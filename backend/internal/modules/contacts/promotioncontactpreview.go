@@ -110,6 +110,8 @@ type LeadContactChange struct {
 	CompanyIndustry *string
 	// TypedCompany is the lead's company name the promotion proposes on the contact instead of resolving.
 	TypedCompany string
+	// Evidence is the activity the promotion will record as its evidence, or nil.
+	Evidence *ids.ActivityID
 }
 
 // PreviewLeadContactChange holds the writer's row locks while resolving the
@@ -121,6 +123,7 @@ func (s *Store) PreviewLeadContactChange(ctx context.Context, id ids.LeadID, in 
 	if err := auth.Require(ctx, leadEntity, principal.ActionUpdate); err != nil {
 		return LeadContactChange{}, err
 	}
+	ctx = withPinnedSLANow(ctx, slaNow(ctx))
 	if err := auth.Require(ctx, contactEntity, principal.ActionCreate); err != nil {
 		return LeadContactChange{}, err
 	}
@@ -169,7 +172,7 @@ func previewPromotionContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.L
 		out.Create = new(promotionContactSpec(lead, employer, leadIdentityName(lead), by))
 		return out, nil
 	}
-	current, err := readContact(ctx, tx, candidate, storekit.LiveOnly, nil)
+	current, err := readContactRow(ctx, tx, candidate, storekit.LiveOnly, nil)
 	if err != nil {
 		return LeadContactChange{}, err
 	}
@@ -219,7 +222,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id, nil); err != nil {
 		return LeadContactChange{}, err
 	}
-	lead, err := promotableLead(ctx, tx, id, in)
+	lead, evidence, err := promotableLead(ctx, tx, id, in)
 	if err != nil {
 		return LeadContactChange{}, err
 	}
@@ -234,7 +237,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if (matched && match.ContactID != candidate) || (!matched && !candidate.IsZero()) {
 		return LeadContactChange{}, apperrors.ErrConflict
 	}
-	employer, typed, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
+	employer, typed, _, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
 	if err != nil {
 		return LeadContactChange{}, err
 	}
@@ -243,6 +246,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 		return LeadContactChange{}, err
 	}
 	out.TypedCompany = typed
+	out.Evidence = evidence
 	if err := previewPromotionReview(ctx, tx, match, &out); err != nil {
 		return LeadContactChange{}, err
 	}

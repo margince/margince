@@ -216,14 +216,13 @@ function BookingHead({
   );
 }
 
+// The address the server chose, and no rule of our own.
+//
+// It is null when every address is archived, so a fallback that read the only
+// entry in `emails` would invite an address somebody retired. The server's rule
+// skips those, and it is the rule the contact page shows.
 function bookingRecipient(contact?: Contact) {
-  const addresses = contact?.emails ?? [];
-  const [only, ...others] = addresses;
-  return (
-    contact?.primary_email ??
-    addresses.find((address) => address.is_primary)?.email ??
-    (only !== undefined && others.length === 0 ? only.email : "")
-  );
+  return contact?.primary_email ?? "";
 }
 
 async function searchBookingContacts(q: string) {

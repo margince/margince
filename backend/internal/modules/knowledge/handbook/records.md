@@ -72,7 +72,7 @@ To edit a contact in Margince, open it and click the value to change in the **De
 Also called: update a contact, change a phone number, rename.
 
 ### Why can't I edit a contact or company?
-A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights." Fields you cannot edit show as plain text and other actions are greyed out; point at a field or open **More actions** for the reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
+A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator." Fields you cannot edit show as plain text and other actions are greyed out; point at a field or open **More actions** for the reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 Also called: read-only record, edit greyed out, cannot change.
 
@@ -110,7 +110,7 @@ Margince also groups contacts that may be duplicates of each other, so you can m
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
 2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one.
 3. Choose the **Owner** (an owner of a ticked contact), press **Preview merge**, then **Merge {count} contacts**.
-The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. You may merge your own contact into a colleague's possible duplicate, which stays with its owner ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
+The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. Your own contact may merge into a colleague's, which keeps its owner; the review ticks those two ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
@@ -172,9 +172,9 @@ Also called: take an unowned account, assign a company to me, claim an account.
 
 Two fields describe a company, and many users mix them up.
 
-**Lifecycle**: where the company stands with you. One value only: **unknown, target, prospect, opportunity, customer, former customer, disqualified.** New companies start at unknown.
+**Lifecycle**: where the company stands with you. One value only: **Unknown**, **Target**, **Prospect**, **Opportunity**, **Onboarding**, **Live**, **Customer**, **Former customer** or **Disqualified**. New companies start at **Unknown**. **Onboarding** means the contract is signed and set-up runs. **Live** means the agreed first scope is in use. Only a colleague sets **Live**: an AI assistant, an automation or an approval that tries is refused.
 
-**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.**
+**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.** A customer and a partner show as marks under the company's name; see [Partners and commission](partners.md).
 
 So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer.
 

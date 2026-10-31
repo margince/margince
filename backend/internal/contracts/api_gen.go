@@ -4761,6 +4761,8 @@ const (
 	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
 	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
 	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
+	CompanyLifecycleLive           CompanyLifecycle = "live"
+	CompanyLifecycleOnboarding     CompanyLifecycle = "onboarding"
 	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
 	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
 	CompanyLifecycleTarget         CompanyLifecycle = "target"
@@ -4775,6 +4777,10 @@ func (e CompanyLifecycle) Valid() bool {
 	case CompanyLifecycleDisqualified:
 		return true
 	case CompanyLifecycleFormerCustomer:
+		return true
+	case CompanyLifecycleLive:
+		return true
+	case CompanyLifecycleOnboarding:
 		return true
 	case CompanyLifecycleOpportunity:
 		return true
@@ -5091,6 +5097,8 @@ const (
 	Company360StateStripAccountLifecycleCustomer       Company360StateStripAccountLifecycle = "customer"
 	Company360StateStripAccountLifecycleDisqualified   Company360StateStripAccountLifecycle = "disqualified"
 	Company360StateStripAccountLifecycleFormerCustomer Company360StateStripAccountLifecycle = "former_customer"
+	Company360StateStripAccountLifecycleLive           Company360StateStripAccountLifecycle = "live"
+	Company360StateStripAccountLifecycleOnboarding     Company360StateStripAccountLifecycle = "onboarding"
 	Company360StateStripAccountLifecycleOpportunity    Company360StateStripAccountLifecycle = "opportunity"
 	Company360StateStripAccountLifecycleProspect       Company360StateStripAccountLifecycle = "prospect"
 	Company360StateStripAccountLifecycleTarget         Company360StateStripAccountLifecycle = "target"
@@ -5105,6 +5113,10 @@ func (e Company360StateStripAccountLifecycle) Valid() bool {
 	case Company360StateStripAccountLifecycleDisqualified:
 		return true
 	case Company360StateStripAccountLifecycleFormerCustomer:
+		return true
+	case Company360StateStripAccountLifecycleLive:
+		return true
+	case Company360StateStripAccountLifecycleOnboarding:
 		return true
 	case Company360StateStripAccountLifecycleOpportunity:
 		return true
@@ -11290,6 +11302,24 @@ func (e ForecastCallScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ForecastContributionExclusionReason.
+const (
+	ForecastContributionExclusionReasonFxMissing ForecastContributionExclusionReason = "fx_missing"
+	ForecastContributionExclusionReasonUnpriced  ForecastContributionExclusionReason = "unpriced"
+)
+
+// Valid indicates whether the value is a known member of the ForecastContributionExclusionReason enum.
+func (e ForecastContributionExclusionReason) Valid() bool {
+	switch e {
+	case ForecastContributionExclusionReasonFxMissing:
+		return true
+	case ForecastContributionExclusionReasonUnpriced:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
@@ -11364,6 +11394,7 @@ const (
 	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
 	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
 	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
+	ForecastMovementBucketNameRecordChanged      ForecastMovementBucketName = "record_changed"
 	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
 	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
 	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
@@ -11390,6 +11421,8 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNamePushedOut:
 		return true
+	case ForecastMovementBucketNameRecordChanged:
+		return true
 	case ForecastMovementBucketNameReopenedOrArchived:
 		return true
 	case ForecastMovementBucketNameStageWeight:
@@ -11411,6 +11444,7 @@ const (
 	ForecastMovementDealCausesPulledIn           ForecastMovementDealCauses = "pulled_in"
 	ForecastMovementDealCausesPushedOut          ForecastMovementDealCauses = "pushed_out"
 	ForecastMovementDealCausesQualification      ForecastMovementDealCauses = "qualification"
+	ForecastMovementDealCausesRecordChanged      ForecastMovementDealCauses = "record_changed"
 	ForecastMovementDealCausesReopenedOrArchived ForecastMovementDealCauses = "reopened_or_archived"
 	ForecastMovementDealCausesStageWeight        ForecastMovementDealCauses = "stage_weight"
 	ForecastMovementDealCausesWon                ForecastMovementDealCauses = "won"
@@ -11434,6 +11468,8 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesPushedOut:
 		return true
 	case ForecastMovementDealCausesQualification:
+		return true
+	case ForecastMovementDealCausesRecordChanged:
 		return true
 	case ForecastMovementDealCausesReopenedOrArchived:
 		return true
@@ -11464,6 +11500,30 @@ func (e ForecastReadingsScopeKind) Valid() bool {
 	case ForecastReadingsScopeKindTeam:
 		return true
 	case ForecastReadingsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastRiskSignalCode.
+const (
+	ForecastRiskSignalCodeClosePushed ForecastRiskSignalCode = "close_pushed"
+	ForecastRiskSignalCodeNoNextStep  ForecastRiskSignalCode = "no_next_step"
+	ForecastRiskSignalCodeQuiet       ForecastRiskSignalCode = "quiet"
+	ForecastRiskSignalCodeStuck       ForecastRiskSignalCode = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastRiskSignalCode enum.
+func (e ForecastRiskSignalCode) Valid() bool {
+	switch e {
+	case ForecastRiskSignalCodeClosePushed:
+		return true
+	case ForecastRiskSignalCodeNoNextStep:
+		return true
+	case ForecastRiskSignalCodeQuiet:
+		return true
+	case ForecastRiskSignalCodeStuck:
 		return true
 	default:
 		return false
@@ -15508,6 +15568,93 @@ func (e OutcomeReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for OwnershipOfferRecordType.
+const (
+	OwnershipOfferRecordTypeCompany OwnershipOfferRecordType = "company"
+	OwnershipOfferRecordTypeContact OwnershipOfferRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipOfferRecordType enum.
+func (e OwnershipOfferRecordType) Valid() bool {
+	switch e {
+	case OwnershipOfferRecordTypeCompany:
+		return true
+	case OwnershipOfferRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OwnershipOfferStatus.
+const (
+	OwnershipOfferStatusPending OwnershipOfferStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipOfferStatus enum.
+func (e OwnershipOfferStatus) Valid() bool {
+	switch e {
+	case OwnershipOfferStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OwnershipRequestRecordType.
+const (
+	OwnershipRequestRecordTypeCompany OwnershipRequestRecordType = "company"
+	OwnershipRequestRecordTypeContact OwnershipRequestRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipRequestRecordType enum.
+func (e OwnershipRequestRecordType) Valid() bool {
+	switch e {
+	case OwnershipRequestRecordTypeCompany:
+		return true
+	case OwnershipRequestRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OwnershipRequestStatus.
+const (
+	OwnershipRequestStatusPending OwnershipRequestStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipRequestStatus enum.
+func (e OwnershipRequestStatus) Valid() bool {
+	switch e {
+	case OwnershipRequestStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerActivationBasis.
+const (
+	PartnerActivationBasisCustomerWon          PartnerActivationBasis = "customer_won"
+	PartnerActivationBasisLeadAccepted         PartnerActivationBasis = "lead_accepted"
+	PartnerActivationBasisRecordedBeforeLadder PartnerActivationBasis = "recorded_before_ladder"
+)
+
+// Valid indicates whether the value is a known member of the PartnerActivationBasis enum.
+func (e PartnerActivationBasis) Valid() bool {
+	switch e {
+	case PartnerActivationBasisCustomerWon:
+		return true
+	case PartnerActivationBasisLeadAccepted:
+		return true
+	case PartnerActivationBasisRecordedBeforeLadder:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PartnerCertStatus.
 const (
 	PartnerCertStatusApplied   PartnerCertStatus = "applied"
@@ -15571,42 +15718,54 @@ func (e PartnerPartnerRole) Valid() bool {
 	}
 }
 
-// Defines values for PartnerRelationshipStage.
+// Defines values for PartnerKind.
 const (
-	PartnerRelationshipStageActive           PartnerRelationshipStage = "active"
-	PartnerRelationshipStageActiveReferring  PartnerRelationshipStage = "active_referring"
-	PartnerRelationshipStageAgreementPending PartnerRelationshipStage = "agreement_pending"
-	PartnerRelationshipStageContacted        PartnerRelationshipStage = "contacted"
-	PartnerRelationshipStageDormant          PartnerRelationshipStage = "dormant"
-	PartnerRelationshipStageFitConfirmed     PartnerRelationshipStage = "fit_confirmed"
-	PartnerRelationshipStageIdentified       PartnerRelationshipStage = "identified"
-	PartnerRelationshipStageInConversation   PartnerRelationshipStage = "in_conversation"
-	PartnerRelationshipStageNoFit            PartnerRelationshipStage = "no_fit"
-	PartnerRelationshipStageResearch         PartnerRelationshipStage = "research"
+	PartnerKindConsulting PartnerKind = "consulting"
+	PartnerKindHosting    PartnerKind = "hosting"
+	PartnerKindReferral   PartnerKind = "referral"
+	PartnerKindStrategic  PartnerKind = "strategic"
 )
 
-// Valid indicates whether the value is a known member of the PartnerRelationshipStage enum.
-func (e PartnerRelationshipStage) Valid() bool {
+// Valid indicates whether the value is a known member of the PartnerKind enum.
+func (e PartnerKind) Valid() bool {
 	switch e {
-	case PartnerRelationshipStageActive:
+	case PartnerKindConsulting:
 		return true
-	case PartnerRelationshipStageActiveReferring:
+	case PartnerKindHosting:
 		return true
-	case PartnerRelationshipStageAgreementPending:
+	case PartnerKindReferral:
 		return true
-	case PartnerRelationshipStageContacted:
+	case PartnerKindStrategic:
 		return true
-	case PartnerRelationshipStageDormant:
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerStageMeaning.
+const (
+	PartnerStageMeaningActive    PartnerStageMeaning = "active"
+	PartnerStageMeaningCandidate PartnerStageMeaning = "candidate"
+	PartnerStageMeaningDormant   PartnerStageMeaning = "dormant"
+	PartnerStageMeaningEnded     PartnerStageMeaning = "ended"
+	PartnerStageMeaningReady     PartnerStageMeaning = "ready"
+	PartnerStageMeaningSigned    PartnerStageMeaning = "signed"
+)
+
+// Valid indicates whether the value is a known member of the PartnerStageMeaning enum.
+func (e PartnerStageMeaning) Valid() bool {
+	switch e {
+	case PartnerStageMeaningActive:
 		return true
-	case PartnerRelationshipStageFitConfirmed:
+	case PartnerStageMeaningCandidate:
 		return true
-	case PartnerRelationshipStageIdentified:
+	case PartnerStageMeaningDormant:
 		return true
-	case PartnerRelationshipStageInConversation:
+	case PartnerStageMeaningEnded:
 		return true
-	case PartnerRelationshipStageNoFit:
+	case PartnerStageMeaningReady:
 		return true
-	case PartnerRelationshipStageResearch:
+	case PartnerStageMeaningSigned:
 		return true
 	default:
 		return false
@@ -18856,48 +19015,6 @@ func (e SetUpPartnerRequestPartnerRole) Valid() bool {
 	}
 }
 
-// Defines values for SetUpPartnerRequestRelationshipStage.
-const (
-	SetUpPartnerRequestRelationshipStageActive           SetUpPartnerRequestRelationshipStage = "active"
-	SetUpPartnerRequestRelationshipStageActiveReferring  SetUpPartnerRequestRelationshipStage = "active_referring"
-	SetUpPartnerRequestRelationshipStageAgreementPending SetUpPartnerRequestRelationshipStage = "agreement_pending"
-	SetUpPartnerRequestRelationshipStageContacted        SetUpPartnerRequestRelationshipStage = "contacted"
-	SetUpPartnerRequestRelationshipStageDormant          SetUpPartnerRequestRelationshipStage = "dormant"
-	SetUpPartnerRequestRelationshipStageFitConfirmed     SetUpPartnerRequestRelationshipStage = "fit_confirmed"
-	SetUpPartnerRequestRelationshipStageIdentified       SetUpPartnerRequestRelationshipStage = "identified"
-	SetUpPartnerRequestRelationshipStageInConversation   SetUpPartnerRequestRelationshipStage = "in_conversation"
-	SetUpPartnerRequestRelationshipStageNoFit            SetUpPartnerRequestRelationshipStage = "no_fit"
-	SetUpPartnerRequestRelationshipStageResearch         SetUpPartnerRequestRelationshipStage = "research"
-)
-
-// Valid indicates whether the value is a known member of the SetUpPartnerRequestRelationshipStage enum.
-func (e SetUpPartnerRequestRelationshipStage) Valid() bool {
-	switch e {
-	case SetUpPartnerRequestRelationshipStageActive:
-		return true
-	case SetUpPartnerRequestRelationshipStageActiveReferring:
-		return true
-	case SetUpPartnerRequestRelationshipStageAgreementPending:
-		return true
-	case SetUpPartnerRequestRelationshipStageContacted:
-		return true
-	case SetUpPartnerRequestRelationshipStageDormant:
-		return true
-	case SetUpPartnerRequestRelationshipStageFitConfirmed:
-		return true
-	case SetUpPartnerRequestRelationshipStageIdentified:
-		return true
-	case SetUpPartnerRequestRelationshipStageInConversation:
-		return true
-	case SetUpPartnerRequestRelationshipStageNoFit:
-		return true
-	case SetUpPartnerRequestRelationshipStageResearch:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SettingOriginSource.
 const (
 	SettingOriginSourceConfigFile SettingOriginSource = "config_file"
@@ -20340,6 +20457,8 @@ const (
 	UpdateCompanyRequestLifecycleCustomer       UpdateCompanyRequestLifecycle = "customer"
 	UpdateCompanyRequestLifecycleDisqualified   UpdateCompanyRequestLifecycle = "disqualified"
 	UpdateCompanyRequestLifecycleFormerCustomer UpdateCompanyRequestLifecycle = "former_customer"
+	UpdateCompanyRequestLifecycleLive           UpdateCompanyRequestLifecycle = "live"
+	UpdateCompanyRequestLifecycleOnboarding     UpdateCompanyRequestLifecycle = "onboarding"
 	UpdateCompanyRequestLifecycleOpportunity    UpdateCompanyRequestLifecycle = "opportunity"
 	UpdateCompanyRequestLifecycleProspect       UpdateCompanyRequestLifecycle = "prospect"
 	UpdateCompanyRequestLifecycleTarget         UpdateCompanyRequestLifecycle = "target"
@@ -20354,6 +20473,10 @@ func (e UpdateCompanyRequestLifecycle) Valid() bool {
 	case UpdateCompanyRequestLifecycleDisqualified:
 		return true
 	case UpdateCompanyRequestLifecycleFormerCustomer:
+		return true
+	case UpdateCompanyRequestLifecycleLive:
+		return true
+	case UpdateCompanyRequestLifecycleOnboarding:
 		return true
 	case UpdateCompanyRequestLifecycleOpportunity:
 		return true
@@ -21160,48 +21283,6 @@ func (e UpsertPartnerRequestPartnerRole) Valid() bool {
 	case UpsertPartnerRequestPartnerRoleHosting:
 		return true
 	case UpsertPartnerRequestPartnerRoleStrategic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UpsertPartnerRequestRelationshipStage.
-const (
-	UpsertPartnerRequestRelationshipStageActive           UpsertPartnerRequestRelationshipStage = "active"
-	UpsertPartnerRequestRelationshipStageActiveReferring  UpsertPartnerRequestRelationshipStage = "active_referring"
-	UpsertPartnerRequestRelationshipStageAgreementPending UpsertPartnerRequestRelationshipStage = "agreement_pending"
-	UpsertPartnerRequestRelationshipStageContacted        UpsertPartnerRequestRelationshipStage = "contacted"
-	UpsertPartnerRequestRelationshipStageDormant          UpsertPartnerRequestRelationshipStage = "dormant"
-	UpsertPartnerRequestRelationshipStageFitConfirmed     UpsertPartnerRequestRelationshipStage = "fit_confirmed"
-	UpsertPartnerRequestRelationshipStageIdentified       UpsertPartnerRequestRelationshipStage = "identified"
-	UpsertPartnerRequestRelationshipStageInConversation   UpsertPartnerRequestRelationshipStage = "in_conversation"
-	UpsertPartnerRequestRelationshipStageNoFit            UpsertPartnerRequestRelationshipStage = "no_fit"
-	UpsertPartnerRequestRelationshipStageResearch         UpsertPartnerRequestRelationshipStage = "research"
-)
-
-// Valid indicates whether the value is a known member of the UpsertPartnerRequestRelationshipStage enum.
-func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
-	switch e {
-	case UpsertPartnerRequestRelationshipStageActive:
-		return true
-	case UpsertPartnerRequestRelationshipStageActiveReferring:
-		return true
-	case UpsertPartnerRequestRelationshipStageAgreementPending:
-		return true
-	case UpsertPartnerRequestRelationshipStageContacted:
-		return true
-	case UpsertPartnerRequestRelationshipStageDormant:
-		return true
-	case UpsertPartnerRequestRelationshipStageFitConfirmed:
-		return true
-	case UpsertPartnerRequestRelationshipStageIdentified:
-		return true
-	case UpsertPartnerRequestRelationshipStageInConversation:
-		return true
-	case UpsertPartnerRequestRelationshipStageNoFit:
-		return true
-	case UpsertPartnerRequestRelationshipStageResearch:
 		return true
 	default:
 		return false
@@ -24504,6 +24585,8 @@ const (
 	ListCompaniesParamsLifecycleCustomer       ListCompaniesParamsLifecycle = "customer"
 	ListCompaniesParamsLifecycleDisqualified   ListCompaniesParamsLifecycle = "disqualified"
 	ListCompaniesParamsLifecycleFormerCustomer ListCompaniesParamsLifecycle = "former_customer"
+	ListCompaniesParamsLifecycleLive           ListCompaniesParamsLifecycle = "live"
+	ListCompaniesParamsLifecycleOnboarding     ListCompaniesParamsLifecycle = "onboarding"
 	ListCompaniesParamsLifecycleOpportunity    ListCompaniesParamsLifecycle = "opportunity"
 	ListCompaniesParamsLifecycleProspect       ListCompaniesParamsLifecycle = "prospect"
 	ListCompaniesParamsLifecycleTarget         ListCompaniesParamsLifecycle = "target"
@@ -24518,6 +24601,10 @@ func (e ListCompaniesParamsLifecycle) Valid() bool {
 	case ListCompaniesParamsLifecycleDisqualified:
 		return true
 	case ListCompaniesParamsLifecycleFormerCustomer:
+		return true
+	case ListCompaniesParamsLifecycleLive:
+		return true
+	case ListCompaniesParamsLifecycleOnboarding:
 		return true
 	case ListCompaniesParamsLifecycleOpportunity:
 		return true
@@ -26689,6 +26776,24 @@ func (e GetWorklistParamsView) Valid() bool {
 	}
 }
 
+// Defines values for GetWorklistParamsRelationships.
+const (
+	GetWorklistParamsRelationshipsInclude GetWorklistParamsRelationships = "include"
+	GetWorklistParamsRelationshipsOmit    GetWorklistParamsRelationships = "omit"
+)
+
+// Valid indicates whether the value is a known member of the GetWorklistParamsRelationships enum.
+func (e GetWorklistParamsRelationships) Valid() bool {
+	switch e {
+	case GetWorklistParamsRelationshipsInclude:
+		return true
+	case GetWorklistParamsRelationshipsOmit:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetHiddenBacklogRowsParamsRule.
 const (
 	GetHiddenBacklogRowsParamsRuleColleagues  GetHiddenBacklogRowsParamsRule = "colleagues"
@@ -26995,7 +27100,8 @@ type Activity struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
@@ -29562,7 +29668,7 @@ type Approval struct {
 	Kind       string              `json:"kind"`
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
-	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 	Preview *ApprovalPreview `json:"preview,omitempty"`
 
 	// ProposalId For kind=coldstart, the ColdStartProposal this approval accepts (links the staged proposal to its approval item).
@@ -29689,7 +29795,7 @@ type ApprovalPreferences struct {
 	Data []ApprovalPreference `json:"data"`
 }
 
-// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 type ApprovalPreview struct {
 	Changes []ApprovalPreviewChange `json:"changes"`
 
@@ -33800,11 +33906,22 @@ type Company struct {
 	ContactCount *int      `json:"contact_count,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 
+	// CreatedBy Who created the company, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+
 	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
-	Description *string            `json:"description,omitempty"`
-	DisplayName string             `json:"display_name"`
-	Domains     *[]CompanyDomain   `json:"domains,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
+	Description *string          `json:"description,omitempty"`
+	DisplayName string           `json:"display_name"`
+	Domains     *[]CompanyDomain `json:"domains,omitempty"`
+
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+	Id    openapi_types.UUID   `json:"id"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -33826,7 +33943,7 @@ type Company struct {
 	LegalHold *bool   `json:"legal_hold,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
@@ -33856,8 +33973,11 @@ type Company struct {
 	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
 	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 	// forward-compatible.
-	Partner *Partner                `json:"partner,omitempty"`
-	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	Partner *Partner `json:"partner,omitempty"`
+
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string                 `json:"phone,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
 
 	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
 	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
@@ -33889,7 +34009,7 @@ type Company struct {
 // CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
 type CompanyIndustry string
 
-// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 type CompanyLifecycle string
 
 // CompanyRelationshipTypes defines model for Company.RelationshipTypes.
@@ -36988,7 +37108,15 @@ type Contact struct {
 	// ConvertedFromLeadId Canonical origin pointer if promoted from a lead.
 	ConvertedFromLeadId *openapi_types.UUID `json:"converted_from_lead_id,omitempty"`
 	CreatedAt           time.Time           `json:"created_at"`
-	Emails              *[]ContactEmail     `json:"emails,omitempty"`
+
+	// CreatedBy Who created the contact, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+	Emails    *[]ContactEmail       `json:"emails,omitempty"`
 
 	// Employer Where this contact works TODAY: their current primary employment edge, resolved to the account it names. History is not here — the full career ribbon is `contact_360.employments`, and a past employer never appears in this field. Absent is not "works nowhere": the field is also absent when the caller may not read relationship edges (an edge discloses its endpoints as a PAIR, which the grant on the contact does not cover) or when the employer sits outside their company row scope. A reader is told who somebody works for or nothing at all, never a company they have no grant for.
 	Employer  *ContactEmployer `json:"employer,omitempty"`
@@ -37096,7 +37224,8 @@ type Contact360 struct {
 	// CreatedBy Who created the contact, from its earliest create audit row: for an agent, the
 	// colleague it worked for and the tool it was typed through, each when the row
 	// records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// DeadAddresses The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
@@ -37370,7 +37499,7 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
@@ -37396,7 +37525,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -38883,13 +39012,19 @@ type CreateCompanyRequest struct {
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string                       `json:"industry,omitempty"`
-	LegalName       *string                       `json:"legal_name,omitempty"`
-	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
-	ParentCompanyId *openapi_types.UUID           `json:"parent_company_id,omitempty"`
-	SizeBand        *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
-	Source          string                        `json:"source"`
+	Industry        *string             `json:"industry,omitempty"`
+	LegalName       *string             `json:"legal_name,omitempty"`
+	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
+	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
+
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone    *string                       `json:"phone,omitempty"`
+	SizeBand *CreateCompanyRequestSizeBand `json:"size_band,omitempty"`
+	Source   string                        `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -39450,6 +39585,20 @@ type CreateOutcomeReviewRequest struct {
 
 	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
 	TemplateVersion *int64 `json:"template_version,omitempty"`
+}
+
+// CreatePartnerStageRequest defines model for CreatePartnerStageRequest.
+type CreatePartnerStageRequest struct {
+	// Key Optional; derived from the label when absent. Lowercase letters, digits and underscores, starting with a letter. Must be unique.
+	Key   *string `json:"key,omitempty"`
+	Label string  `json:"label"`
+
+	// Meaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	Meaning   PartnerStageMeaning `json:"meaning"`
+	SortOrder *int                `json:"sort_order,omitempty"`
 }
 
 // CreatePipelineRequest defines model for CreatePipelineRequest.
@@ -40090,7 +40239,15 @@ type Deal struct {
 	// CompanyId Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 	CreatedAt time.Time           `json:"created_at"`
-	Currency  *string             `json:"currency,omitempty"`
+
+	// CreatedBy Who created the deal, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+	Currency  *string               `json:"currency,omitempty"`
 
 	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
 	Description *string `json:"description,omitempty"`
@@ -42597,6 +42754,46 @@ type ForecastCallBaseline string
 // ForecastCallScopeKind defines model for ForecastCall.ScopeKind.
 type ForecastCallScopeKind string
 
+// ForecastContribution One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
+type ForecastContribution struct {
+	// AppliedProbability The chance in use with `effect` applied to its odds, in percent.
+	AppliedProbability int `json:"applied_probability"`
+
+	// BaseMinor The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+	BaseMinor *int64  `json:"base_minor,omitempty"`
+	Category  *string `json:"category,omitempty"`
+
+	// ChanceInUse The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
+	ChanceInUse int                `json:"chance_in_use"`
+	DealId      openapi_types.UUID `json:"deal_id"`
+	DealName    string             `json:"deal_name"`
+
+	// Effect The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+	Effect *float64 `json:"effect,omitempty"`
+
+	// EvidenceN How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off.
+	EvidenceN *int `json:"evidence_n,omitempty"`
+
+	// ExclusionReason Why a deal in the reading contributes no money.
+	ExclusionReason *ForecastContributionExclusionReason `json:"exclusion_reason,omitempty"`
+	InBestCase      bool                                 `json:"in_best_case"`
+	InEvidence      bool                                 `json:"in_evidence"`
+	InOpen          bool                                 `json:"in_open"`
+	InWon           bool                                 `json:"in_won"`
+	OwnerId         *openapi_types.UUID                  `json:"owner_id,omitempty"`
+
+	// Signals Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off.
+	Signals []ForecastRiskSignal `json:"signals"`
+	StageId *openapi_types.UUID  `json:"stage_id,omitempty"`
+
+	// TypedProbability The chance typed on the deal's stage, in percent.
+	TypedProbability *int  `json:"typed_probability,omitempty"`
+	WeightedMinor    int64 `json:"weighted_minor"`
+}
+
+// ForecastContributionExclusionReason Why a deal in the reading contributes no money.
+type ForecastContributionExclusionReason string
+
 // ForecastEnforcementPreview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
 type ForecastEnforcementPreview struct {
 	// Digest Names the policy version and every open deal's treatment this preview counted.
@@ -42654,12 +42851,14 @@ type ForecastMovementReading string
 
 // ForecastMovementBucket defines model for ForecastMovementBucket.
 type ForecastMovementBucket struct {
-	AmountMinor int64                      `json:"amount_minor"`
-	DealCount   int                        `json:"deal_count"`
-	Name        ForecastMovementBucketName `json:"name"`
+	AmountMinor int64 `json:"amount_minor"`
+	DealCount   int   `json:"deal_count"`
+
+	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+	Name ForecastMovementBucketName `json:"name"`
 }
 
-// ForecastMovementBucketName defines model for ForecastMovementBucket.Name.
+// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
 type ForecastMovementBucketName string
 
 // ForecastMovementDeal defines model for ForecastMovementDeal.
@@ -42707,11 +42906,17 @@ type ForecastQualifiedReadings struct {
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
-	AsOf               time.Time     `json:"as_of"`
-	BaseCurrency       string        `json:"base_currency"`
-	BestCaseMinor      int64         `json:"best_case_minor"`
-	ConfirmedDateCount int           `json:"confirmed_date_count"`
-	CurrentCall        *ForecastCall `json:"current_call,omitempty"`
+	AsOf               time.Time `json:"as_of"`
+	BaseCurrency       string    `json:"base_currency"`
+	BestCaseMinor      int64     `json:"best_case_minor"`
+	ConfirmedDateCount int       `json:"confirmed_date_count"`
+
+	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
+	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
+
+	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
+	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
 
 	// EligibleCount Deals considered, priced or not.
 	EligibleCount int `json:"eligible_count"`
@@ -42738,6 +42943,12 @@ type ForecastReadings struct {
 	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
 
+	// RangeHighMinor The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+
+	// RangeLowMinor The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+	RangeLowMinor *int64 `json:"range_low_minor,omitempty"`
+
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
 	ScopeHoldsDeals *bool               `json:"scope_holds_deals,omitempty"`
 	ScopeId         *openapi_types.UUID `json:"scope_id,omitempty"`
@@ -42747,6 +42958,9 @@ type ForecastReadings struct {
 
 	// ScopeLimited True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much.
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
+
+	// SelfCorrecting Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed.
+	SelfCorrecting *bool `json:"self_correcting,omitempty"`
 
 	// Snapshots The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
 	Snapshots *[]ForecastSnapshotRef `json:"snapshots,omitempty"`
@@ -42767,6 +42981,19 @@ type ForecastReadings struct {
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
+
+// ForecastRiskSignal One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
+type ForecastRiskSignal struct {
+	ClosePassed  *bool                  `json:"close_passed,omitempty"`
+	ClosesInDays *int                   `json:"closes_in_days,omitempty"`
+	Code         ForecastRiskSignalCode `json:"code"`
+	Count        *int                   `json:"count,omitempty"`
+	Days         *int                   `json:"days,omitempty"`
+	StageId      *openapi_types.UUID    `json:"stage_id,omitempty"`
+}
+
+// ForecastRiskSignalCode defines model for ForecastRiskSignal.Code.
+type ForecastRiskSignalCode string
 
 // ForecastShare A share link as it stands. Carries no token: that is shown once, when the link is issued, and the table holds only its digest.
 type ForecastShare struct {
@@ -42801,6 +43028,32 @@ type ForecastSnapshotRef struct {
 
 // ForecastSnapshotRefTrigger Why it was taken.
 type ForecastSnapshotRefTrigger string
+
+// ForecastStageChance defines model for ForecastStageChance.
+type ForecastStageChance struct {
+	ChanceInUse int `json:"chance_in_use"`
+
+	// EvidenceN Recorded entries into this stage that have closed won or lost.
+	EvidenceN        int                `json:"evidence_n"`
+	StageId          openapi_types.UUID `json:"stage_id"`
+	TypedProbability int                `json:"typed_probability"`
+
+	// WonPercent The estimated share of those deals that end won. Absent when none closed.
+	WonPercent *int `json:"won_percent,omitempty"`
+}
+
+// ForecastStageChances defines model for ForecastStageChances.
+type ForecastStageChances struct {
+	// EvidenceCutoff The start of today in the installation's zone. No outcome after it counts.
+	EvidenceCutoff time.Time `json:"evidence_cutoff"`
+
+	// PriorStrength How many closed deals the typed chance counts as.
+	PriorStrength int `json:"prior_strength"`
+
+	// SelfCorrecting The installation setting `forecast_self_correcting`. False means every chance in use is the typed one.
+	SelfCorrecting bool                  `json:"self_correcting"`
+	Stages         []ForecastStageChance `json:"stages"`
+}
 
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
@@ -44524,6 +44777,14 @@ type InstallationSettings struct {
 	// `commit_evidence` and says so in the landing's `caveat`.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
+	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
+	// toward the outcomes of deals recorded entering it in the last two years, weighted
+	// against the typed chance as if that were 20 deals; imported and older moves without
+	// a recorded origin count for nothing. A risk signal changes a deal's weight only
+	// after settled frozen forecasts show its effect. Off, every forecast surface weights
+	// a deal by its stage's typed chance.
+	ForecastSelfCorrecting bool `json:"forecast_self_correcting"`
+
 	// IndividualPerformance Show individual performance. On by default. Off, reports, analytics questions,
 	// forecasts and forecast shares, targets, evidence, editions and their exports, and
 	// team weeks carry no figure keyed to a colleague of the reader: breakdowns and filters
@@ -45476,6 +45737,15 @@ type Lead struct {
 	OriginLabel *string             `json:"origin_label,omitempty"`
 	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 
+	// PartnerAcceptedAt When someone accepted the lead for its partner. The first accepted lead activates the partner.
+	PartnerAcceptedAt *time.Time `json:"partner_accepted_at,omitempty"`
+
+	// PartnerAcceptedBy Who accepted the lead for its partner.
+	PartnerAcceptedBy *string `json:"partner_accepted_by,omitempty"`
+
+	// PartnerCompanyId The partner company that referred this lead. Null when none did, or when the caller cannot read that company.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
@@ -45487,9 +45757,13 @@ type Lead struct {
 	PromotedContactId *openapi_types.UUID `json:"promoted_contact_id,omitempty"`
 
 	// QualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
-	// linked activities at read time: a held meeting over a booked one over an inbound reply.
-	// What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-	// lead has no such signal yet (a human may still qualify with `human_qualify`).
+	// linked activities at read time: a held meeting over a booked one over an inbound reply,
+	// by mail or channel message. A meeting with no recorded status counts as booked, and a
+	// meeting the lead declined counts as nothing. Only engagement inside the waiting
+	// horizon counts (the one that keeps automatic work current, at most 30 days), so older
+	// engagement is left out. What the qualify dialog shows as the reason and sends back as
+	// `trigger`; null when the lead has no such signal (a human may still qualify with
+	// `human_qualify`).
 	QualificationEvidence *LeadQualificationEvidence `json:"qualification_evidence,omitempty"`
 
 	// QualifiedDealId The deal opened by the qualify call that promoted this lead, when one was asked for.
@@ -45713,9 +45987,13 @@ type LeadQualification struct {
 }
 
 // LeadQualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
-// linked activities at read time: a held meeting over a booked one over an inbound reply.
-// What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-// lead has no such signal yet (a human may still qualify with `human_qualify`).
+// linked activities at read time: a held meeting over a booked one over an inbound reply,
+// by mail or channel message. A meeting with no recorded status counts as booked, and a
+// meeting the lead declined counts as nothing. Only engagement inside the waiting
+// horizon counts (the one that keeps automatic work current, at most 30 days), so older
+// engagement is left out. What the qualify dialog shows as the reason and sends back as
+// `trigger`; null when the lead has no such signal (a human may still qualify with
+// `human_qualify`).
 type LeadQualificationEvidence struct {
 	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
@@ -46912,7 +47190,7 @@ type MagicLine struct {
 	// ApprovalKind The staged action kind on a needs_you line, for an action label separate from its record name.
 	ApprovalKind *string `json:"approval_kind,omitempty"`
 
-	// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 	ApprovalPreview *ApprovalPreview `json:"approval_preview,omitempty"`
 
 	// Before The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps.
@@ -49085,6 +49363,68 @@ type OverrideWarning struct {
 	Version string `json:"version"`
 }
 
+// OwnershipOffer defines model for OwnershipOffer.
+type OwnershipOffer struct {
+	ApprovalId openapi_types.UUID       `json:"approval_id"`
+	ExpiresAt  time.Time                `json:"expires_at"`
+	RecordId   openapi_types.UUID       `json:"record_id"`
+	RecordType OwnershipOfferRecordType `json:"record_type"`
+	Status     OwnershipOfferStatus     `json:"status"`
+
+	// ToId The colleague the offer is put to.
+	ToId openapi_types.UUID `json:"to_id"`
+}
+
+// OwnershipOfferRecordType defines model for OwnershipOffer.RecordType.
+type OwnershipOfferRecordType string
+
+// OwnershipOfferStatus defines model for OwnershipOffer.Status.
+type OwnershipOfferStatus string
+
+// OwnershipOfferCandidate defines model for OwnershipOfferCandidate.
+type OwnershipOfferCandidate struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// OwnershipOfferCandidates defines model for OwnershipOfferCandidates.
+type OwnershipOfferCandidates struct {
+	Data []OwnershipOfferCandidate `json:"data"`
+}
+
+// OwnershipOfferInput defines model for OwnershipOfferInput.
+type OwnershipOfferInput struct {
+	// Note A line for the colleague, shown on the card.
+	Note *string `json:"note,omitempty"`
+
+	// ToId The colleague the record is offered to.
+	ToId openapi_types.UUID `json:"to_id"`
+}
+
+// OwnershipRequest defines model for OwnershipRequest.
+type OwnershipRequest struct {
+	ApprovalId openapi_types.UUID `json:"approval_id"`
+	ExpiresAt  time.Time          `json:"expires_at"`
+
+	// OwnerId The owner the request is put to.
+	OwnerId    openapi_types.UUID         `json:"owner_id"`
+	RecordId   openapi_types.UUID         `json:"record_id"`
+	RecordType OwnershipRequestRecordType `json:"record_type"`
+	Status     OwnershipRequestStatus     `json:"status"`
+}
+
+// OwnershipRequestRecordType defines model for OwnershipRequest.RecordType.
+type OwnershipRequestRecordType string
+
+// OwnershipRequestStatus defines model for OwnershipRequest.Status.
+type OwnershipRequestStatus string
+
+// OwnershipRequestInput defines model for OwnershipRequestInput.
+type OwnershipRequestInput struct {
+	// Note A line for the owner, shown on the card.
+	Note *string `json:"note,omitempty"`
+}
+
 // PageInfo defines model for PageInfo.
 type PageInfo struct {
 	HasMore bool `json:"has_more"`
@@ -49103,8 +49443,22 @@ type PageInfo struct {
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
 type Partner struct {
-	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
-	CertStatus PartnerCertStatus `json:"cert_status"`
+	// ActivatedAt When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.
+	ActivatedAt *time.Time `json:"activated_at,omitempty"`
+
+	// ActivatedBy Who accepted the lead or recorded the win that activated the partner.
+	ActivatedBy *string `json:"activated_by,omitempty"`
+
+	// ActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+	ActivationBasis *PartnerActivationBasis `json:"activation_basis,omitempty"`
+
+	// ActivationDealId The won deal that activated the partner.
+	ActivationDealId *openapi_types.UUID `json:"activation_deal_id,omitempty"`
+
+	// ActivationLeadId The accepted lead that activated the partner.
+	ActivationLeadId *openapi_types.UUID `json:"activation_lead_id,omitempty"`
+	ArchivedAt       *time.Time          `json:"archived_at,omitempty"`
+	CertStatus       PartnerCertStatus   `json:"cert_status"`
 
 	// CompanyId The company this partner record extends (PK = FK).
 	CompanyId openapi_types.UUID `json:"company_id"`
@@ -49131,14 +49485,32 @@ type Partner struct {
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
 	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
 
-	// PartnerRole Functional role; implementation + dev are Margince's turf.
+	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
+	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
 	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
-	RelationshipHealth *string                   `json:"relationship_health,omitempty"`
-	RelationshipStage  *PartnerRelationshipStage `json:"relationship_stage,omitempty"`
-	ServedSegments     *[]string                 `json:"served_segments,omitempty"`
-	UpdatedAt          time.Time                 `json:"updated_at"`
+	RelationshipHealth *string `json:"relationship_health,omitempty"`
+
+	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
+	RelationshipStage *string   `json:"relationship_stage,omitempty"`
+	ServedSegments    *[]string `json:"served_segments,omitempty"`
+
+	// StageLabel The label `/partner-stages` gives `relationship_stage`.
+	StageLabel *string `json:"stage_label,omitempty"`
+
+	// StageLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	StageLabelKey *ShippedLabelKey `json:"stage_label_key,omitempty"`
+
+	// StageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	StageMeaning *PartnerStageMeaning `json:"stage_meaning,omitempty"`
+	UpdatedAt    time.Time            `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -49147,17 +49519,68 @@ type Partner struct {
 	Version *RowVersion `json:"version,omitempty"`
 }
 
+// PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+type PartnerActivationBasis string
+
 // PartnerCertStatus defines model for Partner.CertStatus.
 type PartnerCertStatus string
 
 // PartnerMarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 type PartnerMarginTier string
 
-// PartnerPartnerRole Functional role; implementation + dev are Margince's turf.
+// PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 type PartnerPartnerRole string
 
-// PartnerRelationshipStage defines model for Partner.RelationshipStage.
-type PartnerRelationshipStage string
+// PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
+type PartnerKind string
+
+// PartnerStage One stage of the installation's partner ladder. `key` is the value stored on `partner.relationship_stage`; `label` is what a user sees.
+type PartnerStage struct {
+	// Active A retired stage leaves the picker and is refused for a new move; partners on it keep it.
+	Active    bool               `json:"active"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Key Stable key, the stored value. Never changes after creation.
+	Key   string `json:"key"`
+	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
+	// Meaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	Meaning PartnerStageMeaning `json:"meaning"`
+
+	// PartnerCount Live partners on this stage whose company the caller may read. Absent for a caller without both the `partner` and the `company` read grant. While any partner carries the key, archived ones included, the meaning cannot change and the stage cannot be deleted (409).
+	PartnerCount *int `json:"partner_count,omitempty"`
+
+	// SortOrder Ladder position, lowest first.
+	SortOrder int `json:"sort_order"`
+
+	// System Built-in. Can be renamed, reordered and retired, never deleted.
+	System    *bool     `json:"system,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+}
+
+// PartnerStageListResponse defines model for PartnerStageListResponse.
+type PartnerStageListResponse struct {
+	Data []PartnerStage `json:"data"`
+}
+
+// PartnerStageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+// active and went quiet. `ended`: the partnership is over or never fit.
+type PartnerStageMeaning string
 
 // PassportConnection The connection a grant-bound passport belongs to, so Settings can name it by the client the
 // human actually approved instead of the raw DCR client id its label carries.
@@ -50121,11 +50544,15 @@ type PromoteLeadRequest struct {
 
 	// Trigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 	// rejected with 422 — promotion is engagement, not import or an outbound touch.
+	// Every trigger but human_qualify needs engagement on the lead that
+	// `qualification_evidence` would offer; with none, the promotion is refused with 422.
 	Trigger PromoteLeadRequestTrigger `json:"trigger"`
 }
 
 // PromoteLeadRequestTrigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 // rejected with 422 — promotion is engagement, not import or an outbound touch.
+// Every trigger but human_qualify needs engagement on the lead that
+// `qualification_evidence` would offer; with none, the promotion is refused with 422.
 type PromoteLeadRequestTrigger string
 
 // PromoteLeadResponse defines model for PromoteLeadResponse.
@@ -52184,14 +52611,20 @@ type ReportingFrameworkInputTemplate string
 
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
-	Attainment   *float64             `json:"attainment,omitempty"`
-	Coverage     ReportingCoverage    `json:"coverage"`
-	Denominator  *float64             `json:"denominator,omitempty"`
-	Evidence     ReportingEvidenceRef `json:"evidence"`
-	Id           ReportingMetricID    `json:"id"`
-	Numerator    *float64             `json:"numerator,omitempty"`
-	Target       *float64             `json:"target,omitempty"`
-	TargetActual *float64             `json:"target_actual,omitempty"`
+	Attainment  *float64             `json:"attainment,omitempty"`
+	Coverage    ReportingCoverage    `json:"coverage"`
+	Denominator *float64             `json:"denominator,omitempty"`
+	Evidence    ReportingEvidenceRef `json:"evidence"`
+	Id          ReportingMetricID    `json:"id"`
+	Numerator   *float64             `json:"numerator,omitempty"`
+
+	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+
+	// RangeLowMinor `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+	RangeLowMinor *int64   `json:"range_low_minor,omitempty"`
+	Target        *float64 `json:"target,omitempty"`
+	TargetActual  *float64 `json:"target_actual,omitempty"`
 
 	// TargetComparison Where the current fiscal quarter's expected landing stands against a
 	// compatible `bookings_won` target, and how far the open pipeline covers
@@ -52267,8 +52700,9 @@ type ReportingPoint struct {
 	// instant. Every member is in exactly one outcome, so the counts add
 	// up to `observations`. `unresolved` members have not reached an
 	// outcome yet and are never counted as lost; `history_partial`
-	// members have a move recorded before Margince kept the stage order,
-	// so the direction of that move is unknown.
+	// members left by a move an import brought in, which does not show
+	// how the team sells, or by a move recorded before Margince kept the
+	// stage order, so its direction is unknown.
 	Outcomes *[]ReportingCohortCount `json:"outcomes,omitempty"`
 
 	// Status `failed` means the database could not calculate this figure on this
@@ -54425,18 +54859,23 @@ type SetTransitionPolicyRequestMode string
 
 // SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
 // or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+// Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
+// program starts on the first active stage meaning `candidate`.
 type SetUpPartnerRequest struct {
-	NextStep          *string                               `json:"next_step,omitempty"`
-	NextStepDueAt     *openapi_types.Date                   `json:"next_step_due_at,omitempty"`
-	PartnerRole       SetUpPartnerRequestPartnerRole        `json:"partner_role"`
-	RelationshipStage *SetUpPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
+	NextStep      *string             `json:"next_step,omitempty"`
+	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
+	PartnerKinds  *[]PartnerKind      `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: send `partner_kinds`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PartnerRole *SetUpPartnerRequestPartnerRole `json:"partner_role,omitempty"`
+
+	// RelationshipStage An active key from `/partner-stages`.
+	RelationshipStage *string `json:"relationship_stage,omitempty"`
 }
 
-// SetUpPartnerRequestPartnerRole defines model for SetUpPartnerRequest.PartnerRole.
+// SetUpPartnerRequestPartnerRole Deprecated: send `partner_kinds`.
 type SetUpPartnerRequestPartnerRole string
-
-// SetUpPartnerRequestRelationshipStage defines model for SetUpPartnerRequest.RelationshipStage.
-type SetUpPartnerRequestRelationshipStage string
 
 // SettingLock A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
 type SettingLock struct {
@@ -55612,7 +56051,7 @@ type TeamWeeklyCoveragePeriodKind string
 // TeamWeeklyFunnelDeviation One stage where the rep converts differently from the team. Entries and conversions are
 // attributed to the owner at the time of each move. "Converted" is a later move to a won
 // stage or to a later stage, compared by the stage order as it was configured when the
-// week was assembled.
+// week was assembled. Moves an import brought in neither enter nor convert a deal.
 type TeamWeeklyFunnelDeviation struct {
 	// DeviationBp The rep's conversion rate less the team's, in basis points.
 	DeviationBp int `json:"deviation_bp"`
@@ -56228,17 +56667,23 @@ type UpdateCompanyRequest struct {
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *openapi_types.Email `json:"email,omitempty"`
+
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
 	LegalName *string `json:"legal_name,omitempty"`
 
-	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
+	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
 
 	// LinkedinUrl Canonical LinkedIn company URL. Null clears it. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
+
+	// Phone The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string `json:"phone,omitempty"`
 
 	// RelationshipTypes Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment.
 	RelationshipTypes *[]UpdateCompanyRequestRelationshipTypes `json:"relationship_types,omitempty"`
@@ -56267,7 +56712,7 @@ type UpdateCompanyRequest struct {
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
 
-// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched.
+// UpdateCompanyRequestLifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 type UpdateCompanyRequestLifecycle string
 
 // UpdateCompanyRequestRelationshipTypes defines model for UpdateCompanyRequest.RelationshipTypes.
@@ -56761,6 +57206,9 @@ type UpdateInstallationSettingsRequest struct {
 	// at once and re-means no stored row.
 	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
 
+	// ForecastSelfCorrecting Let the forecast correct itself. Omit to leave it unchanged. Each change is audited.
+	ForecastSelfCorrecting *bool `json:"forecast_self_correcting,omitempty"`
+
 	// GeocodeBackfillIntervalSeconds Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.
 	GeocodeBackfillIntervalSeconds *int `json:"geocode_backfill_interval_seconds,omitempty"`
 
@@ -56919,6 +57367,9 @@ type UpdateLeadRequest struct {
 	// already write the row. To take an unowned lead for yourself, prefer
 	// `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// PartnerCompanyId The partner that referred the lead: a live partner company the caller can read (422 `not_a_partner` otherwise). Null clears it. Refused with 409 `partner_already_accepted` once the lead was accepted for its partner.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
@@ -57086,6 +57537,19 @@ type UpdateOfferTemplateRequest struct {
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    string                 `json:"locale"`
 	Name      string                 `json:"name"`
+}
+
+// UpdatePartnerStageRequest defines model for UpdatePartnerStageRequest.
+type UpdatePartnerStageRequest struct {
+	Active *bool   `json:"active,omitempty"`
+	Label  *string `json:"label,omitempty"`
+
+	// Meaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	Meaning   *PartnerStageMeaning `json:"meaning,omitempty"`
+	SortOrder *int                 `json:"sort_order,omitempty"`
 }
 
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
@@ -57337,16 +57801,28 @@ type UpdateWebhookSubscriptionRequest struct {
 // UpdateWebhookSubscriptionRequestState defines model for UpdateWebhookSubscriptionRequest.State.
 type UpdateWebhookSubscriptionRequestState string
 
-// UpsertPartnerRequest defines model for UpsertPartnerRequest.
+// UpsertPartnerRequest Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
+// `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
 type UpsertPartnerRequest struct {
-	CertStatus        *UpsertPartnerRequestCertStatus        `json:"cert_status,omitempty"`
-	GateMetrics       *map[string]interface{}                `json:"gate_metrics,omitempty"`
-	MarginTier        *UpsertPartnerRequestMarginTier        `json:"margin_tier,omitempty"`
-	NextStep          *string                                `json:"next_step,omitempty"`
-	NextStepDueAt     *openapi_types.Date                    `json:"next_step_due_at,omitempty"`
-	PartnerRole       UpsertPartnerRequestPartnerRole        `json:"partner_role"`
-	RelationshipStage *UpsertPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
-	ServedSegments    *[]string                              `json:"served_segments,omitempty"`
+	CertStatus    *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
+	GateMetrics   *map[string]interface{}         `json:"gate_metrics,omitempty"`
+	MarginTier    *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
+	NextStep      *string                         `json:"next_step,omitempty"`
+	NextStepDueAt *openapi_types.Date             `json:"next_step_due_at,omitempty"`
+
+	// PartnerKinds Every kind the partner holds; it replaces the kinds stored.
+	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PartnerRole *UpsertPartnerRequestPartnerRole `json:"partner_role,omitempty"`
+
+	// RelationshipStage An active key from `/partner-stages`, or the stage the partner already stands on (422
+	// `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
+	// `partner_not_activated` until the partner was activated by an accepted partner lead or
+	// a won customer it sourced.
+	RelationshipStage *string   `json:"relationship_stage,omitempty"`
+	ServedSegments    *[]string `json:"served_segments,omitempty"`
 }
 
 // UpsertPartnerRequestCertStatus defines model for UpsertPartnerRequest.CertStatus.
@@ -57355,11 +57831,8 @@ type UpsertPartnerRequestCertStatus string
 // UpsertPartnerRequestMarginTier defines model for UpsertPartnerRequest.MarginTier.
 type UpsertPartnerRequestMarginTier string
 
-// UpsertPartnerRequestPartnerRole defines model for UpsertPartnerRequest.PartnerRole.
+// UpsertPartnerRequestPartnerRole Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.
 type UpsertPartnerRequestPartnerRole string
-
-// UpsertPartnerRequestRelationshipStage defines model for UpsertPartnerRequest.RelationshipStage.
-type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
@@ -58946,6 +59419,7 @@ type Worklist struct {
 	// OptionalRelationships Optional reconnections, outside the work queue, counts and Focus. An open
 	// deal or relationship score does not establish an obligation. A reader may
 	// pin a suggestion into their personal queue or create an explicit task.
+	// Absent when the request sent `relationships=omit`.
 	OptionalRelationships *[]WorklistItem `json:"optional_relationships,omitempty"`
 
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
@@ -62197,6 +62671,15 @@ type ListCompaniesParams struct {
 	// is archived without `include_archived`, is simply absent from the page.
 	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
 
+	// PartnerKind Companies whose live partner program holds this kind. Needs the `partner` read grant (403 otherwise).
+	PartnerKind *PartnerKind `form:"partner_kind,omitempty" json:"partner_kind,omitempty"`
+
+	// PartnerStage Companies whose live partner program stands on this `/partner-stages` key. Needs the `partner` read grant (403 otherwise).
+	PartnerStage *string `form:"partner_stage,omitempty" json:"partner_stage,omitempty"`
+
+	// PartnerStageMeaning Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
+	PartnerStageMeaning *PartnerStageMeaning `form:"partner_stage_meaning,omitempty" json:"partner_stage_meaning,omitempty"`
+
 	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
 	// too to find the one company holding that id there. A company the caller cannot
 	// see, or that is archived without `include_archived`, is simply absent from the page.
@@ -64535,6 +65018,9 @@ type GetForecastParams struct {
 
 	// ScopeId Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// Contributions Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why.
+	Contributions *bool `form:"contributions,omitempty" json:"contributions,omitempty"`
 }
 
 // GetForecastParamsPeriod defines parameters for GetForecast.
@@ -65112,6 +65598,30 @@ type UpdateLeadParams struct {
 
 // DemoteLeadParams defines parameters for DemoteLead.
 type DemoteLeadParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// AcceptPartnerLeadParams defines parameters for AcceptPartnerLead.
+type AcceptPartnerLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -65811,6 +66321,54 @@ type PutOnboardingStateParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// CreatePartnerStageParams defines parameters for CreatePartnerStage.
+type CreatePartnerStageParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UpdatePartnerStageParams defines parameters for UpdatePartnerStage.
+type UpdatePartnerStageParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListPartnersParams defines parameters for ListPartners.
 type ListPartnersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -65838,9 +66396,20 @@ type ListPartnersParams struct {
 	// its pipeline or a partner by its company's name, needs a sort the server cannot express
 	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
 	// `422 code: sort_field_not_allowed`.
-	Sort        *Sort                          `form:"sort,omitempty" json:"sort,omitempty"`
+	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// PartnerKind Partners holding this kind, among others.
+	PartnerKind *PartnerKind `form:"partner_kind,omitempty" json:"partner_kind,omitempty"`
+
+	// PartnerRole Deprecated: use `partner_kind`, which this is read as.
 	PartnerRole *ListPartnersParamsPartnerRole `form:"partner_role,omitempty" json:"partner_role,omitempty"`
-	CertStatus  *ListPartnersParamsCertStatus  `form:"cert_status,omitempty" json:"cert_status,omitempty"`
+
+	// RelationshipStage Partners on this stage key from `/partner-stages`, matched exactly.
+	RelationshipStage *string `form:"relationship_stage,omitempty" json:"relationship_stage,omitempty"`
+
+	// StageMeaning Partners on any stage carrying this meaning, so "all active partners" holds however the stages are named.
+	StageMeaning *PartnerStageMeaning          `form:"stage_meaning,omitempty" json:"stage_meaning,omitempty"`
+	CertStatus   *ListPartnersParamsCertStatus `form:"cert_status,omitempty" json:"cert_status,omitempty"`
 }
 
 // ListPartnersParamsPartnerRole defines parameters for ListPartners.
@@ -66753,6 +67322,54 @@ type ClaimRecordParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
+type OfferOwnershipTransferParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// RequestOwnershipTransferParams defines parameters for RequestOwnershipTransfer.
+type RequestOwnershipTransferParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // CreateRecordAssignmentParams defines parameters for CreateRecordAssignment.
@@ -68148,6 +68765,12 @@ type GetWorklistParams struct {
 	// owner take it silently would echo back the scope that had been ignored, so one
 	// rep's work would arrive labelled `"scope": "unassigned"`.
 	Owner *openapi_types.UUID `form:"owner,omitempty" json:"owner,omitempty"`
+
+	// Relationships Whether to read the optional reconnections. `omit` skips that read, and the
+	// page carries neither `optional_relationships` nor
+	// `optional_relationships_more_available`. A reconnection the reader pinned
+	// is still read and still reaches the queue. Nothing else on the page changes.
+	Relationships *GetWorklistParamsRelationships `form:"relationships,omitempty" json:"relationships,omitempty"`
 }
 
 // GetWorklistParamsScope defines parameters for GetWorklist.
@@ -68158,6 +68781,9 @@ type GetWorklistParamsFilter string
 
 // GetWorklistParamsView defines parameters for GetWorklist.
 type GetWorklistParamsView string
+
+// GetWorklistParamsRelationships defines parameters for GetWorklist.
+type GetWorklistParamsRelationships string
 
 // GetHandledForYouParams defines parameters for GetHandledForYou.
 type GetHandledForYouParams struct {
@@ -69045,6 +69671,12 @@ type MessageOnboardingCompanyJSONRequestBody = OnboardingCompanyMessageRequest
 // PutOnboardingStateJSONRequestBody defines body for PutOnboardingState for application/json ContentType.
 type PutOnboardingStateJSONRequestBody = PutOnboardingStateRequest
 
+// CreatePartnerStageJSONRequestBody defines body for CreatePartnerStage for application/json ContentType.
+type CreatePartnerStageJSONRequestBody = CreatePartnerStageRequest
+
+// UpdatePartnerStageJSONRequestBody defines body for UpdatePartnerStage for application/json ContentType.
+type UpdatePartnerStageJSONRequestBody = UpdatePartnerStageRequest
+
 // IssuePassportJSONRequestBody defines body for IssuePassport for application/json ContentType.
 type IssuePassportJSONRequestBody = IssuePassportRequest
 
@@ -69158,6 +69790,12 @@ type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 
 // UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
 type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
+
+// OfferOwnershipTransferJSONRequestBody defines body for OfferOwnershipTransfer for application/json ContentType.
+type OfferOwnershipTransferJSONRequestBody = OwnershipOfferInput
+
+// RequestOwnershipTransferJSONRequestBody defines body for RequestOwnershipTransfer for application/json ContentType.
+type RequestOwnershipTransferJSONRequestBody = OwnershipRequestInput
 
 // CreateRecordAssignmentJSONRequestBody defines body for CreateRecordAssignment for application/json ContentType.
 type CreateRecordAssignmentJSONRequestBody = CreateRecordAssignmentRequest
@@ -70472,6 +71110,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "created_at")
 	}
 
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
@@ -70494,6 +71140,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'domains': %w", err)
 		}
 		delete(object, "domains")
+	}
+
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
 	}
 
 	if raw, found := object["id"]; found {
@@ -70614,6 +71268,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'partner': %w", err)
 		}
 		delete(object, "partner")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["raw"]; found {
@@ -70782,6 +71444,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
 	}
 
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
 	if a.Description != nil {
 		object["description"], err = json.Marshal(a.Description)
 		if err != nil {
@@ -70798,6 +71467,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["domains"], err = json.Marshal(a.Domains)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'domains': %w", err)
+		}
+	}
+
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
 		}
 	}
 
@@ -70901,6 +71577,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["partner"], err = json.Marshal(a.Partner)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -71081,6 +71764,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'created_at': %w", err)
 		}
 		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
 	}
 
 	if raw, found := object["emails"]; found {
@@ -71359,6 +72050,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
 	}
 
 	if a.Emails != nil {
@@ -72591,6 +73289,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -72621,6 +73327,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'parent_company_id': %w", err)
 		}
 		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["size_band"]; found {
@@ -72716,6 +73430,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	if a.Industry != nil {
 		object["industry"], err = json.Marshal(a.Industry)
 		if err != nil {
@@ -72741,6 +73462,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -74425,6 +75153,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "created_at")
 	}
 
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
 	if raw, found := object["currency"]; found {
 		err = json.Unmarshal(raw, &a.Currency)
 		if err != nil {
@@ -74809,6 +75545,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 	object["created_at"], err = json.Marshal(a.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
 	}
 
 	if a.Currency != nil {
@@ -76158,6 +76901,30 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["partner_accepted_at"]; found {
+		err = json.Unmarshal(raw, &a.PartnerAcceptedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_accepted_at': %w", err)
+		}
+		delete(object, "partner_accepted_at")
+	}
+
+	if raw, found := object["partner_accepted_by"]; found {
+		err = json.Unmarshal(raw, &a.PartnerAcceptedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_accepted_by': %w", err)
+		}
+		delete(object, "partner_accepted_by")
+	}
+
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -76585,6 +77352,27 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerAcceptedAt != nil {
+		object["partner_accepted_at"], err = json.Marshal(a.PartnerAcceptedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_accepted_at': %w", err)
+		}
+	}
+
+	if a.PartnerAcceptedBy != nil {
+		object["partner_accepted_by"], err = json.Marshal(a.PartnerAcceptedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_accepted_by': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
 		}
 	}
 
@@ -78483,6 +79271,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "domains")
 	}
 
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
 	if raw, found := object["industry"]; found {
 		err = json.Unmarshal(raw, &a.Industry)
 		if err != nil {
@@ -78529,6 +79325,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'parent_company_id': %w", err)
 		}
 		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
 	}
 
 	if raw, found := object["relationship_types"]; found {
@@ -78609,6 +79413,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
 	if a.Industry != nil {
 		object["industry"], err = json.Marshal(a.Industry)
 		if err != nil {
@@ -78648,6 +79459,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
 		}
 	}
 
@@ -79634,6 +80452,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -79762,6 +80588,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
 		}
 	}
 
@@ -82056,7 +82889,7 @@ type ServerInterface interface {
 	// Administratively preview or apply one resumable batch of retained employment evidence.
 	// (POST /employment-import/backfill)
 	BackfillEmploymentImport(w http.ResponseWriter, r *http.Request)
-	// Whether the contacts and companies in a payload are already records here.
+	// Find out whether a contact or company is already a record here, before creating one.
 	// (POST /entity-resolutions)
 	ResolveEntities(w http.ResponseWriter, r *http.Request)
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
@@ -82167,6 +83000,9 @@ type ServerInterface interface {
 	// Close a share link before it expires.
 	// (DELETE /forecast/shares/{id})
 	RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// The chance the forecast uses for each open stage, and the evidence behind it.
+	// (GET /forecast/stage-chances)
+	GetForecastStageChances(w http.ResponseWriter, r *http.Request)
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
@@ -82401,6 +83237,9 @@ type ServerInterface interface {
 	// Withdraw a human-provided scoring factor.
 	// (DELETE /leads/{id}/manual-signals/{factor})
 	ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor)
+	// Accept a lead for the partner that referred it.
+	// (POST /leads/{id}/partner-acceptance)
+	AcceptPartnerLead(w http.ResponseWriter, r *http.Request, id Id, params AcceptPartnerLeadParams)
 	// Promote a lead to a contact on genuine engagement (non-lossy merge).
 	// (POST /leads/{id}/promote)
 	PromoteLead(w http.ResponseWriter, r *http.Request, id Id, params PromoteLeadParams)
@@ -82704,7 +83543,19 @@ type ServerInterface interface {
 	// The OpenAPI 3.1 document of every operation a passport can call, as JSON.
 	// (GET /openapi.json)
 	GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request)
-	// List partner companies (companies with a partner row), filterable by role/cert status.
+	// List the partner stages, active and retired, in ladder order.
+	// (GET /partner-stages)
+	ListPartnerStages(w http.ResponseWriter, r *http.Request)
+	// Add a partner stage.
+	// (POST /partner-stages)
+	CreatePartnerStage(w http.ResponseWriter, r *http.Request, params CreatePartnerStageParams)
+	// Remove a partner stage nothing uses.
+	// (DELETE /partner-stages/{id})
+	DeletePartnerStage(w http.ResponseWriter, r *http.Request, id Id)
+	// Rename, reorder, retire or re-mean a partner stage.
+	// (PATCH /partner-stages/{id})
+	UpdatePartnerStage(w http.ResponseWriter, r *http.Request, id Id, params UpdatePartnerStageParams)
+	// List partner companies (companies with a partner row), filterable by kind, stage and cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
 	// List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
@@ -82965,6 +83816,27 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Withdraw the caller's open offer of this record.
+	// (DELETE /records/{record_type}/{id}/ownership-offer)
+	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open offer of this record.
+	// (GET /records/{record_type}/{id}/ownership-offer)
+	GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Offer the caller's own record to a colleague.
+	// (POST /records/{record_type}/{id}/ownership-offer)
+	OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams)
+	// The colleagues the caller may offer this record to.
+	// (GET /records/{record_type}/{id}/ownership-offer/candidates)
+	ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Withdraw the caller's open request to be handed this record.
+	// (DELETE /records/{record_type}/{id}/ownership-request)
+	WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open request to be handed this record.
+	// (GET /records/{record_type}/{id}/ownership-request)
+	GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Ask a record's owner to hand it over to the caller.
+	// (POST /records/{record_type}/{id}/ownership-request)
+	RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestOwnershipTransferParams)
 	// Who is responsible for this record, by role.
 	// (GET /records/{record_type}/{record_id}/assignments)
 	ListRecordAssignments(w http.ResponseWriter, r *http.Request, recordType AssignmentRecordType, recordId openapi_types.UUID)
@@ -86394,7 +87266,7 @@ func (_ Unimplemented) BackfillEmploymentImport(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Whether the contacts and companies in a payload are already records here.
+// Find out whether a contact or company is already a record here, before creating one.
 // (POST /entity-resolutions)
 func (_ Unimplemented) ResolveEntities(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -86613,6 +87485,12 @@ func (_ Unimplemented) CreateForecastShare(w http.ResponseWriter, r *http.Reques
 // Close a share link before it expires.
 // (DELETE /forecast/shares/{id})
 func (_ Unimplemented) RevokeForecastShare(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The chance the forecast uses for each open stage, and the evidence behind it.
+// (GET /forecast/stage-chances)
+func (_ Unimplemented) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87081,6 +87959,12 @@ func (_ Unimplemented) SetLeadManualSignal(w http.ResponseWriter, r *http.Reques
 // Withdraw a human-provided scoring factor.
 // (DELETE /leads/{id}/manual-signals/{factor})
 func (_ Unimplemented) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept a lead for the partner that referred it.
+// (POST /leads/{id}/partner-acceptance)
+func (_ Unimplemented) AcceptPartnerLead(w http.ResponseWriter, r *http.Request, id Id, params AcceptPartnerLeadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87690,7 +88574,31 @@ func (_ Unimplemented) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List partner companies (companies with a partner row), filterable by role/cert status.
+// List the partner stages, active and retired, in ladder order.
+// (GET /partner-stages)
+func (_ Unimplemented) ListPartnerStages(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a partner stage.
+// (POST /partner-stages)
+func (_ Unimplemented) CreatePartnerStage(w http.ResponseWriter, r *http.Request, params CreatePartnerStageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a partner stage nothing uses.
+// (DELETE /partner-stages/{id})
+func (_ Unimplemented) DeletePartnerStage(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename, reorder, retire or re-mean a partner stage.
+// (PATCH /partner-stages/{id})
+func (_ Unimplemented) UpdatePartnerStage(w http.ResponseWriter, r *http.Request, id Id, params UpdatePartnerStageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List partner companies (companies with a partner row), filterable by kind, stage and cert status.
 // (GET /partners)
 func (_ Unimplemented) ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -88209,6 +89117,48 @@ func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Reques
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw the caller's open offer of this record.
+// (DELETE /records/{record_type}/{id}/ownership-offer)
+func (_ Unimplemented) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open offer of this record.
+// (GET /records/{record_type}/{id}/ownership-offer)
+func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Offer the caller's own record to a colleague.
+// (POST /records/{record_type}/{id}/ownership-offer)
+func (_ Unimplemented) OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The colleagues the caller may offer this record to.
+// (GET /records/{record_type}/{id}/ownership-offer/candidates)
+func (_ Unimplemented) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw the caller's open request to be handed this record.
+// (DELETE /records/{record_type}/{id}/ownership-request)
+func (_ Unimplemented) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open request to be handed this record.
+// (GET /records/{record_type}/{id}/ownership-request)
+func (_ Unimplemented) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask a record's owner to hand it over to the caller.
+// (POST /records/{record_type}/{id}/ownership-request)
+func (_ Unimplemented) RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestOwnershipTransferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -99343,6 +100293,45 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_kind", r.URL.Query(), &params.PartnerKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_stage" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_stage", r.URL.Query(), &params.PartnerStage, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_stage"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_stage", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_stage_meaning" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_stage_meaning", r.URL.Query(), &params.PartnerStageMeaning, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_stage_meaning"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_stage_meaning", Err: err})
 		}
 		return
 	}
@@ -111266,6 +112255,19 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "contributions" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contributions", r.URL.Query(), &params.Contributions, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contributions"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contributions", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetForecast(w, r, params)
 	}))
@@ -111823,6 +112825,26 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RevokeForecastShare(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastStageChances operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastStageChances(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -114584,6 +115606,62 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ClearLeadManualSignal(w, r, id, factor)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptPartnerLead operation middleware
+func (siw *ServerInterfaceWrapper) AcceptPartnerLead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptPartnerLeadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptPartnerLead(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118536,6 +119614,163 @@ func (siw *ServerInterfaceWrapper) GetAgentOpenAPIDocument(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// ListPartnerStages operation middleware
+func (siw *ServerInterfaceWrapper) ListPartnerStages(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPartnerStages(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreatePartnerStage operation middleware
+func (siw *ServerInterfaceWrapper) CreatePartnerStage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreatePartnerStageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePartnerStage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePartnerStage operation middleware
+func (siw *ServerInterfaceWrapper) DeletePartnerStage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePartnerStage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePartnerStage operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePartnerStage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdatePartnerStageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePartnerStage(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPartners operation middleware
 func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.Request) {
 
@@ -118592,6 +119827,19 @@ func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "partner_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_kind", r.URL.Query(), &params.PartnerKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_kind", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "partner_role" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_role", r.URL.Query(), &params.PartnerRole, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -118601,6 +119849,32 @@ func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_role"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_role", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "relationship_stage" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationship_stage", r.URL.Query(), &params.RelationshipStage, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationship_stage"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationship_stage", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "stage_meaning" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stage_meaning", r.URL.Query(), &params.StageMeaning, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stage_meaning"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stage_meaning", Err: err})
 		}
 		return
 	}
@@ -122520,6 +123794,341 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ClaimRecord(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawOwnershipOffer operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawOwnershipOffer(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOwnershipOffer operation middleware
+func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOwnershipOffer(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OfferOwnershipTransfer operation middleware
+func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OfferOwnershipTransferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OfferOwnershipTransfer(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOwnershipOfferCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOwnershipOfferCandidates(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawOwnershipRequest operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawOwnershipRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOwnershipRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOwnershipRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestOwnershipTransfer operation middleware
+func (siw *ServerInterfaceWrapper) RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RequestOwnershipTransferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestOwnershipTransfer(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129393,6 +131002,19 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ------------- Optional query parameter "relationships" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationships", r.URL.Query(), &params.Relationships, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationships"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationships", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWorklist(w, r, params)
 	}))
@@ -131543,6 +133165,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/forecast/shares/{id}", wrapper.RevokeForecastShare)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/stage-chances", wrapper.GetForecastStageChances)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/fx-rates", wrapper.ListFxRates)
 	})
 	r.Group(func(r chi.Router) {
@@ -131775,6 +133400,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/leads/{id}/manual-signals/{factor}", wrapper.ClearLeadManualSignal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/partner-acceptance", wrapper.AcceptPartnerLead)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/promote", wrapper.PromoteLead)
@@ -132080,6 +133708,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/openapi.json", wrapper.GetAgentOpenAPIDocument)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/partner-stages", wrapper.ListPartnerStages)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/partner-stages", wrapper.CreatePartnerStage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/partner-stages/{id}", wrapper.DeletePartnerStage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/partner-stages/{id}", wrapper.UpdatePartnerStage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/partners", wrapper.ListPartners)
 	})
 	r.Group(func(r chi.Router) {
@@ -132339,6 +133979,27 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.WithdrawOwnershipOffer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.GetOwnershipOffer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.OfferOwnershipTransfer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-offer/candidates", wrapper.ListOwnershipOfferCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.WithdrawOwnershipRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.GetOwnershipRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.RequestOwnershipTransfer)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{record_type}/{record_id}/assignments", wrapper.ListRecordAssignments)

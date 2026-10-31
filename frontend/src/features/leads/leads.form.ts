@@ -33,6 +33,7 @@ export function mapLeadUpdate(
     origin_detail: field("origin_detail"),
     candidate_company_key: field("candidate_company_key"),
     project_id: field("project_id"),
+    partner_company_id: field("partner_company_id"),
     owner_id: stringField(values.owner_id).trim() || undefined,
   };
 }

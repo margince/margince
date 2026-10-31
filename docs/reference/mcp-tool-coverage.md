@@ -96,7 +96,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 0 |
 | … **no case requires** | 11 |
 | … of those, permitted somewhere but never required | 5 |
-| Prompt tokens spent on tools no case requires | 4696 |
+| Prompt tokens spent on tools no case requires | 4700 |
 | Use cases | 35 |
 | Acceptance criteria the cases declare, each with a statement | 74 |
 
@@ -383,8 +383,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `change_state` | 0.82 | 9/11 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
 | `preview_import` | 0.80 | 4/5 | - | `case10_finish_the_import`, `case3_spreadsheet` |
-| `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_forecast` | 0.80 | 4/5 | - | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
+| `bulk_update_records` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `read_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
 | `create_record` | 0.89 | 8/9 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_lists` | 0.67 | 2/3 | - | `case47_tidy_the_fair_list` |
@@ -436,7 +436,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 1017 | - | - | - |
+| `read_view` | 1021 | - | - | - |
 | `change_reports` | 664 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

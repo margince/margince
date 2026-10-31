@@ -43,6 +43,8 @@ type ListActivitiesInput struct {
 	// note: EntityType+EntityID is the polymorphic activity_link filter —
 	// the target is ANY entity kind, so the id stays untyped (rule 6).
 	EntityID *ids.UUID
+	// LinkedToDeals keeps the rows filed under any of these deals.
+	LinkedToDeals []ids.UUID
 	// Query is the contract's `q`: a substring match over the subject and
 	// body a human would recognize the item by.
 	Query *string

@@ -79,6 +79,21 @@ func TestAnOversizedSubmissionIsBounded(t *testing.T) {
 	}
 }
 
+func TestANulByteNeverReachesTheEnquiry(t *testing.T) {
+	fields, err := parseFields("application/x-www-form-urlencoded",
+		[]byte("email=zz-nul%40example.test&message=a%00b&Nick%00name=c%00d"))
+	if err != nil {
+		t.Fatalf("parse the post: %v", err)
+	}
+	e := readEnquiry(fields, nil)
+	if e.Message != "ab" {
+		t.Errorf("the message read %q, want %q", e.Message, "ab")
+	}
+	if len(e.Extra) != 1 || e.Extra[0] != (Field{Name: "Nickname", Value: "cd"}) {
+		t.Errorf("the extra fields read %q, want one Nickname=cd", e.Extra)
+	}
+}
+
 func TestEachBodyEncodingAFormCanSendIsRead(t *testing.T) {
 	var multi bytes.Buffer
 	w := multipart.NewWriter(&multi)

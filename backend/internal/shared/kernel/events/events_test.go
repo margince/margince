@@ -289,6 +289,9 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
 		"cg:commissions": {"gw:events:crm:deal"},
+		// Activating a partner on its first sourced win; apart from the accrual
+		// so neither waits on the other.
+		"cg:partner-activation": {"gw:events:crm:deal"},
 		// Both streams: contract.* and deal_room.* ride the deal one,
 		// activity.captured its own.
 		"cg:stage-evidence": {"gw:events:crm:activity", "gw:events:crm:deal"},

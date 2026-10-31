@@ -5,16 +5,18 @@
 
 package gates
 
-// Every writer of a stage move records the stage order it happened in. Every
-// writer of a lead's arrival records the owner it arrived with. Writers are
-// found by the statement they send, so a new one is judged without a list. The
-// cohort readings mark a missing value as partial, so a skip degrades silently.
+// Every writer of a stage move records the stage order it happened in. It also
+// records whether the move was made in Margince or an import brought it in. Every writer of a lead's
+// arrival records the owner it arrived with. Writers are found by the statement
+// they send, so a new one is judged without a list. The cohort readings mark a
+// missing value as partial, so a skip degrades silently.
 
 import (
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -77,6 +79,9 @@ func TestEveryStageMoveWriterRecordsTheStageOrderAtTheMove(t *testing.T) {
 				if !strings.Contains(columns[1], want) {
 					t.Errorf("%s inserts a stage move without %s: a later reorder would then decide which way it went", path, want)
 				}
+			}
+			if !slices.Contains(strings.Fields(strings.ReplaceAll(columns[1], ",", " ")), "provenance") {
+				t.Errorf("%s inserts a stage move without provenance: stage conversion would read it as unknown history", path)
 			}
 		}
 	}

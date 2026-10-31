@@ -2443,6 +2443,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "can_merge": {
+                  "type": "boolean"
+                },
                 "candidate_id": {
                   "type": "string"
                 },
@@ -2478,11 +2481,15 @@
                     ]
                   }
                 },
+                "keep_id": {
+                  "type": "string"
+                },
                 "other_record_id": {
                   "type": "string"
                 }
               },
               "required": [
+                "can_merge",
                 "candidate_id",
                 "confidence",
                 "evidence",
@@ -5593,6 +5600,109 @@
           "confirmed_date_count": {
             "type": "integer"
           },
+          "contributions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "applied_probability": {
+                  "type": "integer"
+                },
+                "base_minor": {
+                  "type": "integer"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "chance_in_use": {
+                  "type": "integer"
+                },
+                "deal_id": {
+                  "type": "string"
+                },
+                "deal_name": {
+                  "type": "string"
+                },
+                "effect": {
+                  "type": "number"
+                },
+                "evidence_n": {
+                  "type": "integer"
+                },
+                "exclusion_reason": {
+                  "type": "string"
+                },
+                "in_best_case": {
+                  "type": "boolean"
+                },
+                "in_evidence": {
+                  "type": "boolean"
+                },
+                "in_open": {
+                  "type": "boolean"
+                },
+                "in_won": {
+                  "type": "boolean"
+                },
+                "owner_id": {
+                  "type": "string"
+                },
+                "signals": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "close_passed": {
+                        "type": "boolean"
+                      },
+                      "closes_in_days": {
+                        "type": "integer"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "integer"
+                      },
+                      "days": {
+                        "type": "integer"
+                      },
+                      "stage_id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code"
+                    ]
+                  }
+                },
+                "stage_id": {
+                  "type": "string"
+                },
+                "typed_probability": {
+                  "type": "integer"
+                },
+                "weighted_minor": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "applied_probability",
+                "chance_in_use",
+                "deal_id",
+                "deal_name",
+                "in_best_case",
+                "in_evidence",
+                "in_open",
+                "in_won",
+                "signals",
+                "weighted_minor"
+              ]
+            }
+          },
+          "contributions_limited": {
+            "type": "boolean"
+          },
           "coverage_note": {
             "type": "string"
           },
@@ -5667,6 +5777,12 @@
               "weighted_minor"
             ]
           },
+          "range_high_minor": {
+            "type": "integer"
+          },
+          "range_low_minor": {
+            "type": "integer"
+          },
           "scope_id": {
             "type": "string"
           },
@@ -5674,6 +5790,9 @@
             "type": "string"
           },
           "scope_limited": {
+            "type": "boolean"
+          },
+          "self_correcting": {
             "type": "boolean"
           },
           "snapshots": {
@@ -12344,6 +12463,109 @@
           "confirmed_date_count": {
             "type": "integer"
           },
+          "contributions": {
+            "items": {
+              "properties": {
+                "applied_probability": {
+                  "type": "integer"
+                },
+                "base_minor": {
+                  "type": "integer"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "chance_in_use": {
+                  "type": "integer"
+                },
+                "deal_id": {
+                  "type": "string"
+                },
+                "deal_name": {
+                  "type": "string"
+                },
+                "effect": {
+                  "type": "number"
+                },
+                "evidence_n": {
+                  "type": "integer"
+                },
+                "exclusion_reason": {
+                  "type": "string"
+                },
+                "in_best_case": {
+                  "type": "boolean"
+                },
+                "in_evidence": {
+                  "type": "boolean"
+                },
+                "in_open": {
+                  "type": "boolean"
+                },
+                "in_won": {
+                  "type": "boolean"
+                },
+                "owner_id": {
+                  "type": "string"
+                },
+                "signals": {
+                  "items": {
+                    "properties": {
+                      "close_passed": {
+                        "type": "boolean"
+                      },
+                      "closes_in_days": {
+                        "type": "integer"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "integer"
+                      },
+                      "days": {
+                        "type": "integer"
+                      },
+                      "stage_id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "stage_id": {
+                  "type": "string"
+                },
+                "typed_probability": {
+                  "type": "integer"
+                },
+                "weighted_minor": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "applied_probability",
+                "chance_in_use",
+                "deal_id",
+                "deal_name",
+                "in_best_case",
+                "in_evidence",
+                "in_open",
+                "in_won",
+                "signals",
+                "weighted_minor"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "contributions_limited": {
+            "type": "boolean"
+          },
           "coverage_note": {
             "type": "string"
           },
@@ -12542,6 +12764,12 @@
             ],
             "type": "object"
           },
+          "range_high_minor": {
+            "type": "integer"
+          },
+          "range_low_minor": {
+            "type": "integer"
+          },
           "readiness": {
             "type": "string"
           },
@@ -12558,6 +12786,9 @@
             "type": "string"
           },
           "scope_limited": {
+            "type": "boolean"
+          },
+          "self_correcting": {
             "type": "boolean"
           },
           "snapshots": {
@@ -16137,6 +16368,24 @@
       "data": {
         "type": "object",
         "properties": {
+          "activated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activated_by": {
+            "type": "string"
+          },
+          "activation_basis": {
+            "type": "string"
+          },
+          "activation_deal_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activation_lead_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "archived_at": {
             "type": "string",
             "format": "date-time"
@@ -16184,6 +16433,12 @@
           "partner_fit_score_computed": {
             "type": "integer"
           },
+          "partner_kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "partner_role": {
             "type": "string"
           },
@@ -16198,6 +16453,15 @@
             "items": {
               "type": "string"
             }
+          },
+          "stage_label": {
+            "type": "string"
+          },
+          "stage_label_key": {
+            "type": "string"
+          },
+          "stage_meaning": {
+            "type": "string"
           },
           "updated_at": {
             "type": "string",

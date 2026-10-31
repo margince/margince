@@ -3758,7 +3758,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List partner companies (companies with a partner row), filterable by role/cert status. */
+        /** List partner companies (companies with a partner row), filterable by kind, stage and cert status. */
         get: operations["listPartners"];
         put?: never;
         post?: never;
@@ -3766,6 +3766,58 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/partner-stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the partner stages, active and retired, in ladder order.
+         * @description The installation's partner ladder. A retired stage stays listed so the partners on it
+         *     still render their label.
+         */
+        get: operations["listPartnerStages"];
+        put?: never;
+        /** Add a partner stage. */
+        post: operations["createPartnerStage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner-stages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a partner stage nothing uses.
+         * @description 409 when the stage is built-in, any partner (archived ones included) carries it, or it is
+         *     the last active stage meaning `candidate`. Retire it instead.
+         */
+        delete: operations["deletePartnerStage"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename, reorder, retire or re-mean a partner stage.
+         * @description 409 when the change would alter the `meaning` of a stage any partner carries, archived
+         *     ones included, or would retire the last active stage meaning `candidate`, which every new
+         *     partner program starts on.
+         */
+        patch: operations["updatePartnerStage"];
         trace?: never;
     };
     "/commissions": {
@@ -7841,6 +7893,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/leads/{id}/partner-acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a lead for the partner that referred it.
+         * @description Records who accepted the lead and when. The first lead accepted for a partner activates
+         *     that partner: if its stage means candidate, signed or ready, it moves to the first active
+         *     stage meaning `active`. Needs the `partner` update grant and write access to the lead and to the
+         *     partner company.
+         *
+         *     Emits `lead.updated`, and `company.updated` when the partner is activated.
+         */
+        post: operations["acceptPartnerLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leads/{id}/score": {
         parameters: {
             query?: never;
@@ -10176,7 +10256,7 @@ export interface paths {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: string;
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -10378,8 +10458,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Whether the contacts and companies in a payload are already records here.
-         * @description The answer the `resolve_entities` agent tool gives, run by the same tool on both
+         * Find out whether a contact or company is already a record here, before creating one.
+         * @description Ask this before creating a contact or company from a name, email, phone or domain,
+         *     such as one from a conference list or a signature.
+         *     The answer the `resolve_entities` agent tool gives, run by the same tool on both
          *     doors. Each candidate is matched by its keys (email, phone, domain) and its name;
          *     only a match on a unique key can be acted on alone. A POST because a batch of
          *     candidates does not fit a query string. It reads and stores nothing.
@@ -16703,6 +16785,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/{record_type}/{id}/ownership-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The caller's open request to be handed this record. */
+        get: operations["getOwnershipRequest"];
+        put?: never;
+        /**
+         * Ask a record's owner to hand it over to the caller.
+         * @description For a contact or company the caller can see but not change, because a colleague owns it. The
+         *     request is an `ownership_transfer` approval in the owner's inbox; only the owner can decide it,
+         *     and it stays open for 7 days. When the owner accepts, the record moves to the caller, and so do
+         *     the open deals linked to it and the open tasks on it that the owner holds. Each moved row gets
+         *     its own audit row and updated event. A second press while a request is open answers that request
+         *     with `200`; a new request answers `201`. `409` names why nothing can be asked for: `unowned`
+         *     (take ownership instead), `already_yours_to_change`, `owner_unavailable` (the owner is
+         *     suspended or has left; ask an administrator), or `transfer_pending` (the owner has offered the
+         *     record to a colleague, and that offer is still open).
+         */
+        post: operations["requestOwnershipTransfer"];
+        /**
+         * Withdraw the caller's open request to be handed this record.
+         * @description The card leaves the owner's inbox. `404` when the caller has no open request.
+         */
+        delete: operations["withdrawOwnershipRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{record_type}/{id}/ownership-offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** The caller's open offer of this record. */
+        get: operations["getOwnershipOffer"];
+        put?: never;
+        /**
+         * Offer the caller's own record to a colleague.
+         * @description Only the record's owner may offer it, and only while they may change it; anyone else gets
+         *     `403` (a manager who is not the owner reassigns the record directly). The offer is an
+         *     `ownership_transfer` approval in the colleague's inbox; only that colleague can accept it, and
+         *     it stays open for 7 days. The colleague may be any active human seat that can write and whose
+         *     role may read and change records of this type, inside the owner's own write scope or not,
+         *     because they agree to take the record; `listOwnershipOfferCandidates` names them. When they
+         *     accept, the record moves to them, and so do the open deals linked to it and the open tasks on it that the
+         *     owner holds. Each moved row gets its own audit row and updated event. A second press for the
+         *     same colleague answers the open offer with `200`; a new offer answers `201`. `422` with
+         *     `owner_not_assignable` when the colleague cannot hold the record. `409 transfer_pending` when
+         *     another offer or a colleague's request for this record is still open; the message names it.
+         */
+        post: operations["offerOwnershipTransfer"];
+        /**
+         * Withdraw the caller's open offer of this record.
+         * @description The card leaves the colleague's inbox. `404` when the caller has no open offer.
+         */
+        delete: operations["withdrawOwnershipOffer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{record_type}/{id}/ownership-offer/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The colleagues the caller may offer this record to.
+         * @description Only the record's owner, while they may change it, reads the list; anyone else gets `403` or
+         *     `404`. It names every colleague `offerOwnershipTransfer` would accept for this record: an active
+         *     human seat that can write and whose role may read and change records of this type, inside the
+         *     owner's own write scope or not. The caller is left out.
+         */
+        get: operations["listOwnershipOfferCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/record-grants": {
         parameters: {
             query?: never;
@@ -19363,7 +19548,10 @@ export interface paths {
          *     committed pipeline whose close dates somebody confirmed — a provisional date is a
          *     guess, which is what that reading exists to exclude, though the deal stays in
          *     `open`. `best_case` adds the best-case category. `weighted` applies each deal's
-         *     stage probability, rounded per deal.
+         *     chance in use, with the strongest learned risk effect, rounded per deal. While
+         *     `self_correcting` is true the chance in use is the stage's typed chance moved toward
+         *     the outcomes of deals recorded entering that stage; with no such outcome, and while it
+         *     is false, it is the typed chance.
          *
          *     `eligible_count` minus `priced_count` is the gap a reader is owed. An unpriced deal
          *     is real pipeline contributing zero money, and a total presented without that gap
@@ -19374,6 +19562,31 @@ export interface paths {
          *     by assumption, and the assumption is usually their own zone.
          */
         get: operations["getForecast"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/stage-chances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The chance the forecast uses for each open stage, and the evidence behind it.
+         * @description Per open stage: the typed chance, how many deals recorded entering the stage in the last
+         *     two years have closed, the estimated share of them won, and the chance the forecast uses.
+         *     Computed over the whole installation, so every reader sees the same chance; only counts
+         *     are returned. Only moves made in this installation count. Imported moves and
+         *     moves saved before their origin was kept count for nothing. Deals still open are
+         *     counted as open until today, so a stage with many young deals is not read as losing.
+         */
+        get: operations["getForecastStageChances"];
         put?: never;
         post?: never;
         delete?: never;
@@ -23468,6 +23681,15 @@ export interface components {
              */
             individual_performance: boolean;
             /**
+             * @description Let the forecast correct itself. On by default. On, each open stage's chance moves
+             *     toward the outcomes of deals recorded entering it in the last two years, weighted
+             *     against the typed chance as if that were 20 deals; imported and older moves without
+             *     a recorded origin count for nothing. A risk signal changes a deal's weight only
+             *     after settled frozen forecasts show its effect. Off, every forecast surface weights
+             *     a deal by its stage's typed chance.
+             */
+            forecast_self_correcting: boolean;
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -23608,6 +23830,8 @@ export interface components {
             call_zalo?: boolean;
             /** @description Show individual performance. Omit to leave it unchanged. Each change is audited. */
             individual_performance?: boolean;
+            /** @description Let the forecast correct itself. Omit to leave it unchanged. Each change is audited. */
+            forecast_self_correcting?: boolean;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
@@ -26771,7 +26995,7 @@ export interface components {
             /** @description Whether this caller may merge at least two members of this case. */
             can_merge: boolean;
             /**
-             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
+             * @description `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
              * @enum {string}
              */
             merge_mode: "ordinary" | "delegated" | "pair" | "none";
@@ -29013,6 +29237,15 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /**
+             * @description Who created the contact, from its earliest create audit row, read the way
+             *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
+             *     tool it was typed through, each when the row records it, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
+             */
+            readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
             readonly imported_from?: string | null;
             /**
@@ -29465,6 +29698,13 @@ export interface components {
              */
             readonly is_anchor?: boolean;
             legal_name?: string | null;
+            /** @description The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose). */
             description?: string | null;
             /**
@@ -29506,10 +29746,10 @@ export interface components {
             readonly computed_fields?: components["schemas"]["ComputedField"][];
             domains?: components["schemas"]["CompanyDomain"][];
             /**
-             * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+             * @description Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422). */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             /**
@@ -29532,6 +29772,15 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /**
+             * @description Who created the company, from its earliest create audit row, read the way
+             *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
+             *     tool it was typed through, each when the row records it, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
+             */
+            readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
             readonly imported_from?: string | null;
             /**
@@ -29568,6 +29817,13 @@ export interface components {
         CreateCompanyRequest: {
             display_name: string;
             legal_name?: string | null;
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
@@ -29600,6 +29856,13 @@ export interface components {
             linkedin_url?: string | null;
             display_name?: string;
             legal_name?: string | null;
+            /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
+            phone?: string | null;
+            /**
+             * Format: email
+             * @description The company's general address, for example info@example.com. It never creates or matches a contact.
+             */
+            email?: string | null;
             /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
@@ -29644,10 +29907,10 @@ export interface components {
              */
             visibility?: "workspace" | "owner";
             /**
-             * @description Where the account stands with us (ADR-0079). Absent = untouched.
+             * @description Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
              * @enum {string}
              */
-            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+            lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
             /** @description Replace-set of what the company is to us (add new, archive removed), the same shape as `domains`. Absent = untouched; an empty array clears every type. Removing `partner` while the company still has a `partner` extension row is refused with 422 — the invariant binds both ways, and an invariant nothing enforces is a comment. */
             relationship_types?: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
         } & {
@@ -30493,7 +30756,7 @@ export interface components {
         Company360StateStrip: {
             account: {
                 /** @enum {string} */
-                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+                lifecycle: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 relationship_types: ("customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other")[];
             };
             /** @description Null when the caller has no activity grant — not assessed, as distinct from never contacted. */
@@ -31386,7 +31649,8 @@ export interface components {
              * @description Who created the contact, from its earliest create audit row: for an agent, the
              *     colleague it worked for and the tool it was typed through, each when the row
              *     records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description The project this was narrowed to, when the request named one. */
@@ -34500,6 +34764,15 @@ export interface components {
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /**
+             * @description Who created the deal, from its earliest create audit row, read the way
+             *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
+             *     tool it was typed through, each when the row records it, which `captured_by`
+             *     cannot say. Absent when no create row is known; a reader says "unknown" for an
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
+             */
+            readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
             readonly imported_from?: string | null;
             /**
@@ -36757,7 +37030,8 @@ export interface components {
              *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
              *     tool it was typed through, each when the row records it, which `captured_by`
              *     cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
@@ -38439,6 +38713,18 @@ export interface components {
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
+            /**
+             * Format: uuid
+             * @description The partner company that referred this lead. Null when none did, or when the caller cannot read that company.
+             */
+            partner_company_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When someone accepted the lead for its partner. The first accepted lead activates the partner.
+             */
+            readonly partner_accepted_at?: string | null;
+            /** @description Who accepted the lead for its partner. */
+            readonly partner_accepted_by?: string | null;
             /** Format: uuid */
             id: string;
             full_name?: string | null;
@@ -38680,6 +38966,11 @@ export interface components {
              * @description Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.
              */
             source?: string;
+            /**
+             * Format: uuid
+             * @description The partner that referred the lead: a live partner company the caller can read (422 `not_a_partner` otherwise). Null clears it. Refused with 409 `partner_already_accepted` once the lead was accepted for its partner.
+             */
+            partner_company_id?: string | null;
             /** @description Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral. */
             origin?: string | null;
             /** @description A short note beside `origin`. Null clears it. */
@@ -38743,6 +39034,8 @@ export interface components {
             /**
              * @description The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
              *     rejected with 422 — promotion is engagement, not import or an outbound touch.
+             *     Every trigger but human_qualify needs engagement on the lead that
+             *     `qualification_evidence` would offer; with none, the promotion is refused with 422.
              * @enum {string}
              */
             trigger: "inbound_reply" | "meeting_booked" | "meeting_held" | "human_qualify";
@@ -38786,9 +39079,13 @@ export interface components {
         };
         /**
          * @description The strongest genuine-engagement signal captured against this lead, derived from its
-         *     linked activities at read time: a held meeting over a booked one over an inbound reply.
-         *     What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-         *     lead has no such signal yet (a human may still qualify with `human_qualify`).
+         *     linked activities at read time: a held meeting over a booked one over an inbound reply,
+         *     by mail or channel message. A meeting with no recorded status counts as booked, and a
+         *     meeting the lead declined counts as nothing. Only engagement inside the waiting
+         *     horizon counts (the one that keeps automatic work current, at most 30 days), so older
+         *     engagement is left out. What the qualify dialog shows as the reason and sends back as
+         *     `trigger`; null when the lead has no such signal (a human may still qualify with
+         *     `human_qualify`).
          */
         LeadQualificationEvidence: {
             /** @enum {string} */
@@ -40958,8 +41255,9 @@ export interface components {
              *     instant. Every member is in exactly one outcome, so the counts add
              *     up to `observations`. `unresolved` members have not reached an
              *     outcome yet and are never counted as lost; `history_partial`
-             *     members have a move recorded before Margince kept the stage order,
-             *     so the direction of that move is unknown.
+             *     members left by a move an import brought in, which does not show
+             *     how the team sells, or by a move recorded before Margince kept the
+             *     stage order, so its direction is unknown.
              */
             outcomes?: components["schemas"]["ReportingCohortCount"][];
             /**
@@ -41047,6 +41345,16 @@ export interface components {
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
             target_comparison?: components["schemas"]["ReportingTargetComparison"];
+            /**
+             * Format: int64
+             * @description `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+             */
+            range_low_minor?: number;
+            /**
+             * Format: int64
+             * @description `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
+             */
+            range_high_minor?: number;
         };
         /**
          * @description Where the current fiscal quarter's expected landing stands against a
@@ -41953,6 +42261,97 @@ export interface components {
             /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
             snapshots?: components["schemas"]["ForecastSnapshotRef"][];
             qualified?: components["schemas"]["ForecastQualifiedReadings"];
+            /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
+            self_correcting?: boolean;
+            /**
+             * Format: int64
+             * @description The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+             */
+            range_low_minor?: number;
+            /**
+             * Format: int64
+             * @description The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
+             */
+            range_high_minor?: number;
+            /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. */
+            contributions_limited?: boolean;
+            /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
+            contributions?: components["schemas"]["ForecastContribution"][];
+        };
+        /** @description One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once. */
+        ForecastContribution: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** Format: uuid */
+            stage_id?: string;
+            category?: string;
+            /**
+             * Format: int64
+             * @description The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+             */
+            base_minor?: number;
+            /**
+             * @description Why a deal in the reading contributes no money.
+             * @enum {string}
+             */
+            exclusion_reason?: "unpriced" | "fx_missing";
+            /** Format: int64 */
+            weighted_minor: number;
+            in_won: boolean;
+            in_open: boolean;
+            in_evidence: boolean;
+            in_best_case: boolean;
+            /** @description The chance typed on the deal's stage, in percent. */
+            typed_probability?: number;
+            /** @description The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals. */
+            chance_in_use: number;
+            /** @description How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off. */
+            evidence_n?: number;
+            /** @description Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off. */
+            signals: components["schemas"]["ForecastRiskSignal"][];
+            /**
+             * Format: double
+             * @description The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+             */
+            effect?: number;
+            /** @description The chance in use with `effect` applied to its odds, in percent. */
+            applied_probability: number;
+        };
+        /** @description One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it). */
+        ForecastRiskSignal: {
+            /** @enum {string} */
+            code: "close_pushed" | "no_next_step" | "quiet" | "stuck";
+            days?: number;
+            count?: number;
+            /** Format: uuid */
+            stage_id?: string;
+            close_passed?: boolean;
+            closes_in_days?: number;
+        };
+        ForecastStageChances: {
+            /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */
+            self_correcting: boolean;
+            /**
+             * Format: date-time
+             * @description The start of today in the installation's zone. No outcome after it counts.
+             */
+            evidence_cutoff: string;
+            /** @description How many closed deals the typed chance counts as. */
+            prior_strength: number;
+            stages: components["schemas"]["ForecastStageChance"][];
+        };
+        ForecastStageChance: {
+            /** Format: uuid */
+            stage_id: string;
+            typed_probability: number;
+            /** @description Recorded entries into this stage that have closed won or lost. */
+            evidence_n: number;
+            /** @description The estimated share of those deals that end won. Absent when none closed. */
+            won_percent?: number;
+            chance_in_use: number;
         };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
@@ -42263,8 +42662,11 @@ export interface components {
             deals: components["schemas"]["ForecastMovementDeal"][];
         };
         ForecastMovementBucket: {
-            /** @enum {string} */
-            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
+            /**
+             * @description `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+             * @enum {string}
+             */
+            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
             /** Format: int64 */
             amount_minor: number;
             deal_count: number;
@@ -42290,7 +42692,7 @@ export interface components {
             /** Format: uuid */
             approval_id?: string;
             /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading. */
-            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
         };
         NewForecastCall: {
             /**
@@ -45631,7 +46033,7 @@ export interface components {
             occurred_precision: components["schemas"]["OccurredPrecision"];
             workstream?: string;
         };
-        /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
+        /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight. */
         ApprovalPreview: {
             /** @description The complete bounded row plan. An incomplete plan cannot authorize an import. */
             import_rows?: components["schemas"]["ApprovalPreviewImportRow"][];
@@ -45900,8 +46302,11 @@ export interface components {
             company_id: string;
             /** @description The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. */
             readonly masked_fields?: string[];
+            /** @description What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role. */
+            partner_kinds?: components["schemas"]["PartnerKind"][];
             /**
-             * @description Functional role; implementation + dev are Margince's turf.
+             * @deprecated
+             * @description Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
              * @enum {string}
              */
             partner_role?: "hosting" | "consulting" | "strategic";
@@ -45916,11 +46321,34 @@ export interface components {
             gate_metrics?: {
                 [key: string]: unknown;
             } | null;
+            /** @description The key of the stage from `/partner-stages` the partner stands on. */
+            relationship_stage?: string;
+            /** @description The label `/partner-stages` gives `relationship_stage`. */
+            readonly stage_label?: string;
+            stage_label_key?: components["schemas"]["ShippedLabelKey"];
+            stage_meaning?: components["schemas"]["PartnerStageMeaning"];
             /**
-             * @default research
-             * @enum {string}
+             * Format: date-time
+             * @description When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.
              */
-            relationship_stage: "research" | "identified" | "contacted" | "in_conversation" | "fit_confirmed" | "agreement_pending" | "active" | "active_referring" | "dormant" | "no_fit";
+            readonly activated_at?: string | null;
+            /**
+             * @description What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+             * @enum {string|null}
+             */
+            readonly activation_basis?: null | "lead_accepted" | "customer_won" | "recorded_before_ladder";
+            /** @description Who accepted the lead or recorded the win that activated the partner. */
+            readonly activated_by?: string | null;
+            /**
+             * Format: uuid
+             * @description The accepted lead that activated the partner.
+             */
+            readonly activation_lead_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The won deal that activated the partner.
+             */
+            readonly activation_deal_id?: string | null;
             /** @description Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. */
             partner_fit_score?: number | null;
             /** @description Retained machine-computed partner-fit value while a Commercial Judgement override is in force. */
@@ -45943,9 +46371,19 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
         };
+        /**
+         * @description Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
+         *     `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
+         */
         UpsertPartnerRequest: {
-            /** @enum {string} */
-            partner_role: "hosting" | "consulting" | "strategic";
+            /** @description Every kind the partner holds; it replaces the kinds stored. */
+            partner_kinds?: components["schemas"]["PartnerKind"][];
+            /**
+             * @deprecated
+             * @description Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.
+             * @enum {string}
+             */
+            partner_role?: "hosting" | "consulting" | "strategic";
             /** @enum {string} */
             cert_status?: "applied" | "certified" | "suspended";
             /** @enum {string|null} */
@@ -45953,8 +46391,13 @@ export interface components {
             gate_metrics?: {
                 [key: string]: unknown;
             } | null;
-            /** @enum {string} */
-            relationship_stage?: "research" | "identified" | "contacted" | "in_conversation" | "fit_confirmed" | "agreement_pending" | "active" | "active_referring" | "dormant" | "no_fit";
+            /**
+             * @description An active key from `/partner-stages`, or the stage the partner already stands on (422
+             *     `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
+             *     `partner_not_activated` until the partner was activated by an accepted partner lead or
+             *     a won customer it sourced.
+             */
+            relationship_stage?: string;
             next_step?: string | null;
             /** Format: date */
             next_step_due_at?: string | null;
@@ -45963,15 +46406,74 @@ export interface components {
         /**
          * @description What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
          *     or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+         *     Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
+         *     program starts on the first active stage meaning `candidate`.
          */
         SetUpPartnerRequest: {
-            /** @enum {string} */
-            partner_role: "hosting" | "consulting" | "strategic";
-            /** @enum {string} */
-            relationship_stage?: "research" | "identified" | "contacted" | "in_conversation" | "fit_confirmed" | "agreement_pending" | "active" | "active_referring" | "dormant" | "no_fit";
+            partner_kinds?: components["schemas"]["PartnerKind"][];
+            /**
+             * @deprecated
+             * @description Deprecated: send `partner_kinds`.
+             * @enum {string}
+             */
+            partner_role?: "hosting" | "consulting" | "strategic";
+            /** @description An active key from `/partner-stages`. */
+            relationship_stage?: string;
             next_step?: string;
             /** Format: date */
             next_step_due_at?: string;
+        };
+        /**
+         * @description What a partner does with us. Implementation and development work is never a partner kind.
+         * @enum {string}
+         */
+        PartnerKind: "hosting" | "consulting" | "strategic" | "referral";
+        /**
+         * @description The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+         *     stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+         *     `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+         *     active and went quiet. `ended`: the partnership is over or never fit.
+         * @enum {string}
+         */
+        PartnerStageMeaning: "candidate" | "signed" | "ready" | "active" | "dormant" | "ended";
+        /** @description One stage of the installation's partner ladder. `key` is the value stored on `partner.relationship_stage`; `label` is what a user sees. */
+        PartnerStage: {
+            /** Format: uuid */
+            id: string;
+            /** @description Stable key, the stored value. Never changes after creation. */
+            key: string;
+            label: string;
+            label_key?: components["schemas"]["ShippedLabelKey"];
+            meaning: components["schemas"]["PartnerStageMeaning"];
+            /** @description Ladder position, lowest first. */
+            sort_order: number;
+            /** @description A retired stage leaves the picker and is refused for a new move; partners on it keep it. */
+            active: boolean;
+            /** @description Built-in. Can be renamed, reordered and retired, never deleted. */
+            readonly system: boolean;
+            /** @description Live partners on this stage whose company the caller may read. Absent for a caller without both the `partner` and the `company` read grant. While any partner carries the key, archived ones included, the meaning cannot change and the stage cannot be deleted (409). */
+            readonly partner_count?: number;
+            version: components["schemas"]["RowVersion"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        PartnerStageListResponse: {
+            data: components["schemas"]["PartnerStage"][];
+        };
+        CreatePartnerStageRequest: {
+            label: string;
+            /** @description Optional; derived from the label when absent. Lowercase letters, digits and underscores, starting with a letter. Must be unique. */
+            key?: string;
+            meaning: components["schemas"]["PartnerStageMeaning"];
+            sort_order?: number;
+        };
+        UpdatePartnerStageRequest: {
+            label?: string;
+            meaning?: components["schemas"]["PartnerStageMeaning"];
+            sort_order?: number;
+            active?: boolean;
         };
         ConsentPurpose: {
             /** Format: uuid */
@@ -46218,6 +46720,61 @@ export interface components {
              */
             owner_id: string;
             version: components["schemas"]["RowVersion"];
+        };
+        OwnershipRequestInput: {
+            /** @description A line for the owner, shown on the card. */
+            note?: string;
+        };
+        OwnershipOfferInput: {
+            /**
+             * Format: uuid
+             * @description The colleague the record is offered to.
+             */
+            to_id: string;
+            /** @description A line for the colleague, shown on the card. */
+            note?: string;
+        };
+        OwnershipOfferCandidates: {
+            data: components["schemas"]["OwnershipOfferCandidate"][];
+        };
+        OwnershipOfferCandidate: {
+            /** Format: uuid */
+            id: string;
+            display_name: string;
+        };
+        OwnershipOffer: {
+            /** Format: uuid */
+            approval_id: string;
+            /** @enum {string} */
+            record_type: "contact" | "company";
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description The colleague the offer is put to.
+             */
+            to_id: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
+        };
+        OwnershipRequest: {
+            /** Format: uuid */
+            approval_id: string;
+            /** @enum {string} */
+            record_type: "contact" | "company";
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: uuid
+             * @description The owner the request is put to.
+             */
+            owner_id: string;
+            /** @enum {string} */
+            status: "pending";
+            /** Format: date-time */
+            expires_at: string;
         };
         /** @description A manual per-record share (ADR-0039) — widens own/team/all base scope for one record. */
         RecordGrant: {
@@ -49170,7 +49727,7 @@ export interface components {
          * @description One stage where the rep converts differently from the team. Entries and conversions are
          *     attributed to the owner at the time of each move. "Converted" is a later move to a won
          *     stage or to a later stage, compared by the stage order as it was configured when the
-         *     week was assembled.
+         *     week was assembled. Moves an import brought in neither enter nor convert a deal.
          */
         TeamWeeklyFunnelDeviation: {
             /** Format: uuid */
@@ -50873,6 +51430,7 @@ export interface components {
              * @description Optional reconnections, outside the work queue, counts and Focus. An open
              *     deal or relationship score does not establish an obligation. A reader may
              *     pin a suggestion into their personal queue or create an explicit task.
+             *     Absent when the request sent `relationships=omit`.
              */
             optional_relationships?: components["schemas"]["WorklistItem"][];
             /** @description More optional contacts exist beyond the existing relationship read bound. */
@@ -56475,7 +57033,7 @@ export interface operations {
                 /** @description Lookup by normalized domain (the employer-inference index). */
                 domain?: string;
                 /** @description Where the account stands with us (DM-VOCAB-2, ADR-0079). */
-                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "customer" | "former_customer" | "disqualified";
+                lifecycle?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
                 /**
@@ -56521,6 +57079,12 @@ export interface operations {
                  *     is archived without `include_archived`, is simply absent from the page.
                  */
                 id?: string[];
+                /** @description Companies whose live partner program holds this kind. Needs the `partner` read grant (403 otherwise). */
+                partner_kind?: components["schemas"]["PartnerKind"];
+                /** @description Companies whose live partner program stands on this `/partner-stages` key. Needs the `partner` read grant (403 otherwise). */
+                partner_stage?: string;
+                /** @description Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise). */
+                partner_stage_meaning?: components["schemas"]["PartnerStageMeaning"];
                 /**
                  * @description Companies that came from this outside system, matched exactly. Send `source_id`
                  *     too to find the one company holding that id there. A company the caller cannot
@@ -58662,7 +59226,17 @@ export interface operations {
                  *     `422 code: sort_field_not_allowed`.
                  */
                 sort?: components["parameters"]["Sort"];
+                /** @description Partners holding this kind, among others. */
+                partner_kind?: components["schemas"]["PartnerKind"];
+                /**
+                 * @deprecated
+                 * @description Deprecated: use `partner_kind`, which this is read as.
+                 */
                 partner_role?: "hosting" | "consulting" | "strategic";
+                /** @description Partners on this stage key from `/partner-stages`, matched exactly. */
+                relationship_stage?: string;
+                /** @description Partners on any stage carrying this meaning, so "all active partners" holds however the stages are named. */
+                stage_meaning?: components["schemas"]["PartnerStageMeaning"];
                 cert_status?: "applied" | "certified" | "suspended";
             };
             header?: never;
@@ -58683,6 +59257,157 @@ export interface operations {
                     };
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listPartnerStages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The partner stage list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerStageListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPartnerStage: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePartnerStageRequest"];
+            };
+        };
+        responses: {
+            /** @description Created partner stage. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerStage"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deletePartnerStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    updatePartnerStage: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePartnerStageRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated partner stage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerStage"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -65990,7 +66715,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Trigger not allowed (e.g. cold-outbound-no-reply does not promote). */
+            /**
+             * @description Trigger not allowed (e.g. cold-outbound-no-reply does not promote). A trigger other
+             *     than `human_qualify` also needs live engagement linked to this lead that shows it: an
+             *     inbound email the lead sent for `inbound_reply`, a held meeting the lead was on for
+             *     `meeting_held`, and a booked or held meeting the lead was on for `meeting_booked`. A cited `evidence.activity_id` that is not such an
+             *     activity answers code `evidence_does_not_show_trigger` naming `evidence.activity_id`.
+             *     With no activity cited, the promotion records the lead's strongest such activity, and
+             *     a lead with none answers the same code naming `trigger`.
+             */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -66241,6 +66974,64 @@ export interface operations {
              *     its email (`duplicate_email`), or a live contact does (`contact_holds_email`, with the
              *     details `createLead` gives).
              */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    acceptPartnerLead: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The accepted lead. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lead"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The lead was already accepted for its partner (`already_accepted`). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -70623,7 +71414,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: string;
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -73637,6 +74428,13 @@ export interface operations {
                  *     rep's work would arrive labelled `"scope": "unassigned"`.
                  */
                 owner?: string;
+                /**
+                 * @description Whether to read the optional reconnections. `omit` skips that read, and the
+                 *     page carries neither `optional_relationships` nor
+                 *     `optional_relationships_more_available`. A reconnection the reader pinned
+                 *     is still read and still reaches the queue. Nothing else on the page changes.
+                 */
+                relationships?: "include" | "omit";
             };
             header?: never;
             path?: never;
@@ -78757,6 +79555,281 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getOwnershipRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    requestOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OwnershipRequestInput"];
+            };
+        };
+        responses: {
+            /** @description The request already open for this record and caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipRequest"];
+                };
+            };
+            /** @description The request is in the owner's inbox. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipRequest"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `transfer_pending`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawOwnershipRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getOwnershipOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's open offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOffer"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    offerOwnershipTransfer: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnershipOfferInput"];
+            };
+        };
+        responses: {
+            /** @description The offer already open for this record and colleague. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOffer"];
+                };
+            };
+            /** @description The offer is in the colleague's inbox. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOffer"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another handover of this record is open (`code`: `transfer_pending`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawOwnershipOffer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The offer is withdrawn. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listOwnershipOfferCandidates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: "contact" | "company";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The colleagues, by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipOfferCandidates"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listRecordGrants: {
         parameters: {
             query?: {
@@ -83616,6 +84689,8 @@ export interface operations {
                 scope_kind?: "workspace" | "team" | "owner";
                 /** @description Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject. */
                 scope_id?: string;
+                /** @description Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why. */
+                contributions?: boolean;
             };
             header?: never;
             path?: never;
@@ -83635,6 +84710,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastStageChances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stage chances. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastStageChances"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getForecastAssurance: {

@@ -27,7 +27,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	scope := forecasting.Scope{Kind: string(frame.Scope.Kind), ID: (*ids.UUID)(frame.Scope.Id)}
-	deals, _, withheld, err := forecastDealsForPipeline(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
+	assembly, err := assembleForecast(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
 	if errors.As(err, new(auth.IndividualPerformanceOffError)) {
 		// The landing alone is withheld; the evaluation's other figures stand.
 		if e.compared != nil {
@@ -38,10 +38,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	readings, err := forecasting.Compute(period, period.LocalDay(frame.EvaluatedAt), deals)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
+	readings, withheld := assembly.Readings, assembly.Limited
 	measure, err := ForecastForwardMeasure(ctx, tx)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -72,6 +69,10 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		qualifiedOpen = &qualifiedMinor
 	}
 	facts, err = forecastOpenFacts(frame, facts, readings, qualifiedOpen)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	facts, err = forecastRangeFacts(frame, facts, readings.Range)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -177,7 +178,35 @@ func forecastAuthoredFacts(frame crmcontracts.ReportingContext, out []reporting.
 const (
 	forecastOpenContext      = "forecast_open"
 	forecastQualifiedContext = "forecast_open_qualified"
+	forecastRangeLowContext  = "forecast_range_low"
+	forecastRangeHighContext = "forecast_range_high"
 )
+
+// forecastRangeFacts adds the two ends of the forecast's range as authored
+// totals beside the landing. The metric and its evidence then state the range
+// GET /forecast states.
+func forecastRangeFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, drawn *forecasting.Range) ([]reporting.Fact, error) {
+	if drawn == nil {
+		return out, nil
+	}
+	for _, end := range []struct {
+		context string
+		amount  int64
+	}{{forecastRangeLowContext, drawn.LowMinor}, {forecastRangeHighContext, drawn.HighMinor}} {
+		if end.amount > reportingExactInteger {
+			return nil, errors.New("forecast exceeds exact reporting range")
+		}
+		value := float64(end.amount)
+		out = append(out, reporting.Fact{
+			Metric: reportingForecastLanding, ContextID: end.context, SourceType: reportingForecastProjection,
+			Money: new(end.amount),
+			Row: crmcontracts.ReportingEvidenceRow{
+				Key: end.context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[end.context]), Value: &value,
+			},
+		})
+	}
+	return out, nil
+}
 
 // forecastQualifiedOpen is the open money the qualified forecast keeps, and
 // false while it is switched off. With enforcement on, every deal read carries

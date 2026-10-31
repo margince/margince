@@ -504,7 +504,7 @@ paths:
           description: Lookup by normalized domain (the employer-inference index).
         - name: lifecycle
           in: query
-          schema: {type: string, enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]}
+          schema: {type: string, enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]}
           description: Where the account stands with us.
         - name: relationship_type
           in: query
@@ -570,6 +570,18 @@ paths:
             A screen that names many companies it did not list itself, such as the deals board,
             reads them in one request instead of one each. An id the caller cannot see, or that
             is archived without `include_archived`, is simply absent from the page.
+        - name: partner_kind
+          in: query
+          schema: {$ref: '#/components/schemas/PartnerKind'}
+          description: Companies whose live partner program holds this kind. Needs the `partner` read grant (403 otherwise).
+        - name: partner_stage
+          in: query
+          schema: {type: string}
+          description: Companies whose live partner program stands on this `/partner-stages` key. Needs the `partner` read grant (403 otherwise).
+        - name: partner_stage_meaning
+          in: query
+          schema: {$ref: '#/components/schemas/PartnerStageMeaning'}
+          description: Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
         - name: source_system
           in: query
           schema: {type: string, maxLength: 128}
@@ -1318,14 +1330,28 @@ paths:
     get:
       tags: [Partners]
       operationId: listPartners
-      summary: List partner companies (companies with a partner row), filterable by role/cert status.
+      summary: List partner companies (companies with a partner row), filterable by kind, stage and cert status.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
+        - name: partner_kind
+          in: query
+          schema: {$ref: '#/components/schemas/PartnerKind'}
+          description: Partners holding this kind, among others.
         - name: partner_role
           in: query
+          deprecated: true
           schema: {type: string, enum: [hosting, consulting, strategic]}
+          description: 'Deprecated: use `partner_kind`, which this is read as.'
+        - name: relationship_stage
+          in: query
+          schema: {type: string}
+          description: Partners on this stage key from `/partner-stages`, matched exactly.
+        - name: stage_meaning
+          in: query
+          schema: {$ref: '#/components/schemas/PartnerStageMeaning'}
+          description: Partners on any stage carrying this meaning, so "all active partners" holds however the stages are named.
         - name: cert_status
           in: query
           schema: {type: string, enum: [applied, certified, suspended]}
@@ -1341,7 +1367,23 @@ paths:
                   data: {type: array, items: {$ref: '#/components/schemas/Partner'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: List partner companies (companies with a partner row), filterable by role/cert status.
+      description: List partner companies (companies with a partner row), filterable by kind, stage and cert status.
+  /partner-stages:
+    get:
+      tags: [Partners]
+      operationId: listPartnerStages
+      summary: List the partner stages, active and retired, in ladder order.
+      description: |-
+        The installation's partner ladder. A retired stage stays listed so the partners on it
+        still render their label.
+      responses:
+        '200':
+          description: The partner stage list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PartnerStageListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /commissions:
     get:
       tags: [Commissions]
@@ -3872,7 +3914,14 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422':
-          description: Trigger not allowed (e.g. cold-outbound-no-reply does not promote).
+          description: |-
+            Trigger not allowed (e.g. cold-outbound-no-reply does not promote). A trigger other
+            than `human_qualify` also needs live engagement linked to this lead that shows it: an
+            inbound email the lead sent for `inbound_reply`, a held meeting the lead was on for
+            `meeting_held`, and a booked or held meeting the lead was on for `meeting_booked`. A cited `evidence.activity_id` that is not such an
+            activity answers code `evidence_does_not_show_trigger` naming `evidence.activity_id`.
+            With no activity cited, the promotion records the lead's strongest such activity, and
+            a lead with none answers the same code naming `trigger`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -5675,7 +5724,21 @@ paths:
       - name: report
         in: path
         required: true
-        schema: {type: string}
+        schema:
+          type: string
+          enum:
+            - activities-by-kind
+            - deals-by-stage
+            - forecast
+            - leads-by-status
+            - meeting-conversion
+            - open-deals-per-company
+            - pipeline-current
+            - project-commitments
+            - projects-by-phase
+            - projects-gone-quiet
+            - stage-age
+            - win-loss
         description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
         examples:
           prebuilt: {value: open-deals-per-company}
@@ -5969,8 +6032,10 @@ paths:
       tags: [Search]
       operationId: resolveEntities
       security: [{bearerAuth: []}]
-      summary: Whether the contacts and companies in a payload are already records here.
+      summary: Find out whether a contact or company is already a record here, before creating one.
       description: |-
+        Ask this before creating a contact or company from a name, email, phone or domain,
+        such as one from a conference list or a signature.
         The answer the `resolve_entities` agent tool gives, run by the same tool on both
         doors. Each candidate is matched by its keys (email, phone, domain) and its name;
         only a match on a unique key can be acted on alone. A POST because a batch of
@@ -7679,6 +7744,11 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+        - name: contributions
+          in: query
+          schema: {type: boolean, default: false}
+          description: >-
+            Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why.
       responses:
         '200':
           description: The readings for that period.
@@ -9358,7 +9428,7 @@ components:
         merge_mode:
           type: string
           enum: [ordinary, delegated, pair, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.'
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -10524,6 +10594,16 @@ components:
         strength: {allOf: [{$ref: '#/components/schemas/RelationshipStrength'}], readOnly: true, description: 'Deterministic relationship-strength. Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who created the contact, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -10775,6 +10855,8 @@ components:
             *which companies are we selling to* exclude it unless `include_anchor` is set, and it
             cannot be archived or merged. A caller that offers company actions should tell it apart.
         legal_name: {type: [string, 'null']}
+        phone: {type: [string, 'null'], description: "The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description:
           type: [string, 'null']
           maxLength: 500
@@ -10825,9 +10907,9 @@ components:
           items: {$ref: '#/components/schemas/CompanyDomain'}
         lifecycle:
           type: string
-          enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
+          enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
           description: >-
-            Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
+            Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
         relationship_types:
           type: array
           items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
@@ -10860,6 +10942,16 @@ components:
             How many open, live deals belong to this account, counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who created the company, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -10898,6 +10990,8 @@ components:
       properties:
         display_name: {type: string}
         legal_name: {type: [string, 'null']}
+        phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 500, description: One human-written line saying what the company does.}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -10922,6 +11016,8 @@ components:
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         display_name: {type: string}
         legal_name: {type: [string, 'null']}
+        phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
+        email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
         description: {type: [string, 'null'], maxLength: 500, description: 'One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
@@ -10947,8 +11043,9 @@ components:
             the seat named by `owner_id` alone. Absent = untouched.
         lifecycle:
           type: string
-          enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
-          description: Where the account stands with us. Absent = untouched.
+          enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
+          description: >-
+            Where the account stands with us. Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
         relationship_types:
           type: array
           description: >-
@@ -11320,7 +11417,7 @@ components:
           properties:
             lifecycle:
               type: string
-              enum: [unknown, target, prospect, opportunity, customer, former_customer, disqualified]
+              enum: [unknown, target, prospect, opportunity, onboarding, live, customer, former_customer, disqualified]
             relationship_types:
               type: array
               items: {type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other]}
@@ -12142,7 +12239,8 @@ components:
             Who created the contact, from its earliest create audit row: for an agent, the
             colleague it worked for and the tool it was typed through, each when the row
             records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.
@@ -14605,6 +14703,16 @@ components:
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who created the deal, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -16250,7 +16358,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         web_form:
           allOf: [{$ref: '#/components/schemas/WebFormSubmission'}]
           readOnly: true
@@ -17261,6 +17370,9 @@ components:
           description: >-
             True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
         tags: {type: array, items: {$ref: '#/components/schemas/RowTag'}}
+        partner_company_id: {type: [string, 'null'], format: uuid, description: 'The partner company that referred this lead. Null when none did, or when the caller cannot read that company.'}
+        partner_accepted_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'When someone accepted the lead for its partner. The first accepted lead activates the partner.'}
+        partner_accepted_by: {type: [string, 'null'], readOnly: true, description: 'Who accepted the lead for its partner.'}
         id: {type: string, format: uuid}
         full_name: {type: [string, 'null']}
         email: {type: [string, 'null'], format: email, description: Lowercased; lead-internal dedupe key.}
@@ -17406,6 +17518,7 @@ components:
         project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.'}
         status: {type: string, enum: [new, contacted, engaged], description: 'A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.'}
         source: {type: string, minLength: 1, deprecated: true, description: 'Deprecated and read-only. How the row reached Margince, which Margince writes. Sending the stored value is accepted; any other value is 422 on `source`. Set `origin` to say where the lead came from.'}
+        partner_company_id: {type: [string, 'null'], format: uuid, description: 'The partner that referred the lead: a live partner company the caller can read (422 `not_a_partner` otherwise). Null clears it. Refused with 409 `partner_already_accepted` once the lead was accepted for its partner.'}
         origin: {type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins`, or the key the lead already carries (a retired key is 422 only for a new value). Changing it recomputes the score. Null clears it, and the lead scores neutral.'}
         origin_detail: {type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`. Null clears it.'}
         score: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Manual human score override. Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.'}
@@ -17458,6 +17571,8 @@ components:
           description: |-
             The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
             rejected with 422 — promotion is engagement, not import or an outbound touch.
+            Every trigger but human_qualify needs engagement on the lead that
+            `qualification_evidence` would offer; with none, the promotion is refused with 422.
         evidence:
           type: object
           description: Which inbound email/meeting (or human) triggered promotion; recorded in audit.
@@ -17496,9 +17611,13 @@ components:
       readOnly: true
       description: |-
         The strongest genuine-engagement signal captured against this lead, derived from its
-        linked activities at read time: a held meeting over a booked one over an inbound reply.
-        What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-        lead has no such signal yet (a human may still qualify with `human_qualify`).
+        linked activities at read time: a held meeting over a booked one over an inbound reply,
+        by mail or channel message. A meeting with no recorded status counts as booked, and a
+        meeting the lead declined counts as nothing. Only engagement inside the waiting
+        horizon counts (the one that keeps automatic work current, at most 30 days), so older
+        engagement is left out. What the qualify dialog shows as the reason and sends back as
+        `trigger`; null when the lead has no such signal (a human may still qualify with
+        `human_qualify`).
       required: [trigger]
       properties:
         trigger:
@@ -18987,8 +19106,9 @@ components:
             instant. Every member is in exactly one outcome, so the counts add
             up to `observations`. `unresolved` members have not reached an
             outcome yet and are never counted as lost; `history_partial`
-            members have a move recorded before Margince kept the stage order,
-            so the direction of that move is unknown.
+            members left by a move an import brought in, which does not show
+            how the team sells, or by a move recorded before Margince kept the
+            stage order, so its direction is unknown.
           items:
             $ref: '#/components/schemas/ReportingCohortCount'
         entries:
@@ -19128,6 +19248,20 @@ components:
           $ref: '#/components/schemas/ReportingEvidenceRef'
         target_comparison:
           $ref: '#/components/schemas/ReportingTargetComparison'
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
     ReportingTargetComparison:
       type: object
       additionalProperties: false
@@ -20104,6 +20238,102 @@ components:
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
         qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
+        self_correcting:
+          type: boolean
+          description: >-
+            Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed.
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
+        contributions_limited:
+          type: boolean
+          description: >-
+            True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals.
+        contributions:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastContribution'}
+          description: >-
+            Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
+      additionalProperties: false
+    ForecastContribution:
+      type: object
+      description: >-
+        One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
+      required: [deal_id, deal_name, chance_in_use, applied_probability, weighted_minor, in_won, in_open, in_evidence, in_best_case, signals]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        owner_id: {type: string, format: uuid}
+        stage_id: {type: string, format: uuid}
+        category: {type: string}
+        base_minor:
+          type: integer
+          format: int64
+          description: The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+        exclusion_reason:
+          type: string
+          enum: [unpriced, fx_missing]
+          description: Why a deal in the reading contributes no money.
+        weighted_minor: {type: integer, format: int64}
+        in_won: {type: boolean}
+        in_open: {type: boolean}
+        in_evidence: {type: boolean}
+        in_best_case: {type: boolean}
+        typed_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The chance typed on the deal's stage, in percent.
+        chance_in_use:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: >-
+            The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
+        evidence_n:
+          type: integer
+          minimum: 0
+          description: >-
+            How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off.
+        signals:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastRiskSignal'}
+          description: >-
+            Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off.
+        effect:
+          type: number
+          format: double
+          description: >-
+            The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+        applied_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The chance in use with `effect` applied to its odds, in percent.
+      additionalProperties: false
+    ForecastRiskSignal:
+      type: object
+      description: >-
+        One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
+      required: [code]
+      properties:
+        code: {type: string, enum: [close_pushed, no_next_step, quiet, stuck]}
+        days: {type: integer, minimum: 0}
+        count: {type: integer, minimum: 0}
+        stage_id: {type: string, format: uuid}
+        close_passed: {type: boolean}
+        closes_in_days: {type: integer, minimum: 0, maximum: 7}
       additionalProperties: false
     ForecastQualifiedReadings:
       type: object
@@ -20387,7 +20617,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
+          description: >-
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false
@@ -20415,7 +20647,7 @@ components:
             Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, qualification]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, qualification]
       additionalProperties: false
     ForecastCall:
       type: object
@@ -21416,7 +21648,7 @@ components:
     ApprovalPreview:
       type: object
       description: >-
-        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
       required: [version, state, changes, reviewer_reason]
       properties:
         import_rows:
@@ -21624,11 +21856,31 @@ components:
           items: {type: string}
           description: >-
             The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
-        partner_role: {type: string, enum: [hosting, consulting, strategic], description: Functional role; implementation + dev are Margince's turf.}
+        partner_kinds:
+          type: array
+          items: {$ref: '#/components/schemas/PartnerKind'}
+          description: What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
+        partner_role:
+          type: string
+          enum: [hosting, consulting, strategic]
+          deprecated: true
+          description: 'Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.'
         cert_status: {type: string, enum: [applied, certified, suspended]}
         margin_tier: {type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], description: The partner's margin tier; the allowed values are in the table's CHECK constraint.}
         gate_metrics: {type: [object, 'null'], additionalProperties: true, description: 'Program gate metrics (certified seats, CSAT, ...).'}
-        relationship_stage: {type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit], default: research}
+        relationship_stage: {type: string, description: 'The key of the stage from `/partner-stages` the partner stands on.'}
+        stage_label: {type: string, readOnly: true, description: 'The label `/partner-stages` gives `relationship_stage`.'}
+        stage_label_key: {$ref: '#/components/schemas/ShippedLabelKey'}
+        stage_meaning: {$ref: '#/components/schemas/PartnerStageMeaning'}
+        activated_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.'}
+        activation_basis:
+          type: [string, 'null']
+          enum: [null, lead_accepted, customer_won, recorded_before_ladder]
+          readOnly: true
+          description: 'What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.'
+        activated_by: {type: [string, 'null'], readOnly: true, description: 'Who accepted the lead or recorded the win that activated the partner.'}
+        activation_lead_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted lead that activated the partner.'}
+        activation_deal_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The won deal that activated the partner.'}
         partner_fit_score: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.'}
         partner_fit_score_computed: {type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.'}
         partner_fit_override_reason: {type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.'}
@@ -21646,13 +21898,52 @@ components:
       description: |-
         What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
         or `served_segments`: the tier is a human's choice, and the others are set after set-up.
-      required: [partner_role]
+        Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
+        program starts on the first active stage meaning `candidate`.
       additionalProperties: false
       properties:
-        partner_role: {type: string, enum: [hosting, consulting, strategic]}
-        relationship_stage: {type: string, enum: [research, identified, contacted, in_conversation, fit_confirmed, agreement_pending, active, active_referring, dormant, no_fit]}
+        partner_kinds:
+          type: array
+          minItems: 1
+          items: {$ref: '#/components/schemas/PartnerKind'}
+        partner_role: {type: string, enum: [hosting, consulting, strategic], deprecated: true, description: 'Deprecated: send `partner_kinds`.'}
+        relationship_stage: {type: string, description: 'An active key from `/partner-stages`.'}
         next_step: {type: string}
         next_step_due_at: {type: string, format: date}
+    PartnerKind:
+      type: string
+      enum: [hosting, consulting, strategic, referral]
+      description: What a partner does with us. Implementation and development work is never a partner kind.
+    PartnerStageMeaning:
+      type: string
+      enum: [candidate, signed, ready, active, dormant, ended]
+      description: |-
+        The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+        stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+        `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+        active and went quiet. `ended`: the partnership is over or never fit.
+    PartnerStage:
+      type: object
+      description: One stage of the installation's partner ladder. `key` is the value stored on `partner.relationship_stage`; `label` is what a user sees.
+      required: [id, key, label, meaning, sort_order, active, system, version, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        key: {type: string, description: 'Stable key, the stored value. Never changes after creation.'}
+        label: {type: string}
+        label_key: {$ref: '#/components/schemas/ShippedLabelKey'}
+        meaning: {$ref: '#/components/schemas/PartnerStageMeaning'}
+        sort_order: {type: integer, description: 'Ladder position, lowest first.'}
+        active: {type: boolean, description: 'A retired stage leaves the picker and is refused for a new move; partners on it keep it.'}
+        system: {type: boolean, readOnly: true, description: 'Built-in. Can be renamed, reordered and retired, never deleted.'}
+        partner_count: {type: integer, readOnly: true, description: 'Live partners on this stage whose company the caller may read. Absent for a caller without both the `partner` and the `company` read grant. While any partner carries the key, archived ones included, the meaning cannot change and the stage cannot be deleted (409).'}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    PartnerStageListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/PartnerStage'}}
     ConsentPurpose:
       type: object
       required: [id, key, label, created_at]

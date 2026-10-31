@@ -210,6 +210,7 @@ func archiveDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reaso
 type contactSide struct {
 	name           string
 	emails         []string
+	linkedIn       string
 	companyID      *ids.CompanyID
 	companyDomains []string
 	mailDomains    []string
@@ -228,7 +229,8 @@ func contactPairStillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemai
 	// The review lanes' own pair tests. A pair stays while the evidence it was
 	// filed on still holds, and retires once an edit removes it.
 	_, _, variant := addressVariantPair(left.emails, right.emails)
-	filed := score >= dedupeReviewThreshold || contactNamesCollide(left.name, right.name) || variant
+	filed := score >= dedupeReviewThreshold || contactNamesCollide(left.name, right.name) || variant ||
+		linkedInProfilesMatch(left.linkedIn, right.linkedIn)
 	if filed && pair.phoneCollision {
 		return true, score, refreshContactPhoneEvidence(ctx, tx, pair, left, right, score)
 	}
@@ -257,10 +259,12 @@ func readContactSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (contactSide, 
 	err := tx.QueryRow(ctx, `
 		SELECT p.full_name,
 		       coalesce((SELECT array_agg(pe.email) FROM contact_email pe
-		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL), '{}')
+		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL), '{}'),
+		       coalesce((SELECT s.handle FROM contact_social s
+		                  WHERE s.contact_id = p.id AND s.platform = '`+SocialLinkedIn+`'), '')
 		  FROM contact p
 		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).
-		Scan(&side.name, &side.emails)
+		Scan(&side.name, &side.emails, &side.linkedIn)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return contactSide{}, false, nil
 	}

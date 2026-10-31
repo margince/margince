@@ -25,6 +25,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.relationships.optional": "Optionale Kontaktpflege",
   "worklist.relationships.optionalDetail":
     "Stille allein ist keine Aufgabe. Hefte einen Kontakt für deinen Tag an oder erstelle eine Aufgabe im Datensatz.",
+  "worklist.relationships.show": "Anzeigen",
+  "worklist.relationships.loading":
+    "Suche nach Kontakten, die still geworden sind…",
+  "worklist.relationships.none": "Gerade ist niemand still geworden.",
+  "worklist.relationships.failed":
+    "Optionale Kontaktpflege konnte nicht gelesen werden. Versuche es später erneut.",
   "worklist.relationships.more":
     "Weitere optionale Kontakte liegen außerhalb dieser Ansicht.",
   "webhooks.event.signal.updated.label": "Hinweis neu zugeordnet",
@@ -852,6 +858,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":
     "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
+  "approval.preview.needsWiderSight":
+    "Diese Änderung betrifft Datensätze, die du nicht öffnen kannst. Entscheiden muss jemand, der sie sehen kann.",
   "approval.preview.change": "{before} → {after}",
   "approval.import.row": "{kind}, Zeile {line} ({key})",
   "approval.import.create": "Neuen Datensatz erstellen",
@@ -935,6 +943,63 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
+  "reporting.movement.record_changed":
+    "Chance durch erfasste Abschlüsse verschoben",
+  "installationSettings.selfCorrectingTitle": "Prognose",
+  "installationSettings.selfCorrecting": "Prognose selbst korrigieren lassen",
+  "installationSettings.selfCorrectingHint":
+    "Jede Phase beginnt mit der eingetragenen Chance. Sobald aus einer Phase erfasste Deals abgeschlossen sind, rückt die Prognose die Chance dieser Phase an deren Ergebnis heran; die eingetragene Chance zählt dabei wie 20 Deals. Importierte Phasenwechsel zählen nie.",
+  "installationSettings.selfCorrectingOn":
+    "Die Prognose gewichtet jeden offenen Deal mit der genutzten Chance seiner Phase und mit einem Risikosignal, sobald eingefrorene Prognosen dessen Wirkung zeigen.",
+  "installationSettings.selfCorrectingOff":
+    "Die Prognose gewichtet jeden offenen Deal wie bisher mit der in seiner Phase eingetragenen Chance.",
+  "stage.chance.noEvidence":
+    "Eingetragen {typed} · Noch kein erfasster Deal von hier abgeschlossen · Prognose nutzt {used}",
+  "stage.chance.off":
+    "Prognose nutzt die eingetragenen {typed}: Selbstkorrektur ist aus",
+  "forecast.deals.title": "Deals hinter dem gewichteten Wert",
+  "forecast.deals.open": "Jeden offenen Deal und seine Chance zeigen",
+  "forecast.deals.introOn":
+    "Jeder Deal zählt mit der genutzten Chance seiner Phase, verschoben durch das stärkste Risikosignal, sobald abgeschlossene Prognosen dessen Wirkung zeigen.",
+  "forecast.deals.introOff":
+    "Jeder Deal zählt mit der in seiner Phase eingetragenen Chance. Die Selbstkorrektur ist aus.",
+  "forecast.deals.none":
+    "Kein offener Deal soll in diesem Zeitraum abschließen.",
+  "forecast.deals.typed": "Eingetragen {percent}",
+  "forecast.deals.uses": "nutzt {percent}",
+  "stage.chance.withEvidence_other":
+    "Eingetragen {typed} · {count} erfasste Deals von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "stage.chance.withEvidence_one":
+    "Eingetragen {typed} · {count} erfasster Deal von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "forecast.deals.recorded_other": "{count} erfasste Ergebnisse",
+  "forecast.deals.recorded_one": "{count} erfasstes Ergebnis",
+  "forecast.deals.afterRisk": "{percent} nach Risiko",
+  "forecast.deals.colDeal": "Deal",
+  "forecast.deals.colSignals": "Risikosignale",
+  "forecast.deals.colAmount": "Betrag",
+  "forecast.deals.colWeighted": "Gewichtet",
+  "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
+  "forecast.signal.no_next_step": "Kein nächster Schritt geplant",
+  "forecast.signal.quiet": "Kunde schweigt",
+  "forecast.signal.stuck": "Lange in der Phase",
+  "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
+  "forecast.deals.limited":
+    "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
+  "forecast.signal.closesNoMeeting_other":
+    "Schließt in {count} Tagen, kein Termin geplant",
+  "forecast.signal.closesNoMeeting_one":
+    "Schließt in {count} Tag, kein Termin geplant",
+  "forecast.signal.closesTomorrow": "Schließt morgen, kein Termin geplant",
+  "forecast.signal.closesToday": "Schließt heute, kein Termin geplant",
+  "forecast.signal.noReply_other": "Seit {count} Tagen keine Antwort",
+  "forecast.signal.noReply_one": "Seit {count} Tag keine Antwort",
+  "forecast.signal.closeMoved_other": "Abschlussdatum {count}-mal verschoben",
+  "forecast.signal.closeMoved_one": "Abschlussdatum {count}-mal verschoben",
+  "forecast.signal.closePassed": "Abschlussdatum verstrichen",
+  "forecast.signal.stuckDays_other": "Seit {count} Tagen in dieser Phase",
+  "forecast.signal.stuckDays_one": "Seit {count} Tag in dieser Phase",
+  "forecast.signal.stuckIn_other": "Seit {count} Tagen in {stage}",
+  "forecast.signal.stuckIn_one": "Seit {count} Tag in {stage}",
   "reporting.movement.won": "Gewonnen",
   "reporting.movement.lost": "Verloren",
   "reporting.movement.reopened_or_archived": "Wieder geöffnet oder archiviert",
@@ -1375,7 +1440,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.regressed": "Zurückgegangen",
   "reporting.cohortOutcome.left_pipeline": "Andere Pipeline",
   "reporting.cohortOutcome.unresolved": "Noch offen",
-  "reporting.cohortOutcome.history_partial": "Vor oder zurück unbekannt",
+  "reporting.cohortOutcome.history_partial":
+    "Nächster Wechsel importiert oder unbekannt",
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
@@ -1384,7 +1450,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Noch offen heißt: beim Abruf dieser Zahlen gab es noch kein Ergebnis. Diese zählen nicht als verloren und fließen nicht in die Quote ein.",
   "reporting.cohortPartialNote":
-    "Vor oder zurück unbekannt heißt: Der Deal hat die Phase verlassen, bevor Margince bei jedem Wechsel die Reihenfolge der Phasen gespeichert hat. Diese fließen nicht in die Quote ein.",
+    "Nächster Wechsel importiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht hat, oder durch einen Wechsel, der gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat. Diese fließen nicht in die Quote ein.",
   "reporting.cohortStageDaysNote":
     "Die Tage neben einem Ergebnis sind die mittlere Zeit, die ein Deal davor in der Phase war. Die Tage neben Noch offen sind die mittlere Zeit in der Phase bis jetzt.",
   "reporting.cohortLeadDaysNote":
@@ -2060,6 +2126,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Öffentliche Datensatzvorschau",
   "systemJob.agent_resume": "Fortsetzung von Agentenläufen",
   "systemJob.agent_scheduler": "Geplante Agentenläufe",
+  "systemJob.forecast_chances": "Prognose-Phasenquoten",
   "systemJob.assurance_freshness": "Aktualität der Prognoseprüfung",
   "systemJob.forecast_call_baseline": "Ausgangsstand einer Prognoseabgabe",
   "systemJob.ai_activity": "Erfassung der KI-Aktivität",
@@ -2091,6 +2158,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
   "systemJob.commission_accrual": "Provisionsabgrenzung",
+  "systemJob.partner_activation": "Partneraktivierung",
   "systemJob.commitment_settle": "Abschluss von Zusagen",
   "systemJob.comms_send": "Nachrichtenversand",
   "systemJob.connector_app_read": "Lesen der Connector-Einstellungen",
@@ -2710,7 +2778,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.archivedReadOnly":
     "Dieses Unternehmen ist archiviert und lässt keine Änderungen zu.",
   "record.notYoursToChange":
-    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
   "record.logActivityRefused":
@@ -2872,8 +2940,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.edit": "Partner bearbeiten",
   "partner.none": "Noch kein Partner",
   "partner.company": "Unternehmen",
-  "partner.role": "Partnerrolle",
-  "partner.roleAll": "Alle Rollen",
   "partner.certStatus": "Zertifizierungsstatus",
   "partner.certStatusAll": "Alle Status",
   "partner.marginTier": "Margenstaffel",
@@ -2889,25 +2955,73 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.servedSegments": "Betreute Segmente",
   "partner.servedSegmentsHint":
     "An wen der Partner verkauft, zum Beispiel mittelständische Hersteller. Mehrere durch Kommas trennen.",
-  "partner.role.hosting": "Hosting",
-  "partner.role.consulting": "Beratung",
-  "partner.role.strategic": "Strategisch",
+  "partner.kind.hosting": "Hosting",
+  "partner.kind.consulting": "Beratung",
+  "partner.kind.strategic": "Strategisch",
+  "partnerStages.builtin.contract_signed": "Vertrag unterschrieben",
+  "partnerStages.builtin.ready": "Bereit",
+  "partnerStages.builtin.activated": "Aktiviert",
+  "partner.kind.referral": "Empfehlung",
+  "partner.kinds": "Partnerarten",
+  "partner.kindsAll": "Alle Arten",
+  "partner.stageAll": "Alle Phasen",
+  "partner.stageMeaning": "Bedeutung der Phase",
+  "partner.stageMeaningAll": "Alle Bedeutungen",
+  "partner.activated": "Aktiviert am {date}",
+  "lead.partner": "Empfohlen von Partner",
+  "lead.partnerNone": "Kein Partner",
+  "lead.partnerAccept": "Für den Partner annehmen",
+  "lead.partnerAccepted": "Für den Partner angenommen am {date}",
+  "lead.partnerAcceptedKept":
+    "Ein für seinen Partner angenommener Lead behält diesen Partner.",
+  "partner.activatedBefore": "Schon aktiv, bevor es die Phasenliste gab",
+  "partner.activatedThroughLead": "durch diesen Lead",
+  "partner.activatedThroughDeal": "durch diesen Deal",
+  "partnerStages.title": "Partnerphasen",
+  "partnerStages.sub":
+    "Die Phasen, die ein Partnerprogramm der Reihe nach durchläuft. Jede Phase hat eine Bedeutung, und Filter und Regeln lesen die Bedeutung, nicht den Namen.",
+  "partnerStages.loading": "Phasen werden geladen…",
+  "partnerStages.addOpen": "Neue Phase",
+  "partnerStages.addTitle": "Neue Partnerphase",
+  "partnerStages.addConfirm": "Phase hinzufügen",
+  "partnerStages.renameTitle": "Phase umbenennen",
+  "partnerStages.colStage": "Phase",
+  "partnerStages.colMeaning": "Bedeutung",
+  "partnerStages.colPartners": "Partner",
+  "partnerStages.activeFor": "{label} kann für einen Partner gewählt werden",
+  "partnerStages.meaningFor": "Bedeutung von {label}",
+  "partnerStages.duplicate":
+    "Eine Phase mit diesem Namen oder Schlüssel gibt es schon. Wähle einen anderen Namen.",
+  "partnerStages.moveUp": "Nach oben",
+  "partnerStages.moveDown": "Nach unten",
+  "partnerStages.removeTitle": "Diese Phase entfernen?",
+  "partnerStages.removeBody":
+    "„{label}“ wird von keinem Partner genutzt und aus der Liste entfernt.",
+  "partnerStages.meaning.candidate": "Kandidat",
+  "partnerStages.meaning.signed": "Unterschrieben",
+  "partnerStages.meaning.ready": "Bereit",
+  "partnerStages.meaning.active": "Aktiv",
+  "partnerStages.meaning.dormant": "Ruhend",
+  "partnerStages.meaning.ended": "Beendet",
+  "settings.tab.partners": "Partner",
+  "settings.page.partners.sub":
+    "Die Phasen, die ein Partnerprogramm durchläuft, und was jede bedeutet.",
   "partner.cert.applied": "Beantragt",
   "partner.cert.certified": "Zertifiziert",
   "partner.cert.suspended": "Ausgesetzt",
   "partner.marginTier.tier1": "Intro (15 %)",
   "partner.marginTier.tier2": "Aktive Zusammenarbeit (20 %)",
   "partner.marginTier.tier3": "Abschluss durch Partner (25 %)",
-  "partner.stage.research": "Recherche",
-  "partner.stage.identified": "Identifiziert",
-  "partner.stage.contacted": "Kontaktiert",
-  "partner.stage.inConversation": "Im Gespräch",
-  "partner.stage.fitConfirmed": "Passung bestätigt",
-  "partner.stage.agreementPending": "Vertrag ausstehend",
-  "partner.stage.active": "Aktiv",
-  "partner.stage.activeReferring": "Aktiv, empfiehlt weiter",
-  "partner.stage.dormant": "Ruhend",
-  "partner.stage.noFit": "Keine Passung",
+  "partnerStages.builtin.research": "Recherche",
+  "partnerStages.builtin.identified": "Identifiziert",
+  "partnerStages.builtin.contacted": "Kontaktiert",
+  "partnerStages.builtin.in_conversation": "Im Gespräch",
+  "partnerStages.builtin.fit_confirmed": "Passung bestätigt",
+  "partnerStages.builtin.agreement_pending": "Vertrag ausstehend",
+  "partnerStages.builtin.active": "Aktiv",
+  "partnerStages.builtin.active_referring": "Aktiv, empfiehlt weiter",
+  "partnerStages.builtin.dormant": "Ruhend",
+  "partnerStages.builtin.no_fit": "Keine Passung",
 
   "rel.add": "Beziehung hinzufügen",
   "rel.seatOnDeal": "Zu einem Deal hinzufügen",
@@ -3253,6 +3367,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.target": "Zielunternehmen",
   "company.lifecycle.prospect": "Interessent",
   "company.lifecycle.opportunity": "Chance",
+  "company.lifecycle.onboarding": "Onboarding",
+  "company.lifecycle.live": "Live",
+  "company.lifecycle.live.help":
+    "Live heißt: Der vereinbarte erste Umfang ist im Einsatz. Das setzt nur ein Mensch, nie ein Assistent oder eine Automatisierung.",
   "company.lifecycle.customer": "Kunde",
   "company.lifecycle.former_customer": "Ehemaliger Kunde",
   "company.lifecycle.disqualified": "Disqualifiziert",
@@ -3993,6 +4111,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "LinkedIn-Treffer",
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
+  "approval.kind.ownership_transfer": "Datensatz übergeben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
@@ -6622,6 +6741,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Lege zuerst ein verantwortliches Teammitglied fest.",
   "recordAccess.option.workspace": "Alle Nutzenden im Unternehmen",
   "recordAccess.manage": "Zugriff verwalten",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "{owner} um Übergabe bitten",
+  "handover.requested":
+    "Du hast {owner} um die Übergabe gebeten. Die Anfrage bleibt bis {date} offen.",
+  "handover.withdraw": "Anfrage zurückziehen",
+  "handover.sent": "Anfrage an {owner} gesendet",
+  "handover.withdrawn": "Anfrage zurückgezogen",
+  // The owner offering a record to a colleague, from the access panel.
+  "handover.offer": "Übergeben an…",
+  "handover.offerTo": "Übergeben an",
+  "handover.offerPick": "Teammitglied wählen",
+  "handover.offerNote": "Notiz (optional)",
+  "handover.offerSend": "Angebot senden",
+  "handover.offerCancel": "Abbrechen",
+  "handover.offerSent": "{name} angeboten",
+  "handover.offered": "{name} angeboten. Das Angebot bleibt bis {date} offen.",
+  "handover.withdrawOffer": "Angebot zurückziehen",
+  "handover.offerWithdrawn": "Angebot zurückgezogen",
   "whoCanSee.title": "Wer diesen Datensatz sehen kann",
   "whoCanSee.group.owner": "Verantwortlich",
   "whoCanSee.group.shared": "Direkt geteilt",
@@ -13550,6 +13687,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingFrom":
     "Hochgerechnet · {won} gewonnen + {remaining} erwartet",
   "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
+  "forecast.range": "8 von 10 Ergebnissen zwischen {low} und {high}",
+  "forecast.rangeBasis":
+    "Beruht auf den genutzten Chancen. Jeder offene Deal wird in vielen Durchläufen mit seiner Chance gewonnen oder verloren. Höchstens ein Ergebnis von zehn liegt unter der Spanne und höchstens eines von zehn darüber. Die Spanne setzt voraus, dass die Chancen stimmen.",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingRecordsDetail":
     "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",
@@ -15930,7 +16070,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert und lässt keine Änderungen zu.",
   "contact.notYoursToChange":
-    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Unternehmen",
@@ -19237,6 +19377,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.tooFew": "Markiere mindestens zwei Kontakte.",
   "contactCase.notConnected":
     "Einige markierte Kontakte sind nicht als mögliche Duplikate mit den anderen verknüpft. Markiere die Kontakte dazwischen oder entferne die Markierung.",
+  "contactCase.pairOnly":
+    "Du kannst hier nur ein Paar zusammenführen, und einer der beiden Kontakte muss deiner sein. Markiere so ein Paar.",
   "contactCase.noOwner":
     "Wähle, wer für den verbleibenden Kontakt verantwortlich ist.",
   "contactCase.ownerLabel": "Verantwortlich",

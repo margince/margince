@@ -32,6 +32,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.relationships.optional": "Kết nối lại tùy chọn",
   "worklist.relationships.optionalDetail":
     "Im lặng không tự tạo công việc. Ghim một liên hệ vào ngày làm việc hoặc tạo nhiệm vụ trong hồ sơ của họ.",
+  "worklist.relationships.show": "Hiển thị",
+  "worklist.relationships.loading": "Đang tìm các liên hệ đã im lặng…",
+  "worklist.relationships.none": "Hiện không có ai im lặng.",
+  "worklist.relationships.failed":
+    "Không đọc được các kết nối lại tùy chọn. Hãy thử lại sau.",
   "worklist.relationships.more":
     "Còn các liên hệ tùy chọn khác ngoài chế độ xem này.",
   "webhooks.event.signal.updated.label": "Đổi thành viên phụ trách cảnh báo",
@@ -833,6 +838,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
   "approval.preview.unavailable":
     "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
+  "approval.preview.needsWiderSight":
+    "Thay đổi này chạm đến các bản ghi bạn không mở được. Một đồng nghiệp xem được chúng phải quyết định.",
   "approval.preview.change": "Từ {before} thành {after}",
   "approval.import.row": "{kind}, dòng {line} ({key})",
   "approval.import.create": "Tạo bản ghi mới",
@@ -913,6 +920,62 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.amount": "Thay đổi giá trị",
   "reporting.movement.category": "Thay đổi nhóm dự báo",
   "reporting.movement.stage_weight": "Thay đổi trọng số giai đoạn",
+  "reporting.movement.record_changed":
+    "Tỷ lệ thay đổi theo kết quả đã ghi nhận",
+  "installationSettings.selfCorrectingTitle": "Dự báo",
+  "installationSettings.selfCorrecting": "Cho dự báo tự điều chỉnh",
+  "installationSettings.selfCorrectingHint":
+    "Mỗi giai đoạn bắt đầu với tỷ lệ bạn đã nhập. Khi các giao dịch được ghi nhận từ một giai đoạn kết thúc, dự báo dịch tỷ lệ của giai đoạn đó về phía kết quả thực tế, coi tỷ lệ bạn nhập như 20 giao dịch. Các lần chuyển giai đoạn do nhập dữ liệu không bao giờ được tính.",
+  "installationSettings.selfCorrectingOn":
+    "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đang dùng của giai đoạn, và theo tín hiệu rủi ro khi các dự báo đã chốt cho thấy tác động của nó.",
+  "installationSettings.selfCorrectingOff":
+    "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đã nhập cho giai đoạn, như trước đây.",
+  "stage.chance.noEvidence":
+    "Đã nhập {typed} · Chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
+  "stage.chance.off": "Dự báo dùng {typed} đã nhập: tự điều chỉnh đang tắt",
+  "forecast.deals.title": "Các giao dịch tạo nên con số có trọng số",
+  "forecast.deals.open": "Xem từng giao dịch đang mở và tỷ lệ của nó",
+  "forecast.deals.introOn":
+    "Mỗi giao dịch được tính theo tỷ lệ đang dùng của giai đoạn, điều chỉnh theo tín hiệu rủi ro mạnh nhất khi các dự báo đã kết thúc cho thấy tác động của nó.",
+  "forecast.deals.introOff":
+    "Mỗi giao dịch được tính theo tỷ lệ đã nhập cho giai đoạn. Tự điều chỉnh đang tắt.",
+  "forecast.deals.none":
+    "Không có giao dịch đang mở nào dự kiến kết thúc trong kỳ này.",
+  "forecast.deals.typed": "Đã nhập {percent}",
+  "forecast.deals.uses": "dùng {percent}",
+  "stage.chance.withEvidence_other":
+    "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
+  "stage.chance.withEvidence_one":
+    "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
+  "forecast.deals.recorded_other": "{count} kết quả đã ghi nhận",
+  "forecast.deals.recorded_one": "{count} kết quả đã ghi nhận",
+  "forecast.deals.afterRisk": "{percent} sau rủi ro",
+  "forecast.deals.colDeal": "Giao dịch",
+  "forecast.deals.colSignals": "Tín hiệu rủi ro",
+  "forecast.deals.colAmount": "Giá trị",
+  "forecast.deals.colWeighted": "Có trọng số",
+  "forecast.signal.close_pushed": "Ngày chốt liên tục dời",
+  "forecast.signal.no_next_step": "Chưa đặt bước tiếp theo",
+  "forecast.signal.quiet": "Khách hàng im lặng",
+  "forecast.signal.stuck": "Ở giai đoạn quá lâu",
+  "forecast.signal.stuckIn_one": "Đứng yên {count} ngày ở {stage}",
+  "forecast.signal.stuckDays_one": "Đứng yên {count} ngày ở giai đoạn này",
+  "forecast.signal.closeMoved_one": "Ngày chốt đã dời {count} lần",
+  "forecast.signal.noReply_one": "Không có phản hồi trong {count} ngày",
+  "forecast.signal.closesNoMeeting_one":
+    "Chốt sau {count} ngày, chưa có cuộc họp",
+  "forecast.deals.limitedTitle": "Chỉ hiện giao dịch của bạn",
+  "forecast.deals.limited":
+    "Tổng có cả giao dịch của đồng nghiệp, được ẩn ở đây vì hiệu suất cá nhân đang tắt. Mỗi thành viên vẫn thấy giao dịch của chính họ.",
+  "forecast.signal.closesNoMeeting_other":
+    "Chốt sau {count} ngày, chưa có cuộc họp",
+  "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa có cuộc họp",
+  "forecast.signal.closesToday": "Chốt hôm nay, chưa có cuộc họp",
+  "forecast.signal.noReply_other": "Không có phản hồi trong {count} ngày",
+  "forecast.signal.closeMoved_other": "Ngày chốt đã dời {count} lần",
+  "forecast.signal.closePassed": "Đã quá ngày chốt",
+  "forecast.signal.stuckDays_other": "Đứng yên {count} ngày ở giai đoạn này",
+  "forecast.signal.stuckIn_other": "Đứng yên {count} ngày ở {stage}",
   "reporting.movement.won": "Thắng",
   "reporting.movement.lost": "Thua",
   "reporting.movement.reopened_or_archived": "Mở lại hoặc lưu trữ",
@@ -1348,7 +1411,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.regressed": "Đã lùi lại",
   "reporting.cohortOutcome.left_pipeline": "Pipeline khác",
   "reporting.cohortOutcome.unresolved": "Vẫn đang mở",
-  "reporting.cohortOutcome.history_partial": "Không rõ tiến hay lùi",
+  "reporting.cohortOutcome.history_partial":
+    "Lần chuyển tiếp theo được nhập hoặc không rõ",
   "reporting.cohortOutcome.accepted": "Bàn giao đã được chấp nhận",
   "reporting.cohortOutcome.qualified": "Đủ điều kiện",
   "reporting.cohortOutcome.disqualified": "Đã loại",
@@ -1357,7 +1421,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Vẫn đang mở nghĩa là chưa có kết quả khi số liệu này được đọc. Các mục này không bị tính là thua và không tính vào tỷ lệ.",
   "reporting.cohortPartialNote":
-    "Không rõ tiến hay lùi nghĩa là deal đã rời giai đoạn trước khi Margince lưu thứ tự giai đoạn cùng mỗi lần chuyển. Các mục này không tính vào tỷ lệ.",
+    "Lần chuyển tiếp theo được nhập hoặc không rõ nghĩa là deal đã rời giai đoạn bằng một lần chuyển do lần nhập dữ liệu mang vào, hoặc bằng một lần chuyển được lưu trước khi Margince ghi thứ tự giai đoạn. Các mục này không tính vào tỷ lệ.",
   "reporting.cohortStageDaysNote":
     "Số ngày bên cạnh một kết quả là thời gian trung vị deal ở trong giai đoạn trước kết quả đó. Số ngày bên cạnh Vẫn đang mở là thời gian trung vị ở trong giai đoạn tính đến nay.",
   "reporting.cohortLeadDaysNote":
@@ -2002,6 +2066,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.public_record_preview": "Xem trước bản ghi công khai",
   "systemJob.agent_resume": "Tiếp tục lần chạy của trợ lý AI",
   "systemJob.agent_scheduler": "Lượt chạy trợ lý AI theo lịch",
+  "systemJob.forecast_chances": "Tỷ lệ giai đoạn dự báo",
   "systemJob.assurance_freshness": "Độ mới của kiểm tra dự báo",
   "systemJob.forecast_call_baseline": "Mốc so sánh của dự báo đã chốt",
   "systemJob.ai_activity": "Ghi nhận hoạt động AI",
@@ -2031,6 +2096,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_which_deal": "Câu hỏi về cơ hội từ thư",
   "systemJob.close_date": "Kiểm tra ngày chốt",
   "systemJob.commission_accrual": "Ghi nhận hoa hồng",
+  "systemJob.partner_activation": "Kích hoạt đối tác",
   "systemJob.commitment_settle": "Chốt kết quả cam kết",
   "systemJob.comms_send": "Gửi tin nhắn",
   "systemJob.connector_app_read": "Đọc cài đặt trình kết nối",
@@ -2627,7 +2693,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.archivedReadOnly":
     "Công ty này đang trong kho lưu trữ và không thể thay đổi.",
   "record.notYoursToChange":
-    "Bạn không có quyền sửa công ty này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+    "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "record.logActivityRefused":
@@ -2788,8 +2854,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.edit": "Sửa đối tác",
   "partner.none": "Chưa phải đối tác",
   "partner.company": "Công ty",
-  "partner.role": "Vai trò đối tác",
-  "partner.roleAll": "Tất cả vai trò",
   "partner.certStatus": "Trạng thái chứng nhận",
   "partner.certStatusAll": "Tất cả trạng thái",
   "partner.marginTier": "Mức hoa hồng đối tác",
@@ -2805,25 +2869,73 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.servedSegments": "Phân khúc phục vụ",
   "partner.servedSegmentsHint":
     "Nhóm khách hàng đối tác phục vụ, ví dụ doanh nghiệp sản xuất vừa và nhỏ. Phân tách nhiều nhóm bằng dấu phẩy.",
-  "partner.role.hosting": "Máy chủ web",
-  "partner.role.consulting": "Tư vấn",
-  "partner.role.strategic": "Chiến lược",
+  "partner.kind.hosting": "Máy chủ web",
+  "partner.kind.consulting": "Tư vấn",
+  "partner.kind.strategic": "Chiến lược",
+  "partnerStages.builtin.contract_signed": "Đã ký hợp đồng",
+  "partnerStages.builtin.ready": "Sẵn sàng",
+  "partnerStages.builtin.activated": "Đã kích hoạt",
+  "partner.kind.referral": "Giới thiệu",
+  "partner.kinds": "Loại đối tác",
+  "partner.kindsAll": "Tất cả loại",
+  "partner.stageAll": "Tất cả giai đoạn",
+  "partner.stageMeaning": "Ý nghĩa giai đoạn",
+  "partner.stageMeaningAll": "Tất cả ý nghĩa",
+  "partner.activated": "Kích hoạt ngày {date}",
+  "lead.partner": "Được đối tác giới thiệu",
+  "lead.partnerNone": "Không có đối tác",
+  "lead.partnerAccept": "Chấp nhận cho đối tác",
+  "lead.partnerAccepted": "Đã chấp nhận cho đối tác ngày {date}",
+  "lead.partnerAcceptedKept":
+    "Lead đã được chấp nhận cho đối tác sẽ giữ đối tác đó.",
+  "partner.activatedBefore": "Đã hoạt động trước khi có danh sách giai đoạn",
+  "partner.activatedThroughLead": "qua lead này",
+  "partner.activatedThroughDeal": "qua giao dịch này",
+  "partnerStages.title": "Giai đoạn đối tác",
+  "partnerStages.sub":
+    "Các giai đoạn mà một chương trình đối tác lần lượt đi qua. Mỗi giai đoạn có một ý nghĩa, và bộ lọc cùng quy tắc đọc ý nghĩa đó, không đọc tên.",
+  "partnerStages.loading": "Đang tải các giai đoạn…",
+  "partnerStages.addOpen": "Giai đoạn mới",
+  "partnerStages.addTitle": "Giai đoạn đối tác mới",
+  "partnerStages.addConfirm": "Thêm giai đoạn",
+  "partnerStages.renameTitle": "Đổi tên giai đoạn",
+  "partnerStages.colStage": "Giai đoạn",
+  "partnerStages.colMeaning": "Ý nghĩa",
+  "partnerStages.colPartners": "Đối tác",
+  "partnerStages.activeFor": "Có thể chọn {label} cho một đối tác",
+  "partnerStages.meaningFor": "Ý nghĩa của {label}",
+  "partnerStages.duplicate":
+    "Đã có một giai đoạn với tên hoặc khóa này. Hãy chọn tên khác.",
+  "partnerStages.moveUp": "Chuyển lên",
+  "partnerStages.moveDown": "Chuyển xuống",
+  "partnerStages.removeTitle": "Xóa giai đoạn này?",
+  "partnerStages.removeBody":
+    "“{label}” không được đối tác nào dùng và sẽ bị xóa khỏi danh sách.",
+  "partnerStages.meaning.candidate": "Ứng viên",
+  "partnerStages.meaning.signed": "Đã ký",
+  "partnerStages.meaning.ready": "Sẵn sàng",
+  "partnerStages.meaning.active": "Đang hoạt động",
+  "partnerStages.meaning.dormant": "Không hoạt động",
+  "partnerStages.meaning.ended": "Đã kết thúc",
+  "settings.tab.partners": "Đối tác",
+  "settings.page.partners.sub":
+    "Các giai đoạn mà một chương trình đối tác đi qua, và ý nghĩa của từng giai đoạn.",
   "partner.cert.applied": "Đã nộp hồ sơ",
   "partner.cert.certified": "Đã chứng nhận",
   "partner.cert.suspended": "Đã tạm ngưng",
   "partner.marginTier.tier1": "Giới thiệu (15%)",
   "partner.marginTier.tier2": "Hợp tác tích cực (20%)",
   "partner.marginTier.tier3": "Đối tác tự chốt (25%)",
-  "partner.stage.research": "Tìm hiểu",
-  "partner.stage.identified": "Đã xác định",
-  "partner.stage.contacted": "Đã liên hệ",
-  "partner.stage.inConversation": "Đang trao đổi",
-  "partner.stage.fitConfirmed": "Đã xác nhận phù hợp",
-  "partner.stage.agreementPending": "Chờ ký hợp đồng",
-  "partner.stage.active": "Đang hoạt động",
-  "partner.stage.activeReferring": "Đang hoạt động, có giới thiệu",
-  "partner.stage.dormant": "Không hoạt động",
-  "partner.stage.noFit": "Không phù hợp",
+  "partnerStages.builtin.research": "Tìm hiểu",
+  "partnerStages.builtin.identified": "Đã xác định",
+  "partnerStages.builtin.contacted": "Đã liên hệ",
+  "partnerStages.builtin.in_conversation": "Đang trao đổi",
+  "partnerStages.builtin.fit_confirmed": "Đã xác nhận phù hợp",
+  "partnerStages.builtin.agreement_pending": "Chờ ký hợp đồng",
+  "partnerStages.builtin.active": "Đang hoạt động",
+  "partnerStages.builtin.active_referring": "Đang hoạt động, có giới thiệu",
+  "partnerStages.builtin.dormant": "Không hoạt động",
+  "partnerStages.builtin.no_fit": "Không phù hợp",
 
   "rel.add": "Thêm quan hệ",
   "rel.seatOnDeal": "Thêm vào deal",
@@ -3150,6 +3262,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.target": "Mục tiêu",
   "company.lifecycle.prospect": "Tiềm năng",
   "company.lifecycle.opportunity": "Cơ hội",
+  "company.lifecycle.onboarding": "Đang triển khai",
+  "company.lifecycle.live": "Đang vận hành",
+  "company.lifecycle.live.help":
+    "Đang vận hành nghĩa là phạm vi đầu tiên đã thỏa thuận đang được sử dụng. Chỉ đồng nghiệp mới đặt trạng thái này, không phải trợ lý hay tự động hóa.",
   "company.lifecycle.customer": "Khách hàng",
   "company.lifecycle.former_customer": "Khách hàng cũ",
   "company.lifecycle.disqualified": "Đã loại",
@@ -3889,6 +4005,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "Đối chiếu LinkedIn",
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
+  "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
@@ -6461,6 +6578,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "recordAccess.option.ownerNeeded": "Giao người chịu trách nhiệm trước.",
   "recordAccess.option.workspace": "Mọi thành viên trong công ty",
   "recordAccess.manage": "Quản lý quyền truy cập",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "Đề nghị {owner} chuyển giao",
+  "handover.requested":
+    "Bạn đã đề nghị {owner} chuyển giao. Đề nghị còn hiệu lực đến {date}.",
+  "handover.withdraw": "Rút lại đề nghị",
+  "handover.sent": "Đã gửi đề nghị tới {owner}",
+  "handover.withdrawn": "Đã rút lại đề nghị",
+  // The owner offering a record to a colleague, from the access panel.
+  "handover.offer": "Chuyển giao cho…",
+  "handover.offerTo": "Giao cho",
+  "handover.offerPick": "Chọn một đồng nghiệp",
+  "handover.offerNote": "Ghi chú (không bắt buộc)",
+  "handover.offerSend": "Gửi đề nghị",
+  "handover.offerCancel": "Hủy",
+  "handover.offerSent": "Đã đề nghị chuyển cho {name}",
+  "handover.offered":
+    "Đã đề nghị chuyển cho {name}. Đề nghị còn mở đến {date}.",
+  "handover.withdrawOffer": "Rút lại đề nghị",
+  "handover.offerWithdrawn": "Đã rút lại đề nghị",
   "whoCanSee.title": "Ai có thể xem hồ sơ này",
   "whoCanSee.group.owner": "Người chịu trách nhiệm",
   "whoCanSee.group.shared": "Chia sẻ trực tiếp",
@@ -13191,6 +13327,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landing": "Dự kiến cuối kỳ",
   "forecast.landingFrom": "Dự kiến · {won} đã chốt + {remaining} sắp tới",
   "forecast.landingFromCall": "Theo nhận định · {won} đã chốt đến nay",
+  "forecast.range": "8 trên 10 kết quả nằm trong khoảng {low} đến {high}",
+  "forecast.rangeBasis":
+    "Dựa trên tỷ lệ đang dùng. Mỗi giao dịch đang mở được tính thắng hoặc thua theo tỷ lệ của nó qua nhiều lượt. Cứ 10 kết quả thì nhiều nhất 1 kết quả thấp hơn khoảng này và nhiều nhất 1 kết quả cao hơn. Khoảng này giả định các tỷ lệ là đúng.",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingRecordsDetail":
     "Đã chốt cộng các deal Commit có ngày chốt đã xác nhận, chưa tính dự báo của quản lý",
@@ -15502,7 +15641,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.archivedReadOnly":
     "Liên hệ này đang trong kho lưu trữ nên không thể thay đổi.",
   "contact.notYoursToChange":
-    "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chia sẻ, hoặc liên hệ quản trị viên để được cấp quyền sửa.",
+    "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "contact.rail.employmentVersionUnresolved":
     "Không thể tải phiên bản hiện tại của dòng này. Tải lại trang rồi thử lại.",
   "contact.rail.employmentTitle": "Công ty",
@@ -18727,6 +18866,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.tooFew": "Đánh dấu ít nhất hai liên hệ.",
   "contactCase.notConnected":
     "Một số liên hệ đã đánh dấu không được liên kết với các liên hệ còn lại như bản trùng. Đánh dấu thêm các liên hệ ở giữa, hoặc bỏ đánh dấu chúng.",
+  "contactCase.pairOnly":
+    "Ở đây bạn chỉ gộp được một cặp, và một trong hai liên hệ phải là của bạn. Hãy đánh dấu một cặp như vậy.",
   "contactCase.noOwner": "Chọn người chịu trách nhiệm liên hệ còn lại.",
   "contactCase.ownerLabel": "Người chịu trách nhiệm",
   "contactCase.ownerHint":

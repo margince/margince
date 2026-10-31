@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 153.5 KB |
+| Tool catalog | 155.3 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 40616 |
+| Approx. wire tokens | 41083 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 44.3 KB | 28% | **No**: a result's shape, never listed to a model |
+| Output schemas | 45.6 KB | 29% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
-| Input schemas | 64.9 KB | 42% | Yes, every step |
-| _Names, annotations, punctuation_ | 9.3 KB | 6% | Partly |
-| **Description + input schema** | **99.9 KB** | **65%** | **the recurring cost** |
+| Input schemas | 65.5 KB | 42% | Yes, every step |
+| _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
+| **Description + input schema** | **100.5 KB** | **64%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 664 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1291 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1342 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -78,7 +78,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1791 |
+| [`find_records`](#find_records) | Find records | yes |  | 1836 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 824 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 875 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
@@ -94,7 +94,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1017 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1021 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
@@ -2173,7 +2173,7 @@ qualify fills what a lead's own data already implies, today the company name fro
 and names the fields still empty. promote turns a lead who has genuinely engaged into a contact.
 disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a
 stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts
-a partner program on a company, with company_id, partner_role and optionally relationship_stage,
+a partner program on a company, with company_id, partner_kinds and optionally relationship_stage,
 next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody
 answered never promotes. demote needs a reason and is refused once the contact owns a deal.
 set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's
@@ -2263,8 +2263,22 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "description": "move_deal only: Logged as a note on the deal's timeline after the move",
       "type": "string"
     },
+    "partner_kinds": {
+      "description": "set_up_partner, required: one or more of hosting, consulting, strategic or referral",
+      "items": {
+        "enum": [
+          "hosting",
+          "consulting",
+          "strategic",
+          "referral"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
     "partner_role": {
-      "description": "set_up_partner, required: hosting, consulting or strategic",
+      "description": "set_up_partner, deprecated: send partner_kinds",
       "enum": [
         "hosting",
         "consulting",
@@ -2288,19 +2302,7 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "type": "string"
     },
     "relationship_stage": {
-      "description": "set_up_partner only",
-      "enum": [
-        "research",
-        "identified",
-        "contacted",
-        "in_conversation",
-        "fit_confirmed",
-        "agreement_pending",
-        "active",
-        "active_referring",
-        "dormant",
-        "no_fit"
-      ],
+      "description": "set_up_partner only: An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage",
       "type": "string"
     },
     "source_id": {
@@ -2986,6 +2988,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "duplicate_candidates": {
           "items": {
             "properties": {
+              "can_merge": {
+                "type": "boolean"
+              },
               "candidate_id": {
                 "type": "string"
               },
@@ -3021,11 +3026,15 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
                 },
                 "type": "array"
               },
+              "keep_id": {
+                "type": "string"
+              },
               "other_record_id": {
                 "type": "string"
               }
             },
             "required": [
+              "can_merge",
               "candidate_id",
               "confidence",
               "evidence",
@@ -3703,10 +3712,19 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "partner_company_id": {
           "type": "string"
         },
+        "partner_kind": {
+          "type": "string"
+        },
         "partner_role": {
           "type": "string"
         },
         "partner_sourced": {
+          "type": "string"
+        },
+        "partner_stage": {
+          "type": "string"
+        },
+        "partner_stage_meaning": {
           "type": "string"
         },
         "phase": {
@@ -3722,6 +3740,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "relationship_mark": {
+          "type": "string"
+        },
+        "relationship_stage": {
           "type": "string"
         },
         "relationship_type": {
@@ -3755,6 +3776,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "stage_id": {
+          "type": "string"
+        },
+        "stage_meaning": {
           "type": "string"
         },
         "stalled": {
@@ -7224,6 +7248,10 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
       "format": "date",
       "type": "string"
     },
+    "contributions": {
+      "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
+      "type": "boolean"
+    },
     "from": {
       "description": "movement only: The opening snapshot.",
       "format": "uuid",
@@ -7331,6 +7359,109 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "confirmed_date_count": {
           "type": "integer"
+        },
+        "contributions": {
+          "items": {
+            "properties": {
+              "applied_probability": {
+                "type": "integer"
+              },
+              "base_minor": {
+                "type": "integer"
+              },
+              "category": {
+                "type": "string"
+              },
+              "chance_in_use": {
+                "type": "integer"
+              },
+              "deal_id": {
+                "type": "string"
+              },
+              "deal_name": {
+                "type": "string"
+              },
+              "effect": {
+                "type": "number"
+              },
+              "evidence_n": {
+                "type": "integer"
+              },
+              "exclusion_reason": {
+                "type": "string"
+              },
+              "in_best_case": {
+                "type": "boolean"
+              },
+              "in_evidence": {
+                "type": "boolean"
+              },
+              "in_open": {
+                "type": "boolean"
+              },
+              "in_won": {
+                "type": "boolean"
+              },
+              "owner_id": {
+                "type": "string"
+              },
+              "signals": {
+                "items": {
+                  "properties": {
+                    "close_passed": {
+                      "type": "boolean"
+                    },
+                    "closes_in_days": {
+                      "type": "integer"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "days": {
+                      "type": "integer"
+                    },
+                    "stage_id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "stage_id": {
+                "type": "string"
+              },
+              "typed_probability": {
+                "type": "integer"
+              },
+              "weighted_minor": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "applied_probability",
+              "chance_in_use",
+              "deal_id",
+              "deal_name",
+              "in_best_case",
+              "in_evidence",
+              "in_open",
+              "in_won",
+              "signals",
+              "weighted_minor"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "contributions_limited": {
+          "type": "boolean"
         },
         "coverage_note": {
           "type": "string"
@@ -7530,6 +7661,12 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
           ],
           "type": "object"
         },
+        "range_high_minor": {
+          "type": "integer"
+        },
+        "range_low_minor": {
+          "type": "integer"
+        },
         "readiness": {
           "type": "string"
         },
@@ -7546,6 +7683,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
           "type": "string"
         },
         "scope_limited": {
+          "type": "boolean"
+        },
+        "self_correcting": {
           "type": "boolean"
         },
         "snapshots": {
@@ -8997,6 +9137,7 @@ argument it does not take and names the ones it does.
         "meeting_brief",
         "meeting_invitation",
         "name_seats",
+        "partner_stages",
         "pipeline",
         "preview_contact_employment_import",
         "project_health_assessments",

@@ -21,6 +21,11 @@ export const en = {
   "worklist.relationships.optional": "Optional reconnections",
   "worklist.relationships.optionalDetail":
     "Silence alone is not work. Pin a contact to choose them for your day, or create a task on their record.",
+  "worklist.relationships.show": "Show",
+  "worklist.relationships.loading": "Looking for contacts who went quiet…",
+  "worklist.relationships.none": "Nobody has gone quiet right now.",
+  "worklist.relationships.failed":
+    "Optional reconnections could not be read. Try again later.",
   "worklist.relationships.more":
     "More optional contacts are outside this view.",
   "webhooks.event.signal.updated.label": "Alert owner changed",
@@ -809,6 +814,8 @@ export const en = {
     "The full change cannot be shown. Request a new proposal before approving.",
   "approval.preview.unavailable":
     "Approval context is unavailable. Reload or request a new proposal.",
+  "approval.preview.needsWiderSight":
+    "This change touches records you cannot open. A colleague who can see them must decide it.",
   "approval.preview.change": "{before} → {after}",
   "approval.import.row": "{kind}, row {line} ({key})",
   "approval.import.create": "Create a new record",
@@ -888,6 +895,60 @@ export const en = {
   "reporting.movement.amount": "Value changes",
   "reporting.movement.category": "Forecast category changes",
   "reporting.movement.stage_weight": "Stage weight changes",
+  "reporting.movement.record_changed": "Chance moved by recorded outcomes",
+  "installationSettings.selfCorrectingTitle": "Forecast",
+  "installationSettings.selfCorrecting": "Let the forecast correct itself",
+  "installationSettings.selfCorrectingHint":
+    "Each stage starts at the chance you typed. As deals recorded from a stage close, the forecast moves that stage’s chance toward how they ended, counting your typed chance as 20 deals. Imported stage moves never count.",
+  "installationSettings.selfCorrectingOn":
+    "The forecast weighs each open deal by its stage’s chance in use, and by a risk signal once frozen forecasts show its effect.",
+  "installationSettings.selfCorrectingOff":
+    "The forecast weighs each open deal by the chance typed on its stage, as before.",
+  "stage.chance.noEvidence":
+    "Typed {typed} · No recorded deal from here has closed yet · Forecast uses {used}",
+  "stage.chance.off": "Forecast uses the typed {typed}: self-correction is off",
+  "forecast.deals.title": "Deals behind the weighted figure",
+  "forecast.deals.open": "Show each open deal and its chance",
+  "forecast.deals.introOn":
+    "Each deal counts at its stage’s chance in use, moved by the strongest risk signal once settled forecasts show its effect.",
+  "forecast.deals.introOff":
+    "Each deal counts at the chance typed on its stage. Self-correction is off.",
+  "forecast.deals.none": "No open deal is expected to close in this period.",
+  "forecast.deals.typed": "Typed {percent}",
+  "forecast.deals.uses": "uses {percent}",
+  "stage.chance.withEvidence_other":
+    "Typed {typed} · {count} recorded deals from here closed, {won} won · Forecast uses {used}",
+  "stage.chance.withEvidence_one":
+    "Typed {typed} · {count} recorded deal from here closed, {won} won · Forecast uses {used}",
+  "forecast.deals.recorded_other": "{count} recorded outcomes",
+  "forecast.deals.recorded_one": "{count} recorded outcome",
+  "forecast.deals.afterRisk": "{percent} after risk",
+  "forecast.deals.colDeal": "Deal",
+  "forecast.deals.colSignals": "Risk signals",
+  "forecast.deals.colAmount": "Amount",
+  "forecast.deals.colWeighted": "Weighted",
+  "forecast.signal.close_pushed": "Close date keeps moving",
+  "forecast.signal.no_next_step": "No next step booked",
+  "forecast.signal.quiet": "Customer quiet",
+  "forecast.signal.stuck": "Long in stage",
+  "forecast.deals.limitedTitle": "Only your own deals are listed",
+  "forecast.deals.limited":
+    "The total includes colleagues’ deals, which are withheld here because individual performance is off. Each rep still sees their own.",
+  "forecast.signal.closesNoMeeting_other":
+    "Closes in {count} days, no meeting booked",
+  "forecast.signal.closesNoMeeting_one":
+    "Closes in {count} day, no meeting booked",
+  "forecast.signal.closesTomorrow": "Closes tomorrow, no meeting booked",
+  "forecast.signal.closesToday": "Closes today, no meeting booked",
+  "forecast.signal.noReply_other": "No reply in {count} days",
+  "forecast.signal.noReply_one": "No reply in {count} day",
+  "forecast.signal.closeMoved_other": "Close date moved {count} times",
+  "forecast.signal.closeMoved_one": "Close date moved {count} time",
+  "forecast.signal.closePassed": "Close date passed",
+  "forecast.signal.stuckDays_other": "Stalled {count} days in this stage",
+  "forecast.signal.stuckDays_one": "Stalled {count} day in this stage",
+  "forecast.signal.stuckIn_other": "Stalled {count} days in {stage}",
+  "forecast.signal.stuckIn_one": "Stalled {count} day in {stage}",
   "reporting.movement.won": "Won",
   "reporting.movement.lost": "Lost",
   "reporting.movement.reopened_or_archived": "Reopened or archived",
@@ -1316,7 +1377,7 @@ export const en = {
   "reporting.cohortOutcome.regressed": "Moved back",
   "reporting.cohortOutcome.left_pipeline": "Other pipeline",
   "reporting.cohortOutcome.unresolved": "Still open",
-  "reporting.cohortOutcome.history_partial": "Forward or back unknown",
+  "reporting.cohortOutcome.history_partial": "Next move imported or unknown",
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
@@ -1325,7 +1386,7 @@ export const en = {
   "reporting.cohortStillOpenNote":
     "Still open means no outcome yet when these figures were read. These are not counted as lost and stay out of the rate.",
   "reporting.cohortPartialNote":
-    "Forward or back unknown means the deal left the stage before Margince kept the stage order with each move. These stay out of the rate.",
+    "Next move imported or unknown means the deal left the stage by a move an import brought in, or by a move saved before Margince kept the stage order. These stay out of the rate.",
   "reporting.cohortStageDaysNote":
     "Days beside an outcome are the median time a deal spent in the stage before it. Days beside Still open are the median time in the stage so far.",
   "reporting.cohortLeadDaysNote":
@@ -1984,6 +2045,7 @@ export const en = {
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",
+  "systemJob.forecast_chances": "Forecast stage rates",
   "systemJob.assurance_freshness": "Forecast check freshness",
   "systemJob.forecast_call_baseline": "Forecast call baseline",
   "systemJob.ai_activity": "AI activity record",
@@ -2013,6 +2075,7 @@ export const en = {
   "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
   "systemJob.commission_accrual": "Commission accrual",
+  "systemJob.partner_activation": "Partner activation",
   "systemJob.commitment_settle": "Commitment settlement",
   "systemJob.comms_send": "Message send",
   "systemJob.connector_app_read": "Connector settings read",
@@ -2634,7 +2697,7 @@ export const en = {
   "record.archived": "Archived",
   "record.archivedReadOnly": "This company is archived and takes no changes.",
   "record.notYoursToChange":
-    "You cannot edit this company. Ask its owner to share it, or an administrator for edit rights.",
+    "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
   "record.logActivityRefused":
@@ -2790,8 +2853,6 @@ export const en = {
   "partner.edit": "Edit partner",
   "partner.none": "Not a partner yet",
   "partner.company": "Company",
-  "partner.role": "Partner role",
-  "partner.roleAll": "All roles",
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
   "partner.marginTier": "Margin tier",
@@ -2807,25 +2868,73 @@ export const en = {
   "partner.servedSegments": "Served segments",
   "partner.servedSegmentsHint":
     "Who the partner sells to, for example mid-size manufacturers. Separate several with commas.",
-  "partner.role.hosting": "Hosting",
-  "partner.role.consulting": "Consulting",
-  "partner.role.strategic": "Strategic",
+  "partner.kind.hosting": "Hosting",
+  "partner.kind.consulting": "Consulting",
+  "partner.kind.strategic": "Strategic",
+  "partnerStages.builtin.contract_signed": "Contract signed",
+  "partnerStages.builtin.ready": "Ready",
+  "partnerStages.builtin.activated": "Activated",
+  "partner.kind.referral": "Referral",
+  "partner.kinds": "Partner kinds",
+  "partner.kindsAll": "All kinds",
+  "partner.stageAll": "All stages",
+  "partner.stageMeaning": "Stage meaning",
+  "partner.stageMeaningAll": "All meanings",
+  "partner.activated": "Activated {date}",
+  "lead.partner": "Referred by partner",
+  "lead.partnerNone": "No partner",
+  "lead.partnerAccept": "Accept for partner",
+  "lead.partnerAccepted": "Accepted for the partner on {date}",
+  "lead.partnerAcceptedKept":
+    "A lead accepted for its partner keeps that partner.",
+  "partner.activatedBefore": "Active before the stage list was introduced",
+  "partner.activatedThroughLead": "through this lead",
+  "partner.activatedThroughDeal": "through this deal",
+  "partnerStages.title": "Partner stages",
+  "partnerStages.sub":
+    "The stages a partner program moves through, in ladder order. Each stage has one meaning, and filters and rules read the meaning, not the name.",
+  "partnerStages.loading": "Loading stages…",
+  "partnerStages.addOpen": "New stage",
+  "partnerStages.addTitle": "New partner stage",
+  "partnerStages.addConfirm": "Add stage",
+  "partnerStages.renameTitle": "Rename stage",
+  "partnerStages.colStage": "Stage",
+  "partnerStages.colMeaning": "Meaning",
+  "partnerStages.colPartners": "Partners",
+  "partnerStages.activeFor": "{label} can be picked for a partner",
+  "partnerStages.meaningFor": "Meaning of {label}",
+  "partnerStages.duplicate":
+    "A stage with this name or key already exists. Choose another name.",
+  "partnerStages.moveUp": "Move up",
+  "partnerStages.moveDown": "Move down",
+  "partnerStages.removeTitle": "Remove this stage?",
+  "partnerStages.removeBody":
+    "“{label}” is not used by any partner and is removed from the list.",
+  "partnerStages.meaning.candidate": "Candidate",
+  "partnerStages.meaning.signed": "Signed",
+  "partnerStages.meaning.ready": "Ready",
+  "partnerStages.meaning.active": "Active",
+  "partnerStages.meaning.dormant": "Dormant",
+  "partnerStages.meaning.ended": "Ended",
+  "settings.tab.partners": "Partners",
+  "settings.page.partners.sub":
+    "The stages a partner program moves through, and what each one means.",
   "partner.cert.applied": "Applied",
   "partner.cert.certified": "Certified",
   "partner.cert.suspended": "Suspended",
   "partner.marginTier.tier1": "Intro (15%)",
   "partner.marginTier.tier2": "Active collaboration (20%)",
   "partner.marginTier.tier3": "Partner closed (25%)",
-  "partner.stage.research": "Research",
-  "partner.stage.identified": "Identified",
-  "partner.stage.contacted": "Contacted",
-  "partner.stage.inConversation": "In conversation",
-  "partner.stage.fitConfirmed": "Fit confirmed",
-  "partner.stage.agreementPending": "Contract pending",
-  "partner.stage.active": "Active",
-  "partner.stage.activeReferring": "Active, referring",
-  "partner.stage.dormant": "Dormant",
-  "partner.stage.noFit": "No fit",
+  "partnerStages.builtin.research": "Research",
+  "partnerStages.builtin.identified": "Identified",
+  "partnerStages.builtin.contacted": "Contacted",
+  "partnerStages.builtin.in_conversation": "In conversation",
+  "partnerStages.builtin.fit_confirmed": "Fit confirmed",
+  "partnerStages.builtin.agreement_pending": "Contract pending",
+  "partnerStages.builtin.active": "Active",
+  "partnerStages.builtin.active_referring": "Active, referring",
+  "partnerStages.builtin.dormant": "Dormant",
+  "partnerStages.builtin.no_fit": "No fit",
 
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
@@ -3206,6 +3315,10 @@ export const en = {
   "company.lifecycle.target": "Target",
   "company.lifecycle.prospect": "Prospect",
   "company.lifecycle.opportunity": "Opportunity",
+  "company.lifecycle.onboarding": "Onboarding",
+  "company.lifecycle.live": "Live",
+  "company.lifecycle.live.help":
+    "Live means the agreed first scope is in use. Only a colleague sets it, never an assistant or an automation.",
   "company.lifecycle.customer": "Customer",
   "company.lifecycle.former_customer": "Former customer",
   "company.lifecycle.disqualified": "Disqualified",
@@ -3974,6 +4087,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
+  "approval.kind.ownership_transfer": "Hand over a record",
   "approval.kind.contact_share": "Share a contact",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
@@ -6663,6 +6777,24 @@ export const en = {
   "recordAccess.option.ownerNeeded": "Assign an owner first.",
   "recordAccess.option.workspace": "All users in the company",
   "recordAccess.manage": "Manage access",
+  // Asking a record's owner to hand it over, from the access panel.
+  "handover.ask": "Ask {owner} to hand it over",
+  "handover.requested":
+    "You asked {owner} to hand this over. The request stays open until {date}.",
+  "handover.withdraw": "Withdraw request",
+  "handover.sent": "Request sent to {owner}",
+  "handover.withdrawn": "Request withdrawn",
+  // The owner offering a record to a colleague, from the access panel.
+  "handover.offer": "Hand over to…",
+  "handover.offerTo": "Hand over to",
+  "handover.offerPick": "Choose a colleague",
+  "handover.offerNote": "Note (optional)",
+  "handover.offerSend": "Send offer",
+  "handover.offerCancel": "Cancel",
+  "handover.offerSent": "Offered to {name}",
+  "handover.offered": "Offered to {name}. The offer stays open until {date}.",
+  "handover.withdrawOffer": "Withdraw offer",
+  "handover.offerWithdrawn": "Offer withdrawn",
   // The full answer on the share screen: every colleague who can open the
   // record, grouped by why, and the reader's own access on one line.
   "whoCanSee.title": "Who can see this record",
@@ -13526,6 +13658,9 @@ export const en = {
   "forecast.landing": "Landing",
   "forecast.landingFrom": "Projected · {won} won + {remaining} to come",
   "forecast.landingFromCall": "From the call · {won} won so far",
+  "forecast.range": "8 in 10 outcomes between {low} and {high}",
+  "forecast.rangeBasis":
+    "Based on the chances in use. Each open deal is won or lost by its chance over many runs. At most one outcome in ten falls below the range, and at most one in ten above it. The range assumes the chances are right.",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingRecordsDetail":
     "Won plus Commit deals with confirmed close dates, without the manager’s call",
@@ -15824,7 +15959,7 @@ export const en = {
   "contact.rail.archivedReadOnly":
     "This contact is archived and takes no changes.",
   "contact.notYoursToChange":
-    "You cannot edit this contact. Ask the owner to share it, or an administrator for edit rights.",
+    "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator.",
   // Fired when an employment row's version could not be read back before a
   // write — the row is not saved unpinned, so the reader is told to reload
   // rather than left to think the edit landed.
@@ -19066,6 +19201,8 @@ export const en = {
   "contactCase.tooFew": "Tick at least two contacts.",
   "contactCase.notConnected":
     "Some ticked contacts are not linked to the others as possible duplicates. Tick the contacts between them, or untick them.",
+  "contactCase.pairOnly":
+    "You can merge only one pair of these contacts, one of them yours. Tick such a pair.",
   "contactCase.noOwner": "Choose who owns the remaining contact.",
   "contactCase.ownerLabel": "Owner",
   "contactCase.ownerHint":

@@ -71,7 +71,7 @@ A stored signal or finding cannot create current work alone. Suggestions without
 
 Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
 
-Current deal actions use the deal page's rules over one batch of owning reads, before the page is cut.
+Current deal actions use the deal page's rules over one batch of owning reads. They are read for the deal rows on the page that the brief or the at-risk lane raised.
 They share the Worklist's database snapshot. A failed advice read keeps the work and names the gap.
 
 Saved model words are an earlier view, with their written date. They never admit work or change its rank.
@@ -161,9 +161,11 @@ Three sources are read on in the tail today:
 
 - Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
   deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
-  by expected close, and draws each deal as the lane does. A deal a waiting card names is left out, even when that
-  card is far down the waiting source (`DealsWaiting`). A deal a brief row above already names is left out too, so
-  one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
+  by expected close, and draws each deal as the lane does.
+
+  A deal a waiting card names is left out, even when that card is far down the waiting source (`DealsWaiting`). So
+  is a deal with an open task due within 7 days (`TasksOnDeals`, judged by the ranked page's rule). A deal a brief
+  row above already names is left out too, so one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
 
 Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
 the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.

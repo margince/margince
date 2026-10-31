@@ -23,9 +23,11 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
 import { ForecastCallEditor } from "./analytics.forecast.calleditor";
+import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import {
   LandingCard,
   RecordsLandingCard,
+  rangeOf,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
 import { QualifiedAnswer } from "./analytics.forecast.qualified";
@@ -115,7 +117,12 @@ export function ForecastView({
               />
             ) : null}
             {emptyNotice?.(data.scope_holds_deals)}
-            <ForecastAnswer readings={data} locale={locale} />
+            <ForecastAnswer
+              readings={data}
+              locale={locale}
+              onOpenDeals={openForecastDeals}
+            />
+            <ForecastDeals scope={selection.scope} period={period} />
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
             )}
@@ -201,11 +208,17 @@ function callDetail(
   );
 }
 
-// The answer, in one sentence and then in three readings.
+// The answer, in one sentence and then in three readings. A shared view has no
+// deals panel, so it passes no `onOpenDeals`.
 function ForecastAnswer({
   readings,
   locale,
-}: Readonly<{ readings: Readings; locale: Locale }>) {
+  onOpenDeals,
+}: Readonly<{
+  readings: Readings;
+  locale: Locale;
+  onOpenDeals?: () => void;
+}>) {
   const t = useT();
   const currency = readings.base_currency;
   // The sentence carries the amount in FULL — it is read once, at prose width,
@@ -335,6 +348,11 @@ function ForecastAnswer({
               landing={readings.landing}
               currency={currency}
               locale={locale}
+              range={rangeOf(
+                readings.range_low_minor,
+                readings.range_high_minor,
+              )}
+              onOpenDeals={onOpenDeals}
             />
           )}
           {readings.landing?.system_minor != null && (

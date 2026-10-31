@@ -6,6 +6,7 @@ package auth
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -14,6 +15,9 @@ type ReleasedRecordPin struct {
 	EntityType string
 	EntityID   ids.UUID
 	Version    int64
+	// ContextDigest pins facts outside the row that the reviewed outcome read.
+	// Empty for a kind that registers no context pin.
+	ContextDigest string
 }
 
 // ReleasedRecordPins keeps target and co-target versions together across redemption.
@@ -49,4 +53,23 @@ func ReleasedRecordVersion(ctx context.Context, entityType string, entityID ids.
 		}
 	}
 	return 0, false
+}
+
+// ReleasedRecordContext answers the context digest the approval released for this record.
+func ReleasedRecordContext(ctx context.Context, entityType string, entityID ids.UUID) (string, bool) {
+	pins, ok := ctx.Value(releasedRecordPinsKey{}).(ReleasedRecordPins)
+	if !ok || pins.Target == nil || pins.Target.ContextDigest == "" {
+		return "", false
+	}
+	if pins.Target.EntityType != entityType || pins.Target.EntityID != entityID {
+		return "", false
+	}
+	return pins.Target.ContextDigest, true
+}
+
+// ReleasedContextMoved is the refusal for an approval whose reviewed context changed.
+// The approvals engine and the native writer both answer it, so the wording is shared.
+func ReleasedContextMoved() error {
+	return &apperrors.VersionSkewError{Message: "The company or evidence this approval was reviewed on changed, " +
+		"so nothing was changed. Stage it again for a fresh approval."}
 }

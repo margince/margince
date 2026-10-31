@@ -72,17 +72,25 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			if err != nil {
 				return err
 			}
-			deals, resolved, limited, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
+			assembly, err := ForecastAssemble(ctx, tx, period, scope, at, baseCurrency)
 			if err != nil {
 				return err
 			}
-			readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-			if err != nil {
-				return err
-			}
+			resolved := assembly.Scope
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
-			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
+			out = forecastToolResult(period, resolved, assembly.Readings, baseCurrency, at, assembly.Limited)
+			out.SelfCorrecting = &assembly.SelfCorrecting
+			if req.Contributions {
+				visible, limited, err := ForecastReaderContributions(ctx, tx, assembly.Readings.Contributions)
+				if err != nil {
+					return err
+				}
+				out.ContributionsLimited = &limited
+				if out.Contributions, err = forecastContributionsToTool(visible); err != nil {
+					return err
+				}
+			}
 			mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
 			if err != nil {
 				return err
@@ -184,6 +192,9 @@ func forecastToolResult(
 	if scope.ID != nil {
 		id := scope.ID.String()
 		out.ScopeID = &id
+	}
+	if in.Range != nil {
+		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
 	}
 	if q := in.Qualified; q != nil {
 		out.Qualified = &agents.ForecastQualifiedResult{

@@ -31,16 +31,16 @@ func (c *channelSendEnv) partnerSetUpInvoker(t *testing.T) func(string) (string,
 	return c.verbInvoker(t, c.mintPassport(t, []string{"read", "write"}), setUpPartnerVerb)
 }
 
-func (c *channelSendEnv) partnerRow(t *testing.T, company string) (role, certStatus string, tier *string, live bool) {
+func (c *channelSendEnv) partnerRow(t *testing.T, company string) (kinds, certStatus string, tier *string, live bool) {
 	t.Helper()
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT partner_role, cert_status, margin_tier, archived_at IS NULL FROM partner WHERE company_id = $1`,
-			company).Scan(&role, &certStatus, &tier, &live)
+			`SELECT array_to_string(partner_kinds, ','), cert_status, margin_tier, archived_at IS NULL FROM partner WHERE company_id = $1`,
+			company).Scan(&kinds, &certStatus, &tier, &live)
 	}); err != nil {
 		t.Fatalf("reading the partner row of %s: %v", company, err)
 	}
-	return role, certStatus, tier, live
+	return kinds, certStatus, tier, live
 }
 
 func (c *channelSendEnv) hasPartnerRow(t *testing.T, company string) bool {

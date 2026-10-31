@@ -74,6 +74,9 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// Activating a partner on the first won deal it sourced. Its own group
+		// so an accrual that is wedged never holds an activation back.
+		{Name: "cg:partner-activation", Streams: forEntities(dealStreamEntity)},
 		// Turning records that already settle something into stage evidence: a
 		// contract turning active, a buyer confirming a room version, a held
 		// meeting. Both streams, because contract.* and deal_room.* ride the

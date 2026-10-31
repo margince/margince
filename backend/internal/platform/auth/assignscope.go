@@ -93,13 +93,27 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 // returns the candidates the caller may make an owner. It asks the same
 // hypothetical row, so a picker built on it offers what the write accepts.
 func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
-	eligible := make(map[ids.UUID]bool, len(candidates))
-	if len(candidates) == 0 {
-		return eligible, nil
-	}
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return nil, err
+	}
+	return eligibleAssigneesAs(ctx, tx, p, candidates)
+}
+
+// EligibleHandOverRecipients answers EnsureHandOverRecipient for many seats in
+// one query: the seat half of EligibleAssignees, without the caller's scope.
+func EligibleHandOverRecipients(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return eligibleAssigneesAs(ctx, tx, consentedAssigner(p), candidates)
+}
+
+func eligibleAssigneesAs(ctx context.Context, tx pgx.Tx, p principal.Principal, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	eligible := make(map[ids.UUID]bool, len(candidates))
+	if len(candidates) == 0 {
+		return eligible, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -140,10 +154,11 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
-	// An owner a case admission names already holds a merged contact. So the
-	// caller's scope is not asked of them, and the seat half still is.
-	if admittedCaseGrantee(ctx, dest) {
-		p.Permissions.RowScope = principal.RowScopeAll
+	// An owner a case admission names already holds a merged contact, and a
+	// consented receiver agreed to take the record. So the caller's scope is not
+	// asked of them, and the seat half still is.
+	if admittedCaseGrantee(ctx, dest) || handOverConsented(ctx, dest) {
+		p = consentedAssigner(p)
 		eligible = AssigneeEligibleSQL
 	}
 	status := "status"

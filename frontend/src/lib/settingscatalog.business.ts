@@ -242,6 +242,15 @@ export const BUSINESS_PAGES = [
     changes: acts(writes("custom_field")),
   },
   {
+    id: "partners",
+    // `custom_field`, as the vocabularies above: everyone reads the partner
+    // ladder, admin/ops change it. A custom stage nothing uses may be removed.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: acts(writes("custom_field"), destroys("custom_field")),
+  },
+  {
     id: "reviewtemplates",
     // `custom_field` read, which is what the templates endpoint requires.
     // Editing a template's questions is `custom_field` update on the server.

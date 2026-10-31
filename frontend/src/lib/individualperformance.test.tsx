@@ -49,12 +49,14 @@ it("drops figures already on screen when the switch goes off", async () => {
   const client = new QueryClient();
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: true,
+    forecast_self_correcting: true,
   });
   client.setQueryData(FIGURES_KEY, { total: 7 });
   mounted(client);
 
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: false,
+    forecast_self_correcting: true,
   });
 
   // The data is gone, not merely stale. A stale answer is still rendered until
@@ -68,6 +70,7 @@ it("drops nothing when a session opens with the switch already off", async () =>
   const client = new QueryClient();
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: false,
+    forecast_self_correcting: true,
   });
   client.setQueryData(FIGURES_KEY, { total: 7 });
   mounted(client);
@@ -82,12 +85,14 @@ it("drops nothing when the switch goes back on", async () => {
   const client = new QueryClient();
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: false,
+    forecast_self_correcting: true,
   });
   client.setQueryData(FIGURES_KEY, { total: 7 });
   mounted(client);
 
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: true,
+    forecast_self_correcting: true,
   });
 
   await waitFor(() => expect(client.getQueryData(FIGURES_KEY)).toBeDefined());

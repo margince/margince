@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -167,6 +168,14 @@ func flagsOf(row contacts.DedupeCandidateRow) pairFlags {
 	return out
 }
 
+func reportedFlags(candidate agents.DuplicateCandidate) pairFlags {
+	out := pairFlags{merge: candidate.CanMerge}
+	if candidate.KeepID != nil {
+		out.keep = *candidate.KeepID
+	}
+	return out
+}
+
 func (c *caseEnv) listedFlags(ctx context.Context, t *testing.T, status string, id ids.UUID) pairFlags {
 	t.Helper()
 	rows, _, err := c.store.ListDedupeCandidates(ctx, contacts.DedupeQueueInput{Status: status, EntityType: "contact", Limit: 50})
@@ -194,6 +203,13 @@ func TestEveryRouteThatAnswersAPairTellsTheSameAuthority(t *testing.T) {
 	listed := c.listedFlags(rep, t, "open", halfPair)
 	if flagsOf(got) != listed || listed != (pairFlags{merge: true, keep: half[1].String()}) {
 		t.Errorf("the read answers %+v and the list %+v, want both to offer the merge keeping the colleague's record", flagsOf(got), listed)
+	}
+	reported, err := openDuplicatesFor(c.e.Pool)(rep, "contact", half[0], nil)
+	if err != nil || len(reported) != 1 {
+		t.Fatalf("the create's report = %+v, %v, want the one filed pair", reported, err)
+	}
+	if got := reportedFlags(reported[0]); got != (pairFlags{merge: listed.merge, keep: listed.keep}) {
+		t.Errorf("the create reports %+v and the list %+v, want the same merge offer", got, listed)
 	}
 
 	both := c.seedCase(t, c.e.Rep1, c.e.Rep1)

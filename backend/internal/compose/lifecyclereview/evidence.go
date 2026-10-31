@@ -6,7 +6,6 @@ package lifecyclereview
 import (
 	"context"
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,12 +42,6 @@ type Finding struct {
 	Scope       string `json:"scope"`
 	Workstream  string `json:"-"`
 }
-
-// LiveStages keeps conflict cards and proposal scans on the same account boundary.
-func LiveStages() []string { return []string{"prospect", "opportunity", "customer"} }
-
-// LiveStage includes accounts whose ending still needs review.
-func LiveStage(stage string) bool { return slices.Contains(LiveStages(), stage) }
 
 // Revalidate refuses changed evidence before a lifecycle decision commits.
 func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UUID, shown *Finding, now time.Time) error {

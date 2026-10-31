@@ -219,9 +219,10 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.Handlers {
 	return forecasting.NewHandlers(
 		newForecastStoreFor(pool),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
+		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
-	).WithCallBaseline(ForecastCallBaseline)
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
+		WithReaderRows(ForecastReaderContributions)
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
@@ -387,6 +388,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom

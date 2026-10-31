@@ -312,7 +312,7 @@ means is the **Projection basis** installation setting, and the card names it:
 
 - **Commit evidence**: confirmed close dates only. The default, and the
   strictest.
-- **Weighted**: every open deal at its stage probability.
+- **Weighted**: every open deal at its probability ([how it is set](forecast-learning.md)).
 - **Manager’s call**: the recorded number *replaces* the projection rather
   than adding to what is already won.
   **From the deal records** shows won plus commit evidence beside it, never added.

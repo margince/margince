@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -92,11 +93,13 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}
 	defer pool.Close()
 	contact := e.SeedContact(t, "Planned Once", &e.Rep1)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Advised Once", pipeline, open, &e.Rep1)
 	subject, body, direction, at := "Following up", "Any news?", "outbound", clocktest.Now(t)
 	mail, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &at, Source: "manual",
 		EmailFrom: "rep@ourco.test", EmailTo: []string{"buyer@customer.test"},
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}, {EntityType: "deal", EntityID: deal}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -111,6 +114,10 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 			return err
 		}
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
+			return err
+		}
+		advice := attentionDealMoves{cards: newDealStatusService(pool, func() time.Time { return at })}
+		if _, err := advice.CurrentMoves(ctx, []ids.UUID{deal}); err != nil {
 			return err
 		}
 		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {

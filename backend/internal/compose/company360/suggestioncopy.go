@@ -31,6 +31,8 @@ var suggestionWords = struct {
 	NextNamedAccount    langcopy.Phrase
 	Prospect            langcopy.Phrase
 	Opportunity         langcopy.Phrase
+	Onboarding          langcopy.Phrase
+	Live                langcopy.Phrase
 	Customer            langcopy.Phrase
 }{
 	OriginStalledDeal:   langcopy.Phrase{En: "Open deal, last worked", De: "Offener Deal, zuletzt bearbeitet", Vi: "Giao dịch đang mở, lần xử lý gần nhất"},
@@ -52,6 +54,8 @@ var suggestionWords = struct {
 	NextNamedAccount:    langcopy.Phrase{En: "Agree the next step with %s", De: "Den nächsten Schritt mit %s vereinbaren", Vi: "Thống nhất bước tiếp theo với %s"},
 	Prospect:            langcopy.Phrase{En: "prospect", De: "Interessent", Vi: "khách hàng tiềm năng"},
 	Opportunity:         langcopy.Phrase{En: "opportunity", De: "Verkaufschance", Vi: "cơ hội bán hàng"},
+	Onboarding:          langcopy.Phrase{En: "onboarding", De: "Onboarding", Vi: "đang triển khai"},
+	Live:                langcopy.Phrase{En: "live", De: "Live", Vi: "đang vận hành"},
 	Customer:            langcopy.Phrase{En: "customer", De: "Kunde", Vi: "khách hàng"},
 }
 
@@ -65,6 +69,10 @@ func (said suggestionCopy) lifecycle(value string) string {
 		return said.Say(suggestionWords.Prospect)
 	case crmcontracts.CompanyLifecycleOpportunity:
 		return said.Say(suggestionWords.Opportunity)
+	case crmcontracts.CompanyLifecycleOnboarding:
+		return said.Say(suggestionWords.Onboarding)
+	case crmcontracts.CompanyLifecycleLive:
+		return said.Say(suggestionWords.Live)
 	case crmcontracts.CompanyLifecycleCustomer:
 		return said.Say(suggestionWords.Customer)
 	default:

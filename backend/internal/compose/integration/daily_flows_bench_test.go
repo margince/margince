@@ -161,13 +161,17 @@ func dailyAIActivityPath() string {
 	return "/v1/me/ai-activity?" + args.Encode()
 }
 
+// worklistDay is the day read the app sends: its largest page, and no
+// reconnections, which are read only when their panel opens.
+const worklistDay = "/v1/worklist?filter=all&limit=100&relationships=omit&scope="
+
 // worklistCalls sends the view and scope the screen opens on: Today, over the
 // reader's own queue. A manager also times the team scope they pick. Home's
 // read names no view, so homeCalls times that one.
 func worklistCalls(in dailyInput) []dailyCall {
-	calls := []dailyCall{{Path: "/v1/worklist?scope=mine&filter=all&view=today"}, {Name: "handled", Path: "/v1/worklist/handled"}}
+	calls := []dailyCall{{Path: worklistDay + "mine&view=today"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 	if in.Seat.Role == "manager" {
-		calls = append(calls, dailyCall{Name: "team", Path: "/v1/worklist?scope=team&filter=all&view=today"})
+		calls = append(calls, dailyCall{Name: "team", Path: worklistDay + "team&view=today"})
 	}
 	return calls
 }
@@ -178,7 +182,7 @@ func worklistCalls(in dailyInput) []dailyCall {
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
-		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
+		{Name: "worklist", Path: worklistDay + "mine"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
 		{Name: "digest", Path: "/v1/digest", Optional: true},

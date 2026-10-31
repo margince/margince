@@ -11,17 +11,21 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
+import { Badge } from "../../design-system/atoms";
+import type { ListChip } from "../../design-system/listsurface";
+import { CellStrip } from "../../design-system/listtable";
 import { useT } from "../../i18n";
 import { isOption } from "../../lib/options";
-import { unwrap } from "../../lib/problem";
 import {
-  CERT_LABELS,
-  CERT_STATUSES,
-  PARTNER_ROLES,
-  type Partner,
-  ROLE_LABELS,
-  STAGE_LABELS,
-} from "./partners.vocab";
+  KIND_LABELS,
+  MEANING_LABELS,
+  PARTNER_KINDS,
+  PARTNER_STAGE_MEANINGS,
+  partnerStageLabel,
+  usePartnerStages,
+} from "../../lib/partnerstages.queries";
+import { unwrap } from "../../lib/problem";
+import { CERT_LABELS, CERT_STATUSES, type Partner } from "./partners.vocab";
 
 // #/partners (PartnersScreen) is the flat list, reached from the Companies
 // list header. The Partner tab on a company is in partners.form.tsx.
@@ -42,7 +46,8 @@ async function fetchPartnersPage(
   query: ListQuery,
   cursor: string | null,
 ): Promise<ListPage<Partner>> {
-  const role = query.filters.partner_role ?? "";
+  const kind = query.filters.partner_kind ?? query.filters.partner_role ?? "";
+  const meaning = query.filters.stage_meaning ?? "";
   const cert = query.filters.cert_status ?? "";
   const data = unwrap(
     await api.GET("/partners", {
@@ -50,7 +55,11 @@ async function fetchPartnersPage(
         query: {
           cursor: cursor || undefined,
           limit: listFetchLimit(query.perPage),
-          partner_role: isOption(role, PARTNER_ROLES) ? role : undefined,
+          partner_kind: isOption(kind, PARTNER_KINDS) ? kind : undefined,
+          relationship_stage: query.filters.relationship_stage || undefined,
+          stage_meaning: isOption(meaning, PARTNER_STAGE_MEANINGS)
+            ? meaning
+            : undefined,
           cert_status: isOption(cert, CERT_STATUSES) ? cert : undefined,
         },
       },
@@ -72,6 +81,19 @@ export function PartnersScreen() {
     key: "partners",
     fetchPage: fetchPartnersPage,
   });
+  // The stage names are the installation's own, so the dial carries words
+  // rather than message keys.
+  const stageChip: readonly ListChip[] = [
+    {
+      key: "relationship_stage",
+      label: t("partner.stage"),
+      allLabel: t("partner.stageAll"),
+      options: (usePartnerStages().data ?? []).map((stage) => ({
+        value: stage.key,
+        label: stage.label,
+      })),
+    },
+  ];
 
   return (
     <div className="wrap">
@@ -96,10 +118,18 @@ export function PartnersScreen() {
             fixed: true,
           },
           {
-            key: "role",
-            header: t("partner.role"),
+            key: "kinds",
+            header: t("partner.kinds"),
             cell: (partner: Partner) =>
-              partner.partner_role ? t(ROLE_LABELS[partner.partner_role]) : "",
+              partner.partner_kinds?.length ? (
+                <CellStrip>
+                  {PARTNER_KINDS.filter((kind) =>
+                    partner.partner_kinds?.includes(kind),
+                  ).map((kind) => (
+                    <Badge key={kind}>{t(KIND_LABELS[kind])}</Badge>
+                  ))}
+                </CellStrip>
+              ) : null,
           },
           {
             key: "cert",
@@ -109,8 +139,7 @@ export function PartnersScreen() {
           {
             key: "stage",
             header: t("partner.stage"),
-            cell: (partner: Partner) =>
-              t(STAGE_LABELS[partner.relationship_stage]),
+            cell: (partner: Partner) => partnerStageLabel(partner, t),
           },
         ]}
         rowKey={(partner) => partner.company_id}
@@ -118,14 +147,24 @@ export function PartnersScreen() {
           screen: "companies",
           id: partner.company_id,
         })}
+        dataChips={stageChip}
         chips={[
           {
-            key: "partner_role",
-            label: "partner.role",
-            allLabel: "partner.roleAll",
-            options: PARTNER_ROLES.map((role) => ({
-              value: role,
-              label: ROLE_LABELS[role],
+            key: "partner_kind",
+            label: "partner.kinds",
+            allLabel: "partner.kindsAll",
+            options: PARTNER_KINDS.map((kind) => ({
+              value: kind,
+              label: KIND_LABELS[kind],
+            })),
+          },
+          {
+            key: "stage_meaning",
+            label: "partner.stageMeaning",
+            allLabel: "partner.stageMeaningAll",
+            options: PARTNER_STAGE_MEANINGS.map((meaning) => ({
+              value: meaning,
+              label: MEANING_LABELS[meaning],
             })),
           },
           {
