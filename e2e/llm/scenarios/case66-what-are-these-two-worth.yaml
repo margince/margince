@@ -1,0 +1,38 @@
+# CASE 66 — What are these two deals worth together.
+#
+# Every amount a tool returns is a `<name>_minor` figure with a readable
+# `<name>_display` beside it. A model that divides the minor figure itself, or
+# adds the raw minor figures and reports them as money, is off by a factor of a
+# hundred. This case asks for a sum, so the answer cannot come from one quoted
+# display: it must read both and add them in major units.
+#
+# The seeded world holds Körber Sensorik Rollout at 56,000.00 EUR and Rheinufer
+# Netzmodernisierung at 12,500.00 EUR, so the pair is 68,500.00 EUR. Neither
+# raw minor sum (6,850,000) nor a missed division (685,000) may appear.
+name: case66_what_are_these_two_worth
+criteria: [1]
+writes: false
+
+prompt: |
+  What are the Körber Sensorik Rollout and the Rheinufer Netzmodernisierung
+  deals worth together?
+
+must_call:
+  - search_records|list_records|query_workspace|read_record|read_forecast
+
+may_call:
+  - find_records
+  - resolve_entities
+
+must_mention:
+  - "68[.,' ’]?500"
+
+must_not_mention:
+  - "6[.,' ’]?850[.,' ’]?000"
+  - "685[.,' ’]?000"
+
+judge:
+  - "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator), taken from readings it made, and may also give each deal's own value, 56,000 and 12,500 EUR. Answer no if it gives a different total, quotes a figure in minor units as if it were money, or gives no total."
+
+runs: 3
+pass_at: 2

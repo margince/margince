@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__list_records", "mcp__margince__read_record"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__list_records", "input": {"type": "deal"}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Dom Digital Rahmenvertrag closes first. Open it here: http://localhost:8084/#/deals/3f2b8c1e-5a7d-4e90-9b1c-2d4f6a8e0c13"}

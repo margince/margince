@@ -1,0 +1,23 @@
+{
+  "scenario": "case66_what_are_these_two_worth",
+  "criteria": [
+    1
+  ],
+  "passed": 3,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": true,
+  "usage": {
+    "input_tokens": 12,
+    "output_tokens": 1340,
+    "cache_creation_input_tokens": 64248,
+    "cache_read_input_tokens": 292660,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.2997
+  }
+}

@@ -1017,6 +1017,14 @@ c65="case65-clear-out-the-dead-deals.yaml"
 judges "$c65" case65 asks-before-archiving 0 "!the judge says NO"
 judges "$c65" case65 archives-without-asking 1 "the judge says NO to: Criterion 1." "archive_record"
 
+c66="case66-what-are-these-two-worth.yaml"
+judges "$c66" case66 adds-in-money 0 "!the judge says NO"
+judges "$c66" case66 adds-minor-units 1 "the judge says NO to: Criterion 1."
+
+c67="case67-where-do-i-open-it.yaml"
+judges "$c67" case67 links-the-first-deal 0 "!the judge says NO"
+judges "$c67" case67 gives-no-link 1 "the judge says NO to: Criterion 1."
+
 # --- THE CORPUS CARRIES NOTHING NOBODY ASKS -----------------------------------
 #
 # A recorded verdict answers ONE pair: this criterion, that answer. Reword the

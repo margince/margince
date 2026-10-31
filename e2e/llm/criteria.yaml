@@ -472,3 +472,15 @@ cases:
         The user names no deal, so the model chooses which ones are dead. It
         names them and asks for a yes before it archives or closes any, because
         an archive runs at once and cannot be undone from the conversation.
+  case66_what_are_these_two_worth:
+    1:
+      name: Add the two deals in money, not in minor units
+      statement: >-
+        The answer gives 68,500 EUR from readings it made. It does not report
+        a minor-unit figure as money.
+  case67_where_do_i_open_it:
+    1:
+      name: Give a link to the deal that closes first
+      statement: >-
+        The answer names the deal with the earliest close date and gives the
+        link to its page in the app.

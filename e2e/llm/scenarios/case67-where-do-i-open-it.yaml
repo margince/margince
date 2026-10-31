@@ -1,0 +1,29 @@
+# CASE 67 — Where do I open it.
+#
+# Every evidence entry for a deal carries a `web_url` to its page in the app. A
+# user who asks where to open a deal needs that link, and a model that has only
+# seen an id cannot give one. The stack's public base URL is the origin of the
+# link, and a deal's page is `/#/deals/<id>` on it.
+name: case67_where_do_i_open_it
+criteria: [1]
+writes: false
+
+prompt: |
+  Which deal closes first? Give me a link I can open it from.
+
+must_call:
+  - search_records|list_records|query_workspace|read_record|read_forecast
+
+may_call:
+  - find_records
+  - resolve_entities
+
+must_mention:
+  - "Dom Digital"
+  - "/#/deals/[0-9a-f]{8}-[0-9a-f]{4}-"
+
+judge:
+  - "Criterion 1. The earliest close date in the workspace belongs to Dom Digital Rahmenvertrag. The answer names that deal and gives a link whose path is a deal's page in the app. Answer no if it names a different deal, names it without a link, or gives a link that is not a deal page."
+
+runs: 3
+pass_at: 2
