@@ -13,8 +13,9 @@ package gates
 // (created_at DESC, id DESC), and a random id there scatters inserts across
 // the whole index.
 //
-// The default is what makes the rule unconditional. A rule held by the call
-// sites lasts until a writer, an import path or a fixture does not know it.
+// The default covers an id nobody supplied. It does not refuse a v4 a caller
+// passes outright, so this is a floor rather than a guarantee. A writer, an
+// import path or a fixture that omits the id gets a v7 instead of an error.
 //
 // The corpus derives from the head catalog, so a new table arrives failing
 // until it carries the default or a waiver.
@@ -43,7 +44,7 @@ func defaultMintsV7(def string) bool {
 
 // uuidKeyLine reads a catalog line for a uuid `id` column, capturing its table
 // and its default.
-var uuidKeyLine = regexp.MustCompile(`^public\.(\w+)\.id uuid NOT NULL gen=\S+ def=(.*)$`)
+var uuidKeyLine = regexp.MustCompile(`^public\.(\w+)\.id uuid(?: NOT NULL)? gen=\S+ def=(.*)$`)
 
 // mintsItsOwnKey records each table whose id has no default, with why. It is
 // what makes a new table fail: an unlisted one neither carries the rule nor
@@ -83,8 +84,8 @@ func TestEveryUUIDKeyDefaultsToV7(t *testing.T) {
 		if defaultMintsV7(defaults[table]) || mintsItsOwnKey.Waived(t, table) {
 			continue
 		}
-		t.Errorf("%s.id has no uuidv7() default (def=%s), so a caller that passes nothing, or "+
-			"passes a v4, is not refused. Add the default in a migration, or waive the table in "+
+		t.Errorf("%s.id has no uuidv7() default (def=%s), so an insert that omits the id fails "+
+			"instead of minting a v7. Add the default in a migration, or waive the table in "+
 			"mintsItsOwnKey with the reason its key comes from elsewhere.", table, defaults[table])
 	}
 }
@@ -100,6 +101,7 @@ func TestTheUUIDKeyReaderSeesEachShape(t *testing.T) {
 	}{
 		{"public.deal.id uuid NOT NULL gen=- def=uuidv7()", true, "uuidv7()"},
 		{"public.mail_draft.id uuid NOT NULL gen=- def=-", true, "-"},
+		{"public.x.id uuid gen=- def=-", true, "-"},
 		{"public.deal.name text NOT NULL gen=- def=-", false, ""},
 		{"public.river_job.id bigint NOT NULL gen=- def=nextval('x')", false, ""},
 		{"public.contact.contact_id uuid NOT NULL gen=- def=-", false, ""},
