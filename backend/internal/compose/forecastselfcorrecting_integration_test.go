@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -171,6 +172,21 @@ func TestRecordedOutcomesMoveTheChanceAndImportedOrLegacyMovesDoNot(t *testing.T
 	}
 	if row.WeightedMinor != 600_000 {
 		t.Fatalf("weighted = %d, want 60%% of 1,000,000", row.WeightedMinor)
+	}
+	var stages forecasting.StageChances
+	if err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
+		var err error
+		stages, err = ForecastStageChances(f.forecastReader(), tx, today)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	read := slices.IndexFunc(stages.Stages, func(stage forecasting.StageChance) bool { return stage.StageID == s0 })
+	if read < 0 {
+		t.Fatal("the stage chances leave out the first stage")
+	}
+	if stage := stages.Stages[read]; stage.ChanceInUse != 60 || stage.Evidence.Resolved != 20 || stage.Typed != 20 {
+		t.Fatalf("Settings reads stage %+v, want typed 20, 20 outcomes and 60 in use as the forecast does", stage)
 	}
 
 	overTool := f.forecastOverTool(t, today)
