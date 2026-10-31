@@ -191,6 +191,12 @@ func WithPublicOrigin(origin string) HTTPOption {
 	return func(d *Dispatcher) { d.publicOrigin = strings.TrimSuffix(origin, "/") }
 }
 
+// WithInputStateKey arms the questions a tool may ask in the chat with the
+// deployment's HMAC key. A short or absent key leaves them off.
+func WithInputStateKey(key string) HTTPOption {
+	return func(d *Dispatcher) { d.inputState = newInputStateSigner([]byte(key)) }
+}
+
 // WithHeldViews tells the tool surface which `ui://` documents are actually
 // being served, so a tool never names one this deployment does not publish.
 func WithHeldViews(held func(uri string) bool) HTTPOption {

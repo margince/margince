@@ -130,6 +130,9 @@ type Dispatcher struct {
 	// served from. Empty leaves serverInfo without a website or icons, and
 	// results without record links.
 	publicOrigin string
+	// inputState signs the questions a tool asks in the chat. Unarmed, no tool
+	// asks, and each does what it did before the question existed.
+	inputState inputStateSigner
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -279,42 +282,6 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 	return resp
 }
 
-// eraOwned answers the calls that exist in ONE framing only, and reports
-// whether the method was one of them at all.
-//
-// Each era's opening call belongs here because answering the other era's would
-// tell a client it had reached the kind of server it was probing for, which is
-// exactly the question those two calls exist to settle. ping is here for a
-// different reason: the 2026-07-28 revision REMOVED it along with the handshake
-// it kept alive, so it stays answered only in the era that still defines it.
-func (s *Dispatcher) eraOwned(req rpcRequest, fr framing) (rpcResponse, bool) {
-	resp := rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID}
-	switch req.Method {
-	case methodInitialize:
-		if fr.modern {
-			return methodNotFound(req), true
-		}
-		if result, rpcErr := s.initialize(req.Params); rpcErr != nil {
-			resp.Error = rpcErr
-		} else {
-			resp.Result = result
-		}
-	case methodDiscover:
-		if !fr.modern {
-			return methodNotFound(req), true
-		}
-		resp.Result = s.discover()
-	case methodPing:
-		if fr.modern {
-			return methodNotFound(req), true
-		}
-		resp.Result = map[string]any{}
-	default:
-		return rpcResponse{}, false
-	}
-	return resp, true
-}
-
 func methodNotFound(req rpcRequest) rpcResponse {
 	return rpcResponse{
 		JSONRPC: jsonRPCVersion, ID: req.ID,
@@ -408,6 +375,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"(it may be revoked, expired, or bound to another workspace). Nothing was changed — " +
 			"mint a new passport or contact the workspace admin.")
 	}
+	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
 	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
 	if spec, ok := s.registry.Spec(p.Name); ok && spec.Unlisted {
 		// The traffic a hidden name still carries, which decides when it can go.
@@ -416,6 +384,9 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle
+		}
+		if asked, ok := s.askedInChat(callCtx, p.Name, p.Arguments, err); ok {
+			return asked
 		}
 		refusal := toolError(s.explain(served.Tool, err))
 		if shown := shownAnswer(err); shown != nil {

@@ -324,7 +324,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterIntentTools(r, inertRetriever{}, nil, nil, seamProbeLifecycle{})
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, seamProbeLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },

@@ -129,6 +129,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// The origin the Origin guard admits is the one the app is served from.
 		// Record links and the connector's icon point at it.
 		agents.WithPublicOrigin(s.mcpAllowedOrigin),
+		agents.WithInputStateKey(s.mcpInputStateKey),
 		// The Tasks extension, which is why a confirm-first call no longer dead-ends
 		// for a client that can hold a handle. The store is composed here for the
 		// same reason the claim store is: agent_task rows are this transport's own

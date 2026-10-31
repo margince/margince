@@ -196,7 +196,9 @@ var bulkUpdateRecordsCopy = toolCopy{
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +
 		"undo, pass the batch_id to undo_preview, show the user the answer, and call undo after " +
-		"they agree; a change is undone once, and records changed since are left alone.",
+		"they agree; a change is undone once, and records changed since are left alone. If your " +
+		"host shows forms, execute and undo ask the user in one, so show the preview and call " +
+		"without asking in words as well.",
 	Instead: "update_record and archive_record change one record.",
 	Retain: "Above 10 records, execute and undo need the confirm_token their preview answered; " +
 		"it is good once. Keep batch_id from the answer: undo names the change by it.",

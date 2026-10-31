@@ -141,3 +141,38 @@ const (
 	serverTitle       = "Margince"
 	serverDescription = "Your CRM in the conversation: deals, contacts, meetings, the forecast and what needs attention."
 )
+
+// eraOwned answers the calls that exist in one framing only, and reports
+// whether the method was one of them at all.
+//
+// Each era's opening call is here because answering the other era's would
+// mislead a client about which kind of server it found. That is the
+// question those two calls exist to settle. ping is here because the 2026-07-28
+// revision removed it with the handshake it kept alive.
+func (s *Dispatcher) eraOwned(req rpcRequest, fr framing) (rpcResponse, bool) {
+	resp := rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID}
+	switch req.Method {
+	case methodInitialize:
+		if fr.modern {
+			return methodNotFound(req), true
+		}
+		if result, rpcErr := s.initialize(req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case methodDiscover:
+		if !fr.modern {
+			return methodNotFound(req), true
+		}
+		resp.Result = s.discover()
+	case methodPing:
+		if fr.modern {
+			return methodNotFound(req), true
+		}
+		resp.Result = map[string]any{}
+	default:
+		return rpcResponse{}, false
+	}
+	return resp, true
+}

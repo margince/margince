@@ -258,6 +258,13 @@ func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserve
 	}
 	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
 	defer release()
+	var asked *askInChatError
+	if errors.As(runErr, &asked) {
+		// Nothing ran: the call waits for the user, and its retry is the same
+		// call under the same key.
+		r.releaseUnrunKey(ctx, spec, res, attempt)
+		return
+	}
 	if runErr != nil {
 		if err := r.claims.Fail(book, spec.Name, res.RetryKey, attempt, safeFailureReason(runErr)); err != nil {
 			slog.ErrorContext(book, "recording a failed call against its idempotency key failed; a retry of "+
