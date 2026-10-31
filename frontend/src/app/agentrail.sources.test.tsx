@@ -7,6 +7,7 @@ import { cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
+import { isOffline } from "./agentrail-reads";
 import {
   block,
   CONNECTED,
@@ -49,6 +50,25 @@ const duplicateKeyWarnings = (spy: ReturnType<typeof vi.spyOn>) =>
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+});
+
+// The rail reads the health the Connections page shows, not the bare status.
+describe("which connections the rail calls offline", () => {
+  it("leaves out a connection its owner disconnected", () => {
+    expect(isOffline({ ...GMAIL, status: "disconnected" })).toBe(false);
+  });
+
+  it("names a connection still connected while its sync keeps failing", () => {
+    expect(isOffline({ ...GMAIL, last_sync_error_class: "transient" })).toBe(
+      true,
+    );
+  });
+
+  it("names a refused or failed grant, and not a healthy one", () => {
+    expect(isOffline({ ...GMAIL, status: "reauth_required" })).toBe(true);
+    expect(isOffline({ ...GMAIL, status: "error" })).toBe(true);
+    expect(isOffline(GMAIL)).toBe(false);
+  });
 });
 
 describe("the agent panel's offline sources", () => {
