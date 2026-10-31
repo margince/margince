@@ -14492,6 +14492,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Webhook có chữ ký từ Typeform",
   "webForms.senderLine.tally": "Webhook có chữ ký từ Tally",
   "webForms.row.consent": "Cần đồng ý",
+  "webForms.row.lastPost": "Lần gửi gần nhất {when}",
+  "webForms.row.noPost": "Chưa có lần gửi nào",
   "webForms.setup": "Xem cách cài đặt",
   "webForms.edit": "Sửa",
   "webForms.pause": "Tạm dừng biểu mẫu",

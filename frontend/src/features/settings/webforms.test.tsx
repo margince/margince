@@ -258,6 +258,26 @@ describe("WebFormsCard", () => {
     expect(screen.getByText(/Leads go to/)).toBeTruthy();
   });
 
+  it("says when each form last landed a post, or that none has yet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [
+        { ...contactForm, last_post_at: "2026-10-30T09:00:00Z" },
+        { ...contactForm, id: "wf-2", name: "Demo page", last_post_at: null },
+      ]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(await screen.findByText(/^Last post /)).toBeTruthy();
+    expect(screen.getByText("No post yet")).toBeTruthy();
+  });
+
+  it("says nothing about posts when the server does not report them", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Contact page")).toBeTruthy();
+    expect(screen.queryByText(/^Last post |^No post yet$/)).toBeNull();
+  });
+
   it("says leads arrive unassigned once the form's owner left", async () => {
     vi.stubGlobal(
       "fetch",

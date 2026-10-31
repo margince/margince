@@ -97,11 +97,19 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	if err := checkEnquiry(f, e); err != nil {
 		return receipt, err
 	}
-	return receipt, in.lander.Land(ctx, Landing{
+	if err := in.lander.Land(ctx, Landing{
 		FormID: f.ID, FormName: f.Name, SourceKey: sourceKey(f.ID, key),
 		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, Enquiry: e,
 		ConsentWording: f.ConsentWording, ConsentPolicyVersion: f.ConsentPolicyVersion,
-	})
+	}); err != nil {
+		return receipt, err
+	}
+	// The post has landed, so a stamp that fails is logged rather than told to
+	// the visitor as a failure.
+	if err := in.store.notePost(ctx, f.ID); err != nil {
+		in.store.log.WarnContext(ctx, "webforms: the form's last post was not stamped", "form", f.ID, "err", err)
+	}
+	return receipt, nil
 }
 
 // admit runs the form's admission rule and reads the fields. An empty key with

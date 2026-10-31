@@ -58161,6 +58161,9 @@ type WebForm struct {
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
 
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at,omitempty"`
+
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
@@ -58219,6 +58222,9 @@ type WebFormCreated struct {
 	// FormKey The last segment of the intake address. Public; it is an address, not a credential.
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
+
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at,omitempty"`
 
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`

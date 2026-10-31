@@ -38,6 +38,7 @@ const contactForm: WebForm = {
   created_at: "2026-09-01T09:00:00Z",
   updated_at: "2026-09-01T09:00:00Z",
   archived_at: null,
+  last_post_at: "2026-10-30T14:12:00Z",
 };
 
 const serverForm: WebForm = {
@@ -50,6 +51,7 @@ const serverForm: WebForm = {
   consent_required: false,
   consent_wording: null,
   secret_configured: true,
+  last_post_at: null,
 };
 
 const typeformForm: WebForm = {

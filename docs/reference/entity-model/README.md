@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 339 |
-| Columns | 4048 |
-| Foreign keys | 560 |
+| Tables | 340 |
+| Columns | 4050 |
+| Foreign keys | 561 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -125,7 +125,7 @@ erDiagram
 | [reporting](reporting.md) | 12 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
-| [webforms](webforms.md) | 1 |
+| [webforms](webforms.md) | 2 |
 | [webhooks](webhooks.md) | 2 |
 | [weeklyplan](weeklyplan.md) | 2 |
 
@@ -452,7 +452,8 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`web_form`](webforms.md#web_form) | webforms | 20 | 0 |
+| [`web_form`](webforms.md#web_form) | webforms | 20 | 1 |
+| [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 18 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |

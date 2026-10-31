@@ -16,6 +16,8 @@ To put a contact form on your website, open **Settings → Website forms** and c
 4. Choose **Create form**. The **Connect** dialog lists the steps, each with what to copy.
 5. Choose **Copy code** and paste the code into your page where the form goes. In a site builder, set the form to send to the **Form address** instead.
 Style the form as you like, but keep each field's `name`. A post from a website not on the list is refused.
+
+To check that the code works, send one test message from your page. The form's row then shows **Last post** and the date. Until then it shows **No post yet**.
 Also called: contact form, request form, lead form, web form, embed a form.
 
 ### Can I keep the form I already have?

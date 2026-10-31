@@ -34718,6 +34718,13 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        last_post_at:
+          type: [string, 'null']
+          format: date-time
+          readOnly: true
+          description: >-
+            When the form last landed a post, stamped at most once a minute. Null until the
+            first one. A post the spam checks drop is not counted.
 
     WebFormCreated:
       allOf:

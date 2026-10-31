@@ -8716,6 +8716,12 @@ public.web_form.web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 
 public.web_form.web_form_success_message_bounded CHECK (((success_message IS NULL) OR (length(success_message) <= 500)))
 public.web_form.web_form_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.web_form_form_key_key CREATE UNIQUE INDEX web_form_form_key_key ON public.web_form USING btree (form_key)
+public.web_form_last_post acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.web_form_last_post.form_id uuid NOT NULL gen=- def=-
+public.web_form_last_post.last_post_at timestamp with time zone NOT NULL gen=- def=-
+public.web_form_last_post.web_form_last_post_form_id_fkey FOREIGN KEY (form_id) REFERENCES web_form(id) ON DELETE CASCADE
+public.web_form_last_post.web_form_last_post_pkey PRIMARY KEY (form_id)
+public.web_form_last_post_pkey CREATE UNIQUE INDEX web_form_last_post_pkey ON public.web_form_last_post USING btree (form_id)
 public.web_form_pkey CREATE UNIQUE INDEX web_form_pkey ON public.web_form USING btree (id)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0
