@@ -15628,6 +15628,10 @@ export const en = {
     "spends enrichment credits; each purchase still asks you first",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI access.",
+  "consent.preset.label": "Assistant permissions",
+  "consent.preset.readDraft": "Read and draft",
+  "consent.preset.full": "Full assistant",
+  "consent.preset.custom": "Pick your own",
   "consent.pickOne": "Pick at least one, or deny.",
   "consent.offline":
     "It stays connected and renews access without asking again until you revoke it.",

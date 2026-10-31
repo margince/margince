@@ -15334,6 +15334,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "tiêu credit bổ sung dữ liệu; mỗi lần mua vẫn hỏi bạn trước",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Quyền truy cập AI.",
+  "consent.preset.label": "Quyền của trợ lý",
+  "consent.preset.readDraft": "Đọc và soạn nháp",
+  "consent.preset.full": "Trợ lý đầy đủ",
+  "consent.preset.custom": "Tự chọn",
   "consent.pickOne": "Chọn ít nhất một quyền, hoặc từ chối.",
   "consent.offline":
     "Ứng dụng giữ kết nối và tự gia hạn quyền truy cập mà không hỏi lại, cho đến khi bạn thu hồi.",

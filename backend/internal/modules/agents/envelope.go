@@ -67,7 +67,8 @@ type Envelope struct {
 	// one of those is true here.
 	Evidence []EvidenceRef `json:"evidence"`
 	Warnings []Warning     `json:"warnings"`
-	// Data is the tool's own result, exactly as its handler marshalled it.
+	// Data is the tool's own result as its handler marshalled it, plus a
+	// readable figure beside each amount (withReadableAmounts).
 	Data json.RawMessage `json:"data"`
 }
 
@@ -103,6 +104,9 @@ type EvidenceRef struct {
 	RecordID   ids.UUID              `json:"record_id"`
 	Source     string                `json:"source,omitempty"`
 	CapturedBy string                `json:"captured_by,omitempty"`
+	// WebURL opens the record in the app. It is set when the answer is sealed,
+	// so two reads of one record still dedupe to one reference.
+	WebURL string `json:"web_url,omitempty"`
 }
 
 // Warning is a non-fatal condition the caller must not have to infer.
@@ -384,8 +388,9 @@ func (f *envelopeFacts) addRef(ref EvidenceRef) {
 // envelope true of the whole surface: a handler does not build one, so no
 // handler can forget one, and a tool added tomorrow carries it without its
 // author having read this file.
-func sealEnvelope(spec mcp.ToolSpec, trace string, facts *envelopeFacts, data json.RawMessage) (json.RawMessage, error) {
+func sealEnvelope(spec mcp.ToolSpec, trace, origin string, facts *envelopeFacts, data json.RawMessage) (json.RawMessage, error) {
 	snapshot := facts.snapshot()
+	linkEvidence(snapshot.Evidence, origin)
 	// The tier and the instruction travel together. A client that does not know
 	// to branch on `trust` still reads the warnings, and the doctrine that
 	// untrusted content is data rather than instructions is worth nothing if the
@@ -401,7 +406,7 @@ func sealEnvelope(spec mcp.ToolSpec, trace string, facts *envelopeFacts, data js
 		Trust:         snapshot.Trust,
 		Evidence:      snapshot.Evidence,
 		Warnings:      snapshot.Warnings,
-		Data:          data,
+		Data:          withReadableAmounts(data),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("crmagents: cannot encode the result envelope for %s: %w", spec.Name, err)
