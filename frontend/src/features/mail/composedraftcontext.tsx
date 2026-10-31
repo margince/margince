@@ -82,17 +82,9 @@ function relatedValue(dealId: string, projectId: string): string {
   return projectId ? `project:${projectId}` : "";
 }
 
-// What the draft was written from, in the two shapes State D draws: a "Based
-// on" line naming the inputs in order, and a row of chips, one per input.
-// Shut by default under a "Why this draft" hint: the words come first.
-//
-// Both render the SAME reasons — they are one answer read two ways, which is
-// why the server sends parts rather than a sentence. The line is for scanning
-// before reading the draft; the chips are for checking one input after.
-//
-// A reason carrying evidence is pressable and opens the record it names. One
-// without — the rep's own instruction — is flat, because there is nothing to
-// open and a chip that looks pressable and is not is worse than a plain one.
+// What the draft was written from: a "Based on" line and one chip per input.
+// It stays shut under a "Why this draft" hint, so the words come first. A chip
+// with evidence opens its record; one without is flat.
 export function DraftReasons({
   reasons,
   onOpenRecord,
