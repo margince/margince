@@ -7047,7 +7047,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionOverview": "Tổng quan",
   "analytics.overview.views": "Chế độ xem tổng quan",
   "analytics.overview.sales": "Rà soát bán hàng",
-  "analytics.overview.prospecting": "Tìm kiếm khách hàng của tôi",
+  "analytics.overview.prospecting": "Tìm khách của tôi",
   "analytics.overview.readings": "Chỉ số chính",
   "analytics.overview.charts": "Biểu đồ",
   "analytics.overview.expectedFinish": "Kết quả dự kiến",
@@ -7160,10 +7160,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.doNext.open": "Mở",
   "analytics.doNext.openNamed": "Mở {title}",
   "analytics.overview.gapMissing": "Kết quả so sánh không có khoảng cách.",
-  "analytics.overview.team": "Tìm kiếm khách hàng của nhóm",
+  "analytics.overview.team": "Tìm khách của nhóm",
   "analytics.team.chooseTeam": "Chọn một nhóm",
   "analytics.team.chooseTeamBody":
-    "Tìm kiếm khách hàng của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm kiếm khách hàng của tôi.",
+    "Tìm khách của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm khách của tôi.",
   "analytics.team.todaysMembers":
     "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo những gì họ đã làm trước đây, và thành viên mới mang theo phần của họ.",
   "analytics.team.withheld":
