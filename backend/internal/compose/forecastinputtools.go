@@ -95,17 +95,23 @@ func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 			population.ID = &id
 		}
 		var found []assurance.Exception
+		var answerable map[ids.UUID]bool
 		if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			found, err = AssuranceExceptionsIn(ctx, tx, population)
+			if found, err = AssuranceExceptionsIn(ctx, tx, population); err != nil {
+				return err
+			}
+			answerable, err = assurance.AnswerableFindings(ctx, tx, found)
 			return err
 		}); err != nil {
 			return nil, err
 		}
+		list := assurance.InputCheckListToWire(found, answerable)
 		// Empty, never nil: null reads as "unknown" to a model. Here that is the
 		// difference between a clean pipeline and an unread one.
-		out := agents.InputChecksResult{Data: []agents.InputCheckResult{}}
-		for _, e := range found {
+		out := agents.InputChecksResult{Data: []agents.InputCheckResult{}, Groups: inputCheckGroupsResult(list.Groups),
+			Totals: agents.InputCheckTotalsResult{Findings: list.Totals.Findings, Deals: list.Totals.Deals, OtherFindings: list.Totals.OtherFindings}}
+		for i, e := range found {
 			check := agents.InputCheckResult{
 				ID: e.ID.String(), Type: e.Type, SubjectKind: e.SubjectKind,
 				SubjectID: e.SubjectID.String(), Severity: e.Severity,
@@ -115,6 +121,7 @@ func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 				FirstSeenAt:   e.FirstSeenAt.UTC().Format(time.RFC3339),
 				LastSeenAt:    e.LastSeenAt.UTC().Format(time.RFC3339),
 				InputsChanged: e.InputsChanged,
+				Destination:   inputCheckDestinationResult(*list.Data[i].Destination),
 			}
 			out.Data = append(out.Data, check)
 		}
@@ -165,4 +172,24 @@ func coverageToolReader(pool *pgxpool.Pool) agents.SourceCoverageReader {
 		}
 		return json.Marshal(out)
 	}
+}
+
+func inputCheckGroupsResult(groups []crmcontracts.InputCheckGroup) []agents.InputCheckGroupResult {
+	out := make([]agents.InputCheckGroupResult, 0, len(groups))
+	for _, g := range groups {
+		exposure := make([]agents.InputCheckExposureResult, 0, len(g.Exposure))
+		for _, money := range g.Exposure {
+			exposure = append(exposure, agents.InputCheckExposureResult{Currency: money.Currency, AmountMinor: money.AmountMinor})
+		}
+		destination := inputCheckDestinationResult(g.Destination)
+		out = append(out, agents.InputCheckGroupResult{
+			Type: g.Type, Findings: g.Findings, Deals: g.Deals, OtherFindings: g.OtherFindings,
+			Exposure: exposure, Destination: *destination,
+		})
+	}
+	return out
+}
+
+func inputCheckDestinationResult(d crmcontracts.InputCheckDestination) *agents.InputCheckDestination {
+	return &agents.InputCheckDestination{Screen: string(d.Screen), Mode: string(d.Mode)}
 }

@@ -29379,6 +29379,13 @@ paths:
                   data:
                     type: array
                     items: { $ref: '#/components/schemas/InputCheck' }
+                  groups:
+                    type: array
+                    description: >-
+                      The same findings grouped by type, in the order each type first appears in
+                      `data`. Counted over the whole list this caller may see, never a page of it.
+                    items: { $ref: '#/components/schemas/InputCheckGroup' }
+                  totals: { $ref: '#/components/schemas/InputCheckTotals' }
                 additionalProperties: false
         '400':
           description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
@@ -58453,6 +58460,70 @@ components:
             finding is out of date until the next run reads the change; a run that
             could not read all it needs leaves it out of date. Null when no check
             has run since changes were first tracked, so nothing is known either way.
+        destination:
+          allOf: [{ $ref: '#/components/schemas/InputCheckDestination' }]
+          description: >-
+            Where this finding is reviewed, and whether this caller may answer it there. Absent
+            on a list that does not say, such as the team weekly.
+      additionalProperties: false
+    InputCheckDestination:
+      type: object
+      description: >-
+        The screen a finding or a group of findings opens on, decided by the server under the
+        caller's authority so a client never offers an answer the server would refuse.
+      required: [screen, mode]
+      properties:
+        screen:
+          type: string
+          enum: [forecast_review]
+          description: The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+        mode:
+          type: string
+          enum: [answer, read]
+          description: >-
+            `answer` when this caller may answer the finding now: a human session with forecast
+            update and write authority over its subject. `read` otherwise, which opens the same
+            finding with no answer offered. On a group, `answer` when the caller may answer at
+            least one of its findings.
+      additionalProperties: false
+    InputCheckGroup:
+      type: object
+      description: >-
+        The findings of one type. Findings and the distinct deals they are about are counted
+        apart, because one deal can carry several findings.
+      required: [type, findings, deals, other_findings, exposure, destination]
+      properties:
+        type: { type: string, description: "The finding type, as `InputCheck.type` spells it." }
+        findings: { type: integer, minimum: 0, description: How many findings of this type. }
+        deals: { type: integer, minimum: 0, description: How many distinct deals those findings are about. }
+        other_findings:
+          type: integer
+          minimum: 0
+          description: Findings of this type about something other than a deal, such as a forecast call or a signal.
+        exposure:
+          type: array
+          description: >-
+            The money in question, one entry per currency and never summed across currencies. A
+            deal counts once, at the largest amount any of its findings in this group names. A
+            finding with no amount adds nothing, which is not the same as nothing at stake.
+          items: { $ref: '#/components/schemas/InputCheckExposure' }
+        destination: { $ref: '#/components/schemas/InputCheckDestination' }
+      additionalProperties: false
+    InputCheckExposure:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: { type: string }
+        amount_minor: { type: integer, format: int64 }
+      additionalProperties: false
+    InputCheckTotals:
+      type: object
+      description: Every finding in the list, with deals counted once however many findings they carry.
+      required: [findings, deals, other_findings]
+      properties:
+        findings: { type: integer, minimum: 0 }
+        deals: { type: integer, minimum: 0 }
+        other_findings: { type: integer, minimum: 0 }
       additionalProperties: false
     ResolveInputCheck:
       type: object

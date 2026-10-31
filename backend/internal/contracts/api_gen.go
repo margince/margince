@@ -12775,6 +12775,39 @@ func (e InputCheckSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for InputCheckDestinationMode.
+const (
+	InputCheckDestinationModeAnswer InputCheckDestinationMode = "answer"
+	InputCheckDestinationModeRead   InputCheckDestinationMode = "read"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckDestinationMode enum.
+func (e InputCheckDestinationMode) Valid() bool {
+	switch e {
+	case InputCheckDestinationModeAnswer:
+		return true
+	case InputCheckDestinationModeRead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckDestinationScreen.
+const (
+	InputCheckDestinationScreenForecastReview InputCheckDestinationScreen = "forecast_review"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckDestinationScreen enum.
+func (e InputCheckDestinationScreen) Valid() bool {
+	switch e {
+	case InputCheckDestinationScreenForecastReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstallationSettingsBaseLanguage.
 const (
 	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
@@ -44603,10 +44636,13 @@ type InputCheck struct {
 	AffectedMinor *int64 `json:"affected_minor,omitempty"`
 
 	// Claim What the record says, as structured values only.
-	Claim       *map[string]interface{} `json:"claim,omitempty"`
-	Currency    *string                 `json:"currency,omitempty"`
-	FirstSeenAt time.Time               `json:"first_seen_at"`
-	Id          openapi_types.UUID      `json:"id"`
+	Claim    *map[string]interface{} `json:"claim,omitempty"`
+	Currency *string                 `json:"currency,omitempty"`
+
+	// Destination Where this finding is reviewed, and whether this caller may answer it there. Absent on a list that does not say, such as the team weekly.
+	Destination *InputCheckDestination `json:"destination,omitempty"`
+	FirstSeenAt time.Time              `json:"first_seen_at"`
+	Id          openapi_types.UUID     `json:"id"`
 
 	// InputsChanged True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
 	InputsChanged *bool `json:"inputs_changed"`
@@ -44640,6 +44676,55 @@ type InputCheckStatus string
 
 // InputCheckSubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 type InputCheckSubjectKind string
+
+// InputCheckDestination The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
+type InputCheckDestination struct {
+	// Mode `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+	Mode InputCheckDestinationMode `json:"mode"`
+
+	// Screen The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+	Screen InputCheckDestinationScreen `json:"screen"`
+}
+
+// InputCheckDestinationMode `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+type InputCheckDestinationMode string
+
+// InputCheckDestinationScreen The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+type InputCheckDestinationScreen string
+
+// InputCheckExposure defines model for InputCheckExposure.
+type InputCheckExposure struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+}
+
+// InputCheckGroup The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings.
+type InputCheckGroup struct {
+	// Deals How many distinct deals those findings are about.
+	Deals int `json:"deals"`
+
+	// Destination The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
+	Destination InputCheckDestination `json:"destination"`
+
+	// Exposure The money in question, one entry per currency and never summed across currencies. A deal counts once, at the largest amount any of its findings in this group names. A finding with no amount adds nothing, which is not the same as nothing at stake.
+	Exposure []InputCheckExposure `json:"exposure"`
+
+	// Findings How many findings of this type.
+	Findings int `json:"findings"`
+
+	// OtherFindings Findings of this type about something other than a deal, such as a forecast call or a signal.
+	OtherFindings int `json:"other_findings"`
+
+	// Type The finding type, as `InputCheck.type` spells it.
+	Type string `json:"type"`
+}
+
+// InputCheckTotals Every finding in the list, with deals counted once however many findings they carry.
+type InputCheckTotals struct {
+	Deals         int `json:"deals"`
+	Findings      int `json:"findings"`
+	OtherFindings int `json:"other_findings"`
+}
 
 // InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 type InstallationBrand struct {

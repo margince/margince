@@ -42572,6 +42572,46 @@ export interface components {
             last_seen_at: string;
             /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way. */
             inputs_changed: boolean | null;
+            /** @description Where this finding is reviewed, and whether this caller may answer it there. Absent on a list that does not say, such as the team weekly. */
+            destination?: components["schemas"]["InputCheckDestination"];
+        };
+        /** @description The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse. */
+        InputCheckDestination: {
+            /**
+             * @description The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+             * @enum {string}
+             */
+            screen: "forecast_review";
+            /**
+             * @description `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+             * @enum {string}
+             */
+            mode: "answer" | "read";
+        };
+        /** @description The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings. */
+        InputCheckGroup: {
+            /** @description The finding type, as `InputCheck.type` spells it. */
+            type: string;
+            /** @description How many findings of this type. */
+            findings: number;
+            /** @description How many distinct deals those findings are about. */
+            deals: number;
+            /** @description Findings of this type about something other than a deal, such as a forecast call or a signal. */
+            other_findings: number;
+            /** @description The money in question, one entry per currency and never summed across currencies. A deal counts once, at the largest amount any of its findings in this group names. A finding with no amount adds nothing, which is not the same as nothing at stake. */
+            exposure: components["schemas"]["InputCheckExposure"][];
+            destination: components["schemas"]["InputCheckDestination"];
+        };
+        InputCheckExposure: {
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+        };
+        /** @description Every finding in the list, with deals counted once however many findings they carry. */
+        InputCheckTotals: {
+            findings: number;
+            deals: number;
+            other_findings: number;
         };
         ResolveInputCheck: {
             /**
@@ -84996,6 +85036,9 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["InputCheck"][];
+                        /** @description The same findings grouped by type, in the order each type first appears in `data`. Counted over the whole list this caller may see, never a page of it. */
+                        groups?: components["schemas"]["InputCheckGroup"][];
+                        totals?: components["schemas"]["InputCheckTotals"];
                     };
                 };
             };
