@@ -83,12 +83,29 @@ func (a Attribution) Wire() *crmcontracts.PrincipalAttribution {
 // FirstCreateSQL is the create audit row a record's creator is read from. It is
 // the earliest, with the id breaking a tie, so a replayed create never changes
 // who made the record. Both arguments are SQL expressions, never request text.
+//
+// The instant is found first, by the index's own order. One sort over both
+// columns cannot stop early and reads the record's whole history.
 func FirstCreateSQL(entityType, entityID string) string {
+	createOf := func(alias string) string {
+		return alias + `.entity_type = ` + entityType + ` AND ` + alias + `.entity_id = ` + entityID +
+			` AND ` + alias + `.action = 'create'`
+	}
 	return `SELECT c.id, c.actor_type, c.actor_id, c.on_behalf_of, c.passport_id, c.occurred_at
 		  FROM audit_log c
-		 WHERE c.entity_type = ` + entityType + ` AND c.entity_id = ` + entityID + ` AND c.action = 'create'
-		 ORDER BY c.occurred_at, c.id LIMIT 1`
+		 WHERE ` + createOf("c") + `
+		   AND c.occurred_at = (SELECT f.occurred_at FROM audit_log f WHERE ` + createOf("f") + `
+		                         ORDER BY f.occurred_at LIMIT 1)
+		 ORDER BY c.id LIMIT 1`
 }
+
+// creatorsSQL probes each named record once, so its cost follows the page size
+// and never the length of a record's history.
+var creatorsSQL = `
+		SELECT named.id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
+		       ` + ActorNameColumn + `, obo.display_name, oc.client_name
+		FROM unnest($2::uuid[]) AS named(id)
+		CROSS JOIN LATERAL (` + FirstCreateSQL("$1", "named.id") + `) a` + ActorNameJoins + AgentClientNameJoin
 
 // CreatorsTx is who created each named record of one type, read from
 // FirstCreateSQL. A record with no surviving create row is absent from the
@@ -99,12 +116,7 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 	if len(entityIDs) == 0 {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT named.id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
-		       `+ActorNameColumn+`, obo.display_name, oc.client_name
-		FROM unnest($2::uuid[]) AS named(id)
-		CROSS JOIN LATERAL (`+FirstCreateSQL("$1", "named.id")+`) a`+ActorNameJoins+AgentClientNameJoin,
-		entityType, entityIDs)
+	rows, err := tx.Query(ctx, creatorsSQL, entityType, entityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("auditattribution: reading creators: %w", err)
 	}

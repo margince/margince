@@ -358,3 +358,19 @@ func TestAutomaticWorkLeavesOutATaskAColleagueCreatedFirst(t *testing.T) {
 		}
 	}
 }
+
+// A machine create replayed later is still one automatic item.
+func TestAutomaticWorkCountsAReplayedMachineCreateOnce(t *testing.T) {
+	f := newWorkFixture(t)
+	task := f.promiseTask(t, f.e.Rep1)
+	created := f.dbNow(t)
+	f.e.WsExec(t, `
+		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		SELECT actor_type, actor_id, 'create', entity_type, entity_id, occurred_at + interval '1 hour'
+		  FROM audit_log WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'create'`, task.UUID)
+
+	_, tally := tallyOf(t, f.report(t, created.Add(2*time.Hour), 7), f.e.Rep1, crmcontracts.AutomaticWorkKindNamePromiseTask)
+	if tally.Counts.Created != 1 {
+		t.Errorf("a task whose machine create was replayed counts %d times, want once", tally.Counts.Created)
+	}
+}
