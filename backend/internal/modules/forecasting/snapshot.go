@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -316,8 +315,7 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		return snapshotSide{}, err
 	}
 
-	rows, err := tx.Query(ctx, `SELECT `+ContributionColumns("c")+`
-		FROM forecast_contribution c
+	rows, err := tx.Query(ctx, ContributionSelect+`
 		WHERE c.snapshot_id = $1
 		ORDER BY c.deal_id`, id)
 	if err != nil {
@@ -430,26 +428,17 @@ func sameID(a, b *ids.UUID) bool {
 	return *a == *b
 }
 
-// contributionColumns is the frozen contribution columns CollectContribution
-// scans, in its order.
-var contributionColumns = strings.Fields(strings.ReplaceAll(`deal_id, owner_id, amount_minor, currency, base_minor,
-effective_close_date, close_provisional, category, stage_probability,
-weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
-exclusion_reason, qualification, audit_id, approval_id,
-stage_id, typed_probability, evidence_n, risk_signal_facts, risk_effect`, ",", " "))
+// ContributionSelect reads frozen contribution rows, aliased c, in the order
+// CollectContribution scans them. A frozen share reads through the same pair,
+// so the two cannot come to read a row two ways.
+const ContributionSelect = `SELECT c.deal_id, c.owner_id, c.amount_minor, c.currency, c.base_minor,
+		c.effective_close_date, c.close_provisional, c.category, c.stage_probability,
+		c.weighted_minor, c.in_won, c.in_evidence, c.in_best_case, c.in_open, c.in_lost,
+		c.exclusion_reason, c.qualification, c.audit_id, c.approval_id,
+		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect
+		FROM forecast_contribution c`
 
-// ContributionColumns lists the frozen contribution columns under a table
-// alias, for a SELECT that CollectContribution scans. A frozen share reads its
-// rows through the same pair, so the two cannot come to read a row two ways.
-func ContributionColumns(alias string) string {
-	qualified := make([]string, len(contributionColumns))
-	for i, column := range contributionColumns {
-		qualified[i] = alias + "." + column
-	}
-	return strings.Join(qualified, ", ")
-}
-
-// CollectContribution scans one row read with ContributionColumns.
+// CollectContribution scans one row read with ContributionSelect.
 func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	var c Contribution
 	var dealID ids.UUID

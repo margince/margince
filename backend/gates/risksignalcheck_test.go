@@ -5,7 +5,7 @@
 
 package gates
 
-// A frozen forecast row accepts exactly the risk signals the assessment can
+// A frozen forecast row accepts the same risk signals the assessment can
 // answer. A signal added to assurance alone aborts every snapshot that freezes
 // it; one added to the CHECK alone is a code no reader words. Both sides are
 // read from their owners: the CHECK from the head catalog, the list from

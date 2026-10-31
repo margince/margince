@@ -157,8 +157,8 @@ type EvaluationRow struct {
 	// share one outcome, so this is the effective sample.
 	Outcomes int `json:"outcomes"`
 	// Vintages whose readings left priced or converted money out.
-	UnpricedVintages int          `json:"unpriced_vintages"`
-	FxGapVintages    int          `json:"fx_gap_vintages"`
+	UnpricedVintages int            `json:"unpriced_vintages"`
+	FxGapVintages    int            `json:"fx_gap_vintages"`
 	Money            *MoneyError    `json:"money,omitempty"`
 	Calibration      *Calibration   `json:"calibration,omitempty"`
 	Interval         *IntervalScore `json:"interval,omitempty"`

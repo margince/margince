@@ -131,11 +131,9 @@ func ReadSharedSnapshot(
 // recipient may read, under the predicate the totals were summed under. The
 // stored range covers rows the recipient may not see, so it is never served.
 func sharedSnapshotRange(ctx context.Context, tx pgx.Tx, visible string, args []any) (*forecasting.Range, error) {
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT %s
-		FROM forecast_contribution c
+	rows, err := tx.Query(ctx, fmt.Sprintf(forecasting.ContributionSelect+`
 		JOIN deal d ON d.id = c.deal_id
-		WHERE c.snapshot_id = $1 AND %s`, forecasting.ContributionColumns("c"), visible), args...)
+		WHERE c.snapshot_id = $1 AND %s`, visible), args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading a shared snapshot's rows for its range: %w", err)
 	}

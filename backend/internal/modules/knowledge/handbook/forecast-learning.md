@@ -52,7 +52,7 @@ behind it. It shows the probability used, any risk, and the weighted amount.
 ## The range beside the landing
 
 The **Landing** card on the forecast shows a line such as "8 in 10 outcomes
-between €610k and €880k". **Expected finish** in Sales review shows the same
+between €610,000 and €880,000". **Expected finish** in Sales review shows the same
 line.
 
 To find the two amounts, the forecast runs the period many times. Each
@@ -67,8 +67,8 @@ the forecast corrects itself, a stage with few closed deals has a probability
 the forecast is not so sure of. That makes the range wider.
 
 On both cards, **Evidence** says what the range rests on. On the forecast,
-**Open** on the **Landing** card goes to **Deals behind the weighted figure**:
-the deals the range was built from, each with its probability. A frozen
+**Open** on the **Landing** card goes to **Deals behind the weighted figure**.
+That list holds the deals the range was built from, each with its probability. A frozen
 forecast keeps the range it showed that day.
 
 ## Switch it off

@@ -63,8 +63,8 @@ func (c evaluationCorpus) vintage(id string, period [2]time.Time, takenOn int, w
 		Definition: DefinitionVersion, Currency: "EUR", Eligible: 3, Priced: 3, Rows: 3,
 		WonMinor: won, Weighted: weighted, TypedWeighted: weighted, OpenMinor: open, Evidence: evidence,
 		Sufficiency: EvidenceNone,
-		Tallies: TallyOpenDeals(deals),
-		Outcome: &VintageOutcome{WonMinor: outcome}, TrainOutcome: &VintageOutcome{WonMinor: outcome},
+		Tallies:     TallyOpenDeals(deals),
+		Outcome:     &VintageOutcome{WonMinor: outcome}, TrainOutcome: &VintageOutcome{WonMinor: outcome},
 	}
 }
 
