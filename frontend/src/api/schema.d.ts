@@ -49566,6 +49566,12 @@ export interface components {
         };
         /** @description One team's week, as it was measured when the week closed. */
         TeamWeeklyReview: {
+            /**
+             * @description True when the reader may not read activities. A meeting is an activity, so every
+             *     meeting figure in the team's counts and each member's row reads zero and says nothing,
+             *     and no member carries a meetings pattern. Absent from an older server.
+             */
+            meetings_withheld?: boolean;
             numeric_summary?: components["schemas"]["WeeklyNumericSummary"];
             /** Format: uuid */
             id: string;
@@ -50035,6 +50041,12 @@ export interface components {
          *     which is why they are stored rather than recomputed.
          */
         WeeklyReview: {
+            /**
+             * @description True when the reader may not read activities. A meeting is an activity, so every
+             *     meeting figure in this review, its prior week and its scorecard reads zero and says
+             *     nothing, and the narrative and learnings read as not run. Absent from an older server.
+             */
+            meetings_withheld?: boolean;
             /** Format: uuid */
             id: string;
             /**

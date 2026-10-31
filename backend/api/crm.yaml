@@ -67104,6 +67104,12 @@ components:
       description: One team's week, as it was measured when the week closed.
       required: [id, team_id, team_name, local_week_start, generated_at, as_of, counts, reps, agenda]
       properties:
+        meetings_withheld:
+          type: boolean
+          description: |
+            True when the reader may not read activities. A meeting is an activity, so every
+            meeting figure in the team's counts and each member's row reads zero and says nothing,
+            and no member carries a meetings pattern. Absent from an older server.
         numeric_summary: { $ref: '#/components/schemas/WeeklyNumericSummary' }
         id: { type: string, format: uuid }
         team_id: { type: string, format: uuid }
@@ -67674,6 +67680,12 @@ components:
         which is why they are stored rather than recomputed.
       required: [id, local_week_start, generated_at, as_of, counts, deals]
       properties:
+        meetings_withheld:
+          type: boolean
+          description: |
+            True when the reader may not read activities. A meeting is an activity, so every
+            meeting figure in this review, its prior week and its scorecard reads zero and says
+            nothing, and the narrative and learnings read as not run. Absent from an older server.
         id: { type: string, format: uuid }
         local_week_start:
           type: string

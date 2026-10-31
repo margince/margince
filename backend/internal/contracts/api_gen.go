@@ -56179,6 +56179,11 @@ type TeamWeeklyReview struct {
 	Id             openapi_types.UUID `json:"id"`
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
 
+	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
+	// meeting figure in the team's counts and each member's row reads zero and says nothing,
+	// and no member carries a meetings pattern. Absent from an older server.
+	MeetingsWithheld *bool `json:"meetings_withheld,omitempty"`
+
 	// Members Every live member of the team that week, including those whose own week could not be
 	// read. `reps` is the measured subset. Empty on a snapshot frozen before the roster was
 	// kept.
@@ -58815,6 +58820,11 @@ type WeeklyReview struct {
 
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// MeetingsWithheld True when the reader may not read activities. A meeting is an activity, so every
+	// meeting figure in this review, its prior week and its scorecard reads zero and says
+	// nothing, and the narrative and learnings read as not run. Absent from an older server.
+	MeetingsWithheld *bool `json:"meetings_withheld,omitempty"`
 
 	// NarratedAt When a narrative pass last ran, null when none has. A reader showing a review with
 	// no sentence must consult this before saying "a quiet week": without it, a week

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -132,7 +133,7 @@ type sdrTeamFigures struct {
 
 func readSdrTeamFigures(ctx context.Context, tx pgx.Tx, requested RequestedScope, window sdrTeamWindow, at time.Time) (sdrTeamFigures, error) {
 	out := sdrTeamFigures{workflow: crmcontracts.SdrTeamReviewWorkflowQualification}
-	if mayReadSdrMeetings(ctx) {
+	if weekly.MayReadMeetings(ctx) {
 		meetings, seats, err := readSdrTeamMeetings(ctx, tx, requested, window, at)
 		if err != nil {
 			return out, err
@@ -369,7 +370,7 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
 	// A seat that may not read activities gets no meetings column, as it gets
 	// no team meeting count.
 	met, meetings, joinMet := "", "NULL::bigint", ""
-	if mayReadSdrMeetings(ctx) {
+	if weekly.MayReadMeetings(ctx) {
 		held, _, err := heldMeetingSource(ctx, &b, at, window.from, window.to)
 		if err != nil {
 			return nil, false, err
