@@ -109,8 +109,12 @@ func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
 		list := assurance.InputCheckListToWire(found, answerable)
 		// Empty, never nil: null reads as "unknown" to a model. Here that is the
 		// difference between a clean pipeline and an unread one.
-		out := agents.InputChecksResult{Data: []agents.InputCheckResult{}, Groups: inputCheckGroupsResult(list.Groups),
-			Totals: agents.InputCheckTotalsResult{Findings: list.Totals.Findings, Deals: list.Totals.Deals, OtherFindings: list.Totals.OtherFindings}}
+		totals := agents.InputCheckTotalsResult{
+			Findings: list.Totals.Findings, Deals: list.Totals.Deals, OtherFindings: list.Totals.OtherFindings,
+		}
+		out := agents.InputChecksResult{
+			Data: []agents.InputCheckResult{}, Groups: inputCheckGroupsResult(list.Groups), Totals: totals,
+		}
 		for i, e := range found {
 			check := agents.InputCheckResult{
 				ID: e.ID.String(), Type: e.Type, SubjectKind: e.SubjectKind,

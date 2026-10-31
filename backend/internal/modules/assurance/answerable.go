@@ -20,13 +20,44 @@ import (
 // signal or a call is asked by its own rule, and a list holds few of those.
 func AnswerableFindings(ctx context.Context, tx pgx.Tx, found []Exception) (map[ids.UUID]bool, error) {
 	out := map[ids.UUID]bool{}
-	actor, err := answeringActor(ctx)
+	actor, refusal := answeringActor(ctx)
+	allowed, err := admitted(refusal)
+	if err != nil {
+		return nil, err
+	}
 	// The answer routes take a human session only, so an agent reading the
 	// list is shown each finding to read.
-	if err != nil || actor.Type != principal.PrincipalHuman {
+	if !allowed || actor.Type != principal.PrincipalHuman {
 		return out, nil
 	}
+	deals, err := answerableBesideDeals(ctx, tx, found, out)
+	if err != nil {
+		return nil, err
+	}
+	updates, err := admitted(auth.Require(ctx, subjectKindDeal, principal.ActionUpdate))
+	if err != nil {
+		return nil, err
+	}
+	if len(deals) == 0 || !updates {
+		return out, nil
+	}
+	writable, err := auth.WritableSubset(ctx, tx, subjectKindDeal, deals)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range found {
+		if e.SubjectKind == subjectKindDeal {
+			out[e.ID] = writable[e.SubjectID]
+		}
+	}
+	return out, nil
+}
+
+// answerableBesideDeals asks each signal and call by its own rule, filling
+// out, and answers the deals left for one statement.
+func answerableBesideDeals(ctx context.Context, tx pgx.Tx, found []Exception, out map[ids.UUID]bool) ([]ids.UUID, error) {
 	var deals []ids.UUID
+	var err error
 	for _, e := range found {
 		switch e.SubjectKind {
 		case subjectKindDeal:
@@ -44,19 +75,7 @@ func AnswerableFindings(ctx context.Context, tx pgx.Tx, found []Exception) (map[
 			}
 		}
 	}
-	if len(deals) == 0 || auth.Require(ctx, subjectKindDeal, principal.ActionUpdate) != nil {
-		return out, nil
-	}
-	writable, err := auth.WritableSubset(ctx, tx, subjectKindDeal, deals)
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range found {
-		if e.SubjectKind == subjectKindDeal {
-			out[e.ID] = writable[e.SubjectID]
-		}
-	}
-	return out, nil
+	return deals, nil
 }
 
 // admitted reads a refusal as "no" and passes any other failure on.

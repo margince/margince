@@ -43,7 +43,7 @@ func (e *forecastEnv) seedFinding(t *testing.T, kind string, deal ids.UUID, amou
 		kind+":"+deal.String(), kind, deal, amount)
 }
 
-func (e *forecastEnv) listInputChecks(t *testing.T, ctx context.Context) assurance.InputCheckList {
+func (e *forecastEnv) listInputChecks(ctx context.Context, t *testing.T) assurance.InputCheckList {
 	t.Helper()
 	h := assurance.NewHandlers(assurance.NewStore(InstallationDB(e.Pool)), AssuranceExceptionsIn,
 		func() time.Time { return clocktest.Now(t) })
@@ -80,14 +80,14 @@ func TestEachFindingSaysWhetherItsReaderMayAnswerIt(t *testing.T) {
 	minePast := e.seedFinding(t, "close_past", mine, amount)
 	theirsPast := e.seedFinding(t, "close_past", theirs, amount)
 
-	rep := modesByFinding(e.listInputChecks(t, e.answeringRepCtx(e.Rep1)))
+	rep := modesByFinding(e.listInputChecks(e.answeringRepCtx(e.Rep1), t))
 	if rep[minePast.String()] != crmcontracts.InputCheckDestinationModeAnswer {
 		t.Errorf("the owner's own finding opens as %q, want answer", rep[minePast.String()])
 	}
 	if rep[theirsPast.String()] != crmcontracts.InputCheckDestinationModeRead {
 		t.Errorf("a colleague's finding opens as %q for the rep, want read", rep[theirsPast.String()])
 	}
-	reviewer := modesByFinding(e.listInputChecks(t, e.forecastReader(e.Admin())))
+	reviewer := modesByFinding(e.listInputChecks(e.forecastReader(e.Admin()), t))
 	for _, id := range []ids.UUID{minePast, theirsPast} {
 		if reviewer[id.String()] != crmcontracts.InputCheckDestinationModeRead {
 			t.Errorf("a read-only reviewer is offered %q on %s, want read", reviewer[id.String()], id)
@@ -106,7 +106,7 @@ func TestGroupsCountFindingsAndDistinctDealsOverTheWholeList(t *testing.T) {
 	e.seedFinding(t, "no_next_step", first, harbour)
 	e.seedFinding(t, "close_past", second, marlow)
 
-	list := e.listInputChecks(t, e.answeringRepCtx(e.Rep1))
+	list := e.listInputChecks(e.answeringRepCtx(e.Rep1), t)
 
 	if list.Totals != (crmcontracts.InputCheckTotals{Findings: 3, Deals: 2}) {
 		t.Errorf("totals are %+v, want 3 findings on 2 deals", list.Totals)

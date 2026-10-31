@@ -8,8 +8,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // InputChecksReader answers the open findings this caller may see, for one
