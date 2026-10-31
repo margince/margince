@@ -2,7 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { SectionHeader, SegmentedControl } from "../../design-system/atoms";
+import { AppLink } from "../../design-system/applink";
+import {
+  EmptyState,
+  SectionHeader,
+  SegmentedControl,
+} from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Disclosure } from "../../design-system/disclosure";
 import { QueryStates, WriteRefused } from "../../design-system/querystates";
@@ -143,16 +148,18 @@ export function ScheduledSendsScreen() {
       <WriteRefused titleKey="sched.writeFailed" message={writeError} />
       <QueryStates query={query} pendingLabel={t("nav.scheduled")}>
         {query.data && query.data.length === 0 ? (
-          // One sentence for the whole page, not one per group: a rep who has
-          // never scheduled anything is not reading three findings, and three
-          // empty blocks make a page that is simply clear look broken.
-          <SurfaceState
-            state="empty"
-            emptyLabel={t("sched.empty")}
-            loadingLabel={t("nav.scheduled")}
+          // One line for the whole page and the way to start: a message is
+          // written from the contact it goes to, so the verb opens Contacts.
+          <EmptyState
+            title={t("sched.empty")}
+            action={
+              <AppLink className="btn btn-primary" href="#/contacts">
+                {t("sched.write")}
+              </AppLink>
+            }
           >
-            {null}
-          </SurfaceState>
+            {t("sched.writeHow")}
+          </EmptyState>
         ) : (
           query.data && (
             <div className="arrive-stack">

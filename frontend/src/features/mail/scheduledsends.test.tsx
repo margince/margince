@@ -403,10 +403,15 @@ it("narrows to the held messages and hides the timeline", async () => {
   expect(screen.queryByText("The renewal quote")).toBeNull();
 });
 
-it("says nothing is scheduled with one sentence, not three", async () => {
+it("says nothing is scheduled once, and offers the way to write one", async () => {
   mount([]);
-  expect(await screen.findByText("No scheduled messages yet.")).toBeTruthy();
-  expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
+  // One heading for the empty page, not one per group.
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+  expect(
+    screen.getByRole("link", { name: "Write a message" }).getAttribute("href"),
+  ).toMatch(/#\/contacts$/);
+  expect(screen.queryByText(/Only you can see them/)).toBeNull();
 });
 
 // The queue says WHOSE decision stopped a message, in the composer's words.

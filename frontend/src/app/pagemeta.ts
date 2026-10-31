@@ -79,10 +79,6 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
   // filter page heads itself (headsItself), and the shell's subtitle goes
   // with the heading it hangs on.
   filters: "filters.subtitle",
-  // Whose messages these are is the fact the page most needs to state, and it
-  // is true of the whole page: a scheduled send is readable only by the contact
-  // who scheduled it, so nothing here is a queue somebody else can work.
-  scheduled: "sched.sub",
 };
 
 // Off-rail screens (reached from Settings or from the surface that created the
