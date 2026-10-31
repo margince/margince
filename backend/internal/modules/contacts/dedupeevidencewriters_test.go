@@ -60,6 +60,91 @@ func TestEveryWrittenEvidenceFieldIsListed(t *testing.T) {
 	}
 }
 
+// The server drops a row whose signal is unknown just as it drops one whose
+// field is, so every written signal must be in DedupeEvidenceSignals.
+func TestEveryWrittenEvidenceSignalIsListed(t *testing.T) {
+	t.Parallel()
+	files := packageSources(t)
+	consts := stringConsts(files)
+	listed := DedupeEvidenceSignals()
+	signals := evidenceSignalExprs(files)
+	if len(signals) == 0 {
+		t.Fatal("no evidence row found; this test is checking nothing")
+	}
+	assigned := localAssignments(files)
+	for _, at := range signals {
+		expr := spelled(at.expr)
+		names := []string{expr}
+		if _, ok := consts[expr]; !ok {
+			names = assigned[expr]
+		}
+		if len(names) == 0 {
+			t.Errorf("%s: evidence signal %s is neither a string constant nor a variable set from one", at.pos, expr)
+		}
+		for _, name := range names {
+			value, ok := consts[name]
+			if !ok {
+				t.Errorf("%s: evidence signal %s takes %s, which is not a string constant", at.pos, expr, name)
+				continue
+			}
+			if !slices.Contains(listed, value) {
+				t.Errorf("%s: a writer files evidence signal %q (%s), which DedupeEvidenceSignals does not list; "+
+					"the server drops that row and the pair arrives unexplained", at.pos, value, name)
+			}
+		}
+	}
+}
+
+// localAssignments maps each variable name to the identifiers assigned to it
+// anywhere in the package, so a signal picked between two constants resolves.
+func localAssignments(files map[string]*ast.File) map[string][]string {
+	assigned := map[string][]string{}
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			stmt, ok := n.(*ast.AssignStmt)
+			if !ok || len(stmt.Lhs) != len(stmt.Rhs) {
+				return true
+			}
+			for i, lhs := range stmt.Lhs {
+				ident, isIdent := lhs.(*ast.Ident)
+				rhs, rhsIdent := stmt.Rhs[i].(*ast.Ident)
+				if isIdent && rhsIdent {
+					assigned[ident.Name] = append(assigned[ident.Name], rhs.Name)
+				}
+			}
+			return true
+		})
+	}
+	return assigned
+}
+
+// evidenceSignalExprs finds the signal of every evidence row.
+func evidenceSignalExprs(files map[string]*ast.File) []fieldExpr {
+	var out []fieldExpr
+	for name, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			if node, ok := n.(*ast.CompositeLit); ok {
+				keyed := keyedValues(node)
+				if value, ok := keyed["evidenceSignalKey"]; ok && keyed["evidenceFieldKey"] != nil {
+					out = append(out, fieldExpr{name, value})
+				}
+			}
+			return true
+		})
+	}
+	return out
+}
+
+func keyedValues(node *ast.CompositeLit) map[string]ast.Expr {
+	keyed := map[string]ast.Expr{}
+	for _, elt := range node.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			keyed[spelled(kv.Key)] = kv.Value
+		}
+	}
+	return keyed
+}
+
 type fieldExpr struct {
 	pos  string
 	expr ast.Expr
@@ -74,12 +159,7 @@ func evidenceFieldExprs(files map[string]*ast.File) []fieldExpr {
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch node := n.(type) {
 			case *ast.CompositeLit:
-				keyed := map[string]ast.Expr{}
-				for _, elt := range node.Elts {
-					if kv, ok := elt.(*ast.KeyValueExpr); ok {
-						keyed[spelled(kv.Key)] = kv.Value
-					}
-				}
+				keyed := keyedValues(node)
 				if value, ok := keyed["evidenceFieldKey"]; ok && keyed["evidenceSignalKey"] != nil {
 					out = append(out, fieldExpr{name, value})
 				}
