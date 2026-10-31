@@ -13,17 +13,21 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // evidenceSeed is one activity a promotion may cite.
 type evidenceSeed struct {
 	kind, direction, meetingStatus string
 	archived                       bool
-	// at is when it happened; zero is the database's now.
-	at time.Time
+	// at is when it happened; zero is the database's now less ago.
+	at  time.Time
+	ago time.Duration
 }
 
 var (
@@ -54,10 +58,10 @@ func (e *promoteConsentEnv) seedEvidenceFrom(t *testing.T, lead *ids.LeadID, see
 	}
 	e.mustExec(t,
 		`INSERT INTO activity (id, kind, subject, direction, meeting_status, occurred_at, source, captured_by, archived_at,
-		                       counterparty_email)
-		 VALUES ($1, $2, 'Evidence', NULLIF($3, ''), NULLIF($4, ''), coalesce($8, now()), 'manual', 'human:x', CASE WHEN $5 THEN now() END,
-		         coalesce(NULLIF($6, ''), (SELECT email FROM lead WHERE id = $7)))`,
-		id, seed.kind, seed.direction, seed.meetingStatus, seed.archived, counterparty, leadID, at)
+		                       counterparty_email, channel_provider)
+		 VALUES ($1, $2, 'Evidence', NULLIF($3, ''), NULLIF($4, ''), coalesce($8, now() - make_interval(secs => $9)), 'manual', 'human:x', CASE WHEN $5 THEN now() END,
+		         coalesce(NULLIF($6, ''), (SELECT email FROM lead WHERE id = $7)), CASE WHEN $2 = 'message' THEN 'telegram' END)`,
+		id, seed.kind, seed.direction, seed.meetingStatus, seed.archived, counterparty, leadID, at, seed.ago.Seconds())
 	if lead != nil {
 		e.mustExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, id, *lead)
 	}
@@ -299,45 +303,120 @@ func TestEngagementOutsideTheWaitingHorizonNoLongerQualifies(t *testing.T) {
 }
 
 // One meeting reads the same to the lead's evidence, its score and its status
-// ladder, whatever its recorded status, through each reader's own query.
+// ladder, through each reader's own query. That holds for every status and answer.
 func TestEvidenceScoringAndTheLadderReadAMeetingAlike(t *testing.T) {
-	for status, want := range map[string]PromoteTrigger{
-		"": TriggerMeetingBooked, "booked": TriggerMeetingBooked, "held": TriggerMeetingHeld, "canceled": "", "no_show": "",
+	for _, tc := range []struct {
+		status, response string
+		want             PromoteTrigger
+	}{
+		{"", "", TriggerMeetingBooked},
+		{"booked", "", TriggerMeetingBooked},
+		{"held", "", TriggerMeetingHeld},
+		{"canceled", "", ""},
+		{"no_show", "", ""},
+		{"", "accepted", TriggerMeetingBooked},
+		{"", "needs_action", TriggerMeetingBooked},
+		{"", "declined", ""},
+		{"held", "declined", ""},
 	} {
-		t.Run("status "+status, func(t *testing.T) {
+		t.Run("status "+tc.status+" answer "+tc.response, func(t *testing.T) {
 			e := setupPromoteConsent(t)
-			lead := e.seedLead(t, "alike@evidence.test")
-			e.seedEvidence(t, &lead, evidenceSeed{kind: "meeting", meetingStatus: status})
+			const address = "alike@evidence.test"
+			lead := e.seedLead(t, address)
+			meeting := e.seedEvidence(t, &lead, evidenceSeed{kind: "meeting", meetingStatus: tc.status})
+			if tc.response != "" {
+				e.mustExec(t, `INSERT INTO activity_participant (activity_id, address, role, response) VALUES ($1, $2, 'attendee', $3)`,
+					meeting, address, tc.response)
+			}
+			offered, scored, engaged := e.readMeetingThreeWays(t, lead)
+			if offered != tc.want || scored != tc.want || engaged != (tc.want != "") {
+				t.Errorf("evidence %q, score signal %q, ladder engaged=%t; want %q from all three", offered, scored, engaged, tc.want)
+			}
+		})
+	}
+}
+
+// readMeetingThreeWays is what the lead's one meeting proves to its evidence,
+// its score and its status ladder.
+func (e *promoteConsentEnv) readMeetingThreeWays(t *testing.T, lead ids.LeadID) (offered, scored PromoteTrigger, engaged bool) {
+	t.Helper()
+	read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.QualificationEvidence != nil {
+		offered = PromoteTrigger(read.QualificationEvidence.Trigger)
+	}
+	var touches []leadResponseTouch
+	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
+		signals, err := leadBehavioralSignals(e.ctx, tx, lead)
+		if err != nil {
+			return err
+		}
+		if len(signals) == 1 {
+			scored = PromoteTrigger(signals[0].Kind)
+		}
+		touches, err = leadTouchesFor(e.ctx, tx, lead, endOfTime)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(touches) != 1 {
+		t.Fatalf("the ladder read %d touches, want the one meeting", len(touches))
+	}
+	step, ok := ladderStepFor(touches[0])
+	return offered, scored, ok && step == LeadStatusEngaged
+}
+
+// An import of engagement already older than the waiting horizon when it was
+// captured does not move the lead to Engaged. A current one does.
+func TestOldEngagementDoesNotClimbTheLadder(t *testing.T) {
+	horizon := storekit.DefaultWaitingHorizonDays * 24 * time.Hour
+	for _, tc := range []struct {
+		name    string
+		age     time.Duration
+		engaged bool
+	}{{"inside the horizon", horizon - time.Hour, true}, {"outside the horizon", horizon + time.Hour, false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			lead := e.seedLead(t, "imported@evidence.test")
+			reply := e.seedEvidence(t, &lead, evidenceSeed{kind: "email", direction: "inbound", ago: tc.age})
+			ladder := leadStatusLadder{store: e.store}
+			ev := workflow.Event{Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: reply.UUID}}
+			if _, err := ladder.Apply(e.ctx, ev, workflow.Effect{}, nil); err != nil {
+				t.Fatal(err)
+			}
 			read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
 			if err != nil {
 				t.Fatal(err)
 			}
-			var offered PromoteTrigger
-			if read.QualificationEvidence != nil {
-				offered = PromoteTrigger(read.QualificationEvidence.Trigger)
-			}
-			var scored PromoteTrigger
-			var touches []leadResponseTouch
-			if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
-				signals, err := leadBehavioralSignals(e.ctx, tx, lead)
-				if len(signals) == 1 {
-					scored = PromoteTrigger(signals[0].Kind)
-				}
-				if err != nil {
-					return err
-				}
-				touches, err = leadTouchesFor(e.ctx, tx, lead, endOfTime)
-				return err
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if len(touches) != 1 {
-				t.Fatalf("the ladder read %d touches, want the one meeting", len(touches))
-			}
-			step, engaged := ladderStepFor(touches[0])
-			if offered != want || scored != want || engaged != (want != "") || (engaged && step != LeadStatusEngaged) {
-				t.Errorf("evidence %q, score signal %q, ladder engaged=%t; want %q from all three", offered, scored, engaged, want)
+			if (read.Status == crmcontracts.LeadStatusEngaged) != tc.engaged {
+				t.Errorf("a reply %s old when captured left the lead %s, want engaged=%t", tc.age, read.Status, tc.engaged)
 			}
 		})
+	}
+}
+
+// A channel message the lead sent is a reply, as the Worklist's qualification
+// advice already reads it. Channel capture names the sender by account, with
+// the address the source vouched for in counterparty_email.
+func TestAChannelMessageFromTheLeadIsReplyEvidence(t *testing.T) {
+	e := setupPromoteConsent(t)
+	lead := e.seedLead(t, "lan@channel.test")
+	message := e.seedEvidence(t, &lead, evidenceSeed{kind: "message", direction: "inbound"})
+	e.mustExec(t, `INSERT INTO activity_participant (activity_id, channel_user_id, role) VALUES ($1, 'tg-990202', 'from')`, message)
+	read, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offered := read.QualificationEvidence
+	if offered == nil || offered.ActivityId == nil || ids.UUID(*offered.ActivityId) != message.UUID {
+		t.Fatalf("the read offers %+v, want the lead's channel message %s", offered, message)
+	}
+	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: string(TriggerInboundReply)}); err != nil {
+		t.Fatalf("promote as inbound_reply on a channel message: %v", err)
+	}
+	if got := e.promotedEvidence(t, lead); got != message.String() {
+		t.Errorf("audit evidence = %q, want the channel message %s", got, message)
 	}
 }

@@ -274,13 +274,14 @@ func answeredBy(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time
 // from one lead and finds its activities, which a scan knows. Neither can be
 // the other without reading rows its caller has no use for.
 func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline time.Time) ([]leadResponseTouch, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT coalesce(a.direction, ''), a.captured_by, a.occurred_at, `+inboundBeforeSQL("$1", "a")+`,
-		       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
+	args := []any{leadID, deadline}
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	q := `SELECT ` + leadTouchColumns(ctx, "$1", arg) + `
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL
-		  AND `+occurredday.ProvenSQL("a")+` <= $2
-		  AND `+auth.ActivityAvailableClause("a"), leadID, deadline)
+		  AND ` + occurredday.ProvenSQL("a") + ` <= $2
+		  AND ` + auth.ActivityAvailableClause("a")
+	rows, err := tx.Query(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the lead's activities before its deadline: %w", err)
 	}
@@ -288,8 +289,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 	var out []leadResponseTouch
 	for rows.Next() {
 		t := leadResponseTouch{lead: leadID}
-		if err := rows.Scan(&t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound,
-			&t.kind, &t.meetingStatus, &t.source, &t.respondedAt); err != nil {
+		if err := scanLeadTouch(rows, &t); err != nil {
 			return nil, err
 		}
 		out = append(out, t)

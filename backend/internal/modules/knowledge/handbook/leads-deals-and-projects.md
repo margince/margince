@@ -40,7 +40,7 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Captured activity sets Contacted and Engaged automatically. You can also set them by hand; the record tells you which.
+Captured activity sets Contacted and Engaged automatically. An imported reply already older than 30 days, or a meeting the lead declined, does not set Engaged. You can also set them by hand; the record tells you which.
 
 You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.

@@ -17611,8 +17611,9 @@ components:
       readOnly: true
       description: |-
         The strongest genuine-engagement signal captured against this lead, derived from its
-        linked activities at read time: a held meeting over a booked one over an inbound reply.
-        A meeting with no recorded status counts as booked. Only engagement inside the waiting
+        linked activities at read time: a held meeting over a booked one over an inbound reply,
+        by mail or channel message. A meeting with no recorded status counts as booked, and a
+        meeting the lead declined counts as nothing. Only engagement inside the waiting
         horizon counts (the one that keeps automatic work current, at most 30 days), so older
         engagement is left out. What the qualify dialog shows as the reason and sends back as
         `trigger`; null when the lead has no such signal (a human may still qualify with
