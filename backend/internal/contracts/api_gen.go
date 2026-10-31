@@ -37573,7 +37573,7 @@ type ContactCaseEdge struct {
 	// widen it further.
 	CanMerge bool `json:"can_merge"`
 
-	// Confidence A weight that ranks pairs, not the chance that the two are one person. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.
+	// Confidence A weight that ranks pairs, not the chance that the two are the same contact. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.
 	Confidence float32          `json:"confidence"`
 	Evidence   []DedupeEvidence `json:"evidence"`
 

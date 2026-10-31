@@ -108,7 +108,7 @@ Anyone the merged-away contact was shared with can open the contact you kept. Of
 
 Margince also groups contacts that may be duplicates of each other, so you can merge more than two at once. Every owner of a contact in the group finds it under **To review** in their Worklist. A contact a colleague keeps private is not in your group, and only they can merge it.
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
-2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one. The group opens with two ticked: the contact you came from and its closest match. **Why they look alike** says what matched for each pair. Two contacts that each look like a third may still be different people, so tick each one yourself.
+2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one. The group opens with two ticked: the contact you came from and its closest match. **Why they look alike** says what matched for each pair. Two contacts can each look like one other contact and still be different people, so tick each one yourself.
 3. Choose the **Owner** (an owner of a ticked contact), press **Preview merge**, then **Merge {count} contacts**.
 The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. Your own contact may merge into a colleague's, which keeps its owner; the review ticks those two ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.

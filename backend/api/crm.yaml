@@ -39135,7 +39135,7 @@ components:
           type: number
           minimum: 0
           maximum: 1
-          description: 'A weight that ranks pairs, not the chance that the two are one person. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.'
+          description: 'A weight that ranks pairs, not the chance that the two are the same contact. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.'
         status: { type: string, enum: [open, not_a_duplicate], description: '`not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.' }
         evidence: { type: array, items: { $ref: '#/components/schemas/DedupeEvidence' } }
         can_dismiss:

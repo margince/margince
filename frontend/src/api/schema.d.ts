@@ -27051,7 +27051,7 @@ export interface components {
             left_id: string;
             /** Format: uuid */
             right_id: string;
-            /** @description A weight that ranks pairs, not the chance that the two are one person. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised. */
+            /** @description A weight that ranks pairs, not the chance that the two are the same contact. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised. */
             confidence: number;
             /**
              * @description `not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.
