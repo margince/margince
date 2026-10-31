@@ -50,8 +50,13 @@ func seedRiskBacklog(t *testing.T) riskBacklog {
 	for i := range slippingScanLimit + 5 {
 		id := b.deal(t, rep1, fmt.Sprintf("Overdue %d", i))
 		b.closes(t, id, -(6 + i))
-		if i == 0 {
-			b.taskOnDeal(t, id)
+		switch i {
+		case 0:
+			b.taskOnDeal(t, id, -20)
+			delete(b.atRisk[rep1], id.String())
+			b.never[id.String()] = true
+		case 1:
+			b.taskOnDeal(t, id, 8)
 		}
 	}
 	for i := range 8 {
@@ -107,11 +112,12 @@ func (b *riskBacklog) closes(t *testing.T, deal ids.UUID, days int) {
 	b.r.e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, deal, installationDay(t, b.r.e, b.r.now).AddDate(0, 0, days).Format(time.DateOnly))
 }
 
-// taskOnDeal gives Rep1 the most overdue task, filed under a deal past the
-// sweep. The task ranks above the tail and its deal stays at risk below it.
-func (b *riskBacklog) taskOnDeal(t *testing.T, deal ids.UUID) {
+// taskOnDeal gives Rep1 a task due in days, filed under a deal past the sweep.
+// Due within the near-task window, the task stands in for the deal, which the
+// tail then leaves out. Due later, the deal stays at risk below the task.
+func (b *riskBacklog) taskOnDeal(t *testing.T, deal ids.UUID, days int) {
 	t.Helper()
-	subject, due := "Chase the deal", b.r.now.AddDate(0, 0, -20)
+	subject, due := fmt.Sprintf("Chase the deal in %d days", days), b.r.now.AddDate(0, 0, days)
 	rep1 := ids.From[ids.UserKind](b.r.e.Rep1)
 	if _, _, err := b.r.e.Activities.LogActivity(b.r.e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: &subject, DueAt: &due, Source: "manual", AssigneeID: &rep1,
