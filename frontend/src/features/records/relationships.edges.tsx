@@ -5,6 +5,7 @@ import { DEAL_COVERAGE_KEY } from "../../lib/activitykeys";
 import type { EntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
 import type { RelationshipEntity } from "../../lib/relationshipcandidates";
+import { KIND_LABELS } from "../../lib/relationshipkinds";
 import type {
   CreatableRelationshipKind,
   CreateRelationshipRequest,
@@ -116,6 +117,23 @@ export function counterpartyRef(
     (companyId) => companyId != null && companyId !== scope.company_id,
   );
   return far ? { kind: "company", id: far } : null;
+}
+
+// The word an edge is shown under, from this scope's end of it. A referred_by
+// edge runs from the company referred to the partner that referred it, so on
+// the partner's own page it reads the other way round.
+export function kindLabelFor(
+  rel: Relationship,
+  scope: RelationshipScope,
+): MessageKey {
+  if (
+    rel.kind === "referred_by" &&
+    "company_id" in scope &&
+    rel.counterparty_company_id === scope.company_id
+  ) {
+    return "rel.kind.referred";
+  }
+  return KIND_LABELS[rel.kind];
 }
 
 export function dateRange(

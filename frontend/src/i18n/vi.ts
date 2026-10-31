@@ -2967,6 +2967,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.kind.projectStakeholder": "Bên liên quan dự án",
   "rel.kind.projectCompany": "Công ty trong dự án",
   "rel.kind.partnerOf": "Đối tác của",
+  "rel.kind.referred": "Đã giới thiệu",
   "rel.kind.referredBy": "Được giới thiệu từ",
   "rel.kind.coSellWith": "Bán chung với",
   "rel.kind.worksWith": "Làm việc cùng",
