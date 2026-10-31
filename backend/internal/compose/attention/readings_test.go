@@ -480,11 +480,9 @@ func TestProspectingCountsAndFiltersPlannedLeadTasks(t *testing.T) {
 	}
 }
 
-// A contact case is settled in its own review, so it carries no verb. Counting
-// verbs alone left every case out of the Home figure whenever the exact
-// decisions total was missing, and a page of only cases read as no decisions.
-// The lane raises a case only for its owners, so whether this viewer may merge
-// it whole (a too-large case never can) does not decide whether it counts.
+// A contact case carries no verb, because it settles in its own review. It
+// still counts when the exact decisions total is missing. The lane raises it
+// only for its owners, so the viewer's right to merge it whole does not decide.
 func TestTheDecisionCountKeepsEveryContactCaseItsLaneRaised(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,

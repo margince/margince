@@ -66,7 +66,7 @@ describe("an empty band draws nothing", () => {
     expect(document.querySelector(".worklist-band-clear")).toBeNull();
   });
 
-  // A band that DOES hold rows draws them under its heading.
+  // A band that holds rows draws them under its heading.
   it("draws a band that holds rows", async () => {
     stub(banded());
     renderWorklist("en");
