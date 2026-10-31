@@ -17022,9 +17022,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Chronik, also gibt es keinen Versand abzubrechen und keinen Datensatz zu
   // löschen — die Nachricht wird zurückgenommen, bevor sie geht.
   "nav.scheduled": "Geplante Nachrichten",
-  "sched.sub":
-    "Deine geplanten Nachrichten, die noch nicht gesendet wurden. Nur du kannst sie sehen.",
-  "sched.empty": "Noch keine geplanten Nachrichten.",
+  "sched.sub": "Nur du siehst diese Nachrichten.",
+  "sched.empty": "Keine Nachrichten geplant.",
+  "sched.write": "Nachricht schreiben",
+  "sched.writeHow": "Öffne einen Kontakt und wähle E-Mail.",
   "sched.group.held": "Zurückgehalten, wartet auf dich",
   "sched.group.waiting": "Geplant",
   "sched.group.waitingEmpty": "Keine Nachrichten geplant.",

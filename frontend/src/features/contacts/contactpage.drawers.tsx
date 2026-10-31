@@ -9,6 +9,7 @@ import {
   useCallStart,
 } from "../../lib/callstart";
 import { intentAbout } from "../../lib/compose.intent";
+import { useMailboxConnected } from "../../lib/connectors";
 import { COMPOSE_PARAM, THREAD_PARAM } from "../../lib/contactpage.address";
 import {
   transportForActivity,
@@ -18,7 +19,6 @@ import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { useWriteTo, type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { ComposeModal } from "../mail/compose";
-import { useMailboxConnected } from "../settings/writetohost";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import type { Contact360, ContactMomentAction } from "./contactpage";
 
