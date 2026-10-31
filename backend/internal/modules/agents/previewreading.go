@@ -43,17 +43,26 @@ const previewStateReady = "ready"
 // previewBodyFields are details the card shows as a message body, not a line.
 var previewBodyFields = []string{"body", "html_body", "signature_text", "signature_html"}
 
+// PreviewWithholdsPlan reports a preview that shows nothing of the plan, as
+// the card shows nothing of it. Whatever reads the plan elsewhere withholds it too.
+func PreviewWithholdsPlan(preview *crmcontracts.ApprovalPreview) bool {
+	return preview != nil && (!previewReadable(preview) || preview.State != previewStateReady)
+}
+
+func previewReadable(preview *crmcontracts.ApprovalPreview) bool {
+	return preview.Version == 1 || preview.Version == 2
+}
+
 // ReadPreview labels a preview the way the card does. A nil preview belongs to
 // a kind with no preview, and reads as nothing.
 func ReadPreview(lang textlang.Lang, preview *crmcontracts.ApprovalPreview) PreviewReading {
 	if preview == nil {
 		return PreviewReading{}
 	}
-	readable := preview.Version == 1 || preview.Version == 2
-	if !readable {
+	if !previewReadable(preview) {
 		return PreviewReading{State: previewStateUnavailable, Note: PreviewStateSentence(lang, previewStateUnavailable)}
 	}
-	if preview.State != previewStateReady {
+	if PreviewWithholdsPlan(preview) {
 		return PreviewReading{State: preview.State, Note: PreviewStateSentence(lang, preview.State)}
 	}
 	out := PreviewReading{State: preview.State}
