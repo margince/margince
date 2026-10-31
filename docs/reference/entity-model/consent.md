@@ -395,7 +395,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `consent_event_new_state_check`: `CHECK ((new_state = ANY (ARRAY['granted', 'withdrawn'])))`
-- `consent_event_subject`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL)))`
+- `consent_event_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `consent_event_wording_pairs`: `CHECK (((policy_text IS NULL) = (policy_version IS NULL)))`
 
 **Indexes**
@@ -573,7 +573,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `contact_consent_lead_unique`: `UNIQUE (lead_id, purpose_id)`
 - `contact_consent_state_check`: `CHECK ((state = ANY (ARRAY['unknown', 'granted', 'withdrawn'])))`
-- `contact_consent_subject`: `CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL)))`
+- `contact_consent_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `contact_consent_unique`: `UNIQUE (contact_id, purpose_id)`
 
 **Indexes**
