@@ -91,22 +91,22 @@ Analytics opens on **Overview**, the first tab, which has two views: **Sales rev
 
 With no sales target there is no gap to show, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Next come the open pipeline by stage and sales won by team member, then the open forecast checks beside a short summary. Last is **Since the last capture**, which shows how the open pipeline moved and needs two captures before it can compare.
 
-**My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report, and **Report templates** opens prepared reports such as **My prospecting progress**.
+**My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
 **Team prospecting** shows a team’s meetings held, accepted handoffs and qualified leads, each counted once for the team. **Handoff feedback** counts what was handed on, accepted, returned (sent back to try again) and rejected in the period. It says how each round handed on in the period ended, why, and what still waits; under five rounds is a small sample. **Members** has one row per colleague you may measure, in name order, and a shared meeting counts in each row. The figures follow who is on the team today. With **Show individual performance** off, no row shows, and a total that would show one colleague’s work is held back.
 
+Each view keeps its own record scope, pipeline, period, close window and dates. **All pipelines** on Sales review is still set when you come back from the other views. A link that names a view and its filters opens what it names and changes nothing you chose. What you chose is kept per account in this browser until you sign out. The links out of a view carry its filters, and Back returns to the same filters, place and card. Forecast covers every pipeline, so it says so first when the figure you came from counts one pipeline of several.
+
+A link to figures you may not see says **This link names figures you cannot open** instead of showing other figures.
+
 ## Which records a number covers
 
-Every Analytics reading covers a set of records, and the screen always says
-which.
+Every Analytics reading covers a set of records, and the screen always says which.
 
-Where you have more than one to choose from, it is a picker labelled **Record
-scope**. Where you have only one, which is the usual case for a rep, it is a
-plain sentence instead: **"These numbers cover {scope}."**
+Where you have more than one to choose from, it is a picker labelled **Record scope**. Where you have only one, which is the usual case for a rep, it is a plain sentence instead: **"These numbers cover {scope}."**
 
 Every seat is offered **Whole company**, every live team and its own records.
-Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are
-never offered. A rep still opens on their own records.
+Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are never offered. A rep still opens on their own records.
 
 A total counts the whole scope you picked. An owner chart, ranking or list shows
 only the owners you may measure, and the answer says so. A scope with no deals
