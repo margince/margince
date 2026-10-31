@@ -58,7 +58,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	employer, typed, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
+	employer, typed, err := s.lockedPromotionEmployer(ctx, tx, lead, in, candidate)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}

@@ -137,6 +137,13 @@ func (s *Store) promoteCandidate(ctx context.Context, tx pgx.Tx, id ids.LeadID) 
 	if err != nil {
 		return none, fmt.Errorf("read lead before resolving its contact: %w", err)
 	}
+	return s.leadPromotionTarget(ctx, tx, lead)
+}
+
+// leadPromotionTarget is the contact a promotion of this lead lands on, or zero
+// for a new one. An approval pins it, so the candidate and the pin agree.
+func (s *Store) leadPromotionTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (ids.ContactID, error) {
+	var none ids.ContactID
 	if lead.Status == crmcontracts.LeadStatusPromoted || lead.ArchivedAt != nil || leadIdentityName(lead) == "" {
 		return none, nil
 	}

@@ -236,7 +236,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if (matched && match.ContactID != candidate) || (!matched && !candidate.IsZero()) {
 		return LeadContactChange{}, apperrors.ErrConflict
 	}
-	employer, typed, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
+	employer, typed, _, err := s.promotionEmployer(ctx, tx, lead, in.CreateCompany)
 	if err != nil {
 		return LeadContactChange{}, err
 	}

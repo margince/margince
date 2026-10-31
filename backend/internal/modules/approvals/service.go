@@ -83,6 +83,9 @@ type Service struct {
 	// undoable classifies the staged kinds whose release a credential may give
 	// to a proposal of its own human's (ownrelease.go). Nil answers no kind.
 	undoable UndoableRelease
+	// contextPins digest, per kind, the facts outside the target row that the
+	// reviewed outcome reads (contextpin.go).
+	contextPins map[string]ContextPin
 }
 
 const (
@@ -154,6 +157,8 @@ func NewService(db *database.DB) *Service {
 		prechecks: map[string]ReleasePrecheck{},
 		declines:  map[string]DeclinedEffect{},
 		expiries:  map[string]ExpiredEffect{},
+
+		contextPins: map[string]ContextPin{},
 	}
 }
 
