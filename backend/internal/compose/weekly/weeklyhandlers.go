@@ -88,14 +88,14 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		AsOf:           review.AsOf,
 		Narrative:      nullableText(review.Narrative),
 		NarratedAt:     review.NarratedAt,
-		Counts:         countsToWire(review.Counts),
+		Counts:         countsToWire(review.Counts, review.MeetingsWithheld),
 		Pipeline:       pipelineToWire(review.Money),
 		Deals:          deals,
 	}
 	if review.Prior != nil {
 		out.Prior = &crmcontracts.WeeklyReviewPrior{
 			LocalWeekStart: openapi_types.Date{Time: review.Prior.LocalWeekStart},
-			Counts:         countsToWire(review.Prior.Counts),
+			Counts:         countsToWire(review.Prior.Counts, review.Prior.MeetingsWithheld),
 			Pipeline:       pipelineToWire(review.Prior.Money),
 		}
 	}
@@ -107,7 +107,7 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		out.Outlook = &outlook
 	}
 	if review.Scorecard != nil {
-		out.Scorecard = scorecardToWire(*review.Scorecard)
+		out.Scorecard = scorecardToWire(*review.Scorecard, review.MeetingsWithheld)
 	}
 	out.Learnings = learningsToWire(review)
 	return out
@@ -152,15 +152,17 @@ func learningsToWire(review Review) *crmcontracts.WeeklyReviewLearnings {
 // Each block travels only when it is present. An absent block is omitted rather
 // than sent as zeros, because a reader that received zeros would draw a rep who
 // carried no leads as having failed at the funnel.
-func scorecardToWire(card Scorecard) *crmcontracts.WeeklyReviewScorecard {
+func scorecardToWire(card Scorecard, meetingsWithheld bool) *crmcontracts.WeeklyReviewScorecard {
 	out := &crmcontracts.WeeklyReviewScorecard{}
 	if l := card.Lead; l != nil {
 		out.Lead = &crmcontracts.WeeklyScorecardLeadBlock{
 			Advanced: l.Advanced, Disqualified: l.Disqualified, Promoted: l.Promoted,
 			Arrived:          l.Arrived,
 			AnsweredInTarget: l.AnsweredInTarget, Breached: l.Breached,
-			MeetingsBooked: l.Booked, MeetingsHeld: l.Held, MeetingsNoShow: l.NoShow,
-			MeetingsPartialHistory: l.PartialHistory,
+			MeetingsBooked:         meetingFigure(l.Booked, meetingsWithheld),
+			MeetingsHeld:           meetingFigure(l.Held, meetingsWithheld),
+			MeetingsNoShow:         meetingFigure(l.NoShow, meetingsWithheld),
+			MeetingsPartialHistory: meetingFigure(l.PartialHistory, meetingsWithheld),
 		}
 	}
 	if d := card.Deal; d != nil {
@@ -232,7 +234,7 @@ func movementToWire(bars []Movement) []crmcontracts.WeeklyReviewMovement {
 	return out
 }
 
-func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
+func countsToWire(c Counts, meetingsWithheld bool) crmcontracts.WeeklyReviewCounts {
 	return crmcontracts.WeeklyReviewCounts{
 		TasksDue: c.TasksDue, TasksDone: c.TasksDone, TasksCompleted: c.TasksCompleted,
 		TasksCarriedOver: c.TasksCarriedOver,
@@ -241,8 +243,9 @@ func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
 		BriefItemsActed: c.BriefItemsActed, BriefItemsDismissed: c.BriefItemsDismissed,
 		CommitmentsDue: c.CommitmentsDue, CommitmentsKept: c.CommitmentsKept,
 		LeadsRouted: c.LeadsRouted, LeadsAnsweredInTarget: c.LeadsAnsweredInTarget,
-		LeadsBreached: c.LeadsBreached,
-		MeetingsHeld:  c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep,
+		LeadsBreached:        c.LeadsBreached,
+		MeetingsHeld:         meetingFigure(c.MeetingsHeld, meetingsWithheld),
+		MeetingsWithNextStep: meetingFigure(c.MeetingsWithNextStep, meetingsWithheld),
 	}
 }
 

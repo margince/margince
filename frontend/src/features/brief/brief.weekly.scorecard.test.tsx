@@ -77,6 +77,25 @@ describe("the weekly scorecard", () => {
     ).toBeTruthy();
   });
 
+  it("draws no meeting row for a seat that may not read activities", () => {
+    const {
+      meetings_booked,
+      meetings_held,
+      meetings_no_show,
+      meetings_partial_history,
+      ...withheld
+    } = leadBlock;
+    render(
+      <ScorecardPanel scorecard={{ lead: withheld }} weekStart="2026-06-01" />,
+    );
+    expect(
+      screen.queryByText(en["brief.weekly.scorecard.meetingsHeld"]),
+    ).toBeNull();
+    expect(
+      screen.getByText(en["brief.weekly.scorecard.advanced"]),
+    ).toBeTruthy();
+  });
+
   it("omits the deal block on its own terms too", () => {
     render(
       <ScorecardPanel scorecard={{ lead: leadBlock }} weekStart="2026-06-01" />,

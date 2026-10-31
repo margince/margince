@@ -100,17 +100,24 @@ function leadRows(
       value: n(block.breached),
       basis: responseBasis(block, t, n),
     },
-    {
-      key: "meetings",
-      label: t("brief.weekly.scorecard.meetingsHeld"),
-      value: n(block.meetings_held),
-      basis: t("brief.weekly.scorecard.meetingsBasis", {
-        booked: n(block.meetings_booked),
-        noShow: n(block.meetings_no_show),
-      }),
-    },
+    // The meeting figures are absent together for a seat that may not read
+    // activities, and then no meeting row is drawn.
+    ...(block.meetings_held === undefined
+      ? []
+      : [
+          {
+            key: "meetings",
+            label: t("brief.weekly.scorecard.meetingsHeld"),
+            value: n(block.meetings_held),
+            basis: t("brief.weekly.scorecard.meetingsBasis", {
+              booked: n(block.meetings_booked ?? 0),
+              noShow: n(block.meetings_no_show ?? 0),
+            }),
+          },
+        ]),
     // Only when non-zero: it says the counts above are a floor.
-    ...(block.meetings_partial_history > 0
+    ...(block.meetings_partial_history !== undefined &&
+    block.meetings_partial_history > 0
       ? [
           {
             key: "partial",

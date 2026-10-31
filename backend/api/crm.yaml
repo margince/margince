@@ -67157,7 +67157,7 @@ components:
       additionalProperties: false
       required: [reps_counted, deals_won, deals_lost, deals_moved, leads_routed,
                  leads_answered_in_target,
-                 leads_breached, meetings_held, meetings_with_next_step,
+                 leads_breached,
                  commitments_due, commitments_kept]
       properties:
         reps_counted: { type: integer, minimum: 0, description: 'Members whose week was read and totalled.' }
@@ -67178,15 +67178,15 @@ components:
         leads_routed: { type: integer, minimum: 0 }
         leads_answered_in_target: { type: integer, minimum: 0 }
         leads_breached: { type: integer, minimum: 0 }
-        meetings_held: { type: integer, minimum: 0 }
-        meetings_with_next_step: { type: integer, minimum: 0 }
+        meetings_held: { type: integer, minimum: 0, description: 'Absent when the seat may not read activities, since a meeting is an activity.' }
+        meetings_with_next_step: { type: integer, minimum: 0, description: 'Absent when the seat may not read activities, since a meeting is an activity.' }
         commitments_due: { type: integer, minimum: 0 }
         commitments_kept: { type: integer, minimum: 0 }
     TeamWeeklyRep:
       type: object
       additionalProperties: false
       description: One member's week as their lead reads it, with what to raise.
-      required: [user_id, display_name, deals_won, leads_breached, meetings_held,
+      required: [user_id, display_name, deals_won, leads_breached,
                  commitments_due, commitments_kept, help_requested, focus_kind, focus_label,
                  patterns]
       properties:
@@ -67196,7 +67196,7 @@ components:
           description: What they were called that week — frozen, and it survives the seat being deleted.
         deals_won: { type: integer, minimum: 0 }
         leads_breached: { type: integer, minimum: 0 }
-        meetings_held: { type: integer, minimum: 0 }
+        meetings_held: { type: integer, minimum: 0, description: 'Absent when the seat may not read activities, since a meeting is an activity.' }
         commitments_due: { type: integer, minimum: 0 }
         commitments_kept: { type: integer, minimum: 0 }
         help_requested: { type: integer, minimum: 0, description: 'Commitments they asked for help on.' }
@@ -67428,9 +67428,7 @@ components:
       additionalProperties: false
       description: |
         How the rep's leads moved, and whether the meetings behind them happened.
-      required:
-        [advanced, disqualified, promoted, answered_in_target, breached,
-         meetings_booked, meetings_held, meetings_no_show, meetings_partial_history]
+      required: [advanced, disqualified, promoted, answered_in_target, breached]
       properties:
         advanced:
           type: integer
@@ -67467,6 +67465,8 @@ components:
             never from its current status. A meeting booked Monday and held Friday counts in both
             this and `meetings_held`, which is what a funnel means; counting the current column
             would report no bookings at all for the week it was booked in.
+
+            Absent when the seat may not read activities, since a meeting is an activity. The three other meeting fields are absent with it.
         meetings_held: { type: integer, minimum: 0 }
         meetings_no_show: { type: integer, minimum: 0 }
         meetings_partial_history:
@@ -67873,7 +67873,6 @@ components:
       required: [tasks_due, tasks_done, tasks_carried_over, deals_moved, deals_won, deals_lost,
                  proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed,
                  leads_routed, leads_answered_in_target, leads_breached,
-                 meetings_held, meetings_with_next_step,
                  commitments_due, commitments_kept]
       properties:
         tasks_completed:
@@ -67918,7 +67917,7 @@ components:
           type: integer
           minimum: 0
           description: |
-            Meetings that actually happened. A booking cancelled or no-showed is not a meeting the
+            Meetings that actually happened. Absent when the seat may not read activities, since a meeting is an activity. A booking cancelled or no-showed is not a meeting the
             week can be judged by, and counting it would credit a conversation that never occurred.
         meetings_with_next_step:
           type: integer
@@ -67927,6 +67926,7 @@ components:
             Of those, meetings with a readable task explicitly linked through source_activity_id
             and created between the meeting and the week closing. Never greater than
             `meetings_held`. Missing linkage does not prove that no follow-up happened.
+            Absent with `meetings_held`.
 
     WeeklyReviewDeal:
       type: object

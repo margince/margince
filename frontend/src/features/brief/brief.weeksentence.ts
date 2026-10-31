@@ -73,7 +73,7 @@ function resultOf(
   if (cites("moved", c.deals_moved)) {
     return counted(locale, "brief.week.moved", c.deals_moved);
   }
-  if (cites("meetings", c.meetings_held)) {
+  if (c.meetings_held !== undefined && cites("meetings", c.meetings_held)) {
     return counted(locale, "brief.week.met", c.meetings_held);
   }
   if (cites("leads", c.leads_answered_in_target)) {
