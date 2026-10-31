@@ -66,12 +66,16 @@ describe("messengerUris", () => {
   });
 
   it("reads a number the way the server stores it", () => {
-    // ParsePhone takes 00 for + and drops only the brackets around a trunk 0.
+    // ParsePhone takes 00 for + and drops a bracketed trunk 0, which a caller
+    // from abroad never dials. A bare 0 after the code stays, as in Italy.
     expect(messengerUris("0049 30 1234567")?.whatsapp).toBe(
       "https://wa.me/49301234567",
     );
     expect(messengerUris("+84 (0) 912 345 678")?.whatsapp).toBe(
-      "https://wa.me/840912345678",
+      "https://wa.me/84912345678",
+    );
+    expect(messengerUris("+39 06 1234567")?.whatsapp).toBe(
+      "https://wa.me/39061234567",
     );
     expect(messengerUris("+49 30\n1234567")).toBeNull();
   });
