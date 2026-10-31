@@ -32,11 +32,22 @@ func derefCount(count *int) int {
 
 func (f *sdrFixture) meetings(ctx context.Context, t *testing.T, owner ids.UUID, cursor *string, limit int) crmcontracts.SdrUpcomingMeetingPage {
 	t.Helper()
+	return f.meetingsIn(ctx, t, owner, nil, cursor, limit)
+}
+
+// meetingsIn reads one page of meetings in a window a summary declared, or in
+// a window from now when window is nil.
+func (f *sdrFixture) meetingsIn(ctx context.Context, t *testing.T, owner ids.UUID, window *crmcontracts.SdrUpcomingWindow, cursor *string, limit int) crmcontracts.SdrUpcomingMeetingPage {
+	t.Helper()
 	kind := crmcontracts.ListSdrUpcomingMeetingsParamsScopeKindOwner
 	id := openapi_types.UUID(owner)
+	params := crmcontracts.ListSdrUpcomingMeetingsParams{ScopeKind: &kind, ScopeId: &id, Cursor: cursor, Limit: &limit}
+	if window != nil {
+		params.WindowStart, params.WindowEnd = &window.StartAt, &window.EndAt
+	}
 	var out crmcontracts.SdrUpcomingMeetingPage
 	body := sdrServe(ctx, t, f.e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
-		h.ListSdrUpcomingMeetings(w, r, crmcontracts.ListSdrUpcomingMeetingsParams{ScopeKind: &kind, ScopeId: &id, Cursor: cursor, Limit: &limit})
+		h.ListSdrUpcomingMeetings(w, r, params)
 	}, f.at)
 	if err := json.Unmarshal(body, &out); err != nil {
 		t.Fatal(err)
@@ -106,7 +117,7 @@ func TestSdrUpcomingMeetingsCountAndListShareOneWindow(t *testing.T) {
 	if got.UpcomingMeetings == nil || *got.UpcomingMeetings != 2 {
 		t.Fatalf("two meetings start after now and before the end, read %d", derefCount(got.UpcomingMeetings))
 	}
-	first := f.meetings(f.ctx, t, e.Rep1, nil, 1)
+	first := f.meetingsIn(f.ctx, t, e.Rep1, got.UpcomingWindow, nil, 1)
 	if len(first.Rows) != 1 || first.NextCursor == nil || ids.UUID(first.Rows[0].Id) != soonest {
 		t.Fatalf("page one is the soonest meeting, with a cursor: %+v", first)
 	}
@@ -116,7 +127,7 @@ func TestSdrUpcomingMeetingsCountAndListShareOneWindow(t *testing.T) {
 	if row := first.Rows[0]; row.Title != "Call with Just after now" || row.Restricted || row.Record == nil || row.Record.Type != crmcontracts.SdrMeetingRecordTypeContact {
 		t.Fatalf("a row names the meeting and the contact it is with: %+v", row)
 	}
-	second := f.meetings(f.ctx, t, e.Rep1, first.NextCursor, 1)
+	second := f.meetingsIn(f.ctx, t, e.Rep1, got.UpcomingWindow, first.NextCursor, 1)
 	if len(second.Rows) != 1 || second.NextCursor != nil || ids.UUID(second.Rows[0].Id) != latest {
 		t.Fatalf("page two is the last counted meeting and ends the list: %+v", second)
 	}
@@ -248,5 +259,39 @@ func TestWeeklyOutcomesLeaveAWeekWithNoCohortEmpty(t *testing.T) {
 	}
 	if seen != 2 {
 		t.Fatalf("both weekly charts come back, read %d", seen)
+	}
+}
+
+// The clock moves on between the summary and its pages, past both meetings'
+// starts. Pages read in the summary's window still hold what it counted.
+func TestSdrUpcomingMeetingPagesKeepTheSummarysWindow(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
+	e := f.e
+	first := f.logMeeting(t, "First booked", f.at.Add(time.Minute), "booked")
+	second := f.logMeeting(t, "Second booked", f.at.Add(2*time.Minute), "booked")
+	summary := f.summary(f.ctx, t, e.Rep1)
+	if summary.UpcomingMeetings == nil || *summary.UpcomingMeetings != 2 || summary.UpcomingWindow == nil {
+		t.Fatalf("the summary counts both booked meetings: %+v", summary)
+	}
+	window := summary.UpcomingWindow
+	f.at = f.at.Add(90 * time.Second)
+	one := f.meetingsIn(f.ctx, t, e.Rep1, window, nil, 1)
+	if len(one.Rows) != 1 || ids.UUID(one.Rows[0].Id) != first || one.NextCursor == nil || !one.Window.StartAt.Equal(window.StartAt) {
+		t.Fatalf("page one holds the first meeting the summary counted: %+v", one)
+	}
+	f.at = f.at.Add(time.Hour)
+	two := f.meetingsIn(f.ctx, t, e.Rep1, window, one.NextCursor, 1)
+	if len(two.Rows) != 1 || ids.UUID(two.Rows[0].Id) != second || two.NextCursor != nil {
+		t.Fatalf("page two holds the second meeting and ends the list: %+v", two)
+	}
+	if now := f.meetings(f.ctx, t, e.Rep1, nil, 10); len(now.Rows) != 0 {
+		t.Fatalf("a window from now holds neither, both have started: %+v", now.Rows)
+	}
+	kind := crmcontracts.ListSdrUpcomingMeetingsParamsScopeKindOwner
+	id := openapi_types.UUID(e.Rep1)
+	w := httptest.NewRecorder()
+	newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return f.at }).ListSdrUpcomingMeetings(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(f.ctx), crmcontracts.ListSdrUpcomingMeetingsParams{ScopeKind: &kind, ScopeId: &id, Cursor: one.NextCursor})
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("a cursor without its window gets %d, want 422", w.Code)
 	}
 }

@@ -62304,7 +62304,13 @@ type ListSdrUpcomingMeetingsParams struct {
 	// ScopeId The owner or team named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
-	// Cursor Opaque position from a previous page's `next_cursor`.
+	// WindowStart The summary's `upcoming_window.start_at`. Not after now.
+	WindowStart *time.Time `form:"window_start,omitempty" json:"window_start,omitempty"`
+
+	// WindowEnd The summary's `upcoming_window.end_at`, which must be the end that `window_start` declares.
+	WindowEnd *time.Time `form:"window_end,omitempty" json:"window_end,omitempty"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`. Needs the window it was read in.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
 }
@@ -96304,6 +96310,32 @@ func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window_start" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_start", r.URL.Query(), &params.WindowStart, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_start"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window_end" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_end", r.URL.Query(), &params.WindowEnd, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_end"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_end", Err: err})
 		}
 		return
 	}

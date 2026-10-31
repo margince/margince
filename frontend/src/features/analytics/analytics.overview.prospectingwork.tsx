@@ -50,9 +50,12 @@ export function UpcomingMeetings({
   const t = useT();
   const { locale } = useLocale();
   const count = summary.data?.upcoming_meetings;
+  // Every page is read in the summary's window, so a clock that moves on
+  // between pages still lists the meetings the summary counted.
+  const window = summary.data?.upcoming_window;
   const rows = useInfiniteQuery({
-    queryKey: ["sdr-summary", self, "meetings"],
-    enabled: count != null && count > 0,
+    queryKey: ["sdr-summary", self, "meetings", window?.start_at],
+    enabled: count != null && count > 0 && window !== undefined,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam, signal }) =>
       unwrap(
@@ -61,6 +64,8 @@ export function UpcomingMeetings({
             query: {
               scope_kind: "owner",
               scope_id: self,
+              window_start: window?.start_at,
+              window_end: window?.end_at,
               ...(pageParam ? { cursor: pageParam } : {}),
             },
           },

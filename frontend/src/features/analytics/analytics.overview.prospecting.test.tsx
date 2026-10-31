@@ -80,9 +80,7 @@ describe("My prospecting's results", () => {
   it("dates the week's figure and the month's targets apart, and divides neither by the other", async () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();
-    expect(
-      lead.getByText(/^Handoffs accepted into a deal, /),
-    ).toBeVisible();
+    expect(lead.getByText(/^Handoffs accepted into a deal, /)).toBeVisible();
     expect(lead.getByText(/^Monthly targets, 1 Sept/)).toBeVisible();
     // The month's own actual against the month's target, never the week's 4.
     expect(lead.getByText("Meetings held: 18 of 24")).toBeVisible();
@@ -208,7 +206,7 @@ describe("My prospecting's readings", () => {
 
   it("counts booked meetings in the window it names, and lists the same meetings", async () => {
     const asOf = "2026-09-25T09:00:00Z";
-    open(ADDRESS, weekAnd(prospectingEvaluation()), {
+    const asked = open(ADDRESS, weekAnd(prospectingEvaluation()), {
       seat: "sdr",
       summary: () =>
         jsonResponse({
@@ -248,6 +246,12 @@ describe("My prospecting's readings", () => {
     expect(
       await list.findByText("Discovery call with Orchard Freight"),
     ).toBeVisible();
+    // The list is read in the window the count declared, not one from now.
+    const page = asked.find(({ url }) =>
+      url.pathname.endsWith("/analytics/sdr-summary/meetings"),
+    )?.url.searchParams;
+    expect(page?.get("window_start")).toBe(asOf);
+    expect(page?.get("window_end")).toBe(upcomingWindow(asOf).end_at);
   });
 });
 

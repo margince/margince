@@ -30002,8 +30002,11 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
       description: |
-        The same meetings `upcoming_meetings` counts, in the same scope and `window`, ordered by
-        start and then by id, so the pages together hold exactly that count. The title is read
+        The same meetings `upcoming_meetings` counts, in the same scope and window, ordered by
+        start and then by id, so the pages together hold that count. Send the summary's
+        `upcoming_window.start_at` and `end_at` as `window_start` and `window_end` on every page,
+        so a clock that moves between the summary and a later page still reads the summary's
+        population. A cursor is only read with a window. Without one, the window starts now. The title is read
         under the meeting's own field mask, and the linked record under that record's row scope
         and field mask.
       x-agent-access: human-only
@@ -30016,10 +30019,18 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The owner or team named by `scope_kind`.
+        - name: window_start
+          in: query
+          schema: { type: string, format: date-time }
+          description: The summary's `upcoming_window.start_at`. Not after now.
+        - name: window_end
+          in: query
+          schema: { type: string, format: date-time }
+          description: The summary's `upcoming_window.end_at`, which must be the end that `window_start` declares.
         - name: cursor
           in: query
           schema: { type: string }
-          description: Opaque position from a previous page's `next_cursor`.
+          description: Opaque position from a previous page's `next_cursor`. Needs the window it was read in.
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 50, default: 10 }

@@ -20251,8 +20251,11 @@ export interface paths {
         };
         /**
          * The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
-         * @description The same meetings `upcoming_meetings` counts, in the same scope and `window`, ordered by
-         *     start and then by id, so the pages together hold exactly that count. The title is read
+         * @description The same meetings `upcoming_meetings` counts, in the same scope and window, ordered by
+         *     start and then by id, so the pages together hold that count. Send the summary's
+         *     `upcoming_window.start_at` and `end_at` as `window_start` and `window_end` on every page,
+         *     so a clock that moves between the summary and a later page still reads the summary's
+         *     population. A cursor is only read with a window. Without one, the window starts now. The title is read
          *     under the meeting's own field mask, and the linked record under that record's row scope
          *     and field mask.
          */
@@ -85553,7 +85556,11 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 /** @description The owner or team named by `scope_kind`. */
                 scope_id?: string;
-                /** @description Opaque position from a previous page's `next_cursor`. */
+                /** @description The summary's `upcoming_window.start_at`. Not after now. */
+                window_start?: string;
+                /** @description The summary's `upcoming_window.end_at`, which must be the end that `window_start` declares. */
+                window_end?: string;
+                /** @description Opaque position from a previous page's `next_cursor`. Needs the window it was read in. */
                 cursor?: string;
                 limit?: number;
             };
