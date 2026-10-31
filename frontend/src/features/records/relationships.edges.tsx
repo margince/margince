@@ -120,8 +120,8 @@ export function counterpartyRef(
 }
 
 // The word an edge is shown under, from this scope's end of it. A referred_by
-// edge runs from the company referred to the partner that referred it, so on
-// the partner's own page it reads the other way round.
+// edge runs from the company referred to the partner that referred it. On the
+// partner's own page it reads the other way round.
 export function kindLabelFor(
   rel: Relationship,
   scope: RelationshipScope,
