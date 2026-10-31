@@ -43,10 +43,11 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	called, err := forecastCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
+	call, seen, err := forecastCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
+	called := seenCall(call, seen)
 	landing, err := forecasting.ProjectLanding(readings, measure, called)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -92,19 +93,24 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 // forecastCallSeen is the call GET /forecast shows this seat, by the same
 // rule. A call covers every pipeline, so a reading of one pipeline has none.
 // The reporting landing and a live share both read the call through it.
-func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (*int64, error) {
+func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (int64, bool, error) {
 	if onePipeline {
-		return nil, nil
+		return 0, false, nil
 	}
 	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
 	if err != nil {
-		return nil, err
+		return 0, false, err
 	}
-	call, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
-	if err != nil || call == nil {
-		return nil, err
+	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
+	return call.AmountMinor, seen, err
+}
+
+// seenCall is the call amount a landing takes: nil when no call was seen.
+func seenCall(amount int64, seen bool) *int64 {
+	if !seen {
+		return nil
 	}
-	return &call.AmountMinor, nil
+	return &amount
 }
 
 func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {

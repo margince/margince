@@ -124,12 +124,12 @@ func addForecastAssertions(
 		return nil, err
 	}
 	out.Snapshots = forecastSnapshotRefsToTool(refs)
-	call, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, resolved)
-	if err != nil || call == nil {
+	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, resolved)
+	if err != nil || !seen {
 		return nil, err
 	}
-	rendered := forecastCallToTool(*call)
-	if err := addCallReview(ctx, tx, rendered, *call); err != nil {
+	rendered := forecastCallToTool(call)
+	if err := addCallReview(ctx, tx, rendered, call); err != nil {
 		return nil, err
 	}
 	encoded, err := json.Marshal(rendered)

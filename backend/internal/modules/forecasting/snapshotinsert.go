@@ -67,3 +67,24 @@ func frozenLandingColumns(landing Landing) []any {
 	}
 	return []any{string(landing.Measure), nil}
 }
+
+// frozenLanding is the landing a snapshot keeps: the measure it actually used
+// and the call it used. A writer that named no forward measure records none,
+// which a share reads as "basis not recorded".
+func (s *Store) frozenLanding(ctx context.Context, tx pgx.Tx, in NewSnapshot) (Landing, error) {
+	if in.ForwardMeasure == "" {
+		return Landing{}, nil
+	}
+	// A call covers every pipeline, so a one-pipeline snapshot has none.
+	var call *int64
+	if in.ForwardMeasure == MeasureManagerCall && in.PipelineID == nil {
+		standing, seen, err := CallSeen(ctx, tx, s, true, in.Period, in.Scope)
+		if err != nil {
+			return Landing{}, err
+		}
+		if seen {
+			call = &standing.AmountMinor
+		}
+	}
+	return ProjectLanding(in.Readings, in.ForwardMeasure, call)
+}

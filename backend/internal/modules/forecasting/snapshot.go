@@ -89,27 +89,6 @@ func (s *NewSnapshot) StampChances(from Assembly) {
 	s.RiskSignalsVersion = from.RiskSignalsVersion
 }
 
-// frozenLanding is the landing a snapshot keeps: the measure it actually used
-// and the call it used. A writer that named no forward measure records none,
-// which a share reads as "basis not recorded".
-func (s *Store) frozenLanding(ctx context.Context, tx pgx.Tx, in NewSnapshot) (Landing, error) {
-	if in.ForwardMeasure == "" {
-		return Landing{}, nil
-	}
-	// A call covers every pipeline, so a one-pipeline snapshot has none.
-	var call *int64
-	if in.ForwardMeasure == MeasureManagerCall && in.PipelineID == nil {
-		standing, err := CallSeen(ctx, tx, s, true, in.Period, in.Scope)
-		if err != nil {
-			return Landing{}, err
-		}
-		if standing != nil {
-			call = &standing.AmountMinor
-		}
-	}
-	return ProjectLanding(in.Readings, in.ForwardMeasure, call)
-}
-
 // TakeSnapshot freezes one set of readings, with the rows they were summed
 // from, in ONE transaction.
 //

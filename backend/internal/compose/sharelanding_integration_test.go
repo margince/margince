@@ -5,9 +5,9 @@
 
 package compose
 
-// A share states the landing GET /forecast states for its reader: a live share
-// computes it now, a snapshot share from the measure and call it froze. The
-// call shows only to a reader who may see it, and a snapshot frozen before the
+// A share states the landing GET /forecast states for its reader. A live share
+// computes it now, and a snapshot share from the measure and call it froze. The
+// call shows only to a reader who may see it. A snapshot frozen before the
 // landing was kept has none.
 
 import (

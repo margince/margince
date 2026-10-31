@@ -178,12 +178,12 @@ func (h Handlers) GetForecast(
 			return nil
 		}
 		var called *int64
-		call, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
+		call, seen, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
 		if err != nil {
 			return err
 		}
-		if call != nil {
-			wire := callToWire(*call)
+		if seen {
+			wire := callToWire(call)
 			out.CurrentCall = &wire
 			called = &call.AmountMinor
 		}
@@ -215,22 +215,19 @@ func MayAssertAbout(ctx context.Context, tx pgx.Tx, resolve ResolveScopeFunc, sc
 	}
 }
 
-// CallSeen is the standing call a seat sees for a resolved population. It is
-// nil when the seat may not assert about it, or when nobody has called. The
+// CallSeen is the standing call a seat sees for a resolved population. Its
+// bool is false when the seat may not assert about it, or nobody has called. The
 // forecast endpoint, the forecast_readings tool and the reporting landing all
 // read the call through it, so the three agree on one landing.
-func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, period Period, scope Scope) (*Call, error) {
+func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, period Period, scope Scope) (Call, bool, error) {
 	if !mayAssert || scope.Kind == ScopeManagedTeams {
-		return nil, nil
+		return Call{}, false, nil
 	}
 	call, err := store.CurrentCallTx(ctx, tx, period, scope)
 	if IsNoStandingCall(err) {
-		return nil, nil
+		return Call{}, false, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &call, nil
+	return call, err == nil, err
 }
 
 // project adds where the period lands and whether the pipeline supports it.
