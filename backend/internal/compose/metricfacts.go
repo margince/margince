@@ -94,17 +94,20 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	return reportingCohorts(frame, facts), coverage, nil
 }
 
-func scanDealMetricFact(row pgx.CollectableRow, metric crmcontracts.ReportingMetricID, money bool) (reporting.Fact, error) {
+// scanDealMetricFact scans the fourteen columns every deal reader selects, then
+// any columns a reader adds after them into extra.
+//
+//craft:ignore naked-any pgx scans into destinations of the caller's own types.
+func scanDealMetricFact(row pgx.CollectableRow, metric crmcontracts.ReportingMetricID, money bool, extra ...any) (reporting.Fact, error) {
 	fact := reporting.Fact{Metric: metric, SourceType: string(recordTypeDeal)}
 	var owner *ids.UUID
 	var value *float64
 	var amount *int64
-	var err error
+	measure := any(&value)
 	if money {
-		err = row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &amount, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition, &fact.GroupKey, &fact.GroupLabel)
-	} else {
-		err = row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &value, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition, &fact.GroupKey, &fact.GroupLabel)
+		measure = &amount
 	}
+	err := row.Scan(append([]any{&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, measure, &fact.StageID, &fact.StageLabel, &fact.Outcome, &fact.Provenance, &fact.StagePosition, &fact.GroupKey, &fact.GroupLabel}, extra...)...)
 	if err != nil {
 		return fact, err
 	}

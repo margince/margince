@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -18,15 +19,49 @@ import (
 // seat named it keeps every mail somebody answers for, so mail nobody owns
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
 //
-// A named seat's read starts from the mail its To line names, which holds
-// every mail the seat answers for. The scan then judges that share only.
-func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int) string {
+// A named seat's read starts from the mail its To line names, and keep drops
+// what the scan would refuse anyway (DirectMailActivitiesSQL).
+func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, keep string) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
 	seat := fmt.Sprintf("$%d::uuid", arg(*owner))
 	return fmt.Sprintf("(a.kind = 'email' AND a.id = ANY (%s) AND %s = %s)",
-		storekit.DirectMailActivitiesSQL(identities, seat), soleDirectSeatSQL(identities), seat)
+		storekit.DirectMailActivitiesSQL(identities, seat, keep), soleDirectSeatSQL(identities), seat)
+}
+
+// mailSeats is whose mail one waiting scan reads before WaitingScanCap. It is
+// one seat's own, or the mail one of a set of seats answers for. The zero
+// value reads every mail somebody answers for.
+type mailSeats struct {
+	owner      *ids.UUID
+	answeredBy []ids.UUID
+	bySeats    bool
+	// unowned keeps what no seat answers for: a message that is not mail.
+	// Every waiting mail has one sole seat, so none of it is unowned.
+	unowned bool
+}
+
+// responsibilitySQL keeps a set's share of the unnarrowed read. Mail that no
+// seat or several seats answer for is nobody's, so no set reaches it. keep is
+// personalMailResponsibilitySQL's.
+func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, keep string) string {
+	if m.unowned {
+		return "(a.kind <> 'email')"
+	}
+	if m.owner != nil || !m.bySeats {
+		return personalMailResponsibilitySQL(m.owner, identities, arg, keep)
+	}
+	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
+}
+
+// waitingMailKeptSQL is the mail, aliased `mail`, that the waiting horizon can
+// still admit: arrived inside it, or kept by a held request. It mirrors the
+// `young OR held` half of withinWaitingHorizonSQL; the raw instant bound is the
+// first conjunct of occurredday.FromSQL, so no young mail falls outside it.
+func waitingMailKeptSQL(asOf, days string) string {
+	young := fmt.Sprintf("mail.occurred_at >= %s - make_interval(days => %s) -- occurred_at raw: a superset bound, FromSQL's own first conjunct\n", asOf, days)
+	return "(" + young + " OR " + strings.Replace(heldRequestSQL(), "a.id = ANY", "mail.id = ANY", 1) + ")"
 }
 
 // soleDirectSeatSQL decides who answers an inbound mail `a`

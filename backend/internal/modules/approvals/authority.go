@@ -359,29 +359,9 @@ var targetResolvedGrants = map[string]principal.Action{
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
-}
-
-// decidable is the ONE visibility-and-authority predicate for the inbox
-// and the decision: true when p holds every grant approving a would
-// require AND could read the staged target itself — the object-read grant
-// on its type, then that record's own row rule (targetvisibility.go). It
-// backs List, Get and Decide alike, so triage visibility and the decision
-// gate can never drift apart — you see exactly what you could act on, and
-// what you cannot see you cannot decide (in either direction). Two shapes
-// narrow that to ONE seat, the member the row was staged for: a self-only
-// kind, a staged create against a table whose rows belong to one human
-// each, and a kind that is one rep's own morning work
-// (decidedByTheSeatStagedFor). An unknown kind (no mapping) or unknown target type is not
-// decidable: fail-closed.
-func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bool, error) {
-	readable, err := proposalReadable(ctx, tx, p, a)
-	if err != nil || !readable {
-		return false, err
-	}
-	if a.Kind == "demote_lead" {
-		return demotionTargetDecidable(ctx, tx, a.TargetType, a.TargetID)
-	}
-	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
+	// Accepting a transfer moves a contact or a company to a colleague, which
+	// is an owner change on that record.
+	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate,
 }
 
 // PendingDecidableBy rechecks current state and authority because a notification event may be stale.
@@ -416,7 +396,11 @@ func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 	if err != nil {
 		return false, err
 	}
-	return pendingEligible(ctx, tx, p, scope, now)(a)
+	eligible, err := pendingEligible(ctx, tx, p, scope, now)([]row{a})
+	if err != nil {
+		return false, err
+	}
+	return eligible[0], nil
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {

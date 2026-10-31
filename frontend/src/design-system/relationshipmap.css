@@ -51,8 +51,7 @@
  * own box rather than making the page scroll sideways. */
 .rmap-scroll {
   overflow-x: auto;
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   padding: var(--space-3);
 }
@@ -212,8 +211,7 @@
 }
 
 .rmap-panel {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   padding: var(--space-4);
 }
@@ -253,8 +251,7 @@
 }
 
 .rmap-empty {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   padding: var(--space-6);
   text-align: center;

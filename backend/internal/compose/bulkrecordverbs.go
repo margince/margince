@@ -38,6 +38,10 @@ type bulkWriters struct {
 // rows are written through, and answers what the verb asks of each record.
 func (e *bulkEngine) admitVerb(ctx context.Context, change *bulkChange) (principal.Action, error) {
 	switch {
+	case change.verb == crmcontracts.BulkVerbArchive && change.recordType == crmcontracts.BulkRecordTypeDeal && change.undo == nil:
+		// Each row's archive asks the deal archive rule, which admits an owner
+		// without the delete grant. Bringing one back still asks delete.
+		return principal.ActionRead, auth.RequireArchiveGrant(ctx, auth.DealArchive)
 	case change.verb == crmcontracts.BulkVerbArchive:
 		return principal.ActionDelete, nil
 	case isListVerb(change.verb):
@@ -69,11 +73,11 @@ func (e *bulkEngine) admitTagVerb(ctx context.Context, change bulkChange) error 
 	return e.tags.CheckTagChange(ctx, ids.From[ids.TagKind](*change.tagID), applying)
 }
 
-// admitTaskVerb asks for the activity grant the task writer asks of each row
-// — create to file a task, delete to retire it on undo — once, up front.
+// admitTaskVerb asks once, up front, for the activity grant the task writer
+// asks of each row. Filing asks create, and retiring on undo the archive grant.
 func admitTaskVerb(ctx context.Context, change bulkChange) error {
 	if change.undo != nil {
-		return auth.Require(ctx, "activity", principal.ActionDelete)
+		return auth.RequireArchiveGrant(ctx, auth.ActivityArchive)
 	}
 	return auth.Require(ctx, "activity", principal.ActionCreate)
 }

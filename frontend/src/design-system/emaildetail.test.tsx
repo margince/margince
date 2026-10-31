@@ -266,7 +266,9 @@ describe("the drawer's participants", () => {
     await openEnvelope();
 
     const contact = await screen.findByRole("link", { name: "Ana Sommer" });
-    expect(contact.getAttribute("href")).toBe(`#/contacts/${ANA}`);
+    expect(contact.getAttribute("href")).toBe(
+      `/r/contacts/${ANA}#/contacts/${ANA}`,
+    );
     // BESIDE the message, not over it: the reader is part-way through a mail
     // in a drawer over the record they were working on, and following the
     // contact in this tab would close both to reach a page they could have

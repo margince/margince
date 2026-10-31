@@ -1,0 +1,781 @@
+{
+  "evaluation_version": "forecast_evaluation_v2",
+  "dataset_version": "forecast_evaluation_dataset_v3",
+  "dataset_digest": "fdf9e8b488c96b24cf88091bf9384324ba8fff489b749623b93367c25e34563b",
+  "outcomes_as_of": "2027-05-18T09:00:00Z",
+  "truncated": false,
+  "plan": {
+    "train_end": "2027-02-07T00:00:00Z",
+    "validation_end": "2027-04-18T00:00:00Z",
+    "horizon_edges": [
+      30,
+      60
+    ],
+    "settle_days": 5,
+    "cohort_floor": 5,
+    "score_candidate": true
+  },
+  "census": {
+    "vintages": 10,
+    "included": 5,
+    "excluded": [
+      {
+        "reason": "after_outcome",
+        "vintages": 1
+      },
+      {
+        "reason": "below_cohort_floor",
+        "vintages": 1
+      },
+      {
+        "reason": "outcome_pending",
+        "vintages": 1
+      },
+      {
+        "reason": "scope_not_evaluated",
+        "vintages": 2
+      }
+    ],
+    "horizon_min_days": 4,
+    "horizon_max_days": 84
+  },
+  "candidate": [
+    {
+      "currency": "EUR",
+      "horizon": "0-29",
+      "train_vintages": 1,
+      "ratio": "1.0000"
+    },
+    {
+      "currency": "EUR",
+      "horizon": "60+",
+      "train_vintages": 1,
+      "ratio": "0.8000"
+    }
+  ],
+  "rows": [
+    {
+      "label": "backtest",
+      "method": "candidate_open_closure",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "none",
+      "not_scored": "the candidate was fitted on this window",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0
+    },
+    {
+      "label": "backtest",
+      "method": "candidate_open_closure",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "none",
+      "not_scored": "the candidate was fitted on this window",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0
+    },
+    {
+      "label": "backtest",
+      "method": "candidate_open_closure",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "thin",
+      "not_scored": "the candidate was fitted on this window",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0
+    },
+    {
+      "label": "backtest",
+      "method": "candidate_open_closure",
+      "window": "validation",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 70000,
+        "abs_error_minor": 20000,
+        "signed_error_minor": 20000,
+        "mean_abs_error_minor": 20000,
+        "abs_error_per_actual": "0.4000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      }
+    },
+    {
+      "label": "backtest",
+      "method": "candidate_open_closure",
+      "window": "test",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 50000,
+        "abs_error_minor": 0,
+        "signed_error_minor": 0,
+        "mean_abs_error_minor": 0,
+        "abs_error_per_actual": "0.0000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      }
+    },
+    {
+      "label": "backtest",
+      "method": "stage_weighting",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 90000,
+        "predicted_minor": 74000,
+        "abs_error_minor": 16000,
+        "signed_error_minor": -16000,
+        "mean_abs_error_minor": 16000,
+        "abs_error_per_actual": "0.1778",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "backtest",
+      "method": "stage_weighting",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 90000,
+        "predicted_minor": 54000,
+        "abs_error_minor": 36000,
+        "signed_error_minor": -36000,
+        "mean_abs_error_minor": 36000,
+        "abs_error_per_actual": "0.4000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "backtest",
+      "method": "stage_weighting",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 27500,
+        "abs_error_minor": 22500,
+        "signed_error_minor": -22500,
+        "mean_abs_error_minor": 22500,
+        "abs_error_per_actual": "0.4500",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "backtest",
+      "method": "stage_weighting",
+      "window": "validation",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 42000,
+        "abs_error_minor": 8000,
+        "signed_error_minor": -8000,
+        "mean_abs_error_minor": 8000,
+        "abs_error_per_actual": "0.1600",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "backtest",
+      "method": "stage_weighting",
+      "window": "test",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 45500,
+        "abs_error_minor": 4500,
+        "signed_error_minor": -4500,
+        "mean_abs_error_minor": 4500,
+        "abs_error_per_actual": "0.0900",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "commit_evidence",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 90000,
+        "predicted_minor": 50000,
+        "abs_error_minor": 40000,
+        "signed_error_minor": -40000,
+        "mean_abs_error_minor": 40000,
+        "abs_error_per_actual": "0.4444",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "not_committed",
+            "deals": 1
+          },
+          {
+            "bin": "committed",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "commit_evidence",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 90000,
+        "predicted_minor": 40000,
+        "abs_error_minor": 50000,
+        "signed_error_minor": -50000,
+        "mean_abs_error_minor": 50000,
+        "abs_error_per_actual": "0.5556",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "not_committed",
+            "deals": 1
+          },
+          {
+            "bin": "committed",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "commit_evidence",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 10000,
+        "abs_error_minor": 40000,
+        "signed_error_minor": -40000,
+        "mean_abs_error_minor": 40000,
+        "abs_error_per_actual": "0.8000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "not_committed",
+            "deals": 1
+          },
+          {
+            "bin": "committed",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "commit_evidence",
+      "window": "validation",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 45000,
+        "abs_error_minor": 5000,
+        "signed_error_minor": -5000,
+        "mean_abs_error_minor": 5000,
+        "abs_error_per_actual": "0.1000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "not_committed",
+            "deals": 1
+          },
+          {
+            "bin": "committed",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "commit_evidence",
+      "window": "test",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 46000,
+        "abs_error_minor": 4000,
+        "signed_error_minor": -4000,
+        "mean_abs_error_minor": 4000,
+        "abs_error_per_actual": "0.0800",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "not_committed",
+            "deals": 1
+          },
+          {
+            "bin": "committed",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "range_central_80",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "interval": {
+        "vintages": 1,
+        "covered": 0,
+        "nominal_coverage": "0.8000",
+        "coverage": "0.0000",
+        "mean_width_minor": 34000,
+        "mean_interval_score_minor": 94000
+      }
+    },
+    {
+      "label": "observed",
+      "method": "range_central_80",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "interval": {
+        "vintages": 1,
+        "covered": 1,
+        "nominal_coverage": "0.8000",
+        "coverage": "1.0000",
+        "mean_width_minor": 70000,
+        "mean_interval_score_minor": 70000
+      }
+    },
+    {
+      "label": "observed",
+      "method": "range_central_80",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "interval": {
+        "vintages": 1,
+        "covered": 1,
+        "nominal_coverage": "0.8000",
+        "coverage": "1.0000",
+        "mean_width_minor": 59500,
+        "mean_interval_score_minor": 59500
+      }
+    },
+    {
+      "label": "observed",
+      "method": "range_central_80",
+      "window": "validation",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "interval": {
+        "vintages": 1,
+        "covered": 1,
+        "nominal_coverage": "0.8000",
+        "coverage": "1.0000",
+        "mean_width_minor": 35000,
+        "mean_interval_score_minor": 35000
+      }
+    },
+    {
+      "label": "observed",
+      "method": "range_central_80",
+      "window": "test",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "interval": {
+        "vintages": 1,
+        "covered": 0,
+        "nominal_coverage": "0.8000",
+        "coverage": "0.0000",
+        "mean_width_minor": 6500,
+        "mean_interval_score_minor": 16500
+      }
+    },
+    {
+      "label": "observed",
+      "method": "self_correcting_weighting",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 90000,
+        "predicted_minor": 70000,
+        "abs_error_minor": 20000,
+        "signed_error_minor": -20000,
+        "mean_abs_error_minor": 20000,
+        "abs_error_per_actual": "0.2222",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "self_correcting_weighting",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "none",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 90000,
+        "predicted_minor": 50000,
+        "abs_error_minor": 40000,
+        "signed_error_minor": -40000,
+        "mean_abs_error_minor": 40000,
+        "abs_error_per_actual": "0.4444",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "self_correcting_weighting",
+      "window": "train",
+      "currency": "EUR",
+      "horizon": "60+",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 25000,
+        "abs_error_minor": 25000,
+        "signed_error_minor": -25000,
+        "mean_abs_error_minor": 25000,
+        "abs_error_per_actual": "0.5000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "self_correcting_weighting",
+      "window": "validation",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 40000,
+        "abs_error_minor": 10000,
+        "signed_error_minor": -10000,
+        "mean_abs_error_minor": 10000,
+        "abs_error_per_actual": "0.2000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    },
+    {
+      "label": "observed",
+      "method": "self_correcting_weighting",
+      "window": "test",
+      "currency": "EUR",
+      "horizon": "0-29",
+      "evidence_sufficiency": "thin",
+      "vintages": 1,
+      "outcomes": 1,
+      "unpriced_vintages": 0,
+      "fx_gap_vintages": 0,
+      "money": {
+        "actual_minor": 50000,
+        "predicted_minor": 45000,
+        "abs_error_minor": 5000,
+        "signed_error_minor": -5000,
+        "mean_abs_error_minor": 5000,
+        "abs_error_per_actual": "0.1000",
+        "zero_outcome_vintages": 0,
+        "zero_outcome_abs_error_minor": 0
+      },
+      "calibration": {
+        "deals": 2,
+        "no_probability": 0,
+        "bins": [
+          {
+            "bin": "10-19",
+            "deals": 1
+          },
+          {
+            "bin": "60-69",
+            "deals": 1
+          }
+        ]
+      }
+    }
+  ]
+}

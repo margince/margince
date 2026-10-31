@@ -18,6 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// assuranceExceptionsOwnedBy is the one read every surface that shows findings
+// goes through: the list endpoint, list_input_checks and the weekly digest. It
+// is also where each finding learns whether its inputs moved since the check,
+// so no surface can show a finding without that answer.
 func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int) ([]assurance.Exception, error) {
 	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
 	if err != nil {
@@ -28,6 +32,11 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 		return nil, err
 	}
 	found = append(found, signals...)
+	calls, err := assuranceCallExceptions(ctx, tx, owners, requested)
+	if err != nil {
+		return nil, err
+	}
+	found = append(found, calls...)
 	sort.SliceStable(found, func(i, j int) bool {
 		if found[i].Severity != found[j].Severity {
 			return assuranceSeverity(found[i].Severity) < assuranceSeverity(found[j].Severity)
@@ -39,6 +48,9 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 	})
 	if limit > 0 && len(found) > limit {
 		found = found[:limit]
+	}
+	if err := assurance.MarkOutOfDate(ctx, tx, found); err != nil {
+		return nil, err
 	}
 	return found, nil
 }
@@ -74,7 +86,14 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	if companyScope != "" {
 		signalScope += " AND " + companyScope
 	}
-	content, err := auth.ActivityContentClause(ctx, "ra", arg)
+	// The content gate runs once, over every activity an open finding's signal
+	// or its suggestion's evidence cites. Each copy is planned separately, and
+	// the planner's memory stays with the pooled connection.
+	open := `SELECT %[1]s FROM assurance_exception oe WHERE oe.subject_kind = 'signal' AND oe.status = 'open'`
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, `SELECT ra.id FROM activity ra WHERE ra.archived_at IS NULL AND ra.id IN (
+   SELECT `+storekit.CitedActivityID("cite")+` FROM signal os, jsonb_array_elements(os.evidence) cite
+    WHERE cite->>'source_type' = 'activity' AND os.id IN (`+fmt.Sprintf(open, "oe.subject_id")+`)
+   UNION ALL `+deals.SuggestionEvidenceActivitiesSQL(fmt.Sprintf(open, "oe.observed->>'suggestion_id'"))+`)`, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -97,16 +116,7 @@ func assuranceSignalExceptions(ctx context.Context, tx pgx.Tx, owners []ids.UUID
 	columns := strings.Replace(exceptionSelect(rawFindingMoney), rawFindingMoney.observed, `CASE WHEN EXISTS (
   SELECT 1 FROM deal_suggestion s WHERE s.id::text = e.observed->>'suggestion_id'
   AND s.state = 'open' AND `+suggestionScope+`) THEN e.observed ELSE e.observed - 'suggestion_id' END`, 1)
-	// The content gate runs once, over every activity an open finding's signal
-	// or its suggestion's evidence cites. Each copy is planned separately, and
-	// the planner's memory stays with the pooled connection.
-	open := `SELECT %[1]s FROM assurance_exception oe WHERE oe.subject_kind = 'signal' AND oe.status = 'open'`
-	rows, err := tx.Query(ctx, `WITH readable_activity AS MATERIALIZED (
-  SELECT ra.id FROM activity ra WHERE ra.archived_at IS NULL AND ra.id IN (
-   SELECT `+storekit.CitedActivityID("cite")+` FROM signal os, jsonb_array_elements(os.evidence) cite
-    WHERE cite->>'source_type' = 'activity' AND os.id IN (`+fmt.Sprintf(open, "oe.subject_id")+`)
-   UNION ALL `+deals.SuggestionEvidenceActivitiesSQL(fmt.Sprintf(open, "oe.observed->>'suggestion_id'"))+`)
-  AND `+content+`)
+	rows, err := tx.Query(ctx, `WITH readable_activity AS MATERIALIZED (`+readable+`)
  SELECT `+columns+`, c.display_name, c.owner_id
  FROM assurance_exception e JOIN signal signal_subject ON signal_subject.id = e.subject_id
  JOIN company c ON c.id = signal_subject.resolved_company_id

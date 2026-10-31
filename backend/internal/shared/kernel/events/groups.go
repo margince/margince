@@ -74,6 +74,9 @@ func Groups() []Group {
 		// where deal.stage_changed carries both the win and the reopen that
 		// reverses one.
 		{Name: "cg:commissions", Streams: forEntities(dealStreamEntity)},
+		// Activating a partner on the first won deal it sourced. Its own group
+		// so an accrual that is wedged never holds an activation back.
+		{Name: "cg:partner-activation", Streams: forEntities(dealStreamEntity)},
 		// Turning records that already settle something into stage evidence: a
 		// contract turning active, a buyer confirming a room version, a held
 		// meeting. Both streams, because contract.* and deal_room.* ride the
@@ -134,6 +137,14 @@ func Groups() []Group {
 		// note that says the buyer just asked something. It listens on the deal
 		// stream, where every deal_room event rides.
 		{Name: "cg:deal-room-timeline", Streams: forEntities(dealStreamEntity)},
+		// Marking the input check's last reading out of date when something it
+		// read changes. Deals and stages ride the deal stream, forecast calls
+		// the identity stream, and activities theirs. Buying signals ride the
+		// capture stream and their companies the company stream. Its own group
+		// because it only marks: a backlog anywhere else must not leave a
+		// changed deal reading as current.
+		{Name: "cg:assurance-freshness", Streams: forEntities(
+			dealStreamEntity, identityStreamEntity, activityStreamEntity, captureStreamEntity, companyStreamEntity)},
 		// A commitment and the task it became, settled together: a task marked
 		// done settles its claim, a claim settled done completes its task. The
 		// activity stream carries the task's update and the contact stream the

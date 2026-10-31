@@ -259,15 +259,15 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
-	source, err := os.ReadFile("waiting.go")
+	source, err := os.ReadFile("waitingslots.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
 	}
 	if !strings.Contains(string(source), "auth.ActivityContentClause") {
 		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
 	}
-	if !strings.Contains(string(source), "auth.LinkTargetVisibleClause") {
-		t.Fatal("the waiting read returns links without checking the reader may see what they point at")
+	if !strings.Contains(string(source), "auth.LinkTargetReadableClause") {
+		t.Fatal("the waiting read returns links without checking the reader may read what they point at")
 	}
 }
 

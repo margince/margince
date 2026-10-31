@@ -20,8 +20,10 @@ import (
 type createdWithFollowups struct {
 	ID                  string `json:"id"`
 	DuplicateCandidates []struct {
-		CandidateID   string `json:"candidate_id"`
-		OtherRecordID string `json:"other_record_id"`
+		CandidateID   string  `json:"candidate_id"`
+		OtherRecordID string  `json:"other_record_id"`
+		CanMerge      bool    `json:"can_merge"`
+		KeepID        *string `json:"keep_id"`
 		Evidence      []struct {
 			Field string `json:"field"`
 			Left  string `json:"left_value"`
@@ -63,6 +65,9 @@ func TestACreateNamesThePairAndTheRecordAlreadyThereForTheCard(t *testing.T) {
 	pair := second.DuplicateCandidates[0]
 	if pair.OtherRecordID != first || pair.CandidateID == "" {
 		t.Fatalf("pair = %+v, want the record already here (%s) and the queue's pair id", pair, first)
+	}
+	if !pair.CanMerge || pair.KeepID != nil {
+		t.Errorf("the creator of both records reads can_merge %v keeping %v, want a merge either way", pair.CanMerge, pair.KeepID)
 	}
 }
 

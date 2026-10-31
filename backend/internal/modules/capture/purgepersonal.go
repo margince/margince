@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -74,6 +75,9 @@ func PersonalPurgeScope(seatCol string) string {
 		   a.kind = 'email' AND a.captured_by LIKE 'connector:%'
 		   AND a.direction = 'inbound'
 		   AND NOT a.counterparty_outbound_attested
+		   -- Mail already destroyed has nothing left to take. Without this the
+		   -- sweep re-erases it every pass, and a batch fills with it.
+		   AND NOT ` + storekit.ActivityErasedSQL("a") + `
 		   -- An obligation the installation owes somebody else outranks a
 		   -- verdict about a sender.
 		   AND a.restricted_at IS NULL

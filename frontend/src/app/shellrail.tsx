@@ -1,8 +1,10 @@
 import { Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
+import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import type { Route } from "../lib/router";
@@ -36,6 +38,14 @@ function BrandBlock() {
     installation?.logo_icon_url,
     installation?.logo_url,
   );
+  // On the link, not the heading: the link already holds the tab stop, and the
+  // measure reaches into the heading it clips. Folded, the name has no width,
+  // so hovering the mark always shows it.
+  const {
+    ref: nameRef,
+    trigger: nameTrigger,
+    tip: nameTip,
+  } = useTruncationTooltip<HTMLAnchorElement>(installation?.display_name ?? "");
   // With no profile (the shell mounted before onboarding described anybody),
   // the block falls back to the product's own mark and name. A company name is
   // never invented to fill the line.
@@ -45,11 +55,11 @@ function BrandBlock() {
         <span className="ws-chip" aria-hidden="true">
           <Logomark />
         </span>
-        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+        <AppLink className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
-        </a>
+        </AppLink>
         {/* No attribution here: the product's own name is already above it. */}
         <span className="ws-company">{marker}</span>
       </>
@@ -67,19 +77,22 @@ function BrandBlock() {
           src={mark}
         />
       </span>
-      <a
+      <AppLink
         className="ws"
         href="#/home"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
+        ref={nameRef}
+        {...nameTrigger}
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
         <Heading size="small" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
-      </a>
+        {nameTip}
+      </AppLink>
       <span className="ws-company">
         <span className="ws-company-text">{t("shell.poweredBy")}</span>
         {marker}

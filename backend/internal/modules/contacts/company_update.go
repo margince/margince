@@ -58,6 +58,10 @@ type UpdateCompanyInput struct {
 	// Lifecycle, when non-nil, moves where the account stands with us
 	// (ADR-0079/A124). nil leaves it untouched.
 	Lifecycle *string
+	// Phone and Email, when non-nil, set or (when empty) clear the main number
+	// and the general address. nil leaves them untouched.
+	Phone *string
+	Email *string
 	// Visibility, when non-nil, moves who may see this company between
 	// 'workspace' and 'owner'. nil leaves it untouched. companyvisibility.go
 	// carries the two rules it owes that no other column here does.
@@ -107,7 +111,7 @@ func (s *Store) updateCompanyInTx(
 	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	current, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
 	}
@@ -144,7 +148,7 @@ func (s *Store) updateCompanyInTx(
 		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 			return crmcontracts.Company{}, err
 		}
-		return current, nil
+		return withCompanyCreator(ctx, tx, current)
 	}
 	if in.Visibility != nil {
 		if err := refuseStaleCompanyVisibility(ctx, tx, id, current); err != nil {
@@ -185,7 +189,7 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read updated company: %w", err)
 	}
-	return out, nil
+	return out, s.followShareOwnerTx(ctx, tx, entityCompany, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // recordCompanyUpdate is everything the write OWES once it has landed: the

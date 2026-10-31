@@ -177,7 +177,7 @@ func recordPendingDispositionTx(
 		INSERT INTO company_domain_disposition (domain, status, owner_id, last_evidence_at)
 		VALUES ($1, 'pending', $2, $3)
 		ON CONFLICT (domain) DO NOTHING`,
-		domain, ownerID, evidenceAt)
+		domain, domainQuestionOwner(ownerID), evidenceAt)
 	if err != nil {
 		return false, fmt.Errorf("contacts: opening the disposition question for %s: %w", domain, err)
 	}
@@ -304,10 +304,6 @@ func (s *Store) ListDueDomains(ctx context.Context, limit int) ([]DueDomain, err
 			  -- vendor's real corporate site, answer "company", and create
 			  -- exactly the record the refusal exists to prevent.
 			  AND d.admission IS DISTINCT FROM 'suppressed'
-			  -- A domain nobody is accountable for may not mint rows, so it is
-			  -- not worth a crawl either (ResolveDomainTriage stamps the company's
-			  -- owner from this column).
-			  AND d.owner_id IS NOT NULL
 			  AND d.next_attempt_at IS NOT NULL
 			  AND d.next_attempt_at <= now()
 			  AND d.attempts < $1
@@ -381,7 +377,6 @@ func (s *Store) ExhaustedDomains(ctx context.Context, limit int) ([]DueDomain, e
 			SELECT domain FROM company_domain_disposition
 			WHERE status = 'pending'
 			  AND admission IS DISTINCT FROM 'suppressed'
-			  AND owner_id IS NOT NULL
 			  AND next_attempt_at IS NOT NULL
 			  AND next_attempt_at <= now()
 			  AND attempts >= $1

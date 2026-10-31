@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button, SegmentedControl } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -247,9 +248,9 @@ export function BookingBlocked() {
           {t("scheduling.connectFirst")}
         </Heading>
         <p>{t("scheduling.setupInSettings")}</p>
-        <a href="#/settings/meetings" target="_blank" rel="noreferrer">
+        <AppLink href="#/settings/meetings" target="_blank" rel="noreferrer">
           {t("scheduling.openSettings")}
-        </a>
+        </AppLink>
       </PanelBody>
     </Panel>
   );

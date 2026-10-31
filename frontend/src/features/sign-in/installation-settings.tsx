@@ -33,6 +33,10 @@ import {
 } from "./aicaches";
 import { CallingSettingsRows } from "./installation-settings.calling";
 import {
+  ForecastSelfCorrectingRows,
+  IndividualPerformanceRows,
+} from "./installation-settings.individual";
+import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
@@ -89,6 +93,14 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       queryClient.setQueryData(INSTALLATION_SETTINGS_KEY, data);
       // These texts are cached by record id alone, and focus does not refetch.
       // An open page would keep text written in the old language or zone.
+      // The switch changes what every reading may show, so nothing cached
+      // under the old answer may be drawn again.
+      if (
+        patch.individual_performance !== undefined ||
+        patch.forecast_self_correcting !== undefined
+      ) {
+        void queryClient.invalidateQueries();
+      }
       if (SETTINGS_IN_SERVER_TEXT.some((key) => patch[key] !== undefined)) {
         for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
           void queryClient.invalidateQueries({ queryKey: prefix });
@@ -161,6 +173,8 @@ function InstallationSettingsForm({
     setEditing(null);
   });
   const calling = useUpdateInstallationSettings();
+  const individual = useUpdateInstallationSettings();
+  const selfCorrecting = useUpdateInstallationSettings();
   const [draft, setDraft] = useState(settings);
   const seeded = useRef(serverSignature(settings));
 
@@ -320,6 +334,18 @@ function InstallationSettingsForm({
         canManage={canManage}
         denialId={denialId}
         update={calling}
+      />
+      <IndividualPerformanceRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={individual}
+      />
+      <ForecastSelfCorrectingRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={selfCorrecting}
       />
       {editing !== null && (
         <InstallationProfileDialog

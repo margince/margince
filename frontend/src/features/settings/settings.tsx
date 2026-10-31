@@ -59,8 +59,10 @@ import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { LegalEntitiesCard } from "./legalentities";
 import { LicenseCard } from "./license";
+import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppsCard } from "./oauth-apps-card";
+import { PartnerStagesCard } from "./partnerstages";
 import { PublicOriginCard } from "./public-origin";
 import { FxRatesCard } from "./rates";
 import { RolesSettings } from "./roles-settings";
@@ -204,6 +206,15 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "acquisition":
       return <AcquisitionSourcesCard />;
+    case "lossreasons":
+      return (
+        <>
+          <LossReasonsCard />
+          <LegacyLossReasonsCard />
+        </>
+      );
+    case "partners":
+      return <PartnerStagesCard />;
     case "reviewtemplates":
       return <ReviewTemplatesCard />;
     case "recordroles":

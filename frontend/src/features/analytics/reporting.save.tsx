@@ -28,12 +28,8 @@ import {
   type ReportingLayout,
 } from "./reporting.layout";
 import { LayoutEditor } from "./reporting.layouteditor";
-import {
-  metricLabel,
-  type ReportingReport,
-  type ReportingSelection,
-} from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import type { ReportingReport, ReportingSelection } from "./reporting.model";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import { reportRevisionsKey } from "./reporting.versions";
 
 export function SaveReportingDialog({
@@ -48,6 +44,7 @@ export function SaveReportingDialog({
   onSaved: (report: ReportingReport) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const [selection, setSelection] = useState(initialSelection);
   const title = useId();
   const formId = useId();
@@ -240,7 +237,7 @@ export function SaveReportingDialog({
               ).map((metric) => (
                 <Checkbox
                   key={metric}
-                  label={metricLabel(metric, t)}
+                  label={metricName(metric)}
                   // Which charts a metric brings is in the catalog, so the
                   // choice waits for it rather than keep cards it cannot judge.
                   disabled={catalog.data === undefined}

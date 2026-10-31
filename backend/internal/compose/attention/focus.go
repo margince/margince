@@ -77,8 +77,38 @@ func focusEligible(row ranked, asOf time.Time) bool {
 	return semanticLevelOf(row) < levelRoutine
 }
 
+// nameWorklistRows names the queue, Focus and the optional list as one batch,
+// so each naming read runs once per page rather than once per list. A failed
+// advice read keeps the rows and is named on the page.
+func (s *Service) nameWorklistRows(
+	ctx context.Context, page *crmcontracts.Worklist, findings map[ids.UUID]string, day crmcontracts.Attention,
+) error {
+	lists := []*[]crmcontracts.WorklistItem{&page.Queue}
+	if page.Focus != nil {
+		lists = append(lists, &page.Focus.Items)
+	}
+	if page.OptionalRelationships != nil {
+		lists = append(lists, page.OptionalRelationships)
+	}
+	var rows []crmcontracts.WorklistItem
+	for _, list := range lists {
+		rows = append(rows, *list...)
+	}
+	advised, adviceErr := s.readingDealMoves(ctx, rows, day)
+	if adviceErr != nil {
+		page.SourcesUnavailable = append(page.SourcesUnavailable, s.stampSources([]crmcontracts.WorklistSourceUnavailable{*adviceErr})...)
+	}
+	if err := advised.nameRows(ctx, rows, findings); err != nil {
+		return err
+	}
+	for _, list := range lists {
+		rows = rows[copy(*list, rows):]
+	}
+	return nil
+}
+
 // Both projections expose the same actions, standing, and ownership labels.
-func (s *Service) nameWorklistRows(ctx context.Context, rows []crmcontracts.WorklistItem, findings map[ids.UUID]string) error {
+func (s *Service) nameRows(ctx context.Context, rows []crmcontracts.WorklistItem, findings map[ids.UUID]string) error {
 	if err := s.nameTheStep(ctx, rows); err != nil {
 		return err
 	}

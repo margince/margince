@@ -61,17 +61,19 @@ type QuietContact struct {
 // candidate contact. It reads the activities, not the edge's last_at. A
 // colleague's message on a thread the contact only belongs to then cannot hide
 // a quiet relationship, and the same colleague's older exchange still counts.
+// The colleague is an EXISTS, so it is asked only of the contact's exchanges.
 func liveExchangeClock(asOf string) string {
 	return fmt.Sprintf(`SELECT max(a.occurred_at) AS touched
 		      FROM activity_participant cp
 		      JOIN activity a ON a.id = cp.activity_id AND a.archived_at IS NULL%s
 		       AND %s
-		      JOIN activity_participant up ON up.activity_id = a.id AND up.role IN %s
-		       AND %s
-		      JOIN app_user lu ON lu.id = up.user_id AND %s
-		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s`,
+		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s
+		       AND EXISTS (SELECT 1 FROM activity_participant up
+		              JOIN app_user lu ON lu.id = up.user_id AND %s
+		             WHERE up.activity_id = a.id AND up.role IN %s
+		               AND %s)`,
 		audienceWorkspaceOnly, relstrength.ContactExchangeSQL("a", "e.contact_id", asOf),
-		interactionRoles, auth.ParticipantStandsSQL("up", "a"), workforce.LiveMemberSQL("lu"), interactionRoles)
+		interactionRoles, workforce.LiveMemberSQL("lu"), interactionRoles, auth.ParticipantStandsSQL("up", "a"))
 }
 
 // QuietContacts answers "which relationships have gone silent", most exchanged

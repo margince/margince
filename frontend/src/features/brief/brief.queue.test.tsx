@@ -119,7 +119,7 @@ it("restores the queue opener's keyboard focus after closing", async () => {
 // no third of its width to spend saying it twice.
 it("takes a review row in hand, and opens no column beside it", async () => {
   const user = userEvent.setup();
-  window.location.hash = "#/home?queue=1";
+  window.location.hash = "#/home?queue=1&queue_view=system";
   const review: components["schemas"]["WorklistItem"] = {
     ...taskRow("privacy", "Review the disclosure"),
     source: "notice_case",
@@ -317,6 +317,79 @@ it("counts the queue the button actually opens", async () => {
   });
 });
 
+it("counts a closed drawer over the reader's own queue from Home's one read", async () => {
+  window.location.hash = "#/home";
+  const views: (string | null)[] = [];
+  stubApi({
+    "GET /worklist": (_body, query) => {
+      views.push(query.get("view"));
+      return jsonResponse({
+        ...readingsDay({}, [taskRow("t", "Call Weber")]),
+        counts: [
+          { category: "tasks", considered: 7, shown: 1, more_available: false },
+          {
+            category: "system",
+            considered: 5,
+            shown: 0,
+            more_available: false,
+          },
+        ],
+      });
+    },
+  });
+  render(<BriefScreen />);
+
+  // Today's total leaves the System rows out, as the drawer's head does.
+  const toggle = await screen.findByRole("button", {
+    name: en["brief.queue.show"],
+  });
+  await waitFor(() =>
+    expect(toggle.querySelector(".optioncount")?.textContent).toContain("7"),
+  );
+  expect(views, "a closed drawer sent a second Worklist read").toEqual([null]);
+});
+
+it("keeps a closed drawer's count on Home's live read after the drawer was open", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  let tasks = 7;
+  stubApi({
+    "GET /worklist": () =>
+      jsonResponse({
+        ...readingsDay({}, [taskRow("t", "Call Weber")]),
+        counts: [
+          {
+            category: "tasks",
+            considered: tasks,
+            shown: 1,
+            more_available: false,
+          },
+        ],
+      }),
+  });
+  const { client } = render(<BriefScreen />);
+  const count = () =>
+    screen
+      .getByRole("button", { name: new RegExp(en["brief.queue.show"]) })
+      .querySelector(".optioncount")?.textContent;
+  await waitFor(() => expect(count()).toContain("7"));
+
+  await user.click(
+    screen.getByRole("button", { name: new RegExp(en["brief.queue.show"]) }),
+  );
+  await screen.findByRole("dialog", { name: en["brief.queue.title"] });
+  await user.click(screen.getByRole("button", { name: /close/i }));
+  tasks = 9;
+  await client.refetchQueries({
+    queryKey: ["worklist", "mine", "all", ""],
+    exact: true,
+  });
+
+  await waitFor(() =>
+    expect(count(), "the closed drawer kept its own stale day").toContain("9"),
+  );
+});
+
 it.each(["failed", "bounded", "scope"])(
   "does not claim an exact drawer total for %s coverage",
   async (gap) => {
@@ -377,4 +450,41 @@ it("keeps optional reconnections reachable in the real Home queue drawer", async
     await within(drawer).findByText(en["worklist.relationships.optional"]),
   ).toBeVisible();
   expect(within(drawer).getByText("Demo reconnection")).toBeVisible();
+});
+
+it("reads optional reconnections only when the reader opens them", async () => {
+  window.location.hash = "#/home?queue=1";
+  const asked: string[] = [];
+  stubApi({
+    "GET /worklist": (_body, query) => {
+      asked.push(query.get("relationships") ?? "");
+      if (query.get("relationships") === "omit") {
+        return jsonResponse(readingsDay({}, []));
+      }
+      return jsonResponse({
+        ...readingsDay({}, []),
+        optional_relationships: [
+          {
+            ...taskRow("01930000-0000-7000-8000-000000000032", "Quiet buyer"),
+            source: "relationship_decay",
+            category: "relationships",
+            level: 6,
+            actions: ["open", "dismiss"],
+            because: [],
+          },
+        ],
+      });
+    },
+  });
+  render(<BriefQueue />);
+  const drawer = await screen.findByRole("dialog", {
+    name: en["brief.queue.title"],
+  });
+  const show = await within(drawer).findByRole("button", {
+    name: en["worklist.relationships.show"],
+  });
+  expect(asked).not.toContain("include");
+  await userEvent.click(show);
+  expect(await within(drawer).findByText("Quiet buyer")).toBeVisible();
+  expect(asked.filter((value) => value === "include")).toHaveLength(1);
 });

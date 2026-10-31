@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { AppLink } from "../../design-system/applink";
 import {
   Badge,
   Button,
@@ -40,10 +41,10 @@ export function ClientSurfaceScreen() {
   return (
     <div className="client-chrome">
       <header className="client-bar">
-        <a href="#/home" className="client-back">
+        <AppLink href="#/home" className="client-back">
           <ArrowLeft aria-hidden size={15} />
           {t("client.back")}
-        </a>
+        </AppLink>
       </header>
       <div className="wrap narrow">
         <SectionHeader title={t("client.title")} />
@@ -74,7 +75,9 @@ export function ClientSurfaceScreen() {
                 {hit.snippet && (
                   <span className="t-caption">{hit.snippet}</span>
                 )}
-                <a href={`#/contacts/${hit.id}`}>{t("client.open360")}</a>
+                <AppLink href={`#/contacts/${hit.id}`}>
+                  {t("client.open360")}
+                </AppLink>
               </Row>
             ))}
           </Card>
@@ -87,9 +90,9 @@ export function ClientSurfaceScreen() {
               {t("client.unknownDetail")}
             </p>
             <div className="card-actions">
-              <a className="btn btn-ghost" href="#/leads">
+              <AppLink className="btn btn-ghost" href="#/leads">
                 {t("client.createLead")}
-              </a>
+              </AppLink>
             </div>
           </Card>
         )}

@@ -1,12 +1,16 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx frontend/src/features/contacts/contactcaseentry.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
 
 ## Reading order
 
-The newest thing the contact sent in the last 7 days that nobody has answered comes first, as the "Just in" row (`frontend/src/components/latestinbound.tsx`). It is shaped like the Next bar. "Noticed" hides it in this browser. On the other tabs it is one line under the badges.
+The newest thing the contact sent in the last 7 days that nobody has answered is "Just in". The server reads it (`GET /activities/latest-inbound`, `backend/internal/modules/activities/latestinbound.go`). Mail and messages come from the `waiting_reply` read. A website form counts until a later sent mail or message, a call or a held meeting answers it. An item a task stands for is left out.
+
+`RecordNextBar` (`frontend/src/components/latestinbound.tsx`) puts the item in the Next bar on every record type. It takes the bar when nothing urgent is next: a late item, a moment or a move the page marks urgent. Otherwise it is one line above the bar. A bar whose move already cites the item draws alone.
+
+**Create task** accepts a mail's request when the server says it can (`accepts_request`), so finishing the task settles it. Anything else becomes a task made from the item. "Noticed" hides it in this browser, and no older item takes its place. On the other tabs it is one line under the badges.
 
 After it, a moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
 
@@ -38,4 +42,6 @@ On a small screen, `Details & permissions` opens the same sidebar content over t
 
 Focus chooses and orders entries the normal way, with no pin controls and no stored pins that change it. The separate full work queue keeps its pins as they work today. The backend chooses Focus before it applies personal pins to the queue. So old stored pins cannot pull a note that asks for no action into Focus, or change its order.
 
-The Next bar ends with **Next task** in every state, also when nothing is due on this contact. A reader working through the queue can then always go on to the next record. How it picks that record is in [home-and-worklist.md](home-and-worklist.md#addresses).
+The Next bar stays about this contact. With no move, no task and nothing just in, it says whose turn it is. It reads that from `last_exchange` in `GET /activities/latest-inbound`, the contact's newest call, meeting or message. `activities.WhoseMove` decides it, the same function the company page's strip uses, so the two cannot disagree.
+
+A move whose action opens the composer drafts the message on the press and is drawn in the AI indigo. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. A move that only opens a form or a record keeps the accent.

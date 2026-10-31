@@ -6,13 +6,7 @@ import { UserPlus } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  RosterPartialNote,
-  useRoster,
-  useRosterPartial,
-} from "../../components/entityref";
 import { Button, Field, TextInput } from "../../design-system/atoms";
-import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
@@ -21,6 +15,7 @@ import { useHoldsAdminRole } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
+import { MemberTeamsField } from "./users-teams";
 import "./users-admin.css";
 
 // The invite form: an address, a name, a role and the teams the member lands
@@ -87,8 +82,6 @@ export function InviteUserForm({
   // admin is asked which teams the new member joins.
   const placesOnTeams = useHoldsAdminRole();
   const [error, setError] = useState<Error | null>(null);
-  const teams = useRoster("team", placesOnTeams);
-  const teamsPartial = useRosterPartial("team", placesOnTeams);
 
   // The role and the team set ride as the mutation's variable rather than
   // through the closure: react-query re-arms a mutation's options in a passive effect,
@@ -209,29 +202,11 @@ export function InviteUserForm({
             />
           )}
         </Field>
+        {/* The teams the member joins on arrival. A team-scoped role with no
+          team edits only its own records, and the preview below says so before
+          the invite goes out. */}
         {placesOnTeams && (
-          <>
-            {/* The teams the member joins on arrival. A team-scoped role with no
-              team edits only its own records, and the preview below says so
-              before the invite goes out. */}
-            <ChoiceList
-              multiple
-              legend={t("users.teamsLabel")}
-              choices={(teams.data ?? []).flatMap((entry) =>
-                "name" in entry ? { value: entry.id, label: entry.name } : [],
-              )}
-              value={teamIds}
-              onChange={setTeamIds}
-            />
-            {/* "No teams yet" is a claim about the workspace, so only a roster
-              read to its end may make it: a walk that stopped early would have
-              an admin invite contacts into no team at all on the strength of
-              pages nothing read. */}
-            {teams.data?.length === 0 && !teamsPartial && (
-              <p>{t("users.noTeamsYet")}</p>
-            )}
-            <RosterPartialNote partial={teamsPartial} />
-          </>
+          <MemberTeamsField value={teamIds} onChange={setTeamIds} canManage />
         )}
         {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
         {/* ABOVE the submit row, where the sibling dialogs in this family put a

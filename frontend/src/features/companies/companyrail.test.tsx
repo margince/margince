@@ -85,7 +85,7 @@ describe("the Overview's Contacts card", () => {
     const contacts = within(card("Contacts"));
     expect(contacts.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
       "href",
-      "#/contacts/p-2",
+      "/#/contacts/p-2",
     );
     expect(contacts.getByText("Lena Middle")).toBeInTheDocument();
     expect(contacts.queryByText("Ravi Weak")).toBeNull();
@@ -93,6 +93,24 @@ describe("the Overview's Contacts card", () => {
     expect(
       contacts.getAllByText("Head of Fleet · Brandt Automotive GmbH").length,
     ).toBe(2);
+  });
+
+  it("stacks its cards as the card list, which keeps a gap between them", () => {
+    stub();
+    renderCards({
+      view: view({
+        contacts: {
+          data: [
+            contact("p-1", "Ravi One", 80),
+            contact("p-2", "Dana Two", 40),
+          ],
+          page: emptyPage,
+        },
+      }),
+    });
+    const list = within(card("Contacts")).getByRole("list");
+    expect(list).toHaveClass("record-card-list");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
   });
 
   it("says no economic buyer is named while a deal is open and nobody holds the seat", () => {
@@ -259,7 +277,7 @@ describe("the details' Way in row", () => {
     expect(screen.getByText("Way in")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
       "href",
-      "#/contacts/p-2",
+      "/#/contacts/p-2",
     );
   });
 });

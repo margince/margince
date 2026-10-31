@@ -387,22 +387,69 @@ describe("an archived account's verbs", () => {
   });
 });
 
-// The design draws no relationship badge beside the name. The lifecycle chip is
-// the one pill that says where the account stands, and the relationship types
-// are a Profile tab field.
+// Beside the lifecycle chip the head says what the company is to the business:
+// a customer, a partner, or both on one record. Other relationship types stay a
+// Profile tab field.
 describe("the marks under an account's name", () => {
-  it("draws the lifecycle and no relationship badge, whatever the types", async () => {
+  it("draws customer and partner on one record, and no other type", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyMarks
-        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
+        company={{
+          ...COMPANY,
+          lifecycle: "opportunity",
+          relationship_types: ["customer", "partner", "supplier"],
+        }}
       />,
     );
 
     expect(
-      await screen.findByText(en["company.lifecycle.customer"]),
+      await screen.findByText(en["company.relType.customer"]),
     ).toBeTruthy();
-    expect(screen.queryByText(en["company.relType.partner"])).toBeNull();
+    expect(screen.getByText(en["company.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.supplier"])).toBeNull();
+  });
+
+  it("names the partner's kinds and stage when the programme is readable", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          relationship_types: ["partner"],
+          partner: {
+            company_id: COMPANY.id,
+            cert_status: "applied",
+            partner_kinds: ["referral", "hosting"],
+            relationship_stage: "contract_signed",
+            stage_label: "Contract signed",
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
+          },
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText("Partner · Hosting, Referral · Contract signed"),
+    ).toBeTruthy();
+  });
+
+  it("does not repeat the customer the lifecycle chip already names", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyMarks
+        company={{
+          ...COMPANY,
+          lifecycle: "customer",
+          relationship_types: ["customer"],
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findAllByText(en["company.lifecycle.customer"]),
+    ).toHaveLength(1);
   });
 });
 
@@ -571,6 +618,25 @@ describe("the lifecycle control beside the name", () => {
     );
     await user.click(screen.getByRole("option", { name: "Prospect" }));
     await waitFor(() => expect(sent).toEqual([{ lifecycle: "prospect" }]));
+  });
+
+  it("says under Live that only a colleague sets it", async () => {
+    stubPatch(200);
+    renderInApp(
+      <CompanyLifecycleControl company={{ ...COMPANY, lifecycle: "live" }} />,
+    );
+    const control = await screen.findByRole("combobox", { name: "Lifecycle" });
+    const hint = document.getElementById(
+      control.getAttribute("aria-describedby") ?? "",
+    );
+    expect(hint?.textContent).toBe(en["company.lifecycle.live.help"]);
+  });
+
+  it("draws no help line under any other stage", async () => {
+    stubPatch(200);
+    renderInApp(<CompanyLifecycleControl company={COMPANY} />);
+    await screen.findByRole("combobox", { name: "Lifecycle" });
+    expect(screen.queryByText(en["company.lifecycle.live.help"])).toBeNull();
   });
 
   it("does not write the stage the account already has", async () => {

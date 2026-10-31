@@ -370,6 +370,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:approval-notify", notify.HandleEvent, logger, 0) })
 
 	startCommissionAccrual(ctx, pool, rdb, background, logger, stdout)
+	startPartnerActivation(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
 	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
@@ -378,6 +379,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)
 	startCommitmentSettle(ctx, pool, rdb, background, logger, stdout)
+	startAssuranceFreshness(ctx, pool, rdb, background, inserter, logger, stdout)
 
 	// What the AI is doing for one contact, projected into the table the UI
 	// reads. Deterministic like the projections above, so it runs on every

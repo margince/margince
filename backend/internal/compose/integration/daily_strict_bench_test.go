@@ -27,10 +27,13 @@ type strictHomeCohort struct {
 // published PERF rows and never consult DailyKnownIssues.
 //
 // The manager owns no records, so their brief, receipts and own queue are the
-// declared empty cohort: timed, but never required to hold anything.
+// declared empty cohort: timed, but never required to hold anything. The team
+// scope a manager picks reads every teammate's queue, so it has the published
+// PERF-8 budget instead of the own queue's.
 var strictHomeCohorts = []strictHomeCohort{
 	{"R02", "worklist", "rep", 750 * time.Millisecond, "queue"},
-	{"R02", "worklist", "manager", 750 * time.Millisecond, "queue"},
+	{"R02", "worklist", "manager", 750 * time.Millisecond, ""},
+	{"R02", "worklist_team", "manager", time.Second, "queue"},
 	{"R02", "home_worklist", "rep", 750 * time.Millisecond, "queue"},
 	{"R02", "home_worklist", "manager", 750 * time.Millisecond, ""},
 	{"R09", "app_shell_approvals", "rep", 100 * time.Millisecond, "count"},

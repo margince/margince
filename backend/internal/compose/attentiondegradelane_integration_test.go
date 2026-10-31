@@ -39,7 +39,7 @@ type stuckWaiting struct {
 	pool *pgxpool.Pool
 }
 
-func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]attention.WaitingCustomer, bool, error) {
+func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]attention.WaitingCustomer, bool, error) {
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
@@ -47,7 +47,7 @@ func (w stuckWaiting) Unanswered(ctx context.Context, asOf time.Time, owner *ids
 	if err != nil {
 		return nil, false, err
 	}
-	return w.Waiting.Unanswered(ctx, asOf, owner)
+	return w.Waiting.Unanswered(ctx, asOf, narrow)
 }
 
 // shortLaneBudget keeps the seam's real snapshot and shortens only the wait,

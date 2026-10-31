@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,7 +26,7 @@ import (
 // dealSeatMasking is a seat whose role withholds the given deal fields. Row
 // scope team and not all, deliberately: a principal reading every row is
 // withheld nothing, so a fixture on that scope would assert nothing. It reads
-// companies too, so the country filter renders rather than being refused.
+// the companies and projects a deal names, as every shipped role does.
 func dealSeatMasking(fields ...string) principal.Principal {
 	masks := make([]principal.FieldMask, 0, len(fields))
 	for _, field := range fields {
@@ -36,8 +37,10 @@ func dealSeatMasking(fields ...string) principal.Principal {
 	return principal.Principal{
 		Type: principal.PrincipalHuman,
 		Permissions: principal.Permissions{
-			RowScope:   principal.RowScopeTeam,
-			Objects:    map[string]principal.ObjectGrant{maskObject: {Read: true}, "company": {Read: true}},
+			RowScope: principal.RowScopeTeam,
+			Objects: map[string]principal.ObjectGrant{
+				maskObject: {Read: true}, "company": {Read: true}, "project": {Read: true},
+			},
 			FieldMasks: masks,
 		},
 	}
@@ -99,6 +102,48 @@ func TestTheDealListRefusesAFilterOverAWithheldField(t *testing.T) {
 		if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
 			t.Errorf("narrowing by %s under a role that withholds it → %v, want the masked-field refusal", name, err)
 		}
+	}
+}
+
+// A role without the company or project grant has those references masked on
+// every row, so it is refused each filter that reads one. The census is every
+// filter whose SQL names a reference column, partner_sourced among them.
+func TestTheDealListRefusesAReferenceFilterToARoleWithoutTheTargetGrant(t *testing.T) {
+	t.Parallel()
+	references := regexp.MustCompile(`\b(` + filterCompanyID + `|` + filterPartnerCompanyID + `|` + filterProjectID + `)\b`)
+	seat := dealSeatMasking()
+	seat.Permissions.Objects = map[string]principal.ObjectGrant{maskObject: {Read: true}}
+	refused := 0
+	for _, name := range dealListFilters.Names() {
+		clauses, err := filterDeals(t, dealSeatMasking(), name)
+		if err != nil {
+			t.Fatalf("narrowing by %s for a seat holding every grant: %v", name, err)
+		}
+		_, err = filterDeals(t, seat, name)
+		// Country reads an attribute of the linked company rather than naming
+		// it, and the company read it needs is refused outright.
+		if name == filterCountry {
+			if !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Errorf("narrowing by country without the company grant → %v, want permission denied", err)
+			}
+			continue
+		}
+		if !slices.ContainsFunc(clauses, references.MatchString) {
+			if err != nil {
+				t.Errorf("narrowing by %s, which names no reference, without the company grant: %v", name, err)
+			}
+			continue
+		}
+		refused++
+		var refusal *values.ParseError
+		if !errors.As(err, &refusal) || refusal.Code != auth.CodeFieldMasked || refusal.Field != name {
+			t.Errorf("narrowing by %s without the company or project grant → %v, want the masked-field refusal on %s",
+				name, err, name)
+		}
+	}
+	if refused < 4 {
+		t.Errorf("the census found %d reference filters; company_id, project_id, partner_company_id and "+
+			"partner_sourced each read one, so it has stopped seeing them", refused)
 	}
 }
 

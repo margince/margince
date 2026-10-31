@@ -3,9 +3,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { taskRow } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
@@ -24,7 +25,7 @@ const LEAD: WorklistItem = {
   contact: { id: "c-1", label: "Alice Brandt" },
 };
 
-function showLead(lead: WorklistItem) {
+function showLead(lead: WorklistItem, writeTo: WriteTo | null = null) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
     "GET /activities/task-1": () =>
@@ -54,14 +55,16 @@ function showLead(lead: WorklistItem) {
   });
   render(
     <StoryProviders>
-      <Triage
-        rows={[lead]}
-        at={0}
-        lead={lead}
-        onChoose={() => {}}
-        onOpenEmail={() => {}}
-        onContext={() => {}}
-      />
+      <WriteToProvider writeTo={writeTo}>
+        <Triage
+          rows={[lead]}
+          at={0}
+          lead={lead}
+          onChoose={() => {}}
+          onOpenEmail={() => {}}
+          onContext={() => {}}
+        />
+      </WriteToProvider>
     </StoryProviders>,
   );
 }
@@ -77,7 +80,7 @@ it("a task lead from a call offers Call and Email, and links the contact once", 
   ).toBeTruthy();
   const toContact = card
     .getAllByRole("link")
-    .filter((link) => link.getAttribute("href") === "#/contacts/c-1");
+    .filter((link) => link.getAttribute("href") === "/#/contacts/c-1");
   expect(toContact).toHaveLength(1);
 });
 
@@ -91,4 +94,22 @@ it("a task lead whose row names no contact still offers the task's contact verbs
   expect(
     card.getByRole("link", { name: en["record.verb.email"] }),
   ).toBeTruthy();
+});
+
+it("a task owed to a contact keeps Done and offers the drafted mail before the details", async () => {
+  showLead(LEAD, vi.fn());
+
+  const card = within(await screen.findByRole("article"));
+  const draft = await card.findByRole("button", {
+    name: en["task.next.draftEmail"],
+  });
+  expect(draft.classList.contains("btn-ai")).toBe(true);
+  expect(card.getByRole("button", { name: en["tasks.complete"] })).toBeTruthy();
+  const details = card.getByRole("button", { name: en["brief.focus.context"] });
+  expect(
+    draft.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    card.queryByRole("button", { name: en["record.verb.email"] }),
+  ).toBeNull();
 });

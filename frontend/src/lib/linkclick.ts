@@ -5,6 +5,11 @@ import type { MouseEvent } from "react";
 
 // A modified click asks the browser for a new tab, a window or a saved copy.
 // A link's own handler leaves that click alone.
-export function opensElsewhere(event: MouseEvent<HTMLAnchorElement>): boolean {
+export function opensElsewhere(
+  event: Pick<
+    MouseEvent<HTMLAnchorElement>,
+    "metaKey" | "ctrlKey" | "shiftKey" | "altKey"
+  >,
+): boolean {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 }

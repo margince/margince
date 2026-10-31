@@ -1,0 +1,59 @@
+/* VoiceKinds: the writing worth bringing, as three tiles. The wrapper is the
+   container, so the guide folds to rows by its own width wherever it sits. */
+.voicekinds {
+  container: voicekinds / inline-size;
+}
+
+.voicekinds-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voicekind {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+
+.voicekind b {
+  color: var(--textPrimary);
+}
+
+.voicekind-icon {
+  display: grid;
+  place-items: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: var(--r-md);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+
+.voicekind-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* On a narrow pane the guide reads as three short rows, so the drop target
+   stays in the first screen. */
+@container voicekinds (max-width: 40rem) {
+  .voicekinds-list {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .voicekind {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+  }
+}

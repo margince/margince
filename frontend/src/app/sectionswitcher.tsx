@@ -3,6 +3,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Modal } from "../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
@@ -41,7 +42,7 @@ function SectionPickGroup({
         </Heading>
       )}
       {group.items.map((entry) => (
-        <a
+        <AppLink
           key={entry.id}
           className="t-body"
           href={navEntryHref([section.screen], entry)}
@@ -52,7 +53,7 @@ function SectionPickGroup({
         >
           <entry.icon size={16} aria-hidden />
           {entryLabel(entry, locale, t)}
-        </a>
+        </AppLink>
       ))}
     </div>
   );

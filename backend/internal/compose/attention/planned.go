@@ -25,7 +25,8 @@ func (s *Service) planned(
 	ctx context.Context, asOf, until time.Time, loc *time.Location, scope TaskScope,
 ) ([]crmcontracts.AttentionItem, int, error) {
 	defer timeStage(ctx, "planned")()
-	open, err := s.tasks.OpenForViewer(ctx, asOf, until, plannedCap, scope, s.taskOwner)
+	team := s.rosterSeats()
+	open, err := s.tasks.OpenForViewer(ctx, asOf, until, plannedCap, scope, s.taskOwner, team)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -37,7 +38,7 @@ func (s *Service) planned(
 	// Only when a lane is actually bound — an installation with no task reader
 	// answers neither.
 	upcoming, err := s.tasks.UpcomingForViewer(
-		ctx, asOf, until, until.AddDate(0, 0, upcomingHorizonDays), upcomingCap, scope, s.taskOwner)
+		ctx, asOf, until, until.AddDate(0, 0, upcomingHorizonDays), upcomingCap, scope, s.taskOwner, team)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -54,18 +55,11 @@ func (s *Service) planned(
 	// badge of len(items) tells a reader with thirteen that they have twelve —
 	// and there is no second page on this lane to find the thirteenth by. The
 	// same reading needs_you has always had.
-	total, err := s.tasks.CountOpenForViewer(ctx, asOf, until, scope, s.taskOwner)
+	total, err := s.tasks.CountOpenForViewer(ctx, asOf, until, scope, s.taskOwner, team)
 	if err != nil {
 		return nil, 0, err
 	}
-	items := make([]crmcontracts.AttentionItem, 0, len(open))
-	for _, task := range open {
-		item := taskItem(task, asOf, until, loc)
-		if task.ReminderDue {
-			item.ReminderDue = new(true)
-		}
-		items = append(items, item)
-	}
+	items := plannedItems(open, asOf, until, loc)
 	// Due reminders first, then overdue. A promise already broken outranks one
 	// merely due. The server decides both, so every surface agrees.
 	sort.SliceStable(items, func(i, j int) bool {
@@ -75,6 +69,20 @@ func (s *Service) planned(
 		return overdue(items[i]) && !overdue(items[j])
 	})
 	return items, total, nil
+}
+
+// plannedItems draws tasks as the planned lane's items. The backlog tail
+// draws its tasks through it too, so a task reads alike above and below the cap.
+func plannedItems(tasks []Task, asOf, until time.Time, loc *time.Location) []crmcontracts.AttentionItem {
+	items := make([]crmcontracts.AttentionItem, 0, len(tasks))
+	for _, task := range tasks {
+		item := taskItem(task, asOf, until, loc)
+		if task.ReminderDue {
+			item.ReminderDue = new(true)
+		}
+		items = append(items, item)
+	}
+	return items
 }
 
 // remindersFirst puts the due reminders ahead of the other rows. It lists each

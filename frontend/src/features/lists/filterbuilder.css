@@ -24,9 +24,8 @@
   margin: 0;
   min-inline-size: 0;
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgWell);
 }
 
 .filter-group-head {

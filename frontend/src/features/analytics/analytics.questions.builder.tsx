@@ -9,13 +9,14 @@ import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { MultiSelect, Select } from "../../design-system/select";
 import { forReader } from "../../format/collate";
-import { ordinalNumber } from "../../format/format";
+import { formatNumber, ordinalNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { VocabularyField } from "../../lib/filterdata";
 import { ValueControl } from "../lists/filtervalue";
 import {
   draftProblem,
   type FilterDraft,
+  groupingOrder,
   inOptionOrder,
   type MeasureDraft,
   nextRowId,
@@ -87,6 +88,29 @@ function fieldOptions(
   }));
 }
 
+// Each of the installation's own fields says how many readable deals hold a
+// value, so a sparse classification shows before it is picked.
+function groupingOptions(words: Words, entity: AnalyticsEntity | undefined) {
+  const fields = entity ? groupingOrder(entity) : [];
+  return fieldOptions(words.t, fields, entity).map((option) => {
+    const field = entity && customFieldOf(entity, option.value);
+    return field
+      ? {
+          ...option,
+          label: words.plural(
+            "analytics.q.groupOptionCoverage",
+            field.records,
+            {
+              label: option.label,
+              held: formatNumber(field.with_value, words.locale),
+              count: formatNumber(field.records, words.locale),
+            },
+          ),
+        }
+      : option;
+  });
+}
+
 /**
  * The question as the reader is composing it: a population, how to group it,
  * what to measure and how to narrow it. Every choice offered comes from this
@@ -152,7 +176,7 @@ export function QuestionBuilder({
             {(control) => (
               <MultiSelect
                 {...control}
-                options={fieldOptions(t, entity?.group_by ?? [], entity)}
+                options={groupingOptions({ t, plural, locale }, entity)}
                 values={draft.groupBy}
                 placeholder={t("analytics.q.noGrouping")}
                 disabled={!entity}

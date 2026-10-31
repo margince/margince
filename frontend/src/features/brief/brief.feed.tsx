@@ -3,6 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import {
@@ -70,13 +71,13 @@ export function BriefFeed({
           {t("brief.first.title")}
         </Eyebrow>
         {changed && (
-          <a className="entity-link" href={changed.href}>
+          <AppLink className="entity-link" href={changed.href}>
             <Badge>
               {plural("brief.feed.changedBadge", changed.count, {
                 count: formatNumber(changed.count, locale),
               })}
             </Badge>
-          </a>
+          </AppLink>
         )}
         {lead && (
           <span className="t-caption t-num brief-first-position">

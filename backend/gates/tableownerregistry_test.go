@@ -83,6 +83,7 @@ var tableOwners = map[string]string{
 	"lead_source":            "internal/modules/contacts",
 	"lead_origin":            "internal/modules/contacts",
 	"lead_disqualify_reason": "internal/modules/contacts",
+	"partner_stage":          "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
 	// administered reason a refusal names. contacts owns them because the SUBJECT
@@ -135,6 +136,8 @@ var tableOwners = map[string]string{
 	"stage_progression_policy":  "internal/modules/deals",
 	"deal_stage_history":        "internal/modules/deals",
 	"deal_acquisition_source":   "internal/modules/deals",
+	"deal_loss_reason":          "internal/modules/deals",
+	"deal_loss_reason_mapping":  "internal/modules/deals",
 	"record_assignment":         "internal/modules/assignments",
 	"record_role":               "internal/modules/assignments",
 	"project_health_assessment": "internal/modules/projects",
@@ -223,6 +226,7 @@ var tableOwners = map[string]string{
 	"activity_review_response": "internal/modules/activities",
 	"worklist_pin":             "internal/modules/activities",
 	"worklist_done":            "internal/modules/activities",
+	"meeting_readiness":        "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -498,6 +502,7 @@ var tableOwners = map[string]string{
 	"team_weekly_review_rep_pattern": "internal/compose/weekly",
 	"assurance_run_finding":          "internal/modules/assurance",
 	"assurance_deal_receipt":         "internal/modules/assurance",
+	"assurance_input_change":         "internal/modules/assurance",
 	"assurance_run":                  "internal/modules/assurance",
 	"assurance_source_coverage":      "internal/modules/assurance",
 	// One pass of assurance over a scope, and what each finding contributed to

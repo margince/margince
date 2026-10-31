@@ -21,6 +21,7 @@
     "GET /v1/acquisition-sources": "read_view",
     "GET /v1/activities": "list_records",
     "GET /v1/activities/follow-up-settings": "read_view",
+    "GET /v1/activities/latest-inbound": "read_view",
     "GET /v1/activities/{id}": "read_record",
     "GET /v1/activities/{id}/email-presentation": "read_view",
     "GET /v1/activities/{id}/meeting-brief": "read_view",
@@ -137,11 +138,13 @@
     "GET /v1/lists/{id}/history": "read_lists",
     "GET /v1/lists/{id}/members": "read_view",
     "GET /v1/lists/{id}/members/{recordId}/why": "read_lists",
+    "GET /v1/loss-reasons": "read_view",
     "GET /v1/meeting-prep": "prep_for_meeting",
     "GET /v1/offer-templates": "list_records",
     "GET /v1/offer-templates/{id}": "read_record",
     "GET /v1/offers/{id}": "read_record",
     "GET /v1/openapi.json": "read_view",
+    "GET /v1/partner-stages": "read_view",
     "GET /v1/partners": "list_records",
     "GET /v1/pipelines": "list_pipelines",
     "GET /v1/pipelines/{id}": "read_view",
@@ -262,11 +265,13 @@
     "POST /v1/tags/{id}/merge": "merge_tags",
     "POST /v1/tasks": "create_task",
     "POST /v1/users/{id}/merge": "merge_members",
+    "POST /v1/worklist/ready/undo": "undo_meeting_ready",
     "POST /v1/workspace-queries": "query_workspace",
     "PUT /v1/analytics/reports/{id}/draft": "draft_report",
     "PUT /v1/brief/annotations": "annotate_brief",
     "PUT /v1/offer-templates/{id}": "update_record",
     "PUT /v1/projects/{id}/companies": "change_record_parts",
-    "PUT /v1/projects/{id}/stakeholders": "change_record_parts"
+    "PUT /v1/projects/{id}/stakeholders": "change_record_parts",
+    "PUT /v1/worklist/ready": "confirm_meeting_ready"
   }
 }

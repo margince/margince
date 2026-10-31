@@ -130,7 +130,9 @@ describe("the agent panel's recap", () => {
     expect(row.textContent).toContain("Read of the");
     expect(
       within(row).getByRole("link", { name: "Acme GmbH" }).getAttribute("href"),
-    ).toBe(`#/companies/${SETTLED_SITE_READ.subject_id}`);
+    ).toBe(
+      `/r/companies/${SETTLED_SITE_READ.subject_id}#/companies/${SETTLED_SITE_READ.subject_id}`,
+    );
     // The kind is an invocation-site token, and a recap that leaked one would
     // say something happened and nothing about what.
     expect(panel().textContent).not.toContain("site_read");

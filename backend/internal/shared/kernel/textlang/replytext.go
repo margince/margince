@@ -254,7 +254,8 @@ func quoteBoundary(runes []rune, reading quoteReading) int {
 // opensQuote is whether the line starts a quote this reading cuts at. With
 // passMarked set, a quote that marks every line with ">" is read past.
 func opensQuote(runes []rune, offset int, line []rune, passMarked bool) bool {
-	return startsQuote(line) && (!passMarked || !opensMarkedQuote(runes, offset, line))
+	return (startsQuote(line) || (passMarked && opensReplyHeader(runes, offset, line))) &&
+		(!passMarked || !opensMarkedQuote(runes, offset, line))
 }
 
 // opensMarkedQuote reports whether the line is a ">" line, or the attribution

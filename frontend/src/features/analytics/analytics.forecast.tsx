@@ -1,18 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  Button,
-  Field,
-  SegmentedControl,
-  TextInput,
-} from "../../design-system/atoms";
+import { Button, SegmentedControl } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { EvidenceReceipt } from "../../design-system/evidencereceipt";
 import { FilterBar } from "../../design-system/filterbar";
-import { MoneyInput } from "../../design-system/moneyinput";
-import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SegmentBar } from "../../design-system/readings";
 import { StatStrip } from "../../design-system/statstrip";
@@ -28,9 +22,12 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
+import { ForecastCallEditor } from "./analytics.forecast.calleditor";
+import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import {
   LandingCard,
   RecordsLandingCard,
+  rangeOf,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
 import { QualifiedAnswer } from "./analytics.forecast.qualified";
@@ -40,6 +37,7 @@ import {
   type ForecastPeriod,
   useForecastReadings,
 } from "./forecast.queries";
+import { CallEditorProvider } from "./inputcheck.call";
 import { ReportingForecastGraphs } from "./reporting.forecast";
 import "./analytics.css";
 
@@ -119,7 +117,12 @@ export function ForecastView({
               />
             ) : null}
             {emptyNotice?.(data.scope_holds_deals)}
-            <ForecastAnswer readings={data} locale={locale} />
+            <ForecastAnswer
+              readings={data}
+              locale={locale}
+              onOpenDeals={openForecastDeals}
+            />
+            <ForecastDeals scope={selection.scope} period={period} />
             {period === "quarter" && (
               <ReportingForecastGraphs scope={selection.scope} />
             )}
@@ -127,7 +130,21 @@ export function ForecastView({
                 needs doing, and reads the receipt beside it when a number looks
                 wrong. */}
             <div className="analytics-pair">
-              <ForecastReview />
+              <CallEditorProvider
+                editor={
+                  canCall
+                    ? {
+                        open: () => setEditing(true),
+                        scope: writableScope(selection.scope) ?? {
+                          scope_kind: "",
+                        },
+                        periodStart: data.period_start ?? "",
+                      }
+                    : null
+                }
+              >
+                <ForecastReview />
+              </CallEditorProvider>
               <EvidenceReceipt
                 title={t("forecast.receipt")}
                 counts={[
@@ -168,9 +185,8 @@ function callDetail(
   locale: Locale,
   t: ReturnType<typeof useT>,
 ): string {
-  // The day the call was authored, cut in the zone the period itself was cut
-  // in: a reporting figure and the date beside it must not be bucketed on two
-  // different calendars.
+  // The day the call was authored, in the period's own zone: a figure and the
+  // date beside it are bucketed on one calendar.
   const date = formatDateAbbrev(call.created_at, locale, readings.timezone);
   const difference =
     call.amount_minor - (readings.won_minor + readings.evidence_minor);
@@ -192,11 +208,17 @@ function callDetail(
   );
 }
 
-// The answer, in one sentence and then in three readings.
+// The answer, in one sentence and then in three readings. A shared view has no
+// deals panel, so it passes no `onOpenDeals`.
 function ForecastAnswer({
   readings,
   locale,
-}: Readonly<{ readings: Readings; locale: Locale }>) {
+  onOpenDeals,
+}: Readonly<{
+  readings: Readings;
+  locale: Locale;
+  onOpenDeals?: () => void;
+}>) {
   const t = useT();
   const currency = readings.base_currency;
   // The sentence carries the amount in FULL — it is read once, at prose width,
@@ -218,9 +240,8 @@ function ForecastAnswer({
       formatMoneyCompact,
     );
   const call = readings.current_call;
-  // What best case adds on top of the evidence it already contains. Never
-  // below zero: a superset that read smaller than its subset is a server fault
-  // to show as nothing added, not as a part drawn backwards.
+  // What best case adds on top of the evidence it contains. Never below zero:
+  // a superset smaller than its subset is a server fault, shown as nothing added.
   const bestCaseAdds = Math.max(
     0,
     readings.best_case_minor - readings.evidence_minor,
@@ -285,7 +306,11 @@ function ForecastAnswer({
             }
           />
           {call && (
-            <p className="t-caption">{callDetail(call, readings, locale, t)}</p>
+            <p className="t-caption">
+              {callDetail(call, readings, locale, t)}
+              {call.baseline === "unavailable" &&
+                ` ${t("forecast.callHistoryUnavailable")}`}
+            </p>
           )}
           <QualifiedAnswer readings={readings} money={money} />
         </PanelBody>
@@ -323,6 +348,11 @@ function ForecastAnswer({
               landing={readings.landing}
               currency={currency}
               locale={locale}
+              range={rangeOf(
+                readings.range_low_minor,
+                readings.range_high_minor,
+              )}
+              onOpenDeals={onOpenDeals}
             />
           )}
           {readings.landing?.system_minor != null && (
@@ -342,118 +372,6 @@ function ForecastAnswer({
         </StatStrip>
       )}
     </>
-  );
-}
-
-// Recording what somebody believes will close.
-//
-// It writes no deal row, and the copy says so: a manager who disagrees with the
-// derived figure records their own number instead of editing the pipeline until
-// the derivation agrees with them.
-function ForecastCallEditor({
-  readings,
-  selection,
-  period,
-  onClose,
-}: Readonly<{
-  readings: Readings;
-  selection: AnalyticsSelection;
-  period: ForecastPeriod;
-  // Leaving the editor, whether by cancelling or by a recorded call: the view
-  // that opened it owns whether it is open.
-  onClose: () => void;
-}>) {
-  const t = useT();
-  const client = useQueryClient();
-  const [amountMinor, setAmountMinor] = useState<number>(
-    readings.current_call?.amount_minor ?? 0,
-  );
-  const [note, setNote] = useState("");
-
-  const save = useMutation({
-    // Amount and note travel as VARIABLES rather than being read from the
-    // closure: a mutation that closes over its inputs sends whatever the last
-    // render saw, which is the wrong number exactly when a save races a
-    // refetch.
-    mutationFn: async (call: { amountMinor: number; note: string }) => {
-      const named = writableScope(selection.scope);
-      if (!named) {
-        // The editor is not rendered without a nameable population, so this is
-        // unreachable rather than a state to design copy for.
-        throw new Error("a forecast names one population");
-      }
-      return unwrap(
-        await api.POST("/forecast/calls", {
-          body: {
-            // The call is filed for the population and the window the reader is
-            // looking at, so the call and the figure it came from agree. A call made
-            // while reading one team's week must not land on the workspace or a quarter.
-            period,
-            ...named,
-            amount_minor: call.amountMinor,
-            currency: readings.base_currency,
-            // An empty note is no note. Sent as "", it would claim the author
-            // wrote something blank.
-            note: call.note === "" ? undefined : call.note,
-          },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      // The readings carry the standing call, so they are stale the moment one
-      // is recorded. Invalidating the whole "forecast" prefix rather than this
-      // population alone: a workspace call changes what a team reading shows
-      // beneath it, and a stale sibling is the bug this replaces.
-      await client.invalidateQueries({ queryKey: ["forecast"] });
-      onClose();
-    },
-  });
-
-  return (
-    <Panel
-      title={t("forecast.updateCall")}
-      // Cancel and save both leave this editor, so they stand under what they
-      // act on rather than in the band that names it.
-      actions={
-        <>
-          <Button onClick={onClose}>{t("forecast.cancel")}</Button>
-          <Button
-            variant="primary"
-            disabled={save.isPending}
-            onClick={() => save.mutate({ amountMinor, note })}
-          >
-            {t("forecast.saveCall")}
-          </Button>
-        </>
-      }
-    >
-      <PanelBody>
-        {/* Two sentences: what a call is, and what recording one does not do.
-            The head band holds one line, and the half it would cut is the
-            half that says no deal moves. */}
-        <PanelIntro>{t("forecast.callExplains")}</PanelIntro>
-        <Field label={t("forecast.expectedTotal")}>
-          {(control) => (
-            <MoneyInput
-              {...control}
-              valueMinor={amountMinor}
-              currency={readings.base_currency}
-              onChangeMinor={(next) => setAmountMinor(next ?? 0)}
-            />
-          )}
-        </Field>
-        <Field label={t("forecast.supportingNote")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              type="text"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-            />
-          )}
-        </Field>
-      </PanelBody>
-    </Panel>
   );
 }
 

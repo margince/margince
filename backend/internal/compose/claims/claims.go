@@ -22,9 +22,14 @@ package claims
 import (
 	"encoding/json"
 	"regexp"
+	"slices"
 	"strings"
+	"unicode"
+
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/specifics"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -240,14 +245,15 @@ type BriefBounds struct {
 	Natures         map[string]bool
 	Fact            string
 	Recommendation  string
-	// Refuse drops a grounded recommendation the caller will not show. Nil
-	// refuses none.
+	// Refuse drops a grounded recommendation this caller will not show, on top
+	// of the promise KeepBrief refuses for every caller. Nil adds none.
 	Refuse func(Sentence) bool
 }
 
-// KeepBrief grounds a brief's sentences and then bounds it. Grounding goes
-// first, so one ungrounded recommendation cannot spend the budget a valid one
-// needed. An unknown nature reads as fact, the strictest reading.
+// KeepBrief grounds a brief's sentences and then bounds it. Grounding and
+// refusal go first, so a recommendation the reader never sees cannot spend the
+// budget a valid one needed. An unknown nature reads as fact, the strictest
+// reading.
 func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBounds) []Sentence {
 	out := make([]Sentence, 0, min(len(sentences), bounds.Sentences))
 	recommendations := 0
@@ -262,7 +268,8 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 			continue
 		}
 		if sentence.Nature == bounds.Recommendation {
-			if recommendations == bounds.Recommendations || (bounds.Refuse != nil && bounds.Refuse(sentence)) {
+			if recommendations == bounds.Recommendations || OpensWithWriterSubject(sentence.Text) ||
+				(bounds.Refuse != nil && bounds.Refuse(sentence)) {
 				continue
 			}
 			recommendations++
@@ -270,6 +277,109 @@ func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBoun
 		out = append(out, sentence)
 	}
 	return Dedupe(out)
+}
+
+// writerSubjects is, per shipped language, every subject that makes a
+// recommendation the writer's or the reader's own promise. Vietnamese anh, chị,
+// em and mình are absent: each also addresses the reader as "you".
+// Apart from compose's writerSubjectWords and selfWords: these match an opening phrase, while those scan every word and selfWords holds objects.
+var writerSubjects = map[textlang.Lang]languageSubjects{
+	textlang.English: {
+		singular: []string{"i", "i'll", "i'm", "i've", "i'd"},
+		plural:   []string{"we", "we'll", "we're", "we've", "we'd", "let's", "let us"},
+	},
+	textlang.German:     {singular: []string{"ich"}, plural: []string{"wir", "lass uns", "lasst uns"}},
+	textlang.Vietnamese: {singular: []string{"tôi"}, plural: []string{"chúng tôi", "chúng ta", "chúng mình"}},
+}
+
+// languageSubjects splits by who acts: the writer alone, or the writer with others, "let's" included.
+type languageSubjects struct{ singular, plural []string }
+
+func (subjects languageSubjects) all() []string {
+	return slices.Concat(subjects.singular, subjects.plural)
+}
+
+var subjectPhrases, singularPhrases, longestSubject = splitSubjects(writerSubjects)
+
+func splitSubjects(byLang map[textlang.Lang]languageSubjects) (all, singular [][]string, longest int) {
+	for _, subjects := range byLang {
+		for _, subject := range subjects.all() {
+			words := strings.Fields(subject)
+			all = append(all, words)
+			longest = max(longest, len(words))
+		}
+		for _, subject := range subjects.singular {
+			singular = append(singular, strings.Fields(subject))
+		}
+	}
+	return all, singular, longest
+}
+
+// OpensWithWriterSubject reports whether text opens with an I or a we, in any
+// shipped language. A recommendation that does is a promise, "I'll send the
+// agreement", where the reader needed an instruction, "Send the agreement".
+//
+// Every language is checked whatever the brief's own: a model can answer in the
+// wrong one, and the subjects do not collide across them.
+func OpensWithWriterSubject(text string) bool {
+	return opensWithAny(text, subjectPhrases)
+}
+
+// OpensWithSingularWriterSubject is OpensWithWriterSubject for an I alone, for
+// a surface whose prompt makes "we" the reader's own company.
+func OpensWithSingularWriterSubject(text string) bool {
+	return opensWithAny(text, singularPhrases)
+}
+
+func opensWithAny(text string, phrases [][]string) bool {
+	words := leadingWords(text, longestSubject)
+	for _, subject := range phrases {
+		if opensWith(words, subject) {
+			return true
+		}
+	}
+	return false
+}
+
+var apostrophes = strings.NewReplacer("’", "'", "ʼ", "'")
+
+// leadingWords spells its words as writerSubjects does: composed, lowercase, every apostrophe as '.
+func leadingWords(text string, n int) []string {
+	runes := []rune(strings.ToLower(apostrophes.Replace(norm.NFC.String(text))))
+	for i, r := range runes {
+		// A "." between two letters joins an abbreviation, "i.e.", and any other "." ends a word.
+		if r == '.' && (i == 0 || i == len(runes)-1 || !unicode.IsLetter(runes[i-1]) || !unicode.IsLetter(runes[i+1])) {
+			runes[i] = ' '
+		}
+	}
+	words := strings.FieldsFunc(string(runes), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r) && !strings.ContainsRune("'-/.", r)
+	})
+	out := make([]string, 0, n)
+	for _, word := range words {
+		if len(out) == n {
+			break
+		}
+		// An opening ' quote, a dash or a numbered bullet must not hide the word after it.
+		word = strings.Trim(word, "'-/.")
+		if word == "" || (len(out) == 0 && strings.TrimFunc(word, unicode.IsDigit) == "") {
+			continue
+		}
+		out = append(out, word)
+	}
+	return out
+}
+
+func opensWith(words, subject []string) bool {
+	if len(words) < len(subject) {
+		return false
+	}
+	for i, word := range subject {
+		if words[i] != word {
+			return false
+		}
+	}
+	return true
 }
 
 // Prose is a brief's sentences as one block of text, which is what a

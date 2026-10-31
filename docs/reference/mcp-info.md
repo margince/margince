@@ -14,10 +14,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | | |
 |---|---:|
 | Tools | 38 |
-| Resources | 9 |
-| Tool catalog | 134.0 KB |
-| Resource catalog | 3.5 KB |
-| Approx. wire tokens | 35201 |
+| Resources | 11 |
+| Tool catalog | 139.6 KB |
+| Resource catalog | 4.2 KB |
+| Approx. wire tokens | 36832 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,18 +32,18 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 27.6 KB | 20% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 33.5 KB | 24% | Yes, every step |
-| Input schemas | 64.1 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.9 KB | 6% | Partly |
-| **Description + input schema** | **97.6 KB** | **72%** | **the recurring cost** |
+| Output schemas | 30.2 KB | 21% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 34.9 KB | 25% | Yes, every step |
+| Input schemas | 65.5 KB | 46% | Yes, every step |
+| _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
+| **Description + input schema** | **100.4 KB** | **71%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
 
-### Resources (9)
+### Resources (11)
 
 - [`margince://capabilities`](#capabilities): What this installation can do
 - [`margince://schema/query`](#query_vocabulary): Workspace query vocabulary
@@ -53,6 +53,8 @@ descriptions and input schemas are what each step pays for.
 - [`margince://schema/analytics`](#analytics-schema): Analytics query vocabulary
 - [`ui://margince/create-followups.html`](#create_followups_view): Next steps for this record
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
+- [`ui://margince/approval-queue.html`](#approval_queue_view): Waiting for your decision
+- [`ui://margince/attention.html`](#attention_view): What needs attention
 - [`ui://margince/update.html`](#update_view): What changed
 
 ### Tools (38)
@@ -62,38 +64,38 @@ descriptions and input schemas are what each step pays for.
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1381 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
-| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 643 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1228 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 553 |
+| [`change_reports`](#change_reports) | Prepare saved reports |  |  | 664 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1342 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 755 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1791 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
+| [`find_records`](#find_records) | Find records | yes |  | 1836 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1045 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1066 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
-| [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
+| [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 875 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 773 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1891 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1017 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1021 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
+| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 593 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -213,6 +215,64 @@ duplicate to merge or keep apart, and a tag word offered for it.
 
 ```text
 A change an assistant proposed, what it would do, and the choice to approve or reject it.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### approval_queue_view
+
+`ui://margince/approval-queue.html` · text/html;profile=mcp-app
+
+**Waiting for your decision**
+
+```text
+Every proposal waiting for a human, what each would change and when it runs out, with Approve and
+Reject on each.
+```
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### attention_view
+
+`ui://margince/attention.html` · text/html;profile=mcp-app
+
+**What needs attention**
+
+```text
+Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for
+each and a way to ask about it.
 ```
 
 <details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
@@ -450,7 +510,9 @@ that survives, and change_state with action=disqualify to close out a lead going
 lead's own transition records the reason where archiving would not. By default the record is
 archived when this call answers; where an installation has raised this verb to confirm first, the
 answer is a staged approval and you must not report the record as archived until the retry that
-carries their approval has answered. (Runs immediately; requires passport scope "write".)
+carries their approval has answered. (Runs immediately; it cannot be undone, so tell the user what
+the call will change and get their yes before calling, unless they asked for this call themselves;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -621,8 +683,9 @@ record is changed only if it still has the version you sent and you may change i
 batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is
 undone once, and records changed since are left alone. update_record and archive_record change one
 record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
-once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; requires
-passport scope "write".)
+once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; it cannot be
+undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1060,13 +1123,14 @@ passport scope "write".)
 ```text
 Log, plan and file activities. log records an email, call, meeting, note or message that already
 happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
-moves one activity to another record; relink_many moves a named set. relink and relink_many wait for
-a human when they file under a project, and run at once anywhere else. attach checks the record
-first; read list_documents before attaching the same file again. Use schedule_meeting to book a
-meeting still to come, and change_state with move_deal when the same event moves a deal, so move and
-note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what
-the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its
-arguments for relink, relink_many; requires passport scope "write".)
+moves one activity to another record; relink_many moves a named set. ready says the user is ready
+for a meeting they attend; unready takes it back. relink and relink_many run at once. Tell the user
+before you file under a project, which only a member can undo from the activity. attach checks the
+record first; read list_documents before attaching the same file again. Use schedule_meeting to book
+a meeting still to come, and change_state with move_deal when the same event moves a deal, so move
+and note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is
+what the retry carries. (Governance: runs immediately for attach, log, ready, task, unready; decided
+per call from its arguments for relink, relink_many; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1075,18 +1139,20 @@ arguments for relink, relink_many; requires passport scope "write".)
 {
   "properties": {
     "action": {
-      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set",
+      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set; ready: say the user is ready for a meeting; unready: take that back",
       "enum": [
         "attach",
         "log",
+        "ready",
         "relink",
         "relink_many",
-        "task"
+        "task",
+        "unready"
       ],
       "type": "string"
     },
     "activity_id": {
-      "description": "relink only: The captured activity to re-associate",
+      "description": "ready, relink, unready only: The meeting",
       "format": "uuid",
       "type": "string"
     },
@@ -1254,6 +1320,12 @@ arguments for relink, relink_many; requires passport scope "write".)
         "instant",
         "day"
       ]
+    },
+    "preparation_revision": {
+      "description": "ready, unready only: The preparation revision read_context with about=meeting answered",
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
     },
     "replace_existing_of_type": {
       "default": false,
@@ -1888,6 +1960,9 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
                     },
                     "question": {
                       "properties": {
+                        "binding": {
+                          "type": "string"
+                        },
                         "entity": {
                           "type": "string"
                         },
@@ -1919,6 +1994,10 @@ their metric catalog. Keep the report id and draft_revision to preview the draft
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "saved_question_id": {
+                          "format": "uuid",
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -2018,20 +2097,22 @@ qualify fills what a lead's own data already implies, today the company name fro
 and names the fields still empty. promote turns a lead who has genuinely engaged into a contact.
 disqualify closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal to a
 stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts
-a partner program on a company, with company_id, partner_role and optionally relationship_stage,
+a partner program on a company, with company_id, partner_kinds and optionally relationship_stage,
 next_step and next_step_due_at. promote needs a trigger naming the engagement; cold outreach nobody
 answered never promotes. demote needs a reason and is refused once the contact owns a deal.
 set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's
 Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost
-stage waits for a human; to an open stage it runs at once. move_project to closed needs a reason and
-leaves the project's tasks open. When the user asked for the close, report what is still open and
-close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines
-gives the stage ids. Use update_record for a record's other fields, and enrich to learn about a
-company from its website. A promotion answers with the new contact's id. A staged answer's approval
-id is what the retry carries; do not report the change until the retry has answered. (Governance:
-runs immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
-merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; requires
-passport scope "write".)
+stage closes or reopens the deal, which is the user's decision: unless they named the deal and
+stage, name them and get their yes first. move_project to closed needs a reason and leaves the
+project's tasks open. When the user asked for the close, report what is still open and close: an
+open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the
+stage ids. Use update_record for a record's other fields, and enrich to learn about a company from
+its website. A promotion answers with the new contact's id. A staged answer's approval id is what
+the retry carries; do not report the change until the retry has answered. (Governance: runs
+immediately for demote, disqualify, move_project, promote, qualify; a human approves first for
+merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the action
+disqualify cannot be undone, so tell the user what the call will change and get their yes before
+calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2086,7 +2167,11 @@ passport scope "write".)
       "type": "string"
     },
     "lost_reason": {
-      "description": "move_deal only: Required when the target stage closes the deal as lost",
+      "description": "move_deal only: A free note explaining a loss",
+      "type": "string"
+    },
+    "lost_reason_code": {
+      "description": "move_deal only: An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped",
       "type": "string"
     },
     "next_step": {
@@ -2102,8 +2187,22 @@ passport scope "write".)
       "description": "move_deal only: Logged as a note on the deal's timeline after the move",
       "type": "string"
     },
+    "partner_kinds": {
+      "description": "set_up_partner, required: one or more of hosting, consulting, strategic or referral",
+      "items": {
+        "enum": [
+          "hosting",
+          "consulting",
+          "strategic",
+          "referral"
+        ],
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
     "partner_role": {
-      "description": "set_up_partner, required: hosting, consulting or strategic",
+      "description": "set_up_partner, deprecated: send partner_kinds",
       "enum": [
         "hosting",
         "consulting",
@@ -2127,19 +2226,7 @@ passport scope "write".)
       "type": "string"
     },
     "relationship_stage": {
-      "description": "set_up_partner only",
-      "enum": [
-        "research",
-        "identified",
-        "contacted",
-        "in_conversation",
-        "fit_confirmed",
-        "agreement_pending",
-        "active",
-        "active_referring",
-        "dormant",
-        "no_fit"
-      ],
+      "description": "set_up_partner only: An active key from the partner stage list (read_view listPartnerStages). Without one the program starts on the first candidate stage",
       "type": "string"
     },
     "source_id": {
@@ -2211,15 +2298,16 @@ passport scope "write".)
 Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company,
 deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new
 word. update renames, recolours or describes one; fields left out are unchanged. merge folds a
-duplicate word into the one kept, once a human approves. apply never creates a tag: an unknown name
-is refused, a name matches case-insensitively, an archived word is refused as archived, and the same
-tag twice is a conflict. Before create, read the list — a near-duplicate splits records that
-belong together, and a taken name is a conflict, even a retired one, which only Settings restores.
-create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag
-right before editing; it changes what a word is called, never what carries it. Removing a tag that
-is not there succeeds. archive retires a word for every record; the records keep it. (Governance:
-runs immediately for apply, archive, create, remove, update; a human approves first for merge;
-requires passport scope "write".)
+duplicate word into the one kept. apply never creates a tag: an unknown name is refused, a name
+matches case-insensitively, an archived word is refused as archived, and the same tag twice is a
+conflict. Before create, read the list — a near-duplicate splits records that belong together, and
+a taken name is a conflict, even a retired one, which only Settings restores. create and update need
+tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it
+changes what a word is called, never what carries it. Removing a tag that is not there succeeds.
+archive retires a word for every record; the records keep it. (Governance: runs immediately for
+apply, archive, create, remove, update; a human approves first for merge; the action archive cannot
+be undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2508,8 +2596,9 @@ web app. A request to get a file in is not a review of it: unless the asker says
 been through these rows, show the counts and the mapping and wait for their go-ahead. Use
 read_import for the report first: numbers nobody read are not a check. The write goes on after this
 answers. Read read_import's report until its state is complete or failed, then report what landed:
-the counts and the mapping the run used, each column by the field it went to. (Runs immediately;
-requires passport scope "write".)
+the counts and the mapping the run used, each column by the field it went to. (Runs immediately; it
+cannot be undone, so tell the user what the call will change and get their yes before calling,
+unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2817,6 +2906,9 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "duplicate_candidates": {
           "items": {
             "properties": {
+              "can_merge": {
+                "type": "boolean"
+              },
               "candidate_id": {
                 "type": "string"
               },
@@ -2852,11 +2944,15 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
                 },
                 "type": "array"
               },
+              "keep_id": {
+                "type": "string"
+              },
               "other_record_id": {
                 "type": "string"
               }
             },
             "required": [
+              "can_merge",
               "candidate_id",
               "confidence",
               "evidence",
@@ -3012,8 +3108,9 @@ theirs to release in the CRM. An item already answered, or lapsed, is reported a
 is written; each bundle member is answered and reported on its own, and a bundle holding none of
 theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is
 where both ids come from. If the proposal is your OWN refused call, approving does not perform it
-— re-issue that same call with approval_id set. (Runs immediately; requires passport scope
-"write".)
+— re-issue that same call with approval_id set. (Runs immediately; the actions bundle, one cannot
+be undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3527,10 +3624,19 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "partner_company_id": {
           "type": "string"
         },
+        "partner_kind": {
+          "type": "string"
+        },
         "partner_role": {
           "type": "string"
         },
         "partner_sourced": {
+          "type": "string"
+        },
+        "partner_stage": {
+          "type": "string"
+        },
+        "partner_stage_meaning": {
           "type": "string"
         },
         "phase": {
@@ -3546,6 +3652,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "relationship_mark": {
+          "type": "string"
+        },
+        "relationship_stage": {
           "type": "string"
         },
         "relationship_type": {
@@ -3579,6 +3688,9 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "stage_id": {
+          "type": "string"
+        },
+        "stage_meaning": {
           "type": "string"
         },
         "stalled": {
@@ -3705,6 +3817,8 @@ for a complete authorized bundle review. Each item carries its one-line summary,
 itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the
 staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
 ```
+
+Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view), visible to `model`.
 
 <details><summary>Input schema</summary>
 
@@ -4974,6 +5088,9 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                                     },
                                     "question": {
                                       "properties": {
+                                        "binding": {
+                                          "type": "string"
+                                        },
                                         "entity": {
                                           "type": "string"
                                         },
@@ -5005,6 +5122,10 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                                             "type": "object"
                                           },
                                           "type": "array"
+                                        },
+                                        "saved_question_id": {
+                                          "format": "uuid",
+                                          "type": "string"
                                         }
                                       },
                                       "required": [
@@ -5534,6 +5655,8 @@ made to customers that are still open. Each view covers only what you may see, a
 item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.
 ```
 
+Renders its result in [`ui://margince/attention.html`](#attention_view), visible to `model`.
+
 <details><summary>Input schema</summary>
 
 ```json
@@ -5574,6 +5697,287 @@ item is on it. Use read_context to dig into one item. Keep each item's record id
   },
   "required": [
     "view"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "as_of": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "commitments": {
+          "items": {
+            "properties": {
+              "about": {
+                "items": {
+                  "properties": {
+                    "entity_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "entity_id",
+                    "entity_type"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "assignee_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "assignee_name": {
+                "type": "string"
+              },
+              "claim_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "days_overdue": {
+                "type": "integer"
+              },
+              "due_at": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "quote": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "source_activity_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "task_id": {
+                "format": "uuid",
+                "type": "string"
+              }
+            },
+            "required": [
+              "about",
+              "source",
+              "state",
+              "subject"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "coverage_withheld": {
+          "type": "boolean"
+        },
+        "deals": {
+          "items": {
+            "properties": {
+              "amount_minor": {
+                "type": "integer"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "deal_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "evidence": {
+                "items": {
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "snippet",
+                    "source"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rank": {
+                "type": "integer"
+              },
+              "risks": {
+                "items": {
+                  "properties": {
+                    "contact_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "contacts": {
+                      "items": {
+                        "properties": {
+                          "contact_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "contact_id",
+                          "name"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "days_since_touch": {
+                      "type": "integer"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "user_ids": {
+                      "items": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "summary"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "deal_id",
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "deals_scanned": {
+          "type": "integer"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
   ],
   "type": "object"
 }
@@ -5685,6 +6089,10 @@ in EUR is EUR 31,000.
       "description": "readings only: Which period to read, by naming a day inside it. Omit for the current one.",
       "format": "date",
       "type": "string"
+    },
+    "contributions": {
+      "description": "readings only: Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount.",
+      "type": "boolean"
     },
     "from": {
       "description": "movement only: The opening snapshot.",
@@ -6595,6 +7003,9 @@ search its evidence, and quote coverage with each number.
                     },
                     "question": {
                       "properties": {
+                        "binding": {
+                          "type": "string"
+                        },
                         "entity": {
                           "type": "string"
                         },
@@ -6626,6 +7037,10 @@ search its evidence, and quote coverage with each number.
                             "type": "object"
                           },
                           "type": "array"
+                        },
+                        "saved_question_id": {
+                          "format": "uuid",
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -6785,11 +7200,10 @@ which offers it without applying it.
 **Read a view**
 
 ```text
-Read what the record tools do not answer: a record's derived views (company_360, contact_graph,
-deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams,
-record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers exactly
-what the matching REST route answers. Name the view, then the id it reads and any of its filters. A
-view refuses an argument it does not take and names the ones it does.
+Read what the record tools do not answer: a record's derived views (company_360,
+company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each view answers
+what its REST route answers. Name the view, its id and any of its filters. A view refuses an
+argument it does not take and names the ones it does.
 ```
 
 <details><summary>Input schema</summary>
@@ -6905,7 +7319,16 @@ view refuses an argument it does not take and names the ones it does.
     "period": {
       "type": "string"
     },
+    "period_month": {
+      "type": "string"
+    },
+    "period_quarter": {
+      "type": "string"
+    },
     "period_start": {
+      "type": "string"
+    },
+    "period_year": {
       "type": "string"
     },
     "pinned_only": {
@@ -7019,6 +7442,7 @@ view refuses an argument it does not take and names the ones it does.
         "follow_up_settings",
         "forecast_calls",
         "import_run",
+        "latest_inbound",
         "latest_site_read",
         "latest_technical_enrich",
         "latest_transcript_read",
@@ -7028,9 +7452,11 @@ view refuses an argument it does not take and names the ones it does.
         "lead_sources",
         "list_members",
         "lists",
+        "loss_reasons",
         "meeting_brief",
         "meeting_invitation",
         "name_seats",
+        "partner_stages",
         "pipeline",
         "preview_contact_employment_import",
         "project_health_assessments",
@@ -7267,7 +7693,8 @@ writes nothing. A merge archives the source and redirects it to the target; it c
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
 survives and source_id the one merged away — read both records before choosing. (Runs immediately;
-requires passport scope "write".)
+the action merge cannot be undone, so tell the user what the call will change and get their yes
+before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -7358,11 +7785,13 @@ requires passport scope "write".)
 **Book or invite to a meeting**
 
 ```text
-Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for.
-invite sends the invitation to its attendees. book runs at once; invite reaches attendees outside
-the workspace and waits for a human. Read check_availability before booking a time. Use
-change_activities with log to record a meeting that already happened. Keep the meeting's id to send
-its invitation. (Governance: runs immediately for book; a human approves first for invite; requires
+Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for and
+tells nobody else. invite sends the invitation to its attendees. invite reaches attendees outside
+the workspace, so name them and the time and get the user's yes first. Read check_availability
+before booking a time. Use change_activities with log to record a meeting that already happened.
+Keep the meeting's id to send its invitation. (Governance: runs immediately for book; a human
+approves first for invite; the action book cannot be undone, so tell the user what the call will
+change and get their yes before calling, unless they asked for this call themselves; requires
 passport scope "send".)
 ```
 
@@ -7485,8 +7914,10 @@ instead. chat_reply cannot start a conversation or choose a channel. Use draft_o
 the message does not exist yet, and change_activities with action=log to record that something was
 said rather than say it. Send the subject, body and activity_id or links the draft produced, and
 keep the staged approval id: the approval binds that exact message, so changed text needs a new one.
-email_new answers with the new conversation's activity_id. (Runs immediately; requires passport
-scope "send".)
+email_new answers with the new conversation's activity_id. (Runs immediately; the actions
+chat_reply, email_new, email_reply cannot be undone, so tell the user what the call will change and
+get their yes before calling, unless they asked for this call themselves; requires passport scope
+"send".)
 ```
 
 <details><summary>Input schema</summary>

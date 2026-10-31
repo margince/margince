@@ -30,7 +30,7 @@ func TestAPromotionMergedIntoAContactIsToldOnTheContact(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "inbound_reply"}); err != nil || !merged {
+	if _, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil || !merged {
 		t.Fatalf("promote: merged=%v err=%v, want a merge into the existing contact", merged, err)
 	}
 

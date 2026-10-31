@@ -4,10 +4,10 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { morningBriefOptions } from "../features/brief/brief.queries";
 import { addressFrom } from "../features/brief/brief.view";
-import { worklistDayOptions } from "../features/worklist/worklist.reads";
 import { handledForYouOptions } from "../lib/handled";
 import { magicOptions } from "../lib/magic.queries";
 import type { UrlParams } from "../lib/urlstate";
+import { worklistDayOptions } from "../lib/worklistday";
 import { notePrefetched } from "./queryclient";
 
 // Home's morning reads, started as soon as the shell may draw (App.tsx). The

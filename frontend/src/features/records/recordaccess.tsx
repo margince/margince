@@ -32,6 +32,8 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateRecord, recordWriteKeys } from "../../lib/recordwritekeys";
 import { navigate, navigateReplacing } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { HandoverOffer } from "./handoveroffer";
+import { HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
 
 // The shape both records share, which is all this component reads. Spelled
@@ -186,25 +188,31 @@ export function RecordAccess({
       <div className="record-access-panel">
         <p>{sentence}</p>
         {refusal ? (
-          <p className="t-caption">{refusal}</p>
+          <>
+            <p className="t-caption">{refusal}</p>
+            <HandoverRequest kind={kind} record={record} />
+          </>
         ) : (
-          <AudienceSwitch
-            legend={t(copy.title)}
-            current={current}
-            owner={ownerStanding(ownerId, viewerId)}
-            pending={setVisibility.isPending}
-            error={
-              setVisibility.isError ? failure(setVisibility.error) : undefined
-            }
-            onSave={(visibility) =>
-              setVisibility.mutate({
-                id,
-                version: record.version,
-                visibility,
-                mayLoseAccess: visibility === "owner" && ownerId !== viewerId,
-              })
-            }
-          />
+          <>
+            <AudienceSwitch
+              legend={t(copy.title)}
+              current={current}
+              owner={ownerStanding(ownerId, viewerId)}
+              pending={setVisibility.isPending}
+              error={
+                setVisibility.isError ? failure(setVisibility.error) : undefined
+              }
+              onSave={(visibility) =>
+                setVisibility.mutate({
+                  id,
+                  version: record.version,
+                  visibility,
+                  mayLoseAccess: visibility === "owner" && ownerId !== viewerId,
+                })
+              }
+            />
+            <HandoverOffer kind={kind} record={record} />
+          </>
         )}
         {/* The full answer (every colleague, and why) is the share screen's;
             this panel names the audience and switches it. */}

@@ -164,7 +164,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"expected_updated_at": rowStamp,
 	"created_at":          rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp, "suspended_at": rowStamp,
-	"activated_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
+	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "enabled_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,
 	"captured_at": rowStamp, "recorded_at": rowStamp, "set_at": rowStamp, "changed_at": rowStamp,
 	"corrected_at": rowStamp, "effective_at": rowStamp, "latest_captured_at": rowStamp, "value_captured_at": rowStamp,
 
@@ -173,7 +173,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"annotated_at": runStamp, "finished_at": runStamp, "completed_at": runStamp, "failed_at": runStamp,
 	"first_failed_at": runStamp, "dead_lettered_at": runStamp, "effect_failed_at": runStamp, "ran_at": runStamp,
 	"detected_at": runStamp, "first_seen_at": runStamp, "observed_at": runStamp, "refresh_at": runStamp,
-	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp,
+	"verified_at": runStamp, "connected_at": runStamp, "month_start_at": runStamp, "pipeline_state_at": runStamp,
 
 	"expires_at": aheadStamp, "credential_expires_at": aheadStamp, "watch_expires_at": aheadStamp, "deletes_at": aheadStamp,
 	"next_attempt_at": aheadStamp, "next_retry_at": aheadStamp, "next_pass_at": aheadStamp, "next_capture_at": aheadStamp,

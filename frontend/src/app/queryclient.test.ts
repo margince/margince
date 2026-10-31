@@ -2,6 +2,7 @@ import {
   MutationObserver,
   onlineManager,
   type QueryClient,
+  QueryObserver,
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
@@ -111,10 +112,9 @@ describe("the query client defaults", () => {
   });
 
   // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
-  // both answers of each are load-bearing: a record read repeats and refetches
-  // on the way back to the tab, and nothing else does either. Asked of both
-  // kinds of key, because what a change could get wrong is one kind while the
-  // other stays right.
+  // each is asked for both of its answers. A record read repeats; what comes
+  // back on return is what a stale answer misstates. Both kinds of key are
+  // asked, because a change can get one wrong and the other right.
   //
   // The predicates, not the defaults they are installed as. What they are
   // wired to is proved end to end in features/records/liverecord.test.tsx,
@@ -129,11 +129,30 @@ describe("the query client defaults", () => {
     expect(liveInterval({ queryKey: ["me", "ai-activity"] })).toBe(false);
   });
 
-  it("refetches a record on the way back to the tab, and nothing else", () => {
+  it("reads again on return whatever a stale answer would misstate", () => {
     // "always" and not `true`: `true` refetches only a read already stale, so
     // inside the staleness window above the return would be served the cache.
     expect(liveOnReturn({ queryKey: ["contact360", "p-1"] })).toBe("always");
     expect(liveOnReturn({ queryKey: ["me", "ai-activity"] })).toBe(false);
+    // A timeline comes back with the reader. Every row it serves says whether
+    // the reader may change it, and a grant expires without a signal.
+    expect(liveOnReturn({ queryKey: ["activities", "contact", "c-1"] })).toBe(
+      "always",
+    );
+    // It does not poll: it pages, so a cadence would refetch every page a
+    // reader has scrolled through.
+    expect(liveInterval({ queryKey: ["activities", "contact", "c-1"] })).toBe(
+      false,
+    );
+    // Not every key whose first word is activities: a one-word prefix is a
+    // write path's invalidation target, not a read.
+    expect(liveOnReturn({ queryKey: ["activities"] })).toBe(false);
+
+    // The installation read carries the policy that decides whether figures
+    // already on screen may stay there, so it comes back with the reader.
+    expect(liveOnReturn({ queryKey: ["installation-settings"] })).toBe(
+      "always",
+    );
   });
 
   it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
@@ -157,6 +176,54 @@ describe("the query client defaults", () => {
         5_000,
       ),
     ).toBe(true);
+  });
+
+  it("shares Home's day with the queue drawer, and nothing else with a second view", () => {
+    const day = {
+      queryKey: ["worklist", "mine", "all", ""],
+      queryHash: "shared-day",
+      state: { dataUpdatedAt: 10_000 },
+    };
+    const handled = {
+      ...day,
+      queryKey: ["worklist", "handled"],
+      queryHash: "handled",
+    };
+    expect(liveOnMount({ ...day, getObserversCount: () => 1 }, 20_000)).toBe(
+      "always",
+    );
+    expect(liveOnMount({ ...day, getObserversCount: () => 2 }, 20_000)).toBe(
+      true,
+    );
+    expect(
+      liveOnMount({ ...handled, getObserversCount: () => 2 }, 20_000),
+    ).toBe("always");
+  });
+
+  it("fetches a live work read once for two views on screen, and again for a later mount", async () => {
+    const client = createQueryClient();
+    let fetched = 0;
+    const options = {
+      queryKey: ["worklist", "mine", "all", ""],
+      queryFn: async () => ++fetched,
+    };
+    const home = new QueryObserver(client, options);
+    const stopHome = home.subscribe(() => {});
+    await vi.waitFor(() =>
+      expect(home.getCurrentResult().fetchStatus).toBe("idle"),
+    );
+    expect(fetched).toBe(1);
+    const drawer = new QueryObserver(client, options);
+    const stopDrawer = drawer.subscribe(() => {});
+    expect(drawer.getCurrentResult().fetchStatus).toBe("idle");
+    expect(fetched).toBe(1);
+    stopDrawer();
+    stopHome();
+    const back = new QueryObserver(client, options);
+    const stopBack = back.subscribe(() => {});
+    await vi.waitFor(() => expect(fetched).toBe(2));
+    stopBack();
+    client.clear();
   });
 
   it("reports a failed query once, through the global sink", async () => {

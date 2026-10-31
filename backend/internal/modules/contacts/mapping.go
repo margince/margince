@@ -27,7 +27,13 @@ import (
 // two surfaces read one mapping rather than each keeping their own.
 // codeRequired is the contract's machine code for a missing required field —
 // one spelling across every refusal in this module that means "you left it out".
-const codeRequired = "required"
+const (
+	codeRequired = "required"
+	// codeInvalidValue and codeInvalidKey are the field codes for a value
+	// outside its vocabulary and a catalog key of the wrong shape.
+	codeInvalidValue = "invalid_value"
+	codeInvalidKey   = "invalid_key"
+)
 
 type RequiredFieldError struct{ Field string }
 
@@ -280,6 +286,8 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		LegalName:       req.LegalName,
 		Description:     req.Description,
 		Industry:        req.Industry,
+		Phone:           req.Phone,
+		Email:           emailArg(req.Email),
 		Source:          req.Source,
 		SourceSystem:    req.SourceSystem,
 		SourceID:        req.SourceId,
@@ -316,6 +324,8 @@ func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64)
 		IfVersion:             ifVersion,
 		CustomFields:          req.AdditionalProperties,
 		LinkedInURL:           req.LinkedinUrl,
+		Phone:                 req.Phone,
+		Email:                 emailArg(req.Email),
 		Visibility:            companyVisibilityArg(req.Visibility),
 	}
 	in.Address = req.Address
@@ -416,10 +426,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		CustomFields:        req.AdditionalProperties,
 		RequestedContactID:  idArg[ids.ContactKind](req.ContactId),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		in.Status = string(*req.Status)
@@ -475,13 +482,11 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		ClearScoreOverride:  req.scoreNull || req.reasonNull,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		IfVersion:           ifVersion,
 		CustomFields:        req.AdditionalProperties,
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 	in.Phone = req.Phone
 	if req.Status != nil {
 		s := string(*req.Status)

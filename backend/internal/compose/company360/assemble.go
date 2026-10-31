@@ -133,20 +133,23 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 	if err != nil {
 		return crmcontracts.Company360{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
-		if err != nil {
-			return err
-		}
-		out.Company = company
-		if err := opts.admit(ctx, tx, companyID, &out); err != nil {
-			return err
-		}
-		prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
-		if err != nil {
-			return err
-		}
-		return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+	// One repeatable-read snapshot, so every section reads the same state.
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
+			if err != nil {
+				return err
+			}
+			out.Company = company
+			if err := opts.admit(ctx, tx, companyID, &out); err != nil {
+				return err
+			}
+			prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
+			if err != nil {
+				return err
+			}
+			return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+		})
 	})
 	if err != nil {
 		return crmcontracts.Company360{}, err
@@ -240,6 +243,7 @@ type assembly struct {
 	signalsRead   bool
 	signalsErr    error
 	staged        []crmcontracts.Approval
+	stagedTotal   int
 	stagedRead    bool
 	stagedRefused bool
 
@@ -266,24 +270,21 @@ func (a *assembly) contactStrengths() ([]contacts.ContactStrength, error) {
 	return contacts, nil
 }
 
-// pendingApprovals reads the decidable stagings once per request.
-// stagedRefused records a permission refusal so the count half can answer
-// "not counted" without asking again and getting the same refusal.
-func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, bool, error) {
+// pendingApprovals reads the decidable stagings and their exact total once per
+// request. stagedRefused records a permission refusal so the count half can
+// answer "not counted" without asking again and getting the same refusal.
+func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, int, bool, error) {
 	if a.stagedRead {
-		return a.staged, !a.stagedRefused, nil
+		return a.staged, a.stagedTotal, !a.stagedRefused, nil
 	}
-	staged, err := a.svc.approvals.PendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID, approvals.PendingScanCap)
+	pending, err := a.svc.approvals.PendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID)
 	a.stagedRead = true
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		a.stagedRefused = true
-		return nil, false, nil
+	a.stagedRefused = errors.Is(err, apperrors.ErrPermissionDenied)
+	if err != nil && !a.stagedRefused {
+		return nil, 0, false, err
 	}
-	if err != nil {
-		return nil, false, err
-	}
-	a.staged = staged
-	return staged, true, nil
+	a.staged, a.stagedTotal = pending.Approvals, pending.Total
+	return a.staged, a.stagedTotal, !a.stagedRefused, nil
 }
 
 func (a *assembly) readContacts() error {
@@ -428,7 +429,7 @@ func (a *assembly) readNextMeeting() error {
 // channel the inbox refuses to be. Triage is human work, so a
 // passport-driven read is refused there and the section is simply absent.
 func (a *assembly) readPendingApprovals() error {
-	staged, triageable, err := a.pendingApprovals()
+	staged, _, triageable, err := a.pendingApprovals()
 	if err != nil {
 		return err
 	}

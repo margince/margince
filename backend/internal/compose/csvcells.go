@@ -298,19 +298,10 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 			return problem
 		}
 	}
+	if problem := emailCellProblem(object, fields); problem != nil {
+		return problem
+	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
-		// Both stores parse the address before the write and refuse a malformed one.
-		email := strings.TrimSpace(fields[fieldEmail])
-		if email == "" {
-			return nil
-		}
-		if _, err := values.ParseEmail(email); err != nil {
-			return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonNotAnEmail, "value", fields[fieldEmail]))
-		}
-		// The contacts store refuses a sending system's address; a lead may hold one.
-		if object == migration.ObjectContact && mailidentity.HasMachineLocalpart(email) {
-			return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonEmailNamesNoContact, "value", email))
-		}
 		return nil
 	}
 	if object != migration.ObjectCompany {
@@ -367,4 +358,22 @@ func sizeBandVocabulary() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// emailCellProblem refuses an address the store would refuse. Every store
+// parses it before the write, so a malformed one is a problem of the test run.
+// The contacts store also refuses a sending system's address; a lead or a
+// company may hold one.
+func emailCellProblem(object string, fields map[string]string) *cellProblem {
+	email := strings.TrimSpace(fields[fieldEmail])
+	if email == "" {
+		return nil
+	}
+	if _, err := values.ParseEmail(email); err != nil {
+		return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonNotAnEmail, "value", fields[fieldEmail]))
+	}
+	if object == migration.ObjectContact && mailidentity.HasMachineLocalpart(email) {
+		return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonEmailNamesNoContact, "value", email))
+	}
+	return nil
 }

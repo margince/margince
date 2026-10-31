@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/search"
 )
 
@@ -160,13 +161,19 @@ func dailyAIActivityPath() string {
 	return "/v1/me/ai-activity?" + args.Encode()
 }
 
-// worklistCalls sends the scope the screen opens on: a rep's own queue, a manager's team.
+// worklistDay is the day read the app sends: its largest page, and no
+// reconnections, which are read only when their panel opens.
+const worklistDay = "/v1/worklist?filter=all&limit=100&relationships=omit&scope="
+
+// worklistCalls sends the view and scope the screen opens on: Today, over the
+// reader's own queue. A manager also times the team scope they pick. Home's
+// read names no view, so homeCalls times that one.
 func worklistCalls(in dailyInput) []dailyCall {
-	scope := "mine"
+	calls := []dailyCall{{Path: worklistDay + "mine&view=today"}, {Name: "handled", Path: "/v1/worklist/handled"}}
 	if in.Seat.Role == "manager" {
-		scope = "team"
+		calls = append(calls, dailyCall{Name: "team", Path: worklistDay + "team&view=today"})
 	}
-	return []dailyCall{{Path: "/v1/worklist?scope=" + scope + "&filter=all"}, {Name: "handled", Path: "/v1/worklist/handled"}}
+	return calls
 }
 
 // homeCalls are what a browser on Today sends once the shell's gates clear.
@@ -175,7 +182,7 @@ func worklistCalls(in dailyInput) []dailyCall {
 func homeCalls(dailyInput) []dailyCall {
 	return []dailyCall{
 		{Name: "brief", Path: "/v1/brief"},
-		{Name: "worklist", Path: "/v1/worklist?scope=mine&filter=all"},
+		{Name: "worklist", Path: worklistDay + "mine"},
 		{Name: "handled", Path: "/v1/worklist/handled"},
 		{Name: "magic", Path: "/v1/magic?limit=100"},
 		{Name: "digest", Path: "/v1/digest", Optional: true},
@@ -731,8 +738,8 @@ func medianOwned(t *testing.T, e *apptest.AppEnv, sql string, ids []string, rep 
 }
 
 // dailyEvaluateArgs builds the evaluate query the analytics screen sends on
-// open (reportingQuery in reporting.model.ts): the seat's default scope, the
-// default pipeline, this month, and the sales template's metrics and blocks.
+// open, as reportingQuery in reporting.model.ts does. It asks the seat's
+// default scope, the default pipeline, this month and the template's preset.
 func dailyEvaluateArgs(t *testing.T, e *apptest.AppEnv, s Seat) string {
 	t.Helper()
 	var frame struct {
@@ -741,12 +748,7 @@ func dailyEvaluateArgs(t *testing.T, e *apptest.AppEnv, s Seat) string {
 			ID   string `json:"id"`
 		} `json:"default_scope"`
 	}
-	var catalog struct {
-		Metrics []struct {
-			ID     string   `json:"id"`
-			Blocks []string `json:"blocks"`
-		} `json:"metrics"`
-	}
+	var catalog crmcontracts.ReportingCatalog
 	var pipelines struct {
 		Data []struct {
 			ID        string `json:"id"`
@@ -777,19 +779,17 @@ func dailyEvaluateArgs(t *testing.T, e *apptest.AppEnv, s Seat) string {
 	args.Set("period", "this_month")
 	args.Set("target_basis", "month")
 	args.Set("close_window", "all_open")
-	metrics, desired := dailyTemplateMetrics(template)
-	var blocks []string
-	for _, metric := range catalog.Metrics {
-		if !metrics(metric.ID) {
-			continue
-		}
-		args.Add("metrics", metric.ID)
-		blocks = append(blocks, metric.Blocks...)
+	// The screen opens on the preset its template names, as the catalog
+	// publishes it for this seat.
+	preset := slices.IndexFunc(catalog.Presets, func(p crmcontracts.ReportingPreset) bool { return string(p.Id) == template })
+	if preset < 0 {
+		t.Fatalf("the catalog offers this seat no %q preset; the screen would have nothing to ask", template)
 	}
-	for _, block := range desired {
-		if slices.Contains(blocks, block) {
-			args.Add("blocks", block)
-		}
+	for _, metric := range catalog.Presets[preset].Metrics {
+		args.Add("metrics", string(metric))
+	}
+	for _, block := range catalog.Presets[preset].Blocks {
+		args.Add("blocks", string(block))
 	}
 	return args.Encode()
 }
@@ -811,17 +811,4 @@ func dailyAnalyticsTemplate(t *testing.T, e *apptest.AppEnv, s Seat) string {
 		t.Fatalf("GET /v1/analytics/framework answered %d: %s", status, clipBody(body))
 	}
 	return framework.Definition.Template
-}
-
-// dailyTemplateMetrics is the metric filter and block wish list of the view the
-// screen opens on for a template. METRIC_VIEW and VIEW_SHAPE in
-// frontend/src/features/analytics/reporting.views.ts hold the lists; a request
-// for more than eight metrics is refused, so one view is asked, never all.
-func dailyTemplateMetrics(template string) (func(id string) bool, []string) {
-	view := []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created"}
-	blocks := []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age"}
-	if template == "sdr" {
-		view, blocks = []string{"meetings_held", "accepted_opportunities"}, []string{"sdr_outcomes", "target_progress"}
-	}
-	return func(id string) bool { return slices.Contains(view, id) }, blocks
 }

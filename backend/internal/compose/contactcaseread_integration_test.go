@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,23 +40,93 @@ func TestAResolvedCaseNamesNoSurvivorItsReaderCannotSee(t *testing.T) {
 	}
 }
 
-func TestAPairIsMergeableOnlyWithWriteAccessToBothEnds(t *testing.T) {
+func TestAPairIsMergeableByTheOwnerOfEitherEnd(t *testing.T) {
 	c := setupCases(t)
 	shared := c.seedCase(t, c.e.Rep1, c.e.Rep2)
 	own := c.seedCase(t, c.e.Rep1, c.e.Rep1)
-	c.setPolicy(t, true)
 	rep := c.rep(c.e.Rep1)
 
-	delegated := c.read(rep, t, shared[0]).Edges[0]
-	if !delegated.CanDismiss || delegated.CanMerge {
-		t.Errorf("an owner of one end under the policy reads can_dismiss %v and can_merge %v, want true and false",
-			delegated.CanDismiss, delegated.CanMerge)
+	half := c.read(rep, t, shared[0]).Edges[0]
+	if half.CanDismiss || !half.CanMerge {
+		t.Errorf("an owner of one end reads can_dismiss %v and can_merge %v, want false and true",
+			half.CanDismiss, half.CanMerge)
+	}
+	if edge := c.read(c.rep(c.e.Rep3), t, shared[0]).Edges[0]; edge.CanMerge {
+		t.Error("a rep who owns neither end may merge the pair")
+	}
+	c.setPolicy(t, true)
+	if edge := c.read(rep, t, shared[0]).Edges[0]; !edge.CanDismiss || !edge.CanMerge {
+		t.Errorf("under the policy an owner of one end reads can_dismiss %v and can_merge %v, want both",
+			edge.CanDismiss, edge.CanMerge)
 	}
 	if edge := c.read(c.e.Admin(), t, shared[0]).Edges[0]; !edge.CanMerge {
 		t.Error("an admin may not merge a pair they may write both ends of")
 	}
 	if edge := c.read(rep, t, own[0]).Edges[0]; !edge.CanMerge {
 		t.Error("a rep may not merge a pair of their own two contacts")
+	}
+}
+
+func TestTheOwnerOfOneMemberOfALargerCaseIsOfferedOnlyTheirPairs(t *testing.T) {
+	c := setupCases(t)
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep2, c.e.Rep2)
+	rep := c.rep(c.e.Rep1)
+	read := c.read(rep, t, members[0])
+	if read.MergeMode != crmcontracts.ContactCaseMergeModePair || len(read.Edges) < 2 {
+		t.Fatalf("the owner of one member reads merge_mode %s over %d pairs, want pair over at least 2", read.MergeMode, len(read.Edges))
+	}
+	var offered []ids.UUID
+	for _, edge := range read.Edges {
+		left, right := ids.UUID(edge.LeftId), ids.UUID(edge.RightId)
+		want, keep := false, ""
+		switch members[0] {
+		case left:
+			want, keep = true, right.String()
+		case right:
+			want, keep = true, left.String()
+		}
+		got := ""
+		if edge.KeepId != nil {
+			got = ids.UUID(*edge.KeepId).String()
+		}
+		if edge.CanMerge != want || got != keep {
+			t.Errorf("the pair %s–%s reads can_merge %v keeping %q, want %v keeping %q", left, right, edge.CanMerge, got, want, keep)
+		}
+		if want && edge.KeepId != nil {
+			offered = []ids.UUID{members[0], ids.UUID(*edge.KeepId)}
+		}
+	}
+	if offered == nil {
+		t.Fatal("no pair offers the owner of one member a merge")
+	}
+	colleague := c.read(c.rep(c.e.Rep2), t, members[0])
+	for _, edge := range colleague.Edges {
+		if ids.UUID(edge.LeftId) != members[0] && ids.UUID(edge.RightId) != members[0] && (!edge.CanMerge || edge.KeepId != nil) {
+			t.Errorf("the owner of both ends reads can_merge %v keeping %v, want true either way", edge.CanMerge, edge.KeepId)
+		}
+	}
+	out, err := c.store.MergeContactCase(rep, members[0], caseDecision(read, offered, offered[1], c.e.Rep2))
+	if err != nil || out.Mode != crmcontracts.ContactCaseOutcomeModePair {
+		t.Fatalf("merging the offered pair = %+v, %v, want a pair merge", out, err)
+	}
+}
+
+func TestACasePairWhoseSurvivorHasNoLiveOwnerOffersNoCaseMerge(t *testing.T) {
+	c := setupCases(t)
+	agent := ids.NewV7()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, is_agent) VALUES ($1, $2, 'Case Agent', true)`,
+		agent, "agent-"+agent.String()+"@case.test"); err != nil {
+		t.Fatal(err)
+	}
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep2)
+	c.e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, agent, members[1])
+	read := c.read(c.rep(c.e.Rep1), t, members[0])
+	if read.MergeMode != crmcontracts.ContactCaseMergeModeNone || read.CanMerge {
+		t.Errorf("the case reads merge_mode %s and can_merge %v, want none and false", read.MergeMode, read.CanMerge)
+	}
+	if !read.Edges[0].CanMerge {
+		t.Error("the pair route, which names no owner, no longer offers the merge")
 	}
 }
 

@@ -139,7 +139,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
 			return err
 		}
-		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit))
+		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit), params.Entity)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
@@ -171,10 +171,11 @@ func (h analyticsQueryHandlers) ListReportRuns(
 // runSummary lists a saved question by its shape alone. Its filter values and
 // scope name records and teams, so they stay out. A question the caller's
 // vocabulary no longer admits is not listed; the page keeps its place by the
-// last row read, listed or not.
+// last row read, listed or not. One that now mixes currencies is listed, so
+// opening it shows the refusal and how to re-ask it.
 func runSummary(run ReportRunSummary, schema analyticsquery.Schema) (crmcontracts.ReportRunSummary, bool, error) {
 	shape := analyticsquery.Query{Entity: run.Query.Entity, GroupBy: run.Query.GroupBy, Measures: run.Query.Measures, Limit: run.Query.Limit}
-	if shape.Validate(schema) != nil {
+	if shape.ValidateVocabulary(schema) != nil {
 		return crmcontracts.ReportRunSummary{}, false, nil //nolint:nilerr // a question the vocabulary no longer admits is skipped, not a fault
 	}
 	asked, err := wireFromQuery(shape)

@@ -57,7 +57,7 @@ type derivationOutcome struct {
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(plan.scope), predicatesAsFilters(plan.predicates)); err != nil {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(plan.scope), plan.groupBy, predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}
 		var args []any
@@ -92,38 +92,12 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		whereSQL := strings.Join(where, " AND ")
 
-		// A reference this reader cannot open comes back NULL, and its row
-		// stays. That is what a normal deal read does with the same column
-		// (deals/fieldmask.go blanks the reference and keeps the deal), so the
-		// drill-through and the list its link opens describe one population.
-		//
-		// On its OWN argument slice, forked from the shared one. The mask binds
-		// the reader's scope values, and only the rows statement names them —
-		// Postgres rejects a parameter a statement never references, so letting
-		// these land in `args` would break the aggregate recompute below, which
-		// selects no reference at all.
-		rowArgs := slices.Clone(args)
-		rowArg := func(v any) int { rowArgs = append(rowArgs, v); return len(rowArgs) }
-		selects, err := maskedDerivationSelects(ctx, spec, plan, rowArg)
-		if err != nil {
+		if err := requireNoLoneColleagueIn(ctx, tx, frame, contributorsSQL(spec, where, nil), args); err != nil {
 			return err
 		}
-		rowsSQL, rowsArgs, err := bindReportTokens(ctx, tx, frame, fmt.Sprintf(
-			"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
-			strings.Join(selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), rowArgs)
-		if err != nil {
+		if out.Rows, err = derivationRows(ctx, tx, frame, report, spec, plan, whereSQL, args); err != nil {
 			return err
 		}
-		pgRows, err := tx.Query(ctx, rowsSQL, rowsArgs...)
-		if err != nil {
-			return fmt.Errorf("derivation %s rows: %w", report, err)
-		}
-		defer pgRows.Close()
-		out.Rows, err = scanDerivationRows(pgRows, plan.columns)
-		if err != nil {
-			return err
-		}
-		pgRows.Close()
 
 		// Recompute the explained aggregates over the identical row set
 		// (count(*) rides along as the honest total behind the capped
@@ -153,6 +127,41 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		return nil
 	})
+}
+
+// derivationRows reads the drill-through's rows over the explained `WHERE`.
+//
+// A reference this reader cannot open comes back NULL, and its row stays.
+// deals/fieldmask.go does the same on a normal deal read. So the drill-through
+// and the list its link opens describe one population.
+//
+// It binds on its own argument slice, forked from the shared one. The mask
+// binds the reader's scope values, and only the rows statement names them.
+// Postgres rejects a parameter a statement never references. In the shared
+// slice they would break the aggregate recompute, which selects no reference.
+//
+//craft:ignore naked-any SQL parameters are heterogeneous values encoded by pgx
+func derivationRows(
+	ctx context.Context, tx pgx.Tx, frame reportFrame, report string, spec reportSpec, plan derivationPlan, whereSQL string, args []any,
+) ([]map[string]any, error) {
+	rowArgs := slices.Clone(args)
+	rowArg := func(v any) int { rowArgs = append(rowArgs, v); return len(rowArgs) }
+	selects, err := maskedDerivationSelects(ctx, spec, plan, rowArg)
+	if err != nil {
+		return nil, err
+	}
+	rowsSQL, rowsArgs, err := bindReportTokens(ctx, tx, frame, fmt.Sprintf(
+		"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
+		strings.Join(selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), rowArgs)
+	if err != nil {
+		return nil, err
+	}
+	pgRows, err := tx.Query(ctx, rowsSQL, rowsArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("derivation %s rows: %w", report, err)
+	}
+	defer pgRows.Close()
+	return scanDerivationRows(pgRows, plan.columns)
 }
 
 // maskedDerivationSelects is plan.selects with each REFERENCE column wrapped so

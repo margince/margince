@@ -96,6 +96,12 @@ func Setup(t *testing.T) *Env {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	// Refused rather than reported, because the reset is what makes a leak
+	// invisible: it truncates the rows the leaked workers are still reading.
+	if leaked := leakedRunners(); leaked != "" {
+		t.Fatalf("a job runner outlived the test that started it, so this reset would "+
+			"pull the database out from under its workers:%s", leaked)
+	}
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
@@ -317,12 +323,19 @@ func (e *Env) AgentCtx() context.Context {
 // assertion vacuously.
 func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
 	t.Helper()
+	return e.AgentOnPassport(t, human, teams, perms, ids.New[ids.PassportKind]())
+}
+
+// AgentOnPassport is AgentFor acting under a passport the test seeded, so the
+// audit row resolves the tool the passport was granted to.
+func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions, passport ids.PassportID) context.Context {
+	t.Helper()
 	teamIDs := make([]ids.TeamID, 0, len(teams))
 	for _, team := range teams {
 		teamIDs = append(teamIDs, ids.From[ids.TeamKind](team))
 	}
 	agent := identity.AgentIdentity{
-		PassportID:  ids.New[ids.PassportKind](),
+		PassportID:  passport,
 		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
 		OnBehalfOf:  ids.From[ids.UserKind](human),
 		SeatType:    string(principal.SeatFull),

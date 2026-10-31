@@ -4,6 +4,7 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { type Translator, useT } from "../i18n";
+import { idBatcher } from "./idbatch";
 import { ProblemError } from "./problem";
 
 // Names a colleague by id, batching every id asked for within one tick into
@@ -94,70 +95,20 @@ export function useMemberNames(
   return names;
 }
 
-// What one batch came back with. A page's refusal is about the ids ON that
-// page: the names an earlier page returned are answers the server gave, and a
-// single map could only report them as a read that never arrived.
-type Naming = Readonly<{
-  named: ReadonlyMap<string, Seat>;
-  failures: ReadonlyMap<string, ProblemError>;
-}>;
-
-// The ids this tick has asked about and not yet sent. A leaf component cannot
-// see its siblings, so the coalescing has to live beside the request rather
-// than at any one call site: one shared batch, every subscriber served from
-// the one answer it produces.
-let queued: string[] = [];
-let batch: Promise<Naming> | null = null;
-
-async function nameOf(id: string): Promise<Seat | null> {
-  const { named, failures } = await join(id);
-  const failed = failures.get(id);
-  if (failed) {
-    throw failed;
+// Every id asked about within one tick shares one `GET /users/names` read.
+const nameOf = idBatcher<Seat>(MAX_SEATS_PER_REQUEST, async (page) => {
+  const { data, error } = await api.GET("/users/names", {
+    params: { query: { id: [...page] } },
+  });
+  if (error) {
+    // Thrown for these ids, because an absent name reads as a colleague who
+    // does not exist.
+    throw new ProblemError(error);
   }
-  return named.get(id) ?? null;
-}
-
-function join(id: string): Promise<Naming> {
-  queued.push(id);
-  if (!batch) {
-    // Opened as a microtask: every component that renders in this tick has
-    // enqueued by the time it runs, and nothing waits on a timer.
-    batch = Promise.resolve().then(() => {
-      const asking = [...new Set(queued)];
-      queued = [];
-      batch = null;
-      return readNames(asking);
-    });
-  }
-  return batch;
-}
-
-async function readNames(ids: readonly string[]): Promise<Naming> {
-  const named = new Map<string, Seat>();
-  const failures = new Map<string, ProblemError>();
-  for (let at = 0; at < ids.length; at += MAX_SEATS_PER_REQUEST) {
-    const page = ids.slice(at, at + MAX_SEATS_PER_REQUEST);
-    const { data, error } = await api.GET("/users/names", {
-      params: { query: { id: page } },
-    });
-    if (error) {
-      // Held against this page's ids rather than thrown, which would reject the
-      // shared batch and lose the names another page already read. `nameOf`
-      // throws it for these ids, because an absent name reads as a colleague
-      // who does not exist.
-      const problem = new ProblemError(error);
-      for (const id of page) {
-        failures.set(id, problem);
-      }
-      continue;
-    }
-    for (const seat of data.data) {
-      named.set(seat.id, {
-        name: seat.display_name,
-        departed: seat.departed === true,
-      });
-    }
-  }
-  return { named, failures };
-}
+  return new Map(
+    data.data.map((seat) => [
+      seat.id,
+      { name: seat.display_name, departed: seat.departed === true },
+    ]),
+  );
+});

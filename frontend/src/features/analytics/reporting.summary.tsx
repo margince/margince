@@ -4,13 +4,13 @@ import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
   reportingCompactAmount,
   reportingPeriodLabel,
 } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 export function TargetProgress({
   value,
@@ -47,6 +47,7 @@ const HEADLINE_METRICS = [
   "leads_created",
   "leads_promoted",
   "lead_first_response",
+  "leads_awaiting_response",
   "partner_pipeline",
   "partner_won",
   "partner_commission",
@@ -61,6 +62,7 @@ export function ResultsSummary({
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const metrics = HEADLINE_METRICS.flatMap(
     (id) => evaluation.metrics.find((metric) => metric.id === id) ?? [],
@@ -83,7 +85,7 @@ export function ResultsSummary({
           <StatCard
             key={metric.id}
             narrow="row"
-            label={metricLabel(metric.id, t)}
+            label={metricName(metric.id)}
             value={amount(metric.value)}
             detail={
               <>

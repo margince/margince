@@ -53,8 +53,24 @@ export function browserSnippet(form: WebForm, url: string): string {
     "</form>",
     "<script>",
     '  document.querySelectorAll("form[data-margince-form]").forEach(function (form) {',
-    "    form.elements._mrg_ts.value = Date.now();",
+    // The first load's time survives a Back, which reloads the page and runs
+    // this again: a visitor's second send within seconds still lands.
+    '    var started = Date.now(), key = "margince-form-started:" + form.action;',
+    "    try {",
+    "      var kept = Number(sessionStorage.getItem(key));",
+    "      if (kept > 0 && kept < started) started = kept;",
+    "      sessionStorage.setItem(key, String(started));",
+    "    } catch (unavailable) {",
+    "      started = Date.now();",
+    "    }",
+    "    form.elements._mrg_ts.value = started;",
     "    form.elements.page_url.value = location.href;",
+    // A page back from Back may hold the last send's id, and a changed message
+    // under it would read as that send again. One page lifetime, one id.
+    '    form.elements._mrg_id.value = "";',
+    '    window.addEventListener("pageshow", function (event) {',
+    '      if (event.persisted) form.elements._mrg_id.value = "";',
+    "    });",
     '    form.addEventListener("submit", function () {',
     "      form.elements._mrg_id.value = form.elements._mrg_id.value || crypto.randomUUID();",
     "    });",

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState, SearchField } from "../../design-system/atoms";
@@ -13,6 +13,7 @@ import {
   QueryGate,
   QueryStates,
 } from "../../design-system/querystates";
+import { RecordCardList } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate, useRoute } from "../../lib/router";
@@ -305,11 +306,7 @@ function SearchGroups({
             }
           >
             <PanelBody>
-              <ul
-                className={
-                  searchHitHasCard(type) ? "record-card-list" : "search-hits"
-                }
-              >
+              <SearchHitList card={searchHitHasCard(type)}>
                 {hits.map((hit) => (
                   <SearchHit
                     key={`${hit.type}:${hit.id}`}
@@ -317,11 +314,24 @@ function SearchGroups({
                     onOpen={onOpen}
                   />
                 ))}
-              </ul>
+              </SearchHitList>
             </PanelBody>
           </Panel>
         );
       })}
     </div>
+  );
+}
+
+// Hits drawn as cards stack as the design system's card list; the rest are
+// plain rows.
+function SearchHitList({
+  card,
+  children,
+}: Readonly<{ card: boolean; children: ReactNode }>) {
+  return card ? (
+    <RecordCardList>{children}</RecordCardList>
+  ) : (
+    <ul className="search-hits">{children}</ul>
   );
 }

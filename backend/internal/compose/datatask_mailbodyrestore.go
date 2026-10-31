@@ -11,10 +11,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type recoverableMailBody struct {
@@ -33,36 +31,11 @@ const recoverableMailBodyScope = `FROM activity a ` + mailOriginalJoin + `
    AND rc.payload IS NOT NULL AND ` + capturedByMailConnector
 
 func restoreMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return datatask.BatchOut{}, err
-	}
-	after, err := datatask.UUIDCursor(in.Cursor)
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.version, a.body, rc.payload `+recoverableMailBodyScope+`
-		AND a.id > @recoverable_after ORDER BY a.id LIMIT @recoverable_limit FOR UPDATE OF a`,
-		pgx.NamedArgs{"recoverable_after": after, "recoverable_limit": in.Limit})
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	candidates, err := pgx.CollectRows(rows, pgx.RowToStructByPos[recoverableMailBody])
-	if err != nil {
-		return datatask.BatchOut{}, err
-	}
-	scanned := make([]ids.UUID, 0, len(candidates))
-	changed := 0
-	for _, candidate := range candidates {
-		scanned = append(scanned, candidate.ID)
-		restored, err := restoreMailBody(ctx, tx, candidate)
-		if err != nil {
-			return datatask.BatchOut{}, err
-		}
-		if restored {
-			changed++
-		}
-	}
-	return datatask.AdvanceUUID(in, scanned, changed)
+	return pageStoredMail(ctx, tx, in,
+		"a.id, a.version, a.body, rc.payload",
+		recoverableMailBodyScope,
+		func(c recoverableMailBody) ids.UUID { return c.ID },
+		restoreMailBody)
 }
 
 // restoreMailBody writes the body the original yields, when the stored one is
@@ -91,11 +64,5 @@ func restoreMailBody(ctx context.Context, tx pgx.Tx, candidate recoverableMailBo
 }
 
 func estimateRecoverableMailBodies(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
-		return 0, false, err
-	}
-	var count int64
-	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id "+recoverableMailBodyScope+" LIMIT @recoverable_cap) candidates",
-		pgx.NamedArgs{"recoverable_cap": maximum + 1}).Scan(&count)
-	return min(count, maximum), count > maximum, err
+	return countStoredMail(ctx, q, recoverableMailBodyScope, maximum)
 }

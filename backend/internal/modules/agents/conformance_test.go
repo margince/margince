@@ -192,7 +192,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
-	RegisterIntentTools(r, inertRetriever{}, nil, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, inertLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
@@ -263,6 +263,18 @@ func fullRegistry(t *testing.T) *Registry {
 // handler, so a seam that answers nothing is the honest stand-in.
 type inertLifecycle struct{}
 
+func (inertLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
+	return MeetingPreparationResult{}, false, nil
+}
+
+func (inertLifecycle) Confirm(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, nil
+}
+
+func (inertLifecycle) Withdraw(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, nil
+}
+
 func (inertLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, nil
 }
@@ -275,7 +287,7 @@ func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.Ra
 	return nil, nil
 }
 
-func (inertLifecycle) Check(context.Context, ids.UUID) error { return nil }
+func (inertLifecycle) Check(context.Context, ids.UUID, *string) error { return nil }
 
 func (inertLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
 	return nil, nil

@@ -43,6 +43,10 @@ const subjectKindDeal = "deal"
 // distinct from one that is missing or out of range.
 const codeInvalid = "invalid"
 
+// codeOutOfRange refuses a moment past the ceiling, for an expiry and a
+// deferral alike.
+const codeOutOfRange = "out_of_range"
+
 // slotOutcome names the answer kind, in the one place it is spelled.
 const slotOutcome = "outcome"
 
@@ -59,6 +63,21 @@ var noExpiry *time.Time
 // made from, and "the value is correct" is a claim about a value on a day —
 // values change, and an uncapped suppression outlives the fact it rested on.
 const MaxSuppression = 90 * 24 * time.Hour
+
+// LiveRemindAtSQL is when a deferral actually comes back: the moment it named,
+// or MaxSuppression after it was given, whichever is sooner.
+//
+// Read rather than trusted, because answers written before the ceiling was
+// refused still name a moment past it. days is SQL the caller renders, so a
+// caller binds it however its own statement binds parameters.
+func LiveRemindAtSQL(answer, days string) string {
+	return "LEAST(" + answer + ".remind_at, " + answer +
+		".created_at + make_interval(days => " + days + "))"
+}
+
+// MaxSuppressionDays is MaxSuppression as the whole number of days a SQL
+// interval takes.
+func MaxSuppressionDays() int { return int(MaxSuppression / (24 * time.Hour)) }
 
 // Resolution is somebody's answer to a finding.
 type Resolution struct {
@@ -82,93 +101,118 @@ func suppresses(outcome string) bool {
 // answer is attributable to whoever gave it, and a body-supplied actor is a
 // signature anybody can forge.
 func (s *Store) Resolve(ctx context.Context, exceptionID ids.UUID, in Resolution, now time.Time) error {
-	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+	actor, settled, err := admitResolution(ctx, in, now)
+	if err != nil {
 		return err
+	}
+	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled, now)
+	})
+}
+
+// ResolveTx is Resolve inside the caller's transaction, for an answer that also
+// writes the deal: both commit together or neither does.
+func (s *Store) ResolveTx(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, in Resolution, now time.Time) error {
+	actor, settled, err := admitResolution(ctx, in, now)
+	if err != nil {
+		return err
+	}
+	return s.resolveIn(ctx, tx, exceptionID, in, actor.UserID, settled, now)
+}
+
+// admitResolution checks who answers and what, before any transaction, and
+// returns the expiry the answer is stored with.
+func admitResolution(ctx context.Context, in Resolution, now time.Time) (principal.Principal, *time.Time, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+		return principal.Principal{}, nil, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
 		// An answer is given BY somebody. A system principal has nobody to
 		// attribute one to, and the auto-resolve path is a different door.
-		return apperrors.ErrPermissionDenied
+		return principal.Principal{}, nil, apperrors.ErrPermissionDenied
 	}
 	settled, err := checkResolution(in, now)
+	return actor, settled, err
+}
+
+func (s *Store) resolveIn(
+	ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, in Resolution, actorID ids.UUID, settled *time.Time,
+	now time.Time,
+) error {
+	if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
+		return err
+	}
+	if err := ensureOutcomeFitsReview(ctx, tx, exceptionID, in.Outcome); err != nil {
+		return err
+	}
+	if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
+		return err
+	}
+	// The status the answer leaves the finding in. A deferral does not resolve
+	// it. "Not now" is about when, not whether, and a deferred finding that
+	// read as resolved would never come back.
+	status := "resolved"
+	if in.Outcome == OutcomeRemindLater {
+		status = "open"
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE assurance_exception
+		SET status = $2, updated_at = now()
+		WHERE id = $1 AND status = 'open'`,
+		exceptionID, status)
 	if err != nil {
+		return fmt.Errorf("assurance: answering the finding: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		// Not there, or already answered: a 404 either way. Saying a finding
+		// is already resolved says it exists, about a deal the caller may not
+		// be able to open.
+		return apperrors.ErrNotFound
+	}
+	// After the status moved, so the check reads the deal as it stands
+	// without this review open.
+	if err := s.applyReviewCheck(ctx, tx, exceptionID, in.Outcome, now); err != nil {
 		return err
 	}
 
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		if err := ensureAnswerable(ctx, tx, exceptionID); err != nil {
-			return err
-		}
-		if err := ensureOutcomeFitsReview(ctx, tx, exceptionID, in.Outcome); err != nil {
-			return err
-		}
-		if err := s.applySignalDecision(ctx, tx, exceptionID, in); err != nil {
-			return err
-		}
-		// The status the answer leaves the finding in. A deferral does NOT
-		// resolve it: "not now" is an answer about when, not about whether, and
-		// a deferred finding that read as resolved would never come back.
-		status := "resolved"
-		if in.Outcome == OutcomeRemindLater {
-			status = "open"
-		}
-		tag, err := tx.Exec(ctx, `
-			UPDATE assurance_exception
-			SET status = $2, updated_at = now()
-			WHERE id = $1 AND status = 'open'`,
-			exceptionID, status)
-		if err != nil {
-			return fmt.Errorf("assurance: answering the finding: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			// Not there, or already answered. A 404 either way: telling a
-			// caller that a finding exists but is already resolved says the
-			// finding exists, about a deal they may not be able to open.
-			return apperrors.ErrNotFound
-		}
+	capturedBy, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	var resolutionID ids.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO assurance_resolution
+		    (exception_id, outcome, reason, evidence_ref, remind_at,
+		     expires_at, actor_id, captured_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id`,
+		exceptionID, in.Outcome, nullIfEmpty(in.Reason),
+		nullIfEmpty(in.EvidenceRef), in.RemindAt, settled,
+		actorID, capturedBy).Scan(&resolutionID); err != nil {
+		return fmt.Errorf("assurance: recording the answer: %w", err)
+	}
 
-		capturedBy, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
-		var resolutionID ids.UUID
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO assurance_resolution
-			    (exception_id, outcome, reason, evidence_ref, remind_at,
-			     expires_at, actor_id, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			RETURNING id`,
-			exceptionID, in.Outcome, nullIfEmpty(in.Reason),
-			nullIfEmpty(in.EvidenceRef), in.RemindAt, settled,
-			actor.UserID, capturedBy).Scan(&resolutionID); err != nil {
-			return fmt.Errorf("assurance: recording the answer: %w", err)
-		}
-
-		auditID, err := storekit.AuditEvent(ctx, tx, "create", "assurance_resolution", resolutionID,
-			map[string]any{
-				"exception_id": exceptionID.String(),
-				slotOutcome:    in.Outcome,
-			})
-		if err != nil {
-			return err
-		}
-		// A surface counting open findings has to know one was answered, and
-		// WHICH KIND of answer it was: the two suppressing outcomes hide the
-		// finding, and a consumer treating all six alike would keep showing
-		// something a contact has already dealt with.
-		//
-		// The reason does not ride along. It is prose one contact wrote for
-		// another, and a subscriber acting on it is acting on something the
-		// author may edit.
-		event := crmcontracts.PublicEventForecastExceptionResolved{
-			ExceptionId: openapi_types.UUID(exceptionID),
-			Outcome:     crmcontracts.PublicEventForecastExceptionResolvedOutcome(in.Outcome),
-			ActorUserId: openapi_types.UUID(actor.UserID),
-			ExpiresAt:   settled,
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, actor.UserID, event)
-	})
+	auditID, err := storekit.AuditEvent(ctx, tx, "create", "assurance_resolution", resolutionID,
+		map[string]any{
+			"exception_id": exceptionID.String(),
+			slotOutcome:    in.Outcome,
+		})
+	if err != nil {
+		return err
+	}
+	// A surface counting open findings has to know one was answered, and with
+	// which kind of answer. The two suppressing outcomes hide the finding. A
+	// consumer treating all six alike would keep showing it.
+	//
+	// The reason does not ride along: it is prose the author may edit.
+	event := crmcontracts.PublicEventForecastExceptionResolved{
+		ExceptionId: openapi_types.UUID(exceptionID),
+		Outcome:     crmcontracts.PublicEventForecastExceptionResolvedOutcome(in.Outcome),
+		ActorUserId: openapi_types.UUID(actorID),
+		ExpiresAt:   settled,
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, actorID, event)
 }
 
 // A suppressing answer requires write authority over its subject.
@@ -180,6 +224,9 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	}
 	if signalErr := auth.Require(ctx, subjectKindSignal, principal.ActionUpdate); signalErr == nil {
 		kinds = append(kinds, subjectKindSignal)
+	}
+	if callErr := auth.Require(ctx, "forecast", principal.ActionCreate); callErr == nil {
+		kinds = append(kinds, SubjectKindForecastCall)
 	}
 	if len(kinds) == 0 {
 		return dealErr
@@ -200,6 +247,9 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	if kind == subjectKindSignal {
 		return ensureSignalAnswerable(ctx, tx, subjectID)
 	}
+	if kind == SubjectKindForecastCall {
+		return ensureCallAnswerable(ctx, tx, subjectID)
+	}
 	if kind != subjectKindDeal {
 		return apperrors.ErrNotFound
 	}
@@ -211,11 +261,31 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
 }
 
-// ReviewOutcomes are the answers a viability review takes. A review closes the
-// forecast's question about a deal, so "fixed" with nothing checked would put
-// the deal back in the qualified forecast unseen. Only a reasoned override
-// with an end date, or a reminder that keeps the review open, is accepted.
-func ReviewOutcomes() []string { return []string{OutcomeValueCorrect, OutcomeRemindLater} }
+// ensureCallAnswerable admits the call's own author: an answer about a call
+// is the author saying the number still stands, or that they called again.
+func ensureCallAnswerable(ctx context.Context, tx pgx.Tx, callID ids.UUID) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	var authored bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM forecast_call WHERE id = $1 AND author_id = $2)`,
+		callID, actor.UserID).Scan(&authored); err != nil {
+		return fmt.Errorf("assurance: reading who made the call: %w", err)
+	}
+	if !authored {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+// ReviewOutcomes are the four answers a viability review takes. Revived is
+// confirmed by the review check against the deal's evidence. Closed lost is
+// recorded as not relevant once the deal is lost. An override needs a reason
+// and an end date. A wait keeps the review open.
+func ReviewOutcomes() []string {
+	return []string{OutcomeFixedRecord, OutcomeNotRelevant, OutcomeValueCorrect, OutcomeRemindLater}
+}
 
 func ensureOutcomeFitsReview(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, outcome string) error {
 	var kind string
@@ -227,7 +297,7 @@ func ensureOutcomeFitsReview(ctx context.Context, tx pgx.Tx, exceptionID ids.UUI
 	}
 	return &values.ParseError{
 		Field: slotOutcome, Code: "not_allowed",
-		Message: "a customer review is answered with an override that states a reason and an end date, or with a reminder",
+		Message: "a customer review is answered by reviving the deal, closing it as lost, an override with a reason and an end date, or a wait",
 	}
 }
 
@@ -263,6 +333,15 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 				Message: "a deferral names when it comes back, or it is a dismissal",
 			}
 		}
+		// Refused rather than silently shortened, as an expiry past the ceiling
+		// is. A deferral hides the finding as an expiry does, so it cannot
+		// outlive the fact it rested on either.
+		if in.RemindAt.After(now.Add(MaxSuppression)) {
+			return nil, &values.ParseError{
+				Field: "remind_at", Code: codeOutOfRange,
+				Message: "a finding may be deferred for at most 90 days: a value that was correct in May is a claim about May",
+			}
+		}
 		return noExpiry, nil
 	}
 
@@ -284,7 +363,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	}
 	if !in.ExpiresAt.After(now) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "an expiry in the past suppresses nothing",
 		}
 	}
@@ -293,7 +372,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	// believe the finding stays hidden through the next two quarters.
 	if in.ExpiresAt.After(ceiling) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "a finding may be hidden for at most 90 days: a value that was correct in May is a claim about May",
 		}
 	}

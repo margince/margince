@@ -42,7 +42,13 @@ export type WriteToRecord = Readonly<{
  * written to yet has no thread to resolve an addressee from, so the address
  * the reader pressed is the one the composer offers.
  */
-export type WriteToTarget = WriteToRecord & Readonly<{ address?: string }>;
+export type WriteToTarget = WriteToRecord &
+  Readonly<{
+    address?: string;
+    // Set by an AI verb: the composer drafts on arrival, steered by these
+    // words. An empty string still drafts; only an absent one opens empty.
+    draftIntent?: string;
+  }>;
 
 export type WriteTo = (target: WriteToTarget) => void;
 

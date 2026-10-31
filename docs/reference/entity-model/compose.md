@@ -815,7 +815,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `as_of` | `timestamp with time zone` | yes |  |
 | `auto_change_reversals` | `integer` |  |  |
-| `base_currency` | `text` |  |  |
+| `base_currency` | `currency_code` |  |  |
 | `commitments_due` | `integer`, default `0` | yes |  |
 | `commitments_kept` | `integer`, default `0` | yes |  |
 | `deals_lost` | `integer`, default `0` | yes |  |
@@ -844,7 +844,6 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `team_weekly_review_counts_are_tallies`: `CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (deals_moved >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0))))`
-- `team_weekly_review_currency_check`: `CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$')))`
 - `team_weekly_review_money_names_its_currency`: `CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL))))`
 - `team_weekly_review_name_present`: `CHECK ((btrim(team_name) <> ''))`
 - `team_weekly_review_quality_tallies`: `CHECK ((((proposals_accepted IS NULL) OR (proposals_accepted >= 0)) AND ((proposals_rejected IS NULL) OR (proposals_rejected >= 0)) AND ((auto_change_reversals IS NULL) OR (auto_change_reversals >= 0))))`
@@ -865,7 +864,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `absent` | `text` |  | One of `insufficient_basis`, `insufficient_history`, `not_authorized`. |
-| `base_currency` | `text` | yes |  |
+| `base_currency` | `currency_code` | yes |  |
 | `basis` | `text` |  | One of `manager_call`, `historical_median`. |
 | `coverage_bp` | `bigint` |  |  |
 | `current_open_minor` | `bigint` |  |  |
@@ -890,7 +889,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_coverage_basis_or_absent`: `CHECK (((basis IS NULL) <> (absent IS NULL)))`
 - `team_weekly_review_coverage_basis_whole`: `CHECK (((basis IS NULL) OR ((reference_landing_minor IS NOT NULL) AND (needed_open_minor IS NOT NULL) AND (current_open_minor IS NOT NULL) AND (remaining_to_support_minor IS NOT NULL) AND (coverage_bp IS NOT NULL))))`
 - `team_weekly_review_coverage_coverage_bp_js_safe`: `CHECK (((coverage_bp >= '-9007199254740991'::bigint) AND (coverage_bp <= '9007199254740991'::bigint)))`
-- `team_weekly_review_coverage_currency_check`: `CHECK ((base_currency ~ '^[A-Z]{3}$'))`
+- `team_weekly_review_coverage_currency_check`: `CHECK (((base_currency) ~ '^[A-Z]{3}$'))`
 - `team_weekly_review_coverage_current_open_minor_js_safe`: `CHECK (((current_open_minor >= '-9007199254740991'::bigint) AND (current_open_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_coverage_needed_open_minor_js_safe`: `CHECK (((needed_open_minor >= '-9007199254740991'::bigint) AND (needed_open_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_coverage_period_kind_check`: `CHECK ((period_kind = ANY (ARRAY['month', 'quarter'])))`
@@ -939,7 +938,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `base_currency` | `text` | yes |  |
+| `base_currency` | `currency_code` | yes |  |
 | `best_case_minor` | `bigint` |  |  |
 | `closing_landing_minor` | `bigint` |  |  |
 | `closing_snapshot_id` | `uuid` |  |  |
@@ -965,7 +964,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `team_weekly_review_outlook_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_closing_landing_minor_js_safe`: `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_commit_minor_js_safe`: `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
-- `team_weekly_review_outlook_currency_present`: `CHECK ((btrim(base_currency) <> ''))`
+- `team_weekly_review_outlook_currency_present`: `CHECK ((btrim((base_currency)) <> ''))`
 - `team_weekly_review_outlook_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
 - `team_weekly_review_outlook_measure_with_landing`: `CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))`
 - `team_weekly_review_outlook_opening_landing_minor_js_safe`: `CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))`
@@ -1140,7 +1139,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `as_of` | `timestamp with time zone` | yes | The instant the week was measured to. |
-| `base_currency` | `text` |  |  |
+| `base_currency` | `currency_code` |  |  |
 | `brief_items_acted` | `integer`, default `0` | yes |  |
 | `brief_items_dismissed` | `integer`, default `0` | yes |  |
 | `commitments_due` | `integer`, default `0` | yes |  |
@@ -1186,7 +1185,6 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `uq_weekly_review_user_week`: `UNIQUE (user_id, local_week_start)`
 - `weekly_review_commitments_are_tallies`: `CHECK (((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due)))`
 - `weekly_review_counts_are_tallies`: `CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))`
-- `weekly_review_currency_check`: `CHECK (((base_currency IS NULL) OR (base_currency ~ '^[A-Z]{3}$')))`
 - `weekly_review_learned_at_matches_state`: `CHECK (((NOT (learnings_state IS DISTINCT FROM 'not_run')) = (learned_at IS NULL)))`
 - `weekly_review_learnings_state_check`: `CHECK ((learnings_state = ANY (ARRAY['not_run', 'insufficient_evidence', 'synthesized'])))`
 - `weekly_review_mail_error_length`: `CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500)))`
@@ -1212,7 +1210,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `amount_minor_at_close` | `bigint` |  |  |
-| `currency_at_close` | `text` |  |  |
+| `currency_at_close` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes | The deal, for a link. |
 | `deal_label` | `text` | yes |  |
 | `occurred_at` | `timestamp with time zone` | yes | When it closed or moved. |
@@ -1367,7 +1365,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `base_currency` | `text` | yes |  |
+| `base_currency` | `currency_code` | yes |  |
 | `best_case_minor` | `bigint` |  | Inclusive of commit, which is what the label on the surface must say. |
 | `closing_landing_minor` | `bigint` |  | What the window was landing on when the week closed. |
 | `closing_snapshot_id` | `uuid` |  |  |
@@ -1393,7 +1391,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `weekly_review_outlook_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_closing_landing_minor_js_safe`: `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_commit_minor_js_safe`: `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
-- `weekly_review_outlook_currency_present`: `CHECK ((btrim(base_currency) <> ''))`
+- `weekly_review_outlook_currency_present`: `CHECK ((btrim((base_currency)) <> ''))`
 - `weekly_review_outlook_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
 - `weekly_review_outlook_measure_with_landing`: `CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL))))`
 - `weekly_review_outlook_opening_landing_minor_js_safe`: `CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint)))`

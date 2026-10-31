@@ -40,7 +40,7 @@ seats see every workspace-visible record. A rep also sees its own owner-only con
 none, so a manager sees fewer contacts than a rep. The seed step asserts that relation. The seats
 differ where the screens ask them to:
 
-- the Worklist opens on `scope=mine` for a rep and `scope=team` for a manager;
+- the Worklist opens on `scope=mine` for both seats, and a manager also times the `scope=team` they pick, as `worklist_team`;
 - the analytics screen evaluates over each seat's default scope;
 - mail visible to its participants only is visible to those seats alone;
 - owner-only contacts are visible to their owner alone.

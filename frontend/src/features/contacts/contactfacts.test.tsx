@@ -59,6 +59,29 @@ describe("a contact an import wrote", () => {
   });
 });
 
+// The archived page draws the contact from its own row, so the row's
+// `created_by` is all that can name whom an agent made it for.
+describe("a contact an agent created", () => {
+  const AGENT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+  it("names the colleague the agent worked for and the tool", () => {
+    show("manual", {
+      ...archivedContact,
+      captured_by: AGENT,
+      created_by: {
+        actor_type: "agent",
+        actor_id: AGENT,
+        on_behalf_of_name: "Anna Weber",
+        agent_client: "Claude",
+      },
+    });
+
+    expect(
+      screen.getByText("Made by Claude for Anna Weber"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("the ways to reach a contact in the header", () => {
   const stamp = { source: "manual", captured_by: "human:u-1" } as const;
   const reachable: Contact = {
@@ -118,38 +141,6 @@ describe("the ways to reach a contact in the header", () => {
     show("manual", { ...reachable, primary_email: null });
 
     expect(screen.queryByText(/@brandt\.example/)).toBeNull();
-  });
-
-  it("puts the write and Call icons beside the address and the number", () => {
-    show("manual", reachable);
-
-    expect(
-      screen.getByRole("link", { name: "Write email" }).getAttribute("href"),
-    ).toBe("mailto:dana@brandt.example");
-    expect(
-      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
-    ).toBe(
-      screen.getByRole("link", { name: "+49 30 2222" }).getAttribute("href"),
-    );
-  });
-
-  it("keeps the Call icon and draws no write icon on an archived contact", () => {
-    show("manual", { ...reachable, archived_at: "2026-08-14T09:00:00Z" });
-
-    expect(screen.queryByRole("link", { name: "Write email" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Write email" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Call" })).toBeInTheDocument();
-  });
-
-  it("draws neither icon without an address or a number", () => {
-    show("manual", {
-      ...reachable,
-      primary_email: null,
-      phones: [],
-    });
-
-    expect(screen.queryByRole("link", { name: "Write email" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
   });
 });
 

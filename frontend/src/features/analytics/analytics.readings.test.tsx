@@ -242,7 +242,7 @@ describe("a forecast tile's door", () => {
     );
 
     const door = screen.getByRole("link", { name: en["stat.open"] });
-    expect(door.getAttribute("href")).toBe("#/deals?forecast_category=commit");
+    expect(door.getAttribute("href")).toBe("/#/deals?forecast_category=commit");
   });
 
   // Through the strip, because the decision that matters is the strip's. It
@@ -269,10 +269,10 @@ describe("a forecast tile's door", () => {
     // a slot per category whether a row came back for it or not. A category
     // with no figure still has somewhere to go.
     expect(doors).toEqual([
-      "#/deals?forecast_category=commit",
-      "#/deals?forecast_category=best_case",
-      "#/deals?forecast_category=pipeline",
-      "#/deals?forecast_category=omitted",
+      "/#/deals?forecast_category=commit",
+      "/#/deals?forecast_category=best_case",
+      "/#/deals?forecast_category=pipeline",
+      "/#/deals?forecast_category=omitted",
     ]);
   });
 

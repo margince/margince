@@ -51,6 +51,7 @@ Sales and data settings in Margince each have one page.
 - Change deal stages: **Pipelines**.
 - Lead origins, reasons to drop a lead, and the first-reply target: **Lead handling**.
 - Where a deal came from: **Acquisition sources**.
+- The stages a partner program moves through: **Partners**.
 - Won and lost questions: **Outcome reviews**.
 - Add a custom field: **Fields**. Rename a tag on every record: **Tags**.
 - The price list, rate card and offer templates: **Products and offers**.
@@ -117,6 +118,8 @@ The Company profile page in Settings (group **Company**) holds your own company'
 
 The company's name is the **Company name** row under **Business context**. Saving it there also renames the installation, so sign-in, offers and the data reset show the new name. **Installation** and **Currency** hold the time zone and base currency, which Admin and Ops change. On the **Installation** card, three **Calling** switches (**WhatsApp chat**, **Telegram chat** and **Zalo chat**) show or hide the chat links beside phone numbers. All three are on by default, and only Admin and Ops can change them. See [How do I call a contact?](records.md#how-do-i-call-a-contact).
 
+The **Show individual performance** switch there decides whether anyone sees a colleague's figures. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
+
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
 **Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate usually starts today or later. A past date works in two cases: the currency has no rate yet, or the date is before its first rate. A rate dated today can be corrected the same day. An older rate never changes, so a new rate never changes a figure that a past month already had.
@@ -154,9 +157,9 @@ Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license
 
-The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it. **Roles and permissions** also holds **Shared merge reviews**, off at the start, which only an admin can turn on. Then an owner of one duplicate contact may also merge the copies their colleagues own; see [what a merge keeps](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
+The Members, Teams, Roles and permissions, and Seats and license pages sit in the Settings group *People*. There is one page each: the list of members, the list of teams, the roles, and the seat count with the license beside it. **Roles and permissions** also holds **Shared merge reviews**, off at the start, which only an admin can turn on. Then an owner of one contact in a group of possible duplicates may merge the whole group, with the copies their colleagues own. Two possible duplicates need no setting: each owner may merge their own record into the other. See [what a merge keeps](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge).
 
-**Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record.
+**Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 
 **Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
 
@@ -205,6 +208,7 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   target, which is off by default. Origins add or take away score points.
 - **Acquisition sources**: the business channels a deal can come from. Lead
   origins, which record where a lead came from, are separate.
+- **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).
 - **Outcome reviews**: questions a seller answers when a deal is won or lost.
   There is one set for won and one for lost.
 - **Responsibility roles**: what a colleague or team looks after on a
@@ -281,9 +285,7 @@ The Knowledge page in Settings (group **Data**) holds your company's **Document 
 
 The **Margince handbook** is always one of them. It is filed with every installation and updated with each release. **Data import** is its own page in the same group.
 
-To ask a document set a question, open the command palette with ⌘K (Ctrl+K) and choose **Ask your documents**.
-
-See [Documents and files](documents-and-files.md#document-sets--asking-your-documents-questions).
+To ask a document set a question, open the command palette with ⌘K (Ctrl+K) and choose **Ask your documents**. See [Documents and files](documents-and-files.md#document-sets--asking-your-documents-questions).
 
 ## Privacy and retention
 
@@ -303,9 +305,7 @@ Between them they hold:
   whether they have been told yet.
 - **Audit log**: every action, and who did it.
 
-Admin and Ops can see Retention and the **Held** list. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked.
-
-All the detail is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
+Admin and Ops can see Retention and the **Held** list. The audit log and privacy requests each need their own permission. Only the Admin role holds them by default, because they name everyone who acted and everyone who asked. All the detail is in [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
 ## System health, Data import, and Reset
 

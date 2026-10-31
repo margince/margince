@@ -47,6 +47,7 @@ export function checkLabel(
     deal_viability: "review.dealViability",
     commit_unpriced: "review.commitUnpriced",
     stage_exit_unmet: "review.stageExitUnmet",
+    forecast_call_moved: "review.forecastCallMoved",
   };
   return (known[type] ?? "review.unknownCheck") as Parameters<
     ReturnType<typeof useT>

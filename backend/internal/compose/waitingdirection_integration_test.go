@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -94,7 +95,7 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			if applied, err := e.Activities.SetOwedVerdict(judge, id, activities.OwedVerdictAsksUs, "test-rules", at); err != nil || !applied {
 				t.Fatalf("request: %t %v", applied, err)
 			}
-			waiting, cut, err := (attentionWaiting{store: e.Activities, contacts: e.Contacts}).Unanswered(e.Admin(), at.Add(time.Hour), nil)
+			waiting, cut, err := (attentionWaiting{store: e.Activities, contacts: e.Contacts}).Unanswered(e.Admin(), at.Add(time.Hour), attention.WaitingFor{})
 			if err != nil || cut {
 				t.Fatalf("waiting: truncated=%t err=%v", cut, err)
 			}

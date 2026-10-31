@@ -111,7 +111,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(req.Scope), req.Filters); err != nil {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(req.Scope), groupBy, req.Filters); err != nil {
 			return err
 		}
 		var args []any
@@ -139,6 +139,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 			}
 			out.excluded = &n
 			where = append(where, maskClauses...)
+		}
+		if err := requireNoLoneColleagueIn(ctx, tx, out.frame, contributorsSQL(spec, where, dimensionExprs(spec, groupBy)), args); err != nil {
+			return err
 		}
 		// Bound separately from `args`, which stays the unbound slice the count
 		// below binds its own statement from. Binding appends a value per token
@@ -270,6 +273,10 @@ var identShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)
 const (
 	// reportZoneToken stands in for the installation timezone's bind position.
 	reportZoneToken = "<<installation-timezone>>"
+	// reportChanceToken stands in for the chance a deal aliased t in stage s is
+	// weighted by. It is the forecast's chance in use, or the typed one while
+	// self-correction is off (forecastchancetable.go).
+	reportChanceToken = "<<forecast-chance:t,s>>"
 	// reportBaseCurrencyToken stands in for the installation base currency's
 	// bind position.
 	reportBaseCurrencyToken = "<<installation-base-currency>>"
@@ -352,6 +359,12 @@ func bindReportTokens(
 		}
 		sql = strings.ReplaceAll(sql, token, clause)
 		return nil
+	}
+	if err := bindScope(reportChanceToken, func() (string, error) {
+		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
+		return table.sqlExpr("t", "s", arg), err
+	}); err != nil {
+		return "", nil, err
 	}
 	if err := bindScope(reportDealScopeToken, func() (string, error) { return auth.ScopeClauseFor(ctx, tableDeal, "d", arg) }); err != nil {
 		return "", nil, err

@@ -17,14 +17,14 @@ import (
 // same grants and write the same audit row. It never carries a margin tier.
 type partnerSetUpAdapter struct{ store *contacts.Store }
 
-func (a partnerSetUpAdapter) Check(ctx context.Context, companyID ids.UUID) error {
-	return a.store.CheckPartnerSetUp(ctx, ids.From[ids.CompanyKind](companyID))
+func (a partnerSetUpAdapter) Check(ctx context.Context, companyID ids.UUID, stage *string) error {
+	return a.store.CheckPartnerSetUp(ctx, ids.From[ids.CompanyKind](companyID), stage)
 }
 
 func (a partnerSetUpAdapter) SetUp(ctx context.Context, companyID ids.UUID, fields agents.PartnerSetUpFields) (json.RawMessage, error) {
 	partner, err := a.store.UpsertPartner(ctx, contacts.UpsertPartnerInput{
 		CompanyID:         ids.From[ids.CompanyKind](companyID),
-		PartnerRole:       fields.Role,
+		PartnerKinds:      &fields.Kinds,
 		RelationshipStage: fields.Stage,
 		NextStep:          fields.NextStep,
 		NextStepDueAt:     fields.NextStepDueAt,

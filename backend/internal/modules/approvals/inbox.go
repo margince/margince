@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The inbox read side: the store row shape and the List/Get queries.
-// Every read here runs through decidable (authority.go), so triage
+// Every read here runs through decidableRows (decidable.go), so triage
 // visibility and the decision gate can never drift apart.
 
 package approvals
@@ -77,6 +77,7 @@ type row struct {
 	// StagedInConversationOf is the colleague whose own live conversation with
 	// an AI client staged this, nil for any other staging.
 	StagedInConversationOf *ids.UUID
+	ContextDigest          *string
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, staged_by_connection,
@@ -84,7 +85,7 @@ const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, stage
 	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
 	bundle_id, evidence, effect_failed_at, effect_failure, effect_ran_at, requested_decider_id,
-	staged_in_conversation_of`
+	staged_in_conversation_of, context_digest`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
@@ -93,7 +94,7 @@ func scan(r pgx.Row) (row, error) {
 		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
 		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure, &a.EffectRanAt, &a.RequestedDecider,
-		&a.StagedInConversationOf)
+		&a.StagedInConversationOf, &a.ContextDigest)
 	return a, err
 }
 
@@ -124,10 +125,8 @@ func (a row) PendingAt(now time.Time) bool {
 // of a caller's inbox.
 const inboxBatch = 200
 
-// PendingScanCap bounds how many staged rows PendingForTarget scans for one
-// record. Decidability is a per-row probe, so an unbounded target would make
-// a single record page pay for the whole backlog. A caller that counts a capped
-// result must read a full one as "this many or more"; CountPending is exact.
+// PendingScanCap bounds how many proposals PendingForTarget lists for one
+// record. Its Total still counts every row past the cap.
 const PendingScanCap = inboxBatch
 
 // statusPending is the status column value a staged, undecided row carries.
@@ -252,12 +251,11 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 }
 
 // scanInbox walks the whole table newest-first and filters each keyset batch
-// through the per-row decidability probe.
+// through the decidability probe.
 //
-// Decidability is role/target/row-scope-shaped, not expressible as one WHERE
-// without joining every object grant — so it runs in memory, and the scan
-// pages rather than taking one wide LIMIT: a burst of undecidable stagings
-// must never starve older visible rows out of a caller's inbox.
+// Decidability is role/target/row-scope-shaped, not one `WHERE` without joining
+// every object grant, so it is asked of each batch. The scan pages rather than
+// taking one wide LIMIT, so undecidable stagings cannot starve older rows out.
 //
 // It fills one row PAST the display limit so has_more is a fact rather than a
 // guess; that row is then dropped, and its existence is what the flag reports.
@@ -292,15 +290,40 @@ func walkInbox(ctx context.Context, tx pgx.Tx, in ListInput, start *keysetStart,
 	}
 }
 
-// inboxProbe is the per-row eligibility every inbox read asks: the row is in
-// the requested scope, and p could decide it now.
-func inboxProbe(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput) func(row) (bool, error) {
-	return func(a row) (bool, error) {
-		if !requestedInScope(a, p.UserID, in) {
-			return false, nil
-		}
-		return decidable(ctx, tx, p, a)
+// inboxProbe is the eligibility every inbox read asks of a batch, by position.
+// A row is eligible when it is in the requested scope and p could decide it now.
+func inboxProbe(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput) batchProbe {
+	return func(batch []row) ([]bool, error) {
+		return askWhere(batch, func(a row) bool { return requestedInScope(a, p.UserID, in) },
+			func(rows []row) ([]bool, error) { return decidableRows(ctx, tx, p, rows) })
 	}
+}
+
+// batchProbe answers a question about each row of a batch, by position.
+type batchProbe func([]row) ([]bool, error)
+
+// askWhere asks probe about the rows keep admits and refuses the rest, so a
+// row an in-memory test refuses never reaches a statement.
+func askWhere(batch []row, keep func(row) bool, probe batchProbe) ([]bool, error) {
+	var kept []row
+	var at []int
+	for i, a := range batch {
+		if keep(a) {
+			kept, at = append(kept, a), append(at, i)
+		}
+	}
+	out := make([]bool, len(batch))
+	if len(kept) == 0 {
+		return out, nil
+	}
+	answers, err := probe(kept)
+	if err != nil {
+		return nil, err
+	}
+	for j, i := range at {
+		out[i] = answers[j]
+	}
+	return out, nil
 }
 
 // admitInboxRead admits a human-backed caller and binds their mutes, so every
@@ -396,19 +419,13 @@ func approvalPageQuery(in ListInput, from *keysetStart) (string, []any) {
 // appends the rows that pass, stopping the moment limit is met (full = true)
 // so a burst of undecidable stagings cannot starve older visible rows out of
 // the caller's inbox.
-//
-// The probe is a parameter because the two readers differ in exactly one half:
-// the inbox asks the whole decidable predicate per row, while a target-scoped
-// read has already established that one target's visibility for every row and
-// asks only the per-kind grants.
-func appendDecidable(batch, out []row, limit int, visible func(row) (bool, error)) ([]row, bool, error) {
-	for i := range batch {
-		a := batch[i]
-		ok, err := visible(a)
-		if err != nil {
-			return out, false, err
-		}
-		if !ok {
+func appendDecidable(batch, out []row, limit int, visible batchProbe) ([]row, bool, error) {
+	answers, err := visible(batch)
+	if err != nil {
+		return out, false, err
+	}
+	for i, a := range batch {
+		if !answers[i] {
 			continue
 		}
 		out = append(out, a)

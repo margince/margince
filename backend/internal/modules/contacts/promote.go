@@ -45,7 +45,7 @@ func ParsePromoteTrigger(raw string) (PromoteTrigger, error) {
 		return tr, nil
 	}
 	return "", &values.ParseError{
-		Field: "trigger", Code: "invalid_promote_trigger",
+		Field: fieldTrigger, Code: "invalid_promote_trigger",
 		Message: "trigger is one of inbound_reply, meeting_booked, meeting_held, human_qualify",
 	}
 }
@@ -68,6 +68,9 @@ type PromoteLeadInput struct {
 	// Nil attaches no precondition, so a REST caller and an agent whose
 	// approval carried no version spell the call the same way.
 	IfVersion *int64
+	// CreateCompany links or creates the company a typed name names when
+	// nothing else backs it; see promotionEmployer.
+	CreateCompany bool
 	// intoCandidate merges the lead into the contact the caller locked, even
 	// when that contact shares only a LinkedIn profile with it. Unexported: only
 	// a door converting the lead it was refused over sets it.
@@ -252,48 +255,44 @@ func emitLeadContactEvent(ctx context.Context, tx pgx.Tx, leadAuditID ids.UUID, 
 }
 
 // promotableLead loads the lead and enforces every promotion guard:
-// visibility, the once-only rule, live status, minimal identity, and
-// in-scope evidence. Archived leads resolve here so a re-promote answers
-// 409 with the outcome pointer instead of a misleading 404; a
-// disqualified (archived, unpromoted) lead stays 404 like any archived
-// row.
-func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput) (crmcontracts.Lead, error) {
+// visibility, the once-only rule, live status, minimal identity and evidence.
+// It returns the evidence the trigger rests on. Archived leads resolve here, so
+// a re-promote answers 409 with the outcome pointer instead of a 404. A
+// disqualified (archived, unpromoted) lead stays 404 like any archived row.
+func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput) (crmcontracts.Lead, *ids.ActivityID, error) {
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, nil, err
 	}
 	// An internal read that builds the promoted contact; its result is not
 	// returned to the wire as a lead, so it carries no custom columns (nil).
 	lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
-		return crmcontracts.Lead{}, fmt.Errorf("read lead before promote: %w", err)
+		return crmcontracts.Lead{}, nil, fmt.Errorf("read lead before promote: %w", err)
 	}
 	if lead.Status == crmcontracts.LeadStatusPromoted {
 		e := &AlreadyPromotedError{}
 		if lead.PromotedContactId != nil {
 			e.ContactID = ids.From[ids.ContactKind](ids.UUID(*lead.PromotedContactId))
 		}
-		return crmcontracts.Lead{}, e
+		return crmcontracts.Lead{}, nil, e
 	}
 	if lead.ArchivedAt != nil {
-		return crmcontracts.Lead{}, apperrors.ErrNotFound
+		return crmcontracts.Lead{}, nil, apperrors.ErrNotFound
 	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, id.UUID); err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, nil, err
 	}
 	// Read through the same derivation the ladder matches on, not through a
 	// nil check: a full_name that is present and empty passes `!= nil` and
 	// names nobody, so such a lead promotes into a contact with no name at all.
 	if leadIdentityName(lead) == "" {
-		return crmcontracts.Lead{}, &PromoteNeedsIdentityError{}
+		return crmcontracts.Lead{}, nil, &PromoteNeedsIdentityError{}
 	}
-	if in.EvidenceActivityID != nil {
-		// The evidence must be a real, in-scope activity — a promotion
-		// justified by a record the promoter cannot see is not evidence.
-		if err := auth.EnsureActivityVisible(ctx, tx, in.EvidenceActivityID.UUID); err != nil {
-			return crmcontracts.Lead{}, err
-		}
+	evidence, err := promotionEvidence(ctx, tx, id, in)
+	if err != nil {
+		return crmcontracts.Lead{}, nil, err
 	}
-	return lead, nil
+	return lead, evidence, nil
 }
 
 // promoteTarget resolves where the lead lands: the §1.3 dedupe path — a
@@ -312,7 +311,7 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // other contact answers promoteTargetMovedError, because locking it now would
 // take the lead's lock before the contact's. intoLocked merges into locked when
 // the ladder names no contact, for a lead that shares only a LinkedIn profile.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, lanes ContactCandidate, intoLocked bool, merged *bool) (ids.ContactID, map[string]any, error) {
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, employer EmployerChoice, by string, locked ids.ContactID, lanes ContactCandidate, intoLocked bool, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
@@ -352,11 +351,11 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		return locked, mergeFields, merr
 	}
 
-	spec := promotionContactSpec(lead, name, by)
+	spec := promotionContactSpec(lead, employer, name, by)
 	if spec.Acquisition, err = promotionAcquisition(ctx, tx, lead); err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	id, err := createContact(ctx, tx, match, spec)
+	id, err := createContact(ctx, tx, s, match, spec)
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}
@@ -388,7 +387,7 @@ func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcon
 		return nil, fmt.Errorf("lock merge-target contact: %w", err)
 	}
 	// A fill-only decision read, never the wire — core columns suffice.
-	current, err := readContact(ctx, tx, contactID, storekit.LiveOnly, nil)
+	current, err := readContactRow(ctx, tx, contactID, storekit.LiveOnly, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read merge-target contact: %w", err)
 	}

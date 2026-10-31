@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -112,6 +113,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		}
 		where = append(where, entityWhere...)
 	}
+	if in.LinkedToDeals != nil {
+		where = append(where, sprintf(
+			"EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id AND on_deal.deal_id = ANY ($%d::uuid[]))",
+			arg(in.LinkedToDeals)))
+	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
 	}
@@ -169,16 +175,25 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
 	if in.Kind != nil {
-		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
+		where = append(where, kindPredicate(*in.Kind, arg))
 	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
+	}
+	if in.SourceSystem != nil {
+		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
+	}
+	if in.AnswersThem {
+		where = append(where, answersThemSQL)
 	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
 	}
 	if in.UnassignedQueue {
 		where = append(where, unassignedQueueClause())
+	}
+	if in.TeamQueueOf != nil {
+		where = append(where, teamQueueClause(in.TeamQueueOf, arg))
 	}
 	if clause := onMeetingOfClause(in.OnMeetingOf, arg); clause != "" {
 		where = append(where, clause)
@@ -203,7 +218,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 // add, since the content gate is discover and audience. Repeating the full gate
 // doubled the statement Postgres plans.
 func dueRemindersArm(ctx context.Context, in ListActivitiesInput, gated bool, arg func(any) int) (string, error) {
-	if !in.RemindersDue && !in.OrRemindersDue {
+	if !in.RemindersDue && !in.OrRemindersDue && !in.ExceptRemindersDue {
 		return "", nil
 	}
 	reminders := dueReminderClause("a", sprintf("$%d", arg(ReminderReader(ctx))), reminderClockOf(in), arg)
@@ -271,7 +286,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	where = append(where, occurredWindowClauses(in, arg)...)
 	if in.OpenStatusOnly {
-		where = append(where, openMeetingStatusSQL)
+		where = append(where, OpenMeetingStatusSQL)
 	}
 	return where
 }
@@ -309,4 +324,13 @@ func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+}
+
+// kindPredicate spells a known kind as a literal, so a generic plan keeps the
+// partial indexes keyed on kind. Any other value stays bound.
+func kindPredicate(kind string, arg func(any) int) string {
+	if known := crmcontracts.ActivityKind(kind); known.Valid() {
+		return "a.kind = '" + string(known) + "'"
+	}
+	return sprintf("a.kind = $%d", arg(kind))
 }

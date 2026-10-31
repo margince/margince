@@ -9,6 +9,21 @@ type Readings = components["schemas"]["ForecastReadings"];
 type Landing = NonNullable<Readings["landing"]>;
 type Sufficiency = NonNullable<Readings["sufficiency"]>;
 
+// The central 80% of finishes under the chances in use. It says nothing about
+// whether the chances are right, so it never brackets the landing in words.
+export type ForecastRange = Readonly<{ lowMinor: number; highMinor: number }>;
+
+// Both ends or neither: one end alone is not a range a reader can act on.
+export function rangeOf(
+  lowMinor: number | undefined,
+  highMinor: number | undefined,
+): ForecastRange | undefined {
+  if (lowMinor === undefined || highMinor === undefined) return undefined;
+  // Equal ends mean nothing is left to decide, and the landing already says it.
+  if (lowMinor === highMinor) return undefined;
+  return { lowMinor, highMinor };
+}
+
 // Basis points to whole percent, which is the only rounding this surface does.
 //
 // The server sends basis points so it chooses no rounding for its clients; a
@@ -25,7 +40,16 @@ export function LandingCard({
   landing,
   currency,
   locale,
-}: Readonly<{ landing: Landing; currency: string; locale: Locale }>) {
+  range,
+  onOpenDeals,
+}: Readonly<{
+  landing: Landing;
+  currency: string;
+  locale: Locale;
+  range?: ForecastRange;
+  // The deals and chances the range was drawn from, where the page holds them.
+  onOpenDeals?: () => void;
+}>) {
   const t = useT();
   // Compact, because a slot of a strip is about a hundred points wide and a
   // full amount clips there — and a WORD where the pair cannot be said as money
@@ -65,7 +89,23 @@ export function LandingCard({
         narrow="row"
         label={t("forecast.landing")}
         value={money(landing.amount_minor)}
-        detail={detail}
+        detail={
+          range ? (
+            <>
+              <span>{detail}</span>
+              <span>
+                {t("forecast.range", {
+                  low: money(range.lowMinor),
+                  high: money(range.highMinor),
+                })}
+              </span>
+            </>
+          ) : (
+            detail
+          )
+        }
+        basis={range && <p>{t("forecast.rangeBasis")}</p>}
+        onOpen={range ? onOpenDeals : undefined}
       />
 
       {/* Its OWN heading, not the card's: the caveat sat under a repeat of

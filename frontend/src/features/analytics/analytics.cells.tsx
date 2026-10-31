@@ -3,6 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Meter } from "../../design-system/readings";
 import { formatNumber } from "../../format/format";
 import { useLocale } from "../../i18n";
@@ -31,9 +32,9 @@ export function CountLink({
 }: Readonly<{ count: number; href: string; title: string }>) {
   const { locale } = useLocale();
   return (
-    <a className="link-button" href={href} title={title}>
+    <AppLink className="link-button" href={href} title={title}>
       {formatNumber(count, locale)}
-    </a>
+    </AppLink>
   );
 }
 

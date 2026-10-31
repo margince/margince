@@ -34,6 +34,12 @@ const RUN: Assurance = {
     { source: "offers", state: "checked" },
     { source: "calendar", state: "not_connected" },
   ],
+  freshness: {
+    state: "current",
+    changed_deals: 0,
+    changed_signals: 0,
+    workspace_changed: false,
+  },
 };
 
 function check(over: Partial<InputCheck>): InputCheck {
@@ -53,6 +59,7 @@ function check(over: Partial<InputCheck>): InputCheck {
     status: "open",
     first_seen_at: "2026-07-12T06:00:00Z",
     last_seen_at: "2026-07-14T06:00:00Z",
+    inputs_changed: false,
     ...over,
   };
 }
@@ -151,6 +158,33 @@ export const NothingToCheck: Story = {
           ],
         },
         [],
+      ),
+    );
+    return (
+      <StoryProviders>
+        <ForecastReview />
+      </StoryProviders>
+    );
+  },
+};
+
+// A deal changed after the run, and its finding and the verdict say so. The
+// verdict loses its tone until the next run reads the change.
+export const OutOfDate: Story = {
+  render: () => {
+    installFetchStub(
+      routes(
+        {
+          ...RUN,
+          freshness: {
+            state: "out_of_date",
+            changed_deals: 1,
+            changed_signals: 0,
+            workspace_changed: false,
+            changed_since: "2026-07-14T10:30:00Z",
+          },
+        },
+        FINDINGS.map((finding, i) => ({ ...finding, inputs_changed: i === 0 })),
       ),
     );
     return (

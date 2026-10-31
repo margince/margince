@@ -67,7 +67,7 @@ describe("ProjectsScreen", () => {
     // The row is a link to the project's own page.
     expect(
       screen.getByRole("link", { name: /CRM rollout/ }).getAttribute("href"),
-    ).toBe("#/projects/pr-1");
+    ).toBe("/#/projects/pr-1");
   });
 
   it("narrows to one phase through the server", async () => {

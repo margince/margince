@@ -9,7 +9,7 @@ import type { components } from "../../../api/schema";
 import { EntityRef } from "../../../components/entityref";
 import { FieldRow } from "../../../design-system/fieldgrid";
 import { Popover } from "../../../design-system/popover";
-import { provenanceOf } from "../../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../../design-system/provenanceof";
 import { FieldGuard } from "../../../design-system/rbac";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
@@ -29,6 +29,10 @@ import {
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
 import { writtenByLabel } from "../../../lib/leadorigins";
+import {
+  lostReasonWords,
+  useLossReasons,
+} from "../../../lib/lossreasons.queries";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
@@ -65,9 +69,11 @@ export type DealIdentity = Partial<
     | "source"
     | "imported_from"
     | "captured_by"
+    | "created_by"
     | "author"
     | "status"
     | "lost_reason"
+    | "lost_reason_code"
   >
 > &
   WonWithoutContract;
@@ -150,12 +156,15 @@ export function DealRecordRows({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(
-                deal.captured_by,
-                viewerId,
-                deal.author,
-                deal.source,
-                deal.imported_from,
+              provenance={withCreator(
+                provenanceOf(
+                  deal.captured_by,
+                  viewerId,
+                  deal.author,
+                  deal.source,
+                  deal.imported_from,
+                ),
+                deal.created_by,
               )}
             />
           }
@@ -180,6 +189,7 @@ export function DealRecordRows({
 // won, a loss says why.
 function ClosingRow({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
   const t = useT();
+  const reasons = useLossReasons(deal.status === "lost").data;
   if (deal.status === "won" && deal.won_without_contract_reason) {
     return (
       <FieldRow label={t("deals.winReason")}>
@@ -187,10 +197,11 @@ function ClosingRow({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
       </FieldRow>
     );
   }
-  if (deal.status === "lost" && deal.lost_reason) {
+  const lost = lostReasonWords(deal, reasons);
+  if (deal.status === "lost" && lost) {
     return (
       <FieldRow label={t("deals.lostReason")}>
-        <LostReasonFact reason={deal.lost_reason} />
+        <LostReasonFact reason={lost} />
       </FieldRow>
     );
   }

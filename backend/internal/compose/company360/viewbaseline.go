@@ -171,16 +171,15 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 		out.DealStageMoves = &moves
 	}
 
-	// The same decidable set the approvals section already read: counting it
-	// again would run the whole scan and its per-kind grant checks twice
-	// against one account in one transaction.
-	staged, triageable, err := a.pendingApprovals()
+	// The section's list stops at its scan cap, so the figure is the total the
+	// same walk counted past it. That read decides whether the reader may
+	// triage here at all.
+	_, total, triageable, err := a.pendingApprovals()
 	if err != nil {
 		return out, err
 	}
 	if triageable {
-		count := len(staged)
-		out.PendingProposals = &count
+		out.PendingProposals = &total
 	}
 
 	return out, nil

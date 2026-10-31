@@ -7,11 +7,11 @@ import { Panel } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
 import { useLocale, useT } from "../../i18n";
 import {
-  metricLabel,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
 } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 // Every metric of an evaluation as one table, folded under the charts: actual,
 // target where any has one, and coverage. On a pane, like the charts above it.
@@ -23,6 +23,7 @@ export function MetricsTable({
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const amount = (value: number | null | undefined, unit: string) =>
     reportingAmount(value, unit, evaluation.context.currency, locale);
@@ -42,7 +43,7 @@ export function MetricsTable({
                   variant="link"
                   onClick={() => onEvidence(metric.evidence)}
                 >
-                  {metricLabel(metric.id, t)}
+                  {metricName(metric.id)}
                 </Button>
               ),
             },

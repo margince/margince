@@ -20,8 +20,7 @@
 }
 .record-split-details,
 .record-split-sheet {
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   min-inline-size: 0;
@@ -116,6 +115,25 @@
   line-clamp: 3;
   overflow: hidden;
 }
+/* The name as its own edit button, in the heading's type at rest and open. The
+   type goes on the button and the box, never the wrapper: the refusal under the
+   box takes the type of what encloses it, and a refusal is not a headline. */
+.record-split-rename {
+  flex: 1;
+  min-inline-size: 0;
+}
+.record-split-rename .record-split-name {
+  padding-inline: var(--space-1);
+  margin-inline: calc(-1 * var(--space-1));
+}
+.record-split-rename .inline-editable {
+  font: inherit;
+  color: inherit;
+}
+.record-split-rename .input {
+  font: var(--fontHeadingLarge);
+  color: inherit;
+}
 .record-split-lines {
   display: flex;
   flex-direction: column;
@@ -129,19 +147,15 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The verbs as one bordered bar of tiles, glyph over word, sharing the width.
-   A glyph-only verb shows its accessible name as the word, so the tile and
-   the screen reader say one thing. The one filled verb runs full width above
-   the tiles; a refusal sentence the verbs point at drops under them. */
+/* The verbs as one row of tiles, glyph over word, sharing the width, with no
+   box of their own. A glyph-only verb shows its accessible name as the word, so
+   the tile and the screen reader say one thing. The one filled verb runs full
+   width above the tiles; a refusal sentence the verbs point at drops under. */
 .record-split-verbs {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 0;
-  padding: 2px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-control);
-  background: var(--bgElevated);
 }
 /* A one-pixel basis keeps every tile on one row in equal widths, however
    narrow the sheet; a wider one wrapped a verb or two onto a ragged second
@@ -173,7 +187,7 @@
   border-color: transparent;
   border-inline-width: 0;
   box-shadow: none;
-  background: var(--bgElevated);
+  background: var(--ground);
   font: var(--fontBodySmall);
   text-align: center;
   white-space: nowrap;
@@ -205,7 +219,7 @@
   background: var(--borderSubtle);
 }
 .record-split-verbs .btn:not(.btn-primary):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 /* One short word under the glyph, on one line in every language; the full
@@ -320,7 +334,7 @@
   display: inline;
   min-inline-size: 0;
   padding: 0;
-  background: var(--pane);
+  background: var(--ground);
   color: var(--textSecondary);
   font-weight: var(--fontWeightRegular);
 }

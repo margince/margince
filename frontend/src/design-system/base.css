@@ -223,8 +223,8 @@
 }
 
 /* The outlined verb: the pane's own ground with a hairline, in the primary
-   ink. Not transparent — on the glow behind a record head a see-through
-   button reads as a label, and four of them as a sentence. */
+   ink. Not transparent: a see-through button reads as a label, and four of
+   them as a sentence. */
 .btn-ghost {
   background: var(--pane);
   /* The hairline, not the control boundary: an outlined verb is a pane with
@@ -232,10 +232,16 @@
      cartoon buttons. The word is what identifies the control (WCAG 1.4.11
      asks the boundary to clear 3:1 only where it is the sole cue), so the
      edge can be as quiet as every other pane's. */
-  border-color: var(--borderSubtle);
+  --ghostEdge: var(--borderSubtle);
+  border-color: var(--ghostEdge);
 }
 .btn-ghost:hover {
   background: var(--bgHover);
+}
+/* Hover recolours the variable, not the border: a ghost drawn borderless or
+   with its own edge keeps it under the pointer. */
+.btn-ghost:hover:not(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+  --ghostEdge: var(--accent);
 }
 /* A button that TOGGLES has to show which way it is set, from `aria-pressed`:
    a selected relationship-graph node drives the detail below it, and has to
@@ -555,7 +561,7 @@ a:not([class]):focus-visible {
 }
 .iconbtn:hover,
 .btn.btn-bare:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .iconbtn:focus-visible,
@@ -659,9 +665,8 @@ kbd {
   max-height: 300px;
   overflow: auto;
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgInset);
   font-family: var(--fontFamilyMono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

@@ -117,6 +117,7 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_existing_contact: "approval.preview.promotionExistingContact",
   promotion_set_origin: "approval.preview.promotionSetOrigin",
   promotion_company_industry: "approval.preview.promotionCompanyIndustry",
+  promotion_company_proposed: "approval.preview.promotionCompanyProposed",
   promotion_duplicate_candidate: "approval.preview.promotionDuplicateCandidate",
   promotion_move_activity: "approval.preview.promotionMoveActivity",
   promotion_remove_duplicate_activity_link:
@@ -248,8 +249,8 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("rel.counterparty");
     case "archive_primary_employer":
       return t("approval.preview.newPrimaryEmployer");
-    case "partner_role":
-      return t("partner.role");
+    case "partner_kinds":
+      return t("partner.kinds");
     case "partner_stage":
       return t("partner.stage");
     case "partner_next_step":

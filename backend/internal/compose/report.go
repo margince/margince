@@ -57,14 +57,10 @@ const (
 	joinStageForWinProbability = "JOIN stage s ON s.id = t.stage_id"
 	colWinProbability          = "s.win_probability"
 
-	// weightedAmountMinorExpr is the REPORT ENGINE's spelling of "weighted
-	// value" (formulas §6, AC-F1): round PER DEAL, half away from zero, so a
-	// roll-up over it equals the sum of its own rows exactly. Shared by every
-	// spec that joins stage for win_probability, so the forecast report and any
-	// other per-stage weighted figure read this one expression. The multiply casts to
-	// numeric first — the contract puts no ceiling on amount_minor below the
-	// bigint bounds, and bigint × smallint overflows before the scaling below
-	// would otherwise widen it.
+	// weightedAmountMinorExpr is the report engine's weighted value (AC-F1):
+	// rounded per deal, half away from zero, so a roll-up equals the sum of its
+	// rows. Every weighted report measure reads it. The multiply
+	// casts to numeric first: bigint × smallint can overflow before the scaling.
 	//
 	// It scales by ×0.01 rather than ÷100, and that is not a style choice.
 	// Numeric multiplication is EXACT — the result scale is the sum of the
@@ -86,7 +82,8 @@ const (
 	// TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit
 	// (weightedvalueparity_integration_test.go), which embed this constant so
 	// an edit here is what runs there.
-	weightedAmountMinorExpr = "round((t.amount_minor::numeric * s.win_probability) * 0.01)::bigint"
+	// reportChanceToken is the forecast's chance in use, learned risk effect included.
+	weightedAmountMinorExpr = "round((t.amount_minor::numeric * " + reportChanceToken + ") * 0.01)::bigint"
 	// fieldWeightedAmountMinor is the API-facing measure name every spec that
 	// defines weightedAmountMinorExpr registers it under.
 	fieldWeightedAmountMinor = "weighted_amount_minor"
@@ -366,6 +363,9 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	if err != nil {
 		return reportOutcome{}, err
 	}
+	if err := refuseUngroupedNativeMoney(spec, groupBy, req.Filters, aggregates); err != nil {
+		return reportOutcome{}, err
+	}
 
 	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
 	if err != nil {
@@ -431,9 +431,6 @@ func buildSelectList(spec reportSpec, groupBy []string, aggregates []reportAggre
 		// Its own refusal: nothing here is out of vocabulary, so the vocabulary
 		// error would name a field the caller never wrote.
 		return nil, nil, &EmptyReportPlanError{}
-	}
-	if err := refuseUngroupedNativeMoney(spec, groupBy, aggregates); err != nil {
-		return nil, nil, err
 	}
 	return columns, selects, nil
 }

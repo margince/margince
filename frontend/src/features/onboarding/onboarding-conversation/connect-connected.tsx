@@ -24,7 +24,7 @@ import {
   useConnectAccount,
 } from "../../../lib/connect-account";
 import type { Service } from "../../../lib/connect-flow-draft";
-import { SERVICE_ICON } from "../../../lib/connect-services";
+import { SERVICE_ICON, SERVICE_WORDS } from "../../../lib/connect-services";
 import {
   accountHealth,
   healthBadge,
@@ -333,11 +333,7 @@ function ConnectedService({
   return (
     <ServiceRow
       icon={SERVICE_ICON[service]}
-      name={t(
-        service === "mail"
-          ? "connectors.svc.newMail"
-          : "connectors.svc.calendar",
-      )}
+      name={t(SERVICE_WORDS[service].name)}
       caption={caption}
       status={{ tone: badge.tone, label: t(badge.label), live: badge.live }}
     />

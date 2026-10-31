@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -50,16 +49,17 @@ func visibleCompanySQL(ctx context.Context, alias string, arg func(any) int) (st
 	return fmt.Sprintf("%s.archived_at IS NULL AND (%s)", alias, scope), nil
 }
 
-const partnerColumns = `company_id, cert_status, partner_role, margin_tier,
+const partnerColumns = `company_id, cert_status, partner_kinds, margin_tier,
 	certified_staff, retention_rate, relationship_stage, next_step, next_step_due_at,
 	served_segments, partner_fit_score, partner_fit_score_computed,
 	partner_fit_override_reason, relationship_health::text, last_contact_at,
-	version, created_at, updated_at, archived_at`
+	version, created_at, updated_at, archived_at,
+	activated_at, activation_basis, activated_by, activation_lead_id, activation_deal_id`
 
 type partnerRow struct {
 	CompanyID         ids.CompanyID
 	CertStatus        string
-	PartnerRole       *string
+	PartnerKinds      []string
 	MarginTier        *string
 	CertifiedStaff    int16
 	RetentionRate     *int16
@@ -79,19 +79,34 @@ type partnerRow struct {
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 	ArchivedAt         *time.Time
+	Activation         partnerActivation
+}
+
+// partnerActivation is the stamp that lets a partner stand on a stage meaning
+// active. The lead and deal are evidence references, not foreign keys.
+type partnerActivation struct {
+	At     *time.Time
+	Basis  *string
+	By     *string
+	LeadID *ids.UUID
+	DealID *ids.UUID
 }
 
 func scanPartner(r pgx.Row) (partnerRow, error) {
 	var p partnerRow
-	err := r.Scan(&p.CompanyID, &p.CertStatus, &p.PartnerRole, &p.MarginTier,
+	err := r.Scan(&p.CompanyID, &p.CertStatus, &p.PartnerKinds, &p.MarginTier,
 		&p.CertifiedStaff, &p.RetentionRate, &p.RelationshipStage, &p.NextStep, &p.NextStepDueAt,
 		&p.ServedSegments, &p.FitScore, &p.FitScoreComputed, &p.FitOverrideReason,
-		&p.RelationshipHealth, &p.LastContactAt, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt)
+		&p.RelationshipHealth, &p.LastContactAt, &p.Version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&p.Activation.At, &p.Activation.Basis, &p.Activation.By, &p.Activation.LeadID, &p.Activation.DealID)
 	return p, err
 }
 
 type UpsertPartnerInput struct {
-	CompanyID         ids.CompanyID
+	CompanyID ids.CompanyID
+	// PartnerKinds replaces the kinds stored. Nil reads PartnerRole, the
+	// deprecated single kind, as a list of one.
+	PartnerKinds      *[]string
 	PartnerRole       string
 	CertStatus        *string
 	MarginTier        *string
@@ -194,6 +209,11 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 	if err := refuseBlankServedSegments(in.ServedSegments); err != nil {
 		return crmcontracts.Partner{}, err
 	}
+	kinds, err := partnerKindsOf(in)
+	if err != nil {
+		return crmcontracts.Partner{}, err
+	}
+	in.PartnerKinds = &kinds
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Partner{}, err
@@ -225,6 +245,10 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 			}
 			in = asFreshProgram(in)
 		}
+		stage, err := resolvePartnerStage(ctx, tx, in)
+		if err != nil {
+			return err
+		}
 		// Before the upsert and under the lock: the statement coalesces every
 		// absent field onto its current value, so what the request actually
 		// moved is only knowable by comparing against the standing row.
@@ -236,7 +260,7 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 		if err != nil {
 			return err
 		}
-		written, err := writePartner(ctx, tx, in, fit, capturedBy, before)
+		written, err := writePartner(ctx, tx, partnerUpsert{in: in, fit: fit, stage: stage, capturedBy: capturedBy}, before)
 		if err != nil {
 			return err
 		}
@@ -247,8 +271,8 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 			}
 			if err := storekit.EmitEvent(ctx, tx, auditID, in.CompanyID.UUID, crmcontracts.PublicEventCompanyUpdated{
 				ChangedFields: map[string]any{
-					eventKeyDelta: map[string]any{"partner": map[string]any{
-						"role": in.PartnerRole, "cert_status": written.row.CertStatus,
+					eventKeyDelta: map[string]any{eventKeyPartner: map[string]any{
+						"role": legacyPartnerRole(kinds), "kinds": kinds, "cert_status": written.row.CertStatus,
 					}},
 				},
 			}); err != nil {
@@ -284,10 +308,20 @@ func resolvePartnerFit(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) (p
 	return applyPartnerFitOverride(current, in.FitScore, in.FitOverrideReason)
 }
 
+// partnerUpsert is one resolved upsert: the request, the fit fold and the stage
+// the row lands on.
+type partnerUpsert struct {
+	in         UpsertPartnerInput
+	fit        partnerFitState
+	stage      partnerStageWrite
+	capturedBy string
+}
+
 // upsertPartnerRow lands the promotion-or-update: absent lifecycle fields
 // keep their current value (coalesce), while the fit triple is always
 // written as resolved — a cleared override must land its NULLs.
-func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit partnerFitState, capturedBy string) (partnerRow, error) {
+func upsertPartnerRow(ctx context.Context, tx pgx.Tx, up partnerUpsert) (partnerRow, error) {
+	in, fit := up.in, up.fit
 	// served_segments keeps its current value only when the field is
 	// absent; pgx maps a nil any to SQL NULL for the coalesce.
 	var segments any
@@ -295,14 +329,14 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		segments = *in.ServedSegments
 	}
 	row := tx.QueryRow(ctx, `
-		INSERT INTO partner (company_id, partner_role, cert_status, margin_tier,
+		INSERT INTO partner (company_id, partner_kinds, cert_status, margin_tier,
 		                     certified_staff, retention_rate, relationship_stage, next_step,
 		                     next_step_due_at, served_segments, partner_fit_score,
 		                     partner_fit_score_computed, partner_fit_override_reason, source, captured_by)
 		VALUES ($1, $2, coalesce($3, 'applied'), $4, coalesce($5, 0), $6,
-		        coalesce($8, 'research'), $9, $10, $11, $12, $13, $14, 'manual', $7)
+		        $16, $9, $10, $11, $12, $13, $14, 'manual', $7)
 		ON CONFLICT (company_id) DO UPDATE SET
-		  partner_role = EXCLUDED.partner_role,
+		  partner_kinds = EXCLUDED.partner_kinds,
 		  cert_status = coalesce($3, partner.cert_status),
 		  margin_tier = CASE WHEN 'margin_tier' = ANY($15) THEN NULL ELSE coalesce($4, partner.margin_tier) END,
 		  certified_staff = CASE WHEN 'gate_metrics' = ANY($15) THEN 0 ELSE coalesce($5, partner.certified_staff) END,
@@ -316,10 +350,10 @@ func upsertPartnerRow(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit
 		  partner_fit_override_reason = $14,
 		  archived_at = NULL
 		RETURNING `+partnerColumns,
-		in.CompanyID, in.PartnerRole, in.CertStatus, in.MarginTier,
-		in.CertifiedStaff, in.RetentionRate, capturedBy,
-		in.RelationshipStage, in.NextStep, in.NextStepDueAt, segments,
-		fit.Score, fit.Computed, fit.OverrideReason, in.Cleared)
+		in.CompanyID, *in.PartnerKinds, in.CertStatus, in.MarginTier,
+		in.CertifiedStaff, in.RetentionRate, up.capturedBy,
+		up.stage.set, in.NextStep, in.NextStepDueAt, segments,
+		fit.Score, fit.Computed, fit.OverrideReason, in.Cleared, up.stage.insert)
 	return scanPartner(row)
 }
 
@@ -350,60 +384,6 @@ func (s *Store) GetPartner(ctx context.Context, companyID ids.CompanyID) (crmcon
 		return err
 	})
 	return out, err
-}
-
-// wirePartner maps the row and withholds nothing. The role's masks are applied
-// by wirePartners around it, which is what a read reaches for: a record mapped
-// here alone carries the margin tier a masked seat may not have.
-func wirePartner(p partnerRow) crmcontracts.Partner {
-	out := crmcontracts.Partner{
-		CompanyId:  openapi_types.UUID(p.CompanyID.UUID),
-		CertStatus: crmcontracts.PartnerCertStatus(p.CertStatus),
-		CreatedAt:  p.CreatedAt,
-		UpdatedAt:  p.UpdatedAt,
-		ArchivedAt: p.ArchivedAt,
-	}
-	version := crmcontracts.RowVersion(p.Version)
-	out.Version = &version
-	if p.PartnerRole != nil {
-		role := crmcontracts.PartnerPartnerRole(*p.PartnerRole)
-		out.PartnerRole = &role
-	}
-	if p.MarginTier != nil {
-		tier := crmcontracts.PartnerMarginTier(*p.MarginTier)
-		out.MarginTier = &tier
-	}
-	stage := crmcontracts.PartnerRelationshipStage(p.RelationshipStage)
-	out.RelationshipStage = &stage
-	out.NextStep = p.NextStep
-	if p.NextStepDueAt != nil {
-		out.NextStepDueAt = &openapi_types.Date{Time: *p.NextStepDueAt}
-	}
-	if p.ServedSegments != nil {
-		segments := p.ServedSegments
-		out.ServedSegments = &segments
-	}
-	out.PartnerFitScore = intPtr(p.FitScore)
-	out.PartnerFitScoreComputed = intPtr(p.FitScoreComputed)
-	out.PartnerFitOverrideReason = p.FitOverrideReason
-	out.RelationshipHealth = p.RelationshipHealth
-	out.LastContactAt = p.LastContactAt
-	metrics := map[string]any{"certified_staff": p.CertifiedStaff}
-	if p.RetentionRate != nil {
-		metrics["retention_rate"] = *p.RetentionRate
-	}
-	out.GateMetrics = &metrics
-	return out
-}
-
-// intPtr widens the DB's smallint to the contract's int without sharing
-// the row's storage.
-func intPtr(v *int16) *int {
-	if v == nil {
-		return nil
-	}
-	w := int(*v)
-	return &w
 }
 
 // MarginTierOf answers what commercial tier a partner company is on, or

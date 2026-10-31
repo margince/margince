@@ -22,6 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// columnSizeBand is the size band's column, which is also its field-history key.
+const columnSizeBand = "size_band"
+
 // readColdStartColumnImages reads the columns an apply may touch, so the audit
 // row can carry what each one WAS. The column writes report only whether they
 // changed something, never what they replaced, so the before image has to be
@@ -29,7 +32,7 @@ import (
 // audit row gives it nothing to diff.
 func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (map[string]any, error) {
 	var displayName string
-	var legalName, industry, description, sizeBand *string
+	var legalName, industry, description, sizeBand, phone, email *string
 	var address crmcontracts.Address
 	// FOR UPDATE, and it is the audit that needs it: the before image and the
 	// apply that follows must describe ONE transaction's work. Read unlocked,
@@ -41,10 +44,10 @@ func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.Com
 	// the row lock second (see its own doc); a caller that reaches this row
 	// lock without it inverts the pair and deadlocks against a human rename.
 	if err := tx.QueryRow(ctx,
-		`SELECT display_name, legal_name, industry, description, size_band,
+		`SELECT display_name, legal_name, industry, description, size_band, phone, email,
 		        address_line1, address_line2, address_region, address_postal_code, address_city, address_country
 		   FROM company WHERE id = $1 FOR UPDATE`,
-		companyID).Scan(&displayName, &legalName, &industry, &description, &sizeBand,
+		companyID).Scan(&displayName, &legalName, &industry, &description, &sizeBand, &phone, &email,
 		&address.Line1, &address.Line2, &address.Region, &address.PostalCode, &address.City, &address.Country); err != nil {
 		return nil, fmt.Errorf("read company column images: %w", err)
 	}
@@ -60,7 +63,7 @@ func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.Com
 	for column, value := range map[string]*string{
 		fieldLegalName: legalName, fieldIndustry: industry,
 		fieldRegisteredAddress: addressLine, fieldOfferSummary: description,
-		"size_band": sizeBand,
+		columnSizeBand: sizeBand, columnCompanyPhone: phone, columnCompanyEmail: email,
 	} {
 		if value == nil {
 			// An empty column reads as an explicit null in the image, never as
@@ -84,7 +87,9 @@ func emptyColdStartColumnImages() map[string]any {
 		fieldIndustry:          nil,
 		fieldRegisteredAddress: nil,
 		fieldOfferSummary:      nil,
-		"size_band":            nil,
+		columnSizeBand:         nil,
+		columnCompanyPhone:     nil,
+		columnCompanyEmail:     nil,
 	}
 }
 

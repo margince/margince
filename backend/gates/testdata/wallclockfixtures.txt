@@ -16,7 +16,7 @@ internal/compose/agentcost_test.go 2
 internal/compose/agenttaskhandle_integration_test.go 1
 internal/compose/aggregateaudience_integration_test.go 8
 internal/compose/aicert/claudeclikill_test.go 1
-internal/compose/analyticsshare_integration_test.go 24
+internal/compose/analyticsshare_integration_test.go 23
 internal/compose/analyticssharehandlers_test.go 4
 internal/compose/analyticssharehttp_integration_test.go 1
 internal/compose/analyticssharestore_test.go 2
@@ -130,6 +130,7 @@ internal/compose/integration/controllerpayloadsweep_integration_test.go 2
 internal/compose/integration/customfields/customfields_vocab_http_integration_test.go 1
 internal/compose/integration/customfields_vocab_integration_test.go 1
 internal/compose/integration/daily_approvals_bench_test.go 1
+internal/compose/integration/daily_backlog_bench_test.go 3
 internal/compose/integration/daily_bench_test.go 1
 internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
@@ -298,6 +299,7 @@ internal/compose/weekly/weeklyrelevance_integration_test.go 1
 internal/compose/weekly/weeklyscorecard_integration_test.go 1
 internal/compose/weeklymetricscoverage_integration_test.go 1
 internal/compose/weeklyplancapacity_integration_test.go 1
+internal/compose/worklistbacklog_integration_test.go 2
 internal/compose/worklistageout_integration_test.go 1
 internal/modules/activities/activityread_test.go 2
 internal/modules/activities/answertouchequivalence_integration_test.go 2
@@ -336,8 +338,10 @@ internal/modules/ai/decisionsummary_integration_test.go 3
 internal/modules/ai/modelfacts_test.go 1
 internal/modules/ai/providerhealthshare_test.go 1
 internal/modules/ai/ratelane_integration_test.go 2
+internal/modules/approvals/batcheligibility_integration_test.go 1
 internal/modules/approvals/lapsemark_integration_test.go 1
 internal/modules/approvals/pendingcount_integration_test.go 2
+internal/modules/approvals/pendingtargetcount_integration_test.go 1
 internal/modules/approvals/sameagent_test.go 2
 internal/modules/assurance/preview_integration_test.go 8
 internal/modules/assurance/runmembership_integration_test.go 2

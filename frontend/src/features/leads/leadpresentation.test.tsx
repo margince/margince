@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { LeadBoard, scoreTone } from "./leadpresentation";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
@@ -117,10 +118,10 @@ describe("lead work-board presentation", () => {
   it("opens a linked company from the card under its own name, without opening the lead", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (request: Request) =>
-        request.url.includes("/v1/companies/c-7")
-          ? jsonOk({ id: "c-7", display_name: "Nordwind Holding SE" })
-          : jsonOk({ rows: [] }),
+      vi.fn(
+        async (request: Request) =>
+          companyNamesAnswer(request.url, { "c-7": "Nordwind Holding SE" }) ??
+          jsonOk({ rows: [] }),
       ),
     );
     renderBoard(
@@ -164,10 +165,10 @@ describe("lead work-board presentation", () => {
   it("drags the lead from anywhere on the card, the company link included", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (request: Request) =>
-        request.url.includes("/v1/companies/c-7")
-          ? jsonOk({ id: "c-7", display_name: "Nordwind Holding SE" })
-          : jsonOk({ rows: [] }),
+      vi.fn(
+        async (request: Request) =>
+          companyNamesAnswer(request.url, { "c-7": "Nordwind Holding SE" }) ??
+          jsonOk({ rows: [] }),
       ),
     );
     renderBoard(

@@ -47,6 +47,7 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:audit-stream":       {KeepImported, "the audit slice records every event"},
 	"cg:webhooks":           {KeepImported, "outside systems decide for themselves, and the payload says the event was imported"},
 	"cg:commissions":        {SkipImported, "a sale an import brings in was priced and paid in the system it came from"},
+	"cg:partner-activation": {SkipImported, "a sale an import brings in happened in the past, and activation is a fact of today"},
 	"cg:stage-evidence":     {SkipImported, "evidence settles what happened now, and imported history is not a new fact"},
 	"cg:deal-room-timeline": {SkipImported, "writes a note about a room that is live today"},
 	"cg:overnight-agent":    {SkipImported, "plans work against the live pipeline, and closed history is not work"},
@@ -59,6 +60,9 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:commitment-settle":  {SkipImported, "an old task update must not settle a commitment kept today"},
 	"cg:capture-enrich":     {SkipImported, "queues a model-backed pass that spends credits on mail nobody just received"},
 	"cg:vcard-ingest":       {SkipImported, "parses a card attached to mail that arrives now"},
+	"cg:assurance-freshness": {
+		KeepImported, "an imported deal or activity is a record the last input check has not read",
+	},
 }
 
 // ImportedDecisionOf answers a group's decision. A group with no entry has none,

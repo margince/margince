@@ -32,10 +32,9 @@
 }
 
 /* App shell — a labeled sidebar collapsing to the canonical 56px rail, and the
- * content column beside it. The chrome is GLASS over the lit ground (DESIGN.md
- * §6), never a dark green column: the sidebar and the strip are the page's own
- * pane with a blur behind it, so rail icons read as ordinary theme tokens
- * rather than white-alpha on a dark ground. */
+ * content column beside it. The chrome is the pane over the page ground
+ * (DESIGN.md §6), never a dark green column, so rail icons read as ordinary
+ * theme tokens rather than white-alpha on a dark ground. */
 
 /* The skip link (WCAG 2.4.1). Off-screen until it has focus, and moved with a
  * transform rather than hidden: `display: none`, `visibility: hidden` and a zero
@@ -96,11 +95,7 @@
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
   box-sizing: border-box;
-  /* The lit ground (DESIGN.md §2): the emerald light behind the sidebar at the
-     top-left, the indigo one at the top-right, painted into the page colour.
-     Declared once in tokens.css, because the buyer's Deal Room stands on the
-     same ground from outside this shell. */
-  background: var(--groundLit);
+  background: var(--bgPage);
   /* `viewport-fit=cover` exposes the horizontal insets too, and this layout is
      the one that applies in landscape — where the notch sits over the sidebar's
      own edge, on top of the brand chip and the column of icons. */
@@ -344,23 +339,19 @@
 }
 
 /* ===== sidebar =====
- * The ground is the pane — glass over the emerald light — in BOTH states, so
- * collapsing to 56px changes the width and never the colour: a sidebar that
- * changed colour on collapse would read as two shells.
+ * The ground is the pane in BOTH states, so collapsing to 56px changes the
+ * width and never the colour: a sidebar that changed colour on collapse would
+ * read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
  * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
  * pinned to the foot. */
 .rail {
-  /* Glass over the glow: the pane's translucent ground with the blur that lets
-     the emerald light behind it show through as a tint rather than as a shape.
-     The two glows are the chrome (DESIGN.md §2) — there is no coloured bar. */
-  background: var(--pane);
-  backdrop-filter: blur(20px);
+  background-color: var(--ground);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
-  border-right: 1px solid var(--paneEdge);
+  border-right: 1px solid var(--groundEdge);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -445,9 +436,8 @@
    axis of their glyphs. */
 .rail.expanded .railhead {
   padding: var(--space-2);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
 }
 /* Collapsed the head is the mark and the marker under it, centred on the 56px
    column's axis, which is the axis every row glyph below stands on too. No card:
@@ -501,7 +491,7 @@
   height: 40px;
   border-radius: var(--r-control);
   overflow: hidden;
-  /* Flat brand emerald, no gradient and no lift: the mark is the one filled
+  /* Flat brand fill, no gradient and no lift: the mark is the one filled
      thing in the chrome. */
   background: var(--accentBrand);
   color: var(--textOnAccent);
@@ -510,7 +500,7 @@
 }
 /* The same slot holding the COMPANY's mark. The chip's own ground goes: what
    stands here is an icon drawn for its own background, or the monogram Avatar
-   tints from the record's identity, and either one on the brand emerald would
+   tints from the record's identity, and either one on the brand fill would
    be a second surface behind a finished mark. The avatar takes the chip's
    square, because a company's icon is drawn square and a circle crops it. */
 .rail .ws-chip-company {
@@ -535,11 +525,16 @@
    faded-out text keeps its intrinsic width and pushes the logomark off centre.
    It is one element, so animating its width is cheap and keeps the brand block
    closing in step with the column. */
+/* One line, whatever the name: an installation name runs to 200 characters,
+   and a head that grew with it pushed every destination below it down. The
+   whole name is the link's tooltip (shellrail.tsx). */
 .rail .ws-name {
   min-width: 0;
   width: auto;
   opacity: 1;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   transition:
     opacity var(--dur-state) var(--ease-in-out),
     width var(--dur-move) var(--ease-out);
@@ -553,10 +548,8 @@
     transition: opacity var(--dur-state) var(--ease-in-out);
   }
 }
-/* Collapsed the name is gone in BOTH axes. Width alone left its block height
-   standing — a name that wraps to two lines expanded held that much air open in
-   the 56px column, so the head's height (and every row under it) depended on how
-   long the installation's name is on a rail nobody can read it in. */
+/* Collapsed the name is gone in BOTH axes. Width alone left its line box
+   standing, air held open under the mark in a column nobody can read it in. */
 .rail.collapsed .ws-name {
   width: 0;
   height: 0;
@@ -725,25 +718,22 @@
   padding: 0;
   justify-content: center;
 }
-/* A pointer resting on a row takes the inset ground the current row is painted
-   in, one step quieter: hover and current are then one gesture read at two
-   strengths rather than two unrelated tints. */
+/* Hover is the current row's tint at one step quieter, so the two read as one
+   gesture at two strengths. */
 .rail .navitem:hover {
-  background: color-mix(in srgb, var(--bgInset) 50%, transparent);
-  color: var(--textPrimary);
+  background: var(--accentLight);
+  color: var(--accentText);
 }
-/* The current row is one more pane on the glass: the pane's ground with the
-   pane's hairline as an EDGE, which is what makes it a surface with a boundary
-   rather than a smudge, and quieter than hover's tint so the two states are
-   never the same gesture read twice.
-   A ground alone is colour-only (WCAG 1.4.1, Level A), so semibold weight
-   goes with it. All of it is neutral: the current row says where the reader
-   is, and the accent is for the action. The opaque inset ground rather than
-   the chip fill, because the row's caption ink does not clear AA on the chip. */
+/* Declared after hover, so a pointer on the current row keeps this. A ground
+   alone is colour-only (WCAG 1.4.1, Level A), so the weight goes with it. */
 .rail .navitem.active {
-  background: var(--bgInset);
-  color: var(--textPrimary);
+  background: var(--accent);
+  color: var(--textOnAccentControl);
   font-weight: var(--fontWeightMedium);
+}
+/* The ring takes the ink: an accent ring vanishes on the accent fill. */
+.rail .navitem.active:focus-visible {
+  outline-color: var(--textOnAccentControl);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -1020,7 +1010,7 @@
   cursor: pointer;
 }
 .pageswitch:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* Pressed, it says so before the sheet arrives — the one frame of feedback a
    touch control owes the thumb that is still on it. */
@@ -1086,7 +1076,6 @@
 }
 .palette {
   width: min(560px, calc(100vw - 40px));
-  background: var(--bgElevated);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   overflow: hidden;
@@ -1149,7 +1138,7 @@
 }
 .palette-row.selected,
 .palette-row:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .palette-row .label,
@@ -1354,18 +1343,11 @@
     /* Here the panel IS a floating object — it hovers over the content rather
        than bounding it — so it takes the chrome the flush sidebar gives up: all
        four sides, the pane's corner, and the one shadow a layer over the page
-       may cast. The ground stays the same glass, so the bar is visibly the
+       may cast. The ground stays the same pane, so the bar is visibly the
        sidebar in its other shape rather than a second surface. */
-    border: 1px solid var(--paneEdge);
+    border: 1px solid var(--groundEdge);
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
-  }
-  /* The current cell takes the inset ground without the desktop row's edge —
-     the same signal `.railmore.active` below uses for a destination that lives
-     in the sheet, so the bar has ONE way of saying "this one". */
-  .rail .navitem.active {
-    background: var(--bgInset);
-    border-color: transparent;
   }
   /* The layer the sheet sits on. It fades in rather than appearing, because the
      page under it does not move and an instant dim reads as a flash. */
@@ -1491,10 +1473,14 @@
   /* A destination inside the More sheet is still the current one; without this
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
-    color: var(--textPrimary);
+    color: var(--textOnAccentControl);
     font-weight: var(--fontWeightMedium);
-    background: var(--bgInset);
+    background: var(--accent);
     border-radius: var(--r-md);
+  }
+  /* Closed only: open, the cell drops its fill and the accent ring shows. */
+  .rail:not(.sheetopen) .railmore.active:focus-visible {
+    outline-color: var(--textOnAccentControl);
   }
 
   /* the sheet: the same element, every destination, thumb-reachable */
@@ -1665,6 +1651,7 @@
      control — a state on a close button would name the wrong thing. */
   .rail.sheetopen .railmore.active {
     background: transparent;
+    color: inherit;
   }
 
   /* the bar floats over the content, and the agent stands above the bar, so the
@@ -1855,7 +1842,6 @@
   padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   max-height: 60vh;
   overflow-y: auto;
@@ -1888,7 +1874,7 @@
    option through `aria-activedescendant` whichever input moved it. */
 .settingssearch-hit.active,
 .settingssearch-hit:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .settingssearch-empty {

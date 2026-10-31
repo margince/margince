@@ -3,6 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { ProviderHealthNotice } from "../../components/ai-provider-health-notice";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -153,12 +154,12 @@ export function TaskDetails({
       ) : null}
       <OutageNote row={row} providers={providers} />
       {canTrace ? (
-        <a
+        <AppLink
           className="t-caption"
           href={callsHrefFor({ [CALL_TASK_PARAM]: row.task })}
         >
           {t("aiTasks.viewCalls")}
-        </a>
+        </AppLink>
       ) : null}
     </div>
   );

@@ -235,7 +235,20 @@ export const RefusedWrite: Story = {
   play: async ({ canvasElement }) => {
     await expandRow(canvasElement, "Lena Hoffmann");
     const drawer = await findRow("Lena Hoffmann");
+    // A close needs the answer and how the identity was checked. Typing only
+    // the answer leaves the verb disabled, so the press wrote nothing and the
+    // story showed no refusal.
     await userEvent.type(within(drawer).getByLabelText(/resolution/i), "done");
+    await userEvent.click(
+      within(drawer).getByRole("combobox", {
+        name: en["privacy.identityCheck"],
+      }),
+    );
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole("option", {
+        name: en["privacy.identityCheck.id_document"],
+      }),
+    );
     await userEvent.click(
       within(drawer).getByRole("button", { name: /reject/i }),
     );
@@ -325,6 +338,17 @@ async function armErasureConfirm(canvasElement: HTMLElement) {
   await expandRow(canvasElement, "8f3a-contact-uuid");
   const row = await findRow("8f3a-contact-uuid");
   await userEvent.type(within(row).getByLabelText(/resolution/i), "verified");
+  // The verb arms on the answer and on how the identity was checked, and a
+  // document seen is the one answer an erasure fulfil accepts. Without it the
+  // press did nothing and the confirm never opened.
+  await userEvent.click(
+    within(row).getByRole("combobox", { name: en["privacy.identityCheck"] }),
+  );
+  await userEvent.click(
+    await within(canvasElement.ownerDocument.body).findByRole("option", {
+      name: en["privacy.identityCheck.id_document"],
+    }),
+  );
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
   await userEvent.type(
     await screen.findByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`),

@@ -213,6 +213,7 @@ func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInp
 		WonWithoutContractDetail: in.WonWithoutContractDetail,
 		ToStageID:                ids.From[ids.StageKind](in.ToStageID),
 		LostReason:               in.LostReason,
+		LostReasonCode:           in.LostReasonCode,
 		IfVersion:                in.IfVersion,
 	})
 	return ref(datasource.EntityDeal, v.Id), err

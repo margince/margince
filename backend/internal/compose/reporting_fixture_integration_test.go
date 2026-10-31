@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -50,6 +51,7 @@ func reportingBusiness(t *testing.T) *reportingBusinessFixture {
 	f.closedDeals(t)
 	f.openDeals(t)
 	f.outcomes(t)
+	f.leads(t)
 	f.at = time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	f.target, err = f.service.CreateTarget(f.human, crmcontracts.ReportingTargetInput{Metric: "bookings_won", PipelineId: ptrUUID(e.pipeline), Scope: crmcontracts.ReportingScope{Kind: "workspace"}, PeriodKind: "month", PeriodStart: openapi_types.Date{Time: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)}, Value: 30000000, Reason: "Monthly commitment"})
 	if err != nil {
@@ -87,7 +89,7 @@ func (f *reportingBusinessFixture) closedDeals(t *testing.T) {
 		input := deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](won), WonWithoutContractReason: &reason}
 		if i >= 12 {
 			reason = "price"
-			input = deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason}
+			input = deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason, LostReasonCode: new("other")}
 		}
 		if _, err := f.store.AdvanceDeal(f.writer, ids.From[ids.DealKind](ids.UUID(deal.Id)), input); err != nil {
 			t.Fatal(err)
@@ -138,6 +140,38 @@ func (f *reportingBusinessFixture) outcomes(t *testing.T) {
 			}
 			dealID := ids.UUID(f.open[i].Id)
 			if err := store.DecideHandoff(f.human, handoff, contacts.HandoffDecision{Status: contacts.HandoffAccepted, DealID: &dealID}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+// leads writes six leads that each wrote in by email on 10 September. Five
+// were answered after 1, 2, 4, 8 and 30 hours, and one is still waiting.
+func (f *reportingBusinessFixture) leads(t *testing.T) {
+	t.Helper()
+	store := contacts.NewStore(InstallationDB(f.env.Pool))
+	mail := activities.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
+	arrived := time.Date(2026, 9, 10, 9, 0, 0, 0, time.UTC)
+	owner := ids.From[ids.UserKind](f.env.Rep1)
+	inbound, subject := "inbound", "Pricing question"
+	for i, hours := range []int{1, 2, 4, 8, 30, 0} {
+		name := fmt.Sprintf("Inbound lead %d", i)
+		lead, _, err := store.CreateLead(f.writer, contacts.CreateLeadInput{FullName: &name, Status: "new", OwnerID: &owner, Source: "manual"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		// The lead writer stamps the database's clock, so the arrival is
+		// moved into the fixture's month before anything answers it.
+		if _, err := f.env.owner.Exec(context.Background(), `UPDATE lead SET created_at=$2 WHERE id=$1`, lead.Id, arrived); err != nil {
+			t.Fatal(err)
+		}
+		f.at = arrived
+		if _, _, err := mail.LogActivity(f.human, activities.LogActivityInput{Kind: "email", Subject: &subject, OccurredAt: &arrived, Direction: &inbound, Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: ids.UUID(lead.Id)}}}); err != nil {
+			t.Fatal(err)
+		}
+		if hours > 0 {
+			if _, err := store.RecordLeadFirstResponse(f.writer, ids.From[ids.LeadKind](ids.UUID(lead.Id)), arrived.Add(time.Duration(hours)*time.Hour)); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -204,6 +238,40 @@ func TestReportingBusinessFixtureReconcilesEveryChartWithItsEvidence(t *testing.
 		}
 		if metric.Value == nil || *metric.Value != expected {
 			t.Fatalf("SDR metric: %+v", metric)
+		}
+	}
+}
+
+func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.T) {
+	f := reportingBusiness(t)
+	catalog, err := f.service.Catalog(f.human)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(catalog.Presets) != len(reportingPresets) {
+		t.Fatalf("the fixture reader is offered %d presets, want %d", len(catalog.Presets), len(reportingPresets))
+	}
+	for _, preset := range catalog.Presets {
+		selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_month", TargetBasis: "month", CloseWindow: "all_open", Metrics: preset.Metrics, Blocks: preset.Blocks}
+		if preset.Id == crmcontracts.ReportingPresetIdSales {
+			selection.PipelineId = ptrUUID(f.env.pipeline)
+		}
+		result, err := f.service.Evaluate(f.human, selection)
+		if err != nil {
+			t.Fatalf("%s preset: %v", preset.Id, err)
+		}
+		if len(result.Metrics) != len(preset.Metrics) {
+			t.Fatalf("%s preset answered %d metrics, asked %d", preset.Id, len(result.Metrics), len(preset.Metrics))
+		}
+		for _, metric := range result.Metrics {
+			if metric.Value == nil || (metric.Coverage.Status != crmcontracts.ReportingStatusOk && metric.Coverage.Status != crmcontracts.ReportingStatusPartial) {
+				t.Errorf("%s preset: %s answered no figure, status %s", preset.Id, metric.Id, metric.Coverage.Status)
+			}
+		}
+		for _, block := range preset.Blocks {
+			if !slices.ContainsFunc(result.Charts, func(chart crmcontracts.ReportingChart) bool { return chart.Kind == block }) {
+				t.Errorf("%s preset drew no %s chart", preset.Id, block)
+			}
 		}
 	}
 }

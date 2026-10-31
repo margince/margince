@@ -103,7 +103,7 @@ func TestALostDealIsNotInTheForecastsOpenPipeline(t *testing.T) {
 	}
 
 	if status := e.Call(t, "POST", "/v1/deals/"+deal.ID+"/advance",
-		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "went with a competitor on price"}, nil, nil); status != http.StatusOK {
+		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "went with a competitor on price", "lost_reason_code": "competitor"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("losing the deal → %d", status)
 	}
 	if lost := read(); lost != before {
@@ -176,11 +176,11 @@ func TestMovingAClosedDealToItsOwnStageChangesNothing(t *testing.T) {
 		t.Fatalf("create the second deal → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/deals/"+second.ID+"/advance",
-		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "price"}, nil, nil); status != http.StatusOK {
+		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "price", "lost_reason_code": "price"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("losing the deal → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/deals/"+second.ID+"/advance",
-		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "a different reason"}, nil, nil); status != http.StatusOK {
+		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "a different reason", "lost_reason_code": "other"}, nil, nil); status != http.StatusOK {
 		t.Errorf("losing an already lost deal → %d, want 200", status)
 	}
 	if after := readDealStatus(t, e, second.ID); after.LostReason == nil || *after.LostReason != "price" {
@@ -202,6 +202,13 @@ func TestALostDealNeedsAReasonThatSaysSomething(t *testing.T) {
 			t.Errorf("lost_reason %q → %d %+v, want 422 lost_reason_required", reason, status, fault)
 		}
 	}
+	// An unknown code is refused even beside a real note.
+	var unknown faultBody
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance",
+		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "too expensive", "lost_reason_code": "weather"}, nil, &unknown); status != http.StatusUnprocessableEntity {
+		t.Errorf("an unknown code → %d %+v, want 422", status, unknown)
+	}
+	// A note alone is the legacy path an old client takes, and it closes.
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance",
 		AnyMap{"to_stage_id": stages.Lost, "lost_reason": "  too expensive  "}, nil, nil); status != http.StatusOK {
 		t.Fatalf("a real reason → %d, want 200", status)

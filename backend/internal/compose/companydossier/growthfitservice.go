@@ -41,7 +41,7 @@ import (
 // half a digest cannot reach. Bumping it invalidates every cached assessment,
 // which is the point: yesterday's bands must not be served beside today's
 // (DOSS-AC-14).
-const growthFitAssemblyVersion = "growth-fit-assembly-v3"
+const growthFitAssemblyVersion = "growth-fit-assembly-v4"
 
 // growthFitPromptVersion is DERIVED from the prompt as it is SENT — boundary
 // rule included — so editing that wording bumps it whether or not anybody

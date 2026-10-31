@@ -122,7 +122,7 @@ const openWorkRule = `In the summary, open_tasks are tasks somebody filed. open_
 // access get different facts — not about preference. Language is not a
 // permission, so it does not follow the reader.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("account summary")
 }
 
@@ -301,14 +301,15 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 				continue
 			}
 			sentence.Nature = nature
-			// Grounding decides FIRST. Counting an ungrounded recommendation
-			// would let one malformed claim spend the volume budget and suppress the
-			// valid advice behind it — the reader loses the advice and is told
-			// nothing about why.
+			// Grounding and refusal decide first: a recommendation the reader never sees
+			// must not spend the budget.
 			if !claims.Grounded(sentence, known) {
 				continue
 			}
 			if nature == natureRecommendation {
+				if claims.OpensWithWriterSubject(sentence.Text) {
+					continue
+				}
 				recommendations++
 			}
 			byKind[section.Kind] = append(byKind[section.Kind], sentence)

@@ -39,6 +39,7 @@ Settings in Margince, by page:
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
 
 Records, deals and mail in Margince, by page:
+- How do record links appear in a message? → [Sharing record links](sharing-record-links.md)
 - How do I create a contact or company, merge, archive or tag one? → [Contacts, companies, leads, deals and projects](records.md)
 - How do I edit a contact or company, or change its owner? → [Contacts, companies, leads, deals and projects](records.md)
 - How do I create a lead, deal or project, or qualify a lead? → [Leads, deals and projects](leads-deals-and-projects.md)
@@ -111,6 +112,9 @@ Records, deals and mail in Margince, by page:
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the
   projected landing. The pipeline needed figure, which is not a target.
+- [How the forecast learns](forecast-learning.md): how each stage's probability
+  moves with the deals that closed from it. The risks marked on a deal, and the
+  switch that turns it off.
 - [Deals the customer still supports](deals-the-customer-supports.md): the review
   a deal gets when its customer stops answering. The switch that leaves such deals
   out of the forecast.

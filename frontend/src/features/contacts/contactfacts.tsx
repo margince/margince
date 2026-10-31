@@ -21,7 +21,6 @@ import { useViewerId } from "../../lib/session";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
-type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
 
 // The fixed word claims the destination is LinkedIn, and a crawl or connector
 // can write any host into `social`. So the host is checked before the anchor
@@ -51,8 +50,6 @@ export function ContactFacts({
   const ownerName = useMemberName(contact.owner_id);
   const email = contact.primary_email;
   const phone = primaryPhone(contact.phones)?.phone;
-  const record = { entityType: "contact", entityId: contact.id } as const;
-  const readOnly = Boolean(contact.archived_at);
   return (
     <RecordFacts>
       {email && (
@@ -60,20 +57,12 @@ export function ContactFacts({
           <ContactLink
             kind="email"
             value={email}
-            record={record}
-            readOnly={readOnly}
+            record={{ entityType: "contact", entityId: contact.id }}
+            readOnly={Boolean(contact.archived_at)}
             className="pe-meta-link"
           >
             {email}
           </ContactLink>
-          <ContactLink
-            appearance="icon"
-            kind="email"
-            value={email}
-            record={record}
-            readOnly={readOnly}
-            label={t("compose.writeEmail")}
-          />
         </Fact>
       )}
       {phone && (
@@ -81,18 +70,11 @@ export function ContactFacts({
           <ContactLink
             kind="phone"
             value={phone}
-            record={record}
+            record={{ entityType: "contact", entityId: contact.id }}
             className="pe-meta-link"
           >
             {phone}
           </ContactLink>
-          <ContactLink
-            appearance="icon"
-            kind="phone"
-            value={phone}
-            record={record}
-            label={t("contact.action.call")}
-          />
         </Fact>
       )}
       {contact.address?.city && (
@@ -141,10 +123,7 @@ export function ContactFacts({
  * source. The popover behind it answers which one, which for a mailbox capture
  * is a message id no reader should have to scan past.
  */
-export function ContactSource({
-  contact,
-  createdBy,
-}: Readonly<{ contact: Contact; createdBy?: PrincipalAttribution }>) {
+export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const viewerId = useViewerId();
   return (
@@ -159,7 +138,7 @@ export function ContactSource({
               contact.source,
               contact.imported_from,
             ),
-            createdBy,
+            contact.created_by,
           )}
         />
       }

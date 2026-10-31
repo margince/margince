@@ -254,9 +254,13 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return nil, false, err
 	}
-	contentArm, err := auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, false, err
+	// A draft's rows passed the content gate, which holds the audience arm, so
+	// each is readable. Projecting the arm again would plan a second copy.
+	contentArm := "TRUE"
+	if !forDraft {
+		if contentArm, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, false, err
+		}
 	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
@@ -288,11 +292,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if hasMore {
 		out = out[:sectionCap]
 	}
-	// AFTER the cap, so the statement counts the rows this page returns rather
-	// than the extra one read to detect hasMore. Same reason the summary above
-	// is composed from the shared helper: a contact page whose mail showed no
-	// paperclip while the same rows off /activities showed one is the drift
-	// this twin exists to avoid.
+	// After the cap, so the statement counts the rows this page returns rather
+	// than the extra one read to detect hasMore. Every step below is the one
+	// /activities runs, so a row means the same on either page.
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
@@ -301,9 +303,10 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
 		return nil, false, err
 	}
-	// Every link the caller may see, read the way /activities reads them, so
-	// a row means the same on either page.
 	if err := activities.AttachLinks(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
+	if err := activities.WithCreators(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
 	if err := activities.WithOffersEmail(ctx, tx, out); err != nil {

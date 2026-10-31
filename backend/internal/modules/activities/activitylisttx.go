@@ -62,6 +62,15 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	for _, row := range paged {
 		activities = append(activities, row.activity)
 	}
+	if in.positions != nil && in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
+		for i := range min(len(paged), limit) {
+			after, err := sorted.EncodePageCursor(paged[i].key, paged[i].activity.CreatedAt, ids.UUID(paged[i].activity.Id))
+			if err != nil {
+				return nil, storekit.Page{}, err
+			}
+			*in.positions = append(*in.positions, after)
+		}
+	}
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
@@ -86,6 +95,9 @@ func finishActivityList(ctx context.Context, tx pgx.Tx, columns CustomColumns, a
 		return err
 	}
 	if err := AttachLinks(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithCreators(ctx, tx, activities); err != nil {
 		return err
 	}
 	if err := WithOffersEmail(ctx, tx, activities); err != nil {

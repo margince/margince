@@ -44,8 +44,9 @@ reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
 Routing uses the **URL hash** (`#/deals/01J9ZK` → `{ screen: "deals", id: "01J9ZK" }`).
-So any plain file host serves `index.html` for every entry point, and the
-server needs no fallback for the web app. A hash may carry a query of its own.
+Record links also carry `/r/{kind}/{id}` before the hash so a preview fetcher can name the record.
+The web tier serves the app for a browser and sends other fetches to the public card endpoint.
+`AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
 
 ## The layers
@@ -241,7 +242,7 @@ too.
 
 ## Colour
 
-The app shell is **glass over the light page**, as
+The app shell has a panel rail and a clear top bar over the theme ground, as
 [DESIGN.md](../../DESIGN.md#6-the-shell) and the top of `src/app/shell.css`
 state. It does not use the dark green field, so the marks on the rail use
 ordinary theme tokens, not `white-alpha` on a dark field.
@@ -251,6 +252,11 @@ The dark group in `tokens.css` (`--bgInkField`, `--textOnInkField`,
 for what passes over the page, such as the tooltips the folded sidebar shows
 and the bar of the client surface. The sidebar is never on it. A new app panel styled from those tokens
 is styled in error.
+
+The text colours made for the page fail on that field: `--textSecondary` and `--accentText` measure
+under 3:1 there. `src/design-system/inkfield.css` lists every part of the app drawn on the field. Inside
+those parts, it points the text, link and focus tokens at the field's own colours. A link there has a line
+under it. A new part on the field goes in that list; `inkfield.test.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
 `main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice

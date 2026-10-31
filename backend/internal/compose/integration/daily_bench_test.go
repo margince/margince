@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -28,7 +29,10 @@ func TestDailyUseBudgets(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("daily bench at scale %g", scale)
-	e := apptest.SetupApp(t)
+	// The reindex identity row needs a bound embeddings model, or its route answers 501.
+	embedder := embedReindexRouter(t, "daily-bench-embed-v1")
+	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(embedder, insertOnlyRunner(t)))
+	seedRouterBinding(t, e, embedder)
 	// Without a statement cache nothing is prepared, so the generic-plan
 	// regressions this bench exists to catch could never appear in a sample.
 	if mode := e.Pool.Config().ConnConfig.DefaultQueryExecMode; mode != pgx.QueryExecModeCacheStatement {
@@ -76,19 +80,19 @@ func TestDailyUseBudgets(t *testing.T) {
 	})
 
 	step("latency", func(t *testing.T) {
-		stagesBefore := worklistStagesSoFar()
 		rep := seats.Reps[slices.IndexFunc(seats.Reps, func(s Seat) bool { return s.UserID == corpus.MedianRepID })]
 		for _, seat := range []Seat{rep, seats.Managers[0]} {
+			stagesBefore := worklistStagesSoFar()
 			in := newDailyInput(t, e, seat, seats.Teams[0], corpus)
 			in.EvaluateArgs = dailyEvaluateArgs(t, e, seat)
 			for _, f := range dailyFlows {
 				rows = append(rows, runDailyFlow(t, e, f, in)...)
 			}
+			logWorklistStages(t, seat.Role, stagesBefore)
 		}
 		admin := Seat{Name: "admin", Role: "admin", Client: e.Client}
 		rows = append(rows, runDailyFlow(t, e, dailyAdminFlow, dailyInput{Seat: admin, Team: seats.Teams[0]})...)
 		assertDailyReviewFocus(t, rows)
-		logWorklistStages(t, stagesBefore)
 	})
 
 	step("load", func(t *testing.T) {

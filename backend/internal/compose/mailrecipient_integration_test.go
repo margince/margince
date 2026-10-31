@@ -372,12 +372,12 @@ func TestATeamWeeklyWithoutAnOriginKeepsEveryContentBlock(t *testing.T) {
 	if _, _, err := e.worker.engine.AssembleTeamFor(e.repCtx, e.Team1, "Northstar sales", []weekly.TeamMember{{UserID: e.Rep1, DisplayName: "Alex Example"}}, now); err != nil {
 		t.Fatal(err)
 	}
-	full, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
+	full, _, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	e.worker.mail.PublicBaseURL = ""
-	without, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
+	without, _, err := e.worker.weeklyMessage(e.repCtx, review, settings, now, mailcopy.For("de"))
 	if err != nil {
 		t.Fatal(err)
 	}

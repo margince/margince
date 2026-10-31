@@ -64,6 +64,13 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 		if leadIdentityName(lead) == "" {
 			return &PromoteNeedsIdentityError{}
 		}
+		_, typed, _, err := s.promotionEmployer(ctx, tx, lead, false)
+		if err != nil {
+			return err
+		}
+		if typed != "" {
+			out.TypedCompany = &typed
+		}
 		match, err := s.previewTarget(ctx, tx, lead)
 		if err != nil {
 			return err

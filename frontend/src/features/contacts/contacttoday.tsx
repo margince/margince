@@ -1,11 +1,17 @@
-import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
+import {
+  CheckSquare,
+  FileText,
+  Search,
+  Send,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { NextTaskSlot } from "../../components/nexttaskslot";
+import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { NextBar } from "../../design-system/nextbar";
 import { formatDate, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
@@ -22,6 +28,7 @@ import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
+import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
 import { openContactTab } from "../worklist/worklist.return";
 
@@ -105,6 +112,11 @@ export function ContactToday({
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
 
+const URGENT_RULES: ReadonlySet<ContactMoment["rule"]> = new Set([
+  "meeting_prep",
+  "overdue_promise",
+]);
+
 // The server's `why_now` is the only reason: one moment gives one reason, and
 // the facts in it are the part a rep judges.
 function MomentBar({
@@ -129,7 +141,11 @@ function MomentBar({
     <TaskCallAction task={task} pageContact={view.contact} />
   );
   return (
-    <NextBar
+    <RecordNextBar
+      // A meeting about to happen, or a promise past its date, outranks what
+      // just came in; the item then sits above the bar.
+      urgent={URGENT_RULES.has(moment.rule) || undefined}
+      about={moment.evidence.map((item) => item.id)}
       title={moment.headline}
       late={lateness(owedDue(moment, view), view, t, locale)}
       sub={moment.why_now}
@@ -168,7 +184,6 @@ function MomentBar({
           : { onSnooze: defer.onDefer, pending: defer.pending }
       }
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }
@@ -220,7 +235,7 @@ function TaskBar({
   const { locale } = useLocale();
   const zone = useRecordZone();
   return (
-    <NextBar
+    <RecordNextBar
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
       detail={taskDetail(task)}
@@ -239,7 +254,6 @@ function TaskBar({
         </>
       }
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }
@@ -264,28 +278,26 @@ function AnswerBar({
   ];
   if (withheld.length > 0) {
     return (
-      <NextBar
+      <RecordNextBar
         title={t("today.withheld", { sections: withheld.join(", ") })}
-        onward={<NextTaskSlot />}
       />
     );
   }
   if (!moment) {
-    return <NextBar title={t("record.notShown")} onward={<NextTaskSlot />} />;
+    return <RecordNextBar title={t("record.notShown")} />;
   }
   if (moment.rule === "thin_relationship") {
     return (
-      <NextBar
+      <RecordNextBar
         title={moment.headline}
         sub={t("contact.overview.coverage")}
         action={
           <ActionVerb action={moment.recommended_action} onAction={onAction} />
         }
-        onward={<NextTaskSlot />}
       />
     );
   }
-  return <NextBar onward={<NextTaskSlot />} />;
+  return <RecordNextBar />;
 }
 
 // What the move says is owed, in the order both readers below take it: the
@@ -378,9 +390,10 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // The ladder is a rule, not a model, so the lead verb is the plain filled
-  // button; indigo would claim an agent wrote it.
-  const variant = primary ? "primary" : "ghost";
+  // A rule ladder picks the verb, not a model. Only a press that has the model
+  // write the mail wears indigo; the rest keep the accent.
+  const drafts = momentDrafts(action);
+  const variant = drafts ? "ai" : primary ? "primary" : "ghost";
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
@@ -393,7 +406,7 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {actionIcon(action.kind)}
+        {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>

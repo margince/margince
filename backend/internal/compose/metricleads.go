@@ -25,10 +25,22 @@ const countedLeadSQL = "l.merged_into_id IS NULL AND (l.archived_at IS NULL OR l
 
 const leadOwnerColumn = "l.owner_id"
 
-// leadNameSQL labels a lead's evidence row by its name, its company, or else
-// the word for a lead, bound at the given position.
-func leadNameSQL(fallback string) string {
-	return "COALESCE(NULLIF(l.full_name,''),NULLIF(l.company_name,'')," + fallback + ")"
+// leadLabelSQL labels a lead's row by its name or else its company. The company
+// is used only where the seat may read it; otherwise the bound fallback is.
+// A reader's field scope already withholds a lead whose name is masked.
+func leadLabelSQL(ctx context.Context, b *reportingBindings, fallback string) (string, error) {
+	company := "NULLIF(l.company_name,'')"
+	visible, masked, err := auth.MaskExcludedClause(ctx, string(recordTypeLead), companyNameField, "l", b.arg)
+	if err != nil {
+		return "", err
+	}
+	if masked {
+		company = "NULL"
+		if visible != "" {
+			company = "CASE WHEN " + visible + " THEN NULLIF(l.company_name,'') END"
+		}
+	}
+	return "COALESCE(NULLIF(l.full_name,'')," + company + "," + fallback + ")", nil
 }
 
 func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
@@ -38,16 +50,23 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "origin")
 	case reportingLeadsPromoted:
 		fields = append(fields, "qualified_deal_id")
-	case reportingLeadFirstResponse:
+	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
+	case reportingLeadCohortOutcomes:
+		fields = append(fields, "routed_at")
 	}
 	return fields
 }
 
 // leadMetricScope is what every lead reader narrows by: the picked scope, the
-// leads this reader may see, and none whose read columns are withheld.
+// leads this reader may see, and none whose read columns are withheld. The lead
+// cohort narrows the scope by the owner a lead arrived with.
 func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, b *reportingBindings) (string, bool, error) {
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), leadOwnerColumn, b.arg, unownedIsExcluded)
+	owner := leadOwnerColumn
+	if metric == reportingLeadCohortOutcomes {
+		owner = leadArrivalOwnerColumn
+	}
+	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
 	if err != nil {
 		return "", false, err
 	}
@@ -83,7 +102,11 @@ func readReportingLeadsCreated(ctx context.Context, tx pgx.Tx, frame crmcontract
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	said := reporting.ExplanationCopy(frame)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,1::float8,'lead_created',
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,1::float8,'lead_created',
  'origin:'||COALESCE(l.origin,''),COALESCE(lo.label,` + b.add(said.Say(reportingBreakdownLabels.NoOrigin)) + `)
  FROM lead l LEFT JOIN lead_origin lo ON lo.key=l.origin LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + countedLeadSQL + ` AND l.created_at>=` + b.add(reportingEarliest(frame)) + ` AND l.created_at<` + b.add(frame.EvaluatedAt) + ` AND ` + scope + `
@@ -111,7 +134,11 @@ func readReportingLeadStatusMoves(ctx context.Context, tx pgx.Tx, frame crmcontr
 	label.WriteString(" END")
 	leads := "(SELECT l.id FROM lead l WHERE " + scope + ") scoped"
 	moves := weekly.LeadMovesSQL(leads, b.add(reportingEarliest(frame)), b.add(frame.EvaluatedAt))
-	query := `SELECT m.audit_id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),m.occurred_at,1::float8,'lead_status_move',
+	name, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT m.audit_id::text,l.id,` + name + `,l.owner_id,COALESCE(u.display_name,''),m.occurred_at,1::float8,'lead_status_move',
  'status:'||m.to_status,` + label.String() + `
  FROM (` + moves + `) m JOIN lead l ON l.id=m.lead_id LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE m.move IS NOT NULL ORDER BY m.audit_id LIMIT ` + b.add(reportingFactLimit+1)
@@ -132,7 +159,11 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	}
 	said := reporting.ExplanationCopy(frame)
 	at := b.add(frame.EvaluatedAt)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,
  CASE WHEN l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<` + at + ` THEN 1 ELSE 0 END::float8,'lead_created','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + countedLeadSQL + ` AND l.created_at>=` + b.add(reportingEarliest(frame)) + ` AND l.created_at<` + at + ` AND ` + scope + `
@@ -140,8 +171,22 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsPromoted, string(recordTypeLead), query, b, withheld)
 }
 
-// readReportingLeadFirstResponse times each answered lead from when it arrived,
-// the instant the response target runs from, to its first response, in hours.
+// leadArrivedSQL is the arrival cohort both response readings count from: a
+// counted lead no import wrote, which arrived in the window ending at `at`.
+func leadArrivedSQL(frame crmcontracts.ReportingContext, b *reportingBindings, at string) string {
+	return leadArrivedBetweenSQL(b.add(reportingEarliest(frame)), at)
+}
+
+// leadArrivedBetweenSQL is that cohort for the half-open window [start, end).
+func leadArrivedBetweenSQL(start, end string) string {
+	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + start + " AND " + leadArrivalSQL + "<" + end
+}
+
+// leadArrivalSQL is when a lead arrived: the instant the response target runs from.
+const leadArrivalSQL = "COALESCE(l.routed_at,l.created_at)"
+
+// readReportingLeadFirstResponse times each answered lead from when it arrived
+// to its first response, in hours.
 func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil
@@ -152,15 +197,43 @@ func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcon
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	said := reporting.ExplanationCopy(frame)
-	arrived := "COALESCE(l.routed_at,l.created_at)"
 	at := b.add(frame.EvaluatedAt)
-	query := `SELECT l.id::text,l.id,` + leadNameSQL(b.add(said.Say(reportingBreakdownLabels.Lead))) + `,l.owner_id,COALESCE(u.display_name,''),` + arrived + `,
- GREATEST(EXTRACT(EPOCH FROM (l.first_response_at-` + arrived + `))/3600,0)::float8,'lead_first_response','',''
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
+ GREATEST(EXTRACT(EPOCH FROM (l.first_response_at-` + leadArrivalSQL + `))/3600,0)::float8,'lead_first_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
- WHERE ` + countedLeadSQL + ` AND ` + weekly.NonImportedLeadSQL + ` AND l.first_response_at<` + at + `
- AND ` + arrived + `>=` + b.add(reportingEarliest(frame)) + ` AND ` + arrived + `<` + at + ` AND ` + scope + `
+ WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.first_response_at<` + at + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	return readGroupedFacts(ctx, tx, frame, reportingLeadFirstResponse, string(recordTypeLead), query, b, withheld)
+}
+
+// readReportingLeadsAwaitingResponse counts the leads of the same arrival
+// cohort that still owe a first reply when the reading is taken. Each wrote
+// in by email, nobody has answered it, and the lead is still open.
+func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	if frame.PipelineId != nil {
+		return nil, noPipelineGap(frame), nil
+	}
+	var b reportingBindings
+	scope, withheld, err := leadMetricScope(ctx, tx, frame, reportingLeadsAwaitingResponse, &b)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	said := reporting.ExplanationCopy(frame)
+	at := b.add(frame.EvaluatedAt)
+	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
+ FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
+ WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=` + at + `)
+ AND ` + auth.LiveLeadInquiryClause("l") + ` AND ` + scope + `
+ ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
+	return readGroupedFacts(ctx, tx, frame, reportingLeadsAwaitingResponse, string(recordTypeLead), query, b, withheld)
 }
 
 // readGroupedFacts scans a reader's rows of key, source, label, owner, owner

@@ -4,6 +4,8 @@
    it (WDS-GATE-4 cascade order). */
 @import "./design-system/brand.css";
 @import "./design-system/base.css";
+@import "./design-system/surfaces.css";
+@import "./design-system/inkfield.css";
 /* After base.css: the arrival vocabulary animates whatever the base layer and
    the component sheets lay out, and a rule that has to be beaten by a
    component's own `animation` has to be seen before it. */
@@ -178,7 +180,7 @@ body {
 }
 
 /* Selected text reads as the accent holding it, in both themes: --bgPage on
-   --accent measures 5.21:1 in light and 5.37:1 in dark, so the selection is legible
+   --accent measures 7.89:1 in light and 6.86:1 in dark, so the selection is legible
    rather than merely visible. Spelled for form controls too — a selection inside an
    input is the same selection, and some engines will not inherit the pseudo. */
 ::selection {

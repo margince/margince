@@ -87,7 +87,7 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err != nil {
 		return Evaluation{}, err
 	}
-	if err := s.applyTargets(ctx, tx, &out.Result); err != nil {
+	if err := s.applyTargets(ctx, tx, &out); err != nil {
 		return Evaluation{}, err
 	}
 	out.Result.EvaluationKey, err = evaluationKey(out)
@@ -118,7 +118,14 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 			return err
 		}
 		out, err = s.evaluateSelection(ctx, tx, selection, framework)
-		return err
+		if err != nil {
+			return err
+		}
+		recorded, err := s.revisionMetricVersions(ctx, tx, id, chosen)
+		if err != nil {
+			return err
+		}
+		return withdrawChangedDefinitions(&out, recorded)
 	})
 	return out.Result, err
 }
@@ -190,7 +197,11 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			out.Truncated = true
 			break
 		}
-		out.Rows = append(out.Rows, fact.Row)
+		row := fact.Row
+		if fact.OwnerWithheld {
+			row.OwnerId = nil
+		}
+		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
 }
@@ -200,10 +211,12 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 		return true
 	}
 	if after, ok := strings.CutPrefix(group, "owner:"); ok {
-		return fact.OwnerID.String() == after
+		return !fact.OwnerWithheld && fact.OwnerID.String() == after
 	}
+	// A stage cohort's outcome group starts like its stage's and names the
+	// outcome after it, so the fact's own key answers it.
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
-		return fact.StageID == after
+		return fact.StageID == after || fact.GroupKey == group
 	}
 	if strings.HasPrefix(group, "week:") && fact.At() != nil {
 		zone, err := time.LoadLocation(frame.Timezone)

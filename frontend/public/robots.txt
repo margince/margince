@@ -1,5 +1,4 @@
-# A shared app link is / plus a #/ fragment no fetcher sends, so a preview reads
-# only the static shell; api paths answer them as any anonymous client.
+# Record cards are public metadata; full records require a session and access.
 User-agent: Twitterbot
 User-agent: LinkedInBot
 User-agent: Slackbot-LinkExpanding
@@ -30,4 +29,6 @@ User-agent: Amazonbot
 Disallow: /
 
 User-agent: *
+Allow: /r/
+Allow: /v1/public/record-previews/
 Disallow: /

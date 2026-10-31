@@ -175,6 +175,18 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	return activities, page, err
 }
 
+// ListActivitiesPositioned is ListActivities that also answers, for each row,
+// the cursor that resumes the list after it. A caller merging this list with
+// another stops between any two rows and resumes there.
+func (s *Store) ListActivitiesPositioned(
+	ctx context.Context, in ListActivitiesInput,
+) ([]crmcontracts.Activity, []string, storekit.Page, error) {
+	positions := []string{}
+	in.positions = &positions
+	rows, page, err := s.ListActivities(ctx, in)
+	return rows, positions, page, err
+}
+
 // ListActivitiesIn is ListActivities inside a caller-opened transaction. in.Columns
 // is the caller's to fill, from a catalog it reads on that transaction.
 func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) (activities []crmcontracts.Activity, page storekit.Page, err error) {
@@ -296,6 +308,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := AttachLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := WithCreators(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	if err := WithOffersEmail(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -335,7 +350,7 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	}
 	args := []any{activityIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}

@@ -337,14 +337,11 @@ func (w *WeeklyForecast) freezeClosing(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	at time.Time, baseCurrency string,
 ) (ids.UUID, closingReadings, forecasting.ForwardMeasure, error) {
-	deals, _, _, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
+	assembly, err := ForecastAssemble(ctx, tx, period, scope, at, baseCurrency)
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
 	}
-	readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-	if err != nil {
-		return ids.Nil, closingReadings{}, "", err
-	}
+	readings := assembly.Readings
 	measure, err := ForecastForwardMeasure(ctx, tx)
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
@@ -358,10 +355,15 @@ func (w *WeeklyForecast) freezeClosing(
 		return ids.Nil, closingReadings{}, "", err
 	}
 
-	id, err := w.store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+	snapshot := forecasting.NewSnapshot{
 		Period: period, Scope: scope, Trigger: forecasting.TriggerPeriodClose,
 		Readings: readings, BaseCurrency: baseCurrency, TakenAt: at,
-	})
+	}
+	snapshot.StampChances(assembly)
+	if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
+		return ids.Nil, closingReadings{}, "", err
+	}
+	id, err := w.store.TakeSnapshot(ctx, tx, snapshot)
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
 	}

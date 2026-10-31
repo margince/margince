@@ -58,13 +58,11 @@ import (
 )
 
 const (
-	// composeTier is the subtree this gate judged first, and still the only one
-	// covered whole.
+	// composeTier is the subtree this gate judged first, still the only one whole.
 	composeTier = "internal/compose"
 
-	// rowScopeVocabularyPkg holds ownerScopedTables — the closed set of tables
-	// the row-scope primitives will interpolate, and therefore the closed set of
-	// references this gate is about.
+	// rowScopeVocabularyPkg holds ownerScopedTables: the closed set of tables the
+	// row-scope primitives interpolate, and so the references this gate is about.
 	rowScopeVocabularyPkg = "internal/platform/auth"
 
 	// wantMinimumScopedSites guards against the way this gate fails silently: an
@@ -75,9 +73,8 @@ const (
 	wantMinimumScopedSites = 10
 )
 
-// unscopedReferenceReads ratifies a compose read that hands back a row-scoped
-// record's id without applying that record's row scope. Keyed
-// "package-dir:FuncName", each entry stating what stands in for the clause.
+// unscopedReferenceReads ratifies a compose read that hands back a row-scoped record's id without
+// applying that record's row scope. Keyed "package-dir:FuncName", each entry stating what stands in.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
@@ -88,6 +85,9 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose/momentaction:DoneSetAsidesTx": "reads only the reader's own Not yet answers, keyed by question, to match them against questions the caller already built from rows it may read; the contact ids are compared, never served",
 	"internal/compose:tagScoutSQL":                  "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:raiseFromAnswers":             "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
+	"internal/compose:forecastStageEvidence":        "the recorded stage entries behind a stage's chance, read installation-wide as the system; the deal ids are grouped by stage inside the read and only per-stage counts and won shares are returned",
+	"internal/compose:forecastRiskEffects":          "the settled frozen forecast rows behind each risk signal's effect, read installation-wide as the system; only one odds ratio per signal is returned",
+	"internal/compose/weekly:StageEntriesSQL":       "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
 	"internal/modules/projects:LinkPhaseHistoryTx":  "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
 	// --- The module tier, one package at a time (censusedModules). ---
 	//
@@ -111,6 +111,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// goes to the signal being written rather than to any caller. What a REP may
 	// then see of those signals is decided on the read side, by
 	// auth.SignalScopeClause.
+	"internal/compose:resolve":            "the input check's freshness marker, under its system principal: each deal and signal it finds is recorded as changed in assurance_input_change and never served; a finding reaches a reader only through assuranceExceptionsOwnedBy, which applies the row scope",
 	"internal/compose:scanGhostedThreads": "the ghosted-thread rule's account scan, under the signal-scan sweep's system principal: the company it names is what the signal is ABOUT, and it is handed to signals.RecordDerived, never to a reader",
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the company it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:conversationCTE":    "the signal extractor's conversation fold, read by the sweep under the system principal and by the pipeline trace for the message whose ladder is already gated: the single company a thread resolves to is what an extraction is filed against, and the rows go to the model lane or to a rung that names no company",
@@ -152,7 +153,6 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The movement bridge's frozen drivers, the same shape as the deal lines
 	// above and for the same reasons: the label was written when the review was,
 	// the query joins no deal, and the review is already the acting rep's own.
-	//
 	// The scope is applied on the WRITE side instead, which is where it can
 	// still mean something: compose/weeklyforecastseam.go's dealLabels takes
 	// auth.ScopeClauseFor for "deal" when it chooses which deals to freeze, so a
@@ -190,7 +190,6 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:projectsGoneQuietSpec":  "the same declaration on the projects-gone-quiet spec, applied the same way at query time",
 
 	"internal/compose/network:readDealFacts": "the coverage view's deal row: the company id it reads is spent one function later on readDeparted's employment test and is absent from DealCoverage, so it reaches no caller. The DEAL is gated where the reference enters — network.Reads.GetDealCoverage takes auth.Require plus auth.EnsureVisibleLive on it before opening this assembly",
-
 	// The reply consumer's sender lookup. Scoping it would be the defect, not
 	// the fix: an introduction is between two colleagues, and the contact who
 	// answers it is very often owned by neither of them. A row scope here would
@@ -202,7 +201,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// Nothing escapes: the id chooses which asks to test and never leaves the
 	// consumer. Who may READ the resulting ask is decided on the read side, by
 	// introductions' own requester-or-introducer predicate.
-	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
+	"internal/compose:inboundSenders":              "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
+	"internal/modules/forecasting:attachOpenDeals": "the forecast evaluation's read of frozen contribution rows, which EvaluationVintagesTx refuses to any principal but a system one: each deal id joins a frozen deal to its outcome inside compose.ForecastEvaluationDataset, and the dataset's JSON drops it, so no id reaches a reader",
 })
 
 // rowScopeSpellings are the platform/auth entry points that APPLY a row scope.
@@ -217,7 +217,7 @@ var rowScopeSpellings = map[string]bool{
 	"OwnerPredicate": true, "VisiblePredicate": true,
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleExisting": true, "EnsureVisibleForSubjectRights": true,
 	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
-	"VisibleTo": true, "LinkTargetVisibleClause": true,
+	"VisibleTo": true, "LinkTargetVisibleClause": true, "LinkTargetReadableClause": true,
 	"ActivityDiscoverClause": true, "ActivityContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
@@ -255,7 +255,7 @@ var rowScopeSpellings = map[string]bool{
 	// VisibleSubset renders VisiblePredicate over the ids it is handed, so a
 	// projection whose references pass through it is bounded row by row.
 	// It counts at function granularity, as EnsureVisible and VisibleTo do.
-	"VisibleSubset": true,
+	"VisibleSubset": true, "PassingSubset": true, "ActivityContentSubset": true, "SignalVisibleLiveSubset": true, "RelationshipVisibleSubset": true,
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

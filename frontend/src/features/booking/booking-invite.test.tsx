@@ -36,6 +36,12 @@ function mount(
   ) => typeof bookingSlots | components["schemas"]["Problem"] = () =>
     bookingSlots,
   hoursAnswer: unknown = bookingHours,
+  // The contact as the server answers for it. Overridden by the case that asks
+  // what an invite does for somebody with no live address.
+  contactBody: Record<string, unknown> = {
+    primary_email: "nina@brandt.example",
+    emails: [{ email: "nina@brandt.example", is_primary: false }],
+  },
 ) {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-27T06:00:00Z"));
@@ -71,11 +77,7 @@ function mount(
           ],
         };
       else if (path.includes("/contacts/"))
-        body = {
-          ...bookingContact,
-          primary_email: null,
-          emails: [{ email: "nina@brandt.example", is_primary: false }],
-        };
+        body = { ...bookingContact, ...contactBody };
       else if (path.endsWith("/availability")) {
         windows.push(new URL(request.url).searchParams);
         const answer = availability(new URL(request.url).searchParams);
@@ -350,4 +352,20 @@ it("keeps the contact draft usable if the hours response is missing its required
   await user.type(message, "Keep this draft");
   expect(screen.getByDisplayValue("Keep this draft")).toBeTruthy();
   expect(await screen.findByDisplayValue("nina@brandt.example")).toBeTruthy();
+});
+
+// A contact every address of which is archived has no address the server will
+// name, and an invite must not reach for the retired one. The rule used to live
+// here, and read the only entry in `emails` whatever its state.
+it("offers no address when the server names none", async () => {
+  mount(true, 30, () => bookingSlots, bookingHours, {
+    primary_email: null,
+    emails: [{ email: "retired@brandt.example", is_primary: false }],
+  });
+  expect(
+    await screen.findByRole("heading", {
+      name: "Book a meeting with Nina Weber",
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByDisplayValue("retired@brandt.example")).toBeNull();
 });

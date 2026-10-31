@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 )
 
 func TestAMachineSenderIsNotACustomerWaiting(t *testing.T) {
@@ -22,6 +23,10 @@ func TestAMachineSenderIsNotACustomerWaiting(t *testing.T) {
 		{Subject: "E-Signatur-Anforderung", Sender: "noreply@docusign.net"},
 		{Subject: "Folder shared with you", Sender: "notifications@dropbox.com"},
 		{Subject: "Re: the retrofit quote", Sender: "anna.weber@acme.com"},
+	}
+	// The stamp capture writes on each mail, by the one machine-sender rule.
+	for i := range rows {
+		rows[i].SenderIsMachine = mailidentity.InboundFromSendingSystem("email", "inbound", rows[i].Sender)
 	}
 
 	kept := keepWaitingCustomers(rows)

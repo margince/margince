@@ -1,11 +1,10 @@
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { MarginceCoreScene } from "../../../design-system/margince-core";
+import { Voiceprint } from "../../../components/voiceprint";
 import { usePrefersReducedMotion } from "../../../design-system/motion";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import type { BuildStage } from "./conversation-machine";
-import { buildCore } from "./presence";
 import type { CorpusSummary } from "./voice-scenes";
 
 const BUILD_STAGES: readonly BuildStage[] = [
@@ -60,12 +59,10 @@ function useCrawlingProgress(ceiling: number): number {
 }
 
 /**
- * The build scene: the Core carrying the progress ring with the percentage
- * inside it. Beside it (never under it) are what the build is reading and the
- * four pipeline stages as a checklist. The ceiling is derived from the stage
- * the server reports. The displayed number crawls toward it (useCrawlingProgress)
- * so the ring keeps moving during a stage, but never passes the ceiling. It
- * reaches 100 only when the build completes, when this scene leaves the screen.
+ * The build scene: the voiceprint carries the progress ring, with the stages
+ * as a checklist beside it. The ceiling comes from the stage the server
+ * reports. The number crawls toward it so the ring moves during a stage, and
+ * never passes it. It reaches 100 only as the scene leaves the screen.
  */
 export function VoiceBuildScene({
   stage,
@@ -86,25 +83,20 @@ export function VoiceBuildScene({
   const progress = useCrawlingProgress(ceiling);
   return (
     <div className="ob-scene ob-voice-building">
-      {/* The orb is the subject and takes its own column; what the build is
-          reading and how far it has got reads down the column beside it.
-          Which model is answering is not repeated here: the band's runtime
+      {/* The voiceprint is the subject and takes its own column; what the
+          build is reading and how far it has got reads down the column beside
+          it. Which model is answering is not repeated here: the band's runtime
           chip above names it for every screen in the room. */}
       <div className="ob-voice-building-row">
-        <div className="ob-voice-orb">
-          <MarginceCoreScene
-            state={buildCore(stage)}
-            progress={progress}
-            feed={false}
-          />
-          {/* Decorative: the stage checklist beside it already carries the
-              build's progress in words, so the crawling digits stay out of the
-              a11y tree instead of being announced on every tick. */}
-          <span className="ob-voice-orb-pct" aria-hidden>
+        {/* Decorative: the stage checklist beside it already carries the
+            build's progress in words, so the crawling digits stay out of the
+            a11y tree instead of being announced on every tick. */}
+        <Voiceprint size="large" busy fraction={progress}>
+          <span className="ob-voice-build-pct">
             {formatNumber(Math.round(progress * 100), locale)}
             <small>%</small>
           </span>
-        </div>
+        </Voiceprint>
         <div className="ob-voice-building-account">
           <p className="ob-voice-building-meta">
             {plural("ob.conv.voice.buildingMeta", sources, {
