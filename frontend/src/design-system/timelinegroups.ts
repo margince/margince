@@ -88,6 +88,45 @@ function bulkMembership(entries: readonly TimelineEntry[]): Set<string> {
   return bulk;
 }
 
+// foldKeyOf is the key this entry folds under, or nothing for a single row. A
+// bulk key folds it when the run is large enough to have no other reading, or
+// when THIS message carries the sender's own List-Unsubscribe attestation. One
+// attested message does not speak for every same-subject message that day.
+function foldKeyOf(
+  entry: TimelineEntry,
+  bulk: ReadonlySet<string>,
+): { kind: "thread" | "bulk"; value: string } | undefined {
+  const key = groupKeyOf(entry);
+  if (key?.kind === "thread") {
+    return key;
+  }
+  const bulkable =
+    key?.kind === "bulk" &&
+    (bulk.has(key.value) || Boolean(entry.bulkAttested));
+  return bulkable ? key : undefined;
+}
+
+// joinNewsletterRun adds a received mailing to the run the list is in, or
+// starts a run where the entry before it was something else.
+function joinNewsletterRun(
+  run: TimelineGroup | undefined,
+  entry: TimelineEntry,
+  groups: TimelineGroup[],
+): TimelineGroup {
+  if (run) {
+    run.entries.push(entry);
+    return run;
+  }
+  const started: TimelineGroup = {
+    id: entry.id,
+    kind: "newsletters",
+    entries: [entry],
+    partial: false,
+  };
+  groups.push(started);
+  return started;
+}
+
 export function groupChronology(
   entries: readonly TimelineEntry[],
   hasMore = false,
@@ -100,30 +139,11 @@ export function groupChronology(
 
   for (const entry of entries) {
     if (inboundBulk(entry)) {
-      if (newsletters) {
-        newsletters.entries.push(entry);
-      } else {
-        newsletters = {
-          id: entry.id,
-          kind: "newsletters",
-          entries: [entry],
-          partial: false,
-        };
-        groups.push(newsletters);
-      }
+      newsletters = joinNewsletterRun(newsletters, entry, groups);
       continue;
     }
     newsletters = undefined;
-    const key = groupKeyOf(entry);
-    // A bulk key folds this entry when the run is large enough to have no
-    // other reading, or when THIS message carries the sender's own
-    // List-Unsubscribe attestation. One attested message does not speak for
-    // every same-subject message that day.
-    const bulkable =
-      key?.kind === "bulk" &&
-      (bulk.has(key.value) || Boolean(entry.bulkAttested));
-    const groupable =
-      key && (key.kind === "thread" || bulkable) ? key : undefined;
+    const groupable = foldKeyOf(entry, bulk);
     if (!groupable) {
       groups.push({
         id: entry.id,
