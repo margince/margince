@@ -3052,6 +3052,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",
   "rel.kind.projectCompany": "Unternehmen im Projekt",
   "rel.kind.partnerOf": "Partner von",
+  "rel.kind.referred": "Hat empfohlen",
   "rel.kind.referredBy": "Empfohlen von",
   "rel.kind.coSellWith": "Co-Selling mit",
   "rel.kind.worksWith": "Arbeitet mit",
