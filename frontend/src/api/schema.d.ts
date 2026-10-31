@@ -38920,6 +38920,14 @@ export interface components {
             project_id?: string | null;
             /**
              * Format: uuid
+             * @description The partner company that referred the lead. Needs `partner:read` (403 otherwise). A
+             *     company that does not exist or that the caller cannot read is 422
+             *     `reference_not_found`; a readable company with no live partner programme is 422
+             *     `not_a_partner`.
+             */
+            partner_company_id?: string | null;
+            /**
+             * Format: uuid
              * @deprecated
              * @description Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
              */
@@ -66273,6 +66281,18 @@ export interface operations {
                  *     created from contacts.
                  */
                 from_contact_id?: string;
+                /**
+                 * @description Only the leads this partner company referred. Reads partner and company data, so it
+                 *     needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+                 *     open matches no lead.
+                 */
+                partner_company_id?: string;
+                /**
+                 * @description `true` keeps the referred leads a partner manager accepted. `false` keeps the
+                 *     referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+                 *     (403 otherwise), and counts only partners the caller can open.
+                 */
+                partner_accepted?: boolean;
             };
             header?: never;
             path?: never;
