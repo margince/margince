@@ -479,3 +479,28 @@ func TestProspectingCountsAndFiltersPlannedLeadTasks(t *testing.T) {
 		t.Fatal("prospecting filter disagrees with planned lead work")
 	}
 }
+
+// A contact case is settled in its own review, so it carries no verb. Counting
+// verbs alone left every case out of the Home figure whenever the exact
+// decisions total was missing, and a page of only cases read as no decisions.
+func TestTheDecisionCountKeepsAContactCaseTheReaderMayMerge(t *testing.T) {
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("mine", "contact_case", withCase(true)),
+			item("theirs", "contact_case", withCase(false)),
+		},
+	}
+
+	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
+
+	if got.Review != 1 {
+		t.Errorf("counted %d decisions, want the one case this reader may merge", got.Review)
+	}
+}
+
+func withCase(canMerge bool) func(*crmcontracts.AttentionItem) {
+	return func(i *crmcontracts.AttentionItem) {
+		i.ContactCase = &crmcontracts.AttentionContactCase{CanMerge: canMerge}
+	}
+}

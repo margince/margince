@@ -95,7 +95,8 @@ func readingsOf(
 			// queue says how much reading it costs.
 			//
 			// A row this reader cannot settle is not their decision. ANY verb is
-			// the test, because the producers already resolved authority to
+			// the test (readerSettles; a contact case answers with can_merge),
+			// because the producers already resolved authority to
 			// decide whether to offer one: a duplicate pair leaves duplicateItem
 			// with verbs only where the reader could write BOTH records, and an
 			// approval carries its verbs only where the inbox admits them.
@@ -107,7 +108,7 @@ func readingsOf(
 			// projects can never be merged by anybody, and the pair is still the
 			// reader's to dismiss as not-a-duplicate. It arrives here carrying
 			// that verb alone, and asking for a merge would drop it.
-			if len(row.item.Actions) == 0 {
+			if !readerSettles(row.item) {
 				continue
 			}
 			out.Review++
@@ -202,4 +203,14 @@ func unpricedDeals(rows []ranked) int {
 		}
 	}
 	return count
+}
+
+// readerSettles reports whether this reader can settle a decisions row. A verb
+// says so for every row the queue settles in place. A contact case settles in
+// its own review and carries no verb, so its can_merge answers instead.
+func readerSettles(item crmcontracts.WorklistItem) bool {
+	if item.ContactCase != nil {
+		return item.ContactCase.CanMerge
+	}
+	return len(item.Actions) > 0
 }
