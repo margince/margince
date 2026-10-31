@@ -258,7 +258,7 @@ func (h Handlers) project(
 
 // LandingFor answers the landing the forecast read prints, under the measure
 // this installation set. The forecast endpoint and the forecast_readings tool
-// both call it, so the two cannot disagree on where a period finishes.
+// both call it.
 func LandingFor(
 	ctx context.Context, tx pgx.Tx, measure MeasureFunc, readings Readings, call *int64,
 ) (crmcontracts.ForecastLanding, error) {
