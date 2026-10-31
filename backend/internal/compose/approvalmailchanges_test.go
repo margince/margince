@@ -5,13 +5,26 @@ package compose
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
+
+// factsText is an email's facts as the lines the email prints.
+func factsText(facts approvalMailFacts) string {
+	var out []string
+	for _, line := range facts.Lines {
+		out = append(out, line.Label+": "+line.Value)
+	}
+	return facts.Heading + "\n" + strings.Join(out, "\n")
+}
 
 func previewText(kind, text string) crmcontracts.ApprovalPreviewValue {
 	return crmcontracts.ApprovalPreviewValue{Kind: kind, Text: text}
@@ -25,6 +38,7 @@ func TestAChangeEmailNamesTheRecordAndEachFieldBeforeAndAfter(t *testing.T) {
 		Summary:     &summary,
 		TargetLabel: new("Margince CRM build"),
 		Preview: &crmcontracts.ApprovalPreview{
+			Version:        1,
 			State:          previewReadyState,
 			ReviewerReason: reviewerOnBehalfOf,
 			Changes: []crmcontracts.ApprovalPreviewChange{
@@ -76,7 +90,7 @@ func TestAChangeEmailListsAtMostItsLimitAndCountsTheRest(t *testing.T) {
 			Field: fmt.Sprintf("field_%d", i), Before: previewText(previewValueText, "a"), After: previewText(previewValueText, "b"),
 		}
 	}
-	facts := changeMailFacts(crmcontracts.Approval{Preview: &crmcontracts.ApprovalPreview{Changes: changes}}, mailcopy.For("en"))
+	facts := changeMailFacts(crmcontracts.Approval{Preview: &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: changes}}, mailcopy.For("en"))
 	listed := 0
 	for _, line := range facts.Lines {
 		if strings.HasPrefix(line.Label, "Field ") {
@@ -89,5 +103,65 @@ func TestAChangeEmailListsAtMostItsLimitAndCountsTheRest(t *testing.T) {
 	last := facts.Lines[len(facts.Lines)-1]
 	if last.Label != "" || last.Value != "+3 more" {
 		t.Errorf("the last line is %+v, want an unlabelled count of the rest", last)
+	}
+}
+
+// A promotion's outcome is in its operands and effects, so the email lists
+// them as the card does. A message body is shown on the card, not as a line.
+func TestAChangeEmailSaysWhatThePromotionWillDo(t *testing.T) {
+	words := mailcopy.For("en")
+	details := []crmcontracts.ApprovalPreviewDetail{
+		{Field: "promotion_contact_name", Value: previewText(previewValueText, "Pat Typed")},
+		{Field: "promotion_contact_email", Value: previewText(previewValueUnavailable, "")},
+		{Field: "body", Value: previewText(previewValueText, "Dear Pat")},
+	}
+	effects := []string{"promote_lead_archive_source", "promote_create_contact"}
+	approval := crmcontracts.Approval{
+		TargetLabel: new("Pat Typed"),
+		Preview: &crmcontracts.ApprovalPreview{
+			Version: 2, State: previewReadyState, ReviewerReason: reviewerOnBehalfOf,
+			Changes: []crmcontracts.ApprovalPreviewChange{}, Details: &details, Effects: &effects,
+		},
+	}
+	text := factsText(changeMailFacts(approval, words))
+	for _, want := range []string{
+		"Promotion contact name: Pat Typed",
+		words.MailAlsoChanges + ": " + agents.EffectSentence(textlang.English, "promote_lead_archive_source"),
+		words.MailAlsoChanges + ": " + agents.EffectSentence(textlang.English, "promote_create_contact"),
+		"Why you: " + words.MailReasonOnBehalf,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the email does not say %q:\n%s", want, text)
+		}
+	}
+	for _, hidden := range []string{"Promotion contact email", "Dear Pat"} {
+		if strings.Contains(text, hidden) {
+			t.Errorf("the email shows %q:\n%s", hidden, text)
+		}
+	}
+}
+
+// A reader who cannot open what a change touches is shown nothing of the plan.
+// As on the card, they are told that a colleague who can must decide it.
+func TestAChangeEmailSaysWhoMustDecideAChangeTheReaderCannotSee(t *testing.T) {
+	words := mailcopy.For("en")
+	approval := crmcontracts.Approval{
+		TargetLabel: new("Kit Merge"),
+		Summary:     new("Convert lead Kit Merge"),
+		Preview: &crmcontracts.ApprovalPreview{
+			Version: 2, State: approvals.PreviewNeedsWiderSight, ReviewerReason: reviewerOnBehalfOf,
+			Changes: []crmcontracts.ApprovalPreviewChange{},
+		},
+	}
+	facts := changeMailFacts(approval, words)
+	want := []approvalMailLine{
+		{Label: words.MailProposal, Value: "Convert lead Kit Merge"},
+		{Label: words.MailPreviewStatus, Value: agents.PreviewStateSentence(textlang.English, approvals.PreviewNeedsWiderSight)},
+	}
+	if !slices.Equal(facts.Lines, want) {
+		t.Errorf("the email says %+v, want %+v", facts.Lines, want)
+	}
+	if !awaitsWiderSight(approval.Preview) {
+		t.Error("the email for a change its reader cannot see is not sent")
 	}
 }

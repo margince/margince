@@ -119,6 +119,49 @@ describe("the approval card", () => {
     expect(root.querySelector("tbody")).toBeNull();
   });
 
+  it("shows the operands and further effects of a ready preview", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      changes: [],
+      preview_state: "ready",
+      details: [
+        {
+          field: "promotion_contact_name",
+          label: "Promotion contact name",
+          value: { kind: "text", text: "Pia Parity" },
+        },
+      ],
+      effects: [
+        {
+          effect: "promote_lead_archive_source",
+          label: "Qualifies and archives this lead.",
+        },
+      ],
+    });
+    expectReadable(root);
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Promotion contact namePia Parity"]);
+    expect(root.querySelector(".dcard-body")?.textContent).toContain(
+      "Also changesQualifies and archives this lead.",
+    );
+    expect(labels(root)).toEqual(["Reject", "Approve"]);
+  });
+
+  it("offers no approval for a preview the reader cannot see, and says who decides", () => {
+    const note =
+      "This change touches records you cannot open. A colleague who can see them must decide it.";
+    const root = mount({
+      ...(approvalFixture.data as object),
+      changes: [],
+      preview_state: "needs_wider_sight",
+      preview_note: note,
+    });
+    expect(labels(root)).toEqual([]);
+    expect(root.querySelector(".dcard-verbs")?.textContent).toBe(note);
+    expect(root.querySelector("tbody")).toBeNull();
+  });
+
   it("approves through decide_approvals and asks the assistant to run it", async () => {
     const root = mount();
     await press(root, "Approve");

@@ -3056,8 +3056,70 @@
             "type": "string",
             "format": "uuid"
           },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "entity_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "text"
+                  ]
+                }
+              },
+              "required": [
+                "field",
+                "label",
+                "value"
+              ]
+            }
+          },
           "diff_hash": {
             "type": "string"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "effect": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "effect",
+                "label"
+              ]
+            }
           },
           "evidence": {
             "type": "array",
@@ -3105,6 +3167,12 @@
               "id",
               "is_you"
             ]
+          },
+          "preview_note": {
+            "type": "string"
+          },
+          "preview_state": {
+            "type": "string"
           },
           "proposed_by": {
             "type": "string"
@@ -3319,8 +3387,70 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "field",
+                      "label",
+                      "value"
+                    ]
+                  }
+                },
                 "diff_hash": {
                   "type": "string"
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "effect": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "effect",
+                      "label"
+                    ]
+                  }
                 },
                 "evidence": {
                   "type": "array",
@@ -3370,6 +3500,12 @@
                   ]
                 },
                 "outcome": {
+                  "type": "string"
+                },
+                "preview_note": {
+                  "type": "string"
+                },
+                "preview_state": {
                   "type": "string"
                 },
                 "proposed_by": {
@@ -6557,8 +6693,70 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "details": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "object",
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "field",
+                      "label",
+                      "value"
+                    ]
+                  }
+                },
                 "diff_hash": {
                   "type": "string"
+                },
+                "effects": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "effect": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "effect",
+                      "label"
+                    ]
+                  }
                 },
                 "evidence": {
                   "type": "array",
@@ -6606,6 +6804,12 @@
                     "id",
                     "is_you"
                   ]
+                },
+                "preview_note": {
+                  "type": "string"
+                },
+                "preview_state": {
+                  "type": "string"
                 },
                 "proposed_by": {
                   "type": "string"
@@ -10707,8 +10911,70 @@
             "type": "string",
             "format": "uuid"
           },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "entity_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "entity_type": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "text"
+                  ]
+                }
+              },
+              "required": [
+                "field",
+                "label",
+                "value"
+              ]
+            }
+          },
           "diff_hash": {
             "type": "string"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "effect": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "effect",
+                "label"
+              ]
+            }
           },
           "evidence": {
             "type": "array",
@@ -10756,6 +11022,12 @@
               "id",
               "is_you"
             ]
+          },
+          "preview_note": {
+            "type": "string"
+          },
+          "preview_state": {
+            "type": "string"
           },
           "proposed_by": {
             "type": "string"
