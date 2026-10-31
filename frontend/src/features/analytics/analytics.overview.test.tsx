@@ -491,6 +491,26 @@ describe("Sales review range", () => {
     expect(strip.getByText("€760k")).toBeVisible();
   });
 
+  it("gives the range the whole two-line detail and moves the basis into the receipt", async () => {
+    const user = userEvent.setup({ delay: null });
+    open(
+      "#/analytics",
+      withRange({ range_low_minor: 61_000_000, range_high_minor: 88_000_000 }),
+    );
+    const strip = await readings();
+    const card = strip.getByText("Expected finish").closest("section");
+    if (!card) throw new Error("the expected finish is not drawn as a card");
+    expect(card.querySelector(".stat-card-detail")?.textContent).toBe(
+      "8 in 10 outcomes between €610k and €880k",
+    );
+
+    await user.click(within(card).getByRole("button", { name: "Evidence" }));
+
+    expect(
+      await screen.findByText(/^End of this fiscal quarter, from /),
+    ).toBeTruthy();
+  });
+
   it("draws no range from one end alone", async () => {
     open("#/analytics", withRange({ range_low_minor: 61_000_000 }));
     const strip = await readings();
