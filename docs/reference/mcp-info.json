@@ -10,15 +10,15 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 142705,
+    "tool_catalog_bytes": 142776,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36763,
+    "approx_wire_tokens_total": 36781,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 35758,
       "input_schema_bytes": 66831,
-      "output_schema_bytes": 30862,
+      "output_schema_bytes": 30933,
       "description_plus_input_schema_bytes": 102589
     }
   },
@@ -2453,6 +2453,9 @@
                 "duplicate_candidates": {
                   "items": {
                     "properties": {
+                      "can_merge": {
+                        "type": "boolean"
+                      },
                       "candidate_id": {
                         "type": "string"
                       },
@@ -2488,11 +2491,15 @@
                         },
                         "type": "array"
                       },
+                      "keep_id": {
+                        "type": "string"
+                      },
                       "other_record_id": {
                         "type": "string"
                       }
                     },
                     "required": [
+                      "can_merge",
                       "candidate_id",
                       "confidence",
                       "evidence",

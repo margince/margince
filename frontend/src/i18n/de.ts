@@ -19309,6 +19309,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.tooFew": "Markiere mindestens zwei Kontakte.",
   "contactCase.notConnected":
     "Einige markierte Kontakte sind nicht als mögliche Duplikate mit den anderen verknüpft. Markiere die Kontakte dazwischen oder entferne die Markierung.",
+  "contactCase.pairOnly":
+    "Du kannst hier nur ein Paar zusammenführen, und einer der beiden Kontakte muss deiner sein. Markiere so ein Paar.",
   "contactCase.noOwner":
     "Wähle, wer für den verbleibenden Kontakt verantwortlich ist.",
   "contactCase.ownerLabel": "Verantwortlich",

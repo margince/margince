@@ -37451,7 +37451,7 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
@@ -37477,7 +37477,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.

@@ -110,7 +110,7 @@ Margince also groups contacts that may be duplicates of each other, so you can m
 1. Open the group: **Possible duplicates (N)** under the contact's name, or **Review** on its Worklist card.
 2. Tick the contacts that are true duplicates, and choose **Keep this record’s details** on one.
 3. Choose the **Owner** (an owner of a ticked contact), press **Preview merge**, then **Merge {count} contacts**.
-The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. You may merge your own contact into a colleague's possible duplicate, which stays with its owner ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
+The first merge settles the group for every owner, and it cannot be undone. A contact you leave unticked stays a possible duplicate of the remaining contact. A group of more than 25 contacts must be decided one pair at a time. Your own contact may merge into a colleague's, which keeps its owner; the review ticks those two ([who may merge](seats-roles-and-access.md#what-a-merge-keeps-and-who-may-merge)).
 Also called: combine, deduplicate, remove a duplicate, merge several contacts, duplicate group.
 
 ### How do I call a contact?
