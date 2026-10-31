@@ -10,10 +10,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
   emptyPage,
   jsonResponse,
+  LEAD_GRANTS,
   lead,
   render,
   SHIPPED_LEAD_ORIGINS,
@@ -398,6 +400,51 @@ describe("LeadsScreen — rich create (P-15)", () => {
       origin_detail: "Berlin summit",
     });
     expect(posted).not.toHaveProperty("source");
+  });
+
+  it("names the partner that referred the lead when the installation has one", async () => {
+    let posted: Record<string, unknown> | null = null;
+    stubFetch(async (url, method, request) => {
+      if (method === "POST" && url.includes("/leads")) {
+        posted = JSON.parse(await request.text());
+        return jsonResponse({ ...lead, id: "l-new" }, 201);
+      }
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({
+            allow: { ...LEAD_GRANTS, company: ["read"] },
+          }).authorization,
+        });
+      }
+      if (
+        url.includes("/v1/companies") &&
+        url.includes("relationship_type=partner")
+      ) {
+        return jsonResponse({
+          data: [{ id: "c-9", display_name: "Referrer GmbH" }],
+          page: { has_more: false },
+        });
+      }
+      return emptyPage();
+    });
+    const user = userEvent.setup();
+    render(<LeadsScreen />);
+    await user.click(await screen.findByTestId("new-record"));
+    const form = within(screen.getByRole("dialog"));
+    await user.type(form.getByLabelText("Full name *"), "Otto Fischer");
+    await user.click(
+      await form.findByRole("combobox", { name: "Referred by partner" }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: "Referrer GmbH" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    await waitFor(() => expect(posted).toBeTruthy());
+    expect(posted).toMatchObject({ partner_company_id: "c-9" });
   });
 
   it("finds an exact email duplicate before POST and links to it", async () => {

@@ -3668,6 +3668,18 @@ paths:
           description: |-
             Only older leads that retain this historical contact link. New leads cannot be
             created from contacts.
+        - name: partner_company_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: |-
+            Only the leads this partner company referred. Reads partner data, so it needs
+            `partner:read` (403 otherwise).
+        - name: partner_accepted
+          in: query
+          schema: {type: boolean}
+          description: |-
+            `true` keeps the referred leads a partner manager accepted. `false` keeps the
+            referred leads still waiting for acceptance. Needs `partner:read` (403 otherwise).
       responses:
         '200':
           description: A page of leads.
@@ -17490,6 +17502,12 @@ components:
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`.'}
         candidate_company_key: {type: [string, 'null']}
         project_id: {type: [string, 'null'], format: uuid}
+        partner_company_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            The partner company that referred the lead. It must be a live partner the caller can
+            read: 422 `not_a_partner` otherwise.
         contact_id:
           type: [string, 'null']
           format: uuid

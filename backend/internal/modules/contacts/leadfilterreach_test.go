@@ -27,7 +27,14 @@ func leadTeamReader(objects map[string]principal.ObjectGrant) context.Context {
 
 var leadReadOnly = map[string]principal.ObjectGrant{leadEntity: {Read: true}}
 
-func TestRefusedLeadFiltersNamesTheCompanyDialsToASeatWithoutCompanyRead(t *testing.T) {
+// leadCompanyPartnerRead reads leads, companies and partner programmes: every
+// dial the lead list has.
+var leadCompanyPartnerRead = map[string]principal.ObjectGrant{
+	leadEntity: {Read: true}, companyEntity: {Read: true}, partnerMaskObject: {Read: true},
+}
+
+// The company dials take company read and the partner dials take partner read.
+func TestRefusedLeadFiltersNamesTheDialsASeatCannotRead(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		ctx  context.Context
@@ -36,10 +43,13 @@ func TestRefusedLeadFiltersNamesTheCompanyDialsToASeatWithoutCompanyRead(t *test
 		{"a reader of every row", principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalSystem, ID: "system:test",
 		}), []string{}},
+		{"a seat reading leads, companies and partners", leadTeamReader(leadCompanyPartnerRead), []string{}},
 		{"a seat reading leads and companies", leadTeamReader(map[string]principal.ObjectGrant{
 			leadEntity: {Read: true}, companyEntity: {Read: true},
-		}), []string{}},
-		{"a seat reading leads alone", leadTeamReader(leadReadOnly), []string{filterCountry, filterIndustry, filterSizeBand}},
+		}), []string{filterPartnerAccepted, leadPartnerField}},
+		{"a seat reading leads alone", leadTeamReader(leadReadOnly), []string{
+			filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand,
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := refusedLeadFilters(tc.ctx, nil)
@@ -83,7 +93,7 @@ func TestTheLeadReachProbeResolvesTheListFilterThroughTheListResolver(t *testing
 	answering := func(err error) storekit.ListMemberFilterResolver {
 		return func(context.Context, ids.UUID, string) (storekit.ListMemberFilter, error) { return nil, err }
 	}
-	readsBoth := leadTeamReader(map[string]principal.ObjectGrant{leadEntity: {Read: true}, companyEntity: {Read: true}})
+	readsBoth := leadTeamReader(leadCompanyPartnerRead)
 	for _, tc := range []struct {
 		name    string
 		members storekit.ListMemberFilterResolver

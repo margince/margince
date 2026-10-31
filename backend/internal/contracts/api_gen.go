@@ -39462,6 +39462,10 @@ type CreateLeadRequest struct {
 	OriginDetail *string             `json:"origin_detail,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
+	// PartnerCompanyId The partner company that referred the lead. It must be a live partner the caller can
+	// read: 422 `not_a_partner` otherwise.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone     *string             `json:"phone,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
@@ -65552,6 +65556,14 @@ type ListLeadsParams struct {
 	// FromContactId Only older leads that retain this historical contact link. New leads cannot be
 	// created from contacts.
 	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
+
+	// PartnerCompanyId Only the leads this partner company referred. Reads partner data, so it needs
+	// `partner:read` (403 otherwise).
+	PartnerCompanyId *openapi_types.UUID `form:"partner_company_id,omitempty" json:"partner_company_id,omitempty"`
+
+	// PartnerAccepted `true` keeps the referred leads a partner manager accepted. `false` keeps the
+	// referred leads still waiting for acceptance. Needs `partner:read` (403 otherwise).
+	PartnerAccepted *bool `form:"partner_accepted,omitempty" json:"partner_accepted,omitempty"`
 }
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
@@ -74610,6 +74622,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -74768,6 +74788,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
 		}
 	}
 
@@ -115148,6 +115175,32 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from_contact_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from_contact_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_company_id", r.URL.Query(), &params.PartnerCompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_accepted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_accepted", r.URL.Query(), &params.PartnerAccepted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_accepted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_accepted", Err: err})
 		}
 		return
 	}

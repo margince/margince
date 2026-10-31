@@ -2889,6 +2889,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.activated": "Kích hoạt ngày {date}",
   "lead.partner": "Được đối tác giới thiệu",
   "lead.partnerNone": "Không có đối tác",
+  "lead.partnerAwaiting": "Đang chờ chấp nhận",
   "lead.partnerAccept": "Chấp nhận cho đối tác",
   "lead.partnerAccepted": "Đã chấp nhận cho đối tác ngày {date}",
   "lead.partnerAcceptedKept":

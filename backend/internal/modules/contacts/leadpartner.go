@@ -54,14 +54,74 @@ func setLeadPartner(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current c
 		return nil
 	}
 	partner := *in.PartnerCompanyID
-	if err := auth.EnsureReferenceTarget(ctx, tx, leadPartnerField, companyEntity, partner.UUID); err != nil {
-		return err
-	}
-	if err := EnsureCompanyIsPartner(ctx, tx, partner); err != nil {
+	if err := ensureLeadPartner(ctx, tx, partner); err != nil {
 		return err
 	}
 	p.Set(leadPartnerField, current.PartnerCompanyId, partner.UUID)
 	return nil
+}
+
+// ensureLeadPartner refuses a referring partner the caller cannot read, or a
+// company with no live partner programme. Create and update both name the
+// partner through it.
+func ensureLeadPartner(ctx context.Context, tx pgx.Tx, partner ids.CompanyID) error {
+	if err := auth.EnsureReferenceTarget(ctx, tx, leadPartnerField, companyEntity, partner.UUID); err != nil {
+		return err
+	}
+	return EnsureCompanyIsPartner(ctx, tx, partner)
+}
+
+// LeadPartnerFilter narrows the lead list to the leads a partner referred.
+type LeadPartnerFilter struct {
+	// CompanyID keeps the leads this partner company referred.
+	CompanyID *ids.CompanyID
+	// Accepted keeps the referred leads a partner manager accepted (true), or
+	// the ones still waiting for acceptance (false).
+	Accepted *bool
+}
+
+// clauses renders the filter over the lead row. It reads partner data, so it
+// takes the partner grant. A partner the caller cannot open matches no lead,
+// because the lead's own read blanks that partner (withholdUnreadablePartners).
+func (f LeadPartnerFilter) clauses(ctx context.Context, arg func(any) int) ([]string, error) {
+	if f.CompanyID == nil && f.Accepted == nil {
+		return nil, nil
+	}
+	if err := auth.Require(ctx, partnerMaskObject, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	var where []string
+	if f.CompanyID != nil {
+		visible, err := readablePartnerClause(ctx, arg)
+		if err != nil {
+			return nil, err
+		}
+		where = append(where, storekit.SQLf("lead.partner_company_id = $%d", arg(*f.CompanyID)), visible)
+	}
+	if f.Accepted != nil {
+		stamp := "lead.partner_accepted_at IS NULL"
+		if *f.Accepted {
+			stamp = "lead.partner_accepted_at IS NOT NULL"
+		}
+		where = append(where, "lead.partner_company_id IS NOT NULL", stamp)
+	}
+	return where, nil
+}
+
+// readablePartnerClause holds the lead's partner company to the rows the
+// caller may open, by the predicate auth.VisibleSubset applies to the read.
+func readablePartnerClause(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.Allows(ctx, companyEntity, principal.ActionRead) {
+		return "false", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, companyEntity, "pc", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		return "true", nil
+	}
+	return "EXISTS (SELECT 1 FROM company pc WHERE pc.id = lead.partner_company_id AND " + scope + ")", nil
 }
 
 // withholdUnreadablePartners blanks the referring partner on every lead whose
