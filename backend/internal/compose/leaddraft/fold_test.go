@@ -230,3 +230,28 @@ func TestALeadRewriteCarriesTheDraftOnScreen(t *testing.T) {
 		t.Errorf("steering = intent %q, rewrite_of %q", in.Intent, in.RewriteOf)
 	}
 }
+
+// A colleague writing from one of our own domains arrives inbound. Read by
+// direction, that mail was the lead's last word, and a follow-up answered a
+// message we had written ourselves.
+func TestAColleaguesInboundMailIsOurSideSpeaking(t *testing.T) {
+	t.Parallel()
+	ours := act("019fe7ae-0000-7000-8000-00000000000c", when.Add(-1*time.Hour),
+		crmcontracts.ActivityDirectionInbound, "Re: Pricing", "Sending this on.")
+	ours.Voice = &crmcontracts.ActivityVoice{
+		Author: &crmcontracts.ActivityAuthor{Kind: crmcontracts.ActivityAuthorKindColleague},
+	}
+	in := leaddraft.FromLead(lead(nil), []crmcontracts.Activity{
+		ours,
+		act("019fe7ae-0000-7000-8000-00000000000d", when.Add(-5*time.Hour),
+			crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
+	}, leaddraft.Request{}, draftfloor.Envelope{})
+
+	wantIn := when.Add(-5 * time.Hour).Format(time.RFC3339)
+	if in.Recipient.LastInbound != wantIn {
+		t.Errorf("last inbound = %q, want the lead's own message at %q", in.Recipient.LastInbound, wantIn)
+	}
+	if want := when.Add(-1 * time.Hour).Format(time.RFC3339); in.Recipient.LastOutbound != want {
+		t.Errorf("last outbound = %q, want our colleague's at %q", in.Recipient.LastOutbound, want)
+	}
+}
