@@ -127,8 +127,12 @@ func TestCreatorsReadAFewAuditRowsPerRecordWhateverItsHistory(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	statement, err := creatorsSQL("contact")
+	if err != nil {
+		t.Fatal(err)
+	}
 	var raw string
-	if err := tx.QueryRow(ctx, `EXPLAIN (ANALYZE, FORMAT JSON) `+creatorsSQL, "contact", page).Scan(&raw); err != nil {
+	if err := tx.QueryRow(ctx, `EXPLAIN (ANALYZE, FORMAT JSON) `+statement, page).Scan(&raw); err != nil {
 		t.Fatalf("explaining the creators statement: %v", err)
 	}
 	var plans []struct {
