@@ -131,6 +131,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [watch-a-running-installation.md](how-to/watch-a-running-installation.md): scrape what each program
+  measures, and what a missing series means.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
