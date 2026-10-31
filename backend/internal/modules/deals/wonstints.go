@@ -3,12 +3,12 @@
 
 package deals
 
-// wonStintsSQL is the completed stage stints of the won deals of pipeline $1,
-// the one population the health pace and the close-date pace take a median
-// of. A stint runs from a move into a stage to the deal's next move, in the
-// order the moves were written. A stint an import brought in at either end is
-// left out: an import lands a deal's whole history in one instant, which would
-// read as a stint of zero days. Columns: deal_id, stage_id, secs.
+// wonStintsSQL is the completed stage stints of the won deals of pipeline $1.
+// The health pace and the close-date pace both take their median of it. A
+// stint runs from a move into a stage to the deal's next move, in the order
+// the moves were written. A stint with an imported move at either end is left
+// out. An import lands a deal's whole history in one instant, which would read
+// as a stint of zero days. Columns: deal_id, stage_id, secs.
 const wonStintsSQL = `
 	SELECT deal_id, stage_id, secs FROM (
 		SELECT h.deal_id, h.to_stage_id AS stage_id, h.provenance,

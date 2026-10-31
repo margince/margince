@@ -60,9 +60,9 @@ type stageEntries struct {
 // to a won stage, or to a later stage of the same pipeline. Stage order is read
 // as configured now: that is the weekly funnel's published meaning, which the
 // Analytics stage cohort does not share. Moves are read in write order. An
-// imported move shows the source system's history, not the rep's selling: it
-// never converts an entry, and an entry whose next move it is is left out, as
-// the stage cohort leaves it out of its rate.
+// imported move shows the source system's history, not the rep's selling. It
+// never converts an entry. An entry whose next move is imported is left out,
+// as the stage cohort leaves it out of its rate.
 var teamFunnelSQL = `
 	WITH entries AS (` + StageEntriesSQL("$%[1]d", "$%[2]d", "h.owner_id_at_change = ANY($%[3]d) AND (%[4]s)") + `)
 	SELECT e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name,

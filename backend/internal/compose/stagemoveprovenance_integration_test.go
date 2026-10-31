@@ -5,7 +5,7 @@
 
 package compose
 
-// What an import brings in is the source system's history, so the readings of
+// What an import brings in is the source system's history. The readings of
 // how this team sells leave it out: stage conversion and close-date pushes. A
 // move saved before provenance was kept still counts.
 

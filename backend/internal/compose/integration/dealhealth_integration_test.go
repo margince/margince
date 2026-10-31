@@ -221,7 +221,7 @@ func TestStalledDealReadsAtRisk(t *testing.T) {
 }
 
 // An imported win lands its whole history in one instant, so its stint in a
-// stage reads as zero days, so it does not set the pace the stage-velocity
+// stage reads as zero days. It does not set the pace the stage-velocity
 // factor compares against. Ten wins saved before provenance was kept, four days
 // in the stage, set it to four, however many imported wins sit beside them.
 func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
@@ -251,8 +251,8 @@ func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 }
 
 // Two moves can share an instant. The one written first ends the stint before
-// them, whatever their ids say: here an imported move, so each one-day stint
-// ending in such a pair is left out and the four-day pace holds.
+// them, whatever their ids say. Here that is an imported move. So each one-day
+// stint ending in such a pair is left out, and the four-day pace holds.
 func TestAStintEndsAtTheMoveWrittenFirstInItsInstant(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
