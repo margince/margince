@@ -5,7 +5,6 @@ package contacts
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,25 +18,29 @@ const leadPromotionSource = "lead_promotion"
 // promotionEmployer is the employer evidence a promotion hands the shared
 // resolver, and the typed company name it holds back. Typed text alone never
 // creates a company: the name rides along only beside a linked company, a
-// business email domain, or the caller's createCompany.
-func (s *Store) promotionEmployer(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, createCompany bool,
-) (EmployerChoice, string, error) {
+// business email domain, or the caller's createsCompany. The facts it decided
+// on come back too, so an approval can pin them.
+func (s *Store) promotionEmployer(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, createsCompany bool,
+) (EmployerChoice, string, promotionEmployerFacts, error) {
+	facts, err := s.promotionEmployerFactsTx(ctx, tx, lead, createsCompany)
+	if err != nil {
+		return EmployerChoice{}, "", facts, err
+	}
 	choice := EmployerChoice{
 		CompanyName: lead.CompanyName, CompanyID: idArg[ids.CompanyKind](lead.CompanyId),
 		Role: lead.Title, Source: lead.Source,
 	}
-	if choice.CompanyID != nil || !choice.named() || createCompany {
-		return choice, "", nil
+	if choice.CompanyID != nil || !choice.named() || createsCompany {
+		return choice, "", facts, nil
 	}
-	if lead.Email != nil {
-		domains, err := s.employerDomainsForAddressTx(ctx, tx, string(*lead.Email))
+	if facts.Domain != nil {
+		domains, err := employerDomainsVisible(ctx, tx, *facts.Domain)
 		if err != nil || len(domains) > 0 {
-			return choice, "", err
+			return choice, "", facts, err
 		}
 	}
-	typed := strings.TrimSpace(*choice.CompanyName)
 	choice.CompanyName = nil
-	return choice, typed, nil
+	return choice, facts.TypedName, facts, nil
 }
 
 // proposeTypedCompany puts a held-back company name on the contact as a

@@ -100,14 +100,14 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:TransferRequestableTx":       "asks whether a colleague may ASK for a record they cannot change; it writes nothing on the record, and the move on accept passes auth.EnsureWritableLive as the owner",
-	"internal/modules/deals:pendingMappingsOf":              "narrows which lost deals a mapping count or apply page reads to those the operator may see. Each write then asks auth.EnsureWritable on the deal (writeMappedLossReason) and skips one the operator may not write",
-	"internal/modules/deals:ListLegacyLossReasons":          "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
-	"internal/modules/contacts:attachToSettledVerdict":      "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",
-	"internal/modules/contacts:employerDomainsForAddressTx": "filters read-only work-domain evidence; no company mutation occurs before the shared employer resolver",
-	"internal/modules/contacts:previewDomainEmployerTx":     "read-only employer planning checks visibility; writes still pass the resolver and their mutation authority gates",
-	"internal/modules/contacts:EmployerNameMatchesTx":       "matches a visible company for an employment link; matching changes no existing company. New companies pass CreateCompanyTx and the edge passes contact write authority and link-target gates",
-	"internal/modules/contacts:ensureCompanyAndEmployment":  "checks whether a domain-matched company may be named before attaching a contact. It changes no company row; the inferred edge uses the capture employment writer and its existing contact and seat locks",
+	"internal/modules/contacts:TransferRequestableTx":      "asks whether a colleague may ASK for a record they cannot change; it writes nothing on the record, and the move on accept passes auth.EnsureWritableLive as the owner",
+	"internal/modules/deals:pendingMappingsOf":             "narrows which lost deals a mapping count or apply page reads to those the operator may see. Each write then asks auth.EnsureWritable on the deal (writeMappedLossReason) and skips one the operator may not write",
+	"internal/modules/deals:ListLegacyLossReasons":         "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
+	"internal/modules/contacts:attachToSettledVerdict":     "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",
+	"internal/modules/contacts:employerDomainsVisible":     "filters read-only work-domain evidence; no company mutation occurs before the shared employer resolver",
+	"internal/modules/contacts:previewDomainEmployerTx":    "read-only employer planning checks visibility; writes still pass the resolver and their mutation authority gates",
+	"internal/modules/contacts:EmployerNameMatchesTx":      "matches a visible company for an employment link; matching changes no existing company. New companies pass CreateCompanyTx and the edge passes contact write authority and link-target gates",
+	"internal/modules/contacts:ensureCompanyAndEmployment": "checks whether a domain-matched company may be named before attaching a contact. It changes no company row; the inferred edge uses the capture employment writer and its existing contact and seat locks",
 
 	"internal/modules/contacts:contactHoldsRefusal":            "asks whether the caller may SEE the contact that already holds a refused lead's key, so the 409 names it only to a caller who may read it. It changes no contact: the write it answers is the lead's, and that write is refused",
 	"internal/modules/contacts:liveVisibleCompanies":           "the reader row scope over companies, which decides which company the lead's domain or name matches for this reader: the offer on a lead read, and the re-check under the link's lock that the requested company is still that match. It changes no company: the link writes only the lead's company_id",
