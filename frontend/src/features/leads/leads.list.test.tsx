@@ -415,7 +415,7 @@ describe("LeadsScreen — rich create (P-15)", () => {
           roles: ["rep"],
           teams: [],
           authorization: meFixture({
-            allow: { ...LEAD_GRANTS, company: ["read"] },
+            allow: { ...LEAD_GRANTS, company: ["read"], partner: ["read"] },
           }).authorization,
         });
       }

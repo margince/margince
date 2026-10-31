@@ -22,9 +22,14 @@ import type { Lead, LeadWriter } from "./leads";
 
 type Translate = ReturnType<typeof useT>;
 
-/** The installation's partner companies, for a seat that may read companies. */
+/**
+ * The installation's partner companies, for a seat that may read companies and
+ * partners. The server refuses a lead's partner to any other seat.
+ */
 export function useLeadPartnerOptions(): CreateFieldOption[] | undefined {
-  return usePartnerCompanyOptions(useCan("company", "read")).data;
+  const readsCompanies = useCan("company", "read");
+  const readsPartners = useCan("partner", "read");
+  return usePartnerCompanyOptions(readsCompanies && readsPartners).data;
 }
 
 /** A referring partner's name, or its id when the options do not hold it. */

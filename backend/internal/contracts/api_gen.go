@@ -39462,8 +39462,8 @@ type CreateLeadRequest struct {
 	OriginDetail *string             `json:"origin_detail,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// PartnerCompanyId The partner company that referred the lead. It must be a live partner the caller can
-	// read: 422 `not_a_partner` otherwise.
+	// PartnerCompanyId The partner company that referred the lead. Needs `partner:read` (403 otherwise). It
+	// must be a live partner the caller can read: 422 `not_a_partner` otherwise.
 	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
 
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
@@ -65557,12 +65557,14 @@ type ListLeadsParams struct {
 	// created from contacts.
 	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
 
-	// PartnerCompanyId Only the leads this partner company referred. Reads partner data, so it needs
-	// `partner:read` (403 otherwise).
+	// PartnerCompanyId Only the leads this partner company referred. Reads partner and company data, so it
+	// needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+	// open matches no lead.
 	PartnerCompanyId *openapi_types.UUID `form:"partner_company_id,omitempty" json:"partner_company_id,omitempty"`
 
 	// PartnerAccepted `true` keeps the referred leads a partner manager accepted. `false` keeps the
-	// referred leads still waiting for acceptance. Needs `partner:read` (403 otherwise).
+	// referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+	// (403 otherwise), and counts only partners the caller can open.
 	PartnerAccepted *bool `form:"partner_accepted,omitempty" json:"partner_accepted,omitempty"`
 }
 

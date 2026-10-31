@@ -14,6 +14,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -96,13 +97,6 @@ func TestTheLeadListNarrowsToAPartnersReferrals(t *testing.T) {
 			}
 		})
 	}
-
-	noPartnerRead := asStageAdmin(e, map[string]principal.ObjectGrant{"lead": {Read: true}, "company": {Read: true}})
-	for _, filter := range []LeadPartnerFilter{{CompanyID: &first}, {Accepted: &waiting}} {
-		if _, _, err := e.store.ListLeads(noPartnerRead, ListLeadsInput{Partner: filter}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("a seat without partner read filtering by %+v: err = %v, want permission denied", filter, err)
-		}
-	}
 }
 
 // The lead's own read blanks a partner the caller cannot open. Filtering by
@@ -141,14 +135,56 @@ func TestALeadListFilterByAnUnseenPartnerMatchesNothing(t *testing.T) {
 	}
 
 	blind := colleague(principal.RowScopeOwn)
+	accepted, waiting := true, false
 	if got := listedLeadNames(blind, t, e, LeadPartnerFilter{CompanyID: &partnerID}); len(got) != 0 {
 		t.Errorf("a seat that cannot open the partner found its referrals by id: %v", got)
 	}
-	waiting := false
-	if got := listedLeadNames(blind, t, e, LeadPartnerFilter{Accepted: &waiting}); !slices.Equal(got, []string{name}) {
-		t.Errorf("the seat's own referred lead, awaiting acceptance: listed %v, want [%s]", got, name)
+	if got := listedLeadNames(blind, t, e, LeadPartnerFilter{Accepted: &waiting}); len(got) != 0 {
+		t.Errorf("a seat that cannot open the partner found the lead awaiting it: %v", got)
 	}
 	if got := listedLeadNames(admin, t, e, LeadPartnerFilter{CompanyID: &partnerID}); !slices.Equal(got, []string{name}) {
 		t.Errorf("the partner company's owner: listed %v, want [%s]", got, name)
+	}
+
+	leadID := ids.From[ids.LeadKind](ids.UUID(own.Id))
+	if _, err := e.store.AcceptPartnerLead(admin, leadID); err != nil {
+		t.Fatalf("accepting the lead: %v", err)
+	}
+	if got := listedLeadNames(blind, t, e, LeadPartnerFilter{Accepted: &accepted}); len(got) != 0 {
+		t.Errorf("a seat that cannot open the partner found the accepted lead: %v", got)
+	}
+	read, err := e.store.GetLead(blind, leadID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.PartnerCompanyId != nil || read.PartnerAcceptedAt != nil || read.PartnerAcceptedBy != nil {
+		t.Errorf("the lead's read gave a seat that cannot open the partner partner %v, accepted %v by %v",
+			read.PartnerCompanyId, read.PartnerAcceptedAt, read.PartnerAcceptedBy)
+	}
+}
+
+// Whether a company is a partner is partner data. A seat without partner read
+// cannot name one on a lead, so the refusal does not answer that question.
+func TestNamingALeadsPartnerTakesPartnerRead(t *testing.T) {
+	e := setupDedupe(t)
+	admin := asStageAdmin(e, stageAdminGrants())
+	partnerID, _ := newPartnerCompany(admin, t, e, "Referrer GmbH", UpsertPartnerInput{PartnerRole: "referral"})
+	noPartnerRead := asStageAdmin(e, map[string]principal.ObjectGrant{
+		"lead": {Create: true, Read: true, Update: true}, "company": {Read: true},
+	})
+
+	name := "Referred Without The Grant"
+	_, _, err := e.store.CreateLead(noPartnerRead, CreateLeadInput{FullName: &name, Source: "manual", PartnerCompanyID: &partnerID})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("creating a referred lead without partner read: err = %v, want permission denied", err)
+	}
+	plain := "Unreferred"
+	lead, _, err := e.store.CreateLead(noPartnerRead, CreateLeadInput{FullName: &plain, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.store.UpdateLead(noPartnerRead, ids.From[ids.LeadKind](ids.UUID(lead.Id)), UpdateLeadInput{PartnerCompanyID: &partnerID})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("naming the partner on an update without partner read: err = %v, want permission denied", err)
 	}
 }

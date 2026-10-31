@@ -33,7 +33,8 @@ var leadCompanyPartnerRead = map[string]principal.ObjectGrant{
 	leadEntity: {Read: true}, companyEntity: {Read: true}, partnerMaskObject: {Read: true},
 }
 
-// The company dials take company read and the partner dials take partner read.
+// The company dials take company read. The partner dials take partner read and
+// company read, because they read the partner through the caller's company scope.
 func TestRefusedLeadFiltersNamesTheDialsASeatCannotRead(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -47,6 +48,9 @@ func TestRefusedLeadFiltersNamesTheDialsASeatCannotRead(t *testing.T) {
 		{"a seat reading leads and companies", leadTeamReader(map[string]principal.ObjectGrant{
 			leadEntity: {Read: true}, companyEntity: {Read: true},
 		}), []string{filterPartnerAccepted, leadPartnerField}},
+		{"a seat reading leads and partners", leadTeamReader(map[string]principal.ObjectGrant{
+			leadEntity: {Read: true}, partnerMaskObject: {Read: true},
+		}), []string{filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand}},
 		{"a seat reading leads alone", leadTeamReader(leadReadOnly), []string{
 			filterCountry, filterIndustry, filterPartnerAccepted, leadPartnerField, filterSizeBand,
 		}},

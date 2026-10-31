@@ -38920,8 +38920,8 @@ export interface components {
             project_id?: string | null;
             /**
              * Format: uuid
-             * @description The partner company that referred the lead. It must be a live partner the caller can
-             *     read: 422 `not_a_partner` otherwise.
+             * @description The partner company that referred the lead. Needs `partner:read` (403 otherwise). It
+             *     must be a live partner the caller can read: 422 `not_a_partner` otherwise.
              */
             partner_company_id?: string | null;
             /**
@@ -66280,13 +66280,15 @@ export interface operations {
                  */
                 from_contact_id?: string;
                 /**
-                 * @description Only the leads this partner company referred. Reads partner data, so it needs
-                 *     `partner:read` (403 otherwise).
+                 * @description Only the leads this partner company referred. Reads partner and company data, so it
+                 *     needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+                 *     open matches no lead.
                  */
                 partner_company_id?: string;
                 /**
                  * @description `true` keeps the referred leads a partner manager accepted. `false` keeps the
-                 *     referred leads still waiting for acceptance. Needs `partner:read` (403 otherwise).
+                 *     referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+                 *     (403 otherwise), and counts only partners the caller can open.
                  */
                 partner_accepted?: boolean;
             };

@@ -61,10 +61,14 @@ func setLeadPartner(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current c
 	return nil
 }
 
-// ensureLeadPartner refuses a referring partner the caller cannot read, or a
-// company with no live partner programme. Create and update both name the
-// partner through it.
+// ensureLeadPartner refuses a seat without partner read, a referring partner
+// the caller cannot read, or a company with no live partner programme. Create
+// and update both name the partner through it, so neither tells a seat which
+// companies are partners.
 func ensureLeadPartner(ctx context.Context, tx pgx.Tx, partner ids.CompanyID) error {
+	if err := auth.Require(ctx, partnerMaskObject, principal.ActionRead); err != nil {
+		return err
+	}
 	if err := auth.EnsureReferenceTarget(ctx, tx, leadPartnerField, companyEntity, partner.UUID); err != nil {
 		return err
 	}
@@ -80,9 +84,10 @@ type LeadPartnerFilter struct {
 	Accepted *bool
 }
 
-// clauses renders the filter over the lead row. It reads partner data, so it
-// takes the partner grant. A partner the caller cannot open matches no lead,
-// because the lead's own read blanks that partner (withholdUnreadablePartners).
+// clauses renders the filter over the lead row. It reads partner and company
+// data, so it takes both grants. Both arms read the partner through the
+// caller's company scope: the lead's own read blanks a partner the caller
+// cannot open, so no filter may match on one.
 func (f LeadPartnerFilter) clauses(ctx context.Context, arg func(any) int) ([]string, error) {
 	if f.CompanyID == nil && f.Accepted == nil {
 		return nil, nil
@@ -90,42 +95,26 @@ func (f LeadPartnerFilter) clauses(ctx context.Context, arg func(any) int) ([]st
 	if err := auth.Require(ctx, partnerMaskObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
+	partner, err := storekit.LinkedCompanyColumn(ctx, "lead."+leadPartnerField, "id", arg)
+	if err != nil {
+		return nil, err
+	}
 	var where []string
 	if f.CompanyID != nil {
-		visible, err := readablePartnerClause(ctx, arg)
-		if err != nil {
-			return nil, err
-		}
-		where = append(where, storekit.SQLf("lead.partner_company_id = $%d", arg(*f.CompanyID)), visible)
+		where = append(where, storekit.SQLf("%s = $%d", partner, arg(*f.CompanyID)))
 	}
 	if f.Accepted != nil {
 		stamp := "lead.partner_accepted_at IS NULL"
 		if *f.Accepted {
 			stamp = "lead.partner_accepted_at IS NOT NULL"
 		}
-		where = append(where, "lead.partner_company_id IS NOT NULL", stamp)
+		where = append(where, partner+" IS NOT NULL", stamp)
 	}
 	return where, nil
 }
 
-// readablePartnerClause holds the lead's partner company to the rows the
-// caller may open, by the predicate auth.VisibleSubset applies to the read.
-func readablePartnerClause(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, companyEntity) {
-		return "false", nil
-	}
-	scope, err := auth.ScopeClauseFor(ctx, companyEntity, "pc", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		return sqlAlwaysVisible, nil
-	}
-	return "EXISTS (SELECT 1 FROM company pc WHERE pc.id = lead.partner_company_id AND " + scope + ")", nil
-}
-
-// withholdUnreadablePartners blanks the referring partner on every lead whose
-// partner company the caller cannot open.
+// withholdUnreadablePartners blanks the referring partner, and the acceptance
+// stamp for it, on every lead whose partner company the caller cannot open.
 func withholdUnreadablePartners(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
 	var partnerIDs []ids.UUID
 	for _, l := range leads {
@@ -142,7 +131,10 @@ func withholdUnreadablePartners(ctx context.Context, tx pgx.Tx, leads []crmcontr
 	}
 	for i := range leads {
 		if leads[i].PartnerCompanyId != nil && !visible[ids.UUID(*leads[i].PartnerCompanyId)] {
+			// The stamp names the partner it was for, so it goes with the partner.
 			leads[i].PartnerCompanyId = nil
+			leads[i].PartnerAcceptedAt = nil
+			leads[i].PartnerAcceptedBy = nil
 		}
 	}
 	return nil

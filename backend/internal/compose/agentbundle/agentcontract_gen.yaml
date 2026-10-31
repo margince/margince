@@ -3672,14 +3672,16 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: |-
-            Only the leads this partner company referred. Reads partner data, so it needs
-            `partner:read` (403 otherwise).
+            Only the leads this partner company referred. Reads partner and company data, so it
+            needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+            open matches no lead.
         - name: partner_accepted
           in: query
           schema: {type: boolean}
           description: |-
             `true` keeps the referred leads a partner manager accepted. `false` keeps the
-            referred leads still waiting for acceptance. Needs `partner:read` (403 otherwise).
+            referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+            (403 otherwise), and counts only partners the caller can open.
       responses:
         '200':
           description: A page of leads.
@@ -17506,8 +17508,8 @@ components:
           type: [string, 'null']
           format: uuid
           description: |-
-            The partner company that referred the lead. It must be a live partner the caller can
-            read: 422 `not_a_partner` otherwise.
+            The partner company that referred the lead. Needs `partner:read` (403 otherwise). It
+            must be a live partner the caller can read: 422 `not_a_partner` otherwise.
         contact_id:
           type: [string, 'null']
           format: uuid
