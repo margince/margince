@@ -38,8 +38,8 @@ type ContextDial = (typeof CONTEXT_DIALS)[number];
  */
 export type OverviewDials = Readonly<Partial<Record<ContextDial, string>>>;
 
-// The periods the team review reads: a team is coached week by week, and a
-// month is the longest span its handoff rounds stay comparable over.
+// The periods the team review reads. A team is coached week by week. A month
+// is the longest span its handoff rounds stay comparable over.
 export const TEAM_PERIODS = [
   "this_week",
   "last_week",
@@ -75,7 +75,7 @@ export function namesContext(params: UrlParams, view: OverviewView): boolean {
   return Object.keys(dialsOf(params, view)).length > 0;
 }
 
-/** `params` opened on `view` with exactly `dials` as its question. */
+/** `params` opened on `view` with `dials` as its whole question. */
 export function withContext(
   params: UrlParams,
   view: OverviewView,
@@ -93,9 +93,9 @@ export function withContext(
 
 /**
  * The remembered dials this reader may still ask. A scope they lost or a
- * period the view no longer offers is dropped, so the view falls back to its
- * default instead of asking a question the server would refuse. A pipeline
- * is kept: Sales review says itself when a pipeline it names is gone.
+ * period the view no longer offers is dropped. The view then reads its
+ * default and never asks a question the server would refuse. A pipeline is
+ * kept: Sales review says itself when a pipeline it names is gone.
  */
 export function permittedDials(
   dials: OverviewDials,
@@ -185,9 +185,9 @@ function write(
 }
 
 /**
- * The view this account chose last. A choice kept before choices were per
- * account is still honoured: a seat key is erased at sign-out, so it was made
- * by whoever is signed in now.
+ * The view this account chose last. An older choice kept for the whole
+ * browser is still honoured. Its seat key is erased at sign-out, so whoever is
+ * signed in now made it.
  */
 export function rememberedView(account: string): string | null {
   return (
@@ -243,8 +243,8 @@ function withView(
 }
 
 /**
- * The dials a door out of a view carries: its question as answered, with the
- * defaults spelled out so the destination cannot read a different default.
+ * The dials a door out of a view carries: its question as answered. The
+ * defaults are spelled out, so the destination cannot read another default.
  * The reader's default scope is left out, because every section reads it.
  */
 export function outboundDials(

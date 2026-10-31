@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // What the Forecast tab can answer of the question an address carries. The
-// forecast reads the current week, month or quarter over every pipeline, so
-// a door from a figure about one pipeline or another period would otherwise
-// show a wider population under the same name.
+// forecast reads the current week, month or quarter over every pipeline. A
+// door from a figure about one pipeline or a past period must not show a
+// wider population under the same name.
 
 import type { ForecastPeriod } from "./forecast.queries";
 

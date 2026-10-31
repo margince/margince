@@ -126,8 +126,8 @@ export function useSelectionEvidence(question: string) {
 
 /**
  * The deeper pages a view leads to, after its own readings and lists. Each
- * is a link carrying the view's question, so the page it opens answers the
- * same one and a modified click opens it in a new tab.
+ * is a link carrying the view's question, so the page it opens answers it.
+ * A modified click opens it in a new tab.
  */
 export function OverviewLinks({
   sections,

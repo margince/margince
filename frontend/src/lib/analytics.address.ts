@@ -111,7 +111,7 @@ export function openAnalyticsSection(section: Section): void {
 }
 
 /**
- * The address of one section asked with exactly `dials`, for a door that
+ * The address of one section asked with `dials` alone, for a door that
  * carries the question it was read under rather than whatever the bar holds.
  * A link, so a modified click opens it in a new tab.
  */

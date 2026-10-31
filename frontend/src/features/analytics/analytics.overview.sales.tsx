@@ -302,8 +302,8 @@ function answeredDials(
   };
 }
 
-// The findings are read for the scope over every pipeline, so a door to one
-// carries the scope alone and the page it opens reads what the list read.
+// The findings are read for the scope over every pipeline. A door to one
+// carries the scope alone, so the page it opens reads what the list read.
 function findingDials(doors: UrlParams): UrlParams {
   const scope = doors.get("scope");
   return new Map([

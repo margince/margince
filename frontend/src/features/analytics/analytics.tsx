@@ -174,8 +174,8 @@ function ScopeRefused({
   allowed: readonly components["schemas"]["AnalyticsScope"][];
 }>) {
   const t = useT();
-  // Named when it can be, so a page that opens on a remembered question
-  // when the address is bare still opens on the population this button says.
+  // Named when it can be. A bare address may open a remembered question,
+  // and the page must open on the population this button names.
   const named = allowed.some((scope) => scopeKey(scope) === scopeKey(fallback));
   return (
     <Callout

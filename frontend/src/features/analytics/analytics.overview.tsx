@@ -191,8 +191,8 @@ function OverviewBoard({
 }
 
 /**
- * The question `view` opens with when the address names none: what this tab
- * or this account kept for it, minus what the reader may no longer ask.
+ * The question `view` opens with when the address names none. It is what
+ * this tab or this account kept, minus what the reader may no longer ask.
  * Undefined when the address already states one or nothing is kept.
  */
 function restoredDials(
@@ -240,9 +240,9 @@ function useOverviewMemory(
   }, [account, signature]);
 }
 
-// An explicit choice of view is remembered and written to the address, so
-// Back from a record and a copied link both open the same view. The view
-// opens on its own question, never on the one just left.
+// An explicit choice of view is remembered and written to the address. Back
+// from a record and a copied link then open the same view. The view opens on
+// its own question, never on the one just left.
 function chooseView(account: string | null, view: OverviewView): void {
   if (account) rememberView(account, view);
   replaceParams(withContext(currentParams(), view, {}));
