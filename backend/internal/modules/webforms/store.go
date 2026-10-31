@@ -6,7 +6,6 @@ package webforms
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5"
@@ -232,14 +231,16 @@ func (s *Store) GetForm(ctx context.Context, id ids.UUID) (Form, error) {
 
 // notePost stamps when a form last landed a post, at most once a minute. It is
 // a read model, like a passport's last use, so it writes no audit row or event.
-func (s *Store) notePost(ctx context.Context, form ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+// The post has landed already, so a stamp that fails is logged, not refused.
+func (s *Store) notePost(ctx context.Context, form ids.UUID) {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
 			INSERT INTO web_form_last_post (form_id, last_post_at) VALUES ($1, now())
 			ON CONFLICT (form_id) DO UPDATE SET last_post_at = excluded.last_post_at
-			 WHERE web_form_last_post.last_post_at < excluded.last_post_at - interval '1 minute'`, form); err != nil {
-			return fmt.Errorf("webforms: stamping the last post of form %s: %w", form, err)
-		}
-		return nil
+			 WHERE web_form_last_post.last_post_at < excluded.last_post_at - interval '1 minute'`, form)
+		return err
 	})
+	if err != nil {
+		s.log.WarnContext(ctx, "webforms: the form's last post was not stamped", "form", form, "err", err)
+	}
 }
