@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -205,4 +206,47 @@ func (f *sdrTeamFixture) ownReviewCode(reader context.Context, owner ids.UUID) i
 	w := httptest.NewRecorder()
 	newSdrSummaryHandlers(InstallationDB(f.e.Pool), func() time.Time { return f.now }).GetSdrTeamReview(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(reader), crmcontracts.GetSdrTeamReviewParams{ScopeKind: &kind, ScopeId: &id})
 	return w.Code
+}
+
+// A week no lead arrived in has no qualified-lead reading, while a week with
+// no held meeting is a measured zero.
+func TestWeeklyOutcomesLeaveAWeekWithNoCohortEmpty(t *testing.T) {
+	e := setupForecast(t)
+	now := clocktest.Now(t)
+	arrived := now.AddDate(0, 0, -10)
+	e.seedID(t, `INSERT INTO lead(id,full_name,source,captured_by,owner_id,created_at) VALUES($1,'Arrived lead','inbound','human:x',$2,$3)`, e.Rep1, arrived)
+	service := newReportingService(e.Pool, func() time.Time { return now })
+	admin := sectionsReader(e, e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeAll)
+	interval := crmcontracts.ReportingWindow{StartAt: now.AddDate(0, 0, -28), EndAt: now}
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "custom", Interval: &interval, TargetBasis: "month", CloseWindow: "all_open",
+		Metrics: []crmcontracts.ReportingMetricID{"leads_promoted", "meetings_held"}, Blocks: []crmcontracts.ReportingBlockKind{"sdr_outcomes"}}
+	result, err := service.Evaluate(admin, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, chart := range result.Charts {
+		seen++
+		measured, empty := 0, 0
+		for _, point := range chart.Points {
+			if point.Value == nil {
+				empty++
+			} else {
+				measured++
+			}
+		}
+		switch chart.Metric {
+		case "leads_promoted":
+			if measured != 1 || empty == 0 {
+				t.Fatalf("only the week the lead arrived in has a reading, read %d measured and %d empty: %+v", measured, empty, chart.Points)
+			}
+		case "meetings_held":
+			if empty != 0 {
+				t.Fatalf("a week with no held meeting is a measured zero: %+v", chart.Points)
+			}
+		}
+	}
+	if seen != 2 {
+		t.Fatalf("both weekly charts come back, read %d", seen)
+	}
 }

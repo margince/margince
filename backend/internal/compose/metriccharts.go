@@ -114,6 +114,15 @@ func sumFactsBefore(facts []reporting.Fact, end time.Time) *float64 {
 	return sum
 }
 
+// weeklyEmptyIsZero names the metrics whose week with no facts is a measured
+// zero, each with the reason. Every other metric leaves such a week without a
+// value: leads qualified counts the leads that arrived that week, and a week
+// nobody arrived in has no one to count.
+var weeklyEmptyIsZero = map[crmcontracts.ReportingMetricID]string{
+	reportingMeetingsHeld:          "the reader reads every held meeting in the interval, so a week with none held is zero",
+	reportingAcceptedOpportunities: "the reader reads every acceptance in the interval, so a week with none accepted is zero",
+}
+
 func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChart) crmcontracts.ReportingChart {
 	frame := out.Result.Context
 	chart.ContextId = reportingInterval
@@ -136,6 +145,9 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 			}
 		}
 		value, _, _ := metricSum(selected)
+		if len(selected) == 0 && weeklyEmptyIsZero[chart.Metric] == "" {
+			value = nil
+		}
 		key := start.Format(time.DateOnly)
 		label := start.Format("2 Jan") + "–" + end.Add(-time.Nanosecond).Format("2 Jan")
 		if days < 7 || end.Sub(start) < 6*24*time.Hour {
