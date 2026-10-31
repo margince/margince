@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import {
   type PickableProject,
@@ -82,7 +83,8 @@ function relatedValue(dealId: string, projectId: string): string {
 }
 
 // What the draft was written from, in the two shapes State D draws: a "Based
-// on" line naming the inputs in order, and a row of "Why this draft?" chips.
+// on" line naming the inputs in order, and a row of chips, one per input.
+// Shut by default under a "Why this draft" hint: the words come first.
 //
 // Both render the SAME reasons — they are one answer read two ways, which is
 // why the server sends parts rather than a sentence. The line is for scanning
@@ -106,13 +108,12 @@ export function DraftReasons({
     return null;
   }
   return (
-    <div className="compose-reasons">
+    <Disclosure className="compose-reasons" summary={t("compose.whyThisDraft")}>
       <p className="t-caption">
         {t("compose.basedOn", {
           inputs: reasons.map((reason) => reason.label).join(" · "),
         })}
       </p>
-      <p>{t("compose.whyThisDraft")}</p>
       <ul className="chips">
         {reasons.map((reason) => (
           <li key={`${reason.kind}:${reason.label}`}>
@@ -134,7 +135,7 @@ export function DraftReasons({
           </li>
         ))}
       </ul>
-    </div>
+    </Disclosure>
   );
 }
 

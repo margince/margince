@@ -239,9 +239,10 @@ export const OfferFailedDark: Story = {
 
 /**
  * What the draft was written from, in the two shapes State D draws: the "Based
- * on" line for scanning before reading the draft, and the "Why this draft?"
- * chips for checking one input after. `openCitation` is the real handler the
- * composer passes, so a chip routes exactly where the drawer sends it.
+ * on" line for scanning before reading the draft, and the chips for checking
+ * one input after, both behind the shut "Why this draft" hint. `openCitation`
+ * is the real handler the composer passes, so a chip routes exactly where the
+ * drawer sends it.
  */
 export const Reasons: Story = {
   render: () => (

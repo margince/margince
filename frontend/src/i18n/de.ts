@@ -6903,7 +6903,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.channelFiling":
     "Beim Senden wird die Nachricht mit dem beantworteten Thread unter {project} abgelegt.",
   "compose.basedOn": "Grundlage: {inputs}",
-  "compose.whyThisDraft": "Warum dieser Entwurf?",
+  "compose.whyThisDraft": "Warum dieser Entwurf",
   "compose.body": "Nachrichtentext",
   "compose.signOff": "Wird beim Senden angefügt",
   "compose.signOffClosing":

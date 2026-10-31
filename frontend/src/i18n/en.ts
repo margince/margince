@@ -6932,7 +6932,7 @@ export const en = {
   "compose.channelFiling":
     "Sending files it under {project}, with the thread it answers.",
   "compose.basedOn": "Based on: {inputs}",
-  "compose.whyThisDraft": "Why this draft?",
+  "compose.whyThisDraft": "Why this draft",
   "compose.body": "Body",
   "compose.signOff": "Added when you send",
   "compose.signOffClosing": "You have no signature, so this closing is added.",

@@ -6738,7 +6738,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.channelFiling":
     "Khi gửi, tin nhắn sẽ được xếp vào {project}, cùng chuỗi thư mà tin nhắn trả lời.",
   "compose.basedOn": "Dựa trên: {inputs}",
-  "compose.whyThisDraft": "Vì sao có bản nháp này?",
+  "compose.whyThisDraft": "Vì sao có bản nháp này",
   "compose.body": "Nội dung",
   "compose.signOff": "Tự thêm khi gửi",
   "compose.signOffClosing": "Chưa có chữ ký, nên lời kết này sẽ được thêm vào.",
