@@ -4420,6 +4420,9 @@ export const en = {
   "email.thread.textUnassessed": "Email text not verified",
   "email.thread.textUnassessedHint":
     "Margince cannot detect requests or commitments here. Read the original in your mail app if text is missing; add any needed task manually.",
+  "email.thread.textUnverifiable": "This mail’s text can no longer be checked",
+  "email.thread.textUnverifiableHint":
+    "Its stored original is gone, so Margince cannot tell whether it read all of the text, and cannot detect requests or commitments here. Read the original in your mail app; add any needed task manually.",
   "email.thread.textUnreadable": "The text of this mail could not be read.",
   "email.thread.textUnreadableHint": "Open it in your mail program to see it.",
   "email.thread.replied": "Sent and added to this thread.",

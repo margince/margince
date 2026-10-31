@@ -25917,12 +25917,14 @@ export interface components {
          *     the body may lack text. `unreadable`: none of it, so the body holds only the From and To
          *     lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
          *     text of the original it forwarded, not the sender's own words. `unassessed`: a mail
-         *     stored before this was recorded and not yet checked against its stored original, or one
-         *     with no original to check. Automatic work (promises, requests and their settlement, and
-         *     the events read from a conversation) is read only from a `complete` mail body.
+         *     stored before this was recorded and not yet checked against its stored original.
+         *     `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+         *     decodes, so its text can never be checked. Automatic work (promises, requests and their
+         *     settlement, and the events read from a conversation) is read only from a `complete` mail
+         *     body.
          * @enum {string}
          */
-        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed";
+        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed" | "unverifiable";
         /**
          * @description One email, composed for reading. The message and its parties come from the activity's
          *     own store; the access block is assembled from the same authority that performs the

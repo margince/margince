@@ -4329,6 +4329,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.textUnassessed": "Nội dung email chưa được xác minh",
   "email.thread.textUnassessedHint":
     "Margince không thể nhận diện yêu cầu hoặc cam kết ở đây. Đọc email gốc trong ứng dụng email nếu thiếu nội dung; tự thêm việc cần làm nếu cần.",
+  "email.thread.textUnverifiable":
+    "Không thể kiểm tra nội dung của thư này nữa",
+  "email.thread.textUnverifiableHint":
+    "Bản gốc đã lưu không còn, nên Margince không biết đã đọc hết nội dung hay chưa và không thể nhận diện yêu cầu hoặc cam kết ở đây. Hãy đọc bản gốc trong ứng dụng email; tự thêm việc cần làm nếu cần.",
   "email.thread.textUnreadable": "Không đọc được nội dung của thư này.",
   "email.thread.textUnreadableHint": "Hãy mở thư trong ứng dụng thư để xem.",
   "email.thread.replied": "Đã gửi và thêm vào chuỗi thư này.",
