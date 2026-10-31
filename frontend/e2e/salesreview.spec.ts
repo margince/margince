@@ -8,15 +8,9 @@ import { reportingFixtureFrames } from "../src/testing/reporting.fixtures";
 import { mockApi } from "./seed";
 
 /**
- * Sales review's first screen, measured in a browser.
- *
- * The vitest suites prove what each part says. What only a real layout can
- * show is whether a manager opening the page at 1366×768 sees the question,
- * the lead figure, the three readings, the summary and the first thing to do
- * before scrolling, and whether anything pushes the page sideways. The boxes
- * are read with the content column at its top, so "visible" means visible on
- * arrival.
- *
+ * Sales review's first screen at 1366×768, measured in a browser. Only a
+ * real layout shows whether the question, the lead, three readings, the
+ * summary and the first action are on screen before any scroll.
  * German, because the app renders German; names come from the catalog.
  */
 

@@ -58,12 +58,12 @@ export function CheckTable({
   const table = useRef<HTMLDivElement>(null);
   const opener = useRef<{ button: HTMLElement; row: number } | null>(null);
   const close = () => setSheet((was) => was && { ...was, open: false });
-  // A save outlives its sheet: the reader may cancel, open another finding and
-  // still be answering it when the first save lands, so only its own sheet closes.
+  // A save outlives its sheet. The reader may cancel and open another finding
+  // before the first save lands, so only the saved finding's sheet closes.
   const resolve = useResolveCheck((id) =>
     setSheet((was) => (was?.id === id ? { ...was, open: false } : was)),
   );
-  // A finding a refetch took away is no longer the server's to answer, so the
+  // A finding a refetch took away is no longer the server's to answer. So the
   // sheet follows the list rather than the click that opened it.
   const open =
     sheet?.open === true && checks.some((check) => check.id === sheet.id);
@@ -77,9 +77,6 @@ export function CheckTable({
     resolve.reset();
     setSheet({ id: check.id, open: true });
   };
-  // An answered finding leaves the list with its own button. The Answer now at
-  // its row index is the FOLLOWING finding's (the last one's when it was last),
-  // so a keyboard reader moves down the list rather than back up it.
   // The named finding is brought into view and given focus once it is drawn.
   useEffect(() => {
     if (!focus || !rows.some((check) => check.id === focus)) return;
@@ -89,6 +86,9 @@ export function CheckTable({
     target?.scrollIntoView?.({ block: "center" });
     target?.focus();
   }, [focus, rows]);
+  // An answered finding leaves the list with its own button. The Answer now at
+  // its row index is the next finding's, or the last one's when it was last.
+  // So a keyboard reader moves down the list rather than back up it.
   const focusAfterClose = (): HTMLElement | null => {
     const from = opener.current;
     if (from === null || from.button.isConnected) {
@@ -229,8 +229,8 @@ function checkColumns(
 // The answer to one finding, sent.
 //
 // The finding and the answer travel as VARIABLES. Read from the closure they
-// would be whatever the last render saw, which is the wrong finding exactly
-// when a save races a refetch.
+// would be whatever the last render saw. That is the wrong finding when a
+// save races a refetch.
 function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({

@@ -194,8 +194,8 @@ const SALES_FIGURES: readonly Metric["id"][] = [
 
 /**
  * Sales review in a few sentences. They say where the quarter is heading
- * against its target, what is won, how far the open deals cover the rest and
- * what the open checks ask. Each links to what it rests on. The comparison is
+ * against its target and what is won. They say how far the open deals cover
+ * the rest and what the open checks ask. Each links to what it rests on. The comparison is
  * the server's; no gap is worked out here. While a figure or the checks
  * failed, no sentence says the quarter is on or above target.
  */

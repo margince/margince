@@ -66,8 +66,8 @@ export function useInterventions(scope: AnalyticsScope): Interventions {
 }
 
 /**
- * The top findings as verbs a reader can act on, their groups counted over
- * the whole list, and the sources needing maintenance on their own line.
+ * The top findings as verbs a reader can act on, and their groups counted
+ * over the whole list. Sources needing maintenance get their own line.
  * Every door carries `dials`, the question the list was read under.
  */
 export function InterventionPanel({

@@ -28,7 +28,7 @@ type Basis = NonNullable<
 
 /**
  * What the quarter's figures mean, in sentences that each open what they rest
- * on; what the expected finish is made of; and the modelled finish beside it.
+ * on. Below them, what the expected finish is made of and the modelled finish.
  */
 export function DecisionSummary({
   evaluation,
@@ -99,9 +99,9 @@ function Sentence({
 }
 
 // The expected finish as its two parts, drawn only when both are money of one
-// basis: won plus the forward half of the same measure. A manager's call is a
-// single authored total with no parts, and a caveat means the plain sum does
-// not hold, so neither draws a bar. What the forecast left out is named.
+// basis: won plus the forward half of the same measure. A manager's call is
+// one authored total with no parts. A caveat means the plain sum does not
+// hold. Neither draws a bar. What the forecast left out is named.
 function Composition({
   evaluation,
 }: Readonly<{ evaluation: ReportingEvaluation }>) {

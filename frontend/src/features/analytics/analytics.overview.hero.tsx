@@ -18,9 +18,9 @@ type Comparison = NonNullable<
 >;
 
 /**
- * What stands under Sales won: how far it is towards the quarter's target,
- * what is still to win, the projected shortfall, and the same point of the
- * previous period. Every figure is the server's; the page only formats.
+ * What stands under Sales won. It shows progress to the quarter's target,
+ * what is still to win, the projected shortfall and the previous period.
+ * Every figure is the server's; the page only formats.
  * A target that cannot be compared says why, with its fix, in place.
  */
 export function HeroAside({
@@ -112,8 +112,8 @@ function TargetProgress({
 }
 
 // The same elapsed point of the period before, read off the trend's own
-// comparison series: both values are the server's, so no partial period is
-// set against a whole one and nothing is subtracted here.
+// comparison series. Both values are the server's. No partial period is set
+// against a whole one, and nothing is subtracted here.
 function PriorPeriod({
   evaluation,
 }: Readonly<{ evaluation: ReportingEvaluation }>) {

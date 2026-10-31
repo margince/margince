@@ -14,8 +14,8 @@ import { meFixture } from "../../testing/mefixture";
 import { ReviewActionsProvider } from "../../testing/reviewactions";
 import { ForecastReview } from "./analytics.forecast.review";
 
-// The review as a door from Sales review opens it: on one finding, or on one
-// group of findings, and only with the answers this reader may give.
+// The review as a door from Sales review opens it. It opens on one finding or
+// one group, and offers only the answers this reader may give.
 
 type InputCheck = components["schemas"]["InputCheck"];
 

@@ -25,9 +25,9 @@ type Comparison = NonNullable<
   ReportingEvaluation["metrics"][number]["target_comparison"]
 >;
 
-// Exactly three readings beside the lead: the expected finish with its basis,
-// coverage of what is still to win with both operands, and the closed win
-// rate. Every figure is the server's; the page only formats.
+// Three readings beside the lead. They are the expected finish with its basis,
+// coverage of what is still to win with both operands, and the win rate.
+// Every figure is the server's; the page only formats.
 export function SalesReadings({
   evaluation,
   onEvidence,
@@ -179,10 +179,10 @@ function NotCompared({ detail }: Readonly<{ detail: string }>) {
 }
 
 /**
- * All open pipeline as the secondary reading over the stock charts: today's
- * figure, dated, with what part the reader may not see and what its source
- * lacks. Never the coverage numerator, which counts only deals eligible to
- * close in the quarter.
+ * All open pipeline as the secondary reading over the stock charts. It is
+ * today's figure, dated, with what the reader may not see and what its source
+ * lacks. It is never the coverage numerator, which counts only deals eligible
+ * to close in the quarter.
  */
 export function OpenPipelineLine({
   evaluation,
