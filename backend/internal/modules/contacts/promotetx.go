@@ -24,6 +24,10 @@ import (
 // promoteTargetMovedError.
 func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, by string, active []fieldcatalog.Column, candidate ids.ContactID) (PromoteOutcome, error) {
 	var out PromoteOutcome
+	lockedEvidence, err := lockEvidenceActivity(ctx, tx, id, in)
+	if err != nil {
+		return PromoteOutcome{}, err
+	}
 	company, err := leadLinkedCompany(ctx, tx, id)
 	if err != nil {
 		return PromoteOutcome{}, err
@@ -39,6 +43,9 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	}
 	lead, evidence, err := promotableLead(ctx, tx, id, in)
 	if err != nil {
+		return PromoteOutcome{}, err
+	}
+	if err := holdEvidenceLink(ctx, tx, id, in, lockedEvidence, evidence); err != nil {
 		return PromoteOutcome{}, err
 	}
 	in.EvidenceActivityID = evidence

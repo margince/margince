@@ -28,14 +28,27 @@ var (
 	bookedMeeting = evidenceSeed{kind: "meeting", meetingStatus: "booked"}
 )
 
-// seedEvidence writes one activity and, when lead is set, links it to that lead.
+// seedEvidence writes one hand-logged activity with the lead as its
+// counterparty and, when lead is set, links it to that lead.
 func (e *promoteConsentEnv) seedEvidence(t *testing.T, lead *ids.LeadID, seed evidenceSeed) ids.ActivityID {
 	t.Helper()
+	return e.seedEvidenceFrom(t, lead, seed, "")
+}
+
+// seedEvidenceFrom is seedEvidence with another counterparty than the lead.
+func (e *promoteConsentEnv) seedEvidenceFrom(t *testing.T, lead *ids.LeadID, seed evidenceSeed, counterparty string) ids.ActivityID {
+	t.Helper()
 	id := ids.New[ids.ActivityKind]()
+	var leadID *ids.UUID
+	if lead != nil {
+		leadID = &lead.UUID
+	}
 	e.mustExec(t,
-		`INSERT INTO activity (id, kind, subject, direction, meeting_status, occurred_at, source, captured_by, archived_at)
-		 VALUES ($1, $2, 'Evidence', NULLIF($3, ''), NULLIF($4, ''), now(), 'manual', 'human:x', CASE WHEN $5 THEN now() END)`,
-		id, seed.kind, seed.direction, seed.meetingStatus, seed.archived)
+		`INSERT INTO activity (id, kind, subject, direction, meeting_status, occurred_at, source, captured_by, archived_at,
+		                       counterparty_email)
+		 VALUES ($1, $2, 'Evidence', NULLIF($3, ''), NULLIF($4, ''), now(), 'manual', 'human:x', CASE WHEN $5 THEN now() END,
+		         coalesce(NULLIF($6, ''), (SELECT email FROM lead WHERE id = $7)))`,
+		id, seed.kind, seed.direction, seed.meetingStatus, seed.archived, counterparty, leadID)
 	if lead != nil {
 		e.mustExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, id, *lead)
 	}
@@ -68,6 +81,9 @@ func TestAPromotionRefusesEvidenceThatDoesNotShowItsTrigger(t *testing.T) {
 		{"another lead's reply", TriggerInboundReply, func(t *testing.T, e *promoteConsentEnv, _ ids.LeadID) *ids.ActivityID {
 			other := e.seedLead(t, "other-"+ids.NewV7().String()+"@evidence.test")
 			return new(e.seedEvidence(t, &other, inboundReply))
+		}, "evidence.activity_id"},
+		{"someone else's reply filed on the lead", TriggerInboundReply, func(t *testing.T, e *promoteConsentEnv, lead ids.LeadID) *ids.ActivityID {
+			return new(e.seedEvidenceFrom(t, &lead, inboundReply, "colleague@elsewhere.test"))
 		}, "evidence.activity_id"},
 		{"a reply linked to nothing", TriggerInboundReply, func(t *testing.T, e *promoteConsentEnv, _ ids.LeadID) *ids.ActivityID {
 			return new(e.seedEvidence(t, nil, inboundReply))
@@ -178,5 +194,47 @@ func TestTheLeadReadOffersEvidenceThePromotionAccepts(t *testing.T) {
 	}
 	if _, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("the lead is still live after its promotion: %v", err)
+	}
+}
+
+// A writer that archives or unfiles the cited activity while the promotion runs
+// is waited for, and the promotion then refuses rather than record it.
+func TestAPromotionWaitsForAConcurrentChangeToItsEvidence(t *testing.T) {
+	cases := map[string]string{
+		"archived": `UPDATE activity SET archived_at = now() WHERE id = $1 AND $2::uuid IS NOT NULL`,
+		"unfiled":  `DELETE FROM activity_link WHERE activity_id = $1 AND lead_id = $2`,
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			ctx := context.Background()
+			lead := e.seedLead(t, "racing@evidence.test")
+			reply := e.seedEvidence(t, &lead, inboundReply)
+
+			holder, err := e.owner.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { endTx(t, holder) })
+			var holderPid int
+			if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPid); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := holder.Exec(ctx, change, reply, lead.UUID); err != nil {
+				t.Fatal(err)
+			}
+			done := make(chan error, 1)
+			go func() {
+				_, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: string(TriggerInboundReply), EvidenceActivityID: &reply})
+				done <- err
+			}()
+			mustBlockOn(t, holder, holderPid, done)
+			if err := holder.Commit(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if _, refused := errors.AsType[*PromoteEvidenceError](<-done); !refused {
+				t.Errorf("the promotion recorded evidence %s while it was %s", reply, name)
+			}
+		})
 	}
 }

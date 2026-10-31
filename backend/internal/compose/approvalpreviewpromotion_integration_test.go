@@ -181,8 +181,8 @@ func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testi
 				t.Fatal(err)
 			}
 			meeting := ids.NewV7()
-			e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by)
-			             VALUES ($1, 'meeting', 'Intro call', 'held', now(), 'manual', 'human:x')`, meeting)
+			e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email)
+			             VALUES ($1, 'meeting', 'Intro call', 'held', now(), 'manual', 'human:x', 'mona@example.test')`, meeting)
 			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
 			raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":%q}`, lead.Id, tc.trigger))
 			if err != nil {

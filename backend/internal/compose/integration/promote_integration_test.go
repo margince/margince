@@ -51,8 +51,8 @@ func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 	leadID := seedLead(t, e, "Ada Prospect", "ada@prospect.test", &e.Rep1)
 	admin := e.Admin()
 	reply := ids.NewV7()
-	e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by)
-	             VALUES ($1, 'email', 'Re: outreach', 'inbound', now(), 'manual', 'human:x')`, reply)
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by, counterparty_email)
+	             VALUES ($1, 'email', 'Re: outreach', 'inbound', now(), 'manual', 'human:x', 'ada@prospect.test')`, reply)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, reply, leadID)
 
 	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{
