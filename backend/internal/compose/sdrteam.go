@@ -126,8 +126,10 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, r
 	if err != nil {
 		return out, err
 	}
-	memberFigures := sdrTeamMemberFigures{targets: targets, workflow: out.Workflow, calendar: calendar,
-		scope: crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(out.Scope.Kind), Id: out.Scope.Id}}
+	memberFigures := sdrTeamMemberFigures{
+		targets: targets, workflow: out.Workflow, calendar: calendar,
+		scope: crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(out.Scope.Kind), Id: out.Scope.Id},
+	}
 	return out, memberFigures.apply(ctx, tx, &out, window)
 }
 

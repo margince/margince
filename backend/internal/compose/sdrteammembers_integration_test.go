@@ -28,11 +28,10 @@ import (
 )
 
 // sdrLeadTeam is a qualification team whose leads come through the lead
-// writers this week: Rep1 qualifies one and leaves one unanswered, a lead
-// handed from Rep1 to the second SDR is qualified, a lead nobody owns is
-// qualified, and a seat that joins the team afterwards brings a qualified
-// lead. at is read after every write, because the lead writers stamp the
-// real clock.
+// writers this week. Rep1 qualifies one lead and leaves one unanswered. A lead
+// handed from Rep1 to the second SDR is qualified, and so is a lead nobody
+// owns. A seat that joins the team afterwards brings a qualified lead. at is
+// read after every write, because the lead writers stamp the real clock.
 type sdrLeadTeam struct {
 	*sdrTeamFixture
 	leads  *contacts.Store
@@ -381,9 +380,9 @@ func TestSdrWaitingHandoffsNameNoColleagueSubmitterWhileIndividualPerformanceIsO
 	}
 }
 
-// The reasons for one outcome add up to that outcome's count in the period, a
-// decision with no reason included, so the drill-down holds the same
-// population as the figure.
+// The reasons for one outcome add up to that outcome's count in the period,
+// with a decision that gave no reason included. So the drill-down holds the
+// same population as the figure.
 func TestSdrTeamReasonsAddUpToTheirOutcome(t *testing.T) {
 	f := newSdrTeamFixture(t)
 	e := f.e

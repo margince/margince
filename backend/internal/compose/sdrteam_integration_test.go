@@ -253,7 +253,7 @@ func TestSdrTeamReviewCreditsADealAcceptedTwiceOnce(t *testing.T) {
 			want = 1
 		}
 		if memberFigure(row.Accepted) != want {
-			t.Errorf("%s is credited %d accepted, want %d: the deal goes to the first acceptance", row.Label, row.Accepted, want)
+			t.Errorf("%s is credited %d accepted, want %d: the deal goes to the first acceptance", row.Label, memberFigure(row.Accepted), want)
 		}
 	}
 }

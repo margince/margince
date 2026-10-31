@@ -5,12 +5,14 @@ package reporting
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -24,8 +26,10 @@ func (s *Service) OwnerTargets(
 	ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, metric crmcontracts.ReportingMetricID,
 	window crmcontracts.ReportingWindow, owners []ids.UUID,
 ) (targets map[ids.UUID]int64, readable bool, err error) {
-	if !auth.Allows(ctx, "sales_target", principal.ActionRead) {
+	if err := auth.Require(ctx, "sales_target", principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil, false, nil
+	} else if err != nil {
+		return nil, false, err
 	}
 	targets = map[ids.UUID]int64{}
 	if len(owners) == 0 {

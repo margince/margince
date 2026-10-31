@@ -31,10 +31,13 @@ type sdrTeamTargets interface {
 type sdrTeamLeads struct{ qualified, unanswered, monthQualified int }
 
 // readSdrTeamLeads counts each seat's leads by the predicates the Leads
-// qualified and Leads still waiting for a reply readings use, under the same
-// row scope and field masks, in one statement for every seat. A lead counts
+// qualified and Leads still waiting for a reply readings use. It reads under
+// their row scope and field masks, in one statement for every seat. A lead counts
 // for its owner now. month is nil when no target is read.
 func readSdrTeamLeads(ctx context.Context, tx pgx.Tx, seats []ids.UUID, window sdrTeamWindow, month *sdrTeamWindow, at time.Time) (map[ids.UUID]sdrTeamLeads, error) {
+	if err := auth.Require(ctx, string(recordTypeLead), principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var b reportingBindings
 	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeLead), "l", b.arg)
 	if err != nil {
@@ -51,7 +54,7 @@ func readSdrTeamLeads(ctx context.Context, tx pgx.Tx, seats []ids.UUID, window s
 	cutoff, from, to := b.add(at), b.add(window.from), b.add(window.to)
 	qualified := leadQualifiedBySQL(cutoff) + " AND " + qualifiedScope
 	createdIn := func(start, end string) string { return "l.created_at>=" + start + " AND l.created_at<" + end }
-	monthQualified, earliest := "false", window.from
+	monthQualified, earliest := sqlNoRecord, window.from
 	if month != nil {
 		monthQualified = createdIn(b.add(month.from), b.add(month.to)) + " AND " + qualified
 		if month.from.Before(earliest) {

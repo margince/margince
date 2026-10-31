@@ -178,7 +178,7 @@ func leadQualifiedBySQL(at string) string {
 }
 
 // leadAwaitingBySQL holds for a lead that wrote in, is still open and had no
-// first reply before at: the rule of Leads still waiting for a reply.
+// first reply before at. It is the rule of Leads still waiting for a reply.
 func leadAwaitingBySQL(at string) string {
 	return "l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=" + at + ") AND " + auth.LiveLeadInquiryClause("l")
 }
