@@ -123,6 +123,10 @@ function withinView(page: Worklist, view: WorklistView): Worklist {
 // minute, because each read re-assembles every page the reader loaded.
 const DUE_SLACK_MS = 1_000;
 
+// A browser fires a timer longer than 2^31 ms (24.8 days) at once. A row due
+// next month would then read the day again the moment each read ends.
+const LONGEST_WAIT_MS = 60 * 60_000;
+
 /** How long until a loaded row comes due, or false when none still will. */
 export function untilNextDue(pages: Worklist[], now: number): number | false {
   let next = Number.POSITIVE_INFINITY;
@@ -132,5 +136,7 @@ export function untilNextDue(pages: Worklist[], now: number): number | false {
       if (due > now && due < next) next = due;
     }
   }
-  return Number.isFinite(next) ? next - now + DUE_SLACK_MS : false;
+  return Number.isFinite(next)
+    ? Math.min(next - now + DUE_SLACK_MS, LONGEST_WAIT_MS)
+    : false;
 }
