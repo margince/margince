@@ -176,26 +176,17 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 	if !withPayload {
 		return out
 	}
-	out.ProposedChange = stagedPayload(a.ProposedChange)
-	out.Evidence = stagedEvidence(a.Evidence)
 	if a.TargetLabel != nil {
 		out.TargetLabel = *a.TargetLabel
 	}
-	out.Changes = stagedChanges(a.Preview)
-	return out
-}
-
-// stagedChanges carries the inbox's preview of each changed field. Only a ready
-// preview names the change completely; any other state carries none, as the
-// inbox then shows none. The tool surface writes each label.
-func stagedChanges(preview *crmcontracts.ApprovalPreview) []agents.FieldChange {
-	if preview == nil || preview.State != previewReadyState {
-		return nil
+	out.Preview = a.Preview
+	// The staged document and its evidence are the plan a withheld preview
+	// keeps from this reader, so they stay behind with it.
+	if agents.PreviewWithholdsPlan(a.Preview) {
+		return out
 	}
-	out := make([]agents.FieldChange, 0, len(preview.Changes))
-	for _, change := range preview.Changes {
-		out = append(out, agents.FieldChange{Field: change.Field, Before: change.Before, After: change.After})
-	}
+	out.ProposedChange = stagedPayload(a.ProposedChange)
+	out.Evidence = stagedEvidence(a.Evidence)
 	return out
 }
 

@@ -5,7 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
-import { ForecastDeals } from "./analytics.forecast.deals";
+import {
+  FORECAST_DEALS_ANCHOR,
+  ForecastDeals,
+  openForecastDeals,
+} from "./analytics.forecast.deals";
 
 afterEach(() => {
   cleanup();
@@ -152,5 +156,18 @@ describe("ForecastDeals", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByText("Typed 20% · uses 20%")).toBeTruthy();
+  });
+});
+
+describe("the way to the deals panel", () => {
+  it("moves keyboard focus onto the panel a reading points at", async () => {
+    serve({ self_correcting: true, contributions: [contribution()] });
+    await openDeals();
+    await screen.findByText("Acme renewal");
+
+    openForecastDeals();
+
+    expect(document.activeElement?.id).toBe(FORECAST_DEALS_ANCHOR);
+    expect(document.activeElement?.textContent).toContain("Acme renewal");
   });
 });

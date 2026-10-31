@@ -56403,6 +56403,23 @@ components:
           $ref: '#/components/schemas/ReportingEvidenceRef'
         target_comparison:
           $ref: '#/components/schemas/ReportingTargetComparison'
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the low end of the central 80% of finishes under the chances
+            in use, the same figure GET /forecast returns. At most one finish in ten falls below
+            it. It is not a bound on the metric's value. Absent where no range was drawn.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the high end of the central 80% of finishes. At most one
+            finish in ten falls above it.
     ReportingTargetComparison:
       type: object
       additionalProperties: false
@@ -57981,6 +57998,25 @@ components:
             Whether the chances moved with recorded outcomes and learned risk effects
             (installation setting `forecast_self_correcting`). Absent on a stored answer from
             before the field existed.
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The low end of the central 80% of finishes: won money plus the open deals, each won or lost by
+            its chance in use, so at most one finish in ten falls below it. It assumes the chances are right
+            and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing.
+            Absent on a stored answer from before ranges were drawn, and present together with
+            `range_high_minor`.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The high end of the central 80% of finishes: at most one finish in ten falls above it.
+            Present together with `range_low_minor`.
         contributions_limited:
           type: boolean
           description: >-

@@ -4,7 +4,12 @@ A candidate forecast model is compared with the configured forecast only against
 its scores. `forecastevalcmd` scores the candidate only when `-preregistration` names a file with every value set,
 for the dataset being scored, with the same windows the flags give. No learned forecast is built or served until
 such a file is filled in and reviewed. If the history cannot support the values, stop at this step and keep the
-configured forecast. The flags and the report fields are in
+configured forecast.
+
+The filled file holds numbers measured on one installation's history: its digest, its windows and thresholds set
+from that corpus. So it is reviewed outside this public repository and is never committed here, and neither are the
+dataset and the report. The checks in step 5 still refuse a file that is not filled, not reviewed, or not for this
+dataset. The flags and the report fields are in
 [Forecast model evaluation](../reference/forecast-model-evaluation.md).
 
 1. Read the installation's history once, with no pre-registration, and keep the dataset:
@@ -14,11 +19,13 @@ configured forecast. The flags and the report fields are in
      -horizon-edges 30,60 -settle-days 14 -as-of 2026-11-01T00:00:00Z -write-dataset dataset.json
    ```
 
-   The report scores only stage weighting and commit evidence. Read its `census` and the per-bucket `outcomes` to
+   The report scores stage weighting, self-correcting weighting, commit evidence and the range, and no candidate.
+   Read its `census` and the per-bucket `outcomes` to
    see what the history can support.
 2. Copy the report's `dataset_digest` into a new file, `preregistration.json`, with every field below.
 3. Set each value from the measured corpus. Do not pick a value after reading a candidate score.
-4. Open a pull request with the file. A second maintainer reviews it, and puts their name in `reviewed_by`.
+4. Hand the file to a second maintainer outside this repository. They review it and put their name in
+   `reviewed_by`.
 5. Score the candidate with the same dataset and flags:
 
    ```sh

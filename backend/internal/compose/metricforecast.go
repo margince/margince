@@ -72,6 +72,10 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
+	facts, err = forecastRangeFacts(frame, facts, readings.Range)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
 	// A reader with no capture, such as the weekly digest, compares nothing.
 	if e.compared != nil {
 		operands := forecastOperands(period, readings, landing, qualifiedOpen, frame.PipelineId != nil && measure == forecasting.MeasureManagerCall)
@@ -174,7 +178,35 @@ func forecastAuthoredFacts(frame crmcontracts.ReportingContext, out []reporting.
 const (
 	forecastOpenContext      = "forecast_open"
 	forecastQualifiedContext = "forecast_open_qualified"
+	forecastRangeLowContext  = "forecast_range_low"
+	forecastRangeHighContext = "forecast_range_high"
 )
+
+// forecastRangeFacts adds the two ends of the forecast's range as authored
+// totals beside the landing. The metric and its evidence then state the range
+// GET /forecast states.
+func forecastRangeFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, drawn *forecasting.Range) ([]reporting.Fact, error) {
+	if drawn == nil {
+		return out, nil
+	}
+	for _, end := range []struct {
+		context string
+		amount  int64
+	}{{forecastRangeLowContext, drawn.LowMinor}, {forecastRangeHighContext, drawn.HighMinor}} {
+		if end.amount > reportingExactInteger {
+			return nil, errors.New("forecast exceeds exact reporting range")
+		}
+		value := float64(end.amount)
+		out = append(out, reporting.Fact{
+			Metric: reportingForecastLanding, ContextID: end.context, SourceType: reportingForecastProjection,
+			Money: new(end.amount),
+			Row: crmcontracts.ReportingEvidenceRow{
+				Key: end.context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[end.context]), Value: &value,
+			},
+		})
+	}
+	return out, nil
+}
 
 // forecastQualifiedOpen is the open money the qualified forecast keeps, and
 // false while it is switched off. With enforcement on, every deal read carries

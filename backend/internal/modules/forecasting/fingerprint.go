@@ -14,7 +14,7 @@ import (
 
 // InputFingerprint is a digest of what a set of contributions says about the
 // forecast. Two readings with one fingerprint agree on every deal's money,
-// close-window membership, qualification, chance and risk effect. No comparison between them can
+// close-window membership, qualification, stage, chance and risk effect. No comparison between them can
 // find a material change. The owner and audit references move no figure.
 func InputFingerprint(rows []Contribution) string {
 	ordered := slices.SortedFunc(slices.Values(rows), func(a, b Contribution) int {
@@ -26,10 +26,10 @@ func InputFingerprint(rows []Contribution) string {
 		if row.BaseMinor != nil {
 			base = fmt.Sprint(*row.BaseMinor)
 		}
-		material = fmt.Appendf(material, "%s|%s|%d|%t|%t|%t|%t|%t|%s|%s|%s|%d|%s|%s|%s|%s\n",
+		material = fmt.Appendf(material, "%s|%s|%d|%t|%t|%t|%t|%t|%s|%s|%s|%s|%d|%s|%s|%s|%s\n",
 			row.DealID, base, row.WeightedMinor, row.InWon, row.InOpen, row.InEvidence,
 			row.InBestCase, row.InLost, row.Qualification, row.Category, row.ExclusionReason,
-			row.StageProbability, optionalInt(row.TypedProbability), optionalInt(row.EvidenceN),
+			row.StageID, row.StageProbability, optionalInt(row.TypedProbability), optionalInt(row.EvidenceN),
 			strings.Join(SignalCodes(row.Signals), ","), optionalEffect(row.Effect))
 	}
 	digest := sha256.Sum256(material)

@@ -13327,6 +13327,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landing": "Dự kiến cuối kỳ",
   "forecast.landingFrom": "Dự kiến · {won} đã chốt + {remaining} sắp tới",
   "forecast.landingFromCall": "Theo nhận định · {won} đã chốt đến nay",
+  "forecast.range": "8 trên 10 kết quả nằm trong khoảng {low} đến {high}",
+  "forecast.rangeBasis":
+    "Dựa trên tỷ lệ đang dùng. Mỗi giao dịch đang mở được tính thắng hoặc thua theo tỷ lệ của nó qua nhiều lượt. Cứ 10 kết quả thì nhiều nhất 1 kết quả thấp hơn khoảng này và nhiều nhất 1 kết quả cao hơn. Khoảng này giả định các tỷ lệ là đúng.",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingRecordsDetail":
     "Đã chốt cộng các deal Commit có ngày chốt đã xác nhận, chưa tính dự báo của quản lý",

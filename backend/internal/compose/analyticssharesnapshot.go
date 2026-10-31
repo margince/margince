@@ -124,6 +124,28 @@ func ReadSharedSnapshot(
 	return SharedSnapshot{Readings: r, Withheld: withheld}, nil
 }
 
+// sharedRange draws the range over the rows a shared headline sums: the rows
+// SharedSnapshotRows reads, before any narrowing to the reader's own deals. The
+// stored range covers rows the recipient may not see, so it is never served.
+func sharedRange(rows []SharedContribution) *forecasting.Range {
+	contributions := make([]forecasting.Contribution, 0, len(rows))
+	for _, row := range rows {
+		contribution := forecasting.Contribution{
+			DealID: row.DealID.String(), StageID: row.StageID, BaseMinor: row.BaseMinor,
+			InWon: row.InWon, InOpen: row.InOpen, EvidenceN: row.EvidenceN, Effect: row.Effect,
+		}
+		if row.ChanceInUse != nil {
+			contribution.StageProbability = *row.ChanceInUse
+		}
+		contributions = append(contributions, contribution)
+	}
+	drawn, ok := forecasting.ForecastRange(contributions)
+	if !ok {
+		return nil
+	}
+	return &drawn
+}
+
 // sharedVisibilityClause is what a share recipient may read of a frozen
 // snapshot, as one SQL predicate over the contribution's deal aliased `d`.
 //
@@ -198,7 +220,9 @@ type SharedContribution struct {
 	TypedProbability *int
 	ChanceInUse      *int
 	EvidenceN        *int
-	Signals          []string
+	// StageID groups the rows whose chance the range draws once.
+	StageID string
+	Signals []string
 	// SignalFacts is the frozen signals with their facts, as JSON.
 	SignalFacts *string
 	Effect      *float64
@@ -228,7 +252,7 @@ func SharedSnapshotRows(
 		       c.base_minor, c.effective_close_date, c.category,
 		       c.in_won, c.in_open, COALESCE(c.exclusion_reason, ''),
 		       c.weighted_minor, c.typed_probability, c.stage_probability, c.evidence_n,
-		       c.risk_signals, c.risk_signal_facts::text, c.risk_effect
+		       c.risk_signals, c.risk_signal_facts::text, c.risk_effect, c.stage_id
 		FROM forecast_contribution c
 		JOIN deal d ON d.id = c.deal_id
 		WHERE c.snapshot_id = $1 AND %s
@@ -241,10 +265,14 @@ func SharedSnapshotRows(
 	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (SharedContribution, error) {
 		var c SharedContribution
 		var currency, category *string
+		var stage *ids.UUID
 		err := row.Scan(&c.DealID, &c.DealName, &c.Owner, &c.AmountMinor, &currency,
 			&c.BaseMinor, &c.EffectiveClose, &category,
 			&c.InWon, &c.InOpen, &c.ExclusionReason,
-			&c.WeightedMinor, &c.TypedProbability, &c.ChanceInUse, &c.EvidenceN, &c.Signals, &c.SignalFacts, &c.Effect)
+			&c.WeightedMinor, &c.TypedProbability, &c.ChanceInUse, &c.EvidenceN, &c.Signals, &c.SignalFacts, &c.Effect, &stage)
+		if stage != nil {
+			c.StageID = stage.String()
+		}
 		if currency != nil {
 			c.Currency = *currency
 		}

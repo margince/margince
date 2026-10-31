@@ -41,6 +41,9 @@ func ReadingsToWire(
 		id := openapi_types.UUID(*scope.ID)
 		out.ScopeId = &id
 	}
+	if in.Range != nil {
+		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
+	}
 	if q := in.Qualified; q != nil {
 		out.Qualified = &crmcontracts.ForecastQualifiedReadings{
 			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
