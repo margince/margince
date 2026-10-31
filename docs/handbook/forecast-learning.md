@@ -26,13 +26,16 @@ that loses them.
 **Settings → Stages** shows this beside each stage, for example "Typed 90% · 40
 recorded deals from here closed, 55% won · Forecast uses 62%".
 
+The weighted figures in reports, on the pipeline and in a company's account
+roll-up count each deal at this same probability.
+
 ## Risks on a deal
 
 The forecast marks four risks on an open deal:
 
 - the close date moved more than twice in 90 days;
 - no next step is written down;
-- the customer has gone quiet;
+- the customer has gone quiet, with no reply for some days;
 - the deal has been in its stage longer than nine of every 10 won deals were.
 
 A risk is shown at once. It changes a deal's weight only later. First, frozen

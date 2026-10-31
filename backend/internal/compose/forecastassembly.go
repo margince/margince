@@ -37,7 +37,7 @@ func assembleForecast(
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}
-	model, err := readForecastChanceModel(ctx, tx, period, asOf)
+	model, err := readForecastChanceModel(ctx, tx, period.LocalDay(asOf))
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}

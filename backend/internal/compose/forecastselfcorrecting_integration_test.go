@@ -440,3 +440,40 @@ func TestTheStuckPaceReadsRecordedStintsAndKeepsArchivedWins(t *testing.T) {
 		})
 	}
 }
+
+// The forecast report's weighted total, drawn beside the headline, weights each
+// deal by the chance the headline uses, recorded evidence included. Off, both
+// weight by the typed chance.
+func TestTheForecastReportWeightsByTheChanceTheHeadlineUses(t *testing.T) {
+	f := newStageCohortFixture(t)
+	s0 := f.stage(0)
+	for range 20 {
+		f.deal(t, f.env.Rep1, s0, f.won)
+	}
+	today := clocktest.Now(t)
+	f.openDeal(t, s0, today)
+	reportWeighted := func() int64 {
+		t.Helper()
+		result := f.env.runReport(f.env.Admin(), t, "forecast", `{"group_by":["currency"]}`)
+		for _, row := range result.Rows {
+			if row["currency"] == "EUR" {
+				return wireInt(t, row, "weighted_minor")
+			}
+		}
+		t.Fatalf("no EUR row in the forecast report: %+v", result.Rows)
+		return 0
+	}
+
+	headline := f.forecastOverHTTP(t, today).WeightedMinor
+	if got := reportWeighted(); got != headline || headline != 600_000 {
+		t.Fatalf("report weighted %d, headline %d; want both 600000 from the chance in use", got, headline)
+	}
+	if _, err := f.env.owner.Exec(context.Background(), `INSERT INTO setting (key, value)
+		VALUES ('installation.forecast_self_correcting', 'false'::jsonb)`); err != nil {
+		t.Fatal(err)
+	}
+	headline = f.forecastOverHTTP(t, today).WeightedMinor
+	if got := reportWeighted(); got != headline || headline != 200_000 {
+		t.Fatalf("off: report weighted %d, headline %d; want both the typed 200000", got, headline)
+	}
+}

@@ -43,14 +43,15 @@ type forecastChanceModel struct {
 	Effects map[string]float64
 }
 
-// readForecastChanceModel reads the evidence a forecast taken at `at` stands
-// on. While the installation switched self-correction off it reads nothing.
-func readForecastChanceModel(ctx context.Context, tx pgx.Tx, period forecasting.Period, at time.Time) (forecastChanceModel, error) {
+// readForecastChanceModel reads the evidence a forecast with this cutoff, the
+// start of its as-of local day, stands on. While the installation switched
+// self-correction off it reads nothing.
+func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (forecastChanceModel, error) {
 	on, err := identity.ForecastSelfCorrectingTx(ctx, tx)
 	if err != nil {
 		return forecastChanceModel{}, err
 	}
-	out := forecastChanceModel{SelfCorrecting: on, Cutoff: period.LocalDay(at)}
+	out := forecastChanceModel{SelfCorrecting: on, Cutoff: cutoff}
 	if !on {
 		return out, nil
 	}
