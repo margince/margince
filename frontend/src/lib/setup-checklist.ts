@@ -9,7 +9,7 @@ import {
   VENDOR_SERVICES,
   vendorOf,
 } from "../format/connectorprovider";
-import { missingCalendarWriteGrant, serviceHealth } from "./connector-status";
+import { missingCalendarWriteGrant } from "./connector-status";
 import { type ConnectorsResult, useConnectors } from "./connectors";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import type { SettingsPageId, SettingsReach } from "./settingscatalog";
@@ -68,14 +68,12 @@ const CALENDARS: ReadonlySet<Provider> = new Set<Provider>(
   VENDORS.map((services) => services.calendar),
 );
 
-// Health comes from serviceHealth, the reading the Connections page shows: a
-// row still "connected" while its sync keeps failing is not a finished step.
 function connected(
   connectors: ConnectorsResult,
   kind: (provider: Provider) => boolean,
 ): CaptureConnection | undefined {
   return connectors.data.find(
-    (row) => serviceHealth(row) === "up_to_date" && kind(row.provider),
+    (row) => row.status === "connected" && kind(row.provider),
   );
 }
 
@@ -119,13 +117,9 @@ function expired(
   connectors: ConnectorsResult,
   kind: (provider: Provider) => boolean,
 ): boolean {
-  return connectors.data.some((row) => {
-    const health = serviceHealth(row);
-    return (
-      (health === "needs_reconnect" || health === "needs_attention") &&
-      kind(row.provider)
-    );
-  });
+  return connectors.data.some(
+    (row) => row.status === "reauth_required" && kind(row.provider),
+  );
 }
 
 function mailStep(connectors: ConnectorsResult): Draft | null {

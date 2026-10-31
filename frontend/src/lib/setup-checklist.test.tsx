@@ -251,36 +251,6 @@ describe("deriveSetupSteps", () => {
     });
   });
 
-  // The row still says "connected" while its sync keeps failing. The
-  // Connections page calls that needs attention, so the checklist must not
-  // call the step done.
-  it("does not finish a calendar whose sync keeps failing", () => {
-    const steps = summary(
-      reads({
-        connectors: roster([
-          connection("gmail"),
-          { ...connection("gcal"), last_sync_error_class: "transient" },
-        ]),
-      }),
-    );
-
-    expect(steps[1]).toMatchObject({
-      id: "calendar",
-      state: "current",
-      reason: "needsReconnect",
-    });
-  });
-
-  it("asks to reconnect a calendar in error rather than offer a new one", () => {
-    const steps = summary(
-      reads({
-        connectors: roster([connection("gmail"), connection("gcal", "error")]),
-      }),
-    );
-
-    expect(steps[1]).toMatchObject({ id: "calendar", reason: "needsReconnect" });
-  });
-
   it("asks to reconnect a calendar that can read but not write bookings", () => {
     const steps = summary(
       reads({

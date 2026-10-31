@@ -7,7 +7,6 @@ import { cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { isOffline } from "./agentrail-reads";
 import {
   block,
   CONNECTED,
@@ -19,6 +18,7 @@ import {
   settlesOnLine,
   stubAgentRailApi,
 } from "./agentrail.testkit";
+import { isOffline } from "./agentrail-reads";
 
 // One Google account is two connections: a Gmail grant and a Calendar grant,
 // both labelled with the account's address. The panel used to reduce each to
