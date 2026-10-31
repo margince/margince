@@ -161,7 +161,7 @@ export function useRecentConversations(
   // messages are the ways in; the bulk groups are left where the History tab
   // draws them.
   const conversations = groupChronology(entries)
-    .filter((group) => group.kind !== "bulk")
+    .filter((group) => group.kind !== "bulk" && group.kind !== "newsletters")
     .flatMap((group): Conversation[] => {
       // The newest member: continuing a conversation means answering its last
       // message, which is the same activity a Reply on the History tab names.

@@ -3367,6 +3367,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.suggest.act.addTask": "Thêm bước tiếp theo",
   // A conversation shown as one event says what it IS before what it
   // says: the reader is scanning for an event, not a sentence.
+  "timeline.group.newsletters_other": "{count} bản tin",
+  "timeline.group.newsletters_one": "{count} bản tin",
   "timeline.group.thread_other": "{count} tin nhắn",
   "timeline.group.thread_one": "{count} tin nhắn",
   "timeline.group.sides": "{theirs} từ phía họ, {ours} từ nhóm của bạn",
