@@ -10,6 +10,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestEveryGovernedKindHasReviewContextOrIsNotCurrentlyStageable(t *testing.T) {
@@ -115,5 +116,43 @@ func TestAnUnknownApprovalKindRequiresSupportedContext(t *testing.T) {
 	}
 	if preview == nil || approvals.PreviewRefusal(preview) == nil {
 		t.Fatal("unknown effect can be approved without context")
+	}
+}
+
+// Every kind's preview first asks who runs its effect. An agent that can no
+// longer call cannot spend its approval, so no kind may show it as decidable.
+func TestEveryApprovalKindIsPreviewedAsThePrincipalThatRunsIt(t *testing.T) {
+	kinds := approvals.StageableKinds()
+	extensions := extensionStagingKinds(confirmFirstUnit(t))
+	if len(kinds) == 0 || len(extensions) == 0 {
+		t.Fatal("the approval kind census is empty")
+	}
+	if err := approvals.RegisterExtensionKinds(extensions); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := approvals.RegisterExtensionKinds(nil); err != nil {
+			t.Errorf("clearing the registered kinds: %v", err)
+		}
+	})
+	for _, extension := range extensions {
+		kinds = append(kinds, extension.Verb)
+	}
+	for _, kind := range kinds {
+		asked := false
+		revoked := func(ctx context.Context) (context.Context, bool, error) {
+			asked = true
+			return ctx, true, apperrors.ErrPermissionDenied
+		}
+		preview, err := (approvalPreviewReader{}).readAs(context.Background(), crmcontracts.Approval{Kind: kind, Status: crmcontracts.ApprovalStatusPending}, revoked)
+		if err != nil {
+			t.Fatalf("%s: %v", kind, err)
+		}
+		if !asked {
+			t.Errorf("%s is previewed without asking who runs its effect", kind)
+		}
+		if approvals.PreviewRefusal(preview) == nil {
+			t.Errorf("%s can be approved although its agent can no longer call", kind)
+		}
 	}
 }

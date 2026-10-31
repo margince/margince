@@ -13,7 +13,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -71,17 +70,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if err != nil {
 		return nil, err
 	}
-	// The outcome is the agent's, since its retry runs the promotion.
-	effect, asAgent, err := approvals.EffectContext(ctx)
-	if previewUnavailable(err) {
-		return out, nil
-	}
-	if err != nil {
-		return nil, err
-	}
 	consents := consent.NewStore(r.db)
 	store := newContactsStore(r.db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil).WithDealOpener(leadDealOpener{deals: r.deals})
-	plan, err := store.PreviewLeadContactChange(effect, ids.From[ids.LeadKind](ids.UUID(*approval.TargetEntityId)), in)
+	plan, err := store.PreviewLeadContactChange(ctx, ids.From[ids.LeadKind](ids.UUID(*approval.TargetEntityId)), in)
 	if errors.Is(err, apperrors.ErrVersionSkew) {
 		out.State = previewStaleState
 		return out, nil
@@ -92,25 +83,13 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if err != nil {
 		return nil, err
 	}
-	if asAgent {
-		readable, err := r.viewerReadsEvery(ctx, promotionTouches(ids.UUID(*approval.TargetEntityId), plan))
-		if err != nil {
-			return nil, err
-		}
-		if !readable {
-			out.State = approvals.PreviewNeedsWiderSight
-			return out, nil
-		}
-	}
+	r.touch(promotionTouches(ids.UUID(*approval.TargetEntityId), plan))
 	out.CurrentVersion = new(int(plan.LeadVersion))
 	details, err := r.promotionDetails(ctx, in, plan)
 	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
-		return nil, err
-	}
-	if err := maskPromotionDetails(ctx, details); err != nil {
 		return nil, err
 	}
 	out.Details = &details
