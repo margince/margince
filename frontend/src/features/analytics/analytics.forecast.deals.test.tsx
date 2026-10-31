@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import { ForecastDeals } from "./analytics.forecast.deals";
 
 afterEach(() => {
@@ -48,7 +49,7 @@ function serve(body: Record<string, unknown>) {
           confirmed_date_count: 1,
           fx_missing_count: 0,
           as_of: "2026-10-31T12:00:00Z",
-          timezone: "UTC",
+          timezone: REPORTING_FIXTURE_ZONE,
           base_currency: "EUR",
           ...body,
         }),
