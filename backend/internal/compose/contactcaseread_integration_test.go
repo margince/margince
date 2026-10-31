@@ -111,6 +111,25 @@ func TestTheOwnerOfOneMemberOfALargerCaseIsOfferedOnlyTheirPairs(t *testing.T) {
 	}
 }
 
+func TestACasePairWhoseSurvivorHasNoLiveOwnerOffersNoCaseMerge(t *testing.T) {
+	c := setupCases(t)
+	agent := ids.NewV7()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`INSERT INTO app_user (id, email, display_name, is_agent) VALUES ($1, $2, 'Case Agent', true)`,
+		agent, "agent-"+agent.String()+"@case.test"); err != nil {
+		t.Fatal(err)
+	}
+	members := c.seedCase(t, c.e.Rep1, c.e.Rep2)
+	c.e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, agent, members[1])
+	read := c.read(c.rep(c.e.Rep1), t, members[0])
+	if read.MergeMode != crmcontracts.ContactCaseMergeModeNone || read.CanMerge {
+		t.Errorf("the case reads merge_mode %s and can_merge %v, want none and false", read.MergeMode, read.CanMerge)
+	}
+	if !read.Edges[0].CanMerge {
+		t.Error("the pair route, which names no owner, no longer offers the merge")
+	}
+}
+
 func TestAnAgentSeatOwnsNoShareOfACase(t *testing.T) {
 	c := setupCases(t)
 	agent := ids.NewV7()

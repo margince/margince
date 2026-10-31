@@ -29,7 +29,12 @@ import {
   stubWithSession,
 } from "../testing/story-utils";
 import { ContactCaseReview } from "./contactcase";
-import { defaultSelection, isConnected } from "./contactcase.selection";
+import {
+  defaultSelection,
+  isConnected,
+  pairKeep,
+  pairProblem,
+} from "./contactcase.selection";
 
 afterEach(() => {
   cleanup();
@@ -170,6 +175,74 @@ describe("a reader who may change one end of a pair", () => {
 
   it("starts on an offered pair when the review opens on another member", () => {
     expect(defaultSelection(pairCase(), DANA)).toEqual([ANA, BEN]);
+  });
+
+  it("keeps the selection to the two ends of one offered pair", async () => {
+    const one = pairCase();
+    const toCleo = {
+      ...one.edges[0],
+      pair_id: "p5",
+      right_id: CLEO,
+      keep_id: CLEO,
+    };
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse({ ...one, edges: [...one.edges, toCleo] }),
+      },
+      {},
+    );
+    const user = userEvent.setup();
+    mount();
+    const cleo = await screen.findByRole("checkbox", { name: /M\. Kovac/ });
+    expect(cleo).toBeDisabled();
+
+    await user.click(member(/Mira Kovač/));
+    expect(cleo).toBeEnabled();
+    // Dana is joined to Ana by a dismissed pair only.
+    expect(member(/Mira Kovacs/)).toBeDisabled();
+    await user.click(cleo);
+    expect(member(/Mira Kovač/)).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /M\. Kovac/ })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: /Owner/ })).toHaveTextContent(
+      "Cleo Reader",
+    );
+  });
+
+  it("offers no survivor for a pair the server will not merge", () => {
+    // Ben and Cleo are joined by an open pair the reader may not merge.
+    expect(pairKeep(pairCase(), [BEN, CLEO])).toBeUndefined();
+    expect(pairProblem(pairCase(), [BEN, CLEO])).toBe("contactCase.pairOnly");
+    expect(pairProblem(pairCase(), [ANA, BEN, CLEO])).toBe(
+      "contactCase.pairOnly",
+    );
+    expect(pairProblem(pairCase(), [ANA, BEN])).toBeNull();
+  });
+
+  it("says why and offers no preview when no pair can keep a live owner", async () => {
+    // Ben's owner left, so Ben's record could keep no owner.
+    const one = pairCase();
+    stubWithSession(
+      {
+        [`GET ${CASE_PATH}`]: () =>
+          jsonResponse({
+            ...one,
+            owners: one.owners.filter(
+              (owner) => !owner.member_ids.includes(BEN),
+            ),
+          }),
+      },
+      {},
+    );
+    mount();
+    expect(
+      await screen.findByText(
+        "You can merge only one pair of these contacts, one of them yours. Tick such a pair.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Preview merge" }),
+    ).toBeDisabled();
   });
 });
 

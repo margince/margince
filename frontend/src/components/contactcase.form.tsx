@@ -29,6 +29,8 @@ import {
   memberLabel,
   ownerChoices,
   pairKeep,
+  pairLocked,
+  pairProblem,
 } from "./contactcase.selection";
 
 type Props = Readonly<{
@@ -49,6 +51,8 @@ function selectionProblem(
   owner: string,
 ): MessageKey | null {
   if (selected.length < 2) return "contactCase.tooFew";
+  const pair = pairProblem(contactCase, selected);
+  if (pair) return pair;
   if (!isConnected(contactCase, selected)) return "contactCase.notConnected";
   if (!owner) return "contactCase.noOwner";
   return null;
@@ -176,7 +180,11 @@ export function CaseForm({
                 <Checkbox
                   label={<MemberDetail member={member} />}
                   checked={ticked}
-                  disabled={locked || (!ticked && against.length > 0)}
+                  disabled={
+                    locked ||
+                    (!ticked && against.length > 0) ||
+                    pairLocked(contactCase, selected, member.id)
+                  }
                   onChange={(event) => toggle(member.id, event.target.checked)}
                 />
                 <Radio

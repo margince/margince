@@ -19137,6 +19137,8 @@ export const en = {
   "contactCase.tooFew": "Tick at least two contacts.",
   "contactCase.notConnected":
     "Some ticked contacts are not linked to the others as possible duplicates. Tick the contacts between them, or untick them.",
+  "contactCase.pairOnly":
+    "You can merge only one pair of these contacts, one of them yours. Tick such a pair.",
   "contactCase.noOwner": "Choose who owns the remaining contact.",
   "contactCase.ownerLabel": "Owner",
   "contactCase.ownerHint":
