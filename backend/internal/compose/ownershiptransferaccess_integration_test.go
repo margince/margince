@@ -111,6 +111,7 @@ func TestOnlyAColleagueWhoCannotChangeARecordMayAskForIt(t *testing.T) {
 // reads and withdraws only their own request.
 func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
 	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep3)
 	company := e.SeedCompany(t, "Private Card AG", &e.Rep1)
 	request, _ := requestHandover(asker(e), t, e, "company", company)
 	transfers := newOwnershipTransfers(e.Pool)
@@ -129,17 +130,17 @@ func TestOnlyTheOwnerAnswersAndOnlyTheAskerWithdraws(t *testing.T) {
 	if err := decideHandover(agent, t, e, request.ApprovalID, true); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the owner's agent accepting → %v, want 403", err)
 	}
-	if _, err := transfers.Own(seatedAs(e, e.Rep2, handoverRepPerms()), "company", company); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := transfers.Own(seatedAs(e, e.Rep2, handoverRepPerms()), "company", company, transferAsked); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("another colleague reading the request → %v, want 404", err)
 	}
-	if err := transfers.Withdraw(seatedAs(e, e.Rep2, handoverRepPerms()), "company", company); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := transfers.Withdraw(seatedAs(e, e.Rep2, handoverRepPerms()), "company", company, transferAsked); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("another colleague withdrawing the request → %v, want 404", err)
 	}
-	own, err := transfers.Own(asker(e), "company", company)
+	own, err := transfers.Own(asker(e), "company", company, transferAsked)
 	if err != nil || own.ApprovalID != request.ApprovalID {
 		t.Fatalf("the asker reading their request → %+v, %v", own, err)
 	}
-	if err := transfers.Withdraw(asker(e), "company", company); err != nil {
+	if err := transfers.Withdraw(asker(e), "company", company, transferAsked); err != nil {
 		t.Fatalf("the asker withdrawing: %v", err)
 	}
 	if n := transfersInInbox(giver(e), t, e); n != 0 {

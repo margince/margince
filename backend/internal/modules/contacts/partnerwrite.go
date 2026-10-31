@@ -29,10 +29,8 @@ type partnerWrite struct {
 //
 // A retired partner coming back, or a company that did not yet carry the
 // 'partner' relationship type, still counts as a change.
-func writePartner(
-	ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit partnerFitState, capturedBy string,
-	standing map[string]any,
-) (partnerWrite, error) {
+func writePartner(ctx context.Context, tx pgx.Tx, up partnerUpsert, standing map[string]any) (partnerWrite, error) {
+	in := up.in
 	var wasLive bool
 	if err := tx.QueryRow(ctx,
 		`SELECT EXISTS (SELECT 1 FROM partner WHERE company_id = $1 AND archived_at IS NULL)`,
@@ -43,7 +41,7 @@ func writePartner(
 	landed, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
 		var promoted bool
 		var err error
-		if staged, promoted, err = stagePartner(ctx, nested, in, fit, capturedBy, standing); err != nil {
+		if staged, promoted, err = stagePartner(ctx, nested, up, standing); err != nil {
 			return false, err
 		}
 		return len(staged.after) > 0 || promoted || !wasLive, nil
@@ -65,19 +63,16 @@ func writePartner(
 
 // stagePartner runs the upsert and the relationship-type assertion, then diffs
 // the result against the row the caller read under the company lock.
-func stagePartner(
-	ctx context.Context, tx pgx.Tx, in UpsertPartnerInput, fit partnerFitState, capturedBy string,
-	standing map[string]any,
-) (w partnerWrite, promoted bool, err error) {
-	row, err := upsertPartnerRow(ctx, tx, in, fit, capturedBy)
+func stagePartner(ctx context.Context, tx pgx.Tx, up partnerUpsert, standing map[string]any) (w partnerWrite, promoted bool, err error) {
+	row, err := upsertPartnerRow(ctx, tx, up)
 	if err != nil {
 		return partnerWrite{}, false, err
 	}
 	// A company is a partner when it has this row and a live 'partner'
 	// relationship type. Both are written in one transaction so the two cannot
 	// disagree.
-	promoted, err = ensureCompanyRelationshipType(ctx, tx, in.CompanyID,
-		relationshipTypePartner, "system", capturedBy)
+	promoted, err = ensureCompanyRelationshipType(ctx, tx, up.in.CompanyID,
+		relationshipTypePartner, "system", up.capturedBy)
 	if err != nil {
 		return partnerWrite{}, false, err
 	}

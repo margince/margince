@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { untilNextDue, worklistDayOptions } from "./worklistday";
+import {
+  readWorklistPage,
+  untilNextDue,
+  WORKLIST_PAGE_ROWS,
+  worklistDayOptions,
+} from "./worklistday";
 
 type Worklist = components["schemas"]["Worklist"];
 type WorklistItem = components["schemas"]["WorklistItem"];
@@ -38,5 +43,31 @@ describe("the Home day's refresh", () => {
     expect(typeof home.refetchInterval).toBe("function");
     expect(team.refetchInterval).toBeUndefined();
     expect(team.refetchOnWindowFocus).toBe(true);
+  });
+});
+
+describe("a day page", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("asks for the largest page, so scrolling rarely reads the day again", async () => {
+    const asked: URL[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        asked.push(
+          new URL(input instanceof Request ? input.url : String(input)),
+        );
+        return new Response(JSON.stringify(page([])), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    await readWorklistPage("mine", "all", undefined, undefined);
+    await readWorklistPage("mine", "all", undefined, "next");
+    expect(asked.map((url) => url.searchParams.get("limit"))).toEqual([
+      String(WORKLIST_PAGE_ROWS),
+      String(WORKLIST_PAGE_ROWS),
+    ]);
+    expect(WORKLIST_PAGE_ROWS).toBe(100);
   });
 });

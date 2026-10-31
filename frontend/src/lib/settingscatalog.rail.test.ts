@@ -91,6 +91,7 @@ describe("what the rail carries and what it leaves behind", () => {
       // The loss reasons, gated the same way: a rep picks one when a deal is
       // lost and changes the list nowhere.
       "lossreasons",
+      "partners",
       // The outcome-review questions: a rep is asked them when a deal closes
       // and reads them here, but editing them is custom_field update.
       "reviewtemplates",

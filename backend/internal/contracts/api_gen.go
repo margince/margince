@@ -15520,6 +15520,39 @@ func (e OutcomeReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for OwnershipOfferRecordType.
+const (
+	OwnershipOfferRecordTypeCompany OwnershipOfferRecordType = "company"
+	OwnershipOfferRecordTypeContact OwnershipOfferRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipOfferRecordType enum.
+func (e OwnershipOfferRecordType) Valid() bool {
+	switch e {
+	case OwnershipOfferRecordTypeCompany:
+		return true
+	case OwnershipOfferRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OwnershipOfferStatus.
+const (
+	OwnershipOfferStatusPending OwnershipOfferStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the OwnershipOfferStatus enum.
+func (e OwnershipOfferStatus) Valid() bool {
+	switch e {
+	case OwnershipOfferStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OwnershipRequestRecordType.
 const (
 	OwnershipRequestRecordTypeCompany OwnershipRequestRecordType = "company"
@@ -15547,6 +15580,27 @@ const (
 func (e OwnershipRequestStatus) Valid() bool {
 	switch e {
 	case OwnershipRequestStatusPending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerActivationBasis.
+const (
+	PartnerActivationBasisCustomerWon          PartnerActivationBasis = "customer_won"
+	PartnerActivationBasisLeadAccepted         PartnerActivationBasis = "lead_accepted"
+	PartnerActivationBasisRecordedBeforeLadder PartnerActivationBasis = "recorded_before_ladder"
+)
+
+// Valid indicates whether the value is a known member of the PartnerActivationBasis enum.
+func (e PartnerActivationBasis) Valid() bool {
+	switch e {
+	case PartnerActivationBasisCustomerWon:
+		return true
+	case PartnerActivationBasisLeadAccepted:
+		return true
+	case PartnerActivationBasisRecordedBeforeLadder:
 		return true
 	default:
 		return false
@@ -15616,42 +15670,54 @@ func (e PartnerPartnerRole) Valid() bool {
 	}
 }
 
-// Defines values for PartnerRelationshipStage.
+// Defines values for PartnerKind.
 const (
-	PartnerRelationshipStageActive           PartnerRelationshipStage = "active"
-	PartnerRelationshipStageActiveReferring  PartnerRelationshipStage = "active_referring"
-	PartnerRelationshipStageAgreementPending PartnerRelationshipStage = "agreement_pending"
-	PartnerRelationshipStageContacted        PartnerRelationshipStage = "contacted"
-	PartnerRelationshipStageDormant          PartnerRelationshipStage = "dormant"
-	PartnerRelationshipStageFitConfirmed     PartnerRelationshipStage = "fit_confirmed"
-	PartnerRelationshipStageIdentified       PartnerRelationshipStage = "identified"
-	PartnerRelationshipStageInConversation   PartnerRelationshipStage = "in_conversation"
-	PartnerRelationshipStageNoFit            PartnerRelationshipStage = "no_fit"
-	PartnerRelationshipStageResearch         PartnerRelationshipStage = "research"
+	PartnerKindConsulting PartnerKind = "consulting"
+	PartnerKindHosting    PartnerKind = "hosting"
+	PartnerKindReferral   PartnerKind = "referral"
+	PartnerKindStrategic  PartnerKind = "strategic"
 )
 
-// Valid indicates whether the value is a known member of the PartnerRelationshipStage enum.
-func (e PartnerRelationshipStage) Valid() bool {
+// Valid indicates whether the value is a known member of the PartnerKind enum.
+func (e PartnerKind) Valid() bool {
 	switch e {
-	case PartnerRelationshipStageActive:
+	case PartnerKindConsulting:
 		return true
-	case PartnerRelationshipStageActiveReferring:
+	case PartnerKindHosting:
 		return true
-	case PartnerRelationshipStageAgreementPending:
+	case PartnerKindReferral:
 		return true
-	case PartnerRelationshipStageContacted:
+	case PartnerKindStrategic:
 		return true
-	case PartnerRelationshipStageDormant:
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerStageMeaning.
+const (
+	PartnerStageMeaningActive    PartnerStageMeaning = "active"
+	PartnerStageMeaningCandidate PartnerStageMeaning = "candidate"
+	PartnerStageMeaningDormant   PartnerStageMeaning = "dormant"
+	PartnerStageMeaningEnded     PartnerStageMeaning = "ended"
+	PartnerStageMeaningReady     PartnerStageMeaning = "ready"
+	PartnerStageMeaningSigned    PartnerStageMeaning = "signed"
+)
+
+// Valid indicates whether the value is a known member of the PartnerStageMeaning enum.
+func (e PartnerStageMeaning) Valid() bool {
+	switch e {
+	case PartnerStageMeaningActive:
 		return true
-	case PartnerRelationshipStageFitConfirmed:
+	case PartnerStageMeaningCandidate:
 		return true
-	case PartnerRelationshipStageIdentified:
+	case PartnerStageMeaningDormant:
 		return true
-	case PartnerRelationshipStageInConversation:
+	case PartnerStageMeaningEnded:
 		return true
-	case PartnerRelationshipStageNoFit:
+	case PartnerStageMeaningReady:
 		return true
-	case PartnerRelationshipStageResearch:
+	case PartnerStageMeaningSigned:
 		return true
 	default:
 		return false
@@ -18901,48 +18967,6 @@ func (e SetUpPartnerRequestPartnerRole) Valid() bool {
 	}
 }
 
-// Defines values for SetUpPartnerRequestRelationshipStage.
-const (
-	SetUpPartnerRequestRelationshipStageActive           SetUpPartnerRequestRelationshipStage = "active"
-	SetUpPartnerRequestRelationshipStageActiveReferring  SetUpPartnerRequestRelationshipStage = "active_referring"
-	SetUpPartnerRequestRelationshipStageAgreementPending SetUpPartnerRequestRelationshipStage = "agreement_pending"
-	SetUpPartnerRequestRelationshipStageContacted        SetUpPartnerRequestRelationshipStage = "contacted"
-	SetUpPartnerRequestRelationshipStageDormant          SetUpPartnerRequestRelationshipStage = "dormant"
-	SetUpPartnerRequestRelationshipStageFitConfirmed     SetUpPartnerRequestRelationshipStage = "fit_confirmed"
-	SetUpPartnerRequestRelationshipStageIdentified       SetUpPartnerRequestRelationshipStage = "identified"
-	SetUpPartnerRequestRelationshipStageInConversation   SetUpPartnerRequestRelationshipStage = "in_conversation"
-	SetUpPartnerRequestRelationshipStageNoFit            SetUpPartnerRequestRelationshipStage = "no_fit"
-	SetUpPartnerRequestRelationshipStageResearch         SetUpPartnerRequestRelationshipStage = "research"
-)
-
-// Valid indicates whether the value is a known member of the SetUpPartnerRequestRelationshipStage enum.
-func (e SetUpPartnerRequestRelationshipStage) Valid() bool {
-	switch e {
-	case SetUpPartnerRequestRelationshipStageActive:
-		return true
-	case SetUpPartnerRequestRelationshipStageActiveReferring:
-		return true
-	case SetUpPartnerRequestRelationshipStageAgreementPending:
-		return true
-	case SetUpPartnerRequestRelationshipStageContacted:
-		return true
-	case SetUpPartnerRequestRelationshipStageDormant:
-		return true
-	case SetUpPartnerRequestRelationshipStageFitConfirmed:
-		return true
-	case SetUpPartnerRequestRelationshipStageIdentified:
-		return true
-	case SetUpPartnerRequestRelationshipStageInConversation:
-		return true
-	case SetUpPartnerRequestRelationshipStageNoFit:
-		return true
-	case SetUpPartnerRequestRelationshipStageResearch:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for SettingOriginSource.
 const (
 	SettingOriginSourceConfigFile SettingOriginSource = "config_file"
@@ -21211,48 +21235,6 @@ func (e UpsertPartnerRequestPartnerRole) Valid() bool {
 	case UpsertPartnerRequestPartnerRoleHosting:
 		return true
 	case UpsertPartnerRequestPartnerRoleStrategic:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for UpsertPartnerRequestRelationshipStage.
-const (
-	UpsertPartnerRequestRelationshipStageActive           UpsertPartnerRequestRelationshipStage = "active"
-	UpsertPartnerRequestRelationshipStageActiveReferring  UpsertPartnerRequestRelationshipStage = "active_referring"
-	UpsertPartnerRequestRelationshipStageAgreementPending UpsertPartnerRequestRelationshipStage = "agreement_pending"
-	UpsertPartnerRequestRelationshipStageContacted        UpsertPartnerRequestRelationshipStage = "contacted"
-	UpsertPartnerRequestRelationshipStageDormant          UpsertPartnerRequestRelationshipStage = "dormant"
-	UpsertPartnerRequestRelationshipStageFitConfirmed     UpsertPartnerRequestRelationshipStage = "fit_confirmed"
-	UpsertPartnerRequestRelationshipStageIdentified       UpsertPartnerRequestRelationshipStage = "identified"
-	UpsertPartnerRequestRelationshipStageInConversation   UpsertPartnerRequestRelationshipStage = "in_conversation"
-	UpsertPartnerRequestRelationshipStageNoFit            UpsertPartnerRequestRelationshipStage = "no_fit"
-	UpsertPartnerRequestRelationshipStageResearch         UpsertPartnerRequestRelationshipStage = "research"
-)
-
-// Valid indicates whether the value is a known member of the UpsertPartnerRequestRelationshipStage enum.
-func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
-	switch e {
-	case UpsertPartnerRequestRelationshipStageActive:
-		return true
-	case UpsertPartnerRequestRelationshipStageActiveReferring:
-		return true
-	case UpsertPartnerRequestRelationshipStageAgreementPending:
-		return true
-	case UpsertPartnerRequestRelationshipStageContacted:
-		return true
-	case UpsertPartnerRequestRelationshipStageDormant:
-		return true
-	case UpsertPartnerRequestRelationshipStageFitConfirmed:
-		return true
-	case UpsertPartnerRequestRelationshipStageIdentified:
-		return true
-	case UpsertPartnerRequestRelationshipStageInConversation:
-		return true
-	case UpsertPartnerRequestRelationshipStageNoFit:
-		return true
-	case UpsertPartnerRequestRelationshipStageResearch:
 		return true
 	default:
 		return false
@@ -39539,6 +39521,20 @@ type CreateOutcomeReviewRequest struct {
 	TemplateVersion *int64 `json:"template_version,omitempty"`
 }
 
+// CreatePartnerStageRequest defines model for CreatePartnerStageRequest.
+type CreatePartnerStageRequest struct {
+	// Key Optional; derived from the label when absent. Lowercase letters, digits and underscores, starting with a letter. Must be unique.
+	Key   *string `json:"key,omitempty"`
+	Label string  `json:"label"`
+
+	// Meaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	Meaning   PartnerStageMeaning `json:"meaning"`
+	SortOrder *int                `json:"sort_order,omitempty"`
+}
+
 // CreatePipelineRequest defines model for CreatePipelineRequest.
 type CreatePipelineRequest struct {
 	IsDefault *bool  `json:"is_default,omitempty"`
@@ -45563,6 +45559,15 @@ type Lead struct {
 	OriginLabel *string             `json:"origin_label,omitempty"`
 	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 
+	// PartnerAcceptedAt When someone accepted the lead for its partner. The first accepted lead activates the partner.
+	PartnerAcceptedAt *time.Time `json:"partner_accepted_at,omitempty"`
+
+	// PartnerAcceptedBy Who accepted the lead for its partner.
+	PartnerAcceptedBy *string `json:"partner_accepted_by,omitempty"`
+
+	// PartnerCompanyId The partner company that referred this lead. Null when none did, or when the caller cannot read that company.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
@@ -49172,6 +49177,44 @@ type OverrideWarning struct {
 	Version string `json:"version"`
 }
 
+// OwnershipOffer defines model for OwnershipOffer.
+type OwnershipOffer struct {
+	ApprovalId openapi_types.UUID       `json:"approval_id"`
+	ExpiresAt  time.Time                `json:"expires_at"`
+	RecordId   openapi_types.UUID       `json:"record_id"`
+	RecordType OwnershipOfferRecordType `json:"record_type"`
+	Status     OwnershipOfferStatus     `json:"status"`
+
+	// ToId The colleague the offer is put to.
+	ToId openapi_types.UUID `json:"to_id"`
+}
+
+// OwnershipOfferRecordType defines model for OwnershipOffer.RecordType.
+type OwnershipOfferRecordType string
+
+// OwnershipOfferStatus defines model for OwnershipOffer.Status.
+type OwnershipOfferStatus string
+
+// OwnershipOfferCandidate defines model for OwnershipOfferCandidate.
+type OwnershipOfferCandidate struct {
+	DisplayName string             `json:"display_name"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// OwnershipOfferCandidates defines model for OwnershipOfferCandidates.
+type OwnershipOfferCandidates struct {
+	Data []OwnershipOfferCandidate `json:"data"`
+}
+
+// OwnershipOfferInput defines model for OwnershipOfferInput.
+type OwnershipOfferInput struct {
+	// Note A line for the colleague, shown on the card.
+	Note *string `json:"note,omitempty"`
+
+	// ToId The colleague the record is offered to.
+	ToId openapi_types.UUID `json:"to_id"`
+}
+
 // OwnershipRequest defines model for OwnershipRequest.
 type OwnershipRequest struct {
 	ApprovalId openapi_types.UUID `json:"approval_id"`
@@ -49214,8 +49257,22 @@ type PageInfo struct {
 // partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
 // forward-compatible.
 type Partner struct {
-	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
-	CertStatus PartnerCertStatus `json:"cert_status"`
+	// ActivatedAt When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.
+	ActivatedAt *time.Time `json:"activated_at,omitempty"`
+
+	// ActivatedBy Who accepted the lead or recorded the win that activated the partner.
+	ActivatedBy *string `json:"activated_by,omitempty"`
+
+	// ActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+	ActivationBasis *PartnerActivationBasis `json:"activation_basis,omitempty"`
+
+	// ActivationDealId The won deal that activated the partner.
+	ActivationDealId *openapi_types.UUID `json:"activation_deal_id,omitempty"`
+
+	// ActivationLeadId The accepted lead that activated the partner.
+	ActivationLeadId *openapi_types.UUID `json:"activation_lead_id,omitempty"`
+	ArchivedAt       *time.Time          `json:"archived_at,omitempty"`
+	CertStatus       PartnerCertStatus   `json:"cert_status"`
 
 	// CompanyId The company this partner record extends (PK = FK).
 	CompanyId openapi_types.UUID `json:"company_id"`
@@ -49242,14 +49299,32 @@ type Partner struct {
 	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
 	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
 
-	// PartnerRole Functional role; implementation + dev are Margince's turf.
+	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
+	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
 	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
-	RelationshipHealth *string                   `json:"relationship_health,omitempty"`
-	RelationshipStage  *PartnerRelationshipStage `json:"relationship_stage,omitempty"`
-	ServedSegments     *[]string                 `json:"served_segments,omitempty"`
-	UpdatedAt          time.Time                 `json:"updated_at"`
+	RelationshipHealth *string `json:"relationship_health,omitempty"`
+
+	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
+	RelationshipStage *string   `json:"relationship_stage,omitempty"`
+	ServedSegments    *[]string `json:"served_segments,omitempty"`
+
+	// StageLabel The label `/partner-stages` gives `relationship_stage`.
+	StageLabel *string `json:"stage_label,omitempty"`
+
+	// StageLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	StageLabelKey *ShippedLabelKey `json:"stage_label_key,omitempty"`
+
+	// StageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	StageMeaning *PartnerStageMeaning `json:"stage_meaning,omitempty"`
+	UpdatedAt    time.Time            `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -49258,17 +49333,68 @@ type Partner struct {
 	Version *RowVersion `json:"version,omitempty"`
 }
 
+// PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+type PartnerActivationBasis string
+
 // PartnerCertStatus defines model for Partner.CertStatus.
 type PartnerCertStatus string
 
 // PartnerMarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 type PartnerMarginTier string
 
-// PartnerPartnerRole Functional role; implementation + dev are Margince's turf.
+// PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 type PartnerPartnerRole string
 
-// PartnerRelationshipStage defines model for Partner.RelationshipStage.
-type PartnerRelationshipStage string
+// PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
+type PartnerKind string
+
+// PartnerStage One stage of the installation's partner ladder. `key` is the value stored on `partner.relationship_stage`; `label` is what a user sees.
+type PartnerStage struct {
+	// Active A retired stage leaves the picker and is refused for a new move; partners on it keep it.
+	Active    bool               `json:"active"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Key Stable key, the stored value. Never changes after creation.
+	Key   string `json:"key"`
+	Label string `json:"label"`
+
+	// LabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	LabelKey *ShippedLabelKey `json:"label_key,omitempty"`
+
+	// Meaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	Meaning PartnerStageMeaning `json:"meaning"`
+
+	// PartnerCount Live partners on this stage whose company the caller may read. Absent for a caller without both the `partner` and the `company` read grant. While any partner carries the key, archived ones included, the meaning cannot change and the stage cannot be deleted (409).
+	PartnerCount *int `json:"partner_count,omitempty"`
+
+	// SortOrder Ladder position, lowest first.
+	SortOrder int `json:"sort_order"`
+
+	// System Built-in. Can be renamed, reordered and retired, never deleted.
+	System    *bool     `json:"system,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+}
+
+// PartnerStageListResponse defines model for PartnerStageListResponse.
+type PartnerStageListResponse struct {
+	Data []PartnerStage `json:"data"`
+}
+
+// PartnerStageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+// active and went quiet. `ended`: the partnership is over or never fit.
+type PartnerStageMeaning string
 
 // PassportConnection The connection a grant-bound passport belongs to, so Settings can name it by the client the
 // human actually approved instead of the raw DCR client id its label carries.
@@ -54536,18 +54662,23 @@ type SetTransitionPolicyRequestMode string
 
 // SetUpPartnerRequest What a partner program starts with. It has no `margin_tier`, `cert_status`, `gate_metrics`
 // or `served_segments`: the tier is a human's choice, and the others are set after set-up.
+// Send `partner_kinds`, or the deprecated `partner_role`. Without `relationship_stage` the
+// program starts on the first active stage meaning `candidate`.
 type SetUpPartnerRequest struct {
-	NextStep          *string                               `json:"next_step,omitempty"`
-	NextStepDueAt     *openapi_types.Date                   `json:"next_step_due_at,omitempty"`
-	PartnerRole       SetUpPartnerRequestPartnerRole        `json:"partner_role"`
-	RelationshipStage *SetUpPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
+	NextStep      *string             `json:"next_step,omitempty"`
+	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
+	PartnerKinds  *[]PartnerKind      `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: send `partner_kinds`.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PartnerRole *SetUpPartnerRequestPartnerRole `json:"partner_role,omitempty"`
+
+	// RelationshipStage An active key from `/partner-stages`.
+	RelationshipStage *string `json:"relationship_stage,omitempty"`
 }
 
-// SetUpPartnerRequestPartnerRole defines model for SetUpPartnerRequest.PartnerRole.
+// SetUpPartnerRequestPartnerRole Deprecated: send `partner_kinds`.
 type SetUpPartnerRequestPartnerRole string
-
-// SetUpPartnerRequestRelationshipStage defines model for SetUpPartnerRequest.RelationshipStage.
-type SetUpPartnerRequestRelationshipStage string
 
 // SettingLock A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
 type SettingLock struct {
@@ -57037,6 +57168,9 @@ type UpdateLeadRequest struct {
 	// `POST /records/lead/{id}/claim`, which is the same act with a version precondition.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
+	// PartnerCompanyId The partner that referred the lead: a live partner company the caller can read (422 `not_a_partner` otherwise). Null clears it. Refused with 409 `partner_already_accepted` once the lead was accepted for its partner.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone *string `json:"phone,omitempty"`
 
@@ -57203,6 +57337,19 @@ type UpdateOfferTemplateRequest struct {
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    string                 `json:"locale"`
 	Name      string                 `json:"name"`
+}
+
+// UpdatePartnerStageRequest defines model for UpdatePartnerStageRequest.
+type UpdatePartnerStageRequest struct {
+	Active *bool   `json:"active,omitempty"`
+	Label  *string `json:"label,omitempty"`
+
+	// Meaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	Meaning   *PartnerStageMeaning `json:"meaning,omitempty"`
+	SortOrder *int                 `json:"sort_order,omitempty"`
 }
 
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
@@ -57454,16 +57601,28 @@ type UpdateWebhookSubscriptionRequest struct {
 // UpdateWebhookSubscriptionRequestState defines model for UpdateWebhookSubscriptionRequest.State.
 type UpdateWebhookSubscriptionRequestState string
 
-// UpsertPartnerRequest defines model for UpsertPartnerRequest.
+// UpsertPartnerRequest Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
+// `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
 type UpsertPartnerRequest struct {
-	CertStatus        *UpsertPartnerRequestCertStatus        `json:"cert_status,omitempty"`
-	GateMetrics       *map[string]interface{}                `json:"gate_metrics,omitempty"`
-	MarginTier        *UpsertPartnerRequestMarginTier        `json:"margin_tier,omitempty"`
-	NextStep          *string                                `json:"next_step,omitempty"`
-	NextStepDueAt     *openapi_types.Date                    `json:"next_step_due_at,omitempty"`
-	PartnerRole       UpsertPartnerRequestPartnerRole        `json:"partner_role"`
-	RelationshipStage *UpsertPartnerRequestRelationshipStage `json:"relationship_stage,omitempty"`
-	ServedSegments    *[]string                              `json:"served_segments,omitempty"`
+	CertStatus    *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
+	GateMetrics   *map[string]interface{}         `json:"gate_metrics,omitempty"`
+	MarginTier    *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
+	NextStep      *string                         `json:"next_step,omitempty"`
+	NextStepDueAt *openapi_types.Date             `json:"next_step_due_at,omitempty"`
+
+	// PartnerKinds Every kind the partner holds; it replaces the kinds stored.
+	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PartnerRole *UpsertPartnerRequestPartnerRole `json:"partner_role,omitempty"`
+
+	// RelationshipStage An active key from `/partner-stages`, or the stage the partner already stands on (422
+	// `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
+	// `partner_not_activated` until the partner was activated by an accepted partner lead or
+	// a won customer it sourced.
+	RelationshipStage *string   `json:"relationship_stage,omitempty"`
+	ServedSegments    *[]string `json:"served_segments,omitempty"`
 }
 
 // UpsertPartnerRequestCertStatus defines model for UpsertPartnerRequest.CertStatus.
@@ -57472,11 +57631,8 @@ type UpsertPartnerRequestCertStatus string
 // UpsertPartnerRequestMarginTier defines model for UpsertPartnerRequest.MarginTier.
 type UpsertPartnerRequestMarginTier string
 
-// UpsertPartnerRequestPartnerRole defines model for UpsertPartnerRequest.PartnerRole.
+// UpsertPartnerRequestPartnerRole Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.
 type UpsertPartnerRequestPartnerRole string
-
-// UpsertPartnerRequestRelationshipStage defines model for UpsertPartnerRequest.RelationshipStage.
-type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
@@ -62315,6 +62471,15 @@ type ListCompaniesParams struct {
 	// is archived without `include_archived`, is simply absent from the page.
 	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
 
+	// PartnerKind Companies whose live partner program holds this kind. Needs the `partner` read grant (403 otherwise).
+	PartnerKind *PartnerKind `form:"partner_kind,omitempty" json:"partner_kind,omitempty"`
+
+	// PartnerStage Companies whose live partner program stands on this `/partner-stages` key. Needs the `partner` read grant (403 otherwise).
+	PartnerStage *string `form:"partner_stage,omitempty" json:"partner_stage,omitempty"`
+
+	// PartnerStageMeaning Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
+	PartnerStageMeaning *PartnerStageMeaning `form:"partner_stage_meaning,omitempty" json:"partner_stage_meaning,omitempty"`
+
 	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
 	// too to find the one company holding that id there. A company the caller cannot
 	// see, or that is archived without `include_archived`, is simply absent from the page.
@@ -65252,6 +65417,30 @@ type DemoteLeadParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AcceptPartnerLeadParams defines parameters for AcceptPartnerLead.
+type AcceptPartnerLeadParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // PromoteLeadParams defines parameters for PromoteLead.
 type PromoteLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -65929,6 +66118,54 @@ type PutOnboardingStateParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// CreatePartnerStageParams defines parameters for CreatePartnerStage.
+type CreatePartnerStageParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// UpdatePartnerStageParams defines parameters for UpdatePartnerStage.
+type UpdatePartnerStageParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListPartnersParams defines parameters for ListPartners.
 type ListPartnersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -65956,9 +66193,20 @@ type ListPartnersParams struct {
 	// its pipeline or a partner by its company's name, needs a sort the server cannot express
 	// yet — and a resource's own list documents which. An out-of-vocabulary field returns
 	// `422 code: sort_field_not_allowed`.
-	Sort        *Sort                          `form:"sort,omitempty" json:"sort,omitempty"`
+	Sort *Sort `form:"sort,omitempty" json:"sort,omitempty"`
+
+	// PartnerKind Partners holding this kind, among others.
+	PartnerKind *PartnerKind `form:"partner_kind,omitempty" json:"partner_kind,omitempty"`
+
+	// PartnerRole Deprecated: use `partner_kind`, which this is read as.
 	PartnerRole *ListPartnersParamsPartnerRole `form:"partner_role,omitempty" json:"partner_role,omitempty"`
-	CertStatus  *ListPartnersParamsCertStatus  `form:"cert_status,omitempty" json:"cert_status,omitempty"`
+
+	// RelationshipStage Partners on this stage key from `/partner-stages`, matched exactly.
+	RelationshipStage *string `form:"relationship_stage,omitempty" json:"relationship_stage,omitempty"`
+
+	// StageMeaning Partners on any stage carrying this meaning, so "all active partners" holds however the stages are named.
+	StageMeaning *PartnerStageMeaning          `form:"stage_meaning,omitempty" json:"stage_meaning,omitempty"`
+	CertStatus   *ListPartnersParamsCertStatus `form:"cert_status,omitempty" json:"cert_status,omitempty"`
 }
 
 // ListPartnersParamsPartnerRole defines parameters for ListPartners.
@@ -66871,6 +67119,30 @@ type ClaimRecordParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
+type OfferOwnershipTransferParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // RequestOwnershipTransferParams defines parameters for RequestOwnershipTransfer.
@@ -69196,6 +69468,12 @@ type MessageOnboardingCompanyJSONRequestBody = OnboardingCompanyMessageRequest
 // PutOnboardingStateJSONRequestBody defines body for PutOnboardingState for application/json ContentType.
 type PutOnboardingStateJSONRequestBody = PutOnboardingStateRequest
 
+// CreatePartnerStageJSONRequestBody defines body for CreatePartnerStage for application/json ContentType.
+type CreatePartnerStageJSONRequestBody = CreatePartnerStageRequest
+
+// UpdatePartnerStageJSONRequestBody defines body for UpdatePartnerStage for application/json ContentType.
+type UpdatePartnerStageJSONRequestBody = UpdatePartnerStageRequest
+
 // IssuePassportJSONRequestBody defines body for IssuePassport for application/json ContentType.
 type IssuePassportJSONRequestBody = IssuePassportRequest
 
@@ -69309,6 +69587,9 @@ type CreateRecordRoleJSONRequestBody = CreateRecordRoleRequest
 
 // UpdateRecordRoleJSONRequestBody defines body for UpdateRecordRole for application/json ContentType.
 type UpdateRecordRoleJSONRequestBody = UpdateRecordRoleRequest
+
+// OfferOwnershipTransferJSONRequestBody defines body for OfferOwnershipTransfer for application/json ContentType.
+type OfferOwnershipTransferJSONRequestBody = OwnershipOfferInput
 
 // RequestOwnershipTransferJSONRequestBody defines body for RequestOwnershipTransfer for application/json ContentType.
 type RequestOwnershipTransferJSONRequestBody = OwnershipRequestInput
@@ -76372,6 +76653,30 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["partner_accepted_at"]; found {
+		err = json.Unmarshal(raw, &a.PartnerAcceptedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_accepted_at': %w", err)
+		}
+		delete(object, "partner_accepted_at")
+	}
+
+	if raw, found := object["partner_accepted_by"]; found {
+		err = json.Unmarshal(raw, &a.PartnerAcceptedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_accepted_by': %w", err)
+		}
+		delete(object, "partner_accepted_by")
+	}
+
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -76799,6 +77104,27 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerAcceptedAt != nil {
+		object["partner_accepted_at"], err = json.Marshal(a.PartnerAcceptedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_accepted_at': %w", err)
+		}
+	}
+
+	if a.PartnerAcceptedBy != nil {
+		object["partner_accepted_by"], err = json.Marshal(a.PartnerAcceptedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_accepted_by': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
 		}
 	}
 
@@ -79878,6 +80204,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -80006,6 +80340,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
 		}
 	}
 
@@ -82645,6 +82986,9 @@ type ServerInterface interface {
 	// Withdraw a human-provided scoring factor.
 	// (DELETE /leads/{id}/manual-signals/{factor})
 	ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor)
+	// Accept a lead for the partner that referred it.
+	// (POST /leads/{id}/partner-acceptance)
+	AcceptPartnerLead(w http.ResponseWriter, r *http.Request, id Id, params AcceptPartnerLeadParams)
 	// Promote a lead to a contact on genuine engagement (non-lossy merge).
 	// (POST /leads/{id}/promote)
 	PromoteLead(w http.ResponseWriter, r *http.Request, id Id, params PromoteLeadParams)
@@ -82948,7 +83292,19 @@ type ServerInterface interface {
 	// The OpenAPI 3.1 document of every operation a passport can call, as JSON.
 	// (GET /openapi.json)
 	GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Request)
-	// List partner companies (companies with a partner row), filterable by role/cert status.
+	// List the partner stages, active and retired, in ladder order.
+	// (GET /partner-stages)
+	ListPartnerStages(w http.ResponseWriter, r *http.Request)
+	// Add a partner stage.
+	// (POST /partner-stages)
+	CreatePartnerStage(w http.ResponseWriter, r *http.Request, params CreatePartnerStageParams)
+	// Remove a partner stage nothing uses.
+	// (DELETE /partner-stages/{id})
+	DeletePartnerStage(w http.ResponseWriter, r *http.Request, id Id)
+	// Rename, reorder, retire or re-mean a partner stage.
+	// (PATCH /partner-stages/{id})
+	UpdatePartnerStage(w http.ResponseWriter, r *http.Request, id Id, params UpdatePartnerStageParams)
+	// List partner companies (companies with a partner row), filterable by kind, stage and cert status.
 	// (GET /partners)
 	ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams)
 	// List the caller's own Agent Seat Passports (metadata only — no token re-disclosure).
@@ -83209,6 +83565,18 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Withdraw the caller's open offer of this record.
+	// (DELETE /records/{record_type}/{id}/ownership-offer)
+	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open offer of this record.
+	// (GET /records/{record_type}/{id}/ownership-offer)
+	GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Offer the caller's own record to a colleague.
+	// (POST /records/{record_type}/{id}/ownership-offer)
+	OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams)
+	// The colleagues the caller may offer this record to.
+	// (GET /records/{record_type}/{id}/ownership-offer/candidates)
+	ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// Withdraw the caller's open request to be handed this record.
 	// (DELETE /records/{record_type}/{id}/ownership-request)
 	WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
@@ -87337,6 +87705,12 @@ func (_ Unimplemented) ClearLeadManualSignal(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Accept a lead for the partner that referred it.
+// (POST /leads/{id}/partner-acceptance)
+func (_ Unimplemented) AcceptPartnerLead(w http.ResponseWriter, r *http.Request, id Id, params AcceptPartnerLeadParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Promote a lead to a contact on genuine engagement (non-lossy merge).
 // (POST /leads/{id}/promote)
 func (_ Unimplemented) PromoteLead(w http.ResponseWriter, r *http.Request, id Id, params PromoteLeadParams) {
@@ -87943,7 +88317,31 @@ func (_ Unimplemented) GetAgentOpenAPIDocument(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List partner companies (companies with a partner row), filterable by role/cert status.
+// List the partner stages, active and retired, in ladder order.
+// (GET /partner-stages)
+func (_ Unimplemented) ListPartnerStages(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a partner stage.
+// (POST /partner-stages)
+func (_ Unimplemented) CreatePartnerStage(w http.ResponseWriter, r *http.Request, params CreatePartnerStageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a partner stage nothing uses.
+// (DELETE /partner-stages/{id})
+func (_ Unimplemented) DeletePartnerStage(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename, reorder, retire or re-mean a partner stage.
+// (PATCH /partner-stages/{id})
+func (_ Unimplemented) UpdatePartnerStage(w http.ResponseWriter, r *http.Request, id Id, params UpdatePartnerStageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List partner companies (companies with a partner row), filterable by kind, stage and cert status.
 // (GET /partners)
 func (_ Unimplemented) ListPartners(w http.ResponseWriter, r *http.Request, params ListPartnersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -88462,6 +88860,30 @@ func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Reques
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw the caller's open offer of this record.
+// (DELETE /records/{record_type}/{id}/ownership-offer)
+func (_ Unimplemented) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open offer of this record.
+// (GET /records/{record_type}/{id}/ownership-offer)
+func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Offer the caller's own record to a colleague.
+// (POST /records/{record_type}/{id}/ownership-offer)
+func (_ Unimplemented) OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The colleagues the caller may offer this record to.
+// (GET /records/{record_type}/{id}/ownership-offer/candidates)
+func (_ Unimplemented) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -99614,6 +100036,45 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_kind", r.URL.Query(), &params.PartnerKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_stage" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_stage", r.URL.Query(), &params.PartnerStage, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_stage"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_stage", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_stage_meaning" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_stage_meaning", r.URL.Query(), &params.PartnerStageMeaning, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_stage_meaning"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_stage_meaning", Err: err})
 		}
 		return
 	}
@@ -114864,6 +115325,62 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// AcceptPartnerLead operation middleware
+func (siw *ServerInterfaceWrapper) AcceptPartnerLead(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptPartnerLeadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptPartnerLead(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PromoteLead operation middleware
 func (siw *ServerInterfaceWrapper) PromoteLead(w http.ResponseWriter, r *http.Request) {
 
@@ -118807,6 +119324,163 @@ func (siw *ServerInterfaceWrapper) GetAgentOpenAPIDocument(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// ListPartnerStages operation middleware
+func (siw *ServerInterfaceWrapper) ListPartnerStages(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPartnerStages(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreatePartnerStage operation middleware
+func (siw *ServerInterfaceWrapper) CreatePartnerStage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreatePartnerStageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreatePartnerStage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeletePartnerStage operation middleware
+func (siw *ServerInterfaceWrapper) DeletePartnerStage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeletePartnerStage(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePartnerStage operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePartnerStage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdatePartnerStageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePartnerStage(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPartners operation middleware
 func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.Request) {
 
@@ -118863,6 +119537,19 @@ func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "partner_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_kind", r.URL.Query(), &params.PartnerKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_kind", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "partner_role" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_role", r.URL.Query(), &params.PartnerRole, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -118872,6 +119559,32 @@ func (siw *ServerInterfaceWrapper) ListPartners(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_role"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_role", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "relationship_stage" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "relationship_stage", r.URL.Query(), &params.RelationshipStage, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "relationship_stage"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "relationship_stage", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "stage_meaning" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stage_meaning", r.URL.Query(), &params.StageMeaning, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stage_meaning"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stage_meaning", Err: err})
 		}
 		return
 	}
@@ -122791,6 +123504,194 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ClaimRecord(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawOwnershipOffer operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawOwnershipOffer(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetOwnershipOffer operation middleware
+func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetOwnershipOffer(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OfferOwnershipTransfer operation middleware
+func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params OfferOwnershipTransferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OfferOwnershipTransfer(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListOwnershipOfferCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListOwnershipOfferCandidates(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132208,6 +133109,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/leads/{id}/manual-signals/{factor}", wrapper.ClearLeadManualSignal)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/leads/{id}/partner-acceptance", wrapper.AcceptPartnerLead)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/promote", wrapper.PromoteLead)
 	})
 	r.Group(func(r chi.Router) {
@@ -132511,6 +133415,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/openapi.json", wrapper.GetAgentOpenAPIDocument)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/partner-stages", wrapper.ListPartnerStages)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/partner-stages", wrapper.CreatePartnerStage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/partner-stages/{id}", wrapper.DeletePartnerStage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/partner-stages/{id}", wrapper.UpdatePartnerStage)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/partners", wrapper.ListPartners)
 	})
 	r.Group(func(r chi.Router) {
@@ -132770,6 +133686,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.WithdrawOwnershipOffer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.GetOwnershipOffer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.OfferOwnershipTransfer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/ownership-offer/candidates", wrapper.ListOwnershipOfferCandidates)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-request", wrapper.WithdrawOwnershipRequest)

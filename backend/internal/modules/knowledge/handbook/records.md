@@ -174,7 +174,7 @@ Two fields describe a company, and many users mix them up.
 
 **Lifecycle**: where the company stands with you. One value only: **Unknown**, **Target**, **Prospect**, **Opportunity**, **Onboarding**, **Live**, **Customer**, **Former customer** or **Disqualified**. New companies start at **Unknown**. **Onboarding** means the contract is signed and set-up runs. **Live** means the agreed first scope is in use. Only a colleague sets **Live**: an AI assistant, an automation or an approval that tries is refused.
 
-**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.**
+**Relationship types**: what the company *is* to you. Many at once: **customer, partner, supplier, investor, portfolio company, competitor, other.** A customer and a partner show as marks under the company's name; see [Partners and commission](partners.md).
 
 So a company can be a customer *and* a supplier. It cannot be both a prospect and a customer, because that is one question with one answer.
 

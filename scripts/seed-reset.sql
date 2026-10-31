@@ -63,6 +63,7 @@ DECLARE
     'oauth_client',
     'oauth_grant',
     'oauth_refresh_token',
+    'partner_stage',
     'passport',
     'project_health_assessment',
     'record_role',

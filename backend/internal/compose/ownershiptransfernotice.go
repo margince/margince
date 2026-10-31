@@ -22,31 +22,40 @@ import (
 // transferOutcome is how a request ended for the colleague who asked, other
 // than by being accepted.
 type transferOutcome struct {
-	kind          string
-	subject, body langcopy.Phrase
+	kind                    string
+	subject, body           langcopy.Phrase
+	offerSubject, offerBody langcopy.Phrase
 }
 
 var (
 	transferDeclined = transferOutcome{
 		"ownership_request_declined",
 		ownershipTransferWords.Declined, ownershipTransferWords.DeclinedBody,
+		ownershipTransferWords.OfferDeclined, ownershipTransferWords.OfferDeclinedBody,
 	}
 	transferExpired = transferOutcome{
 		"ownership_request_expired",
 		ownershipTransferWords.Expired, ownershipTransferWords.ExpiredBody,
+		ownershipTransferWords.OfferExpired, ownershipTransferWords.OfferExpiredBody,
 	}
 	transferWithdrawn = transferOutcome{
 		"ownership_request_withdrawn",
 		ownershipTransferWords.Withdrawn, ownershipTransferWords.WithdrawnBody,
+		ownershipTransferWords.OfferWithdrawn, ownershipTransferWords.OfferWithdrawnBody,
 	}
 )
 
 const transferAcceptedKind = "ownership_request_accepted"
 
-// tellRequester gives the colleague who asked one line about how it ended.
+// tellRequester gives the colleague who staged the transfer one line about
+// how it ended, naming the colleague who was to answer it.
 func tellRequester(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, transfer approvalsubject.OwnershipTransfer, outcome transferOutcome) error {
 	lang := identity.BaseLanguageForRecord(ctx, tx)
-	owner, err := colleagueName(ctx, tx, transfer.FromID)
+	subject, body := outcome.subject, outcome.body
+	if transfer.Offered() {
+		subject, body = outcome.offerSubject, outcome.offerBody
+	}
+	other, err := colleagueName(ctx, tx, transfer.DeciderID)
 	if err != nil {
 		return err
 	}
@@ -56,13 +65,13 @@ func tellRequester(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tr
 	}
 	return recordTransferNotice(ctx, tx, approvalID, transfer, notices.NewNotice{
 		Kind:    outcome.kind,
-		Subject: fmt.Sprintf(outcome.subject.In(lang), owner, record),
-		Body:    outcome.body.In(lang),
+		Subject: fmt.Sprintf(subject.In(lang), other, record),
+		Body:    body.In(lang),
 	})
 }
 
-// tellAccepted tells the receiver what is theirs now, and names what stayed
-// with the giver because its own write refused the move.
+// tellAccepted tells the colleague who staged the transfer what moved, and
+// names what stayed with the giver because its own write refused the move.
 func tellAccepted(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, transfer approvalsubject.OwnershipTransfer, moved transferHandOver) error {
 	lang := identity.BaseLanguageForRecord(ctx, tx)
 	giver, err := colleagueName(ctx, tx, transfer.FromID)
@@ -70,7 +79,15 @@ func tellAccepted(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tra
 		return err
 	}
 	words := ownershipTransferWords
-	lines := []string{fmt.Sprintf(words.AcceptedMoved.In(lang), moved.deals.Moved, moved.tasks.Moved)}
+	subject, movedLine := fmt.Sprintf(words.Accepted.In(lang), giver, moved.record), words.AcceptedMoved
+	if transfer.Offered() {
+		receiver, err := colleagueName(ctx, tx, transfer.ToID)
+		if err != nil {
+			return err
+		}
+		subject, movedLine = fmt.Sprintf(words.OfferAccepted.In(lang), receiver, moved.record), words.OfferAcceptedMoved
+	}
+	lines := []string{fmt.Sprintf(movedLine.In(lang), moved.deals.Moved, moved.tasks.Moved)}
 	if moved.deals.Kept > 0 {
 		lines = append(lines, fmt.Sprintf(words.KeptDeals.In(lang), giver, moved.deals.Kept))
 	}
@@ -79,13 +96,13 @@ func tellAccepted(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, tra
 	}
 	return recordTransferNotice(ctx, tx, approvalID, transfer, notices.NewNotice{
 		Kind:    transferAcceptedKind,
-		Subject: fmt.Sprintf(words.Accepted.In(lang), giver, moved.record),
+		Subject: subject,
 		Body:    strings.Join(lines, " "),
 	})
 }
 
-// recordTransferNotice writes the line to the colleague who asked, about the
-// record, once per request and outcome.
+// recordTransferNotice writes the line to the colleague who staged the
+// transfer, about the record, once per transfer and outcome.
 func recordTransferNotice(ctx context.Context, tx pgx.Tx, approvalID ids.ApprovalID, transfer approvalsubject.OwnershipTransfer, line notices.NewNotice) error {
 	line.Recipient = ids.From[ids.UserKind](transfer.RequestedBy)
 	line.Target = notices.Target{Type: transfer.RecordType, ID: transfer.RecordID}

@@ -108,6 +108,7 @@ describe("the scope each page declares", () => {
     leads: "workspace",
     acquisition: "workspace",
     lossreasons: "workspace",
+    partners: "workspace",
     reviewtemplates: "workspace",
     recordroles: "workspace",
     fields: "workspace",
@@ -232,6 +233,8 @@ describe("what each page lets a reader change", () => {
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
     lossreasons:
       "all(full-seat, any(any(custom_field:update, custom_field:create)))",
+    partners:
+      "all(full-seat, any(any(custom_field:update, custom_field:create), custom_field:delete))",
     // Edit questions is the one write, and the server gates it on update.
     reviewtemplates: "all(full-seat, any(any(custom_field:update)))",
     // No delete arm either: a role is retired through its switch, because an

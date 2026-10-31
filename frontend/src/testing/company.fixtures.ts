@@ -231,6 +231,10 @@ export function backstopAnswer(
   if (pathname.endsWith("/activities/latest-inbound")) {
     return jsonResponse({ data: [] });
   }
+  // The partner ladder the company list's partner dials name.
+  if (pathname.endsWith("/partner-stages")) {
+    return jsonResponse({ data: [] });
+  }
   // The account scan the page asks for on open: `never`, echoing the 360's
   // rows, unless a suite hands in one, so a page test is not also a scan test.
   if (pathname.endsWith("/scan")) {
