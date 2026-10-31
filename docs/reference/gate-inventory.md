@@ -571,6 +571,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobtestonly_test.go` | H2 | jobs.Config.TestOnly and compose.JobRunnerConfig.TestOnly carry River's flag of the same name, which disables machinery that is "useful in production, but which may be harmful to tests" (in the pinned river@v0.43.0, the maintenance services' staggered startup). |
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault once. |
 | `lanepoolbudget_test.go` | H2 | Every pool the integration lane opens is inside the lane's budget. |
+| `leadmeetingproof_test.go` | H2 | Lead evidence, lead scoring and the lead status ladder read what a meeting proves from leadmeetingproof.go. |
 | `licensebody_test.go` | H1 | The BUSL-1.1 text below LICENSE's Parameters block never changes. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
 | `maskclosurecrossings_test.go` | H2 | A fact withheld on another record as a consequence may not also be offered for configuration. |

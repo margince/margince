@@ -45751,9 +45751,13 @@ type Lead struct {
 	PromotedContactId *openapi_types.UUID `json:"promoted_contact_id,omitempty"`
 
 	// QualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
-	// linked activities at read time: a held meeting over a booked one over an inbound reply.
-	// What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-	// lead has no such signal yet (a human may still qualify with `human_qualify`).
+	// linked activities at read time: a held meeting over a booked one over an inbound reply,
+	// by mail or channel message. A meeting with no recorded status counts as booked, and a
+	// meeting the lead declined counts as nothing. Only engagement inside the waiting
+	// horizon counts (the one that keeps automatic work current, at most 30 days), so older
+	// engagement is left out. What the qualify dialog shows as the reason and sends back as
+	// `trigger`; null when the lead has no such signal (a human may still qualify with
+	// `human_qualify`).
 	QualificationEvidence *LeadQualificationEvidence `json:"qualification_evidence,omitempty"`
 
 	// QualifiedDealId The deal opened by the qualify call that promoted this lead, when one was asked for.
@@ -45977,9 +45981,13 @@ type LeadQualification struct {
 }
 
 // LeadQualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
-// linked activities at read time: a held meeting over a booked one over an inbound reply.
-// What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-// lead has no such signal yet (a human may still qualify with `human_qualify`).
+// linked activities at read time: a held meeting over a booked one over an inbound reply,
+// by mail or channel message. A meeting with no recorded status counts as booked, and a
+// meeting the lead declined counts as nothing. Only engagement inside the waiting
+// horizon counts (the one that keeps automatic work current, at most 30 days), so older
+// engagement is left out. What the qualify dialog shows as the reason and sends back as
+// `trigger`; null when the lead has no such signal (a human may still qualify with
+// `human_qualify`).
 type LeadQualificationEvidence struct {
 	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
@@ -50530,11 +50538,15 @@ type PromoteLeadRequest struct {
 
 	// Trigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 	// rejected with 422 — promotion is engagement, not import or an outbound touch.
+	// Every trigger but human_qualify needs engagement on the lead that
+	// `qualification_evidence` would offer; with none, the promotion is refused with 422.
 	Trigger PromoteLeadRequestTrigger `json:"trigger"`
 }
 
 // PromoteLeadRequestTrigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 // rejected with 422 — promotion is engagement, not import or an outbound touch.
+// Every trigger but human_qualify needs engagement on the lead that
+// `qualification_evidence` would offer; with none, the promotion is refused with 422.
 type PromoteLeadRequestTrigger string
 
 // PromoteLeadResponse defines model for PromoteLeadResponse.

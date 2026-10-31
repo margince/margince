@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -212,5 +213,52 @@ func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testi
 				t.Errorf("the ready preview names no evidence, though the promotion records the held meeting: %+v", *preview.Details)
 			}
 		})
+	}
+}
+
+// Evidence the reviewer may discover but not read still makes a ready preview.
+// It is named by its date, and its subject stays withheld.
+func TestPromotionApprovalPreviewNamesWithheldEvidenceWithoutItsSubject(t *testing.T) {
+	e := integration.Setup(t)
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+	ctx := e.As(e.AdminUser, nil, perms)
+	lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Nora Held"), Email: new("nora@example.test"), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	meeting := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email, audience)
+	             VALUES ($1, 'meeting', 'Board compensation', 'held', now(), 'manual', 'human:someone-else', 'nora@example.test', 'participants')`, meeting)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
+	raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":"meeting_held"}`, lead.Id))
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewApprovalsService(e.DB())
+	id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal, err := svc.GetWire(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preview := proposal.Preview
+	if preview == nil || preview.State != previewReadyState || preview.Details == nil {
+		t.Fatalf("preview of a promotion on withheld evidence: %+v, want ready", preview)
+	}
+	named := false
+	for _, detail := range *preview.Details {
+		if strings.Contains(detail.Value.Text, "Board compensation") {
+			t.Fatalf("the preview disclosed the withheld subject in %s", detail.Field)
+		}
+		if detail.Field == "promotion_evidence" {
+			named = detail.Value.Kind == previewValueDate && detail.Value.EntityId != nil && ids.UUID(*detail.Value.EntityId) == meeting
+		}
+	}
+	if !named {
+		t.Errorf("the preview does not name the withheld meeting by its date: %+v", *preview.Details)
 	}
 }

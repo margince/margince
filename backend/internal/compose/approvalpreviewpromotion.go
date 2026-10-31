@@ -8,10 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -122,7 +126,7 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 		details = append(details, previewDetail("promotion_note", *in.EvidenceNote))
 	}
 	if plan.Evidence != nil {
-		value, err := r.referenceValue(ctx, "activity_id", plan.Evidence.String())
+		value, err := r.promotionEvidenceValue(ctx, *plan.Evidence)
 		if err != nil {
 			return nil, err
 		}
@@ -157,6 +161,24 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 		details = append(details, deal...)
 	}
 	return details, nil
+}
+
+// promotionEvidenceValue names the activity a promotion rests on by its subject.
+// Evidence the caller may discover but not read keeps its subject withheld.
+// It is named by its date, and the trigger beside it says what kind it is.
+func (r approvalPreviewReader) promotionEvidenceValue(ctx context.Context, id ids.ActivityID) (crmcontracts.ApprovalPreviewValue, error) {
+	value, err := r.referenceValue(ctx, "activity_id", id.String())
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		return value, err
+	}
+	activity, err := r.activities.GetActivity(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		return value, err
+	}
+	return crmcontracts.ApprovalPreviewValue{
+		Kind: previewValueDate, Text: activity.OccurredAt.Format(time.RFC3339Nano),
+		EntityType: new(entityActivity), EntityId: new(openapi_types.UUID(id.UUID)),
+	}, nil
 }
 
 func (r approvalPreviewReader) promotionContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {
