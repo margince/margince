@@ -107,7 +107,7 @@ type Handlers struct {
 	stageChances StageChancesFunc
 	// readerRows narrows per-deal rows to what the reader may see one by one.
 	readerRows ReaderRowsFunc
-	now          func() time.Time
+	now        func() time.Time
 }
 
 // ReaderRowsFunc narrows the per-deal rows of a reading to what the reader may
