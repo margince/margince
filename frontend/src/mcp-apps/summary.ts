@@ -86,6 +86,20 @@ export function changesOf(value: unknown): Change[] {
     .filter((c) => c.field !== "" && c.label !== "");
 }
 
+/** detailsOf reads the operands a staged action carries, each as a change
+ *  that sets its value, so changeTable draws them without a before. */
+export function detailsOf(value: unknown): Change[] {
+  return asList(value)
+    .map(asRecord)
+    .map((d) => ({
+      field: asText(d.field),
+      label: asText(d.label),
+      before: shownOf(undefined),
+      after: shownOf(d.value),
+    }))
+    .filter((d) => d.field !== "" && d.label !== "");
+}
+
 /** inWords names a field the server sent no label for by its words. */
 export function inWords(name: string): string {
   const words = name

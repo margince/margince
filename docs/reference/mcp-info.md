@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 11 |
-| Tool catalog | 139.6 KB |
+| Tool catalog | 140.8 KB |
 | Resource catalog | 4.2 KB |
-| Approx. wire tokens | 36832 |
+| Approx. wire tokens | 37132 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,8 +32,8 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 30.2 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.9 KB | 25% | Yes, every step |
+| Output schemas | 31.4 KB | 22% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 34.9 KB | 24% | Yes, every step |
 | Input schemas | 65.5 KB | 46% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.0 KB | 6% | Partly |
 | **Description + input schema** | **100.4 KB** | **71%** | **the recurring cost** |
@@ -3968,8 +3968,70 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                 "format": "uuid",
                 "type": "string"
               },
+              "details": {
+                "items": {
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "properties": {
+                        "currency": {
+                          "type": "string"
+                        },
+                        "entity_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "entity_type": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "text"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "label",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "diff_hash": {
                 "type": "string"
+              },
+              "effects": {
+                "items": {
+                  "properties": {
+                    "effect": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "effect",
+                    "label"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
               },
               "evidence": {
                 "items": {
@@ -4017,6 +4079,12 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
                   "is_you"
                 ],
                 "type": "object"
+              },
+              "preview_note": {
+                "type": "string"
+              },
+              "preview_state": {
+                "type": "string"
               },
               "proposed_by": {
                 "type": "string"
@@ -5475,8 +5543,70 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "format": "uuid",
           "type": "string"
         },
+        "details": {
+          "items": {
+            "properties": {
+              "field": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "properties": {
+                  "currency": {
+                    "type": "string"
+                  },
+                  "entity_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "entity_type": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "field",
+              "label",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "diff_hash": {
           "type": "string"
+        },
+        "effects": {
+          "items": {
+            "properties": {
+              "effect": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect",
+              "label"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "evidence": {
           "items": {
@@ -5524,6 +5654,12 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
             "is_you"
           ],
           "type": "object"
+        },
+        "preview_note": {
+          "type": "string"
+        },
+        "preview_state": {
+          "type": "string"
         },
         "proposed_by": {
           "type": "string"

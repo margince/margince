@@ -10,15 +10,15 @@
   "totals": {
     "tools": 38,
     "resources": 11,
-    "tool_catalog_bytes": 142980,
+    "tool_catalog_bytes": 144180,
     "resource_catalog_bytes": 4350,
-    "approx_wire_tokens_total": 36832,
+    "approx_wire_tokens_total": 37132,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
       "description_bytes": 35758,
       "input_schema_bytes": 67035,
-      "output_schema_bytes": 30933,
+      "output_schema_bytes": 32133,
       "description_plus_input_schema_bytes": 102793
     }
   },
@@ -3454,8 +3454,70 @@
                         "format": "uuid",
                         "type": "string"
                       },
+                      "details": {
+                        "items": {
+                          "properties": {
+                            "field": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "properties": {
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "entity_id": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                },
+                                "entity_type": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string"
+                                },
+                                "text": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "text"
+                              ],
+                              "type": "object"
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "label",
+                            "value"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "diff_hash": {
                         "type": "string"
+                      },
+                      "effects": {
+                        "items": {
+                          "properties": {
+                            "effect": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "effect",
+                            "label"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
                       },
                       "evidence": {
                         "items": {
@@ -3503,6 +3565,12 @@
                           "is_you"
                         ],
                         "type": "object"
+                      },
+                      "preview_note": {
+                        "type": "string"
+                      },
+                      "preview_state": {
+                        "type": "string"
                       },
                       "proposed_by": {
                         "type": "string"
@@ -4917,8 +4985,70 @@
                   "format": "uuid",
                   "type": "string"
                 },
+                "details": {
+                  "items": {
+                    "properties": {
+                      "field": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "properties": {
+                          "currency": {
+                            "type": "string"
+                          },
+                          "entity_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "entity_type": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "type": "object"
+                      }
+                    },
+                    "required": [
+                      "field",
+                      "label",
+                      "value"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "diff_hash": {
                   "type": "string"
+                },
+                "effects": {
+                  "items": {
+                    "properties": {
+                      "effect": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "effect",
+                      "label"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
                 },
                 "evidence": {
                   "items": {
@@ -4966,6 +5096,12 @@
                     "is_you"
                   ],
                   "type": "object"
+                },
+                "preview_note": {
+                  "type": "string"
+                },
+                "preview_state": {
+                  "type": "string"
                 },
                 "proposed_by": {
                   "type": "string"

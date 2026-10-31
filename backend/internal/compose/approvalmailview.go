@@ -67,7 +67,7 @@ func refreshApprovalNotice(
 	if current.RequestedDeciderId == nil || ids.UUID(*current.RequestedDeciderId) != attempt.Recipient.UUID {
 		return attempt, facts, false, nil
 	}
-	if approvals.PreviewRefusal(current.Preview) != nil {
+	if approvals.PreviewRefusal(current.Preview) != nil && !awaitsWiderSight(current.Preview) {
 		return attempt, facts, false, nil //nolint:nilerr // A refused preview suppresses mail; delivery itself has not failed.
 	}
 	return withApprovalWords(ctx, pool, attempt, current, approval.ExpiresAt, use)
@@ -75,7 +75,7 @@ func refreshApprovalNotice(
 
 // withApprovalWords writes the notice's subject and digest line for the
 // recipient, and the facts its single email adds. A commitment has its own;
-// any other approval lists the changes its ready preview shows.
+// any other approval says what its preview shows.
 func withApprovalWords(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, current crmcontracts.Approval, expires time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
@@ -95,7 +95,7 @@ func withApprovalWords(
 		if facts, err = newApprovalPreviewReader(InstallationDB(pool)).commitmentMailFacts(ctx, current, words, local); err != nil {
 			return attempt, facts, false, err
 		}
-	case current.Preview != nil && current.Preview.State == previewReadyState:
+	case current.Preview != nil:
 		facts = changeMailFacts(current, words)
 	}
 	if !approvals.ExpiresNever(current.Kind) {
@@ -103,6 +103,13 @@ func withApprovalWords(
 		attempt.Notice.Body += " · " + facts.Deadline
 	}
 	return attempt, facts, true, nil
+}
+
+// awaitsWiderSight is a preview the recipient cannot decide because its effect
+// touches records they cannot open. The card tells them who must decide it, and
+// so does the email, rather than leave the request unannounced.
+func awaitsWiderSight(preview *crmcontracts.ApprovalPreview) bool {
+	return preview != nil && preview.State == approvals.PreviewNeedsWiderSight
 }
 
 func mailNow(clock func() time.Time) time.Time {
