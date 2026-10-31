@@ -47,12 +47,12 @@ const (
 var stageCohortOutcomes = []string{cohortAdvanced, cohortWon, cohortLost, cohortRegressed, cohortLeftPipeline, cohortUnresolved, cohortHistoryPartial}
 
 // stageExitSQL names the outcome of an entry from its next move, nx. A next
-// move an import brought in, or one that predates provenance, is
-// history_partial: it says nothing about how this team sells. Won and lost need
+// move an import brought in is history_partial: it says nothing about how this
+// team sells. A move saved before provenance was kept counts. Won and lost need
 // only the meaning the move recorded; a direction needs both of its recorded
 // positions, and without them the outcome is history_partial too.
 const stageExitSQL = `CASE WHEN nx.changed_at IS NULL THEN '` + cohortUnresolved + `'
-	WHEN nx.provenance IS DISTINCT FROM 'recorded' THEN '` + cohortHistoryPartial + `'
+	WHEN nx.provenance = 'imported' THEN '` + cohortHistoryPartial + `'
 	WHEN nx.semantic_at_change = 'won' THEN '` + cohortWon + `'
 	WHEN nx.semantic_at_change = 'lost' THEN '` + cohortLost + `'
 	WHEN nx.pipeline_id_at_change IS DISTINCT FROM e.pipeline_id THEN '` + cohortLeftPipeline + `'

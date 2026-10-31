@@ -221,9 +221,9 @@ func TestStalledDealReadsAtRisk(t *testing.T) {
 }
 
 // An imported win lands its whole history in one instant, so its stint in a
-// stage reads as zero days. Only won deals moved in Margince set the pace the
-// stage-velocity factor compares against: ten wins that spent four days in the
-// stage set it to four, however many imported wins sit beside them.
+// stage reads as zero days, so it does not set the pace the stage-velocity
+// factor compares against. Ten wins saved before provenance was kept, four days
+// in the stage, set it to four, however many imported wins sit beside them.
 func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
@@ -234,8 +234,9 @@ func TestImportedWinsDoNotSetTheStagePace(t *testing.T) {
 		if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](d), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: &reason}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := owner.Exec(context.Background(), `UPDATE deal_stage_history SET changed_at = changed_at - interval '4 days'
-			WHERE deal_id = $1 AND from_stage_id IS NULL`, d); err != nil {
+		if _, err := owner.Exec(context.Background(), `UPDATE deal_stage_history SET provenance = NULL,
+			changed_at = changed_at - CASE WHEN from_stage_id IS NULL THEN interval '4 days' ELSE interval '0' END
+			WHERE deal_id = $1`, d); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -52530,9 +52530,9 @@ type ReportingPoint struct {
 	// instant. Every member is in exactly one outcome, so the counts add
 	// up to `observations`. `unresolved` members have not reached an
 	// outcome yet and are never counted as lost; `history_partial`
-	// members left by a move an import brought in, or by a move recorded
-	// before Margince kept where a move came from or the stage order, so
-	// that move does not show how the team sells.
+	// members left by a move an import brought in, which does not show
+	// how the team sells, or by a move recorded before Margince kept the
+	// stage order, so its direction is unknown.
 	Outcomes *[]ReportingCohortCount `json:"outcomes,omitempty"`
 
 	// Status `failed` means the database could not calculate this figure on this

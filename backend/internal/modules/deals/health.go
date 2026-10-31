@@ -364,9 +364,9 @@ func healthExpectedPace(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineI
 	// Expected pace: for each won deal of this pipeline, the completed
 	// stints in the subject's current stage (entry row → the next stage
 	// change); the median of those durations. A stint still open at the
-	// win has no exit row and contributes nothing. A stint only counts when
-	// both its moves were made in Margince: an import lands a deal's whole
-	// history in one instant, which would read as a stint of zero days. Below the
+	// win has no exit row and contributes nothing. A stint an import brought in
+	// at either end does not count: an import lands a deal's whole history in
+	// one instant, which would read as a stint of zero days. Below the
 	// ten-won-deal history floor the median is statistically noise, so
 	// the fold falls back to STAGE_VELOCITY_FALLBACK_DAYS.
 	var wonDealsWithHistory int
@@ -384,7 +384,7 @@ func healthExpectedPace(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineI
 		       percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM left_at - entered))
 		FROM stints
 		WHERE to_stage_id = $2 AND left_at IS NOT NULL
-		  AND provenance = 'recorded' AND left_provenance = 'recorded'`,
+		  AND provenance IS DISTINCT FROM 'imported' AND left_provenance IS DISTINCT FROM 'imported'`,
 		pipelineID, in.stageID).Scan(&wonDealsWithHistory, &medianSeconds); err != nil {
 		return err
 	}

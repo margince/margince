@@ -93,7 +93,7 @@ Open **Analytics → Stage conversion** and choose one pipeline. Each row is a s
 
 Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Next move imported or unknown**, and the rate leaves them out too.
 
-Only moves made in Margince count, by a team member, an agent or an automation. A move that an import brought in shows what happened in the system the deal came from, not how your team sells. So an imported move never starts an entry, and a deal whose next move was imported shows as **Next move imported or unknown**. Moves saved before Margince kept where a move came from count the same way as imported ones.
+Moves that an import brought in are left out. Such a move shows what happened in the system the deal came from, not how your team sells. So an imported move never starts an entry, and a deal whose next move was imported shows as **Next move imported or unknown**. Margince did not always keep whether an import brought a move in. Moves saved before then still count, and the figure is marked as partial, because some of them may be imports.
 
 Each deal counts for the team member who owned it when it entered the stage, also after it gets a new owner. The days next to an outcome are the middle time a deal spent in the stage before it. The days next to **Still open** are the middle time in the stage so far.
 

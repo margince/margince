@@ -484,12 +484,12 @@ func seedFunnel(
 	for i := range entries {
 		deal := e.SeedDeal(t, "Funnel deal", pipeline, ids.From[ids.StageKind](stage), &ownerNow)
 		e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, to_stage_id, changed_by, changed_at,
-			owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance)
-			VALUES ($1, $2, 'human:x', $3, $4, $5, 'open', 'recorded')`, deal, stage, at, ownerThen, pipeline)
+			owner_id_at_change, pipeline_id_at_change, semantic_at_change)
+			VALUES ($1, $2, 'human:x', $3, $4, $5, 'open')`, deal, stage, at, ownerThen, pipeline)
 		if i < converted {
 			e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by,
-				changed_at, owner_id_at_change, pipeline_id_at_change, semantic_at_change, provenance)
-				VALUES ($1, $2, $3, 'human:x', $4, $5, $6, 'open', 'recorded')`,
+				changed_at, owner_id_at_change, pipeline_id_at_change, semantic_at_change)
+				VALUES ($1, $2, $3, 'human:x', $4, $5, $6, 'open')`,
 				deal, stage, next, at.AddDate(0, 0, 3), ownerThen, pipeline)
 		}
 	}

@@ -84,7 +84,7 @@ var teamFunnelSQL = `
 	                         WHERE x.deal_id = e.deal_id
 	                           AND (x.changed_at, x.id) > (e.changed_at, e.id) AND x.changed_at < $%[2]d
 	                         ORDER BY x.changed_at, x.id LIMIT 1) nx
-	          WHERE nx.provenance IS DISTINCT FROM 'recorded')
+	          WHERE nx.provenance = 'imported')
 	 GROUP BY e.owner_id, e.pipeline_id, p.name, e.stage_id, s.name, s.pipeline_id, s."position"`
 
 // measureTeamFunnel attaches each measured rep's top deviations.

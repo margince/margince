@@ -1390,7 +1390,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortStillOpenNote":
     "Noch offen heißt: beim Abruf dieser Zahlen gab es noch kein Ergebnis. Diese zählen nicht als verloren und fließen nicht in die Quote ein.",
   "reporting.cohortPartialNote":
-    "Nächster Wechsel importiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht hat, oder durch einen Wechsel, der erfasst wurde, bevor Margince die Herkunft eines Wechsels oder die Reihenfolge der Phasen gespeichert hat. Diese fließen nicht in die Quote ein.",
+    "Nächster Wechsel importiert oder unbekannt heißt: Der Deal hat die Phase durch einen Wechsel verlassen, den ein Import mitgebracht hat, oder durch einen Wechsel, der gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat. Diese fließen nicht in die Quote ein.",
   "reporting.cohortStageDaysNote":
     "Die Tage neben einem Ergebnis sind die mittlere Zeit, die ein Deal davor in der Phase war. Die Tage neben Noch offen sind die mittlere Zeit in der Phase bis jetzt.",
   "reporting.cohortLeadDaysNote":

@@ -6,7 +6,8 @@
 package compose
 
 // What an import brings in is the source system's history, so the readings of
-// how this team sells leave it out: stage conversion and close-date pushes.
+// how this team sells leave it out: stage conversion and close-date pushes. A
+// move saved before provenance was kept still counts.
 
 import (
 	"context"
@@ -30,7 +31,7 @@ import (
 const importRunSeedSQL = `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
 	VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`
 
-// importer is the context the import job writes under: a person allowed to
+// importer is the context the import job writes under: a member allowed to
 // import, with every write marked as landed by one run.
 func (f *stageCohortFixture) importer(t *testing.T) context.Context {
 	t.Helper()
@@ -87,10 +88,10 @@ func (f *stageCohortFixture) forgetProvenance(t *testing.T, deal ids.DealID, sta
 	}
 }
 
-// Only a move made in Margince starts an entry. An entry whose next move was
-// imported, or predates provenance, is history_partial and stays out of the
-// rate.
-func TestStageConversionCountsOnlyMovesMadeInMargince(t *testing.T) {
+// An imported move starts no entry, and an entry whose next move was imported
+// is history_partial and stays out of the rate. A move saved before provenance
+// was kept still counts.
+func TestStageConversionLeavesOutImportedMoves(t *testing.T) {
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
 	rep1 := f.env.Rep1
@@ -113,20 +114,20 @@ func TestStageConversionCountsOnlyMovesMadeInMargince(t *testing.T) {
 	rows := cohortRows(t, result)
 
 	first := rows[s0.String()]
-	if first.observations != 7 || first.outcomes[cohortAdvanced] != 5 || first.outcomes[cohortHistoryPartial] != 2 || first.outcomes[cohortWon] != 0 {
-		t.Fatalf("first stage: %+v, want the hand moves advanced and two exits not made here; the imported win is no entry", first)
+	if first.observations != 7 || first.outcomes[cohortAdvanced] != 6 || first.outcomes[cohortHistoryPartial] != 1 || first.outcomes[cohortWon] != 0 {
+		t.Fatalf("first stage: %+v, want six advanced, the legacy exit among them, one exit by import, and no entry for the imported win", first)
 	}
 	second := rows[s1.String()]
-	if second.observations != 5 || second.outcomes[cohortUnresolved] != 5 {
-		t.Fatalf("second stage: %+v, want only the hand moves' open entries", second)
+	if second.observations != 6 || second.outcomes[cohortUnresolved] != 6 {
+		t.Fatalf("second stage: %+v, want the hand moves' and the legacy move's open entries, not the imported one", second)
 	}
-	if metric := result.Metrics[0]; metric.Numerator == nil || *metric.Numerator != 5 || *metric.Denominator != 5 || metric.Coverage.Status != reportingPartial {
-		t.Fatalf("stage conversion: %+v, want 5 of 5, partial for the exits not made here", metric)
+	if metric := result.Metrics[0]; metric.Numerator == nil || *metric.Numerator != 6 || *metric.Denominator != 6 || metric.Coverage.Status != reportingPartial {
+		t.Fatalf("stage conversion: %+v, want 6 of 6, partial for the imported exit and the legacy move", metric)
 	}
 }
 
-// A deal whose moves all predate provenance starts no entry, and the reading
-// says its history is incomplete.
+// A deal whose moves all predate provenance still counts, and the reading says
+// some of its moves may have been imports.
 func TestStageConversionIsPartialWhenAnEntryPredatesProvenance(t *testing.T) {
 	f := newStageCohortFixture(t)
 	s0, s1 := f.stage(0), f.stage(1)
@@ -141,11 +142,11 @@ func TestStageConversionIsPartialWhenAnEntryPredatesProvenance(t *testing.T) {
 	at := f.at.Add(2 * time.Hour)
 	result := f.evaluate(t, newReportingService(f.env.Pool, func() time.Time { return at }), crmcontracts.ReportingScope{Kind: "workspace"}, interval)
 	first := cohortRows(t, result)[s0.String()]
-	if first.observations != 5 || first.outcomes[cohortAdvanced] != 5 {
-		t.Fatalf("first stage: %+v, want the five moves made with provenance", first)
+	if first.observations != 6 || first.outcomes[cohortAdvanced] != 6 {
+		t.Fatalf("first stage: %+v, want the five moves with provenance and the legacy one", first)
 	}
 	if metric := result.Metrics[0]; metric.Coverage.Status != reportingPartial {
-		t.Fatalf("stage conversion coverage: %+v, want partial for the deal left out", metric.Coverage)
+		t.Fatalf("stage conversion coverage: %+v, want partial for the moves that may be imports", metric.Coverage)
 	}
 }
 
