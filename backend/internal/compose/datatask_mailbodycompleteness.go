@@ -91,7 +91,7 @@ func assessMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) 
 // assessStoredMailBody never guesses. Mail no connector parsed is text a member
 // or an import wrote, whole as stored. Captured mail is judged from its stored
 // original. Without one, or with one that no longer reads, nothing is left to
-// judge it by, and it is unverifiable rather than waiting for a check.
+// judge it by. It is unverifiable rather than waiting for a check.
 func assessStoredMailBody(candidate unassessedMailBody) (capture.BodyCompleteness, bool) {
 	if candidate.Body == nil {
 		return "", false
