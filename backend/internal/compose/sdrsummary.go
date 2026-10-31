@@ -42,12 +42,20 @@ const handoffCycleSQL = `FROM sdr_handoff h
  LEFT JOIN app_user r ON r.id=h.assigned_to`
 
 type sdrSummaryHandlers struct {
-	db  *database.DB
-	now func() time.Time
+	db      *database.DB
+	now     func() time.Time
+	targets sdrTeamTargets
 }
 
 func newSdrSummaryHandlers(db *database.DB, now func() time.Time) sdrSummaryHandlers {
 	return sdrSummaryHandlers{db: db, now: now}
+}
+
+// withTargets lets the team review hold members against their own targets.
+// Without it the review reads no target at all.
+func (h sdrSummaryHandlers) withTargets(targets sdrTeamTargets) sdrSummaryHandlers {
+	h.targets = targets
+	return h
 }
 
 // GetSdrSummary implements GET /analytics/sdr-summary.
@@ -234,6 +242,9 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := withoutColleagueSubmitters(ctx, tx, out); err != nil {
+		return nil, nil, err
+	}
 	if len(out) <= limit {
 		return out, nil, nil
 	}
@@ -244,6 +255,23 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 		return nil, nil, err
 	}
 	return out, &next, nil
+}
+
+// withoutColleagueSubmitters drops who submitted each row while the
+// installation shows no individual performance, unless it was the reader.
+// Counted by submitter, a team's list would rebuild each colleague's figure.
+func withoutColleagueSubmitters(ctx context.Context, tx pgx.Tx, rows []crmcontracts.SdrWaitingHandoff) error {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return err
+	}
+	actor, _ := principal.Actor(ctx)
+	for index := range rows {
+		if submitter := rows[index].SubmitterId; submitter != nil && ids.UUID(*submitter) != actor.UserID {
+			rows[index].SubmitterId = nil
+		}
+	}
+	return nil
 }
 
 // leadNameFields are the columns leadLabelSQL reads, so the label is built only

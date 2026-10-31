@@ -35,7 +35,13 @@ type sdrTeamFixture struct {
 
 func newSdrTeamFixture(t *testing.T) *sdrTeamFixture {
 	t.Helper()
-	f := &sdrTeamFixture{sdrFixture: newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr), now: clocktest.Now(t).UTC()}
+	return newSdrTeamFixtureFor(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+}
+
+// newSdrTeamFixtureFor is that team under the framework template given.
+func newSdrTeamFixtureFor(t *testing.T, template crmcontracts.ReportingFrameworkInputTemplate) *sdrTeamFixture {
+	t.Helper()
+	f := &sdrTeamFixture{sdrFixture: newSdrFixture(t, template), now: clocktest.Now(t).UTC()}
 	f.at = reportperiod.WeekStart(f.now, time.UTC).AddDate(0, 0, -6).Add(9 * time.Hour)
 	f.second = f.e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'second@forecast.test', 'Second SDR')`)
 	f.manager = f.e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'manager@forecast.test', 'Manager')`)

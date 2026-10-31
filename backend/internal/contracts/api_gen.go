@@ -18562,6 +18562,21 @@ func (e SdrSummaryWorkflow) Valid() bool {
 	}
 }
 
+// Defines values for SdrTeamMemberTargetsMetric.
+const (
+	SdrTeamMemberTargetsMetricLeadsPromoted SdrTeamMemberTargetsMetric = "leads_promoted"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamMemberTargetsMetric enum.
+func (e SdrTeamMemberTargetsMetric) Valid() bool {
+	switch e {
+	case SdrTeamMemberTargetsMetricLeadsPromoted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrTeamReviewMembershipBasis.
 const (
 	SdrTeamReviewMembershipBasisCurrent SdrTeamReviewMembershipBasis = "current"
@@ -18571,6 +18586,30 @@ const (
 func (e SdrTeamReviewMembershipBasis) Valid() bool {
 	switch e {
 	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewWithheldFigures.
+const (
+	SdrTeamReviewWithheldFiguresHandoffs SdrTeamReviewWithheldFigures = "handoffs"
+	SdrTeamReviewWithheldFiguresLeads    SdrTeamReviewWithheldFigures = "leads"
+	SdrTeamReviewWithheldFiguresMeetings SdrTeamReviewWithheldFigures = "meetings"
+	SdrTeamReviewWithheldFiguresTargets  SdrTeamReviewWithheldFigures = "targets"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewWithheldFigures enum.
+func (e SdrTeamReviewWithheldFigures) Valid() bool {
+	switch e {
+	case SdrTeamReviewWithheldFiguresHandoffs:
+		return true
+	case SdrTeamReviewWithheldFiguresLeads:
+		return true
+	case SdrTeamReviewWithheldFiguresMeetings:
+		return true
+	case SdrTeamReviewWithheldFiguresTargets:
 		return true
 	default:
 		return false
@@ -54041,7 +54080,12 @@ type SdrHandoffOutcomes struct {
 
 // SdrHandoffReasonCount defines model for SdrHandoffReasonCount.
 type SdrHandoffReasonCount struct {
-	Count   int                          `json:"count"`
+	Count int `json:"count"`
+
+	// Given False for the decisions that recorded no reason, so the reasons of one outcome add up to its count in `outcomes`.
+	Given bool `json:"given"`
+
+	// Label The reason's name. Empty when `given` is false.
 	Label   string                       `json:"label"`
 	Outcome SdrHandoffReasonCountOutcome `json:"outcome"`
 }
@@ -54122,7 +54166,7 @@ type SdrTeamHandoffs struct {
 	Cohort   SdrHandoffCohort   `json:"cohort"`
 	Outcomes SdrHandoffOutcomes `json:"outcomes"`
 
-	// Reasons The reasons given for the rejections and returns in `outcomes`, most often first.
+	// Reasons Why the rejections and returns in `outcomes` were decided, most often first: decisions made in the period, not the rounds submitted in it. With no more than 50 groups, the counts of one outcome add up to its count in `outcomes`.
 	Reasons []SdrHandoffReasonCount `json:"reasons"`
 
 	// Unattributed Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them.
@@ -54150,13 +54194,38 @@ type SdrTeamMember struct {
 
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
-	Recycled           int        `json:"recycled"`
-	Rejected           int        `json:"rejected"`
-	Submitted          int        `json:"submitted"`
+
+	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads`.
+	Qualified *int                 `json:"qualified,omitempty"`
+	Recycled  int                  `json:"recycled"`
+	Rejected  int                  `json:"rejected"`
+	Submitted int                  `json:"submitted"`
+	Target    *SdrTeamMemberTarget `json:"target,omitempty"`
+
+	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads`.
+	Unanswered *int `json:"unanswered,omitempty"`
 
 	// Waiting This member's handoffs waiting on somebody else now.
 	Waiting int `json:"waiting"`
 }
+
+// SdrTeamMemberTarget defines model for SdrTeamMemberTarget.
+type SdrTeamMemberTarget struct {
+	// Actual Leads that arrived in the target month up to `as_of`, owned by the member now and qualified by `as_of`: the `qualified` rule over the month.
+	Actual int `json:"actual"`
+
+	// Value The member's own target for `member_targets.metric` over `member_targets.window`.
+	Value int64 `json:"value"`
+}
+
+// SdrTeamMemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
+type SdrTeamMemberTargets struct {
+	Metric SdrTeamMemberTargetsMetric `json:"metric"`
+	Window ReportingWindow            `json:"window"`
+}
+
+// SdrTeamMemberTargetsMetric defines model for SdrTeamMemberTargets.Metric.
+type SdrTeamMemberTargetsMetric string
 
 // SdrTeamReview defines model for SdrTeamReview.
 type SdrTeamReview struct {
@@ -54165,7 +54234,10 @@ type SdrTeamReview struct {
 	Handoffs *SdrTeamHandoffs `json:"handoffs,omitempty"`
 	Interval ReportingWindow  `json:"interval"`
 	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
-	Members  []SdrTeamMember  `json:"members"`
+
+	// MemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
+	MemberTargets *SdrTeamMemberTargets `json:"member_targets,omitempty"`
+	Members       []SdrTeamMember       `json:"members"`
 
 	// MembersTruncated The team has more measurable members than `members` holds.
 	MembersTruncated bool `json:"members_truncated"`
@@ -54188,12 +54260,18 @@ type SdrTeamReview struct {
 	// Withheld Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent.
 	Withheld bool `json:"withheld"`
 
+	// WithheldFigures The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, and leaves out `handoffs`; each member's handoff counts are then zero and mean nothing. `leads` needs lead read and leaves out `qualified` and `unanswered`. `targets` needs target read and lead read, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.
+	WithheldFigures []SdrTeamReviewWithheldFigures `json:"withheld_figures"`
+
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 	Workflow SdrTeamReviewWorkflow `json:"workflow"`
 }
 
 // SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
 type SdrTeamReviewMembershipBasis string
+
+// SdrTeamReviewWithheldFigures defines model for SdrTeamReview.WithheldFigures.
+type SdrTeamReviewWithheldFigures string
 
 // SdrTeamReviewWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 type SdrTeamReviewWorkflow string
@@ -54260,7 +54338,7 @@ type SdrWaitingHandoff struct {
 	Resubmitted bool               `json:"resubmitted"`
 	Subject     *SdrHandoffSubject `json:"subject,omitempty"`
 
-	// SubmitterId Who submitted the current round.
+	// SubmitterId Who submitted the current round. Absent while the installation shows no individual performance, unless the submitter is the reader.
 	SubmitterId *openapi_types.UUID `json:"submitter_id,omitempty"`
 
 	// WaitingSince The start of the current submission.

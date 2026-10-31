@@ -55,7 +55,7 @@ func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Requ
 	// Every figure is read from one snapshot, so they agree with one as_of.
 	err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
-		out, err = readSdrTeamReview(ctx, tx, requested, period, h.now().UTC())
+		out, err = readSdrTeamReview(ctx, tx, h.targets, requested, period, h.now().UTC())
 		return err
 	})
 	if err != nil {
@@ -68,15 +68,13 @@ func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Requ
 // sdrTeamWindow is the half-open span a review counts events in.
 type sdrTeamWindow struct{ from, to time.Time }
 
-func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time) (crmcontracts.SdrTeamReview, error) {
+func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time) (crmcontracts.SdrTeamReview, error) {
 	// No history of team membership is kept, so a team's figures follow its
 	// members today, and the answer says so.
 	out := crmcontracts.SdrTeamReview{
 		AsOf: at, Workflow: crmcontracts.SdrTeamReviewWorkflowQualification, SmallSampleBelow: sdrTeamSmallSample,
 		MembershipBasis: crmcontracts.SdrTeamReviewMembershipBasisCurrent, Members: []crmcontracts.SdrTeamMember{},
-	}
-	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
-		return out, err
+		WithheldFigures: []crmcontracts.SdrTeamReviewWithheldFigures{},
 	}
 	if err := ownReviewOnly(ctx, requested); err != nil {
 		return out, err
@@ -120,11 +118,17 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 		}
 	}
 	out.Workflow, out.Meetings, out.Handoffs = figures.workflow, figures.meetings, figures.handoffs
+	out.WithheldFigures = readerWithheldFigures(ctx, out.Workflow)
 	if owners.IndividualOff {
 		return out, nil
 	}
 	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at)
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	memberFigures := sdrTeamMemberFigures{targets: targets, workflow: out.Workflow, calendar: calendar,
+		scope: crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(out.Scope.Kind), Id: out.Scope.Id}}
+	return out, memberFigures.apply(ctx, tx, &out, window)
 }
 
 // ownReviewOnly admits an owner review only of the requesting seat itself.
@@ -165,6 +169,9 @@ func readSdrTeamFigures(ctx context.Context, tx pgx.Tx, requested RequestedScope
 		return out, err
 	}
 	out.workflow = crmcontracts.SdrTeamReviewWorkflowHandoff
+	if !auth.Allows(ctx, contacts.HandoffObject, principal.ActionRead) {
+		return out, nil
+	}
 	handoffs, seats, err := readSdrTeamHandoffs(ctx, tx, requested, window, at)
 	if err != nil {
 		return out, err
@@ -347,15 +354,16 @@ func readWaitingSubmitters(ctx context.Context, tx pgx.Tx, requested RequestedSc
 }
 
 // readHandoffReasons groups the window's rejections and returns by the reason
-// given, most often first.
+// given, most often first. A decision with no reason is a group of its own, so
+// one outcome's groups add up to its count.
 func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope, window sdrTeamWindow) ([]crmcontracts.SdrHandoffReasonCount, [][]ids.UUID, error) {
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "e.submitter_id_at_change", b.arg, unownedIsExcluded)
 	if err != nil {
 		return nil, nil, err
 	}
-	query := `SELECT e.to_status,r.label,count(*),COALESCE(array_remove(array_agg(DISTINCT e.submitter_id_at_change),NULL),'{}')
- FROM sdr_handoff_event e JOIN sdr_handoff_reason r ON r.id=e.reason_id
+	query := `SELECT e.to_status,COALESCE(r.label,''),r.id IS NOT NULL,count(*),COALESCE(array_remove(array_agg(DISTINCT e.submitter_id_at_change),NULL),'{}')
+ FROM sdr_handoff_event e LEFT JOIN sdr_handoff_reason r ON r.id=e.reason_id
  WHERE e.to_status IN (` + b.add(contacts.HandoffRejected) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + orUnnarrowed(population) + ` AND ` + eventWindowSQL(&b, "e.occurred_at", window) + `
  GROUP BY e.to_status,r.id,r.label ORDER BY count(*) DESC,r.label,r.id LIMIT 50`
 	rows, err := tx.Query(ctx, query, b.values...)
@@ -368,7 +376,7 @@ func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope
 	for rows.Next() {
 		var reason crmcontracts.SdrHandoffReasonCount
 		var behind []ids.UUID
-		if err := rows.Scan(&reason.Outcome, &reason.Label, &reason.Count, &behind); err != nil {
+		if err := rows.Scan(&reason.Outcome, &reason.Label, &reason.Given, &reason.Count, &behind); err != nil {
 			return nil, nil, err
 		}
 		out, seats = append(out, reason), append(seats, behind)

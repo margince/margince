@@ -30074,6 +30074,13 @@ paths:
 
         An event recorded before the submitter was kept with it is counted in `unattributed`, for
         the whole company only, and in no member's row.
+
+        A member's `qualified` and `unanswered` use the rules of the Leads qualified and Leads
+        still waiting for a reply readings, credited to each lead's owner now. A member's
+        `target` is held against the month in `member_targets`, never against a week. Each
+        figure needs its own grant, and the requesting reader's grants decide, never the
+        member's. All member figures are read in one statement per figure for the whole page of
+        members, and the targets in one more.
       x-agent-access: human-only
       parameters:
         - name: scope_kind
@@ -55908,7 +55915,7 @@ components:
         resubmitted: { type: boolean, description: Whether this handoff was returned and submitted again. }
         restricted: { type: boolean, description: 'The seat may not read the prospect, so `subject` is absent.' }
         subject: { $ref: '#/components/schemas/SdrHandoffSubject' }
-        submitter_id: { type: string, format: uuid, description: Who submitted the current round. }
+        submitter_id: { type: string, format: uuid, description: 'Who submitted the current round. Absent while the installation shows no individual performance, unless the submitter is the reader.' }
         recipient: { $ref: '#/components/schemas/SdrHandoffRecipient' }
         reason: { type: string, description: 'Why the recipient sent it back, from the reason catalog. Only on a `returned` row.' }
     SdrHandoffSubject:
@@ -55941,7 +55948,7 @@ components:
     SdrTeamReview:
       type: object
       additionalProperties: false
-      required: [as_of, scope, interval, observed_through, workflow, withheld, small_sample_below, membership_basis, members_withheld, members, members_truncated]
+      required: [as_of, scope, interval, observed_through, workflow, withheld, small_sample_below, membership_basis, members_withheld, members, members_truncated, withheld_figures]
       properties:
         membership_basis:
           type: string
@@ -55968,6 +55975,28 @@ components:
           maxItems: 100
           items: { $ref: '#/components/schemas/SdrTeamMember' }
         members_truncated: { type: boolean, description: The team has more measurable members than `members` holds. }
+        withheld_figures:
+          type: array
+          description: 'The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, and leaves out `handoffs`; each member''s handoff counts are then zero and mean nothing. `leads` needs lead read and leaves out `qualified` and `unanswered`. `targets` needs target read and lead read, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.'
+          items:
+            type: string
+            enum: [meetings, handoffs, leads, targets]
+        member_targets: { $ref: '#/components/schemas/SdrTeamMemberTargets' }
+    SdrTeamMemberTargets:
+      type: object
+      additionalProperties: false
+      required: [metric, window]
+      description: 'What each member''s `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.'
+      properties:
+        metric: { type: string, enum: [leads_promoted] }
+        window: { $ref: '#/components/schemas/ReportingWindow', description: 'The whole reporting month that holds the last counted instant of the period, which is the month an evaluation with `target_basis` month reads.' }
+    SdrTeamMemberTarget:
+      type: object
+      additionalProperties: false
+      required: [value, actual]
+      properties:
+        value: { type: integer, format: int64, minimum: 0, description: The member's own target for `member_targets.metric` over `member_targets.window`. }
+        actual: { type: integer, minimum: 0, description: 'Leads that arrived in the target month up to `as_of`, owned by the member now and qualified by `as_of`: the `qualified` rule over the month.' }
     SdrTeamMeetings:
       type: object
       additionalProperties: false
@@ -55986,7 +56015,7 @@ components:
         reasons:
           type: array
           maxItems: 50
-          description: The reasons given for the rejections and returns in `outcomes`, most often first.
+          description: 'Why the rejections and returns in `outcomes` were decided, most often first: decisions made in the period, not the rounds submitted in it. With no more than 50 groups, the counts of one outcome add up to its count in `outcomes`.'
           items: { $ref: '#/components/schemas/SdrHandoffReasonCount' }
         unattributed:
           type: integer
@@ -56015,10 +56044,11 @@ components:
     SdrHandoffReasonCount:
       type: object
       additionalProperties: false
-      required: [outcome, label, count]
+      required: [outcome, label, given, count]
       properties:
         outcome: { type: string, enum: [rejected, recycled] }
-        label: { type: string }
+        label: { type: string, description: The reason's name. Empty when `given` is false. }
+        given: { type: boolean, description: 'False for the decisions that recorded no reason, so the reasons of one outcome add up to its count in `outcomes`.' }
         count: { type: integer, minimum: 1 }
     SdrTeamMember:
       type: object
@@ -56028,6 +56058,9 @@ components:
         id: { type: string, format: uuid }
         label: { type: string }
         meetings_held: { type: integer, minimum: 0, description: 'Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.' }
+        qualified: { type: integer, minimum: 0, description: 'Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading''s rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads`.' }
+        unanswered: { type: integer, minimum: 0, description: 'Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading''s rule. Absent when `withheld_figures` names `leads`.' }
+        target: { $ref: '#/components/schemas/SdrTeamMemberTarget' }
         submitted: { type: integer, minimum: 0 }
         accepted: { type: integer, minimum: 0 }
         rejected: { type: integer, minimum: 0 }
