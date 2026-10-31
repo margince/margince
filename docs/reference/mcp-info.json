@@ -10,15 +10,15 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 160198,
+    "tool_catalog_bytes": 160500,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41364,
+    "approx_wire_tokens_total": 41439,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35809,
       "input_schema_bytes": 67035,
-      "output_schema_bytes": 47850,
+      "output_schema_bytes": 48152,
       "description_plus_input_schema_bytes": 102844
     }
   },
@@ -7073,6 +7073,35 @@
                 },
                 "fx_missing_count": {
                   "type": "integer"
+                },
+                "landing": {
+                  "properties": {
+                    "amount_minor": {
+                      "type": "integer"
+                    },
+                    "caveat": {
+                      "type": "string"
+                    },
+                    "measure": {
+                      "type": "string"
+                    },
+                    "remaining_minor": {
+                      "type": "integer"
+                    },
+                    "system_minor": {
+                      "type": "integer"
+                    },
+                    "won_minor": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "amount_minor",
+                    "measure",
+                    "remaining_minor",
+                    "won_minor"
+                  ],
+                  "type": "object"
                 },
                 "open_minor": {
                   "type": "integer"

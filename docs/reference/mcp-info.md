@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 156.4 KB |
+| Tool catalog | 156.7 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41364 |
+| Approx. wire tokens | 41439 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.7 KB | 29% | **No**: a result's shape, never listed to a model |
+| Output schemas | 47.0 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
 | Input schemas | 65.5 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
@@ -7734,6 +7734,35 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         },
         "fx_missing_count": {
           "type": "integer"
+        },
+        "landing": {
+          "properties": {
+            "amount_minor": {
+              "type": "integer"
+            },
+            "caveat": {
+              "type": "string"
+            },
+            "measure": {
+              "type": "string"
+            },
+            "remaining_minor": {
+              "type": "integer"
+            },
+            "system_minor": {
+              "type": "integer"
+            },
+            "won_minor": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "amount_minor",
+            "measure",
+            "remaining_minor",
+            "won_minor"
+          ],
+          "type": "object"
         },
         "open_minor": {
           "type": "integer"
