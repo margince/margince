@@ -15,11 +15,9 @@ import (
 	"testing"
 )
 
-// The gate in backend/gates holds DedupeEvidenceFields against the contract,
-// but the list itself was kept by hand, and the LinkedIn and company-domain
-// lanes wrote fields it never named, so the server dropped their evidence.
-// This reads the writers instead: every field name an evidence snapshot can
-// carry must be in the list.
+// The gate in backend/gates holds DedupeEvidenceFields against the contract.
+// This holds the list against its writers. The server drops a field the list
+// omits, and that pair then arrives with no reason.
 func TestEveryWrittenEvidenceFieldIsListed(t *testing.T) {
 	t.Parallel()
 	files := packageSources(t)
