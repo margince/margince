@@ -20,20 +20,22 @@ import {
   upcomingWindow,
 } from "./analytics.overview.fixtures";
 import {
+  isWeeks,
+  prospectingWeeks,
+  returnedHandoffs,
+  upcomingMeetings,
+} from "./analytics.overview.prospectingdata";
+import {
   backlogList,
   boardCharts,
   bookingsTrend,
   framed,
   frames,
-  isWeeks,
   movementOn,
   prospectingOn,
-  prospectingWeeks,
   quarterSales,
-  returnedHandoffs,
   teamOn,
   teamReviewOn,
-  upcomingMeetings,
   waitingHandoffs,
   workday,
   workRows,

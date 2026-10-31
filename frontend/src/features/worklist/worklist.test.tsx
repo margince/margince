@@ -612,11 +612,11 @@ describe("what the ranked queue tells a reader", () => {
 // The lead lane, on the screen.
 //
 // The lane, its dedupe and its bounds are proved in Go. What none of that can
-// see is the half of the same invariant that lives here: a source, a category
-// and three reason kinds each have to be REGISTERED in lib/worklistcopy.ts before
-// a word of them reaches a reader. An unregistered one does not error — it
-// renders a fallback, or silently drops the figure it was carrying — so the
-// backend can be entirely correct while the row says nothing.
+// see is the half of the same invariant that lives here. A source, a category
+// and three reason kinds each have to be registered in lib/worklistcopy.ts
+// before a word of them reaches a reader. An unregistered one does not error.
+// It renders a fallback, or drops the figure it was carrying, so the backend
+// can be correct while the row says nothing.
 describe("a lead still owed its first reply", () => {
   function leadRow(over: Partial<WorklistItem> = {}): WorklistItem {
     return row({

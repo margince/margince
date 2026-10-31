@@ -3,9 +3,9 @@
 
 // Which of the day's per-category figures a given narrowing is measured over.
 //
-// Its own file because it belongs to neither of the two it sits between and both
-// are frozen at their length: `lib/worklistcopy.ts` writes the completeness
-// sentence and `worklist.header.tsx` owns the lane vocabulary, and this is the
+// Its own file because it belongs to neither of the two it sits between, and
+// both are frozen at their length. `lib/worklistcopy.ts` writes the completeness
+// sentence and `worklist.header.tsx` owns the lane vocabulary. This is the
 // join — the rule that says a narrowing is not always one category.
 
 import { outstandingCounts } from "../../lib/worklistcounts";

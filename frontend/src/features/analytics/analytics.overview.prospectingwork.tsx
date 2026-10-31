@@ -35,8 +35,8 @@ type CohortPeriod = (typeof COHORT_PERIODS)[number];
 
 /**
  * The meetings booked ahead, in the window the summary counts them in, so the
- * list's pages hold exactly that count. Each opens the record it is with, to
- * prepare. A meeting is listed by its start, in the reader's own clock.
+ * list's pages hold that count. Each opens the record it is with, to prepare.
+ * A meeting is listed by its start, in the reader's own clock.
  */
 export function UpcomingMeetings({
   self,
@@ -159,9 +159,9 @@ function MeetingRow({
 }
 
 /**
- * What happened to the handoffs the reader submitted in the period: the
- * cohort is named, and each round counts once in the outcome it reached by
- * the time it was read. Counts only; no rate is drawn from them.
+ * What happened to the handoffs the reader submitted in the period. The cohort
+ * is named. Each round counts once, in the outcome it reached when read.
+ * Counts only; no rate is drawn from them.
  */
 export function HandoffCohort({
   self,

@@ -28,8 +28,8 @@ export type ProspectingOutcome = Extract<
 
 /**
  * The weeks that end with the period on screen, read as the server's own
- * weekly buckets. The interval is cut from the answered period in its own
- * zone, so the last bucket is the headline's week when the period is a week.
+ * weekly buckets. The interval is cut from the answered period in its zone.
+ * So when the period is a week, the last bucket is the headline's week.
  */
 export function useProspectingWeeks(
   week: ReportingEvaluation | undefined,

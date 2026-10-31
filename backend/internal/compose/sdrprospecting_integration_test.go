@@ -78,9 +78,9 @@ func (f *sdrFixture) logMeeting(t *testing.T, name string, start time.Time, stat
 	return ids.UUID(meeting.Id)
 }
 
-// Meetings on each side of both edges of the window: only those that have
-// not happened and start before its end count, and the list holds exactly
-// the counted ones across its pages.
+// Meetings on each side of both edges of the window. Only those that have not
+// happened and start before its end count. The list's pages hold the counted
+// ones and no others.
 func TestSdrUpcomingMeetingsCountAndListShareOneWindow(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSales)
 	e := f.e
@@ -121,8 +121,8 @@ func TestSdrUpcomingMeetingsCountAndListShareOneWindow(t *testing.T) {
 	}
 }
 
-// A handoff sent back waits on its submitter: it leaves the waiting list,
-// appears on the returned list with the reason given, and ages from its return.
+// A handoff sent back waits on its submitter. It leaves the waiting list and
+// appears on the returned list with its reason, aged from its return.
 func TestSdrReturnedHandoffsCarryTheirReason(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e

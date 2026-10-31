@@ -84,8 +84,8 @@ export function openOverview(
   return asked;
 }
 
-// The requests the route map cannot answer: an evaluation, answered by what
-// it asks, and the returned list, which is the waiting route with a state.
+// The requests the route map cannot answer. An evaluation is answered by what
+// it asks; the returned list is the waiting route with a state.
 function ownAnswer(
   url: URL,
   answer: (url: URL) => Answer,

@@ -3,9 +3,9 @@
 
 package compose
 
-// The meetings an SDR has booked for the next two weeks: the count on the
-// summary and the list behind it read one predicate, so the list's pages hold
-// exactly the count.
+// The meetings an SDR has booked for the next two weeks. The count on the
+// summary and the list behind it read one predicate, so the pages hold the
+// counted meetings and no others.
 
 import (
 	"context"
@@ -47,9 +47,9 @@ func upcomingWindow(ctx context.Context, tx pgx.Tx, at time.Time) (crmcontracts.
 	return crmcontracts.SdrUpcomingWindow{StartAt: at, EndAt: end.UTC(), Timezone: name}, nil
 }
 
-// upcomingMeetingSQL is the WHERE clause, over activity alias a, of an open
-// customer meeting credited to the scope that has not happened by the window's
-// start and starts before its end.
+// upcomingMeetingSQL is the filter, over activity alias a, of an open customer
+// meeting credited to the scope. It has not happened by the window's start and
+// starts before its end.
 func upcomingMeetingSQL(ctx context.Context, tx pgx.Tx, requested RequestedScope, window crmcontracts.SdrUpcomingWindow, b *reportingBindings) (string, error) {
 	_, credited, err := analyticsPopulationExpression(ctx, tx, requested, "credit.id", b.arg, unownedIsExcluded)
 	if err != nil {

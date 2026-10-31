@@ -5,22 +5,14 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { Button, Disclosure, TableScroll } from "./atoms";
 import "./report-charts.css";
 
-import type { ChartProps, ChartReading } from "./report-charts.model";
+import type {
+  ChartProps,
+  ChartReading,
+  GroupedBarsProps,
+} from "./report-charts.model";
+import { readingScale } from "./report-charts.model";
 
 export type { ChartReading } from "./report-charts.model";
-
-function readingScale(readings: readonly ChartReading[], reference = 0) {
-  return Math.max(
-    1,
-    reference,
-    ...readings.flatMap((reading) => [
-      reading.value ?? 0,
-      reading.comparison ?? 0,
-      reading.target ?? 0,
-      reading.upper ?? 0,
-    ]),
-  );
-}
 
 function ReadingTable({
   readings,
@@ -418,12 +410,7 @@ export function GroupedBars({
   comparisonLabel,
   onSelect,
   size = "default",
-}: ChartProps &
-  Readonly<{
-    comparisonLabel?: string;
-    /** `compact` is shorter columns, for weeks beside a lead figure. */
-    size?: "default" | "compact";
-  }>) {
+}: GroupedBarsProps) {
   const scale = readingScale(readings) * 1.15;
   return (
     <figure className="report-chart" data-size={size}>

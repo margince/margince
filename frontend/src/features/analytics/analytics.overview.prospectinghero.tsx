@@ -28,8 +28,8 @@ type SdrSummary = components["schemas"]["SdrSummary"];
 /** The element the upcoming reading moves focus to: the meetings it counts. */
 export const UPCOMING_LIST_ID = "analytics-upcoming-meetings";
 
-// What a reading's figure is, which decides the words beside it: a measured
-// zero, a figure hidden from this reader, a source that failed, or a value.
+// What a reading's figure is decides the words beside it. It is a measured
+// zero, a figure hidden from this reader, a failed source, or a value.
 export type ReadingState = "zero" | "withheld" | "failed" | "value" | "other";
 
 export function readingState(metric: Metric | undefined): ReadingState {
@@ -178,9 +178,9 @@ function WorkflowUnknown({
 }
 
 /**
- * The readings that support the outcome: meetings held, how fast leads are
- * answered beside how many still wait, and the meetings booked ahead, which
- * are never counted as held.
+ * The readings that support the outcome: meetings held, and how fast leads are
+ * answered beside how many still wait. The meetings booked ahead come last,
+ * and are never counted as held.
  */
 export function ProspectingReadings({
   evaluation,

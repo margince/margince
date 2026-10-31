@@ -14,9 +14,9 @@ import {
 } from "./reporting.model";
 import { useMetricNames } from "./reporting.queries";
 
-// This month's targets as a strip of its own under the week's figure, named
-// by their own month, so a week's figure is never read against a month's
-// target. `ownScope` is the reader's own records, which the target form opens on.
+// This month's targets as a strip of their own under the week's figure. They
+// name their own month, so a week is never read against a month's target.
+// `ownScope` is the reader's own records, which the target form opens on.
 export function MonthlyTargets({
   evaluation,
   ownScope,

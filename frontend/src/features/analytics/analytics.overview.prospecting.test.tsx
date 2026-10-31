@@ -13,9 +13,8 @@ import { upcomingWindow } from "./analytics.overview.fixtures";
 import {
   isWeeks,
   prospectingWeeks,
-  workday,
-  workRows,
-} from "./analytics.overview.scenariodata";
+} from "./analytics.overview.prospectingdata";
+import { workday, workRows } from "./analytics.overview.scenariodata";
 import {
   metric,
   openOverview as open,
@@ -82,7 +81,7 @@ describe("My prospecting's results", () => {
     open(ADDRESS, weekAnd(prospectingEvaluation()), { seat: "sdr" });
     const lead = await results();
     expect(
-      lead.getByText(/^Handoffs accepted as opportunities, /),
+      lead.getByText(/^Handoffs accepted into a deal, /),
     ).toBeVisible();
     expect(lead.getByText(/^Monthly targets, 1 Sept/)).toBeVisible();
     // The month's own actual against the month's target, never the week's 4.

@@ -22,9 +22,9 @@ import "./worklist.row.compact.css";
  * ONE object, handed to whichever column the surface asked for, so the two
  * densities cannot come to say different things about one piece of work.
  *
- * Strings rather than the item, deliberately: `when` is written against the
- * reader's clock and the record's zone, `facts` against the reader's currency,
- * and the reasons are phrased by `lib/worklistcopy.ts`. A column that took the
+ * Strings rather than the item. `when` is written against the
+ * reader's clock and the record's zone, `facts` against the reader's currency.
+ * The reasons are phrased by `lib/worklistcopy.ts`. A column that took the
  * item and re-derived any of them would be a second author of the row's words.
  */
 export type RowReadings = Readonly<{
