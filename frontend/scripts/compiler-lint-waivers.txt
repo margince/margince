@@ -103,7 +103,7 @@
 2 react-hooks/refs src/features/onboarding/onboarding-gate.ticker.tsx
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-ignition.tsx
 1 react-hooks/set-state-in-effect src/features/settings/preferences.tsx
-1 react-hooks/refs src/features/privacy/privacy.caselink.ts
+1 react-hooks/refs src/lib/privacycaselink.ts
 1 react-hooks/refs src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/settings/rate-manual.tsx

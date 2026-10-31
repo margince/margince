@@ -2,24 +2,24 @@ import {
   activityTimeOfDay,
   formatActivityWhen,
   type OccurredPrecision,
-} from "../../format/activitywhen";
-import { middayInstant, sameCalendarDay } from "../../format/calendarday";
+} from "../format/activitywhen";
+import { middayInstant, sameCalendarDay } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
   formatMoney,
   formatNumber,
-} from "../../format/format";
-import type { Locale } from "../../i18n";
-import { translatePlural } from "../../i18n";
-import type { T } from "./worklist.copy";
-import { scheduledText } from "./worklist.held";
+} from "../format/format";
+import type { Locale } from "../i18n";
+import { translatePlural } from "../i18n";
+import type { T } from "./worklistcopy";
+import { scheduledText } from "./worklistheld";
+import { daysValued, known } from "./worklistreasoncensus";
 import type {
   WorklistItem,
   WorklistReason,
   WorklistValue,
-} from "./worklist.queries";
-import { daysValued, known } from "./worklist.reasoncensus";
+} from "./worklisttypes";
 
 // One comparator value, in the reader's notation.
 //

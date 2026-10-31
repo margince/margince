@@ -613,7 +613,7 @@ describe("what the ranked queue tells a reader", () => {
 //
 // The lane, its dedupe and its bounds are proved in Go. What none of that can
 // see is the half of the same invariant that lives here: a source, a category
-// and three reason kinds each have to be REGISTERED in worklist.copy.ts before
+// and three reason kinds each have to be REGISTERED in lib/worklistcopy.ts before
 // a word of them reaches a reader. An unregistered one does not error — it
 // renders a fallback, or silently drops the figure it was carrying — so the
 // backend can be entirely correct while the row says nothing.

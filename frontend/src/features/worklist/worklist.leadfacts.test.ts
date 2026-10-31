@@ -3,7 +3,7 @@
 
 import { expect, it } from "vitest";
 import { type Translator, translate } from "../../i18n";
-import { dealFactsText } from "./worklist.copy";
+import { dealFactsText } from "../../lib/worklistcopy";
 import { leadFactsText } from "./worklist.leadfacts";
 import type { WorklistItem } from "./worklist.queries";
 

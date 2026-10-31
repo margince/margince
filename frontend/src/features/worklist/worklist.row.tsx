@@ -9,8 +9,6 @@ import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
-import { askKey } from "./worklist.ask";
-import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -21,11 +19,17 @@ import {
   rowHref,
   subjectHref,
   whenText,
-} from "./worklist.copy";
+} from "../../lib/worklistcopy";
+import {
+  conditionOf,
+  eyebrowKeyFor,
+  kindClass,
+} from "../../lib/worklisteyebrow";
+import { askKey } from "./worklist.ask";
+import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";

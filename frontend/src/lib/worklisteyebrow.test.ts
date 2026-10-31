@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { translate } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { itemTitle } from "./worklist.copy";
-import { conditionOf, eyebrowKeyFor } from "./worklist.eyebrow";
-import type { WorklistItem } from "./worklist.queries";
+import { translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { itemTitle } from "./worklistcopy";
+import { conditionOf, eyebrowKeyFor } from "./worklisteyebrow";
+import type { WorklistItem } from "./worklisttypes";
 
 const t = (key: MessageKey) => translate("en", key);
 

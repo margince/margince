@@ -182,7 +182,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A backdated entry's wire date must be the picked day in zones a day ahead of UTC at the moment of logging, so each case names the zone it is logged in.",
   },
   {
-    file: "features/worklist/worklist.held.test.ts",
+    file: "lib/worklistheld.test.ts",
     why: "A date-only meeting reads on the record's clock and a timed one on the reader's, and the two only differ between named zones far apart.",
   },
   {

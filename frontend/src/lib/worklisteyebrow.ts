@@ -1,8 +1,8 @@
-import { providerName } from "../../format/connectorprovider";
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { aiTaskLabel } from "../../lib/ai-task-label";
-import type { WorklistItem } from "./worklist.queries";
+import { providerName } from "../format/connectorprovider";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { aiTaskLabel } from "./ai-task-label";
+import type { WorklistItem } from "./worklisttypes";
 
 /** The signals the overnight run can name, and the only ones this eyebrow trusts. */
 const BRIEF_SIGNALS = [

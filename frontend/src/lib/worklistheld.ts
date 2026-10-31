@@ -1,6 +1,6 @@
-import { formatActivityWhen } from "../../format/activitywhen";
-import type { Locale } from "../../i18n/locale";
-import type { WorklistItem } from "./worklist.queries";
+import { formatActivityWhen } from "../format/activitywhen";
+import type { Locale } from "../i18n/locale";
+import type { WorklistItem } from "./worklisttypes";
 
 type T = (key: "worklist.when.scheduled", values: { when: string }) => string;
 

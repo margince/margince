@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { translate } from "../../i18n";
+import { whenText } from "../../lib/worklistcopy";
 import { taskRow } from "../../testing/brief.fixtures";
-import { whenText } from "./worklist.copy";
 import {
   noticeDetail,
   readerTask,

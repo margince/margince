@@ -3,7 +3,7 @@
 
 import { Callout } from "../../design-system/callout";
 import { useLocale, useT } from "../../i18n";
-import { sourceUnavailableText } from "./worklist.copy";
+import { sourceUnavailableText } from "../../lib/worklistcopy";
 import { planCoverageGap, planCoverageText } from "./worklist.plancoverage";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 import { represented } from "./worklistunits";

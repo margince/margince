@@ -24,7 +24,7 @@ import "./worklist.row.compact.css";
  *
  * Strings rather than the item, deliberately: `when` is written against the
  * reader's clock and the record's zone, `facts` against the reader's currency,
- * and the reasons are phrased by `worklist.copy.ts`. A column that took the
+ * and the reasons are phrased by `lib/worklistcopy.ts`. A column that took the
  * item and re-derived any of them would be a second author of the row's words.
  */
 export type RowReadings = Readonly<{
