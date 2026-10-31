@@ -110,6 +110,8 @@ type LeadContactChange struct {
 	CompanyIndustry *string
 	// TypedCompany is the lead's company name the promotion proposes on the contact instead of resolving.
 	TypedCompany string
+	// Evidence is the activity the promotion will record as its evidence, or nil.
+	Evidence *ids.ActivityID
 }
 
 // PreviewLeadContactChange holds the writer's row locks while resolving the
@@ -219,7 +221,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id, nil); err != nil {
 		return LeadContactChange{}, err
 	}
-	lead, err := promotableLead(ctx, tx, id, in)
+	lead, evidence, err := promotableLead(ctx, tx, id, in)
 	if err != nil {
 		return LeadContactChange{}, err
 	}
@@ -243,6 +245,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 		return LeadContactChange{}, err
 	}
 	out.TypedCompany = typed
+	out.Evidence = evidence
 	if err := previewPromotionReview(ctx, tx, match, &out); err != nil {
 		return LeadContactChange{}, err
 	}

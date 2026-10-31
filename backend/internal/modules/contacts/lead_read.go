@@ -101,17 +101,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
 	status_set_by, qualified_deal_id,
-	(SELECT jsonb_build_object('trigger', CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'
-	                                           WHEN a.kind = 'meeting' THEN 'meeting_booked'
-	                                           ELSE 'inbound_reply' END,
-	                           'activity_id', a.id, 'occurred_at', a.occurred_at, 'occurred_precision', a.occurred_precision)
-	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	  WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	    AND ((a.kind = 'email' AND a.direction = 'inbound')
-	         OR (a.kind = 'meeting'
-	             AND (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))))
-	  ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
-	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
+	` + leadQualificationEvidenceSQL() + `,
 	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),

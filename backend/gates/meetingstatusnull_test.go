@@ -28,11 +28,9 @@ package gates
 // a different question.
 //
 // WHAT IT CANNOT SEE, stated rather than discovered later: the window is two
-// lines, so a comparison that happens to sit beside an unrelated clause's
-// `IS NULL` passes on proximity rather than on intent. lead_read.go's ORDER BY
-// arm does exactly that today. It is the safe direction — a false PASS on a
-// line that drops nothing, never a false pass on a filter — but it is the shape
-// to widen if this is ever tightened.
+// lines. A comparison beside an unrelated clause's `IS NULL` passes on
+// proximity rather than on intent, which is the shape to widen if this is ever
+// tightened.
 //
 // NOT a claim that NULL means booked everywhere. It means "nothing said it was
 // off", and each surface adds its own time bound — which is why a past meeting
@@ -63,9 +61,10 @@ var (
 // to drop an unrecorded meeting. Keyed by FILE AND the line's own text, so a
 // waiver covers one reading and not every reading added to that file after it.
 var meetingStatusReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/meetingfollowup.go: return \"(\" + alias + \".meeting_status = 'held' AND \" + occurredday.BegunSQL(alias, now) + \")\"":          "the follow-up reminder asks only about a meeting somebody said was held. An unrecorded past meeting is not dropped: it owes an outcome, and the outcome lane asks for that once, so admitting NULL here would raise the same meeting twice",
-	"internal/compose/reportmeetingconversion.go: whereHeldMeeting = \"t.kind = 'meeting' AND t.meeting_status = 'held' AND t.archived_at IS NULL\"":               "the conversion report's subject is what the RECORD SAYS, which its own description states: \"meetings the record says were HELD (a booked one is a plan, and a no-show or a cancellation is a plan that failed)\". It carries no time bound of its own, so admitting NULL would count a meeting still in the future as one that happened — the opposite of the reading everywhere else, where NULL is paired with a past window",
-	"internal/modules/contacts/lead_read.go: (SELECT jsonb_build_object('trigger', CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'": "a CASE arm that CLASSIFIES rather than filters: it names the trigger `meeting_held` for a meeting the record says was held and `meeting_booked` for every other meeting, which is where an unrecorded one lands. Dropping nothing, so there is nothing for an IS NULL arm to admit. The FILTER beside it is a different question and does admit NULL",
+	"internal/modules/activities/meetingfollowup.go: return \"(\" + alias + \".meeting_status = 'held' AND \" + occurredday.BegunSQL(alias, now) + \")\"":        "the follow-up reminder asks only about a meeting somebody said was held. An unrecorded past meeting is not dropped: it owes an outcome, and the outcome lane asks for that once, so admitting NULL here would raise the same meeting twice",
+	"internal/compose/reportmeetingconversion.go: whereHeldMeeting = \"t.kind = 'meeting' AND t.meeting_status = 'held' AND t.archived_at IS NULL\"":             "the conversion report's subject is what the RECORD SAYS, which its own description states: \"meetings the record says were HELD (a booked one is a plan, and a no-show or a cancellation is a plan that failed)\". It carries no time bound of its own, so admitting NULL would count a meeting still in the future as one that happened — the opposite of the reading everywhere else, where NULL is paired with a past window",
+	"internal/modules/contacts/leadevidence.go: const leadEvidenceTriggerSQL = `(CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'": "a CASE arm that CLASSIFIES rather than filters: it names the trigger `meeting_held` for a meeting the record says was held and `meeting_booked` for every other meeting, which is where an unrecorded one lands. Dropping nothing, so there is nothing for an IS NULL arm to admit. The FILTER in leadEvidenceFromSQL is a different question and does admit NULL",
+	"internal/modules/contacts/leadevidence.go: const leadEvidenceOrderSQL = ` ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0":       "an ORDER BY arm that RANKS rather than filters: a held meeting sorts first and an unrecorded one sorts with the booked ones. It drops no row",
 })
 
 func TestAMeetingWithNoStatusIsNotDroppedFromAPositiveTest(t *testing.T) {

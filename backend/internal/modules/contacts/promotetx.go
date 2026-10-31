@@ -37,10 +37,11 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	if err := refuseMovedCompany(ctx, tx, id, company); err != nil {
 		return PromoteOutcome{}, err
 	}
-	lead, err := promotableLead(ctx, tx, id, in)
+	lead, evidence, err := promotableLead(ctx, tx, id, in)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
+	in.EvidenceActivityID = evidence
 	// Under the lock, against the row this transaction will write. An
 	// agent's released approval was granted against a version, and
 	// redemption verified it in a transaction that has since committed —

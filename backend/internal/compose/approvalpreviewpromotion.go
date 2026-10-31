@@ -109,8 +109,8 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 	if in.EvidenceNote != nil {
 		details = append(details, previewDetail("promotion_note", *in.EvidenceNote))
 	}
-	if in.EvidenceActivityID != nil {
-		value, err := r.referenceValue(ctx, "activity_id", in.EvidenceActivityID.String())
+	if plan.Evidence != nil {
+		value, err := r.referenceValue(ctx, "activity_id", plan.Evidence.String())
 		if err != nil {
 			return nil, err
 		}
