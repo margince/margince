@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 156.5 KB |
+| Tool catalog | 156.4 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41383 |
+| Approx. wire tokens | 41364 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
 | Input schemas | 65.5 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.5 KB** | **64%** | **the recurring cost** |
+| **Description + input schema** | **100.4 KB** | **64%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -65,7 +65,7 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 840 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 821 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1467 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
@@ -747,12 +747,12 @@ commitment_needs_the_user. Call mode preview first and show the user what it say
 change, which are left alone and why, and the sample rows. Execute only after they agree. Each
 record is changed only if it still has the version you sent and you may change it. To undo, pass the
 batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is
-undone once, and records changed since are left alone. If your host shows forms, execute and undo
-ask the user in one, so show the preview and call without asking in words as well. update_record and
-archive_record change one record. Above 10 records, execute and undo need the confirm_token their
-preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Runs
-immediately; it cannot be undone, so tell the user what the call will change and get their yes
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+undone once, and records changed since are left alone. Ask in words even when the host also shows a
+form. update_record and archive_record change one record. Above 10 records, execute and undo need
+the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names
+the change by it. (Runs immediately; it cannot be undone, so tell the user what the call will change
+and get their yes before calling, unless they asked for this call themselves; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>

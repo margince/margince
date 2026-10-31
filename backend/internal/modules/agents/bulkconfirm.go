@@ -39,7 +39,7 @@ func confirmBulkInChat(ctx context.Context, args bulkUpdateRecordsArgs) error {
 // bulkConfirmMessage says what will change, in the words the form shows.
 func bulkConfirmMessage(args bulkUpdateRecordsArgs) string {
 	if args.Mode == bulkModeUndo {
-		return "Undo the bulk change? Every record goes back to how it was before it."
+		return "Undo the bulk change? Records changed since then are left as they are."
 	}
 	noun := strings.ReplaceAll(args.RecordType, "_", " ")
 	if noun == "worklist item" {
@@ -47,7 +47,7 @@ func bulkConfirmMessage(args bulkUpdateRecordsArgs) string {
 	}
 	count := len(args.Items)
 	if count != 1 {
-		noun += "s"
+		noun = pluralNoun(noun)
 	}
 	return fmt.Sprintf("%s %d %s? You can undo it afterwards.", bulkVerbWords(args.Verb), count, noun)
 }
@@ -79,4 +79,12 @@ func bulkVerbWords(verb string) string {
 	default:
 		return "Change"
 	}
+}
+
+// pluralNoun spells more than one of a record kind: company becomes companies.
+func pluralNoun(noun string) string {
+	if stem, ok := strings.CutSuffix(noun, "y"); ok {
+		return stem + "ies"
+	}
+	return noun + "s"
 }

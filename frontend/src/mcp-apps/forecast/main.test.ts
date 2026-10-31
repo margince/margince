@@ -129,6 +129,85 @@ describe("the forecast card for the input checks", () => {
   });
 });
 
+describe("the forecast card when records moved after the check", () => {
+  it("says the verdict may no longer hold instead of stating it as current", () => {
+    const root = mount({
+      ...(checksFixture.data as object),
+      readiness: "ready",
+      freshness: { state: "out_of_date", changed_deals: 2 },
+    });
+    expect(root.querySelector(".panel-head .badge")?.textContent).toBe(
+      "Out of date",
+    );
+    expect(root.querySelector(".intro")?.textContent).toBe(
+      "Records changed after the last check read them (2 deals), so its verdict, ready, may no longer hold. The check read 14 deals.",
+    );
+  });
+});
+
+describe("the forecast card for a caller who cannot open every deal", () => {
+  it("says the totals leave those deals out", () => {
+    const root = mount({
+      ...(readingsFixture.data as object),
+      scope_limited: true,
+    });
+    expect(root.textContent).toContain(
+      "Deals you cannot open are left out of these totals.",
+    );
+  });
+
+  it("says nothing of it when every deal counts", () => {
+    expect(mount(readingsFixture.data).textContent).not.toContain(
+      "left out of these totals",
+    );
+  });
+});
+
+describe("the forecast card for the open findings", () => {
+  it("lists each finding with what is at stake", () => {
+    const root = mount({
+      data: [
+        {
+          type: "stale_close_date",
+          severity: "high",
+          affected_minor: 1_200_000,
+          currency: "EUR",
+        },
+        { type: "missing_amount", severity: "low" },
+      ],
+    });
+    expectReadable(root);
+    expect(root.querySelector(".panel-head .badge")?.textContent).toBe(
+      "2 findings",
+    );
+    const lines = [...root.querySelectorAll(".context-line")].map((line) =>
+      line.textContent,
+    );
+    expect(lines).toEqual([
+      `Stale close dateHigh, ${compactMoney(1_200_000, "EUR")} at stake`,
+      "Missing amountLow",
+    ]);
+  });
+});
+
+describe("the forecast card for the sources a check read", () => {
+  it("names each source and how far it was read", () => {
+    const root = mount({
+      as_of: "2026-10-30T03:00:00Z",
+      sources: [
+        { source: "deals", state: "checked", checked_through: "2026-10-29" },
+        { source: "signals", state: "unreadable" },
+      ],
+    });
+    expectReadable(root);
+    const metas = [...root.querySelectorAll(".context-line .meta")].map(
+      (m) => m.textContent,
+    );
+    expect(metas[0]).toMatch(/^Checked through /);
+    expect(metas[1]).toBe("Unreadable");
+  });
+});
+
 describe("an answer the card does not know", () => {
   it("says there is nothing to show", () => {
     expect(mount({ something: "else" }).querySelector("h1")?.textContent).toBe(

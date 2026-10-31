@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 160273,
+    "tool_catalog_bytes": 160198,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41383,
+    "approx_wire_tokens_total": 41364,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 35884,
+      "description_bytes": 35809,
       "input_schema_bytes": 67035,
       "output_schema_bytes": 47850,
-      "description_plus_input_schema_bytes": 102919
+      "description_plus_input_schema_bytes": 102844
     }
   },
   "tools": {
@@ -369,7 +369,7 @@
           "readOnlyHint": false,
           "title": "Change many records at once"
         },
-        "description": "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or undo such a change. A Worklist commitment is not yours to mark done: it is skipped as commitment_needs_the_user. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. If your host shows forms, execute and undo ask the user in one, so show the preview and call without asking in words as well. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; it cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or undo such a change. A Worklist commitment is not yours to mark done: it is skipped as commitment_needs_the_user. Call mode preview first and show the user what it says: how many records change, which are left alone and why, and the sample rows. Execute only after they agree. Each record is changed only if it still has the version you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the answer, and call undo after they agree; a change is undone once, and records changed since are left alone. Ask in words even when the host also shows a form. update_record and archive_record change one record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; it cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "else": {

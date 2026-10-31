@@ -19,7 +19,7 @@ import {
   type ToolCall,
   type Warning,
 } from "../types";
-import { compactMoney, day } from "../values";
+import { ABSENT, compactMoney, day } from "../values";
 import "../view.css";
 
 /** render draws the card, keeping the reader's place across a redraw. */
@@ -43,6 +43,10 @@ function draw(
     root.appendChild(movementCard(answer));
   } else if ("readiness" in answer || "eligible_deals" in answer) {
     root.appendChild(checksCard(answer));
+  } else if (Array.isArray(answer.data)) {
+    root.appendChild(findingsCard(answer));
+  } else if (Array.isArray(answer.sources)) {
+    root.appendChild(sourcesCard(answer));
   } else {
     root.appendChild(refusalPanel("Nothing to show", null));
   }
@@ -100,6 +104,15 @@ function readingsCard(answer: Record<string, unknown>): HTMLElement {
       ]),
     }),
   );
+  if (answer.scope_limited === true) {
+    body.appendChild(
+      el(
+        "p",
+        "readings-floor",
+        "Deals you cannot open are left out of these totals.",
+      ),
+    );
+  }
   const note = asText(answer.coverage_note);
   if (note !== "") body.appendChild(el("p", "readings-floor", note));
   else if (priced < eligible) {
@@ -233,22 +246,33 @@ function movementCard(answer: Record<string, unknown>): HTMLElement {
   return card;
 }
 
-/** checksCard states whether the forecast's inputs can be trusted. */
+/**
+ * checksCard states whether the forecast's inputs can be trusted. A verdict on
+ * records that changed since is shown as out of date, never as current.
+ */
 function checksCard(answer: Record<string, unknown>): HTMLElement {
   const verdict = readinessWords(asText(answer.readiness));
+  const freshness = asRecord(answer.freshness);
+  const stale = asText(freshness.state) === "out_of_date";
   const card = panel("The forecast's inputs", {
     level: "h1",
-    action: badge(verdict.label, verdict.tone),
+    action: stale
+      ? badge("Out of date", "warning")
+      : badge(verdict.label, verdict.tone),
   });
   const body = panelBody();
   const deals = asFiniteNumber(answer.eligible_deals);
+  const changed = asFiniteNumber(freshness.changed_deals) ?? 0;
+  const sentence = stale
+    ? `Records changed after the last check read them${changed > 0 ? ` (${changed} ${changed === 1 ? "deal" : "deals"})` : ""}, so its verdict, ${verdict.label.toLowerCase()}, may no longer hold.`
+    : verdict.sentence;
   body.appendChild(
     el(
       "p",
       "intro",
       deals === null
-        ? verdict.sentence
-        : `${verdict.sentence} The check read ${deals} ${deals === 1 ? "deal" : "deals"}.`,
+        ? sentence
+        : `${sentence} The check read ${deals} ${deals === 1 ? "deal" : "deals"}.`,
     ),
   );
   card.appendChild(body);
@@ -286,4 +310,84 @@ function readinessWords(readiness: string): {
         sentence: "The checks could not finish, so nobody could look yet.",
       };
   }
+}
+
+/** words turns a stored name such as stage_weight into reading words. */
+function words(name: string): string {
+  const text = name.replaceAll("_", " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** findingsCard lists what the inputs still need, most material first. */
+function findingsCard(answer: Record<string, unknown>): HTMLElement {
+  const findings = asList(answer.data).map(asRecord);
+  const card = panel("What the inputs still need", {
+    level: "h1",
+    action: badge(
+      `${findings.length} ${findings.length === 1 ? "finding" : "findings"}`,
+    ),
+  });
+  const body = panelBody();
+  if (findings.length === 0) {
+    body.appendChild(el("p", "intro", "Nothing is open on the inputs."));
+    card.appendChild(body);
+    return card;
+  }
+  const list = el("ul", "context-lines");
+  for (const finding of findings.slice(0, 5)) {
+    const item = el("li", "context-line");
+    const money =
+      asFiniteNumber(finding.affected_minor) === null
+        ? ""
+        : `, ${compactMoney(finding.affected_minor, finding.currency)} at stake`;
+    item.append(
+      el("p", "context-line-text", words(asText(finding.type))),
+      el("p", "meta", `${words(asText(finding.severity))}${money}`),
+    );
+    list.appendChild(item);
+  }
+  body.appendChild(list);
+  body.appendChild(
+    rowAction("Walk me through them", () =>
+      askAssistant(
+        "Walk me through what my forecast's inputs still need, most material first, and what I should fix.",
+      ),
+    ),
+  );
+  card.appendChild(body);
+  return card;
+}
+
+/** sourcesCard says which sources the last check read, and how far. */
+function sourcesCard(answer: Record<string, unknown>): HTMLElement {
+  const sources = asList(answer.sources).map(asRecord);
+  const card = panel("What the check read", {
+    level: "h1",
+    action: badge(day(answer.as_of)),
+  });
+  const body = panelBody();
+  if (sources.length === 0) {
+    body.appendChild(el("p", "intro", "The check read no source yet."));
+    card.appendChild(body);
+    return card;
+  }
+  const list = el("ul", "context-lines");
+  for (const source of sources) {
+    const through = day(source.checked_through);
+    const item = el("li", "context-line");
+    item.append(
+      el("p", "context-line-text", words(asText(source.source))),
+      el(
+        "p",
+        "meta",
+        asText(source.state) === "checked" && through !== ABSENT
+          ? `Checked through ${through}`
+          : words(asText(source.state)),
+      ),
+    );
+    list.appendChild(item);
+  }
+  body.appendChild(list);
+  card.appendChild(body);
+  return card;
 }
