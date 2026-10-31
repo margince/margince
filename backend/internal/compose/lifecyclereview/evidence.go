@@ -133,7 +133,7 @@ func readSignalSources(ctx context.Context, tx pgx.Tx, signal crmcontracts.Signa
 }
 
 // QuoteProofOf is a stored quote proof as the verifier reads it. A proof with
-// no cut was made before cuts were named, and verifies against that first cut.
+// no cut names the zero cut, which VerifySenderQuote reads it against.
 func QuoteProofOf(stored crmcontracts.SourceQuoteProof) values.QuoteProof {
 	proof := values.QuoteProof{Start: stored.Start, End: stored.End, SHA256: stored.Sha256}
 	if stored.Cut != nil {

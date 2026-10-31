@@ -78,8 +78,8 @@ func TestCurrentMessageEndsAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) 
 	}
 }
 
-// A proof stored before the cut changed hashed the whole of this message, the
-// earlier cut's text. It still verifies, because it is read with that cut.
+// A proof stored with the zero cut hashed the whole of this message. It still
+// verifies, because it is read with that cut.
 func TestAProofStoredUnderTheEarlierCutStillVerifies(t *testing.T) {
 	stored, ok := values.ProveQuote(strings.TrimSpace(outlookBlockBody), "Head of Sales")
 	if !ok {
