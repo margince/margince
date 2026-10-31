@@ -398,15 +398,15 @@ func explainWithheldOwners(ctx context.Context, tx pgx.Tx, out *reporting.Evalua
 
 // requireFrozenShareMeasurable asks a frozen reading what a live one is asked
 // on every read, while the switch is off. A snapshot of a colleague's forecast
-// is that colleague's number, however old. It also clears every colleague's
-// seat off the rows, which the export would otherwise print.
-func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) error {
+// is that colleague's number, however old. It answers only the reader's own
+// rows, which the export prints, as the live per-deal rows do.
+func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) ([]SharedContribution, error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
-		return err
+		return rows, err
 	}
 	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
-		return err
+		return nil, err
 	}
 	owners, categories := []ids.UUID{}, []string{}
 	for _, row := range rows {
@@ -415,14 +415,21 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 		}
 	}
 	if err := requireNoLoneColleague(ctx, tx, categoryGroups(owners, categories)); err != nil {
-		return err
+		return nil, err
 	}
-	for index := range rows {
-		if rows[index].Owner != nil && !auth.MayMeasureSeat(ctx, false, *rows[index].Owner) {
-			rows[index].Owner = nil
+	own := make([]SharedContribution, 0, len(rows))
+	for _, row := range rows {
+		if row.Owner != nil && readerOwnsRow(ctx, *row.Owner) {
+			own = append(own, row)
 		}
 	}
-	return nil
+	return own, nil
+}
+
+// readerOwnsRow is the per-deal row rule while the switch is off: a row stays
+// only when the deal is the reader's own. Shares and live rows both ask it.
+func readerOwnsRow(ctx context.Context, owner ids.UUID) bool {
+	return auth.MayMeasureSeat(ctx, false, owner)
 }
 
 // ForecastReaderContributions narrows the forecast's per-deal rows to what this
@@ -437,7 +444,7 @@ func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecast
 	out := make([]forecasting.Contribution, 0, len(rows))
 	for _, row := range rows {
 		owner, err := ids.Parse(row.Owner)
-		if err != nil || !auth.MayMeasureSeat(ctx, false, owner) {
+		if err != nil || !readerOwnsRow(ctx, owner) {
 			continue
 		}
 		row.Owner = ""
