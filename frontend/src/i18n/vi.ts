@@ -7074,8 +7074,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.stillWaiting_other": "{count} lead vẫn đang chờ phản hồi",
   "analytics.overview.monthlyTitle": "Mục tiêu tháng, {month}",
   "analytics.overview.noMonthlyTarget": "Chưa đặt mục tiêu tháng",
-  "analytics.overview.setMonthlyTargetBody":
-    "Đặt mục tiêu tháng cho cuộc họp hoặc bàn giao được chấp nhận để xem còn thiếu bao nhiêu trong tháng.",
   "analytics.overview.noHandoffs":
     "Lead đủ điều kiện là kết quả chính của bạn, vì công ty này không dùng bàn giao SDR.",
   "analytics.overview.changeWorkflow": "Đổi trong Thiết lập",
@@ -7083,10 +7081,65 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quản trị viên có thể thiết lập việc này trong Thiết lập.",
   "analytics.attentionIncomplete":
     "Không đọc được một số kiểm tra, nên danh sách này có thể chưa đủ.",
-  "analytics.overview.mainOutcome": "Kết quả chính",
   "analytics.overview.workflowFailed":
     "Không đọc được công ty này có dùng bàn giao SDR hay không.",
-  "analytics.overview.workflowTitle": "Bàn giao SDR",
+  "analytics.prospect.results": "Kết quả của bạn",
+  "analytics.prospect.withheld": "Bị ẩn với bạn",
+  "analytics.prospect.failed": "Không đọc được",
+  "analytics.prospect.failedDetail":
+    "Nguồn dữ liệu không phản hồi. Hãy thử lại sau.",
+  "analytics.prospect.basisAccepted":
+    "Bàn giao được chấp nhận thành cơ hội, {period}",
+  "analytics.prospect.basisQualified":
+    "Trong số {arrived} lead đến trong {period}",
+  "analytics.prospect.weeksFailed": "Không đọc được các tuần gần đây.",
+  "analytics.prospect.noMeetingsWeek":
+    "Tuần này chưa có cuộc họp nào được ghi là đã diễn ra",
+  "analytics.prospect.noMeetingsPeriod":
+    "Trong kỳ này chưa có cuộc họp nào được ghi là đã diễn ra",
+  "analytics.prospect.unansweredWithheld":
+    "Số lead chưa được trả lời bị ẩn với bạn",
+  "analytics.prospect.unansweredFailed":
+    "Không đếm được lead chưa được trả lời",
+  "analytics.prospect.tooFew": "Quá ít",
+  "analytics.prospect.tooFewResponses":
+    "Quá ít lead được trả lời để đưa ra thời gian điển hình.",
+  "analytics.prospect.upcoming": "Cuộc họp đã đặt",
+  "analytics.prospect.upcomingThrough": "14 ngày tới, đến hết {date}",
+  "analytics.prospect.weeksLabel": "{metric} mỗi tuần",
+  "analytics.prospect.weeksByArrival":
+    "Mỗi lead được tính vào tuần nó đến. Tuần cuối được tính đến hiện tại.",
+  "analytics.prospect.weeksByAcceptance":
+    "Mỗi bàn giao được tính vào tuần nó được chấp nhận. Tuần cuối được tính đến hiện tại.",
+  "analytics.prospect.historyTitle": "Kết quả của bạn đã thay đổi thế nào",
+  "analytics.prospect.historyCaption":
+    "Theo từng tuần từ {from}. Tuần đang diễn ra được tính đến hiện tại.",
+  "analytics.prospect.blocked": "Bên nhận không thể xử lý",
+  "analytics.prospect.unassigned": "Hàng chờ chung",
+  "analytics.prospect.returned": "Bị trả lại",
+  "analytics.prospect.returnedAgo": "Bị trả lại {age} trước",
+  "analytics.prospect.noReason": "Không có lý do",
+  "analytics.prospect.noUpcoming":
+    "Không có cuộc họp nào được đặt trong 14 ngày tới",
+  "analytics.prospect.restrictedRecord": "Một bản ghi bạn không mở được",
+  "analytics.prospect.prepTitle": "Cuộc họp cần chuẩn bị",
+  "analytics.prospect.upcomingTitle": "Cuộc họp sắp tới",
+  "analytics.prospect.cohortTitle": "Bàn giao của bạn đã ra sao",
+  "analytics.prospect.cohortPeriods":
+    "Chỉ hiện cho một tuần hoặc một tháng. Hãy chọn một trong các kỳ đó.",
+  "analytics.prospect.cohortCaption_one":
+    "{count} bàn giao bạn gửi trong {period}, theo tình trạng hiện tại",
+  "analytics.prospect.cohortCaption_other":
+    "{count} bàn giao bạn gửi trong {period}, theo tình trạng hiện tại",
+  "analytics.prospect.cohort.accepted": "Được chấp nhận",
+  "analytics.prospect.cohort.recycled": "Bị trả lại",
+  "analytics.prospect.cohort.rejected": "Bị từ chối",
+  "analytics.prospect.cohort.waiting": "Chưa được quyết định",
+  "analytics.doNext.title": "Việc tiếp theo",
+  "analytics.doNext.more_one": "Thêm {count} việc trong Danh sách công việc",
+  "analytics.doNext.more_other": "Thêm {count} việc trong Danh sách công việc",
+  "analytics.doNext.open": "Mở",
+  "analytics.doNext.openNamed": "Mở {title}",
   "analytics.overview.gapMissing": "Kết quả so sánh không có khoảng cách.",
   "analytics.overview.team": "Tìm kiếm khách hàng của nhóm",
   "analytics.team.chooseTeam": "Chọn một nhóm",
@@ -7376,9 +7429,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Lead vẫn đang chờ phản hồi đầu tiên",
   "analytics.sdrQualifiedOf": "{qualified} trên {arrived}",
-  "analytics.sdrUpcomingMeetings": "Cuộc họp sắp tới",
-  "analytics.sdrUpcomingMeetingsDetail":
-    "Đã đặt và chưa diễn ra, tính đến hôm nay.",
   "analytics.sdrWaiting": "Bàn giao đang chờ bên khác xử lý",
   "analytics.sdrWaitingIntro":
     "Các bàn giao bạn đã gửi mà chưa ai quyết định. Bàn giao bị trả lại rồi gửi lại được tính thời gian chờ từ lần gửi mới.",
@@ -7396,10 +7446,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrWaitingFor": "Đang chờ {age}",
   "analytics.sdrWaitingSinceResubmit": "Đang chờ {age} kể từ khi bạn gửi lại",
   "analytics.sdrRestrictedProspect": "Một hồ sơ bạn không mở được",
-  "analytics.sdrNeedsYou": "Đang chờ bạn",
   "analytics.sdrOpenWorklist": "Mở Danh sách công việc",
   "analytics.sdrNothingNeedsYou": "Hiện không có việc gì chờ bạn",
-  "analytics.sdrWorkCount": "Việc cần làm: {total}. Khẩn cấp: {urgent}.",
   "analytics.sdrWorkIncomplete":
     "Không đọc được một phần công việc của bạn, nên danh sách này có thể thiếu mục.",
   "analytics.myMeetings": "Cuộc họp của tôi",

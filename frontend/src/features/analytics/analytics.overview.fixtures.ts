@@ -466,6 +466,14 @@ function pipelinePage(pipelines: readonly (typeof SALES_PIPELINE)[]) {
 export const twoPipelines = () =>
   pipelinePage([SALES_PIPELINE, RENEWALS_PIPELINE]);
 
+/** The fourteen days the summary counts booked meetings in, from `asOf`. */
+export function upcomingWindow(asOf: string) {
+  const day = asOf.slice(0, 10);
+  const end = new Date(`${day}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() + 14);
+  return { start_at: asOf, end_at: end.toISOString(), timezone: "UTC" };
+}
+
 export function overviewRoutes(
   over: Readonly<{
     seat?: Seat;
@@ -478,6 +486,10 @@ export function overviewRoutes(
     team?: () => Response | Promise<Response>;
     worklist?: () => Response | Promise<Response>;
     handoffs?: () => Response | Promise<Response>;
+    meetings?: () => Response | Promise<Response>;
+    // The handoffs sent back: the waiting route asked with state=returned,
+    // which the route map cannot tell apart, so openOverview answers it.
+    returned?: () => Response;
     pipelines?: () => Response | Promise<Response>;
   }> = {},
 ): RouteMap {
@@ -517,11 +529,20 @@ export function overviewRoutes(
             template === "sdr"
               ? { waiting: 2, unassigned: 0, blocked: 0, returned: 0 }
               : undefined,
-          upcoming_meetings: 5,
+          upcoming_meetings: 0,
+          upcoming_window: upcomingWindow(interval.end_at),
         })),
     "GET /analytics/sdr-summary/handoffs":
       over.handoffs ??
       (() => jsonResponse({ as_of: interval.end_at, rows: [] })),
+    "GET /analytics/sdr-summary/meetings":
+      over.meetings ??
+      (() =>
+        jsonResponse({
+          as_of: interval.end_at,
+          window: upcomingWindow(interval.end_at),
+          rows: [],
+        })),
     "GET /analytics/sdr-team": over.team ?? (() => jsonResponse(teamReview())),
     "GET /worklist": over.worklist ?? (() => jsonResponse(QUIET_DAY)),
   };

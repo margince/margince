@@ -230,3 +230,21 @@ export const OwnerTargetsDark: Story = {
   ...OwnerTargets,
   globals: { theme: "dark" },
 };
+
+// Weeks beside a lead figure: the same columns at half the height.
+export const CompactWeeks: Story = {
+  render: () => (
+    <GroupedBars
+      size="compact"
+      label="Accepted opportunities per week"
+      valueLabel="Accepted opportunities"
+      dataLabel="Show readings"
+      readings={[
+        { key: "1", label: "5–11 Oct", value: 2, amount: "2" },
+        { key: "2", label: "12–18 Oct", value: 0, amount: "0" },
+        { key: "3", label: "19–25 Oct", value: 3, amount: "3" },
+        { key: "4", label: "26 Oct–1 Nov (partial)", value: 1, amount: "1" },
+      ]}
+    />
+  ),
+};

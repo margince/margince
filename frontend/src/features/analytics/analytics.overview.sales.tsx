@@ -118,9 +118,7 @@ function SalesReviewBody({
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   // A pipeline the address names and this reader cannot open is said, never
   // swapped for the default one.
-  const named = params.get("pipeline");
-  const pipelineGone =
-    !!named && named !== "all" && !pipelines.some(({ id }) => id === named);
+  const pipelineGone = pipelineIsGone(params.get("pipeline"), pipelines);
   const query = useReportingEvaluation(
     selection,
     validDates && metrics.length > 0 && !pipelineGone,
@@ -133,9 +131,10 @@ function SalesReviewBody({
     answeredDials(selection, filters.start, filters.end),
   );
   const apply = (next: ReportingSelection) => {
-    if (next.period !== filters.period) filters.setPeriod(next.period);
-    if (next.pipeline_id !== selection.pipeline_id)
-      filters.setPipelineId(next.pipeline_id ?? "");
+    changeFilters(filters, selection, {
+      ...next,
+      close_window: filters.closeWindow,
+    });
     if (scopeKey(next.scope) !== scopeKey(scope))
       replaceDial("scope", scopeKey(next.scope));
   };
@@ -173,13 +172,7 @@ function SalesReviewBody({
         evaluation={query.data}
         saved={query.data ? { ...query.data.selection, blocks } : undefined}
         scope={scopeKey(scope)}
-        onChange={(next) => {
-          if (next.period !== filters.period) filters.setPeriod(next.period);
-          if (next.pipeline_id !== selection.pipeline_id)
-            filters.setPipelineId(next.pipeline_id ?? "");
-          if (next.close_window !== filters.closeWindow)
-            filters.setCloseWindow(next.close_window);
-        }}
+        onChange={(next) => changeFilters(filters, selection, next)}
       />
       {pipelineGone ? (
         <PipelineGone
@@ -290,6 +283,30 @@ function SalesReviewBody({
       />
     </>
   );
+}
+
+// A pipeline the address names that is not among the reader's pipelines.
+function pipelineIsGone(
+  named: string | undefined,
+  pipelines: readonly Pipeline[],
+): boolean {
+  return (
+    !!named && named !== "all" && !pipelines.some(({ id }) => id === named)
+  );
+}
+
+// A filter change moves only the dials it changed, so the rest of the
+// address stays as the reader left it.
+function changeFilters(
+  filters: ReturnType<typeof useOverviewFilters>,
+  selection: ReportingSelection,
+  next: ReportingSelection,
+) {
+  if (next.period !== filters.period) filters.setPeriod(next.period);
+  if (next.pipeline_id !== selection.pipeline_id)
+    filters.setPipelineId(next.pipeline_id ?? "");
+  if (next.close_window !== filters.closeWindow)
+    filters.setCloseWindow(next.close_window);
 }
 
 // The question Sales review answered, defaults spelled out: the default

@@ -7275,18 +7275,68 @@ export const en = {
     "{count} leads still waiting for a reply",
   "analytics.overview.monthlyTitle": "Monthly targets, {month}",
   "analytics.overview.noMonthlyTarget": "No monthly target set",
-  "analytics.overview.setMonthlyTargetBody":
-    "Set a monthly target for meetings or accepted handoffs to see what is left this month.",
   "analytics.overview.noHandoffs":
     "Leads qualified is your main outcome, because this company does not use SDR handoffs.",
   "analytics.overview.changeWorkflow": "Change in Setup",
   "analytics.overview.workflowWho": "An admin can set this up in Setup.",
   "analytics.attentionIncomplete":
     "Some checks could not be read, so this list may be short.",
-  "analytics.overview.mainOutcome": "Main outcome",
   "analytics.overview.workflowFailed":
     "Could not read whether this company uses SDR handoffs.",
-  "analytics.overview.workflowTitle": "SDR handoffs",
+  "analytics.prospect.results": "Your results",
+  "analytics.prospect.withheld": "Hidden from you",
+  "analytics.prospect.failed": "Could not be read",
+  "analytics.prospect.failedDetail":
+    "The source did not answer. Try again later.",
+  "analytics.prospect.basisAccepted": "Handoffs accepted into a deal, {period}",
+  "analytics.prospect.basisQualified":
+    "Of {arrived} leads that arrived {period}",
+  "analytics.prospect.weeksFailed": "The recent weeks could not be read.",
+  "analytics.prospect.noMeetingsWeek": "No meetings recorded as held this week",
+  "analytics.prospect.noMeetingsPeriod":
+    "No meetings recorded as held in this period",
+  "analytics.prospect.unansweredWithheld":
+    "The count of unanswered leads is hidden from you",
+  "analytics.prospect.unansweredFailed":
+    "Unanswered leads could not be counted",
+  "analytics.prospect.tooFew": "Too few",
+  "analytics.prospect.tooFewResponses":
+    "Too few answered leads to give a typical time.",
+  "analytics.prospect.upcoming": "Booked meetings",
+  "analytics.prospect.upcomingThrough": "Next 14 days, through {date}",
+  "analytics.prospect.weeksLabel": "{metric} per week",
+  "analytics.prospect.weeksByArrival":
+    "Each lead counts in the week it arrived.",
+  "analytics.prospect.weeksByAcceptance":
+    "Each handoff counts in the week it was accepted. The last week counts up to now.",
+  "analytics.prospect.historyTitle": "How your outcomes developed",
+  "analytics.prospect.historyCaption":
+    "Week by week since {from}. The week under way counts so far.",
+  "analytics.prospect.blocked": "Recipient cannot act",
+  "analytics.prospect.unassigned": "Shared queue",
+  "analytics.prospect.returned": "Sent back",
+  "analytics.prospect.returnedAgo": "Sent back {age} ago",
+  "analytics.prospect.noReason": "No reason given",
+  "analytics.prospect.noUpcoming": "No meetings booked in the next 14 days",
+  "analytics.prospect.restrictedRecord": "A record you cannot open",
+  "analytics.prospect.prepTitle": "Meetings to prepare",
+  "analytics.prospect.upcomingTitle": "Meetings coming up",
+  "analytics.prospect.cohortTitle": "What happened to your handoffs",
+  "analytics.prospect.cohortPeriods":
+    "Shown for a week or a month. Choose one of those periods to see it.",
+  "analytics.prospect.cohortCaption_one":
+    "{count} handoff you submitted {period}, as it stands now",
+  "analytics.prospect.cohortCaption_other":
+    "{count} handoffs you submitted {period}, as they stand now",
+  "analytics.prospect.cohort.accepted": "Accepted",
+  "analytics.prospect.cohort.recycled": "Sent back",
+  "analytics.prospect.cohort.rejected": "Rejected",
+  "analytics.prospect.cohort.waiting": "Not decided yet",
+  "analytics.doNext.title": "Do next",
+  "analytics.doNext.more_one": "{count} more in your Worklist",
+  "analytics.doNext.more_other": "{count} more in your Worklist",
+  "analytics.doNext.open": "Open",
+  "analytics.doNext.openNamed": "Open {title}",
   "analytics.overview.gapMissing": "The comparison came back without a gap.",
   "analytics.overview.team": "Team prospecting",
   "analytics.team.chooseTeam": "Choose a team",
@@ -7572,9 +7622,6 @@ export const en = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads still waiting for a first reply",
   "analytics.sdrQualifiedOf": "{qualified} of {arrived}",
-  "analytics.sdrUpcomingMeetings": "Meetings coming up",
-  "analytics.sdrUpcomingMeetingsDetail":
-    "Booked and not yet held, today’s count.",
   "analytics.sdrWaiting": "Handoffs waiting on others",
   "analytics.sdrWaitingIntro":
     "Handoffs you submitted that nobody has decided yet. A handoff that was sent back and submitted again waits from the new submission.",
@@ -7593,10 +7640,8 @@ export const en = {
   "analytics.sdrWaitingSinceResubmit":
     "Waiting {age} since you submitted it again",
   "analytics.sdrRestrictedProspect": "A prospect you cannot open",
-  "analytics.sdrNeedsYou": "Waiting on you",
   "analytics.sdrOpenWorklist": "Open Worklist",
   "analytics.sdrNothingNeedsYou": "Nothing needs you right now",
-  "analytics.sdrWorkCount": "Items to do: {total}. Urgent: {urgent}.",
   "analytics.sdrWorkIncomplete":
     "Some of your work could not be read, so this list may be missing items.",
   "analytics.myMeetings": "My meetings",

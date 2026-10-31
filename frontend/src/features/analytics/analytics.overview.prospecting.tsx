@@ -5,30 +5,35 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import { StatCard } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { scopeKey } from "./analytics.context";
-import {
-  NeedsYourAction,
-  useSdrSummary,
-  WaitingOnOthers,
-} from "./analytics.outcomes.sdr";
+import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
 import { outboundDials } from "./analytics.overview.context";
+import { DoNext } from "./analytics.overview.donext";
 import { MonthlyTargets } from "./analytics.overview.monthly";
 import {
-  MetricReading,
-  metricOf,
+  ProspectingReadings,
+  ProspectingResults,
+} from "./analytics.overview.prospectinghero";
+import {
+  OutcomeHistory,
+  type ProspectingOutcome,
+  useProspectingWeeks,
+} from "./analytics.overview.prospectingweeks";
+import {
+  HandoffCohort,
+  UpcomingMeetings,
+} from "./analytics.overview.prospectingwork";
+import {
   OverviewLinks,
   OverviewSaveActions,
 } from "./analytics.overview.readings";
@@ -38,11 +43,10 @@ import {
   useSelectionEvidence,
 } from "./reporting.evidence";
 import { ReportingFilters } from "./reporting.filters";
-import {
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingPeriodLabel,
+import type {
+  ReportingEvaluation,
+  ReportingEvidenceRef,
+  ReportingSelection,
 } from "./reporting.model";
 import {
   customInterval,
@@ -91,7 +95,6 @@ export function MyProspecting({
   switcher: ReactNode;
 }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
@@ -121,6 +124,10 @@ export function MyProspecting({
   const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
     JSON.stringify(selection),
   );
+  const weeks = useProspectingWeeks(
+    query.data,
+    weekOutcome(workflowOf(framework, summary)),
+  );
   if (!self?.id) {
     return (
       <SurfaceState
@@ -135,10 +142,16 @@ export function MyProspecting({
   }
   const workflow = workflowOf(framework, summary);
   const known = workflow === "handoff" || workflow === "qualification";
+  const outcome = weekOutcome(workflow);
+  const retryWorkflow = () => {
+    void framework.refetch();
+    void summary.refetch();
+  };
   return (
     <>
       <FilterBar
         label={t("analytics.filters")}
+        quiet
         actions={
           <OverviewSaveActions
             selection={
@@ -175,54 +188,62 @@ export function MyProspecting({
           }}
         />
       </FilterBar>
-      {problemCodeOf(query.error) === "reporting_interval_invalid" ? (
+      {problemCodeOf(query.error) === "reporting_interval_invalid" && (
         <ErrorLine error={query.error} />
-      ) : (
-        <QueryGate
-          query={query}
-          pendingLabel={t("analytics.overview.prospecting")}
-        >
-          {(evaluation) => (
-            <>
-              <ProspectingReadings
-                evaluation={evaluation}
-                workflow={workflow}
-                upcoming={summary.data?.upcoming_meetings}
-                onEvidence={openEvidence}
-              />
-              <OpeningSummary
-                sentences={prospectingSummary(
-                  evaluation,
-                  known ? workflow : undefined,
-                  summary.data?.handoffs?.waiting,
-                  { t, plural, locale },
-                )}
-              />
-              <MonthlyTargets
-                evaluation={evaluation}
-                ownScope={scopeKey(self)}
-              />
-              {evidence && (
-                <ReportingEvidenceDrawer
-                  key={JSON.stringify(evidence)}
-                  evaluation={evaluation}
-                  reference={evidence}
-                  onClose={closeEvidence}
-                />
-              )}
-            </>
-          )}
-        </QueryGate>
       )}
-      <NeedsYourAction locale={locale} />
-      {workflow === "handoff" && <Waiting self={self.id} summary={summary} />}
-      {workflow === "qualification" && <QualificationNote />}
-      {workflow === "failed" && (
-        <WorkflowFailed
-          onRetry={() => {
-            void framework.refetch();
-            void summary.refetch();
-          }}
+      {/* The results and the first moves share the first screen; on a narrow
+          one the moves come straight after the results, before any history. */}
+      <div className="analytics-lead">
+        <div className="analytics-column">
+          <QueryGate
+            query={query}
+            pendingLabel={t("analytics.overview.prospecting")}
+          >
+            {(evaluation) => (
+              <>
+                <ProspectingResults
+                  evaluation={evaluation}
+                  outcome={outcome}
+                  workflowState={known ? "known" : workflow}
+                  weeks={weeks}
+                  onEvidence={openEvidence}
+                  onRetryWorkflow={retryWorkflow}
+                  aside={
+                    <MonthlyTargets
+                      evaluation={evaluation}
+                      ownScope={scopeKey(self)}
+                    />
+                  }
+                />
+                <ProspectingReadings
+                  evaluation={evaluation}
+                  summary={summary}
+                  onEvidence={openEvidence}
+                />
+              </>
+            )}
+          </QueryGate>
+        </div>
+        <ProspectingMoves
+          evaluation={query.isError ? undefined : query.data}
+          workflow={known ? workflow : undefined}
+          waiting={summary.data?.handoffs?.waiting}
+        />
+      </div>
+      <ProspectingWork
+        self={self.id}
+        workflow={workflow}
+        summary={summary}
+        week={query.data}
+        weeks={weeks}
+        onEvidence={openEvidence}
+      />
+      {evidence && query.data && (
+        <ReportingEvidenceDrawer
+          key={JSON.stringify(evidence)}
+          evaluation={weeksOwn(evidence, weeks.data) ?? query.data}
+          reference={evidence}
+          onClose={closeEvidence}
         />
       )}
       <OverviewLinks
@@ -242,112 +263,78 @@ export function MyProspecting({
   );
 }
 
-// The four readings. Without SDR handoffs the qualified leads are the outcome,
-// and the meetings booked ahead take the freed place.
-function ProspectingReadings({
+// The short explanation and the first moves of the day, beside the results.
+function ProspectingMoves({
   evaluation,
   workflow,
-  upcoming,
-  onEvidence,
+  waiting,
 }: Readonly<{
-  evaluation: ReportingEvaluation;
-  workflow: WorkflowState;
-  upcoming: number | undefined;
-  onEvidence: (reference: ReportingEvidenceRef) => void;
+  evaluation: ReportingEvaluation | undefined;
+  workflow: Workflow | undefined;
+  waiting: number | undefined;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { context } = evaluation;
-  const period = reportingPeriodLabel(
-    context.interval,
-    context.timezone,
-    locale,
-  );
-  const qualified = metricOf(evaluation, "leads_promoted");
-  const waiting = metricOf(evaluation, "leads_awaiting_response");
-  const qualifiedReading = (
-    <MetricReading
-      evaluation={evaluation}
-      id="leads_promoted"
-      detail={
-        qualified?.denominator
-          ? t("reporting.outOf", {
-              total: formatNumber(qualified.denominator, locale),
-            })
-          : period
-      }
-      onEvidence={onEvidence}
-    />
-  );
   return (
-    <StatStrip label={t("analytics.overview.readings")}>
-      <MetricReading
-        evaluation={evaluation}
-        id="meetings_held"
-        detail={period}
-        onEvidence={onEvidence}
-      />
-      {workflow === "handoff" && (
-        <>
-          <MetricReading
-            evaluation={evaluation}
-            id="accepted_opportunities"
-            detail={period}
-            onEvidence={onEvidence}
-          />
-          {qualifiedReading}
-        </>
+    <div className="analytics-column">
+      {evaluation && (
+        <OpeningSummary
+          title={t("analytics.overview.summary")}
+          sentences={prospectingSummary(evaluation, workflow, waiting, {
+            t,
+            plural,
+            locale,
+          })}
+        />
       )}
-      {workflow === "qualification" && (
-        <>
-          {qualifiedReading}
-          <StatCard
-            narrow="row"
-            label={t("analytics.sdrUpcomingMeetings")}
-            value={
-              upcoming == null
-                ? t("analytics.readingLoading")
-                : formatNumber(upcoming, locale)
-            }
-            detail={t("analytics.sdrUpcomingMeetingsDetail")}
-          />
-        </>
+      <DoNext />
+    </div>
+  );
+}
+
+// Below the first screen: who the reader waits on, the meetings ahead, and how
+// the recent weeks and the submitted handoffs turned out.
+function ProspectingWork({
+  self,
+  workflow,
+  summary,
+  week,
+  weeks,
+  onEvidence,
+}: Readonly<{
+  self: string;
+  workflow: WorkflowState;
+  summary: ReturnType<typeof useSdrSummary>;
+  week: ReportingEvaluation | undefined;
+  weeks: ReturnType<typeof useProspectingWeeks>;
+  onEvidence: (reference: ReportingEvidenceRef) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <div className="analytics-pair">
+        {workflow === "handoff" && <Waiting self={self} summary={summary} />}
+        <UpcomingMeetings
+          self={self}
+          summary={summary}
+          title={t(
+            workflow === "qualification"
+              ? "analytics.prospect.prepTitle"
+              : "analytics.prospect.upcomingTitle",
+          )}
+        />
+      </div>
+      {workflow === "qualification" && <QualificationNote />}
+      {week && (
+        <div className="analytics-pair">
+          <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          {workflow === "handoff" && (
+            <HandoffCohort self={self} evaluation={week} />
+          )}
+        </div>
       )}
-      {(workflow === "pending" || workflow === "failed") && (
-        <>
-          {qualifiedReading}
-          {/* Accepted handoffs or meetings ahead: which one counts here is
-              not known yet, so neither is shown in its place. */}
-          <StatCard
-            narrow="row"
-            label={t("analytics.overview.mainOutcome")}
-            value={t(
-              workflow === "pending"
-                ? "analytics.readingLoading"
-                : "analytics.readingUnavailable",
-            )}
-            detail={
-              workflow === "failed"
-                ? t("analytics.overview.workflowFailed")
-                : undefined
-            }
-          />
-        </>
-      )}
-      <MetricReading
-        evaluation={evaluation}
-        id="lead_first_response"
-        detail={
-          waiting?.coverage.status === "ok" && waiting.value != null
-            ? plural("analytics.overview.stillWaiting", waiting.value, {
-                count: formatNumber(waiting.value, locale),
-              })
-            : undefined
-        }
-        onEvidence={onEvidence}
-      />
-    </StatStrip>
+    </>
   );
 }
 
@@ -412,22 +399,16 @@ export function QualificationNote() {
   );
 }
 
-// Neither the framework nor the summary said which workflow applies, so the
-// page shows no handoff panel and no qualification note in its place.
-function WorkflowFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
-  const t = useT();
-  return (
-    <Panel title={t("analytics.overview.workflowTitle")}>
-      <PanelBody>
-        <SurfaceState
-          state="failed"
-          emptyLabel={t("common.empty")}
-          loadingLabel={t("analytics.overview.workflowTitle")}
-          detail={{ onRetry }}
-        >
-          {null}
-        </SurfaceState>
-      </PanelBody>
-    </Panel>
-  );
+function weekOutcome(workflow: WorkflowState): ProspectingOutcome | undefined {
+  if (workflow === "handoff") return "accepted_opportunities";
+  if (workflow === "qualification") return "leads_promoted";
+  return undefined;
+}
+
+// A week's columns answer their own evaluation, so the drawer reads that one.
+function weeksOwn(
+  reference: ReportingEvidenceRef,
+  weeks: ReportingEvaluation | undefined,
+): ReportingEvaluation | undefined {
+  return reference.group_key?.startsWith("week:") ? weeks : undefined;
 }

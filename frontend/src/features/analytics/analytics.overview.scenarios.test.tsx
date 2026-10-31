@@ -37,7 +37,7 @@ const CENSUS: Readonly<Record<string, string>> = {
   trueZero: "SPT",
   noTarget: "SP",
   wrongTargetScope: "S",
-  notEnoughHistory: "S",
+  notEnoughHistory: "SP",
   limitedImportHistory: "ST",
   partialValuation: "S",
   sourceUnavailable: "SPT",
@@ -60,6 +60,9 @@ const CENSUS: Readonly<Record<string, string>> = {
   legacyLanding: "S",
   noForecast: "S",
   twoPipelines: "S",
+  unknownWorkflow: "P",
+  worklistFailed: "P",
+  readingsWithheld: "P",
 };
 const LETTER: Readonly<Record<OverviewView, string>> = {
   sales: "S",
@@ -208,21 +211,28 @@ const SIGNATURES: Readonly<
 > = {
   populated: {
     sales: shows("3.6×"),
-    prospecting: shows("Items to do: 5. Urgent: 1."),
+    prospecting: shows("2 more in your Worklist"),
     team: shows("Wrong territory"),
   },
   trueZero: {
     sales: shows(/^0(\.0)?×$/),
-    prospecting: shows("Nothing needs you right now"),
+    prospecting: async () => {
+      await shows("No meetings recorded as held this week")();
+      await shows("Nothing needs you right now")();
+    },
     team: shows(/Of the 0 rounds/),
   },
   noTarget: {
     sales: shows("No sales target for this quarter"),
-    prospecting: shows("No monthly target set"),
+    prospecting: shows(/^No monthly target set\./),
   },
   wrongTargetScope: { sales: shows("Pick one team to compare with a target") },
   notEnoughHistory: {
     sales: shows("Comparison starts after a second compatible capture."),
+    prospecting: async () => {
+      await shows("—")();
+      expect(screen.queryByText(/history/i)).toBeNull();
+    },
   },
   limitedImportHistory: { sales: lacks("4 Oct"), team: shows("Members") },
   partialValuation: {
@@ -240,12 +250,15 @@ const SIGNATURES: Readonly<
   },
   tooFewObservations: {
     sales: shows("Too few observations"),
-    prospecting: shows("Too few observations"),
+    prospecting: async () => {
+      await shows("Too few")();
+      await shows("2 leads still waiting for a reply")();
+    },
     team: shows("A small sample"),
   },
   individualPerformanceOff: {
     sales: lacks("Maya"),
-    prospecting: shows("Items to do: 5. Urgent: 1."),
+    prospecting: shows("2 more in your Worklist"),
     team: shows(
       "Individual performance is off, so no member’s figures are shown.",
     ),
@@ -256,7 +269,7 @@ const SIGNATURES: Readonly<
   },
   largeBacklog: {
     sales: shows("All open checks: 24 findings · 7 deals"),
-    prospecting: shows("Items to do: 210. Urgent: 1."),
+    prospecting: shows("207 more in your Worklist"),
   },
   readOnlyReviewer: {
     sales: async () => {
@@ -281,11 +294,14 @@ const SIGNATURES: Readonly<
     prospecting: shows("Call Nordhafen Logistik back about the fleet trial"),
   },
   handoffWorkflow: {
-    prospecting: shows(/Casey Closer can no longer act/),
+    prospecting: async () => {
+      await shows(/Casey Closer can no longer act/)();
+      await shows(/No budget this quarter/)();
+    },
     team: shows("Wrong territory"),
   },
   qualificationWorkflow: {
-    prospecting: shows("Meetings coming up"),
+    prospecting: shows("Meetings to prepare"),
     team: shows(/does not use SDR handoffs/),
   },
   weakNoHandoffTable: { team: shows("Members") },
@@ -293,6 +309,26 @@ const SIGNATURES: Readonly<
   landingBases: { sales: shows("Won + confirmed commit") },
   legacyLanding: { sales: shows("Basis not recorded") },
   noForecast: { sales: shows("Unavailable") },
+  unknownWorkflow: {
+    prospecting: async () => {
+      await shows("Could not read whether this company uses SDR handoffs.")();
+      expect(screen.queryByText("Accepted handoffs")).toBeNull();
+      expect(screen.queryByText(/does not use SDR handoffs/)).toBeNull();
+    },
+  },
+  worklistFailed: {
+    prospecting: async () => {
+      await shows("This section did not load.")();
+      expect(screen.queryByText("Nothing needs you right now")).toBeNull();
+      expect(screen.queryByRole("link", { name: /^Open Call/ })).toBeNull();
+    },
+  },
+  readingsWithheld: {
+    prospecting: async () => {
+      await shows("Hidden from you")();
+      await shows("The count of unanswered leads is hidden from you")();
+    },
+  },
   twoPipelines: {
     sales: async () => {
       const user = userEvent.setup({ delay: null });

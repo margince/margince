@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { AppLink } from "../../design-system/applink";
-import { Button, StatCard } from "../../design-system/atoms";
+import { Badge, Button, StatCard } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -17,13 +17,10 @@ import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDuration, formatNumber } from "../../format/format";
-import { isMessageKey, type Locale, useT } from "../../i18n";
+import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
-import { isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
-import { routeHash } from "../../lib/router";
-import { listReadState } from "../../lib/worklist.listread";
-import { worklistDayOptions } from "../../lib/worklistday";
+import { DoNext } from "./analytics.overview.donext";
 import {
   type ReportingEvaluation,
   type ReportingSelection,
@@ -34,10 +31,6 @@ import { useReportingCatalog } from "./reporting.queries";
 
 type SdrSummary = components["schemas"]["SdrSummary"];
 type WaitingHandoff = components["schemas"]["SdrWaitingHandoff"];
-type WorklistItem = components["schemas"]["WorklistItem"];
-
-// How many ranked items the work panel names, in the Worklist's own order.
-const NAMED_WORK = 5;
 
 const LEAD_READINGS = [
   "leads_promoted",
@@ -86,7 +79,7 @@ export function MySdrWork({
           totals={summary.data.handoffs}
         />
       )}
-      <NeedsYourAction locale={locale} />
+      <DoNext />
     </>
   );
 }
@@ -162,9 +155,8 @@ function MyLeads({
               {upcoming != null && (
                 <StatCard
                   narrow="row"
-                  label={t("analytics.sdrUpcomingMeetings")}
+                  label={t("analytics.prospect.upcoming")}
                   value={formatNumber(upcoming, locale)}
-                  detail={t("analytics.sdrUpcomingMeetingsDetail")}
                 />
               )}
             </StatStrip>
@@ -212,25 +204,7 @@ export function WaitingOnOthers({
 }>) {
   const t = useT();
   const asOf = Date.parse(summary.as_of);
-  const rows = useInfiniteQuery({
-    queryKey: ["sdr-summary", self, "handoffs"],
-    enabled: totals.waiting > 0,
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam, signal }) =>
-      unwrap(
-        await api.GET("/analytics/sdr-summary/handoffs", {
-          params: {
-            query: {
-              scope_kind: "owner",
-              scope_id: self,
-              ...(pageParam ? { cursor: pageParam } : {}),
-            },
-          },
-          signal,
-        }),
-      ),
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
-  });
+  const rows = useHandoffPages(self, "waiting", totals.waiting > 0);
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   return (
     <Panel title={t("analytics.sdrWaiting")}>
@@ -288,20 +262,12 @@ export function WaitingOnOthers({
                   locale={locale}
                 />
               ))}
-              {rows.hasNextPage && (
-                <PanelRow>
-                  <Button
-                    onClick={() => void rows.fetchNextPage()}
-                    disabled={rows.isFetchingNextPage}
-                  >
-                    {t("analytics.sdrShowMore")}
-                  </Button>
-                </PanelRow>
-              )}
+              <MoreRows rows={rows} />
             </>
           )}
         </QueryGate>
       )}
+      {totals.returned > 0 && <ReturnedHandoffs self={self} locale={locale} />}
     </Panel>
   );
 }
@@ -330,94 +296,126 @@ function WaitingRow({
     waitingOn,
   ];
   return (
+    <HandoffRow row={row} facts={facts}>
+      {row.recipient && !row.recipient.active && (
+        <Badge tone="warning">{t("analytics.prospect.blocked")}</Badge>
+      )}
+      {!row.recipient && <Badge>{t("analytics.prospect.unassigned")}</Badge>}
+    </HandoffRow>
+  );
+}
+
+// A handoff sent back: it waits on the submitter, aged from its return, with
+// the reason the recipient gave. The prospect opens to be worked again.
+function ReturnedRow({
+  row,
+  asOf,
+  locale,
+}: Readonly<{ row: WaitingHandoff; asOf: number; locale: Locale }>) {
+  const t = useT();
+  const facts = [
+    t("analytics.prospect.returnedAgo", {
+      age: formatDuration(asOf - Date.parse(row.waiting_since), locale),
+    }),
+    row.reason ?? t("analytics.prospect.noReason"),
+  ];
+  return (
+    <HandoffRow row={row} facts={facts}>
+      <Badge>{t("analytics.prospect.returned")}</Badge>
+    </HandoffRow>
+  );
+}
+
+function HandoffRow({
+  row,
+  facts,
+  children,
+}: Readonly<{ row: WaitingHandoff; facts: string[]; children: ReactNode }>) {
+  const t = useT();
+  return (
     <PanelRow className="analytics-attention-row">
       <div className="analytics-attention-text">
-        {row.subject ? (
-          <EntityRef
-            kind={row.subject.type}
-            id={row.subject.id}
-            name={row.subject.label}
-          />
-        ) : (
-          <p>{t("analytics.sdrRestrictedProspect")}</p>
-        )}
+        <p className="analytics-attention-title">
+          {row.subject ? (
+            <EntityRef
+              kind={row.subject.type}
+              id={row.subject.id}
+              name={row.subject.label}
+            />
+          ) : (
+            t("analytics.sdrRestrictedProspect")
+          )}{" "}
+          {children}
+        </p>
         <p className="t-caption">{facts.join(" · ")}</p>
       </div>
     </PanelRow>
   );
 }
 
-// The first page of the reader's own day, under the key Home reads it by.
-// The two screens then share one request and one answer.
-export function NeedsYourAction({ locale }: Readonly<{ locale: Locale }>) {
+/** The handoffs sent back to the reader, one page at a time. */
+function ReturnedHandoffs({
+  self,
+  locale,
+}: Readonly<{ self: string; locale: Locale }>) {
   const t = useT();
-  const day = useInfiniteQuery(worklistDayOptions("mine", "all"));
-  const page = day.data?.pages[0];
-  const items = page?.queue?.slice(0, NAMED_WORK) ?? [];
-  // A source that failed or was withheld means the list may be short, so an
-  // empty answer is never read as a clear day.
-  const incomplete = (page?.sources_unavailable?.length ?? 0) > 0;
-  const read = listReadState(day, page?.queue);
-  const state = read === "empty" && incomplete ? "ready" : read;
+  const rows = useHandoffPages(self, "returned", true);
+  const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
+  const asOf = Date.parse(rows.data?.pages[0]?.as_of ?? "");
   return (
-    <Panel
-      title={t("analytics.sdrNeedsYou")}
-      actions={
-        <AppLink
-          className="btn btn-ghost"
-          href={routeHash({ screen: "worklist" })}
-        >
-          {t("analytics.sdrOpenWorklist")}
-        </AppLink>
-      }
-    >
-      <PanelBody>
-        <SurfaceState
-          state={state}
-          emptyLabel={t("analytics.sdrNothingNeedsYou")}
-          loadingLabel={t("analytics.sdrNeedsYou")}
-          detail={{ onRetry: () => void day.refetch() }}
-        >
-          {page?.summary && (
-            <PanelIntro>
-              {t("analytics.sdrWorkCount", {
-                total: formatNumber(page.summary.total, locale),
-                urgent: formatNumber(page.summary.urgent, locale),
-              })}
-            </PanelIntro>
-          )}
-          {incomplete && (
-            <p className="t-caption">{t("analytics.sdrWorkIncomplete")}</p>
-          )}
-        </SurfaceState>
-      </PanelBody>
-      {state === "ready" &&
-        items.map((item) => (
-          <WorkRow key={`${item.source}-${item.id}`} item={item} />
-        ))}
-    </Panel>
+    <QueryGate query={rows} pendingLabel={t("analytics.sdrReturned")}>
+      {() => (
+        <>
+          {loaded.map((row) => (
+            <ReturnedRow key={row.id} row={row} asOf={asOf} locale={locale} />
+          ))}
+          <MoreRows rows={rows} />
+        </>
+      )}
+    </QueryGate>
   );
 }
 
-function WorkRow({ item }: Readonly<{ item: WorklistItem }>) {
+function useHandoffPages(
+  self: string,
+  state: "waiting" | "returned",
+  enabled: boolean,
+) {
+  return useInfiniteQuery({
+    queryKey: ["sdr-summary", self, "handoffs", state],
+    enabled,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam, signal }) =>
+      unwrap(
+        await api.GET("/analytics/sdr-summary/handoffs", {
+          params: {
+            query: {
+              scope_kind: "owner",
+              scope_id: self,
+              state,
+              ...(pageParam ? { cursor: pageParam } : {}),
+            },
+          },
+          signal,
+        }),
+      ),
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
+  });
+}
+
+function MoreRows({
+  rows,
+}: Readonly<{ rows: ReturnType<typeof useHandoffPages> }>) {
   const t = useT();
-  const category = `worklist.category.${item.category}`;
-  const title =
-    item.title ||
-    item.subject?.label ||
-    (isMessageKey(category) ? t(category) : t("worklist.untitled.generic"));
+  if (!rows.hasNextPage) return null;
   return (
-    <PanelRow className="analytics-attention-row">
-      <div className="analytics-attention-text">
-        <p className="analytics-attention-title">{title}</p>
-        {item.subject && isEntityKind(item.subject.type) && (
-          <EntityRef
-            kind={item.subject.type}
-            id={item.subject.id}
-            name={item.subject.label}
-          />
-        )}
-      </div>
+    <PanelRow>
+      <Button
+        onClick={() => void rows.fetchNextPage()}
+        disabled={rows.isFetchingNextPage}
+      >
+        {t("analytics.sdrShowMore")}
+      </Button>
     </PanelRow>
   );
 }

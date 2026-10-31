@@ -245,6 +245,9 @@
   grid-auto-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
+.report-chart[data-size="compact"] .report-chart-column-pair {
+  height: 5rem;
+}
 .report-chart-column-group {
   min-width: 0;
 }

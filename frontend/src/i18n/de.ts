@@ -7262,8 +7262,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Leads warten noch auf eine Antwort",
   "analytics.overview.monthlyTitle": "Monatsziele, {month}",
   "analytics.overview.noMonthlyTarget": "Kein Monatsziel gesetzt",
-  "analytics.overview.setMonthlyTargetBody":
-    "Setze ein Monatsziel für Termine oder angenommene Übergaben, um zu sehen, was diesen Monat fehlt.",
   "analytics.overview.noHandoffs":
     "Qualifizierte Leads sind dein wichtigstes Ergebnis, weil dieses Unternehmen keine SDR-Übergaben nutzt.",
   "analytics.overview.changeWorkflow": "In der Einrichtung ändern",
@@ -7271,10 +7269,68 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Admins können das in der Einrichtung festlegen.",
   "analytics.attentionIncomplete":
     "Einige Prüfungen konnten nicht gelesen werden, daher kann diese Liste unvollständig sein.",
-  "analytics.overview.mainOutcome": "Wichtigstes Ergebnis",
   "analytics.overview.workflowFailed":
     "Ob dieses Unternehmen SDR-Übergaben nutzt, konnte nicht gelesen werden.",
-  "analytics.overview.workflowTitle": "SDR-Übergaben",
+  "analytics.prospect.results": "Deine Ergebnisse",
+  "analytics.prospect.withheld": "Für dich verborgen",
+  "analytics.prospect.failed": "Konnte nicht gelesen werden",
+  "analytics.prospect.failedDetail":
+    "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
+  "analytics.prospect.basisAccepted":
+    "Als Deal angenommene Übergaben, {period}",
+  "analytics.prospect.basisQualified":
+    "Von {arrived} Leads, die {period} eingegangen sind",
+  "analytics.prospect.weeksFailed":
+    "Die letzten Wochen konnten nicht gelesen werden.",
+  "analytics.prospect.noMeetingsWeek":
+    "Diese Woche sind keine Termine als stattgefunden erfasst",
+  "analytics.prospect.noMeetingsPeriod":
+    "In diesem Zeitraum sind keine Termine als stattgefunden erfasst",
+  "analytics.prospect.unansweredWithheld":
+    "Die Zahl unbeantworteter Leads ist für dich verborgen",
+  "analytics.prospect.unansweredFailed":
+    "Unbeantwortete Leads konnten nicht gezählt werden",
+  "analytics.prospect.tooFew": "Zu wenige",
+  "analytics.prospect.tooFewResponses":
+    "Zu wenige beantwortete Leads für eine typische Zeit.",
+  "analytics.prospect.upcoming": "Gebuchte Termine",
+  "analytics.prospect.upcomingThrough": "Nächste 14 Tage, bis {date}",
+  "analytics.prospect.weeksLabel": "{metric} pro Woche",
+  "analytics.prospect.weeksByArrival":
+    "Jeder Lead zählt in der Woche, in der er eingegangen ist.",
+  "analytics.prospect.weeksByAcceptance":
+    "Jede Übergabe zählt in der Woche, in der sie angenommen wurde. Die letzte Woche zählt bis jetzt.",
+  "analytics.prospect.historyTitle":
+    "Wie sich deine Ergebnisse entwickelt haben",
+  "analytics.prospect.historyCaption":
+    "Woche für Woche seit {from}. Die laufende Woche zählt bis jetzt.",
+  "analytics.prospect.blocked": "Kann nicht mehr handeln",
+  "analytics.prospect.unassigned": "Gemeinsame Warteschlange",
+  "analytics.prospect.returned": "Zurückgegeben",
+  "analytics.prospect.returnedAgo": "Vor {age} zurückgegeben",
+  "analytics.prospect.noReason": "Kein Grund angegeben",
+  "analytics.prospect.noUpcoming":
+    "Keine Termine in den nächsten 14 Tagen gebucht",
+  "analytics.prospect.restrictedRecord":
+    "Ein Datensatz, den du nicht öffnen kannst",
+  "analytics.prospect.prepTitle": "Termine zum Vorbereiten",
+  "analytics.prospect.upcomingTitle": "Anstehende Termine",
+  "analytics.prospect.cohortTitle": "Was aus deinen Übergaben wurde",
+  "analytics.prospect.cohortPeriods":
+    "Für eine Woche oder einen Monat angezeigt. Wähle einen dieser Zeiträume.",
+  "analytics.prospect.cohortCaption_one":
+    "{count} Übergabe, die du {period} eingereicht hast, nach aktuellem Stand",
+  "analytics.prospect.cohortCaption_other":
+    "{count} Übergaben, die du {period} eingereicht hast, nach aktuellem Stand",
+  "analytics.prospect.cohort.accepted": "Angenommen",
+  "analytics.prospect.cohort.recycled": "Zurückgegeben",
+  "analytics.prospect.cohort.rejected": "Abgelehnt",
+  "analytics.prospect.cohort.waiting": "Noch nicht entschieden",
+  "analytics.doNext.title": "Als Nächstes",
+  "analytics.doNext.more_one": "{count} weitere in deiner Worklist",
+  "analytics.doNext.more_other": "{count} weitere in deiner Worklist",
+  "analytics.doNext.open": "Öffnen",
+  "analytics.doNext.openNamed": "{title} öffnen",
   "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
   "analytics.overview.team": "Team-Akquise",
   "analytics.team.chooseTeam": "Wähle ein Team",
@@ -7569,9 +7625,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads, die noch auf eine erste Antwort warten",
   "analytics.sdrQualifiedOf": "{qualified} von {arrived}",
-  "analytics.sdrUpcomingMeetings": "Anstehende Termine",
-  "analytics.sdrUpcomingMeetingsDetail":
-    "Gebucht und noch nicht stattgefunden, Stand heute.",
   "analytics.sdrWaiting": "Übergaben, die auf andere warten",
   "analytics.sdrWaitingIntro":
     "Übergaben, die du eingereicht hast und über die noch niemand entschieden hat. Eine zurückgegebene und neu eingereichte Übergabe wartet ab der neuen Einreichung.",
@@ -7592,10 +7645,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wartet seit {age}, seit du sie neu eingereicht hast",
   "analytics.sdrRestrictedProspect":
     "Ein Interessent, den du nicht öffnen kannst",
-  "analytics.sdrNeedsYou": "Wartet auf dich",
   "analytics.sdrOpenWorklist": "Worklist öffnen",
   "analytics.sdrNothingNeedsYou": "Gerade wartet nichts auf dich",
-  "analytics.sdrWorkCount": "Zu erledigen: {total}. Dringend: {urgent}.",
   "analytics.sdrWorkIncomplete":
     "Ein Teil deiner Arbeit konnte nicht gelesen werden, daher fehlen hier vielleicht Einträge.",
   "analytics.myMeetings": "Meine Termine",

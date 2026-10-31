@@ -17,6 +17,7 @@ import {
   overviewRoutes,
   teamReview,
   twoPipelines,
+  upcomingWindow,
 } from "./analytics.overview.fixtures";
 import {
   backlogList,
@@ -24,11 +25,15 @@ import {
   bookingsTrend,
   framed,
   frames,
+  isWeeks,
   movementOn,
   prospectingOn,
+  prospectingWeeks,
   quarterSales,
+  returnedHandoffs,
   teamOn,
   teamReviewOn,
+  upcomingMeetings,
   waitingHandoffs,
   workday,
   workRows,
@@ -47,6 +52,8 @@ type Routes = NonNullable<Parameters<typeof overviewRoutes>[0]>;
 export type OverviewSetup = Readonly<{
   answer: (url: URL) => ReportingEvaluation;
   routes: Routes;
+  // The handoffs sent back to the reader, when the scenario has some.
+  returned?: () => Response;
 }>;
 type Pair = OverviewSetup | Readonly<{ excluded: string }>;
 
@@ -108,7 +115,15 @@ const summary = (
         }
       : {}),
     upcoming_meetings: waits.upcoming,
+    upcoming_window: upcomingWindow(week.clock),
   });
+const meetingRows = json({
+  as_of: week.clock,
+  window: upcomingWindow(week.clock),
+  rows: upcomingMeetings(week.clock),
+});
+const returnedRows = () =>
+  jsonResponse({ as_of: week.clock, rows: returnedHandoffs() });
 
 // Sales review answers its movement read apart from its headline read, both on
 // one clock.
@@ -129,16 +144,25 @@ function sales(
 function prospecting(
   evaluation: ReportingEvaluation,
   routes: Routes = {},
+  weeks: ReportingEvaluation = prospectingWeeks(
+    week,
+    routes.template === "sales" ? "leads_promoted" : "accepted_opportunities",
+    routes.template === "sales" ? [1, 2, 0, 4, 2, 3] : [2, 0, 3, 1, 2, 2],
+  ),
 ): Pair {
+  const served: Routes = {
+    seat: "sdr",
+    summary: summary("handoff"),
+    handoffs: handoffRows,
+    returned: returnedRows,
+    meetings: meetingRows,
+    worklist: day(),
+    ...routes,
+  };
   return {
-    answer: () => evaluation,
-    routes: {
-      seat: "sdr",
-      summary: summary("handoff"),
-      handoffs: handoffRows,
-      worklist: day(),
-      ...routes,
-    },
+    answer: (url) => (isWeeks(url) ? weeks : evaluation),
+    returned: served.returned,
+    routes: served,
   };
 }
 
@@ -325,9 +349,20 @@ export const OVERVIEW_SCENARIOS = {
           ],
         }),
       ),
-      prospecting: {
-        excluded: "My prospecting draws no history today.",
-      },
+      // Weeks with no reading stay empty; nothing says history is limited,
+      // because no provenance says so.
+      prospecting: prospecting(
+        prospectingOn(week),
+        {},
+        prospectingWeeks(week, "accepted_opportunities", [
+          null,
+          null,
+          null,
+          null,
+          1,
+          2,
+        ]),
+      ),
       team: { excluded: "Team prospecting draws no history today." },
     },
   },
@@ -801,6 +836,49 @@ export const OVERVIEW_SCENARIOS = {
       team: { excluded: SALES_ONLY },
     },
   },
+  unknownWorkflow: {
+    about: "Neither the framework nor the summary says which workflow applies.",
+    views: {
+      sales: { excluded: WORKFLOW },
+      prospecting: prospecting(prospectingOn(week), {
+        framework: unavailable,
+        summary: unavailable,
+      }),
+      team: {
+        excluded: "Team prospecting reads the workflow from its review.",
+      },
+    },
+  },
+  worklistFailed: {
+    about: "The reader's day could not be read, so no move is offered.",
+    views: {
+      sales: { excluded: "Sales review lists review findings, not work rows." },
+      prospecting: prospecting(prospectingOn(week), { worklist: unavailable }),
+      team: { excluded: NO_ACTION_LIST },
+    },
+  },
+  readingsWithheld: {
+    about: "Held meetings and unanswered leads are hidden from this reader.",
+    views: {
+      sales: { excluded: "Sales review has its own withheld owner chart." },
+      prospecting: prospecting(
+        prospectingOn(week, [
+          metric("meetings_held", null, {
+            coverage: { status: "ok", withheld: true },
+          }),
+          metric("accepted_opportunities", 2),
+          metric("leads_promoted", 3, { denominator: 11 }),
+          metric("lead_first_response", 1.7),
+          metric("leads_awaiting_response", null, {
+            coverage: { status: "ok", withheld: true },
+          }),
+        ]),
+      ),
+      team: {
+        excluded: "Team prospecting withholds by member, not by figure.",
+      },
+    },
+  },
 } as const satisfies Record<string, OverviewScenario>;
 
 export type ScenarioName = keyof typeof OVERVIEW_SCENARIOS;
@@ -836,6 +914,16 @@ export function installOverviewServer(setup: OverviewSetup): void {
     );
     if (url.pathname.endsWith("/analytics/evaluate"))
       return Promise.resolve(jsonResponse(setup.answer(url)));
+    // The returned list is the waiting route with a state; the stub's route
+    // map cannot see a query, so it is answered here.
+    if (
+      url.pathname.endsWith("/analytics/sdr-summary/handoffs") &&
+      url.searchParams.get("state") === "returned"
+    )
+      return Promise.resolve(
+        setup.returned?.() ??
+          jsonResponse({ as_of: url.searchParams.get("as_of"), rows: [] }),
+      );
     return routed(input, init);
   }) as typeof fetch;
 }

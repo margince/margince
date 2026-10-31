@@ -75,6 +75,26 @@ const secondPage: Page = {
   ],
 };
 
+const WINDOW = {
+  start_at: AS_OF,
+  end_at: "2026-10-04T22:00:00Z",
+  timezone: "Europe/Berlin",
+};
+
+const returnedPage: Page = {
+  as_of: AS_OF,
+  rows: [
+    {
+      id: "h-9",
+      waiting_since: "2026-09-19T12:00:00Z",
+      resubmitted: false,
+      restricted: false,
+      subject: { type: "lead", id: "l-9", label: "Returned lead" },
+      reason: "Budget not confirmed",
+    },
+  ],
+};
+
 function show(
   over: Readonly<{
     summary?: SdrSummary | "failed";
@@ -95,6 +115,8 @@ function show(
         ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
         : jsonResponse(over.summary ?? handoffSummary),
     "GET /analytics/sdr-summary/handoffs": () => jsonResponse(firstPage),
+    "GET /analytics/sdr-summary/meetings": () =>
+      jsonResponse({ as_of: AS_OF, window: WINDOW, rows: [] }),
     "GET /worklist": over.worklist ?? (() => jsonResponse(day())),
   });
   // The stub keys on the path alone, so the cursor's page is answered here.
@@ -106,6 +128,9 @@ function show(
       "https://storybook.local",
     );
     asked.push(url);
+    if (url.searchParams.get("state") === "returned") {
+      return jsonResponse(returnedPage);
+    }
     if (url.searchParams.get("cursor") === "cursor-2") {
       return jsonResponse(secondPage);
     }
@@ -147,6 +172,32 @@ describe("MySdrWork", () => {
     ).toBeNull();
   });
 
+  it("lists a handoff sent back with the reason the recipient gave", async () => {
+    show({
+      summary: {
+        ...handoffSummary,
+        handoffs: {
+          waiting: 3,
+          unassigned: 1,
+          blocked: 1,
+          returned: 1,
+          oldest_waiting_since: "2026-09-18T12:00:00Z",
+        },
+      },
+    });
+    expect(await screen.findByText("Returned lead")).toBeVisible();
+    expect(
+      screen.getByText(/^Sent back .* ago · Budget not confirmed$/),
+    ).toBeVisible();
+  });
+
+  it("marks a waiting handoff whose recipient cannot act", async () => {
+    show();
+    expect(
+      await screen.findByText(en["analytics.prospect.blocked"]),
+    ).toBeVisible();
+  });
+
   it("leaves handoffs out without a handoff workflow and shows meetings coming up", async () => {
     const asked = show({
       summary: {
@@ -156,7 +207,7 @@ describe("MySdrWork", () => {
         upcoming_meetings: 2,
       },
     });
-    expect(await screen.findByText(en["analytics.sdrNeedsYou"])).toBeVisible();
+    expect(await screen.findByText(en["analytics.doNext.title"])).toBeVisible();
     await screen.findByText(en["analytics.sdrLeads"]);
     expect(screen.queryByText(en["analytics.sdrWaiting"])).toBeNull();
     expect(
@@ -174,7 +225,7 @@ describe("MySdrWork", () => {
     expect(
       await within(panel as HTMLElement).findByText(en["state.failed"]),
     ).toBeVisible();
-    expect(screen.queryByText(en["analytics.sdrUpcomingMeetings"])).toBeNull();
+    expect(screen.queryByText(en["analytics.prospect.upcoming"])).toBeNull();
   });
 
   it("never says nothing needs you while a source failed", async () => {
@@ -203,6 +254,35 @@ describe("MySdrWork", () => {
     });
     expect(await screen.findByText(en["state.failed"])).toBeVisible();
     expect(screen.queryByText(en["analytics.sdrNothingNeedsYou"])).toBeNull();
+  });
+
+  it("opens a work row's own record, with its reason and its clock", async () => {
+    show({
+      worklist: () =>
+        jsonResponse(
+          day({
+            queue: [
+              row({
+                id: "handoff-review",
+                title: "Review the handoff for Kestrel Fleet",
+                subject: { type: "lead", id: "l-kestrel", label: "Kestrel" },
+                due_at: "2026-09-21T09:00:00Z",
+                overdue: true,
+                because: [{ kind: "overdue" }],
+                primary_action: "open",
+                actions: ["open"],
+              }),
+            ],
+            summary: { urgent: 1, due: 1, lower_priority: 0, total: 1 },
+          }),
+        ),
+    });
+    const open = await screen.findByRole("link", {
+      name: /^Open Review the handoff for Kestrel Fleet/,
+    });
+    expect(open.getAttribute("href")).toContain("/leads/l-kestrel");
+    expect(open.getAttribute("href")).not.toContain("companies");
+    expect(screen.getByText(en["worklist.overdue"])).toBeVisible();
   });
 
   it("names the Worklist's top items in its own order", async () => {

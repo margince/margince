@@ -417,10 +417,16 @@ export function GroupedBars({
   valueLabel,
   comparisonLabel,
   onSelect,
-}: ChartProps & Readonly<{ comparisonLabel?: string }>) {
+  size = "default",
+}: ChartProps &
+  Readonly<{
+    comparisonLabel?: string;
+    /** `compact` is shorter columns, for weeks beside a lead figure. */
+    size?: "default" | "compact";
+  }>) {
   const scale = readingScale(readings) * 1.15;
   return (
-    <figure className="report-chart">
+    <figure className="report-chart" data-size={size}>
       <figcaption className="sr-only">{label}</figcaption>
       <div className="report-chart-legend">
         <span className="report-chart-key">{valueLabel}</span>

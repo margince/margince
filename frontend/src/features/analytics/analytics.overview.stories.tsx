@@ -235,3 +235,19 @@ export const SalesReviewLegacyLanding: Story = scenario(
 );
 export const SalesReviewNoForecast: Story = scenario("noForecast", "sales");
 export const SalesReviewTwoPipelines: Story = scenario("twoPipelines", "sales");
+export const MyProspectingNotEnoughHistory: Story = scenario(
+  "notEnoughHistory",
+  "prospecting",
+);
+export const MyProspectingUnknownWorkflow: Story = scenario(
+  "unknownWorkflow",
+  "prospecting",
+);
+export const MyProspectingWorklistFailed: Story = scenario(
+  "worklistFailed",
+  "prospecting",
+);
+export const MyProspectingReadingsWithheld: Story = scenario(
+  "readingsWithheld",
+  "prospecting",
+);

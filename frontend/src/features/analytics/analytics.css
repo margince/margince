@@ -198,6 +198,13 @@
   align-items: stretch;
   gap: var(--gapCards);
 }
+/* One column of the lead row: its cards stacked at the gap between cards. */
+.analytics-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
 @media (max-width: 1100px) {
   .analytics-lead {
     grid-template-columns: minmax(0, 1fr);

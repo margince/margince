@@ -67,12 +67,8 @@ export function openOverview(
     asked.push(entry);
     if (hold(url)) return new Promise<Response>(() => {});
     try {
-      if (url.pathname.endsWith("/analytics/evaluate")) {
-        const given = answer(url);
-        return await (given instanceof Response || given instanceof Promise
-          ? given
-          : jsonResponse(given));
-      }
+      const own = ownAnswer(url, answer, routes);
+      if (own) return await own;
       return await routed(input, init);
     } finally {
       entry.settled = clock++;
@@ -86,6 +82,25 @@ export function openOverview(
     </QueryClientProvider>,
   );
   return asked;
+}
+
+// The requests the route map cannot answer: an evaluation, answered by what
+// it asks, and the returned list, which is the waiting route with a state.
+function ownAnswer(
+  url: URL,
+  answer: (url: URL) => Answer,
+  routes: Parameters<typeof overviewRoutes>[0],
+): Response | Promise<Response> | undefined {
+  if (
+    url.pathname.endsWith("/analytics/sdr-summary/handoffs") &&
+    url.searchParams.get("state") === "returned"
+  )
+    return routes?.returned?.();
+  if (!url.pathname.endsWith("/analytics/evaluate")) return undefined;
+  const given = answer(url);
+  return given instanceof Response || given instanceof Promise
+    ? given
+    : jsonResponse(given);
 }
 
 /** The most requests `among` names that were in flight at one moment. */
