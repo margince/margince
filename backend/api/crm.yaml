@@ -34722,7 +34722,7 @@ components:
       description: >-
         A website form (`web_form`): a public intake address that turns a submission into a lead.
         No secret is ever returned here; `secret_configured` says one is stored.
-      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at]
+      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -34752,10 +34752,9 @@ components:
         last_post_at:
           type: [string, 'null']
           format: date-time
-          readOnly: true
           description: >-
             When the form last landed a post, stamped at most once a minute. Null until the
-            first one. A post the spam checks drop is not counted.
+            first one since the time was tracked. A post the spam checks drop is not counted.
 
     WebFormCreated:
       allOf:
@@ -53647,6 +53646,8 @@ components:
           description: |
             The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
             rejected with 422 — promotion is engagement, not import or an outbound touch.
+            Every trigger but human_qualify needs engagement on the lead that
+            `qualification_evidence` would offer; with none, the promotion is refused with 422.
         evidence:
           type: object
           description: Which inbound email/meeting (or human) triggered promotion; recorded in audit.
@@ -53687,9 +53688,13 @@ components:
       readOnly: true
       description: |
         The strongest genuine-engagement signal captured against this lead, derived from its
-        linked activities at read time: a held meeting over a booked one over an inbound reply.
-        What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-        lead has no such signal yet (a human may still qualify with `human_qualify`).
+        linked activities at read time: a held meeting over a booked one over an inbound reply,
+        by mail or channel message. A meeting with no recorded status counts as booked, and a
+        meeting the lead declined counts as nothing. Only engagement inside the waiting
+        horizon counts (the one that keeps automatic work current, at most 30 days), so older
+        engagement is left out. What the qualify dialog shows as the reason and sends back as
+        `trigger`; null when the lead has no such signal (a human may still qualify with
+        `human_qualify`).
       required: [trigger]
       properties:
         trigger:
@@ -56404,6 +56409,23 @@ components:
           $ref: '#/components/schemas/ReportingEvidenceRef'
         target_comparison:
           $ref: '#/components/schemas/ReportingTargetComparison'
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the low end of the central 80% of finishes under the chances
+            in use, the same figure GET /forecast returns. At most one finish in ten falls below
+            it. It is not a bound on the metric's value. Absent where no range was drawn.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the high end of the central 80% of finishes. At most one
+            finish in ten falls above it.
     ReportingTargetComparison:
       type: object
       additionalProperties: false
@@ -57982,6 +58004,25 @@ components:
             Whether the chances moved with recorded outcomes and learned risk effects
             (installation setting `forecast_self_correcting`). Absent on a stored answer from
             before the field existed.
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The low end of the central 80% of finishes: won money plus the open deals, each won or lost by
+            its chance in use, so at most one finish in ten falls below it. It assumes the chances are right
+            and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing.
+            Absent on a stored answer from before ranges were drawn, and present together with
+            `range_high_minor`.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The high end of the central 80% of finishes: at most one finish in ten falls above it.
+            Present together with `range_low_minor`.
         contributions_limited:
           type: boolean
           description: >-
@@ -63295,7 +63336,10 @@ components:
         Pending proposals alone carry this review-time projection. An approval attempt
         with stale context returns version_skew. Incomplete, unavailable or conflicting
         context returns 422 with approval_preview_incomplete, approval_preview_unavailable
-        or approval_preview_conflict respectively, without recording a decision.
+        or approval_preview_conflict respectively, without recording a decision. An agent's
+        proposal is explained as the agent whose retry runs it. When that effect touches a
+        record the reader cannot open, the state is needs_wider_sight, nothing of the plan is
+        shown, and an approval attempt returns 403 with approval_needs_wider_sight.
       required: [version, state, changes, reviewer_reason]
       properties:
         import_rows:
@@ -63325,7 +63369,7 @@ components:
         version: { type: integer, minimum: 1 }
         state:
           type: string
-          x-extensible-enum: [ready, stale, unavailable, incomplete]
+          x-extensible-enum: [ready, stale, unavailable, incomplete, needs_wider_sight]
           description: Whether the full effect can still be explained from authorized records.
         changes:
           type: array

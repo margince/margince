@@ -29668,7 +29668,7 @@ type Approval struct {
 	Kind       string              `json:"kind"`
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
-	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 	Preview *ApprovalPreview `json:"preview,omitempty"`
 
 	// ProposalId For kind=coldstart, the ColdStartProposal this approval accepts (links the staged proposal to its approval item).
@@ -29795,7 +29795,7 @@ type ApprovalPreferences struct {
 	Data []ApprovalPreference `json:"data"`
 }
 
-// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 type ApprovalPreview struct {
 	Changes []ApprovalPreviewChange `json:"changes"`
 
@@ -42943,6 +42943,12 @@ type ForecastReadings struct {
 	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
 
+	// RangeHighMinor The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+
+	// RangeLowMinor The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+	RangeLowMinor *int64 `json:"range_low_minor,omitempty"`
+
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
 	ScopeHoldsDeals *bool               `json:"scope_holds_deals,omitempty"`
 	ScopeId         *openapi_types.UUID `json:"scope_id,omitempty"`
@@ -45751,9 +45757,13 @@ type Lead struct {
 	PromotedContactId *openapi_types.UUID `json:"promoted_contact_id,omitempty"`
 
 	// QualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
-	// linked activities at read time: a held meeting over a booked one over an inbound reply.
-	// What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-	// lead has no such signal yet (a human may still qualify with `human_qualify`).
+	// linked activities at read time: a held meeting over a booked one over an inbound reply,
+	// by mail or channel message. A meeting with no recorded status counts as booked, and a
+	// meeting the lead declined counts as nothing. Only engagement inside the waiting
+	// horizon counts (the one that keeps automatic work current, at most 30 days), so older
+	// engagement is left out. What the qualify dialog shows as the reason and sends back as
+	// `trigger`; null when the lead has no such signal (a human may still qualify with
+	// `human_qualify`).
 	QualificationEvidence *LeadQualificationEvidence `json:"qualification_evidence,omitempty"`
 
 	// QualifiedDealId The deal opened by the qualify call that promoted this lead, when one was asked for.
@@ -45977,9 +45987,13 @@ type LeadQualification struct {
 }
 
 // LeadQualificationEvidence The strongest genuine-engagement signal captured against this lead, derived from its
-// linked activities at read time: a held meeting over a booked one over an inbound reply.
-// What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-// lead has no such signal yet (a human may still qualify with `human_qualify`).
+// linked activities at read time: a held meeting over a booked one over an inbound reply,
+// by mail or channel message. A meeting with no recorded status counts as booked, and a
+// meeting the lead declined counts as nothing. Only engagement inside the waiting
+// horizon counts (the one that keeps automatic work current, at most 30 days), so older
+// engagement is left out. What the qualify dialog shows as the reason and sends back as
+// `trigger`; null when the lead has no such signal (a human may still qualify with
+// `human_qualify`).
 type LeadQualificationEvidence struct {
 	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 	OccurredAt *time.Time          `json:"occurred_at,omitempty"`
@@ -47176,7 +47190,7 @@ type MagicLine struct {
 	// ApprovalKind The staged action kind on a needs_you line, for an action label separate from its record name.
 	ApprovalKind *string `json:"approval_kind,omitempty"`
 
-	// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+	// ApprovalPreview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 	ApprovalPreview *ApprovalPreview `json:"approval_preview,omitempty"`
 
 	// Before The fields this change moved, as they were. MASKED to what the reader may see, through the same field mask the record's own history uses — a receipt is not a way around the boundary the record keeps.
@@ -50530,11 +50544,15 @@ type PromoteLeadRequest struct {
 
 	// Trigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 	// rejected with 422 — promotion is engagement, not import or an outbound touch.
+	// Every trigger but human_qualify needs engagement on the lead that
+	// `qualification_evidence` would offer; with none, the promotion is refused with 422.
 	Trigger PromoteLeadRequestTrigger `json:"trigger"`
 }
 
 // PromoteLeadRequestTrigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 // rejected with 422 — promotion is engagement, not import or an outbound touch.
+// Every trigger but human_qualify needs engagement on the lead that
+// `qualification_evidence` would offer; with none, the promotion is refused with 422.
 type PromoteLeadRequestTrigger string
 
 // PromoteLeadResponse defines model for PromoteLeadResponse.
@@ -52593,14 +52611,20 @@ type ReportingFrameworkInputTemplate string
 
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
-	Attainment   *float64             `json:"attainment,omitempty"`
-	Coverage     ReportingCoverage    `json:"coverage"`
-	Denominator  *float64             `json:"denominator,omitempty"`
-	Evidence     ReportingEvidenceRef `json:"evidence"`
-	Id           ReportingMetricID    `json:"id"`
-	Numerator    *float64             `json:"numerator,omitempty"`
-	Target       *float64             `json:"target,omitempty"`
-	TargetActual *float64             `json:"target_actual,omitempty"`
+	Attainment  *float64             `json:"attainment,omitempty"`
+	Coverage    ReportingCoverage    `json:"coverage"`
+	Denominator *float64             `json:"denominator,omitempty"`
+	Evidence    ReportingEvidenceRef `json:"evidence"`
+	Id          ReportingMetricID    `json:"id"`
+	Numerator   *float64             `json:"numerator,omitempty"`
+
+	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+
+	// RangeLowMinor `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+	RangeLowMinor *int64   `json:"range_low_minor,omitempty"`
+	Target        *float64 `json:"target,omitempty"`
+	TargetActual  *float64 `json:"target_actual,omitempty"`
 
 	// TargetComparison Where the current fiscal quarter's expected landing stands against a
 	// compatible `bookings_won` target, and how far the open pipeline covers
@@ -58310,8 +58334,8 @@ type WebForm struct {
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
 
-	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one. A post the spam checks drop is not counted.
-	LastPostAt *time.Time `json:"last_post_at,omitempty"`
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at"`
 
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
@@ -58372,8 +58396,8 @@ type WebFormCreated struct {
 	FormKey string             `json:"form_key"`
 	Id      openapi_types.UUID `json:"id"`
 
-	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one. A post the spam checks drop is not counted.
-	LastPostAt *time.Time `json:"last_post_at,omitempty"`
+	// LastPostAt When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
+	LastPostAt *time.Time `json:"last_post_at"`
 
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`

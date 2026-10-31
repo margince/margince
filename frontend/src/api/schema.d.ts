@@ -23374,9 +23374,9 @@ export interface components {
             archived_at?: string | null;
             /**
              * Format: date-time
-             * @description When the form last landed a post, stamped at most once a minute. Null until the first one. A post the spam checks drop is not counted.
+             * @description When the form last landed a post, stamped at most once a minute. Null until the first one since the time was tracked. A post the spam checks drop is not counted.
              */
-            readonly last_post_at?: string | null;
+            last_post_at: string | null;
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
             /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
@@ -39039,6 +39039,8 @@ export interface components {
             /**
              * @description The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
              *     rejected with 422 — promotion is engagement, not import or an outbound touch.
+             *     Every trigger but human_qualify needs engagement on the lead that
+             *     `qualification_evidence` would offer; with none, the promotion is refused with 422.
              * @enum {string}
              */
             trigger: "inbound_reply" | "meeting_booked" | "meeting_held" | "human_qualify";
@@ -39082,9 +39084,13 @@ export interface components {
         };
         /**
          * @description The strongest genuine-engagement signal captured against this lead, derived from its
-         *     linked activities at read time: a held meeting over a booked one over an inbound reply.
-         *     What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-         *     lead has no such signal yet (a human may still qualify with `human_qualify`).
+         *     linked activities at read time: a held meeting over a booked one over an inbound reply,
+         *     by mail or channel message. A meeting with no recorded status counts as booked, and a
+         *     meeting the lead declined counts as nothing. Only engagement inside the waiting
+         *     horizon counts (the one that keeps automatic work current, at most 30 days), so older
+         *     engagement is left out. What the qualify dialog shows as the reason and sends back as
+         *     `trigger`; null when the lead has no such signal (a human may still qualify with
+         *     `human_qualify`).
          */
         LeadQualificationEvidence: {
             /** @enum {string} */
@@ -41344,6 +41350,16 @@ export interface components {
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
             target_comparison?: components["schemas"]["ReportingTargetComparison"];
+            /**
+             * Format: int64
+             * @description `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+             */
+            range_low_minor?: number;
+            /**
+             * Format: int64
+             * @description `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
+             */
+            range_high_minor?: number;
         };
         /**
          * @description Where the current fiscal quarter's expected landing stands against a
@@ -42252,6 +42268,16 @@ export interface components {
             qualified?: components["schemas"]["ForecastQualifiedReadings"];
             /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
             self_correcting?: boolean;
+            /**
+             * Format: int64
+             * @description The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+             */
+            range_low_minor?: number;
+            /**
+             * Format: int64
+             * @description The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
+             */
+            range_high_minor?: number;
             /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance. The totals still include colleagues' deals. */
             contributions_limited?: boolean;
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
@@ -46012,7 +46038,7 @@ export interface components {
             occurred_precision: components["schemas"]["OccurredPrecision"];
             workstream?: string;
         };
-        /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. */
+        /** @description A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight. */
         ApprovalPreview: {
             /** @description The complete bounded row plan. An incomplete plan cannot authorize an import. */
             import_rows?: components["schemas"]["ApprovalPreviewImportRow"][];

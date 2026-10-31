@@ -101,7 +101,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
 	status_set_by, qualified_deal_id,
-	` + leadQualificationEvidenceSQL() + `,
+	` + leadQualificationEvidenceSQL(slaNow(ctx), arg) + `,
 	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),

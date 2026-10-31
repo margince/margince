@@ -40,7 +40,7 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Captured activity sets Contacted and Engaged automatically. You can also set them by hand; the record tells you which.
+Captured activity sets Contacted and Engaged automatically. An imported reply already older than 30 days, or a meeting the lead declined, does not set Engaged. You can also set them by hand; the record tells you which.
 
 You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.
@@ -54,7 +54,7 @@ To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also
 **Qualify** is turned off until the lead has an email address and an open status.
 Also called: convert a lead, promote a lead, turn a lead into a contact or opportunity.
 
-Qualifying a lead records what started it: a reply that came in, a meeting booked, a meeting held, or your own call. The **Why** line in the dialog is filled from the captured activity when there is one. If not, it reads "Reason: qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when they engage with you; importing it or writing to it is not enough.
+Qualifying a lead records what started it: a reply that came in, a meeting booked, a meeting held, or your own call. A synced meeting nobody marked counts as booked. A reply or meeting counts only within the last 30 days, or the shorter time your team's reply speed sets. The **Why** line in the dialog is filled from that activity, or reads "Reason: qualified by you." when there is none. Mail you sent that had no reply **does not count**. A lead qualifies when they engage with you; importing it or writing to it is not enough.
 
 Then one of two things happens, in a single step:
 

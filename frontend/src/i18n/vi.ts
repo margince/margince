@@ -838,6 +838,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
   "approval.preview.unavailable":
     "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
+  "approval.preview.needsWiderSight":
+    "Thay đổi này chạm đến các bản ghi bạn không mở được. Một đồng nghiệp xem được chúng phải quyết định.",
   "approval.preview.change": "Từ {before} thành {after}",
   "approval.import.row": "{kind}, dòng {line} ({key})",
   "approval.import.create": "Tạo bản ghi mới",
@@ -13325,6 +13327,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landing": "Dự kiến cuối kỳ",
   "forecast.landingFrom": "Dự kiến · {won} đã chốt + {remaining} sắp tới",
   "forecast.landingFromCall": "Theo nhận định · {won} đã chốt đến nay",
+  "forecast.range": "8 trên 10 kết quả nằm trong khoảng {low} đến {high}",
+  "forecast.rangeBasis":
+    "Dựa trên tỷ lệ đang dùng. Mỗi giao dịch đang mở được tính thắng hoặc thua theo tỷ lệ của nó qua nhiều lượt. Cứ 10 kết quả thì nhiều nhất 1 kết quả thấp hơn khoảng này và nhiều nhất 1 kết quả cao hơn. Khoảng này giả định các tỷ lệ là đúng.",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingRecordsDetail":
     "Đã chốt cộng các deal Commit có ngày chốt đã xác nhận, chưa tính dự báo của quản lý",
@@ -14550,7 +14555,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.tally": "Webhook có chữ ký từ Tally",
   "webForms.row.consent": "Cần đồng ý",
   "webForms.row.lastPost": "Lần gửi gần nhất {when}",
-  "webForms.row.noPost": "Chưa có lần gửi nào",
+  "webForms.row.noPost": "Chưa ghi nhận lần gửi nào",
   "webForms.setup": "Xem cách cài đặt",
   "webForms.edit": "Sửa",
   "webForms.pause": "Tạm dừng biểu mẫu",

@@ -6,19 +6,21 @@ package approvals
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ContextPin digests the facts outside the target row that a kind's reviewed
 // outcome reads, such as the company a promotion resolves. The version pin
 // cannot see them, because changing them never bumps the target.
 //
-// It must not depend on who asks. Staging runs as the stager, the preview as
-// the approver and redemption as the agent, and all three must agree.
+// The service runs it as the principal the effect runs as (effectContext).
+// So the stager, the approver and the redeeming agent digest the same facts.
 type ContextPin func(ctx context.Context, tx pgx.Tx, targetID ids.UUID, proposedChange json.RawMessage) (string, error)
 
 // WithContextPin registers the context pin for one staging kind. Staging takes
@@ -34,7 +36,15 @@ func (s *Service) stagedContextDigest(ctx context.Context, tx pgx.Tx, in StageIn
 	if !ok {
 		return "", nil
 	}
-	return pin(ctx, tx, in.TargetID, in.ProposedChange)
+	stager, ok := principal.Actor(ctx)
+	if !ok {
+		return "", errors.New("crmapprovals: no actor bound to context")
+	}
+	pinCtx, err := s.effectContext(ctx, tx, stagedByActor(stager))
+	if err != nil {
+		return "", err
+	}
+	return pin(pinCtx, tx, in.TargetID, in.ProposedChange)
 }
 
 // checkContextPin refuses an approval whose context moved since it was pinned.
@@ -47,7 +57,11 @@ func (s *Service) checkContextPin(ctx context.Context, tx pgx.Tx, a row) error {
 	if a.ContextDigest == nil || a.TargetID == nil {
 		return auth.ReleasedContextMoved()
 	}
-	current, err := pin(ctx, tx, *a.TargetID, a.ProposedChange)
+	pinCtx, err := s.effectContext(ctx, tx, stagedByRow(a))
+	if err != nil {
+		return err
+	}
+	current, err := pin(pinCtx, tx, *a.TargetID, a.ProposedChange)
 	if err != nil {
 		return err
 	}
@@ -58,7 +72,7 @@ func (s *Service) checkContextPin(ctx context.Context, tx pgx.Tx, a row) error {
 }
 
 // previewContextPin checks the pin of a row a human is reading. A pending row
-// staged before its kind had a pin is pinned now, on the context the human sees.
+// staged before its kind had a pin is pinned now.
 func (s *Service) previewContextPin(ctx context.Context, tx pgx.Tx, a row) error {
 	if _, ok := s.contextPins[a.Kind]; ok && a.ContextDigest == nil && a.Status == statusPending {
 		return s.storeContextDigest(ctx, tx, a)
@@ -89,7 +103,11 @@ func (s *Service) storeContextDigest(ctx context.Context, tx pgx.Tx, a row) erro
 	if a.TargetID == nil {
 		return auth.ReleasedContextMoved()
 	}
-	digest, err := s.contextPins[a.Kind](ctx, tx, *a.TargetID, a.ProposedChange)
+	pinCtx, err := s.effectContext(ctx, tx, stagedByRow(a))
+	if err != nil {
+		return err
+	}
+	digest, err := s.contextPins[a.Kind](pinCtx, tx, *a.TargetID, a.ProposedChange)
 	if err != nil {
 		return err
 	}

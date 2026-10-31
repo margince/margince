@@ -858,6 +858,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":
     "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
+  "approval.preview.needsWiderSight":
+    "Diese Änderung betrifft Datensätze, die du nicht öffnen kannst. Entscheiden muss jemand, der sie sehen kann.",
   "approval.preview.change": "{before} → {after}",
   "approval.import.row": "{kind}, Zeile {line} ({key})",
   "approval.import.create": "Neuen Datensatz erstellen",
@@ -13685,6 +13687,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingFrom":
     "Hochgerechnet · {won} gewonnen + {remaining} erwartet",
   "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
+  "forecast.range": "8 von 10 Ergebnissen zwischen {low} und {high}",
+  "forecast.rangeBasis":
+    "Beruht auf den genutzten Chancen. Jeder offene Deal wird in vielen Durchläufen mit seiner Chance gewonnen oder verloren. Höchstens ein Ergebnis von zehn liegt unter der Spanne und höchstens eines von zehn darüber. Die Spanne setzt voraus, dass die Chancen stimmen.",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingRecordsDetail":
     "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",
@@ -14928,7 +14933,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.tally": "Signierter Webhook von Tally",
   "webForms.row.consent": "Einwilligung nötig",
   "webForms.row.lastPost": "Letzte Sendung {when}",
-  "webForms.row.noPost": "Noch keine Sendung",
+  "webForms.row.noPost": "Noch keine Sendung erfasst",
   "webForms.setup": "Einrichtung zeigen",
   "webForms.edit": "Bearbeiten",
   "webForms.pause": "Formular pausieren",

@@ -1,10 +1,10 @@
 {
-  "dataset_digest": "1a4bbaa57970c372341a2bbe104d95686c0cebc26d4cfa12465b0531fb73753b",
+  "dataset_digest": "fdf9e8b488c96b24cf88091bf9384324ba8fff489b749623b93367c25e34563b",
   "train_end": "2027-02-07",
   "validation_end": "2027-04-18",
   "horizon_edges": [30, 60],
   "settle_days": 5,
-  "eligible_population": "the test corpus: workspace scope, EUR, forecast_v2",
+  "eligible_population": "the test corpus: workspace scope, EUR, forecast_v3",
   "minimum_outcomes": 1,
   "minimum_calibration_deals": 5,
   "improvement_threshold": "test value",

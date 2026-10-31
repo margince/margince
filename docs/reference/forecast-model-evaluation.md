@@ -1,8 +1,8 @@
 # Forecast model evaluation
 
 `backend/internal/compose/forecastevalcmd` scores the forecasts an installation froze against what each
-snapshot's own deals went on to win. It compares the readings every snapshot stores, stage weighting and commit
-evidence. It scores one trivial candidate only when a reviewed pre-registration is given; the steps to write one are
+snapshot's own deals went on to win. It compares stage weighting at the typed chances, self-correcting weighting at
+the chances in use, commit evidence, and the frozen range. It scores one trivial candidate only when a reviewed pre-registration is given; the steps to write one are
 in [Pre-register a forecast evaluation](../how-to/pre-register-a-forecast-evaluation.md).
 
 ## Run it
@@ -50,14 +50,18 @@ history.
 ## What the dataset holds
 
 `forecasting.EvaluationDataset` (`backend/internal/modules/forecasting/evaluationdataset.go`), version
-`forecast_evaluation_dataset_v2`:
+`forecasting.EvaluationDatasetVersion`, now `forecast_evaluation_dataset_v3`:
 
 - every workspace-scope snapshot, oldest first, with the figures it froze: won, commit evidence, weighted and open
   money, the counts of eligible, priced and unconverted deals, the forward measure and qualified policy it was
   taken under, and its population fingerprint;
+- for each snapshot, whether self-correction was on, the frozen range when one was drawn, the open deals summed at
+  their typed chances (`typed_weighted_minor`), and the evidence group of its open deals
+  (`evidence_sufficiency`);
 - for each snapshot whose period ended by `-as-of`, two outcomes: its frozen won money plus what its own open deals
   won inside the period, as their stage history stood at `-as-of` and at the start of `-train-end`;
-- for each such snapshot, its open deals counted into calibration bins, with no deal id and no amount.
+- for each such snapshot, its open deals counted into calibration bins twice, by typed chance and by the chance in
+  use after the risk effect, plus committed against not committed, with no deal id and no amount.
 
 Since `forecast_v3` a deal's weight is its chance in use, not the typed stage chance. `forecasting.ChanceInUse`
 blends the typed chance with the stage's recorded won share as a beta prior of strength `forecasting.PriorStrength`;
@@ -93,17 +97,36 @@ known: the evaluation counts it as `after_outcome` and scores it nowhere.
 | `census` | vintages read, included, and excluded per reason, plus the horizon range |
 | `candidate` | the candidate's fitted ratio per currency and horizon bucket, or why it has none |
 | `candidate_not_scored` | why the candidate has no fit and no rows: no reviewed pre-registration was given |
-| `rows` | one row per label, method, window, currency and horizon bucket |
+| `rows` | one row per label, method, window, currency, horizon bucket and evidence group |
+
+The report names its rules as `forecasting.EvaluationVersion`, now `forecast_evaluation_v2`. One version and one
+dataset digest give one report.
 
 Labels keep two kinds of number apart. An `observed` row scores a figure frozen when its snapshot was taken. A
 `backtest` row scores a figure computed afterwards from frozen inputs, which nobody saw at the time. The candidate
-is always a backtest.
+is always a backtest. Stage weighting is a backtest when any vintage in its group was frozen with self-correction
+on, because the figure shown then was the self-correcting one.
 
 | Method | Prediction |
 |---|---|
-| `stage_weighting` | won plus the weighted open pipeline, through `forecasting.ProjectLanding`; each deal at the chance in use the snapshot froze |
+| `stage_weighting` | won plus the open deals at their typed chances, through `forecasting.ProjectLanding` |
+| `self_correcting_weighting` | won plus the weighted figure the snapshot froze, each deal at its chance in use after the risk effect |
 | `commit_evidence` | won plus the committed open pipeline, through `forecasting.ProjectLanding` |
+| `range_central_80` | the frozen range: the central 80% of finishes under the chances in use |
 | `candidate_open_closure` | won plus open money times the share of open money that closed in training |
+
+A method that cannot score every vintage of a group scores none of them and says why in `not_scored`. So
+`self_correcting_weighting` is not scored for a group that holds a vintage frozen with self-correction off, and
+`range_central_80` is not scored for one that holds a vintage frozen before ranges were drawn. No method is scored
+on a smaller set than the others.
+
+Each row belongs to one evidence group, by how much recorded evidence the vintage's open deals stood on:
+
+| Group | Meaning |
+|---|---|
+| `sufficient` | at least half of the open deals stood in stages with `forecasting.PriorStrength` or more recorded outcomes |
+| `thin` | some open deal had recorded outcomes, but fewer than that half reached `forecasting.PriorStrength` |
+| `none` | no open deal had a recorded outcome |
 
 The candidate is fitted on the training outcomes of training vintages whose period ended, plus the settle days,
 before `-train-end`. A correction after `-train-end` reaches the scoring outcomes and never the fit. The candidate is
@@ -118,8 +141,14 @@ Each scored row reports:
   `abs_error_per_actual`, which is empty when the group won nothing; vintages of a period that won nothing are
   scored apart by absolute error;
 - `calibration`: per open deal, the share won against what the method claimed. Stage weighting bins by tenths of
-  probability and gives a Brier score; commit evidence bins committed against not committed. A bin of fewer deals
-  than the cohort floor gives only its count. The candidate states nothing per deal and has none.
+  the typed chance, and self-correcting weighting by tenths of the chance in use after the risk effect; each gives a
+  Brier score. Commit evidence bins committed against not committed. A bin of fewer deals than the cohort floor
+  gives only its count. The candidate and the range state nothing per deal and
+  have none;
+- `interval`, for the range only: `vintages`, how many outcomes fell inside (`covered`), the share against the
+  nominal 0.8, the mean width, and the mean interval score in minor units. The interval score is the
+  Gneiting–Raftery score for a central 80% interval: the width plus 10 times every unit the outcome falls outside
+  it. Lower is better. A range can cover well by being wide, so read coverage and score together.
 
 No row states an accuracy percentage.
 

@@ -5657,6 +5657,12 @@
               "weighted_minor"
             ]
           },
+          "range_high_minor": {
+            "type": "integer"
+          },
+          "range_low_minor": {
+            "type": "integer"
+          },
           "scope_id": {
             "type": "string"
           },

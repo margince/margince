@@ -24,6 +24,8 @@ import (
 // promoteTargetMovedError.
 func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, by string, active []fieldcatalog.Column, candidate ids.ContactID) (PromoteOutcome, error) {
 	var out PromoteOutcome
+	// The evidence lock and the evidence check judge its age at one instant.
+	ctx = withPinnedSLANow(ctx, slaNow(ctx))
 	lockedEvidence, err := lockEvidenceActivity(ctx, tx, id, in)
 	if err != nil {
 		return PromoteOutcome{}, err

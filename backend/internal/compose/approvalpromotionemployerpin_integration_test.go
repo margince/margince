@@ -43,6 +43,8 @@ func newPinnedPromotion(t *testing.T, rest bool, trigger string) *pinnedPromotio
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+	// The pin reads as the agent, on its human's stored grants.
+	e.GrantRole(t, e.Rep1, "admin")
 	passport := e.SeedPassport(t, integration.OwnerConn(t), "promotion pin")
 	p := &pinnedPromotion{
 		t: t, e: e, svc: NewApprovalsService(e.DB()),
@@ -232,7 +234,7 @@ func TestAPromotionStaysReadyAcrossReadersAndUnrelatedChanges(t *testing.T) {
 }
 
 // A row staged before the pin is pinned when a human first reads it, on the
-// context that human sees, and then promotes as approved.
+// context its agent sees, and then promotes as approved.
 func TestAPromotionStagedBeforeThePinIsPinnedWhenFirstRead(t *testing.T) {
 	eachPromotionDoor(t, func(t *testing.T, rest bool) {
 		p := newPinnedPromotion(t, rest, "human_qualify")

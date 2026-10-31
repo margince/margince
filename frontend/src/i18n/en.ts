@@ -814,6 +814,8 @@ export const en = {
     "The full change cannot be shown. Request a new proposal before approving.",
   "approval.preview.unavailable":
     "Approval context is unavailable. Reload or request a new proposal.",
+  "approval.preview.needsWiderSight":
+    "This change touches records you cannot open. A colleague who can see them must decide it.",
   "approval.preview.change": "{before} → {after}",
   "approval.import.row": "{kind}, row {line} ({key})",
   "approval.import.create": "Create a new record",
@@ -13656,6 +13658,9 @@ export const en = {
   "forecast.landing": "Landing",
   "forecast.landingFrom": "Projected · {won} won + {remaining} to come",
   "forecast.landingFromCall": "From the call · {won} won so far",
+  "forecast.range": "8 in 10 outcomes between {low} and {high}",
+  "forecast.rangeBasis":
+    "Based on the chances in use. Each open deal is won or lost by its chance over many runs. At most one outcome in ten falls below the range, and at most one in ten above it. The range assumes the chances are right.",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingRecordsDetail":
     "Won plus Commit deals with confirmed close dates, without the manager’s call",
@@ -14875,7 +14880,7 @@ export const en = {
   "webForms.senderLine.tally": "Signed webhook from Tally",
   "webForms.row.consent": "Consent required",
   "webForms.row.lastPost": "Last post {when}",
-  "webForms.row.noPost": "No post yet",
+  "webForms.row.noPost": "No post recorded yet",
   "webForms.setup": "Show setup",
   "webForms.edit": "Edit",
   "webForms.pause": "Pause form",

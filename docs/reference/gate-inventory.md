@@ -183,6 +183,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `requestkeyconflict_test.go` | H2 | A row keyed by a client's request id is written conflict-first. |
 | `requirementseam_test.go` | H1 | The two halves of the requirement seam describe the same thing. |
 | `reviewoutcomes_test.go` | H3 | The answer sheet offers a customer review only the outcomes the server accepts. |
+| `risksignalcheck_test.go` | H2 | A frozen forecast row accepts the same risk signals the assessment can answer. |
 | `riskverdictretention_test.go` | H1 | The queue's recorded verdicts live as long as the figure that reads them, and no longer. |
 | `rowscopetables_test.go` | H2 | Which table a row-scope call bounds, and which column names a reference to one. |
 | `runneractivityparity_test.go` | H3 | The runner's own status vocabulary must be total over the column it reads. |
@@ -571,6 +572,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobtestonly_test.go` | H2 | jobs.Config.TestOnly and compose.JobRunnerConfig.TestOnly carry River's flag of the same name, which disables machinery that is "useful in production, but which may be harmful to tests" (in the pinned river@v0.43.0, the maintenance services' staggered startup). |
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault once. |
 | `lanepoolbudget_test.go` | H2 | Every pool the integration lane opens is inside the lane's budget. |
+| `leadmeetingproof_test.go` | H2 | Lead evidence, lead scoring and the lead status ladder read what a meeting proves from leadmeetingproof.go. |
 | `licensebody_test.go` | H1 | The BUSL-1.1 text below LICENSE's Parameters block never changes. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
 | `maskclosurecrossings_test.go` | H2 | A fact withheld on another record as a consequence may not also be offered for configuration. |

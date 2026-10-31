@@ -36,7 +36,9 @@ var forecastReadingsCopy = toolCopy{
 		"expected to. `evidence` is committed pipeline whose close date somebody confirmed; a " +
 		"provisional date stays in `open` and out of `evidence`. `coverage_note` says what the " +
 		"totals do not cover and is absent only when they cover every eligible deal, so " +
-		"quoting a total without it reports a partial pipeline as a complete one.",
+		"quoting a total without it reports a partial pipeline as a complete one. " +
+		"`range_low_minor` to `range_high_minor` holds 8 in 10 finishes if the chances in use " +
+		"are right; it is no bound on `weighted` or the landing, so never say either lies inside it.",
 	Instead: "run_report's forecast report and a hand-summed query_workspace also produce a " +
 		"number, and NEITHER is the forecast: only this applies the fiscal calendar, the base " +
 		"currency conversion and the weighting. These figures also cannot be cited in a " +
