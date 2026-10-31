@@ -42,6 +42,7 @@ export function framed(
       ...evaluation.context,
       period_kind: frame.periodKind,
       interval: frame.interval,
+      horizon: frame.horizon,
       target_interval: frame.targetInterval,
       evaluated_at: frame.clock,
       state_at: frame.clock,

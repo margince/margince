@@ -180,7 +180,7 @@ function OutcomePeriod({
 
 // What a headline figure is about. Sales won covers the chosen period. Open
 // pipeline is the state now, so it names a moment and a count. The forecast
-// landing is always this fiscal quarter's.
+// landing is always this fiscal quarter's, on the basis it was projected with.
 function headlineBasis(
   evaluation: ReportingEvaluation,
   metric: ReportingEvaluation["metrics"][number],
@@ -199,8 +199,13 @@ function headlineBasis(
           at,
         });
   }
+  // An edition stored before the basis was kept says the basis is unknown.
   if (metric.id === "forecast_landing") {
-    return t("reporting.forecastLandingBasis");
+    const landing = metric.forecast_basis?.landing;
+    const basis = landing
+      ? t(`forecast.basis.${landing.measure}`)
+      : t("forecast.basis.unknown");
+    return `${t("reporting.forecastLandingBasis")} · ${basis}`;
   }
   // A figure read as things stand names the moment, not a period.
   if (metric.evidence.context_id === "state") {

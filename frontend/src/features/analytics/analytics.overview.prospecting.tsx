@@ -30,6 +30,7 @@ import {
   OverviewLinks,
   OverviewSaveActions,
 } from "./analytics.overview.readings";
+import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingFilters } from "./reporting.filters";
 import {
@@ -40,7 +41,6 @@ import {
 } from "./reporting.model";
 import {
   customInterval,
-  resultsThrough,
   useOverviewFilters,
   validDateRange,
 } from "./reporting.overview";
@@ -143,7 +143,7 @@ export function MyProspecting({
         }
         caption={
           validDates
-            ? resultsThrough(query.data, locale, t)
+            ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
       >

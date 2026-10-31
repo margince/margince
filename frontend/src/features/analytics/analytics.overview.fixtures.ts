@@ -142,6 +142,39 @@ export const compared: Comparison = {
   coverage: 3.58,
 };
 
+const SALES_QUARTER = {
+  start_at: "2026-06-30T22:00:00Z",
+  end_at: "2026-09-30T22:00:00Z",
+};
+
+type Basis = NonNullable<Metric["forecast_basis"]>;
+type LandingShape = Basis["landing"];
+
+/**
+ * What a landing rests on, as the server sends it beside the figure. A call
+ * landing sets its amount apart; every other measure is won plus the rest.
+ */
+export function landingBasis(
+  landing: Partial<LandingShape> & { won: number; remaining: number },
+  over: Partial<Omit<Basis, "landing">> = {},
+): Basis {
+  const { won, remaining, ...shape } = landing;
+  return {
+    landing: {
+      measure: "commit_evidence",
+      amount_minor: won + remaining,
+      won_minor: won,
+      remaining_minor: remaining,
+      ...shape,
+    },
+    period: SALES_QUARTER,
+    eligible_count: 18,
+    priced_count: 18,
+    fx_missing_count: 0,
+    ...over,
+  };
+}
+
 export function salesEvaluation(
   over: Readonly<{
     comparison?: Comparison;
@@ -155,10 +188,8 @@ export function salesEvaluation(
       ...reportingStoryEvaluation.context,
       scope: TEAM,
       period_kind: "this_quarter",
-      target_interval: {
-        start_at: "2026-06-30T22:00:00Z",
-        end_at: "2026-09-30T22:00:00Z",
-      },
+      horizon: SALES_QUARTER,
+      target_interval: SALES_QUARTER,
     },
     selection: {
       ...reportingStoryEvaluation.selection,
@@ -175,6 +206,12 @@ export function salesEvaluation(
       }),
       metric("forecast_landing", 76_000_000, {
         target_comparison: over.comparison ?? compared,
+        forecast_basis: landingBasis({
+          won: 42_000_000,
+          remaining: 34_000_000,
+        }),
+        range_low_minor: 61_000_000,
+        range_high_minor: 98_000_000,
       }),
     ],
     charts: over.charts ?? [],

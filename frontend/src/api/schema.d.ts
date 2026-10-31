@@ -41218,6 +41218,8 @@ export interface components {
             population_fingerprint: string;
             interval: components["schemas"]["ReportingWindow"];
             target_interval?: components["schemas"]["ReportingWindow"];
+            /** @description The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed. */
+            horizon?: components["schemas"]["ReportingWindow"];
             close_interval?: components["schemas"]["ReportingWindow"];
             timezone: string;
             currency: string;
@@ -41372,6 +41374,7 @@ export interface components {
              * @description `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
              */
             range_high_minor?: number;
+            forecast_basis?: components["schemas"]["ReportingForecastBasis"];
         };
         /**
          * @description Where the current fiscal quarter's expected landing stands against a
@@ -41379,10 +41382,12 @@ export interface components {
          *     what is left to win. Present only on the `forecast_landing` metric.
          *     Every amount is in minor units of the context currency.
          *
-         *     - `gap` is `target` minus `landing`: positive is short, negative is ahead.
-         *     - `remaining` is `target` minus `won`, never below zero.
-         *     - `coverage` is `open_pipeline` divided by `remaining`: the open deals
-         *       expected to close in the quarter, over what is left to win.
+         *     - `gap` is `target` minus `landing`, the projected shortfall: positive is
+         *       short, negative is ahead.
+         *     - `remaining` is `target` minus `won`, the sales still to win, never below
+         *       zero. It is a different figure from `gap`.
+         *     - `open_pipeline` is the open deals eligible to close in the quarter, not
+         *       every open deal. `coverage` is `open_pipeline` divided by `remaining`.
          *
          *     `won` and `open_pipeline` come from the same forecast reading as
          *     `landing`, so a won deal is never counted twice. A manager call is a
@@ -41450,6 +41455,41 @@ export interface components {
             coverage?: number;
             qualified?: components["schemas"]["ReportingQualifiedCoverage"];
             operands?: components["schemas"]["ReportingComparisonOperands"];
+        };
+        /**
+         * @description `forecast_landing` only: what the landing and its range rest on, the same answer
+         *     GET /forecast gives. Absent where no landing is shown, and on editions captured before
+         *     the field existed; a reader then says the basis is unknown and never guesses one.
+         *
+         *     The range in `range_low_minor` and `range_high_minor` is a model of finishes: won money
+         *     plus each priced eligible open deal won or lost by its chance in use. It is not the
+         *     landing's uncertainty, and it omits the deals counted by `eligible_count` minus
+         *     `priced_count` and by `fx_missing_count`.
+         */
+        ReportingForecastBasis: {
+            landing: components["schemas"]["ForecastLanding"];
+            /** @description The fiscal quarter the landing and the range project, half-open. */
+            period: components["schemas"]["ReportingWindow"];
+            /**
+             * Format: int64
+             * @description The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
+             */
+            call_minor?: number;
+            /**
+             * Format: int64
+             * @description Deals the forecast considered, priced or not.
+             */
+            eligible_count: number;
+            /**
+             * Format: int64
+             * @description How many of them carried an amount; an unpriced deal adds nothing to the range.
+             */
+            priced_count: number;
+            /**
+             * Format: int64
+             * @description Priced deals with no exchange rate to the base currency, left out of every total.
+             */
+            fx_missing_count: number;
         };
         /**
          * @description Coverage over the deals the qualified forecast keeps, beside the

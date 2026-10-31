@@ -19,7 +19,11 @@ import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial } from "../../lib/urlstate";
 import { AttentionPanel, useAttentionList } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
-import { rangeOf } from "./analytics.forecast.landing";
+import {
+  landingBasisLines,
+  ModelRangeCard,
+  rangeOf,
+} from "./analytics.forecast.landing";
 import {
   BoardChart,
   SalesHero,
@@ -33,6 +37,7 @@ import {
   readingValue,
 } from "./analytics.overview.readings";
 import { SinceLastReview } from "./analytics.overview.since";
+import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingFilters } from "./reporting.filters";
 import {
@@ -43,12 +48,11 @@ import {
 } from "./reporting.model";
 import {
   customInterval,
-  resultsThrough,
   useOverviewFilters,
   validDateRange,
 } from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
-import { ComparisonState, gapWords } from "./reporting.targetcomparison";
+import { ComparisonState } from "./reporting.targetcomparison";
 import { viewRequest } from "./reporting.views";
 import { OpeningSummary, salesReviewSummary } from "./reporting.written";
 
@@ -142,7 +146,7 @@ function SalesReviewBody({
         }
         caption={
           validDates
-            ? resultsThrough(query.data, locale, t)
+            ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
       >
@@ -243,9 +247,9 @@ function SalesReviewBody({
   );
 }
 
-// The expected finish, the gap to target, the closed win rate and the open
-// pipeline. Sales won leads the page above them. With no target there is no
-// gap to show, and the note above the page says how to get one.
+// The expected finish with its basis, and the modelled finish beside it. Then
+// the shortfall, coverage with both operands, the win rate and open pipeline.
+// Every figure is the server's; the page only formats.
 function SalesReadings({
   evaluation,
   onEvidence,
@@ -259,58 +263,24 @@ function SalesReadings({
   const { context } = evaluation;
   const landing = metricOf(evaluation, "forecast_landing");
   const comparison = landing?.target_comparison;
-  const compared =
-    comparison?.status === "compared" ||
-    comparison?.status === "target_reached";
   const money = (value: number | undefined) =>
     reportingCompactAmount(value, context.currency, context.currency, locale);
-  const range = rangeOf(landing?.range_low_minor, landing?.range_high_minor);
-  const finishBasis = comparison?.basis
-    ? t("analytics.overview.finishBasis", {
-        basis: t(`reporting.compare.basis.${comparison.basis}`),
-      })
-    : t("reporting.forecastLandingBasis");
   const open = metricOf(evaluation, "open_pipeline");
   const openCount = open?.coverage.eligible_count;
   return (
     <StatStrip label={t("analytics.overview.readings")}>
-      <StatCard
-        narrow="row"
-        label={t("analytics.overview.expectedFinish")}
-        value={
-          landing
-            ? readingValue(landing, evaluation, t, locale)
-            : t("analytics.overview.quarterOnly")
-        }
-        // The basis sentence alone fills the detail's two lines, so beside a
-        // range it moves into the receipt and the range keeps the detail.
-        detail={
-          range
-            ? t("forecast.range", {
-                low: money(range.lowMinor),
-                high: money(range.highMinor),
-              })
-            : finishBasis
-        }
-        basis={
-          range && (
-            <>
-              <p>{finishBasis}</p>
-              <p>{t("forecast.rangeBasis")}</p>
-            </>
-          )
-        }
-        onOpen={
-          landing?.value != null
-            ? () => openAnalyticsSection("forecast")
-            : undefined
-        }
-      />
-      {compared ? (
-        <GapReading comparison={comparison} money={money} />
-      ) : (
-        comparison && comparison.status !== "no_target" && <NotCompared />
+      <ExpectedFinish evaluation={evaluation} money={money} />
+      {landing?.value != null && (
+        <ModelRangeCard
+          label={t("forecast.model.quarter")}
+          range={rangeOf(landing.range_low_minor, landing.range_high_minor)}
+          wonMinor={landing.forecast_basis?.landing.won_minor}
+          unpriced={unpricedOf(landing.forecast_basis)}
+          fxMissing={landing.forecast_basis?.fx_missing_count ?? 0}
+          money={money}
+        />
       )}
+      {comparison && <TargetReadings comparison={comparison} money={money} />}
       {metricOf(evaluation, "closed_win_rate") && (
         <MetricReading
           evaluation={evaluation}
@@ -322,21 +292,147 @@ function SalesReadings({
       <MetricReading
         evaluation={evaluation}
         id="open_pipeline"
+        // Never the coverage numerator: that counts only the deals eligible
+        // to close in the quarter.
+        label={t(
+          context.close_interval
+            ? "analytics.overview.openClosing"
+            : "analytics.overview.allOpen",
+        )}
         detail={
-          comparison?.status === "compared" && comparison.coverage != null
-            ? t("analytics.overview.covers", {
-                ratio: formatDecimal(comparison.coverage, locale, 1),
-                remaining: money(comparison.remaining),
+          openCount != null
+            ? plural("analytics.overview.openDeals", openCount, {
+                count: formatNumber(openCount, locale),
               })
-            : openCount != null
-              ? plural("analytics.overview.openDeals", openCount, {
-                  count: formatNumber(openCount, locale),
-                })
-              : undefined
+            : undefined
         }
         onEvidence={onEvidence}
       />
     </StatStrip>
+  );
+}
+
+type Basis = NonNullable<
+  ReportingEvaluation["metrics"][number]["forecast_basis"]
+>;
+
+function unpricedOf(basis: Basis | undefined): number {
+  return basis ? basis.eligible_count - basis.priced_count : 0;
+}
+
+// The landing and the two lines that say what it counts. A figure with no
+// basis says it is unknown rather than borrowing one.
+function ExpectedFinish({
+  evaluation,
+  money,
+}: Readonly<{
+  evaluation: ReportingEvaluation;
+  money: (value: number | undefined) => string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const landing = metricOf(evaluation, "forecast_landing");
+  if (!landing)
+    return (
+      <StatCard
+        narrow="row"
+        label={t("analytics.overview.expectedFinish")}
+        value={t("analytics.overview.quarterOnly")}
+      />
+    );
+  const basis = landing.forecast_basis;
+  const lines =
+    landing.value == null
+      ? undefined
+      : landingBasisLines(basis?.landing, basis?.call_minor, money, t);
+  return (
+    <StatCard
+      narrow="row"
+      label={t("analytics.overview.expectedFinish")}
+      value={readingValue(landing, evaluation, t, locale)}
+      tone={lines?.warning ? "warning" : undefined}
+      detail={
+        lines && (
+          <>
+            <span>{lines.basis}</span>
+            {lines.beside && <span>{lines.beside}</span>}
+          </>
+        )
+      }
+      onOpen={
+        landing.value != null
+          ? () => openAnalyticsSection("forecast")
+          : undefined
+      }
+    />
+  );
+}
+
+// The quarter against its target: the projected shortfall (target minus the
+// landing) and coverage of what is still to win (target minus won). The two
+// are different figures, and a state that compares nothing says why.
+function TargetReadings({
+  comparison,
+  money,
+}: Readonly<{
+  comparison: Comparison;
+  money: (value: number | undefined) => string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (comparison.status === "no_target") return null;
+  if (
+    comparison.status !== "compared" &&
+    comparison.status !== "target_reached"
+  )
+    return <NotCompared />;
+  const { gap } = comparison;
+  return (
+    <>
+      {/* A comparison without its gap names no gap, rather than a zero one. */}
+      {gap == null ? (
+        <NotCompared detail={t("analytics.overview.gapMissing")} />
+      ) : (
+        <StatCard
+          narrow="row"
+          label={t(
+            gap < 0
+              ? "analytics.overview.surplus"
+              : "analytics.overview.shortfall",
+          )}
+          value={money(Math.abs(gap))}
+          detail={t("analytics.overview.shortfallOperands", {
+            target: money(comparison.target),
+            landing: money(comparison.landing),
+          })}
+        />
+      )}
+      {comparison.status === "target_reached" ? (
+        <StatCard
+          narrow="row"
+          label={t("analytics.overview.coverage")}
+          value={t("reporting.compare.reached")}
+          detail={t("reporting.compare.remainingBasis", {
+            won: money(comparison.won),
+            target: money(comparison.target),
+          })}
+        />
+      ) : comparison.coverage == null ? (
+        <NotCompared />
+      ) : (
+        <StatCard
+          narrow="row"
+          label={t("analytics.overview.coverage")}
+          value={t("reporting.compare.ratio", {
+            ratio: formatDecimal(comparison.coverage, locale, 1),
+          })}
+          detail={t("reporting.compare.coverageBasis", {
+            open: money(comparison.open_pipeline),
+            remaining: money(comparison.remaining),
+          })}
+        />
+      )}
+    </>
   );
 }
 
@@ -348,41 +444,6 @@ function NotCompared({ detail }: Readonly<{ detail?: string }>) {
       label={t("reporting.compare.gap")}
       value={t("analytics.overview.notCompared")}
       detail={detail ?? t("analytics.overview.notComparedDetail")}
-    />
-  );
-}
-
-function GapReading({
-  comparison,
-  money,
-}: Readonly<{
-  comparison: Comparison;
-  money: (value: number | undefined) => string;
-}>) {
-  const t = useT();
-  if (comparison.status === "target_reached") {
-    return (
-      <StatCard
-        narrow="row"
-        label={t("reporting.compare.gap")}
-        value={t("reporting.compare.reached")}
-        detail={t("reporting.compare.remainingBasis", {
-          won: money(comparison.won),
-          target: money(comparison.target),
-        })}
-      />
-    );
-  }
-  const { gap } = comparison;
-  // A comparison without its gap names no gap, rather than a zero one.
-  if (gap == null)
-    return <NotCompared detail={t("analytics.overview.gapMissing")} />;
-  return (
-    <StatCard
-      narrow="row"
-      label={t("reporting.compare.gap")}
-      value={money(Math.abs(gap))}
-      detail={t(gapWords(gap), { target: money(comparison.target) })}
     />
   );
 }

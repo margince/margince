@@ -11,6 +11,7 @@ import {
   ADMIN_GRANTS,
   compared,
   isMovement,
+  landingBasis,
   metric,
   overviewRoutes,
   teamReview,
@@ -167,6 +168,18 @@ const noTarget = {
   target_metric: "bookings_won",
 } as const;
 
+// An answer as an older server stored it: no forecast basis, no horizon.
+function legacy(evaluation: ReportingEvaluation): ReportingEvaluation {
+  const { horizon: _horizon, ...context } = evaluation.context;
+  return {
+    ...evaluation,
+    context,
+    metrics: evaluation.metrics.map(
+      ({ forecast_basis: _basis, ...metric }) => metric,
+    ),
+  };
+}
+
 const SALES_ONLY = "Only Sales review reads the forecast landing.";
 const NO_ACTION_LIST = "Team prospecting has no action list.";
 const NO_MONEY = "Prospecting figures are counts and carry no money.";
@@ -201,6 +214,12 @@ export const OVERVIEW_SCENARIOS = {
             }),
             metric("open_pipeline", 0),
             metric("forecast_landing", 0, {
+              forecast_basis: landingBasis(
+                { won: 0, remaining: 0 },
+                { eligible_count: 0, priced_count: 0 },
+              ),
+              range_low_minor: 0,
+              range_high_minor: 0,
               target_comparison: {
                 ...compared,
                 landing: 0,
@@ -411,6 +430,10 @@ export const OVERVIEW_SCENARIOS = {
             }),
             metric("open_pipeline", 136_000_000),
             metric("forecast_landing", 76_000_000, {
+              forecast_basis: landingBasis({
+                won: 42_000_000,
+                remaining: 34_000_000,
+              }),
               target_comparison: compared,
             }),
           ],
@@ -491,7 +514,8 @@ export const OVERVIEW_SCENARIOS = {
     },
   },
   modelCommitDivergence: {
-    about: "No committed business yet beside a wide modelled range.",
+    about:
+      "No committed business yet, a wide modelled range and a manager’s call.",
     views: {
       sales: sales(
         quarterSales({
@@ -500,6 +524,14 @@ export const OVERVIEW_SCENARIOS = {
             metric("closed_win_rate", 28),
             metric("open_pipeline", 210_000_000),
             metric("forecast_landing", 0, {
+              forecast_basis: landingBasis(
+                { won: 0, remaining: 0 },
+                {
+                  call_minor: 190_000_000,
+                  eligible_count: 12,
+                  priced_count: 11,
+                },
+              ),
               range_low_minor: 140_000_000,
               range_high_minor: 260_000_000,
               target_comparison: {
@@ -531,6 +563,10 @@ export const OVERVIEW_SCENARIOS = {
               coverage: { status: "ok", withheld: false, eligible_count: 61 },
             }),
             metric("forecast_landing", 78_500_000, {
+              forecast_basis: landingBasis({
+                won: 72_000_000,
+                remaining: 6_500_000,
+              }),
               target_comparison: {
                 ...compared,
                 landing: 78_500_000,
@@ -649,11 +685,54 @@ export const OVERVIEW_SCENARIOS = {
             target: 80_000_000,
             landing: 96_000_000,
             won: 88_000_000,
+            gap: -16_000_000, // ds:ignore the target comparison money gap, not a CSS gap
             remaining: 0,
             open_pipeline: 54_000_000,
           },
         }),
       ),
+      prospecting: { excluded: SALES_ONLY },
+      team: { excluded: SALES_ONLY },
+    },
+  },
+  landingBases: {
+    about: "100 won, 40 confirmed commit and a call of 190 that is not added.",
+    views: {
+      sales: sales(
+        quarterSales({
+          metrics: [
+            metric("bookings_won", 10_000),
+            metric("closed_win_rate", 30),
+            metric("open_pipeline", 25_000),
+            metric("forecast_landing", 14_000, {
+              forecast_basis: landingBasis(
+                { won: 10_000, remaining: 4_000 },
+                { call_minor: 19_000 },
+              ),
+              range_low_minor: 11_000,
+              range_high_minor: 21_000,
+              target_comparison: {
+                ...compared,
+                target: 20_000,
+                landing: 14_000,
+                won: 10_000,
+                gap: 6_000, // ds:ignore the target comparison money gap, not a CSS gap
+                remaining: 10_000,
+                open_pipeline: 11_000,
+                coverage: 1.1,
+              },
+            }),
+          ],
+        }),
+      ),
+      prospecting: { excluded: SALES_ONLY },
+      team: { excluded: SALES_ONLY },
+    },
+  },
+  legacyLanding: {
+    about: "A stored answer from before the basis and the period were kept.",
+    views: {
+      sales: sales(legacy(quarterSales())),
       prospecting: { excluded: SALES_ONLY },
       team: { excluded: SALES_ONLY },
     },

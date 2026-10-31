@@ -52,6 +52,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
     pipeline_id: "sales",
     population_fingerprint: "fixture-dach",
     interval,
+    horizon: { start_at: interval.start_at, end_at: "2026-09-30T22:00:00Z" },
     target_interval: {
       start_at: interval.start_at,
       end_at: "2026-09-30T22:00:00Z",
@@ -419,14 +420,16 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
   };
 
 /**
- * A reporting period as the server frames it in REPORTING_FIXTURE_ZONE: the
- * read instant, the actuals window and the target window. Berlin leaves summer
- * time at 01:00Z on 25 Oct 2026, so a window across that day has an hour more.
+ * A reporting period as the server frames it in REPORTING_FIXTURE_ZONE. It
+ * holds the read instant, the actuals window, the whole period and the target
+ * window. Berlin leaves summer time at 01:00Z on 25 Oct 2026, so a window
+ * across that day has an hour more.
  */
 export type ReportingFixtureFrame = Readonly<{
   clock: string;
   periodKind: components["schemas"]["ReportingSelection"]["period"];
   interval: components["schemas"]["ReportingWindow"];
+  horizon: components["schemas"]["ReportingWindow"];
   targetInterval: components["schemas"]["ReportingWindow"];
   fiscalYearStartMonth: number;
 }>;
@@ -440,6 +443,10 @@ export const reportingFixtureFrames = {
     interval: {
       start_at: "2026-09-30T22:00:00Z",
       end_at: "2026-10-31T16:00:00Z",
+    },
+    horizon: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-12-31T23:00:00Z",
     },
     targetInterval: {
       start_at: "2026-09-30T22:00:00Z",
@@ -456,6 +463,10 @@ export const reportingFixtureFrames = {
       start_at: "2026-07-31T22:00:00Z",
       end_at: "2026-10-20T10:00:00Z",
     },
+    horizon: {
+      start_at: "2026-07-31T22:00:00Z",
+      end_at: "2026-10-31T23:00:00Z",
+    },
     targetInterval: {
       start_at: "2026-07-31T22:00:00Z",
       end_at: "2026-10-31T23:00:00Z",
@@ -471,6 +482,10 @@ export const reportingFixtureFrames = {
       start_at: "2026-10-25T23:00:00Z",
       end_at: "2026-10-29T09:00:00Z",
     },
+    horizon: {
+      start_at: "2026-10-25T23:00:00Z",
+      end_at: "2026-11-01T23:00:00Z",
+    },
     targetInterval: {
       start_at: "2026-09-30T22:00:00Z",
       end_at: "2026-10-31T23:00:00Z",
@@ -484,6 +499,10 @@ export const reportingFixtureFrames = {
     interval: {
       start_at: "2026-10-18T22:00:00Z",
       end_at: "2026-10-25T18:00:00Z",
+    },
+    horizon: {
+      start_at: "2026-10-18T22:00:00Z",
+      end_at: "2026-10-25T23:00:00Z",
     },
     targetInterval: {
       start_at: "2026-09-30T22:00:00Z",

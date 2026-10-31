@@ -1253,7 +1253,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
-  "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.actualsThrough": "Ist-Werte bis {at}",
   "reporting.periodNotStarted":
     "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
@@ -1366,10 +1366,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.remaining": "Noch zu gewinnen",
   "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
   "reporting.compare.reached": "Ziel erreicht",
-  "reporting.compare.coverageAll": "Deckung, alle offenen Deals",
+  "reporting.compare.coverageAll":
+    "Deckung, Deals mit Abschluss in diesem Quartal",
   "reporting.compare.coverageQualified": "Deckung, qualifizierte Deals",
   "reporting.compare.coverageBasis":
-    "{open} offen in diesem Quartal, im Verhältnis zum Rest",
+    "{open} mit Abschluss in diesem Quartal / {remaining} noch zu gewinnen",
   "reporting.compare.qualifiedBasis":
     "{open} in qualifizierten Deals, im Verhältnis zum Rest",
   "reporting.compare.ratio": "{ratio}×",
@@ -7215,15 +7216,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.prospecting": "Meine Akquise",
   "analytics.overview.readings": "Wichtigste Kennzahlen",
   "analytics.overview.expectedFinish": "Erwartetes Ergebnis",
+  "analytics.overview.coverage": "Deckung",
+  "analytics.overview.allOpen": "Gesamte offene Pipeline",
+  "analytics.overview.openClosing":
+    "Offene Pipeline mit Abschluss in diesem Quartal",
+  "analytics.overview.shortfall": "Erwartete Lücke",
+  "analytics.overview.surplus": "Erwarteter Überschuss",
+  "analytics.overview.shortfallOperands":
+    "Ziel {target} − erwartetes Ergebnis {landing}",
   "analytics.overview.quarterOnly": "Nur dieses Quartal",
-  "analytics.overview.finishBasis":
-    "Ende dieses Geschäftsquartals, aus {basis}",
   "analytics.overview.winRateBasis":
     "Von den in diesem Zeitraum abgeschlossenen Deals",
   "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
-  "analytics.overview.covers": "Deckt {ratio}× der noch offenen {remaining}",
   "analytics.overview.openDeals_one": "{count} offener Deal",
   "analytics.overview.openDeals_other": "{count} offene Deals",
   "analytics.overview.saveView": "Ansicht speichern",
@@ -13695,13 +13701,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "forecast.landing": "Erwartetes Ergebnis",
-  "forecast.landingFrom":
-    "Hochgerechnet · {won} gewonnen + {remaining} erwartet",
-  "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
-  "forecast.range": "8 von 10 Ergebnissen zwischen {low} und {high}",
-  "forecast.rangeBasis":
-    "Beruht auf den genutzten Chancen. Jeder offene Deal wird in vielen Durchläufen mit seiner Chance gewonnen oder verloren. Höchstens ein Ergebnis von zehn liegt unter der Spanne und höchstens eines von zehn darüber. Die Spanne setzt voraus, dass die Chancen stimmen.",
   "forecast.landingRecords": "Aus den Deal-Daten",
+  "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
+  "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
+  "forecast.basis.manager_call": "Einschätzung der Führungskraft",
+  "forecast.basis.unknown": "Grundlage nicht erfasst",
+  "forecast.split": "{won} gewonnen + {remaining} erwartet",
+  "forecast.callNotAdded":
+    "Einschätzung der Führungskraft {call}, nicht addiert",
+  "forecast.recordsProject": "Die Deal-Daten allein ergeben {amount}",
+  "forecast.callAbsentLine": "Keine Einschätzung erfasst, daher Commit",
+  "forecast.callBelowLine":
+    "Unter den bereits gewonnenen {won}, wie erfasst gezeigt",
+  "forecast.model.quarter": "Modelliertes Quartalsergebnis",
+  "forecast.model.month": "Modelliertes Monatsergebnis",
+  "forecast.model.week": "Modelliertes Wochenergebnis",
+  "forecast.model.value": "{low} bis {high}",
+  "forecast.model.detail":
+    "Mittlere 80 % der modellierten Ergebnisse bei den aktuellen Chancen",
+  "forecast.model.includes": "Enthält bereits gewonnene {won}",
+  "forecast.model.unpriced_one": "{count} Deal ohne Betrag nicht enthalten",
+  "forecast.model.unpriced_other": "{count} Deals ohne Betrag nicht enthalten",
+  "forecast.model.fxMissing_one":
+    "{count} Deal ohne Wechselkurs nicht enthalten",
+  "forecast.model.fxMissing_other":
+    "{count} Deals ohne Wechselkurs nicht enthalten",
+  "forecast.model.none": "Keine Spanne",
+  "forecast.model.noneDetail":
+    "Für diesen Zeitraum wurde keine modellierte Spanne berechnet.",
+  "forecast.model.basis":
+    "Gewonnener Umsatz plus jeder offene Deal mit Betrag in diesem Zeitraum, in vielen Durchläufen nach seiner Chance gewonnen oder verloren. 8 von 10 modellierten Ergebnissen liegen in dieser Spanne. Die Spanne setzt voraus, dass die Chancen stimmen, und ist keine gemessene Prognosegenauigkeit.",
   "forecast.landingRecordsDetail":
     "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",

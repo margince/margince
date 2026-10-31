@@ -54,6 +54,8 @@ const CENSUS: Readonly<Record<string, string>> = {
   qualificationWorkflow: "PT",
   weakNoHandoffTable: "T",
   targetReached: "S",
+  landingBases: "S",
+  legacyLanding: "S",
   noForecast: "S",
 };
 const LETTER: Readonly<Record<OverviewView, string>> = {
@@ -202,12 +204,12 @@ const SIGNATURES: Readonly<
   Record<string, Partial<Record<OverviewView, Signature>>>
 > = {
   populated: {
-    sales: shows(/Covers 3\.6× of/),
+    sales: shows("3.6×"),
     prospecting: shows("Items to do: 5. Urgent: 1."),
     team: shows("Wrong territory"),
   },
   trueZero: {
-    sales: shows(/Covers 0(\.0)?× of/),
+    sales: shows(/^0(\.0)?×$/),
     prospecting: shows("Nothing needs you right now"),
     team: shows(/Of the 0 rounds/),
   },
@@ -250,10 +252,10 @@ const SIGNATURES: Readonly<
     sales: shows("24 forecast checks to answer"),
     prospecting: shows("Items to do: 210. Urgent: 1."),
   },
-  modelCommitDivergence: { sales: shows(/8 in 10 outcomes between/) },
-  coverageNumerator: { sales: shows(/Covers 38\.8× of/) },
-  cutoffVersusHorizon: { sales: shows(/Results through/) },
-  fiscalQuarter: { sales: shows(/Results through/) },
+  modelCommitDivergence: { sales: shows("Modelled quarter finish") },
+  coverageNumerator: { sales: shows("38.8×") },
+  cutoffVersusHorizon: { sales: shows("1 October – 31 December") },
+  fiscalQuarter: { sales: shows("1 August – 31 October") },
   weekAcrossMonths: {
     prospecting: shows(/Monthly targets, .*Oct/),
     team: shows("Wrong territory"),
@@ -271,6 +273,8 @@ const SIGNATURES: Readonly<
   },
   weakNoHandoffTable: { team: shows("Members") },
   targetReached: { sales: shows("Target reached") },
+  landingBases: { sales: shows("Won + confirmed commit") },
+  legacyLanding: { sales: shows("Basis not recorded") },
   noForecast: { sales: shows("Unavailable") },
 };
 

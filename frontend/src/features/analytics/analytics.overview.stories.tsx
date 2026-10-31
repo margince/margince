@@ -224,4 +224,9 @@ export const SalesReviewTargetReached: Story = scenario(
   "targetReached",
   "sales",
 );
+export const SalesReviewLandingBases: Story = scenario("landingBases", "sales");
+export const SalesReviewLegacyLanding: Story = scenario(
+  "legacyLanding",
+  "sales",
+);
 export const SalesReviewNoForecast: Story = scenario("noForecast", "sales");

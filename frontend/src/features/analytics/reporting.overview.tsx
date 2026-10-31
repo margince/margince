@@ -5,9 +5,8 @@ import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
@@ -16,15 +15,14 @@ import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
-import {
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingPeriodIsEmpty,
+import type {
+  ReportingEvidenceRef,
+  ReportingSelection,
 } from "./reporting.model";
 import {
   useReportingCatalog,
@@ -209,7 +207,7 @@ function OverviewBody({
         }
         caption={
           validDates
-            ? resultsThrough(query.data, locale, t)
+            ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
       >
@@ -322,36 +320,4 @@ export function validDateRange(
   end: string,
 ): boolean {
   return period !== "custom" || !!(start && end);
-}
-
-// "Results through" only while the period is still running: a closed period
-// ends where it says it does, and the line would only repeat it. A period read
-// at its first instant holds no time, which is said rather than drawn as zeros.
-export function resultsThrough(
-  evaluation: ReportingEvaluation | undefined,
-  locale: Locale,
-  t: Translator,
-): string | undefined {
-  if (
-    !evaluation ||
-    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
-  ) {
-    return undefined;
-  }
-  if (reportingPeriodIsEmpty(evaluation.context.interval)) {
-    return t("reporting.periodNotStarted", {
-      at: formatDateTime(
-        evaluation.context.interval.start_at,
-        locale,
-        evaluation.context.timezone,
-      ),
-    });
-  }
-  return t("reporting.resultsThrough", {
-    at: formatDateTime(
-      evaluation.context.interval.end_at,
-      locale,
-      evaluation.context.timezone,
-    ),
-  });
 }

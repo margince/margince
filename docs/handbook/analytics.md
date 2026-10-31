@@ -2,13 +2,9 @@
 <!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting -->
 # Analytics and forecasting
 
-**Analytics** in Margince is the reporting screen. It shows forecast, pipeline
-reports, sales performance, time in stage, your own outcomes, delivery and data
-coverage. It is in the sidebar under **Insights**. It answers two different
-kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
+**Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
 
-Every number here opens the records it was made from. If a figure looks wrong,
-open it rather than guessing.
+Every number here opens the records it was made from. If a figure looks wrong, open it rather than guessing.
 
 ## Common reporting tasks
 
@@ -89,7 +85,11 @@ The section is part of the address, so a link to one opens it.
 
 Analytics opens on **Overview**, the first tab, which has two views: **Sales review** and **My prospecting**. A reader who measures a team also gets **Team prospecting**. The view a link names opens first, then the one you chose last. With neither, a reader who measures their own records in a company set up for SDR teams gets **My prospecting**. Everyone else gets **Sales review**. Each view shows its readings, a few sentences on what they mean, and what needs you.
 
-**Sales review** opens on this fiscal quarter with **Sales won** at the top, beside a line of its total over the period. Under it are **Expected finish**, **Gap to target**, **Closed win rate** and **Open pipeline**, which says how far open deals cover what is left. With no sales target there is no gap to show, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Next come the open pipeline by stage and sales won by team member, then the open forecast checks beside a short summary. Last is **Since the last capture**, which shows how the open pipeline moved and needs two captures before it can compare.
+**Sales review** opens on this fiscal quarter with **Sales won** at the top, beside a line of its total over the period. The line under the filters names the whole quarter, such as "1 October – 31 December", and the time the results so far run up to. **Expected finish** names what it counts, such as **Won + confirmed commit** or **Manager’s call**. A manager’s call the figure does not use shows on the card and is not added. **Modelled quarter finish** is the span that 8 in 10 runs of the forecast end in. It is a second figure, not a margin around the expected finish.
+
+**Projected shortfall** is the target minus the expected finish. **Coverage** names both of its amounts: the open value due to close this quarter, over what is still to win. **Closed win rate** and **All open pipeline** follow, and the second holds every open deal.
+
+With no sales target there is no gap to show, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Next come the open pipeline by stage and sales won by team member, then the open forecast checks beside a short summary. Last is **Since the last capture**, which shows how the open pipeline moved and needs two captures before it can compare.
 
 **My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report, and **Report templates** opens prepared reports such as **My prospecting progress**.
 

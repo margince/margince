@@ -24,13 +24,13 @@ import {
   OverviewSaveActions,
 } from "./analytics.overview.readings";
 import { MemberTable, ReasonList } from "./analytics.overview.team.members";
+import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import {
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingPeriodLabel,
 } from "./reporting.model";
-import { resultsThrough } from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
 import { presetRequest } from "./reporting.views";
 
@@ -141,7 +141,7 @@ export function TeamProspecting({
             }
           />
         }
-        caption={resultsThrough(query.data, locale, t)}
+        caption={periodCaption(query.data, locale, t)}
       >
         {switcher}
         {scopeControl}

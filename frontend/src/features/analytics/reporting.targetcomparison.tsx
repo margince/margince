@@ -69,9 +69,11 @@ function ComparedFigures({
         detail={t(gapWords(gap), { target: amount(comparison.target) })}
         basis={t("reporting.compare.gapBasis", {
           landing: amount(comparison.landing),
-          basis: t(
-            `reporting.compare.basis.${comparison.basis ?? "commit_evidence"}`,
-          ),
+          // An answer stored before the basis was kept names none, and the
+          // card says so rather than guessing one.
+          basis: comparison.basis
+            ? t(`reporting.compare.basis.${comparison.basis}`)
+            : t("forecast.basis.unknown"),
         })}
       />
       <StatCard
@@ -91,6 +93,7 @@ function ComparedFigures({
         value={coverageValue(comparison.coverage, reached, t, locale)}
         detail={t("reporting.compare.coverageBasis", {
           open: amount(comparison.open_pipeline),
+          remaining: amount(comparison.remaining),
         })}
       />
       <QualifiedCard

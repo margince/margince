@@ -9,6 +9,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import {
   LandingCard,
+  ModelRangeCard,
   RecordsLandingCard,
   rangeOf,
   SufficiencyCard,
@@ -43,22 +44,21 @@ const sufficiency = (over: Partial<Sufficiency> = {}): Sufficiency => ({
 });
 
 describe("the projected landing", () => {
-  it("says the sum it made, so a reader can check the arithmetic", () => {
+  const money = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+
+  it("names its basis, then the sum it made, so a reader can check it", () => {
     draw(<LandingCard landing={landing()} currency="EUR" locale="en" />);
 
-    // ONE label over both measures, with the measure leading the detail: a
-    // label that changed with the measure made one figure read as two
-    // different readings between two periods.
+    // One label over every measure, with the basis leading the detail.
     expect(screen.getByText("Landing")).toBeTruthy();
-    // The two halves, both named. A figure alone leaves a reader to guess
-    // which readings were added, and the wrong guess is Won plus Best case.
-    const detail = screen.getByText(/^Projected ·/);
-    expect(detail.textContent).toContain("400");
-    expect(detail.textContent).toContain("500");
+    expect(screen.getByText("Won + confirmed commit")).toBeTruthy();
+    expect(
+      screen.getByText(`${money(400_00)} won + ${money(500_00)} to come`),
+    ).toBeTruthy();
   });
 
-  // The misreading this shape exists to prevent: a call is the whole period's
-  // landing, so a reader must not be told it is the remainder.
+  // A call is the whole period's landing, so a reader must not be told it is
+  // the remainder; the records' own projection stands beside it.
   it("says a manager's call replaces the projection rather than adding to it", () => {
     draw(
       <LandingCard
@@ -66,17 +66,34 @@ describe("the projected landing", () => {
           measure: "manager_call",
           amount_minor: 900_00,
           remaining_minor: 0,
+          system_minor: 650_00,
         })}
         currency="EUR"
         locale="en"
       />,
     );
 
-    // The same label, and a detail that says the call IS the answer rather
-    // than a remainder added to what is won.
-    expect(screen.getByText("Landing")).toBeTruthy();
-    expect(screen.getByText(/^From the call ·/)).toBeTruthy();
-    expect(screen.queryByText(/^Projected ·/)).toBeNull();
+    expect(screen.getByText("Manager’s call")).toBeTruthy();
+    expect(
+      screen.getByText(`Records alone project ${money(650_00)}`),
+    ).toBeTruthy();
+    expect(screen.queryByText(/ to come$/)).toBeNull();
+  });
+
+  it("names a standing call beside a projection without adding it", () => {
+    draw(
+      <LandingCard
+        landing={landing()}
+        callMinor={1_900_00}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(screen.getByText(money(900_00))).toBeTruthy();
+    expect(
+      screen.getByText(`Manager’s call ${money(1_900_00)}, not added`),
+    ).toBeTruthy();
   });
 
   it("names the fallback when nobody has called the period", () => {
@@ -209,105 +226,87 @@ describe("a manager's call beside the records", () => {
   });
 });
 
-describe("the range beside the landing", () => {
+describe("the modelled finish beside the landing", () => {
   const range = { lowMinor: 610_00, highMinor: 880_00 };
+  const money = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
 
-  it("states the central 80% of outcomes as its own line, never around the landing", () => {
-    draw(
-      <LandingCard
-        landing={landing()}
-        currency="EUR"
-        locale="en"
+  function model(over: Partial<Parameters<typeof ModelRangeCard>[0]> = {}) {
+    return (
+      <ModelRangeCard
+        label="Modelled quarter finish"
         range={range}
-      />,
+        wonMinor={400_00}
+        unpriced={0}
+        fxMissing={0}
+        money={money}
+        {...over}
+      />
     );
+  }
 
-    const line = screen.getByText(/^8 in 10 outcomes between /);
-    expect(line.textContent).toBe(
-      `8 in 10 outcomes between ${formatMoneyCompact(610_00, "EUR", "en")} and ${formatMoneyCompact(880_00, "EUR", "en")}`,
-    );
-  });
-
-  it("gives the range the whole two-line detail, so the clamp cannot cut it", () => {
+  it("is its own reading, never a line under the landing", () => {
     const { container } = draw(
-      <LandingCard
-        landing={landing()}
-        currency="EUR"
-        locale="en"
-        range={range}
-      />,
+      <LandingCard landing={landing()} currency="EUR" locale="en" />,
     );
-
-    const detail = container.querySelector(".stat-card-detail");
-    expect(detail?.textContent).toMatch(/^8 in 10 outcomes between .+$/);
-    expect(detail?.textContent).not.toContain("Projected");
+    expect(container.textContent).not.toMatch(/80%|8 in 10| to €/);
   });
 
-  it("moves the sum the landing was made of into the receipt beside the range", async () => {
-    const user = userEvent.setup();
-    draw(
-      <LandingCard
-        landing={landing()}
-        currency="EUR"
-        locale="en"
-        range={range}
-      />,
-    );
-
-    await user.click(await screen.findByRole("button", { name: "Evidence" }));
-
-    expect(await screen.findByText(/^Projected ·/)).toBeTruthy();
+  it("states the central 80% of modelled outcomes and the won money inside it", () => {
+    draw(model());
+    expect(
+      screen.getByText(`${money(610_00)} to ${money(880_00)}`),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Central 80% of modelled outcomes under current chances",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(`Includes ${money(400_00)} already won`),
+    ).toBeTruthy();
   });
 
-  it("names the chances in use as the range's basis in the receipt", async () => {
+  it("says which deals it leaves out", () => {
+    draw(model({ unpriced: 2, fxMissing: 1 }));
+    expect(screen.getByText("2 unpriced deals left out")).toBeTruthy();
+  });
+
+  it("says it assumes the chances are right, in the receipt", async () => {
     const user = userEvent.setup();
-    draw(
-      <LandingCard
-        landing={landing()}
-        currency="EUR"
-        locale="en"
-        range={range}
-      />,
-    );
+    draw(model({ unpriced: 2, fxMissing: 1 }));
 
     await user.click(await screen.findByRole("button", { name: "Evidence" }));
 
     expect(
-      await screen.findByText(/^Based on the chances in use\./),
+      await screen.findByText(/it is not a measured forecast accuracy\.$/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("1 deal without an exchange rate left out"),
     ).toBeTruthy();
   });
 
-  it("leads to the deals the range was drawn from", async () => {
+  it("leads to the deals it was drawn from", async () => {
     const user = userEvent.setup();
-    const onOpenDeals = vi.fn();
-    draw(
-      <LandingCard
-        landing={landing()}
-        currency="EUR"
-        locale="en"
-        range={range}
-        onOpenDeals={onOpenDeals}
-      />,
-    );
+    const onOpen = vi.fn();
+    draw(model({ onOpen }));
 
     await user.click(screen.getByRole("button", { name: "Open" }));
 
-    expect(onOpenDeals).toHaveBeenCalledOnce();
+    expect(onOpen).toHaveBeenCalledOnce();
   });
 
-  it("draws no range line, receipt or door without a range", () => {
-    draw(
-      <LandingCard
-        landing={landing()}
-        currency="EUR"
-        locale="en"
-        onOpenDeals={vi.fn()}
-      />,
-    );
-
-    expect(screen.queryByText(/8 in 10 outcomes/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Evidence" })).toBeNull();
+  it("says when no range was drawn", () => {
+    draw(model({ range: undefined, onOpen: vi.fn() }));
+    expect(screen.getByText("No range")).toBeTruthy();
+    expect(
+      screen.getByText("No modelled range was drawn for this period."),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Open" })).toBeNull();
+  });
+
+  it("reads equal ends as one amount", () => {
+    draw(model({ range: { lowMinor: 420_00, highMinor: 420_00 } }));
+    expect(screen.getByText(money(420_00))).toBeTruthy();
   });
 });
 
@@ -321,8 +320,10 @@ describe("rangeOf", () => {
     expect(rangeOf(undefined, 880_00)).toBeUndefined();
   });
 
-  it("draws no range when nothing is left to decide", () => {
-    expect(rangeOf(0, 0)).toBeUndefined();
-    expect(rangeOf(420_00, 420_00)).toBeUndefined();
+  it("keeps equal ends, so the reading can say nothing is left to model", () => {
+    expect(rangeOf(420_00, 420_00)).toEqual({
+      lowMinor: 420_00,
+      highMinor: 420_00,
+    });
   });
 });

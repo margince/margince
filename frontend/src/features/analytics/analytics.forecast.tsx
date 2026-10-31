@@ -13,12 +13,13 @@ import { StatStrip } from "../../design-system/statstrip";
 import {
   formatDateAbbrev,
   formatDateTime,
+  formatDayRange,
   formatMoneyCompact,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
@@ -26,12 +27,14 @@ import { ForecastCallEditor } from "./analytics.forecast.calleditor";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import {
   LandingCard,
+  ModelRangeCard,
   RecordsLandingCard,
   rangeOf,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
 import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import { ForecastReview } from "./analytics.forecast.review";
+import { PeriodCaption } from "./analytics.period";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,
@@ -84,11 +87,7 @@ export function ForecastView({
             </Button>
           ) : null
         }
-        caption={
-          readings.data?.period_start && readings.data.period_end
-            ? `${formatDateAbbrev(readings.data.period_start, locale, readings.data.timezone)} – ${formatDateAbbrev(readings.data.period_end, locale, readings.data.timezone)}`
-            : undefined
-        }
+        caption={readings.data && forecastPeriod(readings.data, locale, t)}
       >
         {scopeControl}
         <SegmentedControl
@@ -120,6 +119,7 @@ export function ForecastView({
             <ForecastAnswer
               readings={data}
               locale={locale}
+              period={period}
               onOpenDeals={openForecastDeals}
             />
             <ForecastDeals scope={selection.scope} period={period} />
@@ -178,6 +178,33 @@ export function ForecastView({
   );
 }
 
+// The forecast's whole period and the instant its actuals were read at, the
+// two facts the Overview's caption states too.
+function forecastPeriod(
+  readings: Readings,
+  locale: Locale,
+  t: Translator,
+): ReactNode {
+  const zone = readings.timezone;
+  return (
+    <PeriodCaption
+      period={
+        readings.period_start && readings.period_end
+          ? formatDayRange(
+              readings.period_start,
+              readings.period_end,
+              locale,
+              zone,
+            )
+          : undefined
+      }
+      through={t("reporting.actualsThrough", {
+        at: formatDateTime(readings.as_of, locale, zone),
+      })}
+    />
+  );
+}
+
 // Compare the period forecast with won sales plus confirmed committed deals.
 function callDetail(
   call: NonNullable<Readings["current_call"]>,
@@ -213,10 +240,12 @@ function callDetail(
 function ForecastAnswer({
   readings,
   locale,
+  period,
   onOpenDeals,
 }: Readonly<{
   readings: Readings;
   locale: Locale;
+  period: ForecastPeriod;
   onOpenDeals?: () => void;
 }>) {
   const t = useT();
@@ -348,11 +377,25 @@ function ForecastAnswer({
               landing={readings.landing}
               currency={currency}
               locale={locale}
+              callMinor={
+                readings.landing.measure === "manager_call"
+                  ? undefined
+                  : readings.current_call?.amount_minor
+              }
+            />
+          )}
+          {readings.landing && (
+            <ModelRangeCard
+              label={t(`forecast.model.${period}`)}
               range={rangeOf(
                 readings.range_low_minor,
                 readings.range_high_minor,
               )}
-              onOpenDeals={onOpenDeals}
+              wonMinor={readings.won_minor}
+              unpriced={readings.eligible_count - readings.priced_count}
+              fxMissing={readings.fx_missing_count}
+              money={slot}
+              onOpen={onOpenDeals}
             />
           )}
           {readings.landing?.system_minor != null && (
@@ -407,7 +450,12 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
                 {t("reporting.restricted")}
               </Callout>
             )}
-            <ForecastAnswer readings={view.readings} locale={locale} />
+            {/* A share always reads the current quarter. */}
+            <ForecastAnswer
+              readings={view.readings}
+              locale={locale}
+              period="quarter"
+            />
           </>
         )}
       </QueryGate>
