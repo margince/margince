@@ -134,8 +134,8 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
 const HEADLINE = ["won", "commitments", "leads", "meetings"];
 
 /**
- * Only the figures the review carries: an older one has no tasks, and one read
- * by a seat that may not read activities has no meetings.
+ * Only the figures the review carries. An older one has no tasks. One read by
+ * a seat that may not read activities has no meetings.
  */
 function carried(review: WeeklyReview, t: Translator, locale: Locale) {
   return weekFigures(t, locale).filter(

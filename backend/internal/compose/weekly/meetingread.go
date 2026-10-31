@@ -11,18 +11,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// MayReadMeetings is the rule for every figure counted from meetings, on
-// Weekly and on the live Analytics reviews alike: a meeting is an activity, so
-// the seat needs activity read.
+// MayReadMeetings is the rule for every figure counted from meetings. Weekly
+// and the live Analytics reviews share it. A meeting is an activity, so the
+// seat needs activity read.
 func MayReadMeetings(ctx context.Context) bool {
 	return auth.Allows(ctx, "activity", principal.ActionRead)
 }
 
 // withholdReviewMeetings takes the meeting figures out of a frozen rep week
-// for a reader who may not read them. The narrative and the learnings go too:
-// a model wrote them from those figures, and no sentence of theirs can be
-// trusted to leave the figures out. They read as never run, which is true for
-// this reader.
+// for a reader who may not read them. The narrative and the learnings go too.
+// A model wrote them from those figures, and may have stated one. They read
+// as never run, which is true for this reader.
 func withholdReviewMeetings(review *Review) {
 	review.MeetingsWithheld = true
 	review.Counts.MeetingsHeld, review.Counts.MeetingsWithNextStep = 0, 0
@@ -35,9 +34,9 @@ func withholdReviewMeetings(review *Review) {
 	review.LearningsState, review.Learnings = LearningsNotRun, nil
 }
 
-// withholdTeamMeetings does the same for a frozen team week. A rep whose only
-// pattern was meetings without a next step reads as a quiet week, in the
-// snapshot's own language, since the focus is always the first pattern.
+// withholdTeamMeetings does the same for a frozen team week. The focus is
+// always the first pattern. So a rep whose only pattern was meetings without a
+// next step reads as a quiet week, in the snapshot's own language.
 func withholdTeamMeetings(review *TeamReview) {
 	review.MeetingsWithheld = true
 	review.Counts.MeetingsHeld, review.Counts.MeetingsWithNextStep = 0, 0
