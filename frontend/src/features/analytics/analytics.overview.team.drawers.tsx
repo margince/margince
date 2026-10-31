@@ -12,7 +12,7 @@ import {
   useHandoffPages,
   WaitingRow,
 } from "./analytics.outcomes.sdr";
-import { EvidenceFrame } from "./reporting.evidence";
+import { EvidenceFrame } from "./reporting.evidenceframe";
 import { reportingPeriodLabel } from "./reporting.model";
 
 type Review = components["schemas"]["SdrTeamReview"];

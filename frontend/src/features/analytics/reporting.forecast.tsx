@@ -11,10 +11,8 @@ import { unwrap } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
 import { ForecastShareActions } from "./analytics.share";
 import { ReportingCharts } from "./reporting.charts";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import {
   type ReportingEvaluation,
   type ReportingSelection,

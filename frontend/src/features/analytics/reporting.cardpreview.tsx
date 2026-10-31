@@ -5,10 +5,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { ChartPanel, pageCharts } from "./reporting.charts";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type { CardChoice } from "./reporting.layout";
 import { type ReportingSelection, reportingQuery } from "./reporting.model";
 

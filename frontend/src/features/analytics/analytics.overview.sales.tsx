@@ -41,10 +41,8 @@ import {
 } from "./analytics.overview.salesreadings";
 import { SinceLastReview } from "./analytics.overview.since";
 import { periodCaption } from "./analytics.period";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type {
   ReportingEvaluation,
   ReportingEvidenceRef,

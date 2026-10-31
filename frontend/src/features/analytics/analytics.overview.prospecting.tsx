@@ -38,10 +38,8 @@ import {
   OverviewSaveActions,
 } from "./analytics.overview.readings";
 import { periodCaption } from "./analytics.period";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingFilters } from "./reporting.filters";
 import type {
   ReportingEvaluation,

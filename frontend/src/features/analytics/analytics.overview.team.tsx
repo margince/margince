@@ -32,10 +32,8 @@ import {
   useTeamSummary,
 } from "./analytics.overview.team.standing";
 import { periodCaption } from "./analytics.period";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import {
   type ReportingEvidenceRef,

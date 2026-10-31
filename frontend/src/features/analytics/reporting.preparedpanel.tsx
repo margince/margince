@@ -17,10 +17,8 @@ import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { ReportingCharts } from "./reporting.charts";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { reportingQuery } from "./reporting.model";
 import {
   PREPARED_REPORTS,

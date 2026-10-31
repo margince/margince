@@ -17,10 +17,8 @@ import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
 import type { ReportingSelection } from "./reporting.model";

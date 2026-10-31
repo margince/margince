@@ -7,10 +7,8 @@ import { formatDateAbbrev } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { AttentionState } from "./analytics.attention";
 import { ChartPanel } from "./reporting.charts";
-import {
-  ReportingEvidenceDrawer,
-  useSelectionEvidence,
-} from "./reporting.evidence";
+import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import type {
   ReportingEvaluation,
   ReportingSelection,
