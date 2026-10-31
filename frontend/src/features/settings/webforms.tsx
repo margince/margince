@@ -13,7 +13,9 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { useT } from "../../i18n";
+import { formatDate } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -169,6 +171,7 @@ function FormRow({
               ? form.allowed_origins.join(", ")
               : t(`webForms.senderLine.${form.sender}`)}
             {form.owner_id && <FormOwnerLine ownerId={form.owner_id} />}
+            <LastPostLine lastPostAt={form.last_post_at} />
             <span className="webform-row-actions">
               <Button
                 data-testid="web-form-setup"
@@ -227,6 +230,27 @@ function FormRow({
         <WebFormDrawer form={form} onClose={() => setEditing(false)} />
       )}
     </>
+  );
+}
+
+// Whether the pasted code works, read off the last post the form landed. An
+// older server sends no field at all, so the row says nothing either way.
+function LastPostLine({
+  lastPostAt,
+}: Readonly<{ lastPostAt: string | null | undefined }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (lastPostAt === undefined) {
+    return null;
+  }
+  return (
+    <span>
+      {lastPostAt === null
+        ? t("webForms.row.noPost")
+        : t("webForms.row.lastPost", {
+            when: formatDate(lastPostAt, locale, viewerZone()),
+          })}
+    </span>
   );
 }
 

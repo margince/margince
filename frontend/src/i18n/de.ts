@@ -14940,6 +14940,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Signierter Webhook von Typeform",
   "webForms.senderLine.tally": "Signierter Webhook von Tally",
   "webForms.row.consent": "Einwilligung nötig",
+  "webForms.row.lastPost": "Letzte Sendung {when}",
+  "webForms.row.noPost": "Noch keine Sendung erfasst",
   "webForms.setup": "Einrichtung zeigen",
   "webForms.edit": "Bearbeiten",
   "webForms.pause": "Formular pausieren",

@@ -34731,7 +34731,7 @@ components:
       description: >-
         A website form (`web_form`): a public intake address that turns a submission into a lead.
         No secret is ever returned here; `secret_configured` says one is stored.
-      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at]
+      required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -34758,6 +34758,12 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        last_post_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the form last landed a post, stamped at most once a minute. Null until the
+            first one since the time was tracked. A post the spam checks drop is not counted.
 
     WebFormCreated:
       allOf:
