@@ -63,7 +63,7 @@ func eventSignalEvidence(event extractedEvent, cited ids.UUID, thread settledThr
 			if message.ID != cited {
 				continue
 			}
-			if proof, ok := values.ProveQuote(textlang.CurrentMessage(message.Body), event.Quote); ok {
+			if proof, ok := textlang.ProveSenderQuote(message.Body, event.Quote); ok {
 				evidence.SourceQuote = &proof
 			}
 		}

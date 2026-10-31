@@ -3471,6 +3471,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.suggest.act.openDeal": "Deal öffnen",
   "co.suggest.act.addTask": "Nächsten Schritt hinzufügen",
   // Ein Verlauf als ein Ereignis sagt zuerst, WAS er ist.
+  "timeline.group.newsletters_other": "{count} Newsletter",
+  "timeline.group.newsletters_one": "{count} Newsletter",
   "timeline.group.thread_other": "{count} Nachrichten",
   "timeline.group.thread_one": "{count} Nachricht",
   "timeline.group.sides": "{theirs} von der Gegenseite, {ours} von deinem Team",
@@ -6913,7 +6915,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.channelFiling":
     "Beim Senden wird die Nachricht mit dem beantworteten Thread unter {project} abgelegt.",
   "compose.basedOn": "Grundlage: {inputs}",
-  "compose.whyThisDraft": "Warum dieser Entwurf?",
+  "compose.whyThisDraft": "Warum dieser Entwurf",
   "compose.body": "Nachrichtentext",
   "compose.signOff": "Wird beim Senden angefügt",
   "compose.signOffClosing":
