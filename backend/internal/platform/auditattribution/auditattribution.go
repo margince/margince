@@ -10,6 +10,7 @@ package auditattribution
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -100,12 +101,21 @@ func FirstCreateSQL(entityType, entityID string) string {
 }
 
 // creatorsSQL probes each named record once, so its cost follows the page size
-// and never the length of a record's history.
-var creatorsSQL = `
+// and never the length of a record's history. The record type is a literal, so
+// a generic plan keeps the partial indexes keyed on entity_type.
+func creatorsSQL(entityType string) (string, error) {
+	if !recordType.MatchString(entityType) {
+		return "", fmt.Errorf("auditattribution: %q is not a record type", entityType)
+	}
+	return `
 		SELECT named.id, a.actor_type, a.actor_id, a.on_behalf_of, a.passport_id,
 		       ` + ActorNameColumn + `, obo.display_name, oc.client_name
-		FROM unnest($2::uuid[]) AS named(id)
-		CROSS JOIN LATERAL (` + FirstCreateSQL("$1", "named.id") + `) a` + ActorNameJoins + AgentClientNameJoin
+		FROM unnest($1::uuid[]) AS named(id)
+		CROSS JOIN LATERAL (` + FirstCreateSQL("'"+entityType+"'", "named.id") + `) a` + ActorNameJoins + AgentClientNameJoin, nil
+}
+
+// recordType is the spelling of every record type a store passes in.
+var recordType = regexp.MustCompile(`^[a-z_]+$`)
 
 // CreatorsTx is who created each named record of one type, read from
 // FirstCreateSQL. A record with no surviving create row is absent from the
@@ -116,7 +126,11 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 	if len(entityIDs) == 0 {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, creatorsSQL, entityType, entityIDs)
+	statement, err := creatorsSQL(entityType)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, statement, entityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("auditattribution: reading creators: %w", err)
 	}
