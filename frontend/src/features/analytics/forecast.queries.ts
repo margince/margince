@@ -81,3 +81,39 @@ export function useForecastReadings(
     enabled: scope !== undefined,
   });
 }
+
+export type ForecastContribution =
+  components["schemas"]["ForecastContribution"];
+
+/**
+ * The deals behind the readings, each with the chance it is weighted by. A
+ * separate read from `useForecastReadings`, so the headline does not wait for
+ * one row per deal.
+ */
+export function useForecastContributions(
+  scope: AnalyticsScope | undefined,
+  period: ForecastPeriod = "quarter",
+) {
+  return useQuery({
+    queryKey: [
+      "forecast",
+      scope ? scopeKey(scope) : "unresolved",
+      period,
+      "contributions",
+    ],
+    queryFn: async () => {
+      if (!scope) {
+        throw new Error("the forecast scope is not resolved yet");
+      }
+      const readings = unwrap(
+        await api.GET("/forecast", {
+          params: {
+            query: { ...scopeQuery(scope), period, contributions: true },
+          },
+        }),
+      );
+      return readings;
+    },
+    enabled: scope !== undefined,
+  });
+}

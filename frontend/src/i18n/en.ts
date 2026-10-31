@@ -893,6 +893,39 @@ export const en = {
   "reporting.movement.amount": "Value changes",
   "reporting.movement.category": "Forecast category changes",
   "reporting.movement.stage_weight": "Stage weight changes",
+  "reporting.movement.record_changed": "Chance moved by recorded outcomes",
+  "installationSettings.selfCorrectingTitle": "Forecast",
+  "installationSettings.selfCorrecting": "Let the forecast correct itself",
+  "installationSettings.selfCorrectingHint":
+    "Each stage starts at the chance you typed. As deals recorded from a stage close, the forecast moves that stage’s chance toward how they ended, counting your typed chance as 20 deals. Imported stage moves never count.",
+  "installationSettings.selfCorrectingOn":
+    "The forecast weighs each open deal by its stage’s chance in use, and by a risk signal once frozen forecasts show its effect.",
+  "installationSettings.selfCorrectingOff":
+    "The forecast weighs each open deal by the chance typed on its stage, as before.",
+  "stage.chance.withEvidence":
+    "Typed {typed} · {count} recorded deals from here closed, {won} won · Forecast uses {used}",
+  "stage.chance.noEvidence":
+    "Typed {typed} · No recorded deal from here has closed yet · Forecast uses {used}",
+  "stage.chance.off": "Forecast uses the typed {typed}: self-correction is off",
+  "forecast.deals.title": "Deals behind the weighted figure",
+  "forecast.deals.open": "Show each open deal and its chance",
+  "forecast.deals.introOn":
+    "Each deal counts at its stage’s chance in use, moved by the strongest risk signal once settled forecasts show its effect.",
+  "forecast.deals.introOff":
+    "Each deal counts at the chance typed on its stage. Self-correction is off.",
+  "forecast.deals.none": "No open deal is expected to close in this period.",
+  "forecast.deals.typed": "Typed {percent}",
+  "forecast.deals.recorded": "{count} recorded outcomes",
+  "forecast.deals.uses": "uses {percent}",
+  "forecast.deals.afterRisk": "{percent} after risk",
+  "forecast.deals.colDeal": "Deal",
+  "forecast.deals.colSignals": "Risk signals",
+  "forecast.deals.colAmount": "Amount",
+  "forecast.deals.colWeighted": "Weighted",
+  "forecast.signal.close_pushed": "Close date keeps moving",
+  "forecast.signal.no_next_step": "No next step",
+  "forecast.signal.quiet": "Customer quiet",
+  "forecast.signal.stuck": "Long in stage",
   "reporting.movement.won": "Won",
   "reporting.movement.lost": "Lost",
   "reporting.movement.reopened_or_archived": "Reopened or archived",

@@ -19548,7 +19548,10 @@ export interface paths {
          *     committed pipeline whose close dates somebody confirmed — a provisional date is a
          *     guess, which is what that reading exists to exclude, though the deal stays in
          *     `open`. `best_case` adds the best-case category. `weighted` applies each deal's
-         *     stage probability, rounded per deal.
+         *     chance in use, with the strongest learned risk effect, rounded per deal. While
+         *     `self_correcting` is true the chance in use is the stage's typed chance moved toward
+         *     the outcomes of deals recorded entering that stage; with no such outcome, and while it
+         *     is false, it is the typed chance.
          *
          *     `eligible_count` minus `priced_count` is the gap a reader is owed. An unpriced deal
          *     is real pipeline contributing zero money, and a total presented without that gap
@@ -19559,6 +19562,31 @@ export interface paths {
          *     by assumption, and the assumption is usually their own zone.
          */
         get: operations["getForecast"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/forecast/stage-chances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The chance the forecast uses for each open stage, and the evidence behind it.
+         * @description Per open stage: the typed chance, how many deals recorded entering the stage in the last
+         *     two years have closed, the estimated share of them won, and the chance the forecast uses.
+         *     Computed over the whole installation, so every reader sees the same chance; only counts
+         *     are returned. Only moves made in this installation count. Imported moves and
+         *     moves saved before their origin was kept count for nothing. Deals still open are
+         *     counted as open until today, so a stage with many young deals is not read as losing.
+         */
+        get: operations["getForecastStageChances"];
         put?: never;
         post?: never;
         delete?: never;
@@ -23653,6 +23681,15 @@ export interface components {
              */
             individual_performance: boolean;
             /**
+             * @description Let the forecast correct itself. On by default. On, each open stage's chance moves
+             *     toward the outcomes of deals recorded entering it in the last two years, weighted
+             *     against the typed chance as if that were 20 deals; imported and older moves without
+             *     a recorded origin count for nothing. A risk signal changes a deal's weight only
+             *     after settled frozen forecasts show its effect. Off, every forecast surface weights
+             *     a deal by its stage's typed chance.
+             */
+            forecast_self_correcting: boolean;
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -23793,6 +23830,8 @@ export interface components {
             call_zalo?: boolean;
             /** @description Show individual performance. Omit to leave it unchanged. Each change is audited. */
             individual_performance?: boolean;
+            /** @description Let the forecast correct itself. Omit to leave it unchanged. Each change is audited. */
+            forecast_self_correcting?: boolean;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
@@ -42206,6 +42245,74 @@ export interface components {
             /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
             snapshots?: components["schemas"]["ForecastSnapshotRef"][];
             qualified?: components["schemas"]["ForecastQualifiedReadings"];
+            /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
+            self_correcting?: boolean;
+            /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
+            contributions?: components["schemas"]["ForecastContribution"][];
+        };
+        /** @description One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once. */
+        ForecastContribution: {
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /** Format: uuid */
+            stage_id?: string;
+            category?: string;
+            /**
+             * Format: int64
+             * @description The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+             */
+            base_minor?: number;
+            /**
+             * @description Why a deal in the reading contributes no money.
+             * @enum {string}
+             */
+            exclusion_reason?: "unpriced" | "fx_missing";
+            /** Format: int64 */
+            weighted_minor: number;
+            in_won: boolean;
+            in_open: boolean;
+            in_evidence: boolean;
+            in_best_case: boolean;
+            /** @description The chance typed on the deal's stage, in percent. */
+            typed_probability?: number;
+            /** @description The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals. */
+            chance_in_use: number;
+            /** @description How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off. */
+            evidence_n?: number;
+            /** @description Risk signals on an open deal: the close date moved more than twice in 90 days, no next step, the customer quiet past the viability threshold, or longer in the stage than nine in ten won deals stayed. Empty while self-correction is off. */
+            signals: ("close_pushed" | "no_next_step" | "quiet" | "stuck")[];
+            /**
+             * Format: double
+             * @description The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+             */
+            effect?: number;
+            /** @description The chance in use with `effect` applied to its odds, in percent. */
+            applied_probability: number;
+        };
+        ForecastStageChances: {
+            /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */
+            self_correcting: boolean;
+            /**
+             * Format: date-time
+             * @description The start of today in the installation's zone. No outcome after it counts.
+             */
+            evidence_cutoff: string;
+            /** @description How many closed deals the typed chance counts as. */
+            prior_strength: number;
+            stages: components["schemas"]["ForecastStageChance"][];
+        };
+        ForecastStageChance: {
+            /** Format: uuid */
+            stage_id: string;
+            typed_probability: number;
+            /** @description Recorded entries into this stage that have closed won or lost. */
+            evidence_n: number;
+            /** @description The estimated share of those deals that end won. Absent when none closed. */
+            won_percent?: number;
+            chance_in_use: number;
         };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
@@ -42516,8 +42623,11 @@ export interface components {
             deals: components["schemas"]["ForecastMovementDeal"][];
         };
         ForecastMovementBucket: {
-            /** @enum {string} */
-            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
+            /**
+             * @description `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+             * @enum {string}
+             */
+            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
             /** Format: int64 */
             amount_minor: number;
             deal_count: number;
@@ -42543,7 +42653,7 @@ export interface components {
             /** Format: uuid */
             approval_id?: string;
             /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading. */
-            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
         };
         NewForecastCall: {
             /**
@@ -84540,6 +84650,8 @@ export interface operations {
                 scope_kind?: "workspace" | "team" | "owner";
                 /** @description Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject. */
                 scope_id?: string;
+                /** @description Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why. */
+                contributions?: boolean;
             };
             header?: never;
             path?: never;
@@ -84559,6 +84671,28 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getForecastStageChances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stage chances. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastStageChances"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getForecastAssurance: {

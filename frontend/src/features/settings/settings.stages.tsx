@@ -28,6 +28,7 @@ import {
   StageExitCriteria,
 } from "./settings.exitcriteria";
 import { useStageOrder } from "./settings.pipelineorder";
+import { useStageChances } from "./settings.stagechances";
 import {
   ladderOf,
   StageCreate,
@@ -84,8 +85,42 @@ function OpenName({
   );
 }
 
+export type StageChances = ReturnType<typeof useStageChances>["data"];
+
+// What the forecast makes of the typed chance: the recorded deals from this
+// stage, and the chance it weights an open deal by.
+export function StageChanceLine({
+  stage,
+  chances,
+}: Readonly<{ stage: Stage; chances: StageChances }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const chance = chances?.byStage.get(stage.id);
+  if (!chances || !chance) return null;
+  const pct = (value: number) => `${formatNumber(value, locale)}%`;
+  const typed = pct(chance.typed_probability);
+  let line: string;
+  if (!chances.selfCorrecting) {
+    line = t("stage.chance.off", { typed });
+  } else if (chance.won_percent === undefined) {
+    line = t("stage.chance.noEvidence", {
+      typed,
+      used: pct(chance.chance_in_use),
+    });
+  } else {
+    line = t("stage.chance.withEvidence", {
+      typed,
+      count: formatNumber(chance.evidence_n, locale),
+      won: pct(chance.won_percent),
+      used: pct(chance.chance_in_use),
+    });
+  }
+  return <span className="t-caption">{line}</span>;
+}
+
 type ColumnsOf = Readonly<{
   t: T;
+  chances: StageChances | undefined;
   plural: PluralTranslator;
   locale: Locale;
   open: readonly Stage[];
@@ -120,7 +155,7 @@ function criteriaFolded(stage: Stage, { plural, locale }: ColumnsOf) {
 }
 
 function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
-  const { t, locale, open, verbs } = of;
+  const { t, locale, open, verbs, chances } = of;
   const reading = (stage: Stage) =>
     `${formatNumber(stage.win_probability, locale)}%`;
   return [
@@ -157,16 +192,21 @@ function stageColumns(of: ColumnsOf): DataTableColumn<Stage>[] {
       header: t("stage.winProb"),
       align: "end",
       render: (stage) => (
-        <span className="stage-odds">
-          <Meter
-            value={stage.win_probability}
-            max={100}
-            label={t("stage.oddsOf", { name: stage.name })}
-            dense
-            flat
-          />
-          {reading(stage)}
-        </span>
+        <CellStack>
+          <span className="stage-odds">
+            <Meter
+              value={stage.win_probability}
+              max={100}
+              label={t("stage.oddsOf", { name: stage.name })}
+              dense
+              flat
+            />
+            {reading(stage)}
+          </span>
+          {stage.semantic === "open" && (
+            <StageChanceLine stage={stage} chances={chances} />
+          )}
+        </CellStack>
       ),
       folded: reading,
     },
@@ -236,6 +276,7 @@ export function StageLadderEditor({
     onRemove: removal.ask,
   };
   const label = t("stage.group");
+  const chances = useStageChances();
   return (
     <>
       <PanelGroupHead
@@ -279,7 +320,14 @@ export function StageLadderEditor({
           rows={ladder}
           rowKey={(stage) => stage.id}
           rowTestId={(stage) => `stage-${stage.id}`}
-          columns={stageColumns({ t, plural, locale, open, verbs })}
+          columns={stageColumns({
+            t,
+            plural,
+            locale,
+            open,
+            verbs,
+            chances: chances.data,
+          })}
           detail={{
             header: t("stage.criteriaDetail"),
             toggleLabel: (stage) =>

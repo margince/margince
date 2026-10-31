@@ -918,6 +918,41 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.amount": "Thay đổi giá trị",
   "reporting.movement.category": "Thay đổi nhóm dự báo",
   "reporting.movement.stage_weight": "Thay đổi trọng số giai đoạn",
+  "reporting.movement.record_changed":
+    "Tỷ lệ thay đổi theo kết quả đã ghi nhận",
+  "installationSettings.selfCorrectingTitle": "Dự báo",
+  "installationSettings.selfCorrecting": "Cho dự báo tự điều chỉnh",
+  "installationSettings.selfCorrectingHint":
+    "Mỗi giai đoạn bắt đầu với tỷ lệ bạn đã nhập. Khi các giao dịch được ghi nhận từ một giai đoạn kết thúc, dự báo dịch tỷ lệ của giai đoạn đó về phía kết quả thực tế, coi tỷ lệ bạn nhập như 20 giao dịch. Các lần chuyển giai đoạn do nhập dữ liệu không bao giờ được tính.",
+  "installationSettings.selfCorrectingOn":
+    "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đang dùng của giai đoạn, và theo tín hiệu rủi ro khi các dự báo đã chốt cho thấy tác động của nó.",
+  "installationSettings.selfCorrectingOff":
+    "Dự báo tính mỗi giao dịch đang mở theo tỷ lệ đã nhập cho giai đoạn, như trước đây.",
+  "stage.chance.withEvidence":
+    "Đã nhập {typed} · {count} giao dịch ghi nhận từ đây đã kết thúc, {won} thắng · Dự báo dùng {used}",
+  "stage.chance.noEvidence":
+    "Đã nhập {typed} · Chưa có giao dịch ghi nhận nào từ đây kết thúc · Dự báo dùng {used}",
+  "stage.chance.off": "Dự báo dùng {typed} đã nhập: tự điều chỉnh đang tắt",
+  "forecast.deals.title": "Các giao dịch tạo nên con số có trọng số",
+  "forecast.deals.open": "Xem từng giao dịch đang mở và tỷ lệ của nó",
+  "forecast.deals.introOn":
+    "Mỗi giao dịch được tính theo tỷ lệ đang dùng của giai đoạn, điều chỉnh theo tín hiệu rủi ro mạnh nhất khi các dự báo đã kết thúc cho thấy tác động của nó.",
+  "forecast.deals.introOff":
+    "Mỗi giao dịch được tính theo tỷ lệ đã nhập cho giai đoạn. Tự điều chỉnh đang tắt.",
+  "forecast.deals.none":
+    "Không có giao dịch đang mở nào dự kiến kết thúc trong kỳ này.",
+  "forecast.deals.typed": "Đã nhập {percent}",
+  "forecast.deals.recorded": "{count} kết quả đã ghi nhận",
+  "forecast.deals.uses": "dùng {percent}",
+  "forecast.deals.afterRisk": "{percent} sau rủi ro",
+  "forecast.deals.colDeal": "Giao dịch",
+  "forecast.deals.colSignals": "Tín hiệu rủi ro",
+  "forecast.deals.colAmount": "Giá trị",
+  "forecast.deals.colWeighted": "Có trọng số",
+  "forecast.signal.close_pushed": "Ngày chốt liên tục dời",
+  "forecast.signal.no_next_step": "Chưa có bước tiếp theo",
+  "forecast.signal.quiet": "Khách hàng im lặng",
+  "forecast.signal.stuck": "Ở giai đoạn quá lâu",
   "reporting.movement.won": "Thắng",
   "reporting.movement.lost": "Thua",
   "reporting.movement.reopened_or_archived": "Mở lại hoặc lưu trữ",

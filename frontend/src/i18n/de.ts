@@ -941,6 +941,42 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
+  "reporting.movement.record_changed":
+    "Chance durch erfasste Abschlüsse verschoben",
+  "installationSettings.selfCorrectingTitle": "Prognose",
+  "installationSettings.selfCorrecting": "Prognose selbst korrigieren lassen",
+  "installationSettings.selfCorrectingHint":
+    "Jede Phase beginnt mit der eingetragenen Chance. Sobald aus einer Phase erfasste Deals abgeschlossen sind, rückt die Prognose die Chance dieser Phase an deren Ergebnis heran; die eingetragene Chance zählt dabei wie 20 Deals. Importierte Phasenwechsel zählen nie.",
+  "installationSettings.selfCorrectingOn":
+    "Die Prognose gewichtet jeden offenen Deal mit der genutzten Chance seiner Phase und mit einem Risikosignal, sobald eingefrorene Prognosen dessen Wirkung zeigen.",
+  "installationSettings.selfCorrectingOff":
+    "Die Prognose gewichtet jeden offenen Deal wie bisher mit der in seiner Phase eingetragenen Chance.",
+  "stage.chance.withEvidence":
+    "Eingetragen {typed} · {count} erfasste Deals von hier abgeschlossen, {won} gewonnen · Prognose nutzt {used}",
+  "stage.chance.noEvidence":
+    "Eingetragen {typed} · Noch kein erfasster Deal von hier abgeschlossen · Prognose nutzt {used}",
+  "stage.chance.off":
+    "Prognose nutzt die eingetragenen {typed}: Selbstkorrektur ist aus",
+  "forecast.deals.title": "Deals hinter dem gewichteten Wert",
+  "forecast.deals.open": "Jeden offenen Deal und seine Chance zeigen",
+  "forecast.deals.introOn":
+    "Jeder Deal zählt mit der genutzten Chance seiner Phase, verschoben durch das stärkste Risikosignal, sobald abgeschlossene Prognosen dessen Wirkung zeigen.",
+  "forecast.deals.introOff":
+    "Jeder Deal zählt mit der in seiner Phase eingetragenen Chance. Die Selbstkorrektur ist aus.",
+  "forecast.deals.none":
+    "Kein offener Deal soll in diesem Zeitraum abschließen.",
+  "forecast.deals.typed": "Eingetragen {percent}",
+  "forecast.deals.recorded": "{count} erfasste Ergebnisse",
+  "forecast.deals.uses": "nutzt {percent}",
+  "forecast.deals.afterRisk": "{percent} nach Risiko",
+  "forecast.deals.colDeal": "Deal",
+  "forecast.deals.colSignals": "Risikosignale",
+  "forecast.deals.colAmount": "Betrag",
+  "forecast.deals.colWeighted": "Gewichtet",
+  "forecast.signal.close_pushed": "Abschlussdatum verschiebt sich",
+  "forecast.signal.no_next_step": "Kein nächster Schritt",
+  "forecast.signal.quiet": "Kunde schweigt",
+  "forecast.signal.stuck": "Lange in der Phase",
   "reporting.movement.won": "Gewonnen",
   "reporting.movement.lost": "Verloren",
   "reporting.movement.reopened_or_archived": "Wieder geöffnet oder archiviert",
