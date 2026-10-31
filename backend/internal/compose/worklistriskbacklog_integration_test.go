@@ -104,7 +104,7 @@ func (b *riskBacklog) quiet(t *testing.T, deal ids.UUID, days int) {
 
 func (b *riskBacklog) closes(t *testing.T, deal ids.UUID, days int) {
 	t.Helper()
-	b.r.e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, deal, b.r.now.AddDate(0, 0, days).Format(time.DateOnly))
+	b.r.e.WsExec(t, `UPDATE deal SET expected_close_date = $2 WHERE id = $1`, deal, installationDay(t, b.r.e, b.r.now).AddDate(0, 0, days).Format(time.DateOnly))
 }
 
 // taskOnDeal gives Rep1 the most overdue task, filed under a deal past the

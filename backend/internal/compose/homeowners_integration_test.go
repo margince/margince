@@ -144,13 +144,7 @@ func TestOwnershipScopesTheOverdueScanAtEveryQuietWindow(t *testing.T) {
 	for i := range slippingScanLimit + 1 {
 		e.SeedDeal(t, fmt.Sprintf("Other dated recovery %d", i), pipeline, stage, &e.Rep3)
 	}
-	// The scan judges overdue on the installation's calendar day, so the close
-	// dates are that day's, not the test machine's local one.
-	zone, err := installationZone(e.Admin(), e.Pool)
-	if err != nil {
-		t.Fatal(err)
-	}
-	today := storekit.WorkspaceDay(at, zone)
+	today := installationDay(t, e, at)
 	e.WsExec(t, `UPDATE deal SET expected_close_date = $1 WHERE pipeline_id = $2`, today.AddDate(0, 0, -20), pipeline)
 	e.WsExec(t, `UPDATE deal SET expected_close_date = $1 WHERE id = $2`, today.AddDate(0, 0, -1), own)
 	for _, days := range []int{19, 60} {
