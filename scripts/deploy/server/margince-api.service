@@ -1,0 +1,26 @@
+# The api on a server. It runs the image's own entrypoint, so it applies the
+# migrations as the owner role and then serves as the app role, as the image
+# does. Settings come from /etc/margince/margince.env.
+[Unit]
+Description=Margince api
+Wants=network-online.target
+After=network-online.target postgresql.service redis-server.service
+
+[Service]
+Type=exec
+User=margince
+Group=margince
+WorkingDirectory=/var/lib/margince
+EnvironmentFile=/etc/margince/margince.env
+Environment=PATH=/opt/margince/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/margince/deploy/api-entrypoint.sh
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/margince
+
+[Install]
+WantedBy=multi-user.target

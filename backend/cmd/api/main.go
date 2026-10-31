@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
 func main() {
@@ -52,6 +53,10 @@ func main() {
 
 // start is --check-config when args ask for it, and the boot otherwise.
 func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-api"))
+		return err
+	}
 	if checked, err := checkAPIConfig(args, config.Environ(), stdout); checked || err != nil {
 		return err
 	}
