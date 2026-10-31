@@ -354,7 +354,6 @@
   padding-inline: var(--padPanel);
 }
 
-
 /* The rank reads as a marker beside the row rather than as part of the
    sentence, so it is set at a fixed width: a two-digit number must not shift
    the titles beside it.
