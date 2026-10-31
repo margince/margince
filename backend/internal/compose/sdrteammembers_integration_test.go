@@ -437,3 +437,86 @@ func TestSdrTeamReviewKeepsMeetingsForAReaderWithoutLeadRead(t *testing.T) {
 		}
 	}
 }
+
+func withMask(ctx context.Context, field string, condition principal.MaskCondition) context.Context {
+	actor, _ := principal.Actor(ctx)
+	actor.Permissions.FieldMasks = append(slices.Clone(actor.Permissions.FieldMasks), principal.FieldMask{Object: "lead", Field: field, Condition: condition})
+	return principal.WithActor(ctx, actor)
+}
+
+// A field mask on a column a lead reading reads withholds that figure. It
+// does so on the reading, on every member's row and on the target.
+// Counted over the leads the mask leaves, it would read as measured.
+func TestSdrTeamMembersWithholdAFigureAFieldMaskReaches(t *testing.T) {
+	f := newSdrLeadTeam(t)
+	e := f.e
+	// A mask never binds an unbounded seat, so the reader is a team lead.
+	manager := sectionsReader(e, f.manager, []ids.UUID{e.Team1}, principal.RowScopeTeam)
+	actor, _ := principal.Actor(manager)
+	actor.Permissions.Objects["sales_target"] = principal.ObjectGrant{Read: true}
+	manager = principal.WithActor(manager, actor)
+	window := f.team(manager, t).MemberTargets.Window
+	if _, err := newReportingService(e.Pool, func() time.Time { return f.at }).CreateTarget(f.ctx, crmcontracts.ReportingTargetInput{
+		Metric: reportingLeadsPromoted, Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)},
+		PeriodKind: "month", PeriodStart: openapi_types.Date{Time: window.StartAt}, Value: 4, Reason: "Month plan",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		name      string
+		field     string
+		condition principal.MaskCondition
+		withheld  []crmcontracts.SdrTeamReviewWithheldFigures
+		reading   crmcontracts.ReportingMetricID
+	}{
+		{
+			name: "promoted_at always", field: "promoted_at", condition: principal.MaskAlways, reading: reportingLeadsPromoted,
+			withheld: []crmcontracts.SdrTeamReviewWithheldFigures{crmcontracts.SdrTeamReviewWithheldFiguresQualified, crmcontracts.SdrTeamReviewWithheldFiguresTargets},
+		},
+		{
+			name: "first reply outside write authority", field: "first_response_at", condition: principal.MaskOutsideWriteAuthority, reading: reportingLeadsAwaitingResponse,
+			withheld: []crmcontracts.SdrTeamReviewWithheldFigures{crmcontracts.SdrTeamReviewWithheldFiguresUnanswered},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := withMask(manager, tc.field, tc.condition)
+			got := f.team(reader, t)
+			if !slices.Equal(got.WithheldFigures, tc.withheld) {
+				t.Fatalf("withheld figures = %v, want %v", got.WithheldFigures, tc.withheld)
+			}
+			qualified := !slices.Contains(tc.withheld, crmcontracts.SdrTeamReviewWithheldFiguresQualified)
+			unanswered := !slices.Contains(tc.withheld, crmcontracts.SdrTeamReviewWithheldFiguresUnanswered)
+			if (got.MemberTargets != nil) != qualified {
+				t.Fatalf("the target month shows only beside an unmasked qualified figure: %+v", got.MemberTargets)
+			}
+			for _, row := range got.Members {
+				if (row.Qualified != nil) != qualified || (row.Unanswered != nil) != unanswered || (row.Target != nil && !qualified) {
+					t.Fatalf("%s publishes a masked figure: %+v", row.Label, row)
+				}
+			}
+			team := f.evaluate(reader, t, crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)})
+			if reading := sectionsReading(t, team, tc.reading); !reading.Coverage.Withheld {
+				t.Fatalf("the governed %s reading does not say the mask withholds it: %+v", tc.reading, reading)
+			}
+		})
+	}
+}
+
+// A seat that may read activities and not leads still gets the meetings
+// booked ahead from the summary, and is told the handoffs are withheld.
+func TestSdrSummaryAnswersUpcomingMeetingsWithoutLeadRead(t *testing.T) {
+	f := newSdrTeamFixture(t)
+	e := f.e
+	f.submitAs(t, e.Rep1, "Handed on")
+	kind := crmcontracts.GetSdrSummaryParamsScopeKindTeam
+	var got crmcontracts.SdrSummary
+	body := sdrServe(withoutGrants(f.as(f.manager), "lead"), t, e, func(h sdrSummaryHandlers, w http.ResponseWriter, r *http.Request) {
+		h.GetSdrSummary(w, r, crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: (*openapi_types.UUID)(&e.Team1)})
+	}, f.now)
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Handoffs != nil || got.HandoffsWithheld == nil || !*got.HandoffsWithheld || got.UpcomingMeetings == nil || got.UpcomingWindow == nil {
+		t.Fatalf("upcoming meetings stay and handoffs are named withheld: %+v", got)
+	}
+}

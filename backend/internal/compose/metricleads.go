@@ -49,7 +49,7 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 	case reportingLeadsCreated:
 		fields = append(fields, "origin")
 	case reportingLeadsPromoted:
-		fields = append(fields, "qualified_deal_id")
+		fields = append(fields, "qualified_deal_id", "promoted_at")
 	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
 	case reportingLeadCohortOutcomes:

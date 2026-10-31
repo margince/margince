@@ -110,9 +110,6 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 
 func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at time.Time) (crmcontracts.SdrSummary, error) {
 	out := crmcontracts.SdrSummary{AsOf: at, Workflow: crmcontracts.SdrSummaryWorkflowQualification}
-	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
-		return out, err
-	}
 	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
 	if err != nil {
 		return out, err
@@ -124,6 +121,14 @@ func readSdrSummary(ctx context.Context, tx pgx.Tx, requested RequestedScope, at
 	}
 	if template == crmcontracts.ReportingFrameworkInputTemplateSdr {
 		out.Workflow = crmcontracts.SdrSummaryWorkflowHandoff
+	}
+	// Each count answers to its own grant, the rule the team review keeps.
+	switch {
+	case out.Workflow != crmcontracts.SdrSummaryWorkflowHandoff:
+	case !mayReadHandoffs(ctx):
+		withheld := true
+		out.HandoffsWithheld = &withheld
+	default:
 		totals, err := readHandoffTotals(ctx, tx, requested, at)
 		if err != nil {
 			return out, err

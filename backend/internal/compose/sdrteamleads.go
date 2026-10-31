@@ -91,24 +91,50 @@ func mayReadHandoffs(ctx context.Context) bool {
 }
 
 // readerWithheldFigures names the figures the requesting reader's grants
-// leave out of a review. A target held against leads the reader may not see
-// says nothing, so targets need lead read as well as target read.
-func readerWithheldFigures(ctx context.Context, workflow crmcontracts.SdrTeamReviewWorkflow) []crmcontracts.SdrTeamReviewWithheldFigures {
+// and field masks leave out of a review. A mask on some leads leaves a count
+// over the rest, which would read as measured, so it withholds the figure. A
+// target held against a figure the reader may not see says nothing.
+func readerWithheldFigures(ctx context.Context, workflow crmcontracts.SdrTeamReviewWorkflow) ([]crmcontracts.SdrTeamReviewWithheldFigures, error) {
 	out := []crmcontracts.SdrTeamReviewWithheldFigures{}
-	leads := auth.Allows(ctx, string(recordTypeLead), principal.ActionRead)
 	if !weekly.MayReadMeetings(ctx) {
 		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresMeetings)
 	}
 	if !mayReadHandoffs(ctx) {
 		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresHandoffs)
 	}
+	leads := auth.Allows(ctx, string(recordTypeLead), principal.ActionRead)
+	qualified, unanswered := true, true
+	if leads {
+		var err error
+		if qualified, unanswered, err = leadReadingsMasked(ctx); err != nil {
+			return nil, err
+		}
+	}
 	if !leads {
 		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresLeads)
 	}
-	if workflow == crmcontracts.SdrTeamReviewWorkflowQualification && (!leads || !auth.Allows(ctx, "sales_target", principal.ActionRead)) {
+	if leads && qualified {
+		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresQualified)
+	}
+	if leads && unanswered {
+		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresUnanswered)
+	}
+	if workflow == crmcontracts.SdrTeamReviewWorkflowQualification && (qualified || !auth.Allows(ctx, "sales_target", principal.ActionRead)) {
 		out = append(out, crmcontracts.SdrTeamReviewWithheldFiguresTargets)
 	}
-	return out
+	return out, nil
+}
+
+// leadReadingsMasked says whether a field mask withholds any column the
+// qualified and the unanswered readings read, on some leads or on all, as
+// each reading's coverage would say.
+func leadReadingsMasked(ctx context.Context) (qualified, unanswered bool, err error) {
+	var b reportingBindings
+	if _, qualified, err = reportingFieldScope(ctx, string(recordTypeLead), "l", reportingLeadFields(reportingLeadsPromoted), &b); err != nil {
+		return false, false, err
+	}
+	_, unanswered, err = reportingFieldScope(ctx, string(recordTypeLead), "l", reportingLeadFields(reportingLeadsAwaitingResponse), &b)
+	return qualified, unanswered, err
 }
 
 // sdrTeamMemberFigures adds the lead figures and targets to the member rows,
@@ -139,7 +165,12 @@ func (f sdrTeamMemberFigures) apply(ctx context.Context, tx pgx.Tx, out *crmcont
 	for index := range out.Members {
 		member := &out.Members[index]
 		figures := leads[ids.UUID(member.Id)]
-		member.Qualified, member.Unanswered = &figures.qualified, &figures.unanswered
+		if !slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresQualified) {
+			member.Qualified = &figures.qualified
+		}
+		if !slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresUnanswered) {
+			member.Unanswered = &figures.unanswered
+		}
 		if value, ok := targets[ids.UUID(member.Id)]; ok {
 			member.Target = &crmcontracts.SdrTeamMemberTarget{Value: value, Actual: figures.monthQualified}
 		}

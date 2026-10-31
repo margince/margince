@@ -18594,10 +18594,12 @@ func (e SdrTeamReviewMembershipBasis) Valid() bool {
 
 // Defines values for SdrTeamReviewWithheldFigures.
 const (
-	SdrTeamReviewWithheldFiguresHandoffs SdrTeamReviewWithheldFigures = "handoffs"
-	SdrTeamReviewWithheldFiguresLeads    SdrTeamReviewWithheldFigures = "leads"
-	SdrTeamReviewWithheldFiguresMeetings SdrTeamReviewWithheldFigures = "meetings"
-	SdrTeamReviewWithheldFiguresTargets  SdrTeamReviewWithheldFigures = "targets"
+	SdrTeamReviewWithheldFiguresHandoffs   SdrTeamReviewWithheldFigures = "handoffs"
+	SdrTeamReviewWithheldFiguresLeads      SdrTeamReviewWithheldFigures = "leads"
+	SdrTeamReviewWithheldFiguresMeetings   SdrTeamReviewWithheldFigures = "meetings"
+	SdrTeamReviewWithheldFiguresQualified  SdrTeamReviewWithheldFigures = "qualified"
+	SdrTeamReviewWithheldFiguresTargets    SdrTeamReviewWithheldFigures = "targets"
+	SdrTeamReviewWithheldFiguresUnanswered SdrTeamReviewWithheldFigures = "unanswered"
 )
 
 // Valid indicates whether the value is a known member of the SdrTeamReviewWithheldFigures enum.
@@ -18609,7 +18611,11 @@ func (e SdrTeamReviewWithheldFigures) Valid() bool {
 		return true
 	case SdrTeamReviewWithheldFiguresMeetings:
 		return true
+	case SdrTeamReviewWithheldFiguresQualified:
+		return true
 	case SdrTeamReviewWithheldFiguresTargets:
+		return true
+	case SdrTeamReviewWithheldFiguresUnanswered:
 		return true
 	default:
 		return false
@@ -54145,6 +54151,9 @@ type SdrSummary struct {
 	AsOf     time.Time         `json:"as_of"`
 	Handoffs *SdrHandoffTotals `json:"handoffs,omitempty"`
 
+	// HandoffsWithheld True when the workflow hands prospects on and the reader may not read leads, where handoffs are kept, so `handoffs` is absent. Absent otherwise.
+	HandoffsWithheld *bool `json:"handoffs_withheld,omitempty"`
+
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
 
@@ -54195,14 +54204,14 @@ type SdrTeamMember struct {
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
 
-	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads`.
+	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
 	Qualified *int                 `json:"qualified,omitempty"`
 	Recycled  *int                 `json:"recycled,omitempty"`
 	Rejected  *int                 `json:"rejected,omitempty"`
 	Submitted *int                 `json:"submitted,omitempty"`
 	Target    *SdrTeamMemberTarget `json:"target,omitempty"`
 
-	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads`.
+	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`.
 	Unanswered *int `json:"unanswered,omitempty"`
 
 	// Waiting This member's handoffs waiting on somebody else now.
@@ -54260,7 +54269,7 @@ type SdrTeamReview struct {
 	// Withheld Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent.
 	Withheld bool `json:"withheld"`
 
-	// WithheldFigures The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `targets` needs target read and lead read, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.
+	// WithheldFigures The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `qualified` and `unanswered` each leave out that one figure when a field mask withholds a column its reading reads, on some leads or on all: a count over the leads left would read as measured. `targets` needs target read, lead read and an unmasked `qualified`, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.
 	WithheldFigures []SdrTeamReviewWithheldFigures `json:"withheld_figures"`
 
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
