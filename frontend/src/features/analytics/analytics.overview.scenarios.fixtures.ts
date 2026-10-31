@@ -176,8 +176,8 @@ function team(evaluation: ReportingEvaluation, routes: Routes = {}): Pair {
   };
 }
 
-// A team in qualification mode: the review has no handoffs, and its members
-// carry qualified and unanswered leads, with a monthly target for one of them.
+// A team in qualification mode: the review has no handoffs. Its members carry
+// qualified and unanswered leads, and one of them has a monthly target.
 const qualificationReview = teamReviewOn(dstWeek, {
   workflow: "qualification",
   handoffs: undefined,
