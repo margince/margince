@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -174,7 +175,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
 	if in.Kind != nil {
-		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
+		where = append(where, kindPredicate(*in.Kind, arg))
 	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
@@ -323,4 +324,13 @@ func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+}
+
+// kindPredicate spells a known kind as a literal, so a generic plan keeps the
+// partial indexes keyed on kind. Any other value stays bound.
+func kindPredicate(kind string, arg func(any) int) string {
+	if known := crmcontracts.ActivityKind(kind); known.Valid() {
+		return "a.kind = '" + string(known) + "'"
+	}
+	return sprintf("a.kind = $%d", arg(kind))
 }
