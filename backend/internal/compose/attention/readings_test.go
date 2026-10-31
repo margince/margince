@@ -483,19 +483,21 @@ func TestProspectingCountsAndFiltersPlannedLeadTasks(t *testing.T) {
 // A contact case is settled in its own review, so it carries no verb. Counting
 // verbs alone left every case out of the Home figure whenever the exact
 // decisions total was missing, and a page of only cases read as no decisions.
-func TestTheDecisionCountKeepsAContactCaseTheReaderMayMerge(t *testing.T) {
+// The lane raises a case only for its owners, so whether this viewer may merge
+// it whole (a too-large case never can) does not decide whether it counts.
+func TestTheDecisionCountKeepsEveryContactCaseItsLaneRaised(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf: rankInstant,
 		NeedsYou: []crmcontracts.AttentionItem{
-			item("mine", "contact_case", withCase(true)),
-			item("theirs", "contact_case", withCase(false)),
+			item("mergeable", "contact_case", withCase(true)),
+			item("too-large", "contact_case", withCase(false)),
 		},
 	}
 
 	got := readingsOf(classifyDay(day, rankInstant, dayMoney{}), nil, nil)
 
-	if got.Review != 1 {
-		t.Errorf("counted %d decisions, want the one case this reader may merge", got.Review)
+	if got.Review != 2 {
+		t.Errorf("counted %d decisions, want both cases the lane raised", got.Review)
 	}
 }
 
