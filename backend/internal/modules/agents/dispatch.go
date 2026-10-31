@@ -69,6 +69,8 @@ const (
 	// an MCP tool result ({"type":"text","text":…}) — one spelling for both,
 	// because a typo in either makes a result no client renders.
 	fieldText = "text"
+	// fieldType names the kind of a content block.
+	fieldType = "type"
 	// fieldTitle is the display name, carried BOTH at the top level of a
 	// tools/list entry and inside its annotations — one spelling for both.
 	fieldTitle = "title"
@@ -422,7 +424,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 // this server made and did not keep. structuredContent below is the member that
 // carries that promise, and it is withheld rather than served in violation.
 func (s *Dispatcher) result(name string, out json.RawMessage) map[string]any {
-	res := map[string]any{fieldContent: []map[string]any{{"type": fieldText, fieldText: string(out)}}}
+	res := map[string]any{fieldContent: []map[string]any{{fieldType: fieldText, fieldText: string(out)}}}
 	if structured, ok := s.structuredContent(name, out); ok {
 		res["structuredContent"] = structured
 	}
@@ -470,6 +472,6 @@ func (s *Dispatcher) structuredContent(name string, out json.RawMessage) (json.R
 func toolError(msg string) map[string]any {
 	return map[string]any{
 		"isError":    true,
-		fieldContent: []map[string]any{{"type": fieldText, fieldText: msg}},
+		fieldContent: []map[string]any{{fieldType: fieldText, fieldText: msg}},
 	}
 }

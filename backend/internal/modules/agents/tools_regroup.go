@@ -8,10 +8,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// The two router names other parts of the server point a model to.
+// The router names other parts of the server point a model to.
 const (
 	findRecordsToolName   = "find_records"
 	readAttentionToolName = "read_attention"
+	readContextToolName   = "read_context"
 )
 
 // The routers below each front one family of verbs under one listed name. A
@@ -43,7 +44,7 @@ type readContext struct{ routed }
 
 func (readContext) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_context", Title: "Get the story so far", Version: toolVersionV1,
+		Name: readContextToolName, Title: "Get the story so far", Version: toolVersionV1,
 		Description: readContextCopy.render(), Instead: readContextCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"about":{"description":"catch_up: what has been happening on one record; meeting: what to know before a meeting; brief: this morning's brief"}}}`),

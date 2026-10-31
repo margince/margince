@@ -78,7 +78,7 @@ const orientation = "Margince is a CRM: contacts, companies, deals, leads, proje
 // serves, for the same reason the queue sentence is conditional.
 func (s *Dispatcher) startingTools() string {
 	var served []string
-	for _, name := range []string{readAttentionToolName, findRecordsToolName, "read_context", "read_record"} {
+	for _, name := range []string{readAttentionToolName, findRecordsToolName, readContextToolName, "read_record"} {
 		if _, ok := s.registry.Spec(name); ok {
 			served = append(served, name)
 		}

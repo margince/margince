@@ -39,7 +39,7 @@ var starterPrompts = []starterPrompt{
 	{
 		Name: "morning_brief", Title: "Brief me for today",
 		Description: "This morning's brief, what is slipping and what waits for your decision.",
-		Tools:       []string{"read_context", readAttentionToolName, listApprovalsToolName},
+		Tools:       []string{readContextToolName, readAttentionToolName, listApprovalsToolName},
 		Text: "Brief me for today. Read this morning's brief with read_context (about: brief), " +
 			"check read_attention (view: slipping) for deals at risk, and call list_approvals for what " +
 			"waits for my decision. Give me the three things to do first, each with its link.",
@@ -55,7 +55,7 @@ var starterPrompts = []starterPrompt{
 		Name: "prepare_meeting", Title: "Prepare my next meeting",
 		Description: "Who is coming, the open threads and what was promised.",
 		Arguments:   []promptArgument{{Name: "with", Description: "The contact, company or deal the meeting is about", Required: true}},
-		Tools:       []string{"read_context"},
+		Tools:       []string{readContextToolName},
 		Text: "Prepare me for my meeting with {with}. Call read_context with about meeting and " +
 			"record_name {with}. Tell me who is coming, the open threads and what we promised.",
 	},
@@ -63,7 +63,7 @@ var starterPrompts = []starterPrompt{
 		Name: "catch_up", Title: "Catch me up on a record",
 		Description: "What has been happening on one contact, company, deal or project.",
 		Arguments:   []promptArgument{{Name: "record", Description: "The name of the contact, company, deal or project", Required: true}},
-		Tools:       []string{"read_context"},
+		Tools:       []string{readContextToolName},
 		Text: "Catch me up on {record}. Call read_context with about catch_up and record_name " +
 			"{record}, and tell me what changed and what is next.",
 	},
@@ -161,7 +161,7 @@ func (s *Dispatcher) promptGet(ctx context.Context, params json.RawMessage) (map
 			fieldDescription: prompt.Description,
 			"messages": []map[string]any{{
 				messageRole:  "user",
-				fieldContent: map[string]any{"type": fieldText, fieldText: text},
+				fieldContent: map[string]any{fieldType: fieldText, fieldText: text},
 			}},
 		}, nil
 	}
