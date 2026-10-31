@@ -9619,7 +9619,7 @@ export const en = {
   "notifications.markRead": "Mark read",
   "notifications.markAllFailed": "Nothing was marked read",
   "notifications.markReadFailed": "That notice was not marked read",
-  "notifications.new": "New",
+  "notifications.unread": "Unread",
   "notifications.byAgent": "By an agent",
   "notifications.empty":
     "Nothing has come in yet. What the product tells you about arrives here.",
