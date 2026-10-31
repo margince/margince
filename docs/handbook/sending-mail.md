@@ -126,7 +126,7 @@ Also called: AI writer, generate an email, write it for me.
 
 **Draft email** writes an email from what the record holds, in your voice.
 **Why this draft**, closed until you open it, shows what it read
-("Based on: {inputs}") and links the record behind each part.
+("Based on: {inputs}"), with a link to each record it read.
 
 Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
