@@ -100,7 +100,7 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 }
 
 func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
-	preview, err := s.preview(ctx, proposal)
+	preview, err := s.preview(s.withPreviewEffect(ctx, subject), proposal)
 	if err != nil || preview == nil {
 		return preview, err
 	}

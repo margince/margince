@@ -86,6 +86,8 @@ type Service struct {
 	// contextPins digest, per kind, the facts outside the target row that the
 	// reviewed outcome reads (contextpin.go).
 	contextPins map[string]ContextPin
+	// effectActor is who an agent's proposal runs as (effectactor.go).
+	effectActor EffectActor
 }
 
 const (
