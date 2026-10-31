@@ -71,8 +71,7 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if err != nil {
 		return nil, err
 	}
-	// The outcome is the agent's, since its retry runs the promotion. Names are
-	// read as the viewer, so a record only the agent can open stays unnamed.
+	// The outcome is the agent's, since its retry runs the promotion.
 	effect, asAgent, err := approvals.EffectContext(ctx)
 	if previewUnavailable(err) {
 		return out, nil
@@ -80,7 +79,6 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if err != nil {
 		return nil, err
 	}
-	r.withholdUnseen = asAgent
 	consents := consent.NewStore(r.db)
 	store := newContactsStore(r.db).WithStopCarrier(consents).WithSatelliteCarriers(consents, nil).WithDealOpener(leadDealOpener{deals: r.deals})
 	plan, err := store.PreviewLeadContactChange(effect, ids.From[ids.LeadKind](ids.UUID(*approval.TargetEntityId)), in)
@@ -94,12 +92,25 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if err != nil {
 		return nil, err
 	}
+	if asAgent {
+		readable, err := r.viewerReadsEvery(ctx, promotionTouches(ids.UUID(*approval.TargetEntityId), plan))
+		if err != nil {
+			return nil, err
+		}
+		if !readable {
+			out.State = approvals.PreviewNeedsWiderSight
+			return out, nil
+		}
+	}
 	out.CurrentVersion = new(int(plan.LeadVersion))
 	details, err := r.promotionDetails(ctx, in, plan)
 	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
+		return nil, err
+	}
+	if err := maskPromotionDetails(ctx, details); err != nil {
 		return nil, err
 	}
 	out.Details = &details
@@ -157,7 +168,6 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 	if err != nil {
 		return nil, err
 	}
-	withholdTargetConsent(contact, carried)
 	details = append(details, carried...)
 	if plan.CompanyIndustry != nil {
 		details = append(details, previewDetail("promotion_company_industry", *plan.CompanyIndustry))
@@ -191,21 +201,6 @@ func (r approvalPreviewReader) promotionEvidenceValue(ctx context.Context, id id
 		Kind: previewValueDate, Text: activity.OccurredAt.Format(time.RFC3339Nano),
 		EntityType: new(entityActivity), EntityId: new(openapi_types.UUID(id.UUID)),
 	}, nil
-}
-
-// withholdTargetConsent hides what a contact the viewer cannot open consents
-// to now. What the promotion leaves it consenting to is still shown.
-func withholdTargetConsent(contact, carried []crmcontracts.ApprovalPreviewDetail) {
-	for _, detail := range contact {
-		if detail.Field != "promotion_existing_contact" || detail.Value.Kind != previewValueUnavailable {
-			continue
-		}
-		for i := range carried {
-			if carried[i].Field == "promotion_consent_before" {
-				carried[i].Value = crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable}
-			}
-		}
-	}
 }
 
 func (r approvalPreviewReader) promotionContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {

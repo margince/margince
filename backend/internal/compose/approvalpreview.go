@@ -54,9 +54,6 @@ type approvalPreviewReader struct {
 	labels     map[string]map[ids.UUID]string
 	signals    *signals.Store
 	activities *activities.Store
-	// withholdUnseen names a record the viewer cannot open as unavailable
-	// instead of failing, for an outcome worked out as another principal.
-	withholdUnseen bool
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {

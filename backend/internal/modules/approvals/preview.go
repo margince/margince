@@ -30,9 +30,20 @@ func (e *PreviewContextError) MessageFault() (code, message string) {
 		return "approval_preview_incomplete", "The full change cannot be shown. Resolve the missing context before approving."
 	case "conflict":
 		return "approval_preview_conflict", "Resolve the conflicting context before approving this change."
+	case PreviewNeedsWiderSight:
+		return "approval_needs_wider_sight", "This change touches records you cannot open. A colleague who can see them must decide it."
 	default:
 		return "approval_preview_unavailable", "The context needed to review this change is unavailable. Check access and the source before approving."
 	}
+}
+
+// Unwrap makes a refusal for want of sight a 403: who decides is the problem,
+// not the context.
+func (e *PreviewContextError) Unwrap() error {
+	if e.State == PreviewNeedsWiderSight {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
 }
 
 // WithPreview connects decision context to the authorized readers of its records.
@@ -173,6 +184,10 @@ func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID 
 	}
 	return destination
 }
+
+// PreviewNeedsWiderSight is the state of a preview whose effect touches a
+// record the viewer cannot open. It shows nothing of the plan.
+const PreviewNeedsWiderSight = "needs_wider_sight"
 
 const (
 	previewIncomplete       = "incomplete"

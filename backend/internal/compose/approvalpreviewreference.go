@@ -34,9 +34,6 @@ func (r approvalPreviewReader) referenceValue(ctx context.Context, field, text s
 	}
 	label, found := labels[id]
 	if !found || strings.TrimSpace(label) == "" {
-		if r.withholdUnseen {
-			return crmcontracts.ApprovalPreviewValue{Kind: previewValueUnavailable, EntityType: &entityType}, nil
-		}
 		return value, apperrors.ErrNotFound
 	}
 	kind := previewValueReference

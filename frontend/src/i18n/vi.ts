@@ -838,6 +838,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể hiển thị đầy đủ thay đổi. Yêu cầu đề xuất mới trước khi duyệt.",
   "approval.preview.unavailable":
     "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
+  "approval.preview.needsWiderSight":
+    "Thay đổi này chạm đến các bản ghi bạn không mở được. Một đồng nghiệp xem được chúng phải quyết định.",
   "approval.preview.change": "Từ {before} thành {after}",
   "approval.import.row": "{kind}, dòng {line} ({key})",
   "approval.import.create": "Tạo bản ghi mới",

@@ -7,6 +7,8 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -18,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,16 +42,19 @@ func newPromotionSight(t *testing.T, agentRole string, approverOf func(*integrat
 	approver := approverOf(e)
 	e.GrantRole(t, e.Rep1, agentRole)
 	e.GrantRole(t, approver, approverRole)
-	passport := e.SeedPassport(t, integration.OwnerConn(t), "promotion sight")
-	live, err := identity.NewService(e.Pool).AuthenticateAgentByID(sightContext(e), ids.From[ids.PassportKind](passport))
+	s := &promotionSight{t: t, e: e, svc: NewApprovalsService(e.DB()), approver: storedMemberSeat(t, e, approver)}
+	s.agentOn(e.SeedPassport(t, integration.OwnerConn(t), "promotion sight"))
+	return s
+}
+
+// agentOn makes the agent the one that authenticates with passport.
+func (s *promotionSight) agentOn(passport ids.UUID) {
+	s.t.Helper()
+	live, err := identity.NewService(s.e.Pool).AuthenticateAgentByID(sightContext(s.e), ids.From[ids.PassportKind](passport))
 	if err != nil {
-		t.Fatal(err)
+		s.t.Fatal(err)
 	}
-	return &promotionSight{
-		t: t, e: e, svc: NewApprovalsService(e.DB()),
-		agent:    principal.WithActor(sightContext(e), live.Principal()),
-		approver: storedMemberSeat(t, e, approver),
-	}
+	s.agent = principal.WithActor(sightContext(s.e), live.Principal())
 }
 
 func sightContext(e *integration.Env) context.Context {
@@ -156,23 +162,47 @@ func (s *promotionSight) approveAndRelease(id ids.ApprovalID, lead ids.LeadID) i
 	return contact
 }
 
-func previewDetailKind(preview crmcontracts.ApprovalPreview, field string) string {
-	for _, detail := range *preview.Details {
-		if detail.Field == field {
-			return detail.Value.Kind
-		}
-	}
-	return ""
-}
-
-func requireUnnamed(t *testing.T, preview crmcontracts.ApprovalPreview, names ...string) {
+func promotionDetailValue(t *testing.T, preview crmcontracts.ApprovalPreview, field string) crmcontracts.ApprovalPreviewValue {
 	t.Helper()
-	for _, detail := range *preview.Details {
-		for _, name := range names {
-			if strings.Contains(detail.Value.Text, name) {
-				t.Fatalf("the preview names %q to a member who cannot open it: %+v", name, detail)
+	if preview.Details != nil {
+		for _, detail := range *preview.Details {
+			if detail.Field == field {
+				return detail.Value
 			}
 		}
+	}
+	t.Fatalf("the preview has no %s detail: %+v", field, preview.Details)
+	return crmcontracts.ApprovalPreviewValue{}
+}
+
+// requireShowsNothing holds that a refused preview carries no part of the plan.
+func requireShowsNothing(t *testing.T, preview crmcontracts.ApprovalPreview, secrets ...string) {
+	t.Helper()
+	if preview.State != approvals.PreviewNeedsWiderSight {
+		t.Fatalf("preview = %s, want %s", preview.State, approvals.PreviewNeedsWiderSight)
+	}
+	if preview.Details != nil || preview.Effects != nil || len(preview.Changes) != 0 {
+		t.Fatalf("a refused preview still shows the plan: %+v", preview)
+	}
+	raw, err := json.Marshal(preview)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, secret := range secrets {
+		if strings.Contains(string(raw), secret) {
+			t.Fatalf("a refused preview carries %q: %s", secret, raw)
+		}
+	}
+}
+
+func requireRefusedForSight(t *testing.T, err error) {
+	t.Helper()
+	refusal, ok := errors.AsType[*approvals.PreviewContextError](err)
+	if !ok || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("deciding = %v, want a permission refusal for want of sight", err)
+	}
+	if code, _ := refusal.MessageFault(); code != "approval_needs_wider_sight" {
+		t.Fatalf("refusal code = %s", code)
 	}
 }
 
@@ -200,6 +230,9 @@ func TestAPromotionPreviewShowsWhatTheAgentsPromotionWillDo(t *testing.T) {
 	if slices.Contains(*preview.Effects, contacts.ContactEmployerResolveEffect) || slices.Contains(*preview.Effects, "reuse_contact_employer") {
 		t.Fatalf("the preview links the company only the approver sees: %v", *preview.Effects)
 	}
+	if email := promotionDetailValue(t, preview, "promotion_contact_email"); email.Text != "pat@"+domain {
+		t.Fatalf("an approver who sees everything gets the address as %+v", email)
+	}
 
 	contact := s.approveAndRelease(id, lead)
 	if n := s.e.WsCount(t, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND company_id = $2`, contact, holder); n != 0 {
@@ -210,59 +243,114 @@ func TestAPromotionPreviewShowsWhatTheAgentsPromotionWillDo(t *testing.T) {
 	}
 }
 
-// The agent links a company and cites a mail that only it can open.
-func TestAPromotionPreviewNamesNoRecordTheApproverCannotOpen(t *testing.T) {
+// The agent's promotion merges into a contact private to its human.
+func TestAnApproverWhoCannotOpenTheMergeTargetIsShownNothing(t *testing.T) {
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
-	secret := s.company("Secret Account", s.e.Rep1, "")
+	address := "kit@private-" + ids.NewV7().String()[24:] + ".test"
 	rep2 := ids.From[ids.UserKind](s.e.Rep2)
-	lead := s.lead(contacts.CreateLeadInput{
-		FullName: new("Lee Linked"), Email: new("lee@gmail.com"), CompanyName: new("Secret Account"), Source: "manual", OwnerID: &rep2,
-	})
-	if _, err := s.e.Contacts.LinkLeadCompany(s.e.Admin(), lead, ids.From[ids.CompanyKind](secret)); err != nil {
-		t.Fatal(err)
-	}
-	// Renamed, so the name the lead typed is no longer the company's name.
-	if _, err := s.e.Contacts.UpdateCompany(s.e.Admin(), ids.From[ids.CompanyKind](secret), contacts.UpdateCompanyInput{DisplayName: new("Quiet Holdings")}); err != nil {
-		t.Fatal(err)
-	}
-	s.hide(secret)
-	mail := s.mailOnlyOn(secret, "Secret pricing thread")
-	id := s.stage(lead, fmt.Sprintf(`{"operation":"PromoteLead","body":{"trigger":"human_qualify","evidence":{"activity_id":%q}}}`, mail))
+	lead := s.lead(contacts.CreateLeadInput{FullName: new("Kit Merge"), Email: new(address), Source: "manual", OwnerID: &rep2})
+	// The writers refuse a contact a live lead's address, so it arrives the
+	// way an older capture left it.
+	target := s.e.SeedContact(t, "Kit Hidden", &s.e.Rep1)
+	s.e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, position, source, captured_by)
+	               VALUES ($1, $2, true, 1, 'manual', 'human:x')`, target, address)
+	s.e.WsExec(t, `UPDATE contact SET visibility = 'owner' WHERE id = $1`, target)
+	id := s.stage(lead, fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.UUID))
 
-	preview := s.preview(id)
-	if preview.State != "ready" || preview.Details == nil {
-		t.Fatalf("preview = %s, want ready", preview.State)
-	}
-	for _, field := range []string{refColCompany, "promotion_evidence"} {
-		if kind := previewDetailKind(preview, field); kind != previewValueUnavailable {
-			t.Fatalf("%s is shown as %q, want it withheld", field, kind)
-		}
-	}
-	requireUnnamed(t, preview, "Quiet Holdings", "Secret pricing thread")
-
-	contact := s.approveAndRelease(id, lead)
-	if n := s.e.WsCount(t, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND company_id = $2 AND kind = 'employment'`, contact, secret); n != 1 {
-		t.Fatalf("the promotion did not link the company the preview withheld (%d links)", n)
+	requireShowsNothing(t, s.preview(id), target.String(), "Kit Hidden", "consent", "promote_")
+	_, err := s.svc.Decide(s.approver, id, true, nil)
+	requireRefusedForSight(t, err)
+	if s.e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND status = 'pending'`, id.UUID) != 1 {
+		t.Fatal("a refused decision moved the approval")
 	}
 }
 
-// The approver cannot find the mail the agent cites, and the pin stays put.
-func TestAPromotionPinHoldsForAnApproverWhoCannotFindTheAgentsMail(t *testing.T) {
+// The approver cannot find the mail the agent cites. The card says so instead
+// of going stale, and an approver who can see the mail still approves it.
+func TestAPromotionCitingMailTheApproverCannotFindWaitsForOneWhoCan(t *testing.T) {
 	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
 	mailbox := s.company("Mailbox Holder", s.e.Rep1, "")
 	s.hide(mailbox)
 	rep2 := ids.From[ids.UserKind](s.e.Rep2)
 	lead := s.lead(contacts.CreateLeadInput{FullName: new("Mo Mail"), Email: new("mo@gmail.com"), Source: "manual", OwnerID: &rep2})
-	mail := s.mailOnlyOn(mailbox, "Call notes")
+	mail := s.mailOnlyOn(mailbox, "Secret pricing thread")
 	id := s.stage(lead, fmt.Sprintf(`{"operation":"PromoteLead","body":{"trigger":"human_qualify","evidence":{"activity_id":%q}}}`, mail))
 	staged := s.e.WsScalar(t, `SELECT context_digest FROM approval WHERE id = $1`, id.UUID)
 
+	requireShowsNothing(t, s.preview(id), mail.String(), "Secret pricing thread")
+	_, err := s.svc.Decide(s.approver, id, true, nil)
+	requireRefusedForSight(t, err)
+
+	s.e.GrantRole(t, s.e.Rep1, "admin")
+	s.approver = storedMemberSeat(t, s.e, s.e.Rep1)
 	if state := s.preview(id).State; state != "ready" {
-		t.Fatalf("preview = %s, want ready", state)
+		t.Fatalf("preview for an approver who sees the mail = %s, want ready", state)
 	}
 	s.approveAndRelease(id, lead)
 	if decided := s.e.WsScalar(t, `SELECT context_digest FROM approval WHERE id = $1`, id.UUID); decided != staged {
 		t.Fatalf("the digest moved from %s to %s across readers", staged, decided)
+	}
+}
+
+func TestAPromotionPreviewKeepsTheFieldsTheApproversRoleMasks(t *testing.T) {
+	s := newPromotionSight(t, "admin", approverIsRep2, "rep")
+	viewer, _ := principal.Actor(s.approver)
+	viewer.Permissions.FieldMasks = []principal.FieldMask{
+		{Object: "lead", Field: "email", Condition: principal.MaskAlways},
+		{Object: "lead", Field: "phone", Condition: principal.MaskAlways},
+	}
+	s.approver = principal.WithActor(s.approver, viewer)
+	rep2 := ids.From[ids.UserKind](s.e.Rep2)
+	lead := s.lead(contacts.CreateLeadInput{
+		FullName: new("Mia Masked"), Email: new("mia@gmail.com"), Phone: new("+49 30 1234567"), Source: "manual", OwnerID: &rep2,
+	})
+	id := s.stage(lead, fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.UUID))
+
+	preview := s.preview(id)
+	if preview.State != "ready" {
+		t.Fatalf("preview = %s, want ready", preview.State)
+	}
+	for _, field := range []string{"promotion_contact_email", "promotion_contact_phone"} {
+		if value := promotionDetailValue(t, preview, field); value.Kind != previewValueUnavailable || value.Text != "" {
+			t.Fatalf("%s reaches a role that masks it: %+v", field, value)
+		}
+	}
+	if name := promotionDetailValue(t, preview, "promotion_contact_name"); name.Text != "Mia Masked" {
+		t.Fatalf("an unmasked field is withheld too: %+v", name)
+	}
+}
+
+func TestAPromotionStagedOnARevokedPassportIsNotReady(t *testing.T) {
+	s := newPromotionSight(t, "admin", approverIsAdmin, "admin")
+	rep1 := ids.From[ids.UserKind](s.e.Rep1)
+	lead := s.lead(contacts.CreateLeadInput{FullName: new("Rae Revoked"), Email: new("rae@gmail.com"), Source: "manual", OwnerID: &rep1})
+	id := s.stage(lead, fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.UUID))
+	agent, _ := principal.Actor(s.agent)
+	s.e.WsExec(t, `UPDATE passport SET revoked_at = now() WHERE id = $1`, agent.PassportID)
+	if state := s.preview(id).State; state == "ready" {
+		t.Fatal("a promotion whose agent can no longer call reads as ready")
+	}
+}
+
+// A refresh retires the passport and mints its successor on the same
+// connection. The successor spends the call, so the preview still holds.
+func TestAPromotionOutlivesARefreshOfItsAgentsPassport(t *testing.T) {
+	s := newPromotionSight(t, "admin", approverIsAdmin, "admin")
+	passport, grant := seedConnectionPassport(t, s.e)
+	s.agentOn(passport)
+	rep1 := ids.From[ids.UserKind](s.e.Rep1)
+	lead := s.lead(contacts.CreateLeadInput{FullName: new("Ren Refresh"), Email: new("ren@gmail.com"), Source: "manual", OwnerID: &rep1})
+	id := s.stage(lead, fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.UUID))
+	successor := ids.NewV7()
+	s.e.WsExec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
+	               VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read']::text[], $3, now() + interval '1 day', $4)`,
+		successor, s.e.Rep1, "hash-"+successor.String(), grant)
+	s.e.WsExec(t, `UPDATE passport SET revoked_at = now() WHERE id = $1`, passport)
+	if state := s.preview(id).State; state != "ready" {
+		t.Fatalf("preview after a refresh = %s, want ready", state)
+	}
+	if _, err := s.svc.Decide(s.approver, id, true, nil); err != nil {
+		t.Fatalf("approving after a refresh: %v", err)
 	}
 }
 
