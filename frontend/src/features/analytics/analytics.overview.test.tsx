@@ -461,3 +461,40 @@ describe("Sales review gap", () => {
     expect(strip.queryByText("€0")).toBeNull();
   });
 });
+
+describe("Sales review range", () => {
+  function withRange(over: Record<string, number>) {
+    return (url: URL) =>
+      isMovement(url)
+        ? startingMovement()
+        : salesEvaluation({
+            metrics: [
+              metric("bookings_won", 42_000_000),
+              metric("open_pipeline", 136_000_000),
+              metric("forecast_landing", 76_000_000, {
+                target_comparison: compared,
+                ...over,
+              }),
+            ],
+          });
+  }
+
+  it("states the central 80% of outcomes under the expected finish", async () => {
+    open(
+      "#/analytics",
+      withRange({ range_low_minor: 61_000_000, range_high_minor: 88_000_000 }),
+    );
+    const strip = await readings();
+    expect(
+      strip.getByText("8 in 10 outcomes between €610k and €880k"),
+    ).toBeVisible();
+    expect(strip.getByText("€760k")).toBeVisible();
+  });
+
+  it("draws no range from one end alone", async () => {
+    open("#/analytics", withRange({ range_low_minor: 61_000_000 }));
+    const strip = await readings();
+    expect(strip.getByText("€760k")).toBeVisible();
+    expect(strip.queryByText(/8 in 10 outcomes/)).toBeNull();
+  });
+});

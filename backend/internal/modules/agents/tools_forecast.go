@@ -134,6 +134,10 @@ type ForecastReadingsResult struct {
 
 	// SelfCorrecting says whether chances moved with recorded outcomes.
 	SelfCorrecting *bool `json:"self_correcting,omitempty"`
+	// RangeLowMinor and RangeHighMinor bound the central 80% of finishes under
+	// the chances in use. Neither bounds the weighted figure or the landing.
+	RangeLowMinor  *int64 `json:"range_low_minor,omitempty"`
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
 	// Contributions are the per-deal rows, present only when asked for.
 	// ContributionsLimited says they hold only the caller's own deals, while
 	// the installation switched off individual performance.
