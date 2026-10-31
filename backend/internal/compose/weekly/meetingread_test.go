@@ -102,8 +102,10 @@ func TestATeamWeekWithoutActivityReadCarriesNoMeetingFigureOrPattern(t *testing.
 
 func TestOnlyASeatWithoutActivityReadLosesTheMeetings(t *testing.T) {
 	week := func() TeamReview {
-		return TeamReview{Language: "en", Counts: TeamCounts{MeetingsHeld: 3},
-			Reps: []TeamRep{summaryRep("Ada", 0, FocusMeetingsWithoutNextStep)}}
+		return TeamReview{
+			Language: "en", Counts: TeamCounts{MeetingsHeld: 3},
+			Reps: []TeamRep{summaryRep("Ada", 0, FocusMeetingsWithoutNextStep)},
+		}
 	}
 	reader := week()
 	withheldFromReader(seatReading("deal", "forecast", "activity"), &reader)
