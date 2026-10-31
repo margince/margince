@@ -29201,7 +29201,8 @@ export interface components {
              *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
              *     tool it was typed through, each when the row records it, which `captured_by`
              *     cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
@@ -29735,7 +29736,8 @@ export interface components {
              *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
              *     tool it was typed through, each when the row records it, which `captured_by`
              *     cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
@@ -31606,7 +31608,8 @@ export interface components {
              * @description Who created the contact, from its earliest create audit row: for an agent, the
              *     colleague it worked for and the tool it was typed through, each when the row
              *     records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description The project this was narrowed to, when the request named one. */
@@ -34725,7 +34728,8 @@ export interface components {
              *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
              *     tool it was typed through, each when the row records it, which `captured_by`
              *     cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
@@ -36985,7 +36989,8 @@ export interface components {
              *     `Contact360.created_by` is: for an agent, the colleague it worked for and the
              *     tool it was typed through, each when the row records it, which `captured_by`
              *     cannot say. Absent when no create row is known; a reader says "unknown" for an
-             *     absent value and never "System".
+             *     absent value and never "System". Served only to a human session, never to an
+             *     agent, and never with `passport_id`.
              */
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */

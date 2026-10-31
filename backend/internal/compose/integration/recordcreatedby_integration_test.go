@@ -26,9 +26,10 @@ import (
 var recordCreatorPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"contact":               {Create: true, Read: true},
-		"company":               {Create: true, Read: true},
-		"deal":                  {Create: true, Read: true},
+		"contact":               {Create: true, Read: true, Update: true},
+		"company":               {Create: true, Read: true, Update: true},
+		"deal":                  {Create: true, Read: true, Update: true},
+		"activity":              {Create: true, Read: true},
 		"pipeline":              {Read: true},
 		"installation_settings": {Read: true},
 	},
@@ -58,6 +59,9 @@ func TestEveryReadOfAnAgentCreatedRecordNamesTheColleagueAndTheTool(t *testing.T
 		}
 		if who.AgentClient == nil || *who.AgentClient != "Claude" {
 			t.Errorf("%s: created_by.agent_client = %v, want the passport's client Claude", read, who.AgentClient)
+		}
+		if who.PassportId != nil {
+			t.Errorf("%s: created_by carries the passport id %s", read, *who.PassportId)
 		}
 	}
 }

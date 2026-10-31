@@ -171,7 +171,7 @@ func previewPromotionContact(ctx context.Context, tx pgx.Tx, lead crmcontracts.L
 		out.Create = new(promotionContactSpec(lead, employer, leadIdentityName(lead), by))
 		return out, nil
 	}
-	current, err := readContact(ctx, tx, candidate, storekit.LiveOnly, nil)
+	current, err := readContactRow(ctx, tx, candidate, storekit.LiveOnly, nil)
 	if err != nil {
 		return LeadContactChange{}, err
 	}

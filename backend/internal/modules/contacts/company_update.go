@@ -111,7 +111,7 @@ func (s *Store) updateCompanyInTx(
 	if err := lockCompanyNameWritesForEdit(ctx, tx, in); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	current, err := readCompany(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
 	}
@@ -148,7 +148,7 @@ func (s *Store) updateCompanyInTx(
 		if err := storekit.EnsureIfMatch(ctx, tx, "company", id.UUID, in.IfVersion); err != nil {
 			return crmcontracts.Company{}, err
 		}
-		return current, nil
+		return withCompanyCreator(ctx, tx, current)
 	}
 	if in.Visibility != nil {
 		if err := refuseStaleCompanyVisibility(ctx, tx, id, current); err != nil {

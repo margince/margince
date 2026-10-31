@@ -1614,7 +1614,8 @@ type Activity struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
@@ -1933,7 +1934,8 @@ type Company struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
@@ -2222,7 +2224,8 @@ type Deal struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 	Currency  *string               `json:"currency,omitempty"`
 

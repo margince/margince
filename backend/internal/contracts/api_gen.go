@@ -27052,7 +27052,8 @@ type Activity struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
@@ -33861,7 +33862,8 @@ type Company struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
@@ -37063,7 +37065,8 @@ type Contact struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 	Emails    *[]ContactEmail       `json:"emails,omitempty"`
 
@@ -37173,7 +37176,8 @@ type Contact360 struct {
 	// CreatedBy Who created the contact, from its earliest create audit row: for an agent, the
 	// colleague it worked for and the tool it was typed through, each when the row
 	// records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// DeadAddresses The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`.
@@ -40192,7 +40196,8 @@ type Deal struct {
 	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
 	// tool it was typed through, each when the row records it, which `captured_by`
 	// cannot say. Absent when no create row is known; a reader says "unknown" for an
-	// absent value and never "System".
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
 	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 	Currency  *string               `json:"currency,omitempty"`
 

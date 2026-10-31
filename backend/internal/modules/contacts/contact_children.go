@@ -14,7 +14,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -269,10 +268,9 @@ var contactColumns = `id, full_name, first_name, last_name, title, owner_id, vis
 	` + sourceAuthorSeatNameSQL("contact") + `,
 	version, created_at, updated_at, archived_at, last_activity_at, legal_hold, relationship_mark`
 
-// readContact resolves one contact row; active names the custom-field
-// columns to carry alongside the core ones — nil for internal decision
-// reads whose result never reaches the wire.
-func readContact(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
+// readContactRow resolves one contact row. active names the custom-field
+// columns to carry. It is nil for an internal read that never reaches the wire.
+func readContactRow(ctx context.Context, tx pgx.Tx, id ids.ContactID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
 	q := `SELECT ` + contactColumns + storekit.SelectSuffix(active) + ` FROM contact WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND archived_at IS NULL`
@@ -385,12 +383,6 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 	if err := storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
 		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) }); err != nil {
-		return err
-	}
-	if err := auditattribution.StampCreators(ctx, tx, contactEntity, contacts,
-		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		auditattribution.NoneWithheld[crmcontracts.Contact],
-		func(p *crmcontracts.Contact, who *crmcontracts.PrincipalAttribution) { p.CreatedBy = who }); err != nil {
 		return err
 	}
 	return attachContactReachability(ctx, tx, idx, contactIDs)

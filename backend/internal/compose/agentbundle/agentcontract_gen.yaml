@@ -10581,7 +10581,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -10928,7 +10929,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -12216,7 +12218,8 @@ components:
             Who created the contact, from its earliest create audit row: for an agent, the
             colleague it worked for and the tool it was typed through, each when the row
             records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.
@@ -14687,7 +14690,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -16333,7 +16337,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         web_form:
           allOf: [{$ref: '#/components/schemas/WebFormSubmission'}]
           readOnly: true

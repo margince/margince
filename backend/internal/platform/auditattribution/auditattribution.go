@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ActorNameColumn answers "who acted" over ActorNameJoins. Only one of the two
@@ -124,11 +125,15 @@ func CreatorsTx(ctx context.Context, tx pgx.Tx, entityType string, entityIDs []i
 }
 
 // StampCreators sets on each row of a page who created it, in one statement.
-// A withheld row gets none: whose agent wrote content the reader may not see,
-// and through which tool, is part of that content.
+// Which agents act for a colleague is that colleague's personal data. So only a
+// human session reads it, as only a human reads the record History. A withheld
+// row gets none: whose agent wrote hidden content is part of that content.
 func StampCreators[T any](ctx context.Context, tx pgx.Tx, entityType string, page []T,
 	id func(T) ids.UUID, withheld func(T) bool, set func(*T, *crmcontracts.PrincipalAttribution),
 ) error {
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+		return nil
+	}
 	readable := make([]ids.UUID, 0, len(page))
 	for i := range page {
 		if !withheld(page[i]) {
@@ -141,7 +146,10 @@ func StampCreators[T any](ctx context.Context, tx pgx.Tx, entityType string, pag
 	}
 	for i := range page {
 		if creator, found := creators[id(page[i])]; found {
-			set(&page[i], creator.Wire())
+			wire := creator.Wire()
+			// A passport id names a credential, and a record read needs only its tool.
+			wire.PassportId = nil
+			set(&page[i], wire)
 		}
 	}
 	return nil
