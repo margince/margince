@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { removeStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
+import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
 import {
   ADMIN_GRANTS,
@@ -98,10 +99,12 @@ describe("where Analytics opens", () => {
 });
 
 describe("Sales review", () => {
-  it("states the quarter's position in four readings and words", async () => {
+  it("leads with sales won and states the quarter's position in readings and words", async () => {
     open("#/analytics", bySeat("leader"));
     const strip = await readings();
-    expect(strip.getByText("€420k")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Sales won" })).toBeVisible();
+    expect(screen.getByText("€420k")).toBeVisible();
+    expect(strip.queryByText("€420k")).toBeNull();
     expect(strip.getByText("€760k")).toBeVisible();
     expect(strip.getByText("€40k")).toBeVisible();
     expect(strip.getByText("Covers 3.6× of €380k left to win")).toBeVisible();
@@ -112,7 +115,30 @@ describe("Sales review", () => {
     ).toBeVisible();
   });
 
-  it("puts the win rate in the gap's place and tells a reader who sets targets", async () => {
+  it("asks the preset's trend, stage and team charts, and draws them", async () => {
+    const asked = open("#/analytics", (url) =>
+      isMovement(url)
+        ? startingMovement()
+        : salesEvaluation({ charts: reportingStoryEvaluation.charts }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Open pipeline by stage" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Sales won by team member" }),
+    ).toBeVisible();
+    const sales = asked.find(
+      ({ url }) =>
+        url.pathname.endsWith("/analytics/evaluate") && !isMovement(url),
+    );
+    expect(sales?.url.searchParams.getAll("blocks")).toEqual([
+      "bookings_trend",
+      "stage_distribution",
+      "owner_attainment",
+    ]);
+  });
+
+  it("shows the win rate and no gap without a target, and tells a reader who sets targets", async () => {
     open(
       "#/analytics",
       (url) =>
@@ -179,8 +205,8 @@ describe("Sales review", () => {
             ],
           }),
     );
-    const strip = await readings();
-    expect(strip.getByText("Could not be calculated")).toBeVisible();
+    await readings();
+    expect(screen.getByText("Could not be calculated")).toBeVisible();
     expect(
       screen.getByText(/Some figures could not be read just now/),
     ).toBeVisible();
@@ -270,9 +296,9 @@ describe("Sales review", () => {
             ],
           }),
     );
-    const strip = await readings();
+    await readings();
     expect(
-      strip.getByText("Part of this figure is hidden from you"),
+      screen.getByText("Part of this figure is hidden from you"),
     ).toBeVisible();
     // The withheld figure is never stated as the whole in words.
     expect(screen.queryByText(/Won in/)).toBeNull();

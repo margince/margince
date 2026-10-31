@@ -7229,8 +7229,8 @@ export const en = {
   "analytics.overview.expectedFinish": "Expected finish",
   "analytics.overview.quarterOnly": "This quarter only",
   "analytics.overview.finishBasis": "End of this fiscal quarter, from {basis}",
-  "analytics.overview.noTargetRate":
-    "No sales target set, so the win rate stands here",
+  "analytics.overview.winRateBasis": "Of the deals closed in this period",
+  "analytics.overview.summary": "Summary",
   "analytics.overview.notCompared": "Not compared",
   "analytics.overview.notComparedDetail": "The note below says why",
   "analytics.overview.covers": "Covers {ratio}× of {remaining} left to win",

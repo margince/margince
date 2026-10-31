@@ -7208,8 +7208,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.quarterOnly": "Nur dieses Quartal",
   "analytics.overview.finishBasis":
     "Ende dieses Geschäftsquartals, aus {basis}",
-  "analytics.overview.noTargetRate":
-    "Kein Umsatzziel gesetzt, daher steht hier die Gewinnquote",
+  "analytics.overview.winRateBasis":
+    "Von den in diesem Zeitraum abgeschlossenen Deals",
+  "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
   "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
   "analytics.overview.covers": "Deckt {ratio}× der noch offenen {remaining}",

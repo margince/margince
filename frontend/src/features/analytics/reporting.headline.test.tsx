@@ -10,6 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ReportingOverview } from "./reporting.overview";
+import { reportingCatalogKey } from "./reporting.queries";
 import {
   reportingCatalogClient,
   reportingStoryEvaluation,
@@ -199,8 +200,20 @@ it("heads the sales figures with the win rate and new qualified pipeline beside 
       },
     ],
   };
+  // Every reading is named from the catalog, so the win rate needs its entry.
+  const client = reportingCatalogClient();
+  client.setQueryData(
+    reportingCatalogKey,
+    (catalog: typeof reportingStoryCatalog) => ({
+      ...catalog,
+      metrics: [
+        ...catalog.metrics,
+        { ...landing, id: "closed_win_rate", label: "Closed win rate" },
+      ],
+    }),
+  );
   render(
-    <StoryProviders>
+    <StoryProviders client={client}>
       <ResultsSummary evaluation={evaluation} onEvidence={() => {}} />
     </StoryProviders>,
   );

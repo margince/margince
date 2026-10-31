@@ -94,3 +94,52 @@
 .analytics-attention-title {
   font-weight: var(--fontWeightMedium);
 }
+
+/* One of a pair standing alone takes the row; a pair with neither drops out of
+   the stack rather than leaving a gap. */
+.analytics-pair > :only-child {
+  grid-column: 1 / -1;
+}
+.analytics-pair:empty {
+  display: none;
+}
+
+/* Sales won leads the opening page: the figure in display type, and the
+   running total that reached it in the room beside it. */
+.analytics-hero-body {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+.analytics-hero-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.analytics-hero-value {
+  font: var(--fontDisplayLarge);
+}
+.analytics-hero-body > :only-child {
+  grid-column: 1 / -1;
+}
+@media (max-width: 900px) {
+  .analytics-hero-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Reports and Setup are doors off the tab row, so they read as controls with
+   an edge rather than as words in the row. */
+.analytics-tab-verbs .btn-ghost {
+  --ghostEdge: var(--borderControl);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-rest);
+}
+.analytics-tab-verbs .btn-ghost:hover {
+  background: var(--bgHover);
+}
+.analytics-tab-verbs .btn-ghost[aria-current="page"] {
+  background: var(--bgInset);
+}
