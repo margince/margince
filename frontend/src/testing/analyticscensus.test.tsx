@@ -55,12 +55,22 @@ const SALES: View = {
       "/v1/analytics/metrics",
       "/v1/pipelines",
     ].includes(path(url)) ||
-    (path(url) === "/v1/analytics/evaluate" && !isMovement(url)),
+    (path(url) === "/v1/analytics/evaluate" &&
+      !isMovement(url) &&
+      !isChartRead(url)),
+  // The checks, the movement read and the board's charts, which the figures
+  // never wait for.
   optional: (url) =>
     path(url) === "/v1/forecast/assurance/exceptions" ||
-    (path(url) === "/v1/analytics/evaluate" && isMovement(url)),
+    (path(url) === "/v1/analytics/evaluate" &&
+      (isMovement(url) || isChartRead(url))),
   inFlight: 2,
 };
+
+// Sales review's chart read: the board's charts with the metrics they belong to.
+function isChartRead(url: URL): boolean {
+  return url.searchParams.getAll("blocks").includes("bookings_trend");
+}
 
 const PROSPECTING: View = {
   critical: (url) =>
@@ -92,8 +102,9 @@ const TEAM: View = {
       "/v1/analytics/evaluate",
       "/v1/analytics/sdr-team",
     ].includes(path(url)),
-  optional: () => false,
-  inFlight: 0,
+  // The team's booked meetings, a line under where the team stands.
+  optional: (url) => path(url) === "/v1/analytics/sdr-summary",
+  inFlight: 1,
 };
 
 // Every request the page made, sorted into the shell, the critical path and
@@ -118,11 +129,12 @@ describe("the request census of each opening view", () => {
       {},
       createQueryClient(),
     );
-    await screen.findByText(
-      "Comparison starts after a second compatible capture.",
-    );
+    await screen.findByText(/^History starts with the next capture, /);
     const headline = asked.filter(
-      ({ url }) => path(url) === "/v1/analytics/evaluate" && !isMovement(url),
+      ({ url }) =>
+        path(url) === "/v1/analytics/evaluate" &&
+        !isMovement(url) &&
+        !isChartRead(url),
     );
     expect(headline[0]?.url.searchParams.get("period")).toBe("this_quarter");
     expect(headline[0]?.url.searchParams.getAll("metrics")).toContain(
