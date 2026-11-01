@@ -130,7 +130,7 @@ func TestTheContentGateIsTheDiscoverGateNarrowedByAudience(t *testing.T) {
 	if !strings.HasPrefix(content, discover) {
 		t.Errorf("the content gate does not start from the discover gate:\n%s\nvs\n%s", content, discover)
 	}
-	for _, arm := range []string{"a.audience = 'workspace'", "a.captured_by LIKE $", "activity_participant ap", "activity_audience_member am"} {
+	for _, arm := range []string{"a.audience = 'workspace'", "a.captured_by LIKE ANY (ARRAY(SELECT $", "activity_participant ap", "activity_audience_member am"} {
 		if !strings.Contains(content, arm) {
 			t.Errorf("the content gate lacks the %q arm: %s", arm, content)
 		}

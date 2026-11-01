@@ -18,6 +18,8 @@ func memberIdentitySetSQL(position int) string {
 	return fmt.Sprintf("SELECT unnest(member_identity_family(root)) AS id FROM unnest($%d::uuid[]) root", position)
 }
 
+// The suffixes are an uncorrelated ARRAY, so Postgres computes the family once
+// per statement; a correlated EXISTS inside an OR ran it once per row.
 func memberAuthorshipSQL(alias string, memberPosition int, arg func(any) int) string {
-	return fmt.Sprintf(`EXISTS (SELECT 1 FROM (%s) author_identity WHERE %s.captured_by LIKE $%d || author_identity.id::text)`, memberIdentitySQL(memberPosition), alias, arg("%:"))
+	return fmt.Sprintf(`%s.captured_by LIKE ANY (ARRAY(SELECT $%d || author_identity.id::text FROM (%s) author_identity))`, alias, arg("%:"), memberIdentitySQL(memberPosition))
 }
