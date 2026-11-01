@@ -343,31 +343,31 @@ func TestEverySettlementWriteLeavesOneEventPerAuditRow(t *testing.T) {
 		}
 	}
 
-	audits, unannounced := settlementAudits(t, e, request, settlementVerdictCol)
+	audits, misannounced := settlementAudits(t, e, request, settlementVerdictCol)
 	if audits != 2 {
 		t.Fatalf("the two verdicts wrote %d settlement audit row(s), want 2", audits)
 	}
-	if unannounced != 0 {
-		t.Errorf("%d of %d settlement audit rows have no outbox row", unannounced, audits)
+	if misannounced != 0 {
+		t.Errorf("%d of %d settlement audit rows lack exactly one settlement event", misannounced, audits)
 	}
 }
 
 // settlementAudits counts the request's audit rows that wrote column, and those
-// of them with no activity.updated beside them that names a settlement change.
-func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string) (audits, unannounced int) {
+// of them without exactly one activity.updated beside them naming a settlement change.
+func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string) (audits, misannounced int) {
 	t.Helper()
 	if err := e.owner.QueryRow(e.as(), `
-		SELECT count(*), count(*) FILTER (WHERE NOT EXISTS (
-		         SELECT 1 FROM event_outbox o
+		SELECT count(*), count(*) FILTER (WHERE (
+		         SELECT count(*) FROM event_outbox o
 		          WHERE o.envelope->'trace'->>'audit_log_id' = a.id::text
 		            AND o.envelope->>'type' = 'activity.updated'
-		            AND o.envelope->'payload'->'changed_fields'->>'request_settlement_changed' = 'true'))
+		            AND o.envelope->'payload'->'changed_fields'->>'request_settlement_changed' = 'true') <> 1)
 		  FROM audit_log a
 		 WHERE a.entity_type = 'activity' AND a.entity_id = $1 AND a.after ? $2`,
-		request, column).Scan(&audits, &unannounced); err != nil {
+		request, column).Scan(&audits, &misannounced); err != nil {
 		t.Fatal(err)
 	}
-	return audits, unannounced
+	return audits, misannounced
 }
 
 // Somebody picking the work back up outranks the machine's verdict. Without
