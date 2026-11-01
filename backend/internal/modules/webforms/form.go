@@ -177,7 +177,7 @@ func originOf(raw string) (string, error) {
 	scheme := strings.ToLower(u.Scheme)
 	host := strings.ToLower(u.Host)
 	local := u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1"
-	if scheme != "https" && (scheme != "http" || !local) {
+	if scheme != schemeHTTPS && (scheme != schemeHTTP || !local) {
 		return "", fmt.Errorf("webforms: %q is not https", raw)
 	}
 	return scheme + "://" + host, nil
@@ -203,7 +203,7 @@ func checkRedirect(raw *string) error {
 		return nil
 	}
 	u, err := url.Parse(*raw)
-	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
+	if err != nil || u.Scheme != schemeHTTPS || u.Host == "" || u.User != nil {
 		return badInput(colRedirectURL, "must be an https address")
 	}
 	return nil

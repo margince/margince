@@ -94,6 +94,42 @@ func TestANulByteNeverReachesTheEnquiry(t *testing.T) {
 	}
 }
 
+// A query parameter can carry an email or a token. A page address and a
+// referrer keep only where the visitor was and the campaign that sent them.
+func TestAPageAddressAndReferrerKeepOnlyWhereTheVisitorWas(t *testing.T) {
+	for _, tc := range []struct{ name, raw, want string }{
+		{"a plain page", "https://example.com/pricing", "https://example.com/pricing"},
+		{"an email in the query", "https://example.com/offer?email=a%40b.example&ref=42", "https://example.com/offer"},
+		{"campaign tags kept", "https://example.com/?utm_source=news&token=x&UTM_Medium=mail", "https://example.com/?UTM_Medium=mail&utm_source=news"},
+		{"fragment and login dropped", "https://user:secret@example.com/a#reset=abc", "https://example.com/a"},
+		{"not a web address", "javascript:alert(1)", ""},
+		{"no host", "/pricing?email=a%40b.example", ""},
+		{"a port but no host", "https://:443/pricing", ""},
+		{"an escaped slash kept", "https://example.com/a%2Fb?email=a%40b.example", "https://example.com/a%2Fb"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := minimisedAddress(tc.raw); got != tc.want {
+				t.Errorf("minimisedAddress(%q) = %q, want %q", tc.raw, got, tc.want)
+			}
+		})
+	}
+	fields, err := parseFields("application/x-www-form-urlencoded", []byte(
+		"email=m%40example.com&page_url=https%3A%2F%2Fexample.com%2Fp%3Femail%3Dm%2540example.com"+
+			"&referrer=https%3A%2F%2Fsearch.example%2F%3Fq%3Dmy%2Bname%26utm_source%3Dads"))
+	if err != nil {
+		t.Fatalf("parse the post: %v", err)
+	}
+	e := readEnquiry(fields, nil)
+	if e.PageURL != "https://example.com/p" || e.Referrer != "https://search.example/?utm_source=ads" {
+		t.Errorf("the enquiry kept page %q and referrer %q", e.PageURL, e.Referrer)
+	}
+	// A map that sends the page field elsewhere still keeps only the address.
+	mappedAway := readEnquiry(fields, map[string]string{"page_url": fieldMessage})
+	if mappedAway.Message != "https://example.com/p" {
+		t.Errorf("a page field mapped to the message kept %q", mappedAway.Message)
+	}
+}
+
 func TestEachBodyEncodingAFormCanSendIsRead(t *testing.T) {
 	var multi bytes.Buffer
 	w := multipart.NewWriter(&multi)
