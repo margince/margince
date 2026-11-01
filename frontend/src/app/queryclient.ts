@@ -14,7 +14,7 @@ import {
 } from "../lib/connectivity";
 import { logUnexpectedError, ProblemError } from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
-import { isLiveWorkRead } from "../lib/workkeys";
+import { isHomeDayRead, isLiveWorkRead } from "../lib/workkeys";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..5). The
 // library's defaults are not this product's: they hold nothing back from the
@@ -33,7 +33,21 @@ const LIVE_RECORD_MS = 60_000;
 // Live-read keys give every consumer the same refresh policy.
 // Deal status refreshes facts without asking a model.
 export function liveInterval(query: { queryKey: QueryKey }): number | false {
-  return isLiveRead(query.queryKey) && LIVE_RECORD_MS;
+  return (
+    isLiveRead(query.queryKey) &&
+    !isHomeDayRead(query.queryKey) &&
+    LIVE_RECORD_MS
+  );
+}
+
+// Home's day is read when it opens, again once its answer is this old, and at
+// once after the reader acts on it (invalidateHandledChange). Home is not a
+// live board, and a timer re-read every tab's whole day each minute.
+export const HOME_DAY_FRESH_MS = 5 * 60_000;
+
+/** How long a read serves its cached answer before a mount or return reads again. */
+export function staleFor(query: { queryKey: QueryKey }): number {
+  return isHomeDayRead(query.queryKey) ? HOME_DAY_FRESH_MS : STALE_TIME_MS;
 }
 
 // "always" and not `true`, which is the same word meaning something weaker:
@@ -42,7 +56,10 @@ export function liveInterval(query: { queryKey: QueryKey }): number | false {
 // cache and waits out the interval. That is the case the minute-long cadence
 // above is priced against — the return is what covers the reader who leaves —
 // so the return has to actually read.
-export function liveOnReturn(query: { queryKey: QueryKey }): "always" | false {
+export function liveOnReturn(query: {
+  queryKey: QueryKey;
+}): "always" | boolean {
+  if (isHomeDayRead(query.queryKey)) return true;
   return (
     (isLiveRead(query.queryKey) ||
       isInstallationRead(query.queryKey) ||
@@ -63,11 +80,9 @@ function isInstallationRead(key: QueryKey): boolean {
 }
 
 // A live work read is read again on every mount, so a screen never opens on an
-// answer fetched before it. Two exceptions. The answer the shell prefetched for
-// the screen being opened (app/homeprefetch.ts) serves that mount while under a
-// second old. And the queue drawer shares Home's day already on screen: Home
-// keeps it current, so only staleness refetches it. Other live reads, such as a
-// record's review verbs, still read again on every mount.
+// answer fetched before it. The answer the shell prefetched for the screen being
+// opened (app/homeprefetch.ts) serves that mount while under a second old.
+// Home's day is the exception: it is read again only once HOME_DAY_FRESH_MS old.
 export const LIVE_ANSWER_CURRENT_MS = 1_000;
 
 const prefetchedAnswers = new Map<string, number>();
@@ -77,29 +92,15 @@ export function notePrefetched(queryHash: string, answeredAt: number): void {
   prefetchedAnswers.set(queryHash, answeredAt);
 }
 
-// The day's worklist key (worklistKey, mine, all, no owner): Home and its queue
-// drawer both read it.
-function isSharedDay(key: QueryKey): boolean {
-  return (
-    key[0] === "worklist" &&
-    key[1] === "mine" &&
-    key[2] === "all" &&
-    key[3] === ""
-  );
-}
-
 export function liveOnMount(
   query: {
     queryKey: QueryKey;
     queryHash: string;
     state: { dataUpdatedAt: number };
-    // The mounting observer counts itself, so more than one means another view.
-    getObserversCount?: () => number;
   },
   now = Date.now(),
 ): "always" | true {
-  if (!isLiveWorkRead(query.queryKey)) return true;
-  if (isSharedDay(query.queryKey) && (query.getObserversCount?.() ?? 0) > 1) {
+  if (!isLiveWorkRead(query.queryKey) || isHomeDayRead(query.queryKey)) {
     return true;
   }
   const answeredAt = query.state.dataUpdatedAt;
@@ -267,7 +268,7 @@ export function createQueryClient(): QueryClient {
   const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: STALE_TIME_MS,
+        staleTime: staleFor,
         retry: retryQuery,
         // FE-PARAM-5. A record on screen re-reads itself; everything else is
         // answered from cache exactly as before.

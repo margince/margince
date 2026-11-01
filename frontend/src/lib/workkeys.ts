@@ -30,3 +30,15 @@ export function isLiveWorkRead(key: QueryKey): boolean {
     (key.length === 1 && (key[0] === magicKey[0] || key[0] === briefKey[0]))
   );
 }
+
+// Home's day: the worklist it opens on, the brief and the receipt. Each costs
+// the server a whole assembly, so it is read on change, not on a cadence.
+export function isHomeDayRead(key: QueryKey): boolean {
+  return (
+    (key[0] === worklistKey[0] &&
+      key[1] === "mine" &&
+      key[2] === "all" &&
+      key[3] === "") ||
+    (key.length === 1 && (key[0] === magicKey[0] || key[0] === briefKey[0]))
+  );
+}
