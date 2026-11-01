@@ -41,10 +41,18 @@ They stay apart so that the role serving requests cannot change the schema.
 
 ## The first company
 
-`MARGINCE_ADMIN_PASSWORD` seeds the first company on an installation that has
-none. It is read once: when a company already exists the entrypoint says so and
-leaves it alone, so the variable can stay set in a deployment without a restart
-reseeding anything.
+An installation with no company seeds one from `bootstrap_admin`, and the
+password arrives by reference rather than as a literal: `password_file` naming a
+path, or `password` as `${file:/path}` or `${env:NAME}`. It has to be at least
+twelve characters.
+
+Mount the secret and point `password_file` at it. In a container the literal in
+an environment variable is readable by anyone who can inspect the container,
+which is a wider audience than the file is.
+
+The entrypoint also accepts `MARGINCE_ADMIN_PASSWORD` directly, and reads it
+once: when a company already exists it says so and leaves it alone, so the
+variable can stay set in a deployment without a restart reseeding anything.
 
 ## What this does not cover
 
