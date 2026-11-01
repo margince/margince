@@ -193,11 +193,8 @@ func RequestSettlementRevalidationTx(ctx context.Context, tx pgx.Tx, expected Se
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", expected.RequestID,
 		map[string]any{settlementRevalidationCol: nil},
 		map[string]any{settlementRevalidationCol: asOf})
-	if err != nil {
-		return false, err
+	if err == nil {
+		err = emitSettlementChanged(ctx, tx, auditID, expected.RequestID)
 	}
-	if err := emitSettlementChanged(ctx, tx, auditID, expected.RequestID); err != nil {
-		return false, err
-	}
-	return true, nil
+	return err == nil, err
 }
