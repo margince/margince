@@ -322,7 +322,7 @@ func teamBelowFloor(ctx context.Context, tx pgx.Tx, scope crmcontracts.Reporting
 	return thin[0], nil
 }
 
-// thinTeamCoverage is every figure of a team withheld by teamBelowFloor.
+// thinTeamCoverage withholds a figure of a team that teamBelowFloor holds back.
 func thinTeamCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
 	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ThinTeam))
 	withheld.Withheld = true

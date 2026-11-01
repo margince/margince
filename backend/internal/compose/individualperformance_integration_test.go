@@ -425,7 +425,7 @@ func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T)
 
 // A team of the reader and one colleague shows none of its totals while the
 // switch is off. That holds even for a total made up of the reader's own deal,
-// because the rest of the team is one person. Two more live members lift it.
+// because the rest of the team is one colleague. Two more live members lift it.
 func TestIndividualPerformanceOffWithholdsATwoMemberTeamsReadings(t *testing.T) {
 	e := setupForecast(t)
 	at := time.Date(2026, 1, 20, 12, 0, 0, 0, time.UTC)
