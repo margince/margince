@@ -8,3 +8,9 @@
 .form-actions > .task-next-reason {
   text-align: end;
 }
+
+/* The verbs' placeholder adds no box of its own: the skeleton inside stands in
+   the verb row exactly where the first verb will. */
+.task-next-pending {
+  display: contents;
+}
