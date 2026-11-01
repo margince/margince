@@ -119,13 +119,16 @@ export function MyProspecting({
     selection,
     !!self?.id && validDates && metrics.length > 0,
   );
-  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
-    JSON.stringify(selection),
-  );
+  const { evidence, evidenceFrom, openEvidence, closeEvidence } =
+    useSelectionEvidence(JSON.stringify(selection));
   const weeks = useProspectingWeeks(
     query.data,
     weekOutcome(workflowOf(framework, summary)),
   );
+  // Each opener keeps the read it was pressed in: a week's column its weeks,
+  // every other figure the week's evaluation.
+  const openFrom = (reference: ReportingEvidenceRef) =>
+    openEvidence(reference, weeksOwn(reference, weeks.data) ?? query.data);
   if (!self?.id) {
     return (
       <SurfaceState
@@ -204,7 +207,7 @@ export function MyProspecting({
                   outcome={outcome}
                   workflowState={known ? "known" : workflow}
                   weeks={weeks}
-                  onEvidence={openEvidence}
+                  onEvidence={openFrom}
                   onRetryWorkflow={retryWorkflow}
                   aside={
                     <MonthlyTargets
@@ -216,7 +219,7 @@ export function MyProspecting({
                 <ProspectingReadings
                   evaluation={evaluation}
                   summary={summary}
-                  onEvidence={openEvidence}
+                  onEvidence={openFrom}
                 />
               </>
             )}
@@ -234,12 +237,12 @@ export function MyProspecting({
         summary={summary}
         week={query.data}
         weeks={weeks}
-        onEvidence={openEvidence}
+        onEvidence={openFrom}
       />
       {evidence && query.data && (
         <ReportingEvidenceDrawer
           key={JSON.stringify(evidence)}
-          evaluation={weeksOwn(evidence, weeks.data) ?? query.data}
+          evaluation={evidenceFrom ?? query.data}
           reference={evidence}
           onClose={closeEvidence}
         />

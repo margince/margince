@@ -125,7 +125,7 @@ function SalesReviewBody({
   const query = useReportingEvaluation(selection, asks);
   const charts = useSalesCharts(selection, blocks, catalog, asks);
   const { evidence, evidenceFrom, openEvidence, closeEvidence } =
-    useSelectionEvidence(JSON.stringify(selection));
+    useSelectionEvidence(JSON.stringify(selection), query.data);
   const doors = outboundDials(
     "sales",
     answeredDials(selection, filters.start, filters.end),
@@ -170,6 +170,7 @@ function SalesReviewBody({
             : t("reporting.chooseDates")
         }
         evaluation={query.data}
+        charts={charts}
         saved={query.data ? { ...query.data.selection, blocks } : undefined}
         scope={scopeKey(scope)}
         onChange={(next) => changeFilters(filters, selection, next)}

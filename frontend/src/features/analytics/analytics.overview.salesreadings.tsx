@@ -52,7 +52,6 @@ export function SalesReadings({
       <CoverageReading
         comparison={metricOf(evaluation, "forecast_landing")?.target_comparison}
         money={money}
-        onEvidence={onEvidence}
       />
       {metricOf(evaluation, "closed_win_rate") ? (
         <MetricReading
@@ -121,14 +120,14 @@ function ExpectedFinish({
 // Coverage of what is still to win (target minus won) by the open deals
 // eligible to close in the quarter, with both operands. A state that compares
 // nothing says why; the hero carries that state's explanation and its fix.
+// Its numerator's evidence is one authored total, not the deals behind it, so
+// the reading offers no records door until the server lists those deals.
 function CoverageReading({
   comparison,
   money,
-  onEvidence,
 }: Readonly<{
   comparison: Comparison | undefined;
   money: (value: number | undefined) => string;
-  onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -144,8 +143,6 @@ function CoverageReading({
         })}
       />
     );
-  // The numerator's deals: the open pipeline eligible to close this quarter.
-  const numerator = comparison?.operands?.open_pipeline;
   if (comparison?.status !== "compared" || comparison.coverage == null)
     return (
       <NotCompared
@@ -167,8 +164,6 @@ function CoverageReading({
         open: money(comparison.open_pipeline),
         remaining: money(comparison.remaining),
       })}
-      opens="records"
-      onOpen={numerator ? () => onEvidence(numerator) : undefined}
     />
   );
 }

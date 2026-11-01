@@ -141,9 +141,10 @@ function figureState(
 function FigureUnavailable({ withheld }: Readonly<{ withheld: boolean }>) {
   const t = useT();
   const client = useQueryClient();
-  if (withheld) return <p role="status">{t("reporting.evidenceWithheld")}</p>;
+  if (withheld) return <p>{t("reporting.evidenceWithheld")}</p>;
   return (
     <ErrorLine
+      standing
       actions={
         <Button onClick={() => reloadReportingFigures(client)}>
           {t("common.retry")}

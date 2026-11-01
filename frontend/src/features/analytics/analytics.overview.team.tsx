@@ -36,6 +36,7 @@ import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import {
+  type ReportingEvaluation,
   type ReportingEvidenceRef,
   type ReportingSelection,
   reportingPeriodLabel,
@@ -126,9 +127,8 @@ export function TeamProspecting({
     team !== undefined && metrics.length > 0,
   );
   const review = useSdrTeamReview(team, period);
-  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
-    JSON.stringify(selection),
-  );
+  const { evidence, evidenceFrom, openEvidence, closeEvidence } =
+    useSelectionEvidence(JSON.stringify(selection), query.data);
   const handoffWorkflow =
     (workflow.data?.definition.template ??
       (review.data?.workflow === "handoff" ? "sdr" : undefined)) === "sdr";
@@ -171,6 +171,7 @@ export function TeamProspecting({
           team={team}
           handoffWorkflow={handoffWorkflow}
           evidence={evidence}
+          evidenceFrom={evidenceFrom}
           onEvidence={openEvidence}
           onCloseEvidence={closeEvidence}
         />
@@ -202,6 +203,7 @@ function TeamBody({
   team,
   handoffWorkflow,
   evidence,
+  evidenceFrom,
   onEvidence,
   onCloseEvidence,
 }: Readonly<{
@@ -210,6 +212,7 @@ function TeamBody({
   team: TeamScope;
   handoffWorkflow: boolean;
   evidence: ReportingEvidenceRef | null;
+  evidenceFrom: ReportingEvaluation | undefined;
   onEvidence: (reference: ReportingEvidenceRef) => void;
   onCloseEvidence: () => void;
 }>) {
@@ -244,7 +247,7 @@ function TeamBody({
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
-                  evaluation={evaluation}
+                  evaluation={evidenceFrom ?? evaluation}
                   reference={evidence}
                   onClose={onCloseEvidence}
                 />

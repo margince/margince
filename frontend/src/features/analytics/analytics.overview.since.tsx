@@ -53,9 +53,8 @@ export function SinceLastReview({
     selection,
     offered && after !== "pending",
   );
-  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
-    JSON.stringify(selection),
-  );
+  const { evidence, evidenceFrom, openEvidence, closeEvidence } =
+    useSelectionEvidence(JSON.stringify(selection), query.data);
   if (!offered) return null;
   return (
     <QueryGate query={query} pendingLabel={t("analytics.overview.sinceTitle")}>
@@ -76,7 +75,7 @@ export function SinceLastReview({
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={JSON.stringify(evidence)}
-                  evaluation={evaluation}
+                  evaluation={evidenceFrom ?? evaluation}
                   reference={evidence}
                   onClose={closeEvidence}
                 />
