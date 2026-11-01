@@ -37,6 +37,8 @@ func TestANewFormIsRefusedOnTheFieldItGotWrong(t *testing.T) {
 		"a policy link on plain http": {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, PrivacyNoticeURL: new("http://example.com/privacy")}, colPrivacyNoticeURL},
 		"a notice past its bound":     {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, PrivacyNotice: new(strings.Repeat("a", maxPrivacyNotice+1))}, colPrivacyNotice},
 		"a notice and its policy":     {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, PrivacyNotice: new("We answer your request."), PrivacyNoticeURL: new("https://www.example.com/privacy")}, ""},
+		"a policy link in capitals":   {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, PrivacyNoticeURL: new("HTTPS://www.example.com/privacy")}, ""},
+		"a policy link with no host":  {CreateInput{Name: "F", Sender: SenderBrowser, AllowedOrigins: site, PrivacyNoticeURL: new("https:///privacy")}, colPrivacyNoticeURL},
 		"a builder form":              {CreateInput{Name: "F", Sender: SenderTally, SenderSecret: secret}, ""},
 	} {
 		if got := refusedField(tc.in.normalize()); got != tc.field {

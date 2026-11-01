@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import { Field, Textarea, TextInput } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 

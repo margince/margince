@@ -116,7 +116,9 @@ Also called: spam, bots, junk leads.
 A prospect who sends, goes back and sends again keeps the first time, so the second message lands. That needs a browser that lets the page store it. In a browser that blocks this, a second send within three seconds of going back is still dropped. The code on your page does not update itself. Copy the **Code to paste** again when it changes.
 
 ### How do I show a privacy notice under the form?
-To show one, edit the form and type it in **Privacy notice**, such as what you use the details for. Add your privacy policy's `https` address in **Privacy policy link**. The **Code to paste** then shows the notice under the send button, with a link to the policy. A plain question needs this notice, not consent: the question itself is the reason to answer it.
+To show one, edit the form and type it in **Privacy notice**, such as how the details are used. Add your privacy policy's `https` address in **Privacy policy link**. Fill either one, or both.
+
+The **Code to paste** for a browser form then shows the notice under the send button, and a link when you added one. A form you keep, or one a builder or your server sends, needs its own notice on your page. For what the notice says, such as the legal basis, see [What should my privacy notice say about the form?](#what-should-my-privacy-notice-say-about-the-form).
 Also called: privacy notice, privacy link, data use notice.
 
 ### How do I ask for consent?

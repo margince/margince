@@ -23500,7 +23500,10 @@ export interface components {
             consent_wording?: string | null;
             /** @description The privacy notice the form shows under it at the point of collection, such as what the details are used for. */
             privacy_notice?: string | null;
-            /** @description The https address of the privacy policy the notice links to. */
+            /**
+             * Format: uri
+             * @description The https address of the privacy policy the notice links to.
+             */
             privacy_notice_url?: string | null;
             /** @description Where a plain HTML post is sent after a submission. */
             redirect_url?: string | null;
@@ -23552,6 +23555,7 @@ export interface components {
             consent_policy_version?: string | null;
             consent_wording?: string | null;
             privacy_notice?: string | null;
+            /** Format: uri */
             privacy_notice_url?: string | null;
             redirect_url?: string | null;
             success_message?: string | null;
@@ -23570,6 +23574,7 @@ export interface components {
             consent_policy_version?: string | null;
             consent_wording?: string | null;
             privacy_notice?: string | null;
+            /** Format: uri */
             privacy_notice_url?: string | null;
             redirect_url?: string | null;
             success_message?: string | null;

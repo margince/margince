@@ -11,4 +11,4 @@ ALTER TABLE web_form
     ADD CONSTRAINT web_form_privacy_notice_bounded
         CHECK (privacy_notice IS NULL OR length(privacy_notice) <= 500) NOT VALID,
     ADD CONSTRAINT web_form_privacy_notice_url_https
-        CHECK (privacy_notice_url IS NULL OR (privacy_notice_url LIKE 'https://%' AND length(privacy_notice_url) <= 2000)) NOT VALID;
+        CHECK (privacy_notice_url IS NULL OR (privacy_notice_url ~* '^https://[^/?#:@]' AND length(privacy_notice_url) <= 2000)) NOT VALID;

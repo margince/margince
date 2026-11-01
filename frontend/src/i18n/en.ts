@@ -15132,7 +15132,7 @@ export const en = {
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/thanks",
   "webForms.field.privacyNotice": "Privacy notice",
   "webForms.field.privacyNoticeHint":
-    "Shown under the form, such as what you use the details for. A plain enquiry needs this, not consent.",
+    "Shown under the browser form: how the details are used, and on what legal basis.",
   "webForms.field.privacyNoticeUrl": "Privacy policy link",
   "webForms.field.privacyNoticeUrlHint":
     "The https address of your privacy policy. The notice links to it.",
