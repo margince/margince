@@ -51,14 +51,16 @@ const (
 )
 
 // EngagementOf reads the state off the strength fold. The direction counts say who
-// wrote inside the 90-day window. Answered needs our mail after their latest,
-// because an unprompted mail nobody answered is the account's most urgent row.
+// wrote inside the 90-day window. Answered needs our mail at or after their
+// latest, because an unprompted mail nobody answered is the account's most
+// urgent row. A tie reads answered, as the contact page's moments read it: two
+// date-only entries on one day share one stored time.
 //
 // When their latest message is a mail, its History badge says whether we owe
 // a reply. A mail it owes nothing on, such as a calendar copy, reads answered
-// when we wrote after it. Otherwise it reads as though it had not arrived.
+// when we wrote at or after it. Otherwise it reads as though it had not arrived.
 func EngagementOf(rs RelationshipStrength) Engagement {
-	replied := rs.LastInbound != nil && rs.LastOutbound != nil && rs.LastOutbound.After(*rs.LastInbound)
+	replied := rs.LastInbound != nil && rs.LastOutbound != nil && !rs.LastOutbound.Before(*rs.LastInbound)
 	owesNothing := rs.LastInboundMove != nil && *rs.LastInboundMove != crmcontracts.EmailSummaryMoveNeedsReply
 	switch {
 	case rs.Inbound90d > 0 && owesNothing && !replied:
