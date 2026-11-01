@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import type { CreateFieldOption } from "../../components/create.fields";
 import type { ListColumn } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
@@ -32,14 +33,16 @@ function Cell({
   columnKey,
   onColumn,
   row = lead,
+  partners,
 }: Readonly<{
   columnKey: string;
   onColumn: (c: ListColumn<Lead>) => void;
   row?: Lead;
+  partners?: readonly CreateFieldOption[];
 }>) {
   const t = useT();
   const zone = useRecordZone();
-  const column = leadColumns(t, "en", zone, undefined).find(
+  const column = leadColumns(t, "en", zone, undefined, partners).find(
     (c) => c.key === columnKey,
   );
   if (!column) throw new Error(`no ${columnKey} column`);
@@ -53,6 +56,7 @@ function renderCell(
   columnKey: string,
   row?: Lead,
   onRow: () => void = () => undefined,
+  partners?: readonly CreateFieldOption[],
 ): ListColumn<Lead> {
   let found: ListColumn<Lead> | undefined;
   const client = new QueryClient({
@@ -64,7 +68,12 @@ function renderCell(
         {/* biome-ignore lint/a11y/useKeyWithClickEvents: a stand-in for the table row's own click */}
         {/* biome-ignore lint/a11y/noStaticElementInteractions: a stand-in for the table row's own click */}
         <div onClick={onRow}>
-          <Cell columnKey={columnKey} onColumn={(c) => (found = c)} row={row} />
+          <Cell
+            columnKey={columnKey}
+            onColumn={(c) => (found = c)}
+            row={row}
+            partners={partners}
+          />
         </div>
       </LocaleProvider>
     </QueryClientProvider>,
@@ -153,5 +162,68 @@ describe("the lead table's columns", () => {
       source: "mirror:csv:pipedrive-export:lead:l-7",
     });
     expect(screen.getByTestId("cell").textContent).toBe("Not set");
+  });
+});
+
+const PARTNERS: CreateFieldOption[] = [
+  { value: "c-9", label: "Referrer GmbH" },
+];
+
+// The column names every key leadColumns returns, so a test can see whether
+// one is offered at all.
+function ColumnKeys({
+  partners,
+}: Readonly<{ partners?: readonly CreateFieldOption[] }>) {
+  const t = useT();
+  const zone = useRecordZone();
+  return (
+    <div data-testid="keys">
+      {leadColumns(t, "en", zone, undefined, partners)
+        .map((column) => column.key)
+        .join(" ")}
+    </div>
+  );
+}
+
+describe("the referring partner column", () => {
+  const showKeys = (partners?: readonly CreateFieldOption[]) =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <ColumnKeys partners={partners} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+  it("is offered only once the installation has a partner", () => {
+    showKeys(undefined);
+    expect(screen.getByTestId("keys").textContent).not.toContain("partner");
+    cleanup();
+    showKeys([]);
+    expect(screen.getByTestId("keys").textContent).not.toContain("partner");
+    cleanup();
+    showKeys(PARTNERS);
+    expect(screen.getByTestId("keys").textContent?.split(" ")).toContain(
+      "partner",
+    );
+  });
+
+  it("names the partner and says a referral still awaits acceptance", () => {
+    const referred = { ...lead, partner_company_id: "c-9" };
+    renderCell("partner", referred, undefined, PARTNERS);
+    expect(screen.getByTestId("cell").textContent).toBe(
+      "Referrer GmbHAwaiting acceptance",
+    );
+    cleanup();
+    renderCell(
+      "partner",
+      { ...referred, partner_accepted_at: "2026-10-01T09:00:00Z" },
+      undefined,
+      PARTNERS,
+    );
+    expect(screen.getByTestId("cell").textContent).toBe("Referrer GmbH");
+    cleanup();
+    renderCell("partner", lead, undefined, PARTNERS);
+    expect(screen.getByTestId("cell").textContent).toBe("No partner");
   });
 });

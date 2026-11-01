@@ -39621,6 +39621,12 @@ type CreateLeadRequest struct {
 	OriginDetail *string             `json:"origin_detail,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
+	// PartnerCompanyId The partner company that referred the lead. Needs `partner:read` (403 otherwise). A
+	// company that does not exist or that the caller cannot read is 422
+	// `reference_not_found`; a readable company with no live partner programme is 422
+	// `not_a_partner`.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
 	// Phone E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes.
 	Phone     *string             `json:"phone,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
@@ -55753,6 +55759,8 @@ type SourceAuthor struct {
 
 // SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 type SourceQuoteProof struct {
+	// Cut How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
+	Cut    *int   `json:"cut,omitempty"`
 	End    int    `json:"end"`
 	Sha256 string `json:"sha256"`
 	Start  int    `json:"start"`
@@ -60614,9 +60622,6 @@ type WorklistItem struct {
 	// Kind The producer's own sub-type — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
-	// Lead The lead's contact context, without inventing an inbound request or response deadline.
-	Lead *WorklistLeadFacts `json:"lead,omitempty"`
-
 	// Level The hard priority band, and the whole of the product rule: 0 pinned by the
 	// reader, or a task assigned to the reader whose reminder came due, 1 a customer waiting or a deadline arriving, 2 a promise due or an
 	// approved action that failed, 3 material revenue at risk, 4 an assigned task
@@ -60849,20 +60854,6 @@ type WorklistItemPrimaryAction string
 // routine decisions that read alike, so a hundred of them cost the reader one
 // row rather than a hundred. Its own facts ride in `batch`.
 type WorklistItemSource string
-
-// WorklistLeadFacts The lead's contact context, without inventing an inbound request or response deadline.
-type WorklistLeadFacts struct {
-	CompanyName    *string    `json:"company_name,omitempty"`
-	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
-
-	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. Absent when that is null.
-	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
-	ResponseTargetTracked *bool              `json:"response_target_tracked,omitempty"`
-
-	// Source The administered source label, absent for an unlabelled import or connector key.
-	Source *string `json:"source,omitempty"`
-	Status *string `json:"status,omitempty"`
-}
 
 // WorklistMayBeDone The question whether a promise task is done, asked because we wrote to a recipient on its thread after the promise.
 // The contact page asks the same question under the same `claim_key`. Not yet is answered by
@@ -65949,6 +65940,16 @@ type ListLeadsParams struct {
 	// FromContactId Only older leads that retain this historical contact link. New leads cannot be
 	// created from contacts.
 	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
+
+	// PartnerCompanyId Only the leads this partner company referred. Reads partner and company data, so it
+	// needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+	// open matches no lead.
+	PartnerCompanyId *openapi_types.UUID `form:"partner_company_id,omitempty" json:"partner_company_id,omitempty"`
+
+	// PartnerAccepted `true` keeps the referred leads a partner manager accepted. `false` keeps the
+	// referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+	// (403 otherwise), and counts only partners the caller can open.
+	PartnerAccepted *bool `form:"partner_accepted,omitempty" json:"partner_accepted,omitempty"`
 }
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
@@ -75007,6 +75008,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "owner_id")
 	}
 
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
 	if raw, found := object["phone"]; found {
 		err = json.Unmarshal(raw, &a.Phone)
 		if err != nil {
@@ -75165,6 +75174,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["owner_id"], err = json.Marshal(a.OwnerId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
 		}
 	}
 
@@ -115671,6 +115687,32 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from_contact_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from_contact_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_company_id", r.URL.Query(), &params.PartnerCompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "partner_accepted" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "partner_accepted", r.URL.Query(), &params.PartnerAccepted, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_accepted"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_accepted", Err: err})
 		}
 		return
 	}

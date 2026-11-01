@@ -124,9 +124,9 @@ Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
 
-**Draft email** writes an email from what the record holds, in your voice. It
-tells you what it read ("Based on: {inputs}"), and **Why this draft?** shows
-why it wrote what it did.
+**Draft email** writes an email from what the record holds, in your voice.
+**Why this draft**, closed until you open it, shows what it read
+("Based on: {inputs}"), with a link to each record it read.
 
 Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
@@ -283,9 +283,9 @@ To cancel or move a scheduled email in Margince, press the clock beside the bell
 4. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
 
-The **Scheduled messages** page lists your messages that are set for later and
-not sent yet. Only you can see them. It has no sidebar row. The toast after you
-set a send time links there, and so does the command palette (⌘K or Ctrl+K).
+The **Scheduled messages** page lists the messages you set for later. Only you can see them.
+It has no sidebar row. With none and a mailbox connected, **Write a message** opens Contacts.
+The toast after you set a send time links there, and so does the command palette (⌘K or Ctrl+K).
 
 Waiting messages sit on a timeline, one block for each day. A line above them
 counts down to the next one. **All**, **Held** and **Today** narrow the list.

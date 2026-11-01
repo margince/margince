@@ -1995,8 +1995,6 @@ export const en = {
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",
-  "worklist.lead.noTarget": "no response target set",
-  "worklist.lead.lastTouch": "last activity {date}",
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} (unconfirmed)",
   "brief.readings.riskBasis": "Face value · not expected loss",
@@ -2896,6 +2894,7 @@ export const en = {
   "partner.activated": "Activated {date}",
   "lead.partner": "Referred by partner",
   "lead.partnerNone": "No partner",
+  "lead.partnerAwaiting": "Awaiting acceptance",
   "lead.partnerAccept": "Accept for partner",
   "lead.partnerAccepted": "Accepted for the partner on {date}",
   "lead.partnerAcceptedKept":
@@ -3436,6 +3435,8 @@ export const en = {
   "co.suggest.act.addTask": "Add next step",
   // A conversation shown as one event says what it IS before what it
   // says: the reader is scanning for an event, not a sentence.
+  "timeline.group.newsletters_other": "{count} newsletters",
+  "timeline.group.newsletters_one": "{count} newsletter",
   "timeline.group.thread_other": "{count} messages",
   "timeline.group.thread_one": "{count} message",
   "timeline.group.sides": "{theirs} from them, {ours} from your team",
@@ -6950,7 +6951,7 @@ export const en = {
   "compose.channelFiling":
     "Sending files it under {project}, with the thread it answers.",
   "compose.basedOn": "Based on: {inputs}",
-  "compose.whyThisDraft": "Why this draft?",
+  "compose.whyThisDraft": "Why this draft",
   "compose.body": "Body",
   "compose.signOff": "Added when you send",
   "compose.signOffClosing": "You have no signature, so this closing is added.",
@@ -17081,9 +17082,10 @@ export const en = {
   // record to delete — the rep is taking a message back before it goes, and
   // "withdraw" is the only one of the three that says so.
   "nav.scheduled": "Scheduled messages",
-  "sched.sub":
-    "Your scheduled messages that have not been sent yet. Only you can see them.",
-  "sched.empty": "No scheduled messages yet.",
+  "sched.sub": "Only you can see these messages.",
+  "sched.empty": "No messages scheduled.",
+  "sched.write": "Write a message",
+  "sched.writeHow": "Open a contact and choose Email.",
   "sched.group.held": "Held for your action",
   "sched.group.waiting": "Scheduled",
   "sched.group.waitingEmpty": "No messages scheduled.",

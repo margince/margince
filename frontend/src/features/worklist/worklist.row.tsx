@@ -30,7 +30,6 @@ import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { leadFactsText } from "./worklist.leadfacts";
 import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
@@ -154,9 +153,7 @@ export function WorklistRow({
   const viewer = useMe(false).data?.user;
   const name = framedName(readerTask(item, viewer, t), t, locale, framed);
   const title = name.title;
-  const facts =
-    dealFactsText(item, t, locale, zone) ??
-    leadFactsText(item, t, locale, zone);
+  const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying

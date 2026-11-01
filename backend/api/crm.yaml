@@ -11374,6 +11374,20 @@ paths:
           description: |
             Only older leads that retain this historical contact link. New leads cannot be
             created from contacts.
+        - name: partner_company_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            Only the leads this partner company referred. Reads partner and company data, so it
+            needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+            open matches no lead.
+        - name: partner_accepted
+          in: query
+          schema: { type: boolean }
+          description: |
+            `true` keeps the referred leads a partner manager accepted. `false` keeps the
+            referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+            (403 otherwise), and counts only partners the caller can open.
       responses:
         '200':
           description: A page of leads.
@@ -53620,6 +53634,14 @@ components:
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`.' }
         candidate_company_key: { type: [string, 'null'] }
         project_id: { type: [string, 'null'], format: uuid }
+        partner_company_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The partner company that referred the lead. Needs `partner:read` (403 otherwise). A
+            company that does not exist or that the caller cannot read is 422
+            `reference_not_found`; a readable company with no live partner programme is 422
+            `not_a_partner`.
         contact_id:
           type: [string, 'null']
           format: uuid
@@ -54728,6 +54750,12 @@ components:
         start: { type: integer, minimum: 0 }
         end: { type: integer, minimum: 1 }
         sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+        cut:
+          type: integer
+          minimum: 0
+          description: >-
+            How the source message was cut before it was hashed, so a proof verifies against the
+            same text. Absent on a proof stored before cuts were named.
       additionalProperties: false
     SignalEvidence:
       type: object
@@ -70814,7 +70842,6 @@ components:
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
         acquisition: { $ref: '#/components/schemas/NoticeAcquisition' }
-        lead: { $ref: '#/components/schemas/WorklistLeadFacts' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
           readOnly: true
@@ -71753,19 +71780,6 @@ components:
         last_outbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_outbound_at`, from the row it names. Absent when that is null.
-
-    WorklistLeadFacts:
-      type: object
-      description: The lead's contact context, without inventing an inbound request or response deadline.
-      properties:
-        company_name: { type: [string, 'null'] }
-        status: { type: string }
-        source: { type: [string, 'null'], description: 'The administered source label, absent for an unlabelled import or connector key.' }
-        last_activity_at: { type: [string, 'null'], format: date-time }
-        last_activity_precision:
-          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
-          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
-        response_target_tracked: { type: boolean }
 
     WorklistDealFacts:
       type: object
