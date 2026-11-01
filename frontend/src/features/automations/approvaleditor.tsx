@@ -4,6 +4,10 @@ import { api } from "../../api/client";
 import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
+  SummaryFields,
+  summarySentence,
+} from "../../design-system/approvalsummary";
+import {
   Button,
   Disclosure,
   Field,
@@ -27,6 +31,7 @@ import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import { approvalHref } from "./approvalhref";
@@ -191,7 +196,8 @@ function ApprovalDetailBody({
     locale,
     recordZone,
   );
-  const named = withoutRepeatedLead(display, approval.summary).filter(
+  const sentence = summarySentence(approval);
+  const named = withoutRepeatedLead(display, sentence).filter(
     (entry) => entry.value !== null,
   );
   // The raw payload is shown ONCE, and where it goes says what it is. A kind
@@ -201,7 +207,8 @@ function ApprovalDetailBody({
   const rawPayload = <RawPayload change={change} />;
   return (
     <div className="form-stack">
-      {approval.summary && <p className="t-body">{approval.summary}</p>}
+      {sentence && <p className="t-body">{sentence}</p>}
+      <SummaryFields parts={approval.summary_parts} words={summaryWords(t)} />
       <ApprovalTarget approval={approval} />
       <ApprovalDecider approval={approval} />
       {named.length > 0

@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import {
+  summaryFieldsLine,
+  summarySentence,
+} from "../../design-system/approvalsummary";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatNumber } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import { pluralKey } from "../../i18n";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import type { Receipt } from "./worklist.queries";
 
 export function receiptSummary(
@@ -14,7 +19,10 @@ export function receiptSummary(
   zone: string,
 ): string {
   const change = receipt.close_date_change;
-  if (!change) return receipt.summary;
+  if (!change) {
+    const fields = summaryFieldsLine(receipt.summary_parts, summaryWords(t));
+    return [summarySentence(receipt), fields].filter(Boolean).join(" — ");
+  }
   const summary = change.date_changed
     ? t(
         receipt.review?.reversed || receipt.undo?.reversed

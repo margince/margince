@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId, useRef } from "react";
+import { SummaryFields, summarySentence } from "./approvalsummary";
 import { DecisionContent, DecisionEvidence } from "./decisioncard.content";
 import { type DecisionDisplay, decisionEvidence } from "./decisioncard.payload";
 import {
@@ -208,7 +209,7 @@ export function DecisionCard({
   // The SAME question the headline asks, so the article's accessible name and
   // the line a sighted reader sees cannot come apart: a card named only by its
   // target_label rendered a headline and pointed aria-labelledby at nothing.
-  const named = cardName(approval, payload.draft) ?? approval.summary ?? null;
+  const named = cardName(approval, payload.draft) ?? summarySentence(approval);
   // The dense form belongs to the row. A deck card that folded its proposal
   // away would be the one thing a tall plate exists not to do.
   const dense = layout === "row" ? compact : undefined;
@@ -323,9 +324,13 @@ export function DecisionCard({
             <Popover label={dense.detail} className="dcard-detail">
               {/* The sentence that says WHY, which the line gave up to stay
                   one line. It leads here for the same reason it led the card. */}
-              {named && approval.summary && (
-                <p className="approval-why">{approval.summary}</p>
+              {named && summarySentence(approval) && (
+                <p className="approval-why">{summarySentence(approval)}</p>
               )}
+              <SummaryFields
+                parts={approval.summary_parts}
+                words={labels.summaryWords}
+              />
               {proposal}
             </Popover>
             {verbs}

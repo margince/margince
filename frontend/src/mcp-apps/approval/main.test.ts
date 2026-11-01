@@ -69,6 +69,25 @@ describe("the approval card", () => {
     ).toEqual(["StageProposal → Negotiation"]);
   });
 
+  it("heads with the summary's sentence and lists its values where the preview has none", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary: "Update record deal: name=Acme, Inc., +1 more",
+      summary_parts: {
+        sentence: "Update record deal",
+        fields: [{ field: "name", value: "Acme, Inc." }],
+        more_fields: 1,
+      },
+      changes: [],
+    });
+    expect(root.querySelector("h1")?.textContent).toBe("Update record deal");
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["NameAcme, Inc."]);
+    expect(root.textContent).toContain("1 more not shown");
+    expect(root.textContent).not.toContain("name=");
+  });
+
   it("shows a structured value as words rather than as its document", () => {
     const root = mount({
       ...(approvalFixture.data as object),

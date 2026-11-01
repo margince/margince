@@ -308,6 +308,12 @@ export function briefContextTitle(item: WorklistItem): string | undefined {
     : undefined;
 }
 
+// An approval's title is its sentence; its values are the row's supporting
+// line (noticeDetail).
+function ownTitle(item: WorklistItem): string | undefined {
+  return item.summary_parts?.sentence ?? item.title;
+}
+
 export function itemTitle(
   item: WorklistItem,
   t: T,
@@ -342,14 +348,13 @@ export function itemTitle(
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   const named = subjectNamed ? undefined : item.subject?.label;
-  if (item.title) {
+  const own = ownTitle(item);
+  if (own) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot
     // be told apart or put in order, and the lead's name is already on the row
     // — it was only the sentence that discarded it.
-    return named && !item.title.includes(named)
-      ? `${item.title} · ${named}`
-      : item.title;
+    return named && !own.includes(named) ? `${own} · ${named}` : own;
   }
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");

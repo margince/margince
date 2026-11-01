@@ -20,6 +20,8 @@ import {
   changeTable,
   detailsOf,
   inWords,
+  type SummaryParts,
+  summaryPartsOf,
 } from "./summary";
 import { asList, asRecord, asText } from "./types";
 import { day } from "./values";
@@ -31,6 +33,8 @@ export type Proposal = {
   kind: string;
   status: string;
   summary: string;
+  /** The summary taken apart, or null on a summary that is a sentence alone. */
+  parts: SummaryParts | null;
   target: string;
   proposedBy: string;
   byAssistant: boolean;
@@ -76,6 +80,7 @@ export function proposalOf(raw: unknown): Proposal | null {
     kind: asText(a.kind),
     status: asText(a.status),
     summary: asText(a.summary),
+    parts: summaryPartsOf(a.summary_parts),
     target: asText(a.target_label),
     proposedBy: proposerOf(proposedBy, a.on_behalf_of),
     byAssistant: proposedBy.startsWith("agent:"),
@@ -223,6 +228,14 @@ function proposalBody(p: Proposal): HTMLElement | null {
   ]) {
     if (table !== null) body.appendChild(table);
   }
+  // The summary's own values, where the preview shows none, so nothing is
+  // listed twice.
+  if (body.childElementCount === 0 && p.parts !== null) {
+    const table = changeTable(p.parts.fields, { before: false });
+    if (table !== null) body.appendChild(table);
+    if (p.parts.more > 0)
+      body.appendChild(el("p", "meta", `${p.parts.more} more not shown`));
+  }
   if (p.effects.length > 0) {
     const list = el("ul", "evidence-list");
     for (const effect of p.effects) list.appendChild(el("li", "meta", effect));
@@ -259,7 +272,7 @@ export function decisionCard(
     if (chip !== null) meta.appendChild(chip);
   }
   // The one card of a deck is the document's heading; a row is one of many.
-  const words = p.summary || inWords(p.kind);
+  const words = p.parts?.sentence || p.summary || inWords(p.kind);
   const headline =
     opts.layout === "deck"
       ? heading("large", words, { as: "h1", className: "approval-headline" })

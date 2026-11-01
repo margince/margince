@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 340 |
-| Columns | 4065 |
+| Columns | 4066 |
 | Foreign keys | 561 |
 | Owning areas | 37 |
 
@@ -169,7 +169,7 @@ erDiagram
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
 | [`app_user`](identity.md#app_user) | identity | 34 | 146 |
-| [`approval`](approvals.md#approval) | approvals | 36 | 4 |
+| [`approval`](approvals.md#approval) | approvals | 37 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |

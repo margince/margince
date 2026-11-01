@@ -191,3 +191,22 @@ it("names shared recipients without claiming nobody owns their reply", () => {
   ).toBeNull();
   expect(sharedResponsibility(task, "en", t)).toBeNull();
 });
+
+it("gives an approval row its proposed values as the supporting line", () => {
+  const approval = {
+    ...taskRow("approval", "Update record deal: name=Acme, Inc."),
+    source: "approval" as const,
+    detail: undefined,
+    summary_parts: {
+      sentence: "Update record deal",
+      fields: [{ field: "name", value: "Acme, Inc." }],
+      more_fields: 1,
+    },
+  };
+  expect(noticeDetail(approval, viewer, t)).toBe(
+    "Name: Acme, Inc. · 1 more not shown",
+  );
+  expect(
+    noticeDetail({ ...approval, summary_parts: undefined }, viewer, t),
+  ).toBe(undefined);
+});

@@ -47,8 +47,11 @@ type StagedApproval struct {
 	Status string `json:"status"`
 	// Summary is the one line the inbox shows a human. Absent on a staging that
 	// never wrote one, rather than filled with a restatement of the kind.
-	Summary    string `json:"summary,omitempty"`
-	ProposedBy string `json:"proposed_by"`
+	Summary string `json:"summary,omitempty"`
+	// SummaryParts is Summary taken apart: the sentence and each field value.
+	// Absent with Summary, and on a summary that is a sentence alone.
+	SummaryParts *crmcontracts.ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	ProposedBy   string                             `json:"proposed_by"`
 	// TargetType and TargetID are the record the staged change acts on, absent
 	// together for a proposal that names none.
 	//

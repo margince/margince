@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-36 columns · primary key `(id)` · referenced by 4 foreign keys
+37 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -39,6 +39,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `staged_in_conversation_of` | `uuid` |  | Points at `app_user.id`. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `approved`, `rejected`, `expired`. |
 | `summary` | `text` |  | One-line description of the proposed change. |
+| `summary_parts` | `jsonb` |  | The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. |
 | `target_entity_id` | `uuid` |  |  |
 | `target_entity_type` | `text` |  | Entity the effect mutates (for precondition re-validation). |
 | `target_label` | `text` |  | What the target record was CALLED when this proposal was staged, where its type has a name at all. |

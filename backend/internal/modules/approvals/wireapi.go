@@ -114,7 +114,7 @@ func (s *Service) readCommittedContext(ctx context.Context, rows []crmcontracts.
 			rows[i] = wire(subject, s.now())
 			rows[i].Preview = &crmcontracts.ApprovalPreview{Version: 1, State: "unavailable", Changes: []crmcontracts.ApprovalPreviewChange{}}
 			// No preview was read, so nothing says the plan may show.
-			rows[i].ProposedChange, rows[i].Evidence, rows[i].Summary = nil, nil, nil
+			withholdPayload(&rows[i])
 		}
 	}
 }

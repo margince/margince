@@ -165,3 +165,28 @@ func TestAChangeEmailSaysWhoMustDecideAChangeTheReaderCannotSee(t *testing.T) {
 		t.Error("the email for a change its reader cannot see is not sent")
 	}
 }
+
+// The proposal line is the summary's sentence. Its field values get lines of
+// their own only where the preview shows no change, so nothing is said twice.
+func TestAChangeEmailShowsTheSummaryFieldsApartFromItsSentence(t *testing.T) {
+	words := mailcopy.For("en")
+	summary := "Update record deal: name=Acme, Inc., +1 more"
+	parts := &crmcontracts.ApprovalSummaryParts{
+		Sentence: "Update record deal", Fields: []crmcontracts.ApprovalSummaryField{{Field: "name", Value: "Acme, Inc."}}, MoreFields: 1,
+	}
+	empty := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{}}
+	got := factsText(changeMailFacts(crmcontracts.Approval{Summary: &summary, SummaryParts: parts, Preview: empty}, words))
+	for _, want := range []string{"Proposal: Update record deal\n", "Name: Acme, Inc.\n", ": +1 more"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("email without preview changes misses %q:\n%s", want, got)
+		}
+	}
+
+	ready := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{
+		{Field: "name", Before: previewText(previewValueText, "Acme"), After: previewText(previewValueText, "Acme, Inc.")},
+	}}
+	got = factsText(changeMailFacts(crmcontracts.Approval{Summary: &summary, SummaryParts: parts, Preview: ready}, words))
+	if strings.Contains(got, "name: Acme, Inc.") || strings.Contains(got, "+1 more") || strings.Contains(got, "name=") {
+		t.Errorf("email with preview changes repeats the summary's fields:\n%s", got)
+	}
+}

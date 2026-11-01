@@ -38,13 +38,14 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 	if approval.TargetLabel != nil {
 		facts.Heading = *approval.TargetLabel
 	}
-	if approval.Summary != nil {
-		facts.add(words.MailProposal, *approval.Summary)
+	if sentence := approvalSentence(approval); sentence != "" {
+		facts.add(words.MailProposal, sentence)
 	}
 	lang := textlang.Lang(words.Language)
 	reading := agents.ReadPreview(lang, approval.Preview)
 	if reading.Note != "" {
 		facts.add(words.MailPreviewStatus, reading.Note)
+		addSummaryFields(&facts, approval.SummaryParts, lang)
 		return facts
 	}
 	var shown []approvalMailLine
@@ -60,6 +61,9 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 			shown = append(shown, approvalMailLine{Label: detail.Label, Value: value})
 		}
 	}
+	if len(shown) == 0 {
+		addSummaryFields(&facts, approval.SummaryParts, lang)
+	}
 	for i, line := range shown {
 		if i == mailChangeLimit {
 			facts.add("", fmt.Sprintf(agents.MoreFields(lang), len(shown)-i))
@@ -72,6 +76,33 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 	}
 	facts.add(words.MailWhyYou, reviewerSentence(approval.Preview.ReviewerReason, words))
 	return facts
+}
+
+// approvalSentence is the act an approval proposes, without the field values
+// the joined summary lists after it. An approval staged without parts reads
+// as its whole summary.
+func approvalSentence(approval crmcontracts.Approval) string {
+	if approval.SummaryParts != nil {
+		return approval.SummaryParts.Sentence
+	}
+	if approval.Summary != nil {
+		return *approval.Summary
+	}
+	return ""
+}
+
+// addSummaryFields lists the summary's own field values, for an email whose
+// preview shows no change of its own; without them the sentence alone is left.
+func addSummaryFields(facts *approvalMailFacts, parts *crmcontracts.ApprovalSummaryParts, lang textlang.Lang) {
+	if parts == nil {
+		return
+	}
+	for _, field := range parts.Fields {
+		facts.add(agents.FieldLabel(lang, field.Field), field.Value)
+	}
+	if parts.MoreFields > 0 {
+		facts.add("", fmt.Sprintf(agents.MoreFields(lang), parts.MoreFields))
+	}
 }
 
 // mailPreviewValue is one preview value as plain text. A value the reader may

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { summaryFieldsLine } from "../../design-system/approvalsummary";
 import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
@@ -41,6 +43,11 @@ export function noticeDetail(
   viewer: Viewer | undefined,
   t: Translator,
 ): string | undefined {
+  if (item.summary_parts) {
+    return (
+      summaryFieldsLine(item.summary_parts, summaryWords(t)) ?? item.detail
+    );
+  }
   if (item.source === "domain_question" && item.domain_reason_code) {
     const label = domainReasonLabels[item.domain_reason_code];
     if (!label) return item.detail;

@@ -17,6 +17,7 @@ import (
 	"errors"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -79,5 +80,43 @@ func TestDecideRefusesAnEditThatRepointsARestStagedCall(t *testing.T) {
 	}
 	if before.DiffHash != after.DiffHash {
 		t.Errorf("diff_hash changed despite the refused edit: before = %q, after = %q", before.DiffHash, after.DiffHash)
+	}
+}
+
+// An edit approves values the summary's parts never named, so the row keeps
+// the sentence and drops the parts rather than showing the staged values.
+func TestAnEditedDecisionDropsTheSummaryValuesItReplaced(t *testing.T) {
+	e := setupStaging(t)
+	company := e.company(t)
+	ctx := e.asHumanWith(decidesEverything())
+
+	staged := json.RawMessage(`{"operation":"company_name_promotion","path":"/v1/companies/` +
+		company.String() + `","body":{"proposed_name":"Acme GmbH"}}`)
+	id, err := e.svc.Stage(ctx, StageInput{
+		Kind:           "company_name_promotion",
+		ProposedChange: staged,
+		DiffHash:       "hash-for-the-edited-summary",
+		TargetType:     tableCompany,
+		TargetID:       company,
+		Summary:        "Rename the company: proposed_name=Acme GmbH",
+		SummaryParts: &crmcontracts.ApprovalSummaryParts{
+			Sentence: "Rename the company",
+			Fields:   []crmcontracts.ApprovalSummaryField{{Field: "proposed_name", Value: "Acme GmbH"}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	edited := json.RawMessage(`{"operation":"company_name_promotion","path":"/v1/companies/` +
+		company.String() + `","body":{"proposed_name":"Acme Holding GmbH"}}`)
+	if _, err := e.svc.DecideEdited(ctx, id, edited); err != nil {
+		t.Fatalf("DecideEdited: %v", err)
+	}
+	after, err := e.svc.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("reading the decided row: %v", err)
+	}
+	if after.Summary == nil || *after.Summary != "Rename the company" || after.SummaryParts != nil {
+		t.Errorf("the edited row reads summary %v and parts %s, want the sentence alone", after.Summary, after.SummaryParts)
 	}
 }

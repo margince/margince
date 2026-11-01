@@ -10,15 +10,15 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 161414,
+    "tool_catalog_bytes": 162026,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41668,
+    "approx_wire_tokens_total": 41821,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35809,
       "input_schema_bytes": 67072,
-      "output_schema_bytes": 49029,
+      "output_schema_bytes": 49641,
       "description_plus_input_schema_bytes": 102881
     }
   },
@@ -3620,6 +3620,40 @@
                       "summary": {
                         "type": "string"
                       },
+                      "summary_parts": {
+                        "properties": {
+                          "fields": {
+                            "items": {
+                              "properties": {
+                                "field": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "field",
+                                "value"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "more_fields": {
+                            "type": "integer"
+                          },
+                          "sentence": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "fields",
+                          "more_fields",
+                          "sentence"
+                        ],
+                        "type": "object"
+                      },
                       "target_id": {
                         "format": "uuid",
                         "type": "string"
@@ -5159,6 +5193,40 @@
                 },
                 "summary": {
                   "type": "string"
+                },
+                "summary_parts": {
+                  "properties": {
+                    "fields": {
+                      "items": {
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "more_fields": {
+                      "type": "integer"
+                    },
+                    "sentence": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "more_fields",
+                    "sentence"
+                  ],
+                  "type": "object"
                 },
                 "target_id": {
                   "format": "uuid",

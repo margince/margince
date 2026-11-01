@@ -100,6 +100,27 @@ export function detailsOf(value: unknown): Change[] {
     .filter((d) => d.field !== "" && d.label !== "");
 }
 
+/** A summary taken apart: the sentence, its field values, and how many more. */
+export type SummaryParts = { sentence: string; fields: Change[]; more: number };
+
+/** summaryPartsOf reads `summary_parts`, or null where the answer carries none. */
+export function summaryPartsOf(value: unknown): SummaryParts | null {
+  const parts = asRecord(value);
+  const sentence = asText(parts.sentence);
+  if (sentence === "") return null;
+  const fields = asList(parts.fields)
+    .map(asRecord)
+    .map((f) => ({
+      field: asText(f.field),
+      label: inWords(asText(f.field)),
+      before: shownOf(undefined),
+      after: shownOf({ kind: "text", text: asText(f.value) }),
+    }))
+    .filter((f) => f.field !== "");
+  const more = typeof parts.more_fields === "number" ? parts.more_fields : 0;
+  return { sentence, fields, more };
+}
+
 /** inWords names a field the server sent no label for by its words. */
 export function inWords(name: string): string {
   const words = name

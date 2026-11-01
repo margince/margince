@@ -21831,6 +21831,25 @@ components:
           description: >-
             Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them.
           items: {$ref: '#/components/schemas/ApprovalPreviewConflict'}
+    ApprovalSummaryParts:
+      type: object
+      description: >-
+        An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined.
+      required: [sentence, fields, more_fields]
+      properties:
+        sentence: {type: string, description: 'The act in words, such as "Update deal Acme renewal".'}
+        fields:
+          type: array
+          description: The fields in name order, at most eight. A value is bounded text; a list reads as its count.
+          items: {$ref: '#/components/schemas/ApprovalSummaryField'}
+        more_fields: {type: integer, minimum: 0, description: 'How many further fields the list leaves out.'}
+    ApprovalSummaryField:
+      type: object
+      description: One request field a summary lists, and its value as the approver should read it.
+      required: [field, value]
+      properties:
+        field: {type: string, description: 'The request field name, as the call sent it.'}
+        value: {type: string, description: 'The value as text. A cleared field reads as "null".'}
     Approval:
       type: object
       description: A staged confirm-first action awaiting human decision.
@@ -21872,6 +21891,10 @@ components:
         target_version: {type: [integer, 'null'], description: 'The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race.'}
         diff_hash: {type: [string, 'null'], description: 'Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.'}
         summary: {type: [string, 'null'], description: One-line description of the proposed change.}
+        summary_parts:
+          allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
+          description: >-
+            The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
         proposed_change:
           type: object
           additionalProperties: true

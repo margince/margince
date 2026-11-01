@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 import {
+  SummaryFields,
+  type SummaryWords,
+  summarySentence,
+} from "./approvalsummary";
+import {
   type DecisionDiff,
   type DecisionDisplay,
   type DecisionDraft,
@@ -52,6 +57,8 @@ export type DecisionCardLabels = Readonly<{
   showLess?: string;
   /** What there is none of: a proposal whose payload carries nothing to read. */
   noContent: string;
+  /** The labels of the fields a summary lists under its sentence. */
+  summaryWords: SummaryWords;
   // What the card's body is waiting for, spoken while it waits. It sits beside
   // noContent because both answer one question for the two states of an absent
   // body. The card knows neither state; only the screen does.
@@ -105,7 +112,7 @@ export function readPayload(
   // The headline and the summary are already on the card; a lead that only
   // repeats either is not drawn again.
   const display = withoutRepeatedLead(
-    withoutRepeatedLead(declared, approval.summary),
+    withoutRepeatedLead(declared, summarySentence(approval)),
     cardName(approval, draft),
   );
   const comparisons = display.flatMap((entry) =>
@@ -196,7 +203,8 @@ export function DecisionHead({
   compact?: boolean;
 }>) {
   const named = cardName(approval, draft);
-  const headline = named ?? approval.summary ?? null;
+  const sentence = summarySentence(approval);
+  const headline = named ?? sentence;
   const chips = (
     <div className="dcard-meta">
       {meta}
@@ -238,9 +246,11 @@ export function DecisionHead({
           {headline}
         </p>
       )}
-      {named && approval.summary && (
-        <p className="approval-why">{approval.summary}</p>
-      )}
+      {named && sentence && <p className="approval-why">{sentence}</p>}
+      <SummaryFields
+        parts={approval.summary_parts}
+        words={labels.summaryWords}
+      />
     </>
   );
 }

@@ -4,10 +4,13 @@
 package approvals
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -43,6 +46,57 @@ func SanitizeSummary(s string) string {
 		}
 	}
 	return boundRunes(strings.TrimSpace(b.String()), maxSummaryLen)
+}
+
+// SanitizeSummaryParts applies SanitizeSummary to every piece, and drops a
+// field whose name is left empty. Nil stays nil.
+func SanitizeSummaryParts(parts *crmcontracts.ApprovalSummaryParts) *crmcontracts.ApprovalSummaryParts {
+	if parts == nil {
+		return nil
+	}
+	clean := crmcontracts.ApprovalSummaryParts{
+		Sentence:   SanitizeSummary(parts.Sentence),
+		Fields:     make([]crmcontracts.ApprovalSummaryField, 0, len(parts.Fields)),
+		MoreFields: max(parts.MoreFields, 0),
+	}
+	for _, field := range parts.Fields {
+		if name := SanitizeSummary(field.Field); name != "" {
+			clean.Fields = append(clean.Fields, crmcontracts.ApprovalSummaryField{Field: name, Value: SanitizeSummary(field.Value)})
+		}
+	}
+	return &clean
+}
+
+// marshalSummaryParts is the summary_parts column value: NULL for no parts.
+func marshalSummaryParts(parts *crmcontracts.ApprovalSummaryParts) (json.RawMessage, error) {
+	if parts == nil {
+		return nil, nil
+	}
+	encoded, err := json.Marshal(parts)
+	if err != nil {
+		return nil, fmt.Errorf("encode approval summary parts: %w", err)
+	}
+	return encoded, nil
+}
+
+// readSummaryParts decodes the stored column. A value that does not decode
+// reads as absent, and the reader falls back to the joined summary.
+func readSummaryParts(stored json.RawMessage) *crmcontracts.ApprovalSummaryParts {
+	if len(stored) == 0 {
+		return nil
+	}
+	var parts crmcontracts.ApprovalSummaryParts
+	if json.Unmarshal(stored, &parts) != nil {
+		return nil
+	}
+	return &parts
+}
+
+// withholdPayload clears what a reader may not see once the preview held the
+// staged call back. That is the call, its evidence and both summary forms.
+func withholdPayload(approval *crmcontracts.Approval) {
+	approval.ProposedChange, approval.Evidence = nil, nil
+	approval.Summary, approval.SummaryParts = nil, nil
 }
 
 // boundRunes truncates so the RESULT is at most n bytes, marking that it did
