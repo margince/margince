@@ -31690,6 +31690,15 @@ export interface components {
             /** Format: uuid */
             activity_id: string;
         };
+        ContactNoticeDuty: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            rule: "art13" | "art14";
+            /** Format: date-time */
+            due_at: string;
+            blocked: boolean;
+        };
         /**
          * @description The contact record page in one payload. Record sections may be absent when their
          *     grants are withheld; `sections_omitted` names those sections. Mail coverage
@@ -31746,7 +31755,7 @@ export interface components {
             /** @description How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent. */
             last_live_inbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles")[];
+            sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles" | "privacy_notice_duties")[];
             strength?: components["schemas"]["RelationshipStrength"];
             /** @description The companies this contact handles invoices for, and in what capacity. Absent when the caller lacks the company or relationship grant, named in `sections_omitted` as `billing_roles`; a company outside the caller's row scope is not listed. */
             billing_roles?: components["schemas"]["BillingCompany"][];
@@ -31787,6 +31796,8 @@ export interface components {
                 data: components["schemas"]["Activity"][];
                 page: components["schemas"]["PageInfo"];
             };
+            /** @description Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld. */
+            privacy_notice_duties?: components["schemas"]["ContactNoticeDuty"][];
             /** @description Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger. */
             consent?: {
                 state: components["schemas"]["ContactConsentState"][];
@@ -32814,11 +32825,11 @@ export interface components {
          *     card.
          * @enum {string}
          */
-        ContactMomentRule: "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
+        ContactMomentRule: "privacy_notice_due" | "meeting_prep" | "re_engaged" | "job_change" | "overdue_promise" | "gone_quiet" | "open_promise" | "public_signal" | "missing_next_step" | "thin_relationship" | "nothing_needed";
         /** @description One thing that actually happened, which the reader can open. */
         ContactMomentEvidence: {
             /** @enum {string} */
-            type: "activity" | "task" | "relationship_change";
+            type: "activity" | "task" | "relationship_change" | "notice_case";
             /**
              * Format: uuid
              * @description The record to open. Absent when the evidence is a derived fact rather than a row.
@@ -32859,10 +32870,10 @@ export interface components {
          */
         ContactMomentDestination: {
             /**
-             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
+             * @description `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact. `privacy_notice` — open the disclosure case named by entity_id directly.
              * @enum {string}
              */
-            surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log" | "booking";
+            surface: "composer" | "meeting_brief" | "research" | "record" | "task" | "activity_log" | "booking" | "privacy_notice";
             /** @enum {string|null} */
             entity_type?: "contact" | "company" | "deal" | "activity" | null;
             /** Format: uuid */
@@ -32944,6 +32955,8 @@ export interface components {
             /** @enum {string} */
             strength_bucket: "none" | "weak" | "moderate" | "strong";
             interactions_90d: number;
+            /** @description Whether both sides have written within the relationship window, decided by the shared direction rule. */
+            two_way?: boolean;
             /** Format: date-time */
             last_at?: string | null;
             /** @description Interactions in the last 90 days where they wrote to this colleague. */

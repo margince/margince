@@ -23,6 +23,7 @@ import {
  * and the queue calls these cases in every sentence it draws.
  */
 export const CASE_PARAM = "case";
+export const NOTICE_CASE_PARAM = "notice_case";
 
 /**
  * How far the queue chases a linked case before saying it is not here.

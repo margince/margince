@@ -515,6 +515,18 @@ has. Staging, the check before a decision and the accept step all ask
 stops calling the notice step. It also fails when the reviewed version is not the
 version the build sends.
 
+## Mail from the contact
+
+Mail from a contact is proof that they gave their own details. Mail marked `bulk_mail_attested`
+also needs `inbound_sender_authenticated` before it can answer a notice duty.
+
+Before closing old cases, the data task reads the stored original with capture's parser to check
+the same proof. Mail with no proof keeps its unknown source.
+
+Duties recorded for `referral` or `purchased_or_imported` keep their source. A queued notice keeps
+its delivery record. If that delivery fails, the same sender proof is checked before the case can
+return to the queue.
+
 ## Where the code lives
 
 | | |

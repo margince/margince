@@ -48,6 +48,15 @@ func promotionContactSpec(lead crmcontracts.Lead, employer EmployerChoice, name,
 // promotionAcquisition preserves what the lead's address proves about its
 // origin. The lead is still live while this evidence is read.
 func promotionAcquisition(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (Acquisition, error) {
+	if lead.Origin != nil {
+		switch *lead.Origin {
+		case "referral", "partner":
+			return Acquisition{Kind: AcquiredReferral, OccurredAt: &lead.CreatedAt}, nil
+		case "linkedin", "cold_outreach":
+			return Acquisition{Kind: AcquiredPublicOrBusinessSource, OccurredAt: &lead.CreatedAt}, nil
+		}
+	}
+
 	if lead.Email == nil {
 		return Acquisition{Kind: AcquiredUnknownLegacy}, nil
 	}

@@ -6983,6 +6983,7 @@ const (
 	Contact360SectionsOmittedContact360SectionsOmittedNetwork             Contact360SectionsOmitted = "network"
 	Contact360SectionsOmittedContact360SectionsOmittedNextMeeting         Contact360SectionsOmitted = "next_meeting"
 	Contact360SectionsOmittedContact360SectionsOmittedNextSteps           Contact360SectionsOmitted = "next_steps"
+	Contact360SectionsOmittedContact360SectionsOmittedPrivacyNoticeDuties Contact360SectionsOmitted = "privacy_notice_duties"
 	Contact360SectionsOmittedContact360SectionsOmittedProfileFields       Contact360SectionsOmitted = "profile_fields"
 	Contact360SectionsOmittedContact360SectionsOmittedProjects            Contact360SectionsOmitted = "projects"
 	Contact360SectionsOmittedContact360SectionsOmittedProviderProfile     Contact360SectionsOmitted = "provider_profile"
@@ -7021,6 +7022,8 @@ func (e Contact360SectionsOmitted) Valid() bool {
 	case Contact360SectionsOmittedContact360SectionsOmittedNextMeeting:
 		return true
 	case Contact360SectionsOmittedContact360SectionsOmittedNextSteps:
+		return true
+	case Contact360SectionsOmittedContact360SectionsOmittedPrivacyNoticeDuties:
 		return true
 	case Contact360SectionsOmittedContact360SectionsOmittedProfileFields:
 		return true
@@ -7752,13 +7755,14 @@ func (e ContactMomentDestinationEntityType) Valid() bool {
 
 // Defines values for ContactMomentDestinationSurface.
 const (
-	ContactMomentDestinationSurfaceActivityLog  ContactMomentDestinationSurface = "activity_log"
-	ContactMomentDestinationSurfaceBooking      ContactMomentDestinationSurface = "booking"
-	ContactMomentDestinationSurfaceComposer     ContactMomentDestinationSurface = "composer"
-	ContactMomentDestinationSurfaceMeetingBrief ContactMomentDestinationSurface = "meeting_brief"
-	ContactMomentDestinationSurfaceRecord       ContactMomentDestinationSurface = "record"
-	ContactMomentDestinationSurfaceResearch     ContactMomentDestinationSurface = "research"
-	ContactMomentDestinationSurfaceTask         ContactMomentDestinationSurface = "task"
+	ContactMomentDestinationSurfaceActivityLog   ContactMomentDestinationSurface = "activity_log"
+	ContactMomentDestinationSurfaceBooking       ContactMomentDestinationSurface = "booking"
+	ContactMomentDestinationSurfaceComposer      ContactMomentDestinationSurface = "composer"
+	ContactMomentDestinationSurfaceMeetingBrief  ContactMomentDestinationSurface = "meeting_brief"
+	ContactMomentDestinationSurfacePrivacyNotice ContactMomentDestinationSurface = "privacy_notice"
+	ContactMomentDestinationSurfaceRecord        ContactMomentDestinationSurface = "record"
+	ContactMomentDestinationSurfaceResearch      ContactMomentDestinationSurface = "research"
+	ContactMomentDestinationSurfaceTask          ContactMomentDestinationSurface = "task"
 )
 
 // Valid indicates whether the value is a known member of the ContactMomentDestinationSurface enum.
@@ -7771,6 +7775,8 @@ func (e ContactMomentDestinationSurface) Valid() bool {
 	case ContactMomentDestinationSurfaceComposer:
 		return true
 	case ContactMomentDestinationSurfaceMeetingBrief:
+		return true
+	case ContactMomentDestinationSurfacePrivacyNotice:
 		return true
 	case ContactMomentDestinationSurfaceRecord:
 		return true
@@ -7786,6 +7792,7 @@ func (e ContactMomentDestinationSurface) Valid() bool {
 // Defines values for ContactMomentEvidenceType.
 const (
 	ContactMomentEvidenceTypeActivity           ContactMomentEvidenceType = "activity"
+	ContactMomentEvidenceTypeNoticeCase         ContactMomentEvidenceType = "notice_case"
 	ContactMomentEvidenceTypeRelationshipChange ContactMomentEvidenceType = "relationship_change"
 	ContactMomentEvidenceTypeTask               ContactMomentEvidenceType = "task"
 )
@@ -7794,6 +7801,8 @@ const (
 func (e ContactMomentEvidenceType) Valid() bool {
 	switch e {
 	case ContactMomentEvidenceTypeActivity:
+		return true
+	case ContactMomentEvidenceTypeNoticeCase:
 		return true
 	case ContactMomentEvidenceTypeRelationshipChange:
 		return true
@@ -7831,6 +7840,7 @@ const (
 	ContactMomentRuleNothingNeeded    ContactMomentRule = "nothing_needed"
 	ContactMomentRuleOpenPromise      ContactMomentRule = "open_promise"
 	ContactMomentRuleOverduePromise   ContactMomentRule = "overdue_promise"
+	ContactMomentRulePrivacyNoticeDue ContactMomentRule = "privacy_notice_due"
 	ContactMomentRulePublicSignal     ContactMomentRule = "public_signal"
 	ContactMomentRuleReEngaged        ContactMomentRule = "re_engaged"
 	ContactMomentRuleThinRelationship ContactMomentRule = "thin_relationship"
@@ -7852,6 +7862,8 @@ func (e ContactMomentRule) Valid() bool {
 	case ContactMomentRuleOpenPromise:
 		return true
 	case ContactMomentRuleOverduePromise:
+		return true
+	case ContactMomentRulePrivacyNoticeDue:
 		return true
 	case ContactMomentRulePublicSignal:
 		return true
@@ -7882,6 +7894,24 @@ func (e ContactNetworkColleagueStrengthBucket) Valid() bool {
 	case ContactNetworkColleagueStrengthBucketStrong:
 		return true
 	case ContactNetworkColleagueStrengthBucketWeak:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactNoticeDutyRule.
+const (
+	ContactNoticeDutyRuleArt13 ContactNoticeDutyRule = "art13"
+	ContactNoticeDutyRuleArt14 ContactNoticeDutyRule = "art14"
+)
+
+// Valid indicates whether the value is a known member of the ContactNoticeDutyRule enum.
+func (e ContactNoticeDutyRule) Valid() bool {
+	switch e {
+	case ContactNoticeDutyRuleArt13:
+		return true
+	case ContactNoticeDutyRuleArt14:
 		return true
 	default:
 		return false
@@ -37484,6 +37514,9 @@ type Contact360 struct {
 		Page PageInfo   `json:"page"`
 	} `json:"next_steps,omitempty"`
 
+	// PrivacyNoticeDuties Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
+	PrivacyNoticeDuties *[]ContactNoticeDuty `json:"privacy_notice_duties,omitempty"`
+
 	// ProfileFields The enrichment evidence sidecar — same rows as `GET /contacts/{id}/profile-fields`.
 	ProfileFields *[]ContactProfileField `json:"profile_fields,omitempty"`
 
@@ -38300,14 +38333,14 @@ type ContactMomentDestination struct {
 	// Prefill What the surface opens with — a draft intent, a subject, a task title. Strings only: a prefill is what a human is about to edit, never a structure the client must interpret.
 	Prefill *map[string]string `json:"prefill,omitempty"`
 
-	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
+	// Surface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact. `privacy_notice` — open the disclosure case named by entity_id directly.
 	Surface ContactMomentDestinationSurface `json:"surface"`
 }
 
 // ContactMomentDestinationEntityType defines model for ContactMomentDestination.EntityType.
 type ContactMomentDestinationEntityType string
 
-// ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
+// ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact. `privacy_notice` — open the disclosure case named by entity_id directly.
 type ContactMomentDestinationSurface string
 
 // ContactMomentEvidence One thing that actually happened, which the reader can open.
@@ -38398,11 +38431,25 @@ type ContactNetworkColleague struct {
 	// Strength PO-F-3b, computed at read; null when the band is `none`.
 	Strength       *int                                  `json:"strength,omitempty"`
 	StrengthBucket ContactNetworkColleagueStrengthBucket `json:"strength_bucket"`
-	UserId         openapi_types.UUID                    `json:"user_id"`
+
+	// TwoWay Whether both sides have written within the relationship window, decided by the shared direction rule.
+	TwoWay *bool              `json:"two_way,omitempty"`
+	UserId openapi_types.UUID `json:"user_id"`
 }
 
 // ContactNetworkColleagueStrengthBucket defines model for ContactNetworkColleague.StrengthBucket.
 type ContactNetworkColleagueStrengthBucket string
+
+// ContactNoticeDuty defines model for ContactNoticeDuty.
+type ContactNoticeDuty struct {
+	Blocked bool                  `json:"blocked"`
+	DueAt   time.Time             `json:"due_at"`
+	Id      openapi_types.UUID    `json:"id"`
+	Rule    ContactNoticeDutyRule `json:"rule"`
+}
+
+// ContactNoticeDutyRule defines model for ContactNoticeDuty.Rule.
+type ContactNoticeDutyRule string
 
 // ContactPhone defines model for ContactPhone.
 type ContactPhone struct {
