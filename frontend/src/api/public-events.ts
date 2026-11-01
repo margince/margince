@@ -995,6 +995,8 @@ export interface components {
             automatic_task_repaired?: boolean;
             /** @description The source's recorded commitment decisions changed; fetch the source through its normal content access gate. */
             commitment_admissions_changed?: boolean;
+            /** @description The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate. */
+            request_settlement_changed?: boolean;
             /** @description The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried. */
             agenda_changed?: boolean;
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */

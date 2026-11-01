@@ -87,6 +87,9 @@ func TestARevalidatedLegacyVerdictIsJudgedAgainOnce(t *testing.T) {
 	if !revalidate(t, e, item, previewAt) {
 		t.Fatal("the reviewed revalidation was not applied")
 	}
+	if audits, misannounced := settlementAudits(t, e, request, settlementRevalidationCol); audits != 1 || misannounced != 0 {
+		t.Fatalf("the revalidation wrote %d audit row(s), %d without exactly one event; want one, announced once", audits, misannounced)
+	}
 	if again := repairPage(t, e, previewAt)[request]; again.Category != SettlementPending || revalidate(t, e, again, previewAt) {
 		t.Fatalf("a second run did not show the request as waiting to be judged: %+v", again)
 	}
