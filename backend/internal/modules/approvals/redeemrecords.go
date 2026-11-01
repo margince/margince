@@ -22,6 +22,9 @@ func (s *Service) RedeemRecords(ctx context.Context, id ids.ApprovalID, tool, di
 		}
 		pins.Target = releasedRecordPin(a.TargetType, a.TargetID, a.TargetVersion)
 		pins.CoTarget = releasedRecordPin(a.CoTargetType, a.CoTargetID, a.CoTargetVersion)
+		if pins.Target != nil && a.ContextDigest != nil {
+			pins.Target.ContextDigest = *a.ContextDigest
+		}
 		if a.Kind == previewMergeRecords && a.TargetType != nil && (*a.TargetType == "contact" || *a.TargetType == tableCompany) && (pins.Target == nil || pins.CoTarget == nil) {
 			return &PreviewContextError{State: previewIncomplete}
 		}

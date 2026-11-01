@@ -170,7 +170,7 @@ func sameDate(a, b time.Time) bool { return a.Format(time.DateOnly) == b.Format(
 func assuranceDealSubjects(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, deal ids.UUID,
 ) ([]assurance.Subject, error) {
-	return assuranceSubjects(ctx, tx, asOf, coverage, &deal)
+	return assuranceSubjects(ctx, tx, asOf, coverage, []ids.UUID{deal})
 }
 
 // assuranceScanner is the input check as every caller runs it.

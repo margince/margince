@@ -139,6 +139,11 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 	if review.Learnings, err = readLearnings(ctx, tx, review.ID); err != nil {
 		return Review{}, err
 	}
+	// Here rather than at each reader, so the screen, the mail and the prior
+	// week all withhold through the one scan they share.
+	if !MayReadMeetings(ctx) {
+		withholdReviewMeetings(&review)
+	}
 	return review, nil
 }
 

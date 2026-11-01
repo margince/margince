@@ -9,16 +9,18 @@ import {
   useCallStart,
 } from "../../lib/callstart";
 import { intentAbout } from "../../lib/compose.intent";
+import { useMailboxConnected } from "../../lib/connectors";
 import { COMPOSE_PARAM, THREAD_PARAM } from "../../lib/contactpage.address";
 import {
   transportForActivity,
   useTransports,
 } from "../../lib/contacttransports";
+import { NOTICE_CASE_PARAM } from "../../lib/privacycaselink";
 import { navigate } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import { useUrlParams } from "../../lib/urlstate";
 import { useWriteTo, type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { ComposeModal } from "../mail/compose";
-import { useMailboxConnected } from "../settings/writetohost";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import type { Contact360, ContactMomentAction } from "./contactpage";
 
@@ -95,6 +97,14 @@ export function runContactMomentAction(
     return;
   }
   switch (destination.surface) {
+    case "privacy_notice":
+      if (destination.entity_id) {
+        navigate(
+          settingsHref("privacy"),
+          new Map([[NOTICE_CASE_PARAM, destination.entity_id]]),
+        );
+      }
+      return;
     case "booking":
       navigate({ screen: "book", id: `contact-${handlers.contactId}` });
       return;

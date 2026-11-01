@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -82,7 +83,8 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	// further away is a gate that census cannot see — and a reader it cannot
 	// see reads as one that excludes no held row.
 	gate := auth.ActivityDiscoverClause
-	if filtersOnContent(in) {
+	contentGated := filtersOnContent(in)
+	if contentGated {
 		// A filter over the subject, the body or the thread key is a READ of
 		// them: a withheld row that matched would tell the caller what it says
 		// through has_more and the page boundary. Such a list is content-gated,
@@ -96,9 +98,13 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if scope != "" {
 		where = append(where, scope)
 	}
-	content, err = auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, "", nil, nil, err
+	// The content gate holds the audience arm, so every row it lets through
+	// has its content available. A second copy would only cost planning.
+	content = sqlTrue
+	if !contentGated {
+		if content, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, "", nil, nil, err
+		}
 	}
 	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
 	if err != nil {
@@ -111,6 +117,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 			return nil, "", nil, nil, entityErr
 		}
 		where = append(where, entityWhere...)
+	}
+	if in.LinkedToDeals != nil {
+		where = append(where, sprintf(
+			"EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id AND on_deal.deal_id = ANY ($%d::uuid[]))",
+			arg(in.LinkedToDeals)))
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
@@ -169,7 +180,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
 	if in.Kind != nil {
-		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
+		where = append(where, kindPredicate(*in.Kind, arg))
 	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
@@ -318,4 +329,13 @@ func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+}
+
+// kindPredicate spells a known kind as a literal, so a generic plan keeps the
+// partial indexes keyed on kind. Any other value stays bound.
+func kindPredicate(kind string, arg func(any) int) string {
+	if known := crmcontracts.ActivityKind(kind); known.Valid() {
+		return "a.kind = '" + string(known) + "'"
+	}
+	return sprintf("a.kind = $%d", arg(kind))
 }

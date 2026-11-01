@@ -77,9 +77,9 @@ func TestLadderClimbsFromActivityAndNeverDescends(t *testing.T) {
 	}
 }
 
-// Which step a captured activity earns: engagement from an inbound reply or
-// a booked/held meeting, contact from any outbound touch or a note a human
-// logged, nothing else.
+// Which step a captured activity earns. An inbound reply or a meeting that
+// proves engagement earns engaged, if it was current when captured. An outbound touch or a note a human logged
+// earns contacted, and nothing else earns a step.
 func TestLadderStepForReadsTheTouch(t *testing.T) {
 	cases := []struct {
 		name string
@@ -87,15 +87,20 @@ func TestLadderStepForReadsTheTouch(t *testing.T) {
 		want LeadStatus
 		ok   bool
 	}{
-		{"inbound email", leadResponseTouch{direction: "inbound", kind: "email"}, LeadStatusEngaged, true},
-		{"booked meeting", leadResponseTouch{kind: "meeting", meetingStatus: "booked"}, LeadStatusEngaged, true},
-		{"held meeting", leadResponseTouch{kind: "meeting", meetingStatus: "held"}, LeadStatusEngaged, true},
-		{"cancelled meeting", leadResponseTouch{kind: "meeting", meetingStatus: "cancelled"}, "", false},
-		{"outbound email", leadResponseTouch{direction: "outbound", kind: "email"}, LeadStatusContacted, true},
-		{"outbound call by the system", leadResponseTouch{direction: "outbound", kind: "call", capturedBy: "connector:x"}, LeadStatusContacted, true},
-		{"a note a human logged", leadResponseTouch{kind: "note", source: "manual", capturedBy: "human:u1"}, LeadStatusContacted, true},
-		{"a note an agent wrote", leadResponseTouch{kind: "note", source: "manual", capturedBy: "agent:a1"}, "", false},
-		{"an imported note under the operator's identity", leadResponseTouch{kind: "note", source: "mirror:legacy_crm:a1", capturedBy: "human:op"}, "", false},
+		{"inbound email", leadResponseTouch{currentWhenCaptured: true, direction: "inbound", kind: "email"}, LeadStatusEngaged, true},
+		{"booked meeting", leadResponseTouch{currentWhenCaptured: true, kind: "meeting", meetingStatus: "booked"}, LeadStatusEngaged, true},
+		{"captured meeting with no status", leadResponseTouch{currentWhenCaptured: true, kind: "meeting"}, LeadStatusEngaged, true},
+		{"no-show meeting", leadResponseTouch{currentWhenCaptured: true, kind: "meeting", meetingStatus: "no_show"}, "", false},
+		{"held meeting", leadResponseTouch{currentWhenCaptured: true, kind: "meeting", meetingStatus: "held"}, LeadStatusEngaged, true},
+		{"cancelled meeting", leadResponseTouch{currentWhenCaptured: true, kind: "meeting", meetingStatus: "cancelled"}, "", false},
+		{"outbound email", leadResponseTouch{currentWhenCaptured: true, direction: "outbound", kind: "email"}, LeadStatusContacted, true},
+		{"outbound call by the system", leadResponseTouch{currentWhenCaptured: true, direction: "outbound", kind: "call", capturedBy: "connector:x"}, LeadStatusContacted, true},
+		{"a note a human logged", leadResponseTouch{currentWhenCaptured: true, kind: "note", source: "manual", capturedBy: "human:u1"}, LeadStatusContacted, true},
+		{"a note an agent wrote", leadResponseTouch{currentWhenCaptured: true, kind: "note", source: "manual", capturedBy: "agent:a1"}, "", false},
+		{"a meeting the lead declined", leadResponseTouch{currentWhenCaptured: true, kind: "meeting", declined: true}, "", false},
+		{"a reply already old when captured", leadResponseTouch{direction: "inbound", kind: "email"}, "", false},
+		{"an outbound email already old when captured", leadResponseTouch{direction: "outbound", kind: "email"}, LeadStatusContacted, true},
+		{"an imported note under the operator's identity", leadResponseTouch{currentWhenCaptured: true, kind: "note", source: "mirror:legacy_crm:a1", capturedBy: "human:op"}, "", false},
 	}
 	for _, tc := range cases {
 		got, ok := ladderStepFor(tc.t)

@@ -13,7 +13,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `column_name` | `text` | yes | Server-derived, `cf_`-prefixed, slug-derived physical column identifier: never client-supplied, immutable once live, stable across rename. |
 | `created_by` | `uuid` | yes | Points at `app_user.id`. |
-| `currency` | `character(3)` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
+| `currency` | `currency_code` |  | ISO-4217 currency code; present when `type=currency`, null otherwise. |
 | `label` | `text` | yes | Display label; a rename changes it, and never the slug or column_name. |
 | `object` | `text` | yes | The existing core object this field is added to. |
 | `options` | `jsonb` |  | Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. |
@@ -35,7 +35,6 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 **Rules**
 
-- `custom_field_currency_check`: `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
 - `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`

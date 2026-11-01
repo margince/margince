@@ -121,9 +121,7 @@ it("opens the section where each item is answered", async () => {
   installFetchStub(routes());
   render(<AnalyticsScreen />);
 
-  await user.click(
-    (await screen.findAllByRole("button", { name: "Review" }))[0],
-  );
+  await user.click((await screen.findAllByRole("link", { name: "Review" }))[0]);
   await waitFor(() =>
     expect(
       screen

@@ -57,7 +57,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `digits` | `smallint` | yes |  |
 
 **Rules**

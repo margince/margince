@@ -1,263 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
-import { Button, Disclosure, TableScroll } from "./atoms";
+import type { CSSProperties } from "react";
+import { Button } from "./atoms";
 import "./report-charts.css";
 
-import type { ChartProps, ChartReading } from "./report-charts.model";
+import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
+import { readingScale } from "./report-charts.model";
+import { ReadingTable } from "./report-charts.table";
 
+export { DonutChart, type DonutPart } from "./report-charts.donut";
+export { CumulativeChart } from "./report-charts.line";
 export type { ChartReading } from "./report-charts.model";
-
-function readingScale(readings: readonly ChartReading[], reference = 0) {
-  return Math.max(
-    1,
-    reference,
-    ...readings.flatMap((reading) => [
-      reading.value ?? 0,
-      reading.comparison ?? 0,
-      reading.target ?? 0,
-      reading.upper ?? 0,
-    ]),
-  );
-}
-
-function ReadingTable({
-  readings,
-  label,
-  dataLabel,
-  valueLabel,
-  secondaryLabel,
-  secondary,
-  onSelect,
-}: ChartProps &
-  Readonly<{
-    secondaryLabel?: string;
-    secondary?: "comparisonAmount" | "targetAmount" | "upperAmount";
-  }>) {
-  return (
-    <Disclosure className="report-chart-data" summary={dataLabel}>
-      <TableScroll className="report-chart-table-scroll" label={label}>
-        <table>
-          <caption className="sr-only">{label}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{label}</th>
-              <th scope="col">{valueLabel}</th>
-              {secondaryLabel && <th scope="col">{secondaryLabel}</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {readings.map((reading) => (
-              <tr key={reading.key}>
-                <th scope="row">
-                  {onSelect ? (
-                    <Button
-                      variant="link"
-                      onClick={() => onSelect(reading.key)}
-                    >
-                      {reading.label}
-                    </Button>
-                  ) : (
-                    reading.label
-                  )}
-                </th>
-                <td>{reading.amount}</td>
-                {secondaryLabel && (
-                  <td>{secondary ? reading[secondary] : null}</td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </TableScroll>
-    </Disclosure>
-  );
-}
-
-function lineSegments(
-  readings: readonly ChartReading[],
-  field: "value" | "comparison",
-  scale: number,
-  width: number,
-) {
-  const lines: string[] = [];
-  let points: string[] = [];
-  readings.forEach((reading, index) => {
-    const value = reading[field];
-    if (value == null) {
-      if (points.length) lines.push(points.join(" "));
-      points = [];
-    } else
-      points.push(
-        `${chartX(index, readings.length, width)},${chartY(value, scale)}`,
-      );
-  });
-  if (points.length) lines.push(points.join(" "));
-  return lines;
-}
-
-function chartX(index: number, count: number, width: number) {
-  return 56 + (index / Math.max(1, count - 1)) * (width - 76);
-}
-function chartY(value: number, scale: number) {
-  return 198 - (value / scale) * 174;
-}
-
-export function CumulativeChart({
-  readings,
-  label,
-  dataLabel,
-  valueLabel,
-  comparisonLabel,
-  reference,
-  axisLabel,
-  onSelect,
-}: ChartProps &
-  Readonly<{
-    comparisonLabel?: string;
-    reference?: Readonly<{ value: number; label: string; amount: string }>;
-    axisLabel: (value: number) => string;
-  }>) {
-  const title = useId();
-  const plot = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(680);
-  useEffect(() => {
-    const node = plot.current;
-    if (!node || typeof ResizeObserver === "undefined") return;
-    const measure = () => setWidth(Math.max(200, node.clientWidth));
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-  const [active, setActive] = useState<string | null>(null);
-  const scale = readingScale(readings, reference?.value) * 1.08;
-  const selected = readings.find((reading) => reading.key === active);
-  const ticks = [0, scale / 2, scale];
-  const labels = new Set([
-    0,
-    Math.floor((readings.length - 1) / 2),
-    readings.length - 1,
-  ]);
-  return (
-    <figure className="report-chart" aria-labelledby={title}>
-      <figcaption id={title} className="sr-only">
-        {label}
-      </figcaption>
-      <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
-        {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-comparison">
-            {comparisonLabel}
-          </span>
-        )}
-        {reference && (
-          <span className="report-chart-key report-chart-key-target">
-            {reference.label} · {reference.amount}
-          </span>
-        )}
-      </div>
-      <div className="report-chart-line" ref={plot}>
-        <svg
-          viewBox={`0 0 ${width} 238`}
-          aria-hidden="true"
-          preserveAspectRatio="none"
-        >
-          {ticks.map((tick) => (
-            <g key={tick}>
-              <line
-                className="report-chart-grid"
-                x1="56"
-                x2={width - 20}
-                y1={chartY(tick, scale)}
-                y2={chartY(tick, scale)}
-              />
-              <text
-                className="report-chart-axis"
-                x="48"
-                y={chartY(tick, scale) + 4}
-                textAnchor="end"
-              >
-                {axisLabel(tick)}
-              </text>
-            </g>
-          ))}
-          {reference && (
-            <line
-              className="report-chart-reference"
-              x1="56"
-              x2={width - 20}
-              y1={chartY(reference.value, scale)}
-              y2={chartY(reference.value, scale)}
-            />
-          )}
-          {lineSegments(readings, "comparison", scale, width).map((points) => (
-            <polyline
-              key={points}
-              className="report-chart-comparison"
-              points={points}
-            />
-          ))}
-          {lineSegments(readings, "value", scale, width).map((points) => (
-            <polyline
-              key={points}
-              className="report-chart-actual"
-              points={points}
-            />
-          ))}
-          {readings.map(
-            (reading, index) =>
-              labels.has(index) && (
-                <text
-                  key={reading.key}
-                  className="report-chart-axis"
-                  x={chartX(index, readings.length, width)}
-                  y="225"
-                  textAnchor="middle"
-                >
-                  {reading.label}
-                </text>
-              ),
-          )}
-        </svg>
-        {readings.map(
-          (reading, index) =>
-            reading.value != null && (
-              <Button
-                key={reading.key}
-                variant="link"
-                className="report-chart-point"
-                style={{
-                  left: `${(chartX(index, readings.length, width) / width) * 100}%`,
-                  top: `${(chartY(reading.value, scale) / 238) * 100}%`,
-                }}
-                aria-label={`${reading.label}: ${reading.amount}`}
-                onFocus={() => setActive(reading.key)}
-                onPointerEnter={() => setActive(reading.key)}
-                onClick={() => onSelect?.(reading.key)}
-                disabled={!onSelect}
-              >
-                <span className="report-chart-dot" />
-              </Button>
-            ),
-        )}
-      </div>
-      <div className="report-chart-focus" aria-live="polite">
-        {selected ? `${selected.label} · ${selected.amount}` : ""}
-      </div>
-      <ReadingTable
-        readings={readings}
-        label={label}
-        dataLabel={dataLabel}
-        valueLabel={valueLabel}
-        secondaryLabel={comparisonLabel}
-        secondary="comparisonAmount"
-        onSelect={onSelect}
-      />
-    </figure>
-  );
-}
 
 export function BulletChart({
   readings,
@@ -412,15 +166,18 @@ export function GroupedBars({
   valueLabel,
   comparisonLabel,
   onSelect,
-}: ChartProps & Readonly<{ comparisonLabel?: string }>) {
+  size = "default",
+}: GroupedBarsProps) {
   const scale = readingScale(readings) * 1.15;
   return (
-    <figure className="report-chart">
+    <figure className="report-chart" data-size={size}>
       <figcaption className="sr-only">{label}</figcaption>
       <div className="report-chart-legend">
-        <span className="report-chart-key">{valueLabel}</span>
+        <span className="report-chart-key report-chart-key-bar">
+          {valueLabel}
+        </span>
         {comparisonLabel && (
-          <span className="report-chart-key report-chart-key-comparison">
+          <span className="report-chart-key report-chart-key-bar report-chart-key-bar-secondary">
             {comparisonLabel}
           </span>
         )}

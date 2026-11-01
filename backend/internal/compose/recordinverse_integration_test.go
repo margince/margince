@@ -208,7 +208,7 @@ func TestUndoingAMachinePromotionDemotesTheLead(t *testing.T) {
 				t.Fatal(err)
 			}
 			leadID := ids.UUID(lead.Id)
-			contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
+			contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "human_qualify"})
 			if err != nil {
 				t.Fatalf("the machine promoting the lead: %v", err)
 			}
@@ -381,7 +381,7 @@ func TestAPromotionUndoIsRefusedToASeatThatMayNotChangeTheContact(t *testing.T) 
 		t.Fatal(err)
 	}
 	leadID := ids.UUID(lead.Id)
-	if _, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"}); err != nil {
+	if _, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
 		t.Fatal(err)
 	}
 	seat := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{

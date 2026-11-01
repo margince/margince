@@ -59,6 +59,7 @@ func (r approvalPreviewReader) recordMergePreview(ctx context.Context, approval 
 }
 
 func (r approvalPreviewReader) populateMerge(ctx context.Context, request recordMergePreviewRequest, scope contacts.MergeSurvivorship, out *crmcontracts.ApprovalPreview) error {
+	r.touch(mergeScopeTouches(scope))
 	details := []crmcontracts.ApprovalPreviewDetail{}
 	for _, subject := range []struct {
 		field string

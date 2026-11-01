@@ -12,10 +12,10 @@ package agents
 // about the wrong company.
 //
 // So the anchor accepts either, and the ambiguity is answered rather than
-// guessed: one match is used, several are REFUSED with the candidates named, and
-// none is refused as none. Guessing is the outcome this exists to remove — the
-// failure it replaces was a silent wrong answer, and a refusal a host can act on
-// is strictly better than a briefing nobody can tell is about the wrong record.
+// guessed. One match is used, and none is refused as none. Several are asked
+// about in the chat where the host can show a form (anchorpick.go), and refused
+// with the candidates named where it cannot. A refusal a host can act on beats a
+// briefing nobody can tell is about the wrong record.
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // anchorResolveLimit bounds the candidate read.
@@ -42,7 +43,9 @@ const anchorResolveLimit = 5
 // The name is ranked by the engine search_records runs, scoped to the anchor's
 // one type. The two never disagree about which record a word names. Rank order
 // picks nothing: one hit is the record, and more are refused.
-func resolveAnchor(ctx context.Context, search RecordSearch, args anchorArgs) (ids.UUID, error) {
+func resolveAnchor(
+	ctx context.Context, search RecordSearch, records datasource.SystemOfRecordProvider, args anchorArgs,
+) (ids.UUID, error) {
 	if args.RecordID != (ids.UUID{}) {
 		return args.RecordID, nil
 	}
@@ -65,6 +68,9 @@ func resolveAnchor(ctx context.Context, search RecordSearch, args anchorArgs) (i
 	case 1:
 		return page.Hits[0].Ref.ID, nil
 	default:
+		if picked, err := pickAnchor(ctx, records, args, page.Hits); err != nil || !picked.IsZero() {
+			return picked, err
+		}
 		return ids.UUID{}, &BadArgsError{Cause: fmt.Errorf(
 			"`record_name` %q matches %d %s records — name one by `record_id`: %s",
 			args.RecordName, len(page.Hits), args.RecordType, candidateIDs(page.Hits))}

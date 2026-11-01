@@ -23,7 +23,7 @@ import {
   moveLabel,
   moveOpensComposer,
   subjectHref,
-} from "./worklist.copy";
+} from "../../lib/worklistcopy";
 import {
   DoneVerb,
   HandBackLines,

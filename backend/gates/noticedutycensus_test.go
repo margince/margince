@@ -12,8 +12,7 @@ package gates
 // each other in code — which is exactly the shape gates/ exists for.
 //
 // Without this, a tenth acquisition kind added in contacts reaches DutyFor's
-// default arm and is silently treated as Art. 14. That default is deliberate
-// and correct as a fail-safe, but it must not become the way new kinds get
+// default arm and asks for source review. That default must not become the way new kinds get
 // decided: an unconsidered kind should stop somebody and ask, not be absorbed.
 
 import (
@@ -60,7 +59,7 @@ func TestEveryAcquisitionKindReachesADecidedDuty(t *testing.T) {
 		if !decided[kind] {
 			t.Errorf("acquisition kind %q reaches no arm of DutyFor in "+
 				"internal/modules/consent/noticerule.go, so it falls to the default and is "+
-				"treated as an Art. 14 duty by accident. Decide it: data the SUBJECT handed us "+
+				"left unassessed by accident. Decide it: data the SUBJECT handed us "+
 				"owes no case (Art. 13 was discharged at collection); data from anywhere else "+
 				"owes an Art. 14 notice within a month", kind)
 		}

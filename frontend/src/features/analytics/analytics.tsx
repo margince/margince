@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { FilterBar } from "../../design-system/filterbar";
 import { Popover } from "../../design-system/popover";
 import { QueryStates } from "../../design-system/querystates";
@@ -18,6 +20,7 @@ import {
   ReviewActionsContext,
   useReviewActions,
 } from "../../lib/reviewactions";
+import { replaceDial } from "../../lib/urlstate";
 import type { Stage } from "./analytics.cells";
 import {
   type AnalyticsSelection,
@@ -32,7 +35,11 @@ import { MyOutcomesView } from "./analytics.outcomes";
 import { AnalyticsOverview } from "./analytics.overview";
 import { QuestionsView } from "./analytics.questions";
 import { AnalyticsScopePicker } from "./analytics.scope";
-import { SETUP_LABEL, useAnalyticsSections } from "./analytics.tabs";
+import {
+  SETUP_LABEL,
+  type SetupSection,
+  useAnalyticsSections,
+} from "./analytics.tabs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { ReportingDefinitions } from "./reporting.definitions";
 import { ReportingLibrary } from "./reporting.library";
@@ -63,7 +70,9 @@ export function AnalyticsScreen({
   // they may choose. Read once here and handed down, so every card on the page
   // is answering about the same set.
   const context = useAnalyticsContext();
-  const { selection, selectScope } = useAnalyticsSelection(context.data);
+  const { selection, selectScope, refusedScope } = useAnalyticsSelection(
+    context.data,
+  );
 
   const { route, section, tabs, setup, library, holding } =
     useAnalyticsSections(context.data?.default_scope.kind);
@@ -122,41 +131,18 @@ export function AnalyticsScreen({
         }}
         label={t("analytics.sections")}
         trailing={
-          library || setup.length > 0 ? (
-            <>
-              {library && (
-                <Button
-                  variant="ghost"
-                  onClick={() => openAnalyticsSection(library)}
-                >
-                  {t(
-                    library === "reports"
-                      ? "analytics.sectionReports"
-                      : "analytics.sectionQuestions",
-                  )}
-                </Button>
-              )}
-              {setup.length > 0 && (
-                <Popover label={t("analytics.setup")}>
-                  {setup.map((candidate) => (
-                    <Button
-                      key={candidate}
-                      variant="link"
-                      onClick={() => openAnalyticsSection(candidate)}
-                    >
-                      {t(SETUP_LABEL[candidate])}
-                    </Button>
-                  ))}
-                </Popover>
-              )}
-            </>
-          ) : undefined
+          <TabVerbs library={library} setup={setup} section={section} />
         }
       />
       <div className="analytics-body">
         <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
           {holding ? (
             <PendingBody label={t("analytics.sections")} />
+          ) : refusedScope && context.data ? (
+            <ScopeRefused
+              fallback={context.data.default_scope}
+              allowed={context.data.allowed_scopes}
+            />
           ) : (
             <SectionBody
               section={section}
@@ -173,6 +159,94 @@ export function AnalyticsScreen({
           )}
         </ReviewActionsContext>
       </div>
+    </div>
+  );
+}
+
+// The address names a population this reader may not choose: a link from a
+// colleague who sees more, or a grant withdrawn since. Nothing is read until
+// the reader takes the population they do have.
+function ScopeRefused({
+  fallback,
+  allowed,
+}: Readonly<{
+  fallback: components["schemas"]["AnalyticsScope"];
+  allowed: readonly components["schemas"]["AnalyticsScope"][];
+}>) {
+  const t = useT();
+  // Named when it can be. A bare address may open a remembered question,
+  // and the page must open on the population this button names.
+  const named = allowed.some((scope) => scopeKey(scope) === scopeKey(fallback));
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("analytics.scopeRefused")}
+      actions={
+        <Button
+          onClick={() =>
+            replaceDial("scope", named ? scopeKey(fallback) : undefined)
+          }
+        >
+          {t("analytics.scopeRefusedUse", { scope: fallback.label })}
+        </Button>
+      }
+    >
+      <p>{t("analytics.scopeRefusedBody")}</p>
+    </Callout>
+  );
+}
+
+// Reports and Setup at the tab row's end. Reports opens a page, so it carries
+// no caret and marks itself while that page is open; Setup is a menu.
+function TabVerbs({
+  library,
+  setup,
+  section,
+}: Readonly<{
+  library: Section | undefined;
+  setup: readonly SetupSection[];
+  section: Section;
+}>) {
+  const t = useT();
+  if (!library && setup.length === 0) return null;
+  return (
+    <div className="analytics-tab-verbs">
+      {library && (
+        <Button
+          variant="ghost"
+          aria-current={section === library ? "page" : undefined}
+          onClick={() => openAnalyticsSection(library)}
+        >
+          <FileText aria-hidden="true" />
+          {t(
+            library === "reports"
+              ? "analytics.sectionReports"
+              : "analytics.sectionQuestions",
+          )}
+        </Button>
+      )}
+      {setup.length > 0 && (
+        <Popover
+          variant="ghost"
+          label={
+            <>
+              {t("analytics.setup")}
+              <ChevronDown aria-hidden="true" />
+            </>
+          }
+        >
+          {setup.map((candidate) => (
+            <Button
+              key={candidate}
+              variant="link"
+              onClick={() => openAnalyticsSection(candidate)}
+            >
+              {t(SETUP_LABEL[candidate])}
+            </Button>
+          ))}
+        </Popover>
+      )}
     </div>
   );
 }
