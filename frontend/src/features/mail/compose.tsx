@@ -40,7 +40,7 @@ import {
   ComposeBody,
   ComposeFoot,
   ComposeFrame,
-  EarlierMessages,
+  ReplyQuote,
 } from "./compose.parts";
 
 // The composer reviews replies, first messages and relinks before submitting.
@@ -411,9 +411,7 @@ export function ComposeWindow({
                 mail={!isChannelReply}
                 replying={thread.replying}
                 earlier={
-                  answering && (
-                    <EarlierMessages messages={thread.conversation.messages} />
-                  )
+                  answering && <ReplyQuote message={thread.anchorActivity} />
                 }
                 voiceMaturity={voiceProfile.data?.maturity}
                 channelLabel={dial.channel?.label}

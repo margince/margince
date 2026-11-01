@@ -8,11 +8,15 @@ package compose
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -45,9 +49,9 @@ func pricingMail(from, to, id, body string, minutes int, authenticated bool) owe
 	return m
 }
 
-// replyPrompt drafts a reply to the anchor as the seat and returns what the
-// model was sent.
-func replyPrompt(t *testing.T, o *owedEnv, anchor ids.UUID) string {
+// Reply language may read related correspondence; reply content stays anchored
+// to the selected message, so these checks inspect the language reader itself.
+func replyLanguageReading(t *testing.T, o *owedEnv, anchor ids.UUID) string {
 	t.Helper()
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Pricing","body":"Thanks."}`}}
 	drafter := newReplyDrafter(o.e.Pool, brain, slog.New(slog.DiscardHandler))
@@ -55,7 +59,14 @@ func replyPrompt(t *testing.T, o *owedEnv, anchor ids.UUID) string {
 	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {
 		t.Fatal(err)
 	}
-	return brain.request.Messages[0].Content
+	if strings.Contains(brain.request.Messages[0].Content, `"conversation":`) {
+		t.Fatal("related correspondence reached the content prompt")
+	}
+	_, written, err := drafter.languageInputs(reader, anchor, draftfloor.Steering{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.Join(written.Thread, "\n")
 }
 
 // alphaThread captures buyer@alpha.test's question, our answer and their
@@ -81,12 +92,12 @@ func TestAReplyDraftReadsNoMessageOfAnotherCorrespondenceOnItsThread(t *testing.
 		o.capture(t, pricingMail("orders@beta.test", o.seat, fmt.Sprintf("order-%d@beta.test", i), betaWrites, 120+i, true))
 	}
 	requireOneThreadKey(t, o, anchor, replyEvidenceRows+4)
-	content := replyPrompt(t, o, anchor)
+	content := replyLanguageReading(t, o, anchor)
 	if strings.Contains(content, betaWrites) {
-		t.Fatalf("the reply's context holds another correspondent's message: %s", content)
+		t.Fatalf("the reply's language evidence holds another correspondent's message: %s", content)
 	}
 	if !strings.Contains(content, alphaAsks) || !strings.Contains(content, ourAnswer) {
-		t.Fatalf("the reply's context lost an earlier message of its own correspondence: %s", content)
+		t.Fatalf("the reply's language evidence lost an earlier message of its own correspondence: %s", content)
 	}
 }
 
@@ -97,7 +108,7 @@ func TestAMessageCopyingAnotherCustomerDoesNotBringTheirMailIntoAReply(t *testin
 	copying.cc = "buyer@alpha.test"
 	anchor := o.capture(t, copying)
 	requireOneThreadKey(t, o, anchor, 4)
-	content := replyPrompt(t, o, anchor)
+	content := replyLanguageReading(t, o, anchor)
 	if strings.Contains(content, alphaAsks) || strings.Contains(content, alphaConfirms) || strings.Contains(content, ourAnswer) {
 		t.Fatalf("a reply to one customer carries mail of the customer it copied: %s", content)
 	}
@@ -119,7 +130,7 @@ func TestAContactOnTwoCustomersThreadsDoesNotJoinThem(t *testing.T) {
 	order.cc = "carla@advisors.test"
 	anchor := o.capture(t, order)
 	requireOneThreadKey(t, o, anchor, 3)
-	if content := replyPrompt(t, o, anchor); strings.Contains(content, alphaAsks) || strings.Contains(content, alphaConfirms) {
+	if content := replyLanguageReading(t, o, anchor); strings.Contains(content, alphaAsks) || strings.Contains(content, alphaConfirms) {
 		t.Fatalf("a contact on both threads joined two customers' mail: %s", content)
 	}
 }
@@ -133,13 +144,13 @@ func TestUnauthenticatedMailStaysOutOfAProvenReplyAndReadsOnlyItsOwnSender(t *te
 	unprovenID := o.capture(t, pricingMail("buyer@alpha.test", o.seat, "pricing-x@alpha.test", unproven, 30, false))
 	anchor := o.capture(t, pricingMail("buyer@alpha.test", o.seat, "pricing-2@alpha.test", alphaConfirms, 60, true))
 	requireOneThreadKey(t, o, anchor, 5)
-	content := replyPrompt(t, o, anchor)
+	content := replyLanguageReading(t, o, anchor)
 	if strings.Contains(content, unproven) || !strings.Contains(content, alphaAsks) {
-		t.Fatalf("the reply's context must hold the authenticated question and not the unauthenticated mail: %s", content)
+		t.Fatalf("the reply's language evidence must hold the authenticated question and not the unauthenticated mail: %s", content)
 	}
 	// The reply to the unauthenticated mail goes back to buyer@alpha.test, so
 	// it may read our mail with that address, and nothing from anyone else.
-	content = replyPrompt(t, o, unprovenID)
+	content = replyLanguageReading(t, o, unprovenID)
 	if !strings.Contains(content, ourAnswer) || strings.Contains(content, betaWrites) {
 		t.Fatalf("a reply to unauthenticated mail must read our mail with its sender and no other correspondent's: %s", content)
 	}
@@ -161,7 +172,7 @@ func TestAReplyGoingToSomeoneOtherThanAnUnprovenSenderReadsTheMessageAlone(t *te
 	if counterparty := o.e.WsScalar(t, `SELECT counterparty_email FROM activity WHERE id = $1`, anchor); counterparty != "rep2@ws.example" {
 		t.Fatalf("precondition: the anchor's counterparty is %q, want the colleague it names", counterparty)
 	}
-	if content := replyPrompt(t, o, anchor); strings.Contains(content, earlier) {
+	if content := replyLanguageReading(t, o, anchor); strings.Contains(content, earlier) {
 		t.Fatalf("a reply sent to someone else carries mail of the unproven sender: %s", content)
 	}
 }
@@ -175,7 +186,7 @@ func TestAnUnauthenticatedSendersReplyReadsTheirMailAndNoOneElses(t *testing.T) 
 	o.capture(t, pricingMail("orders@beta.test", o.seat, "order-1@beta.test", betaWrites, 25, true))
 	anchor := o.capture(t, pricingMail("anna@customer.test", o.seat, "pricing-2@customer.test", alphaConfirms, 30, false))
 	requireOneThreadKey(t, o, anchor, 5)
-	content := replyPrompt(t, o, anchor)
+	content := replyLanguageReading(t, o, anchor)
 	if !strings.Contains(content, alphaAsks) || !strings.Contains(content, ourAnswer) {
 		t.Fatalf("the reply lost the earlier mail between us and its sender: %s", content)
 	}
@@ -197,7 +208,7 @@ func TestAColleagueAsCounterpartyWidensAReplyToNoOneElse(t *testing.T) {
 	colleague.cc = "vendor@delta.test"
 	anchor := o.capture(t, colleague)
 	requireOneThreadKey(t, o, anchor, 2)
-	if content := replyPrompt(t, o, anchor); strings.Contains(content, shared) {
+	if content := replyLanguageReading(t, o, anchor); strings.Contains(content, shared) {
 		t.Fatalf("a colleague's mail was joined by another address at our own domain: %s", content)
 	}
 }
@@ -207,7 +218,7 @@ func TestTwoSendersAtAConsumerMailDomainAreNotOneCorrespondence(t *testing.T) {
 	o.capture(t, pricingMail("anna.private@gmail.com", o.seat, pricingRoot, alphaAsks, 0, true))
 	anchor := o.capture(t, pricingMail("bert.private@gmail.com", o.seat, "pricing-2@gmail.com", alphaConfirms, 30, true))
 	requireOneThreadKey(t, o, anchor, 2)
-	if content := replyPrompt(t, o, anchor); strings.Contains(content, alphaAsks) {
+	if content := replyLanguageReading(t, o, anchor); strings.Contains(content, alphaAsks) {
 		t.Fatalf("two consumer mailboxes were read as one company: %s", content)
 	}
 }
@@ -220,8 +231,44 @@ func TestAReplyToACustomersColleagueReadsTheCustomersEarlierMail(t *testing.T) {
 	joined := pricingMail("purchasing@alpha.test", o.seat, "pricing-3@alpha.test", colleagueAsks, 60, true)
 	joined.cc = "buyer@alpha.test"
 	anchor := o.capture(t, joined)
-	content := replyPrompt(t, o, anchor)
+	content := replyLanguageReading(t, o, anchor)
 	if !strings.Contains(content, alphaAsks) || !strings.Contains(content, ourAnswer) {
 		t.Fatalf("a reply to the customer's colleague lost the customer's earlier mail or our answer: %s", content)
+	}
+}
+
+func TestASelectedColleagueInboundMessageIsDraftedAsOurFollowUp(t *testing.T) {
+	e := integration.Setup(t)
+	reader := e.As(e.AdminUser, nil, importerPerms())
+	status, activity := postActivity(reader, t, e, crmcontracts.CreateActivityRequest{
+		Source: "manual", Kind: "email", Subject: new("Pricing"), Body: new(ourAnswer),
+		Direction:    new(crmcontracts.CreateActivityRequestDirectionInbound),
+		SourceSystem: new("mail_import"), SourceId: new("colleague-inbound"), SourceAuthorId: new(openapi_types.UUID(e.Rep2)),
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("import status = %d", status)
+	}
+	anchor := ids.UUID(activity.Id)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pricing","body":"Hello,\n\nCould we confirm the delivery window?"}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	activity, _, err := drafter.languageInputs(reader, anchor, draftfloor.Steering{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activity.Direction == nil || *activity.Direction != "inbound" {
+		t.Fatal("precondition: the colleague's mail did not arrive inbound")
+	}
+	if activity.Voice == nil || activity.Voice.Author == nil {
+		t.Fatal("precondition: the colleague's mail has no author")
+	}
+	if activity.Voice.Author.Kind != "colleague" {
+		t.Fatalf("precondition: author kind = %q", activity.Voice.Author.Kind)
+	}
+	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	content := brain.request.Messages[0].Content
+	if strings.Contains(content, `"thread":"inbound_mail"`) || !strings.Contains(content, ourAnswer) {
+		t.Fatalf("a colleague's message was read as their turn: %s", content)
 	}
 }

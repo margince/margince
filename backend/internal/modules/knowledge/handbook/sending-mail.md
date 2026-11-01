@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -10,8 +10,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 4. Pick a **Reason for contact**.
 5. Read the warning bar above **Send**, if there is one. Then press **Send** once.
 
-"No address and no thread to reply to." means the contact has no address to write to.
-Also called: write an email, email a customer, message a client.
+"No address and no thread to reply to." means the contact has no address to write to. Also called: write an email, email a customer, message a client.
 
 ### Where can I start writing an email?
 To start an email in Margince, use any of these:
@@ -24,20 +23,21 @@ To start an email in Margince, use any of these:
 
 Every one of these opens the same composer, so the fields, checks and send times are the same from each.
 From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
-A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first."
-Also called: compose, new message, reply to an email.
+A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
 
 ### How do I send a follow-up email?
 To send a follow-up email in Margince, open the contact's **History** tab and press **Reply** on the message. Or press the button on its Worklist row.
-1. On the record, press **Reply** on the email. After your own email, the composer reads "Following up on your email “{subject}”"; after theirs, "Replying to “{subject}”".
+1. On the record, press **Reply** on the email. After your own email, the composer reads "Following up on “{subject}”"; after theirs, "Replying to “{subject}”".
 2. From **Home** → **Show Worklist**, press **Read and reply**, **Draft reply** or **Write email** on the row.
 3. Pick a **Reason for contact** and press **Send**, or set a time. A reply to their own message needs no reason.
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
 ### How do I reply to one particular message in a thread?
 To reply to one message in Margince, open the email reader and press **Reply** below that message. Select an older message first to show its text and **Reply**. The newest message appears first and opens with the one you came from. Close the composer to return to the thread.
-You can also pick a message under **Threads** in the composer. The line above the recipients says which message you answer.
 
+The **…** button below your reply shows only the message you are answering. **Draft reply** answers that selected message, even when newer mail is in the thread. Mail on the thread helps choose the language and form of address.
+
+Pick a message under **Threads** in the composer too. The line above the recipients names it.
 Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 
 ### How do I file an email I send under a project?

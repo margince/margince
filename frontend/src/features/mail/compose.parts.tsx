@@ -10,15 +10,19 @@ import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   asksWhy,
   type CommunicationContext,
   contextOptions,
 } from "../../lib/compose-context";
+import {
+  authorName,
+  correspondenceSide,
+  writtenByReader,
+} from "../../lib/messagevoice";
 import type { RelinkKind } from "../../lib/recordtargets";
 import { useRichTextLabels } from "../../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
@@ -394,32 +398,23 @@ export function ComposeWhy({
   );
 }
 
-// The thread a reply answers, folded under its words as quoted history. One
-// small control says how much is there, and opens it.
-// It is the reader's to read; the reply carries only what they wrote.
-export function EarlierMessages({
-  messages,
-}: Readonly<{ messages: readonly Activity[] }>) {
+export function ReplyQuote({
+  message,
+}: Readonly<{ message: Activity | undefined }>) {
   const t = useT();
-  const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
-  const readable = messages.filter(
-    (message) => message.content_state !== "withheld" && message.body,
-  );
-  if (readable.length === 0) {
-    return null;
-  }
+  if (!message?.body || message.content_state === "withheld") return null;
+  const who = writtenByReader(message)
+    ? t("compose.quotedYou")
+    : (authorName(message) ??
+      (correspondenceSide(message) === "ours"
+        ? t(message.voice?.author ? "compose.quotedTeam" : "compose.quotedYou")
+        : message.email_summary?.counterparty?.trim() || t("email.received")));
   return (
     <div className="compose-earlier">
       <IconAction
-        label={
-          open
-            ? t("compose.earlierHide")
-            : plural("compose.earlierShow", readable.length, {
-                count: formatNumber(readable.length, locale),
-              })
-        }
+        label={t(open ? "compose.selectedHide" : "compose.selectedShow")}
         icon={
           <span className="compose-earlier-pill">
             <Ellipsis aria-hidden="true" />
@@ -429,29 +424,24 @@ export function EarlierMessages({
         pressed={open}
         onClick={() => setOpen((was) => !was)}
       />
-      {open &&
-        readable.map((message) => (
-          <figure key={message.id} className="compose-quoted">
-            <figcaption className="t-caption">
-              {t("compose.quotedHeader", {
-                when: formatActivityWhen(
-                  message.occurred_at,
-                  message.occurred_precision,
-                  locale,
-                  viewerZone(),
-                ),
-                who:
-                  message.direction === "outbound"
-                    ? t("compose.quotedYou")
-                    : message.email_summary?.counterparty?.trim() ||
-                      t("email.received"),
-              })}
-            </figcaption>
-            <blockquote>
-              <EmailText body={message.body ?? ""} />
-            </blockquote>
-          </figure>
-        ))}
+      {open && (
+        <figure className="compose-quoted">
+          <figcaption className="t-caption">
+            {t("compose.quotedHeader", {
+              when: formatActivityWhen(
+                message.occurred_at,
+                message.occurred_precision,
+                locale,
+                viewerZone(),
+              ),
+              who,
+            })}
+          </figcaption>
+          <blockquote>
+            <EmailText body={message.body} />
+          </blockquote>
+        </figure>
+      )}
     </div>
   );
 }

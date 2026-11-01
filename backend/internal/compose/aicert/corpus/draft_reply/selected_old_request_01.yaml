@@ -1,0 +1,34 @@
+name: selected_old_request_for_materials
+task: draft_reply
+site: reply
+source: hand_authored
+sanitized_by: hand_authored
+fixture:
+  activity:
+    output_language: en
+    conversation_state: weeks
+    silence_days: '12'
+    now: '2026-10-20T09:00:00Z'
+    sender_name: Demo Sender
+    sender_email: sender@example.test
+    thread: inbound_mail
+    recipient: Alex
+    register: familiar
+    subject: Product materials
+    body: 'Could you send the product brochure and the approved product images? We need both for our internal review.'
+    occurred_at: '2026-10-08T09:00:00Z'
+  voice: null
+expect:
+  outcome: accepted
+  answer: plain
+  rubric: >
+    The selected message asks for a product brochure and approved product images.
+    The reply addresses both requested materials and may ask how they should be supplied.
+    It may introduce the requested materials as attached, following the shared drafting rule,
+    but does not invent filenames, versions, prices or delivery promises.
+    It keeps the reply focused on the two supplied requests.
+    The text is an English reply to Alex, without a signature or invented facts.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

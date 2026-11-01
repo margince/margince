@@ -28,12 +28,10 @@ import (
 const replyDraftSystem = `Draft a professional email reply, for the sender to send under their own name.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The selected activity and stated intent are the authoritative reason for this reply. Answer that exact message.
-- Conversation contains other readable messages in the same thread, with their directions and dates, for context only. Do not switch the reply target. An outbound selected message calls for a follow-up to its recipient, not an answer to ourselves.
+- No other thread message is supplied. Use the selected subject and body, steered by intent and rewrite_of. A selected message written by our side calls for a follow-up to its recipient, not an answer to ourselves.
 - Where the message raises several distinct points, answer at least two by name, a clause each, before the ask.
-- Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.
-` + draftrules.Turns + `
 ` + draftrules.Rewrite
 
 // replyDraftSchema is the answer's shape, subject first: the order the model
