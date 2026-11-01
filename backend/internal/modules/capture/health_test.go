@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -32,7 +33,7 @@ func TestConnectionConcernCarriesTheWorstConditionOnly(t *testing.T) {
 		{"parked mailbox stays quiet", ConnectionView{Status: statusDisconnected, LastErrorClass: &auth, Backfill: failed}, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if kind := connectionConcern(tc.view); kind != tc.wantKind {
+			if kind := connectionConcern(tc.view, time.Time{}); kind != tc.wantKind {
 				t.Fatalf("connectionConcern = %q, want %q", kind, tc.wantKind)
 			}
 		})

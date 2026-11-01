@@ -167,3 +167,62 @@ func readAutomaticWorkSeats(ctx context.Context, tx pgx.Tx, named []ids.UUID) ([
 		return s, err
 	})
 }
+
+func readAutomaticWorkSummary(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontracts.AutomaticWorkCounts, int, time.Time, error) {
+	_, from, _, err := automaticWorkWindow(ctx, tx, now, automaticWorkDefaultDays)
+	if err != nil {
+		return crmcontracts.AutomaticWorkCounts{}, 0, from, err
+	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	query := `SELECT u.id, item.kind, item.outcome, count(*) FROM (` + automaticItemsSQL(arg, from, now) + `) item
+ LEFT JOIN app_user u ON u.id=item.colleague AND NOT u.is_agent GROUP BY 1,2,3 ORDER BY 1,2,3`
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return crmcontracts.AutomaticWorkCounts{}, 0, from, err
+	}
+	defer rows.Close()
+	type groupKey struct {
+		colleague ids.UUID
+		kind      crmcontracts.AutomaticWorkKindName
+	}
+	grouped := map[groupKey]crmcontracts.AutomaticWorkCounts{}
+	total := crmcontracts.AutomaticWorkCounts{}
+	for rows.Next() {
+		var key groupKey
+		var colleague *ids.UUID
+		var outcome string
+		var n int
+		if err := rows.Scan(&colleague, &key.kind, &outcome, &n); err != nil {
+			return total, 0, from, err
+		}
+		if colleague != nil {
+			key.colleague = *colleague
+		}
+		counts := grouped[key]
+		if err := addOutcome(&counts, outcome, n); err != nil {
+			return total, 0, from, err
+		}
+		grouped[key] = counts
+	}
+	if err := rows.Err(); err != nil {
+		return total, 0, from, err
+	}
+	review := 0
+	for key, counts := range grouped {
+		sumCounts(&total, counts)
+		if key.colleague.IsZero() {
+			continue
+		}
+		for _, kind := range automaticWorkKinds {
+			if kind.Kind == key.kind {
+				_, _, above := automaticRouting(counts, kind.RecordsNotMine)
+				if above {
+					review += counts.NotMine
+				}
+				break
+			}
+		}
+	}
+	return total, review, from, nil
+}

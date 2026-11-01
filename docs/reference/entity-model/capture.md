@@ -196,7 +196,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-28 columns · primary key `(id)` · referenced by 2 foreign keys
+30 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -204,6 +204,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `account_bound_at` | `timestamp with time zone` |  |  |
 | `account_label` | `text` |  | Display-only name of the connected account (e.g. the mailbox address). |
 | `auth` | `bytea` |  |  |
+| `connected_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `context_tag_id` | `uuid` |  | Points at `tag.id`. |
 | `credential_ref` | `text` |  |  |
 | `generation` | `integer`, default `0` | yes |  |
@@ -217,6 +218,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `scopes` | `text[]`, default `'{}'::text[]` | yes | The granted provider scopes. |
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |
 | `signature_enrich_enabled` | `boolean` |  | This mailbox's own answer to reading contact details out of its mail, or null to follow the tenant default (`CaptureSettings.signature_enrich`). |
+| `silence_dismissed_since` | `timestamp with time zone` |  |  |
 | `status` | `text`, default `'disconnected'::text` | yes | Connection state; `reauth_required` when the stored token expired/was revoked upstream. |
 | `sync_anchor` | `timestamp with time zone` |  |  |
 | `sync_cursor` | `jsonb` |  | Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only. |
@@ -596,7 +598,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_sync_state
 
-10 columns · primary key `(connection_id)` · referenced by 0 foreign keys
+11 columns · primary key `(connection_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -604,6 +606,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `connection_id` | `uuid` | yes | Points at `capture_connection.id`. |
 | `consecutive_failures` | `integer`, default `0` | yes |  |
 | `failing_since` | `timestamp with time zone` |  |  |
+| `last_delivery_at` | `timestamp with time zone` |  |  |
 | `last_error_class` | `text` |  | One of `rate_limited`, `unreachable`, `auth`, `history_gone`, `internal`. |
 | `last_success_at` | `timestamp with time zone` |  |  |
 | `last_synced_at` | `timestamp with time zone` |  |  |

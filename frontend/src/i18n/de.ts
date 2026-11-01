@@ -9220,32 +9220,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Hintergrundwarteschlange ist leer. Keine Jobs warten, laufen, werden wiederholt oder sind gestoppt.",
   "jobs.workspaceKinds": "Dieses Unternehmen",
   "jobs.workspaceEmpty": "Keine Hintergrund-Jobs für dieses Unternehmen.",
-  "jobs.dispatcherKinds": "Flotten-Dispatcher",
+  "jobs.dispatcherKinds": "Gemeinsame Hintergrundarbeit",
   "jobs.dispatcherSub":
-    "Einträge ohne Unternehmen: Ein Dispatcher verteilt Arbeit an jedes Unternehmen und führt selbst keine aus. Die Zahlen der Dispatcher gehören zur Installation.",
+    "Diese Läufe dienen der gesamten Installation. Die Zahlen gelten nicht nur für dieses Unternehmen.",
   "jobs.dispatcherEmpty":
-    "Keine Dispatcher-Einträge. Periodische Ticks fügen die Einträge neu ein. Eine leere Liste heißt daher, dass gerade kein Dispatcher geplant ist.",
+    "Aktuell sind keine gemeinsamen Hintergrundläufe gespeichert.",
   "jobs.col.job": "Job",
   "jobs.col.queue": "Warteschlange",
   "jobs.col.waiting": "Wartend",
   "jobs.col.running": "Laufend",
   "jobs.col.retrying": "Wird wiederholt",
-  "jobs.col.dead": "Gestoppt",
+  "jobs.col.expectation": "Erwartete Wartezeit",
   "jobs.col.oldestWait": "Längste Wartezeit",
   "jobs.col.state": "Status",
   "jobs.col.reason": "Grund",
   "jobs.col.attempt": "Versuch",
   "jobs.col.failedAt": "Fehlgeschlagen am",
   "jobs.col.jobId": "Job-ID",
-  "jobs.deadTitle_one": "{count} gestoppter Job in den letzten {hours} Stunden",
-  "jobs.deadTitle_other":
-    "{count} gestoppte Jobs in den letzten {hours} Stunden",
-  "jobs.deadTotal":
-    "In den letzten 7 Tagen verworfen oder abgebrochen: {count}. So lange werden diese Einträge aufbewahrt.",
-  "jobs.deadBody_one":
-    "{count} Job wurde verworfen oder abgebrochen und läuft ohne Eingriff nicht mehr. Verworfene Jobs haben alle Versuche verbraucht, abgebrochene wurden absichtlich gestoppt.",
-  "jobs.deadBody_other":
-    "{count} Jobs wurden verworfen oder abgebrochen und laufen ohne Eingriff nicht mehr. Verworfene Jobs haben alle Versuche verbraucht, abgebrochene wurden absichtlich gestoppt.",
   "jobs.failures": "Letzte Fehler",
   "jobs.failuresSub": "Neueste zuerst, höchstens 50.",
   "jobs.failuresEmpty": "Keine Fehler erfasst.",
@@ -9343,32 +9334,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.providerHealth": "Status der KI-Anbieter",
   "settings.providerHealthSub":
     "Ob jeder KI-Anbieter antwortet, wie dieser Server es beobachtet hat.",
-  "systemHealth.strip": "Status",
   "systemHealth.asOf": "Stand: {time}",
-  "systemHealth.checking": "Wird geprüft…",
-  "systemHealth.unread": "Prüfung fehlgeschlagen",
   "systemHealth.notSetUp": "Nicht eingerichtet",
-  "systemHealth.jobs.idle": "Leerlauf",
-  "systemHealth.jobs.keepingUp": "Hält Schritt",
-  "systemHealth.jobs.dead_one": "{count} gestoppt",
-  "systemHealth.jobs.dead_other": "{count} gestoppt",
-  "systemHealth.jobs.retrying_one": "{count} wird wiederholt",
-  "systemHealth.jobs.retrying_other": "{count} werden wiederholt",
-  "systemHealth.intake.label": "Connector-Datensätze",
-  "systemHealth.intake.none": "Keine",
-  "systemHealth.intake.refused_one": "{count} abgelehnt",
-  "systemHealth.intake.refused_other": "{count} abgelehnt",
-  "systemHealth.providers.answering": "Erreichbar",
-  "systemHealth.providers.affected_one": "{count} mit Störung",
-  "systemHealth.providers.affected_other": "{count} mit Störung",
-  "systemHealth.providers.standIn": "Integrierter Testanbieter",
-  "systemHealth.providers.standInDetail":
-    "Die zugeordneten Modelle sind nicht aufrufbar. Füge unter KI-Modelle einen Schlüssel hinzu.",
-  "systemHealth.providers.standInPartialDetail":
-    "Einige Stufen antworten vom integrierten Testanbieter. Füge unter KI-Modelle ihre Schlüssel hinzu.",
   "providerHealth.adminOnly":
     "Der Status der KI-Anbieter betrifft die ganze Installation und erfordert eine Berechtigung, die deine Rolle nicht hat.",
-  "providerHealth.healthy": "Alle KI-Anbieter antworten.",
   "providerHealth.noneConfigured":
     "Es gibt nichts zu prüfen, da kein KI-Anbieter eingerichtet ist.",
   "aiProviderHealth.label.degraded": "Eingeschränkt",
@@ -18825,6 +18794,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "captureConcern.reauth": "Erneute Verbindung erforderlich",
+  "captureConcern.error": "Verbindungsfehler",
+  "captureConcern.failing": "Synchronisierung schlägt fehl",
+  "captureConcern.backfill": "Verlaufsimport fehlgeschlagen",
+  "captureConcern.stalled": "Synchronisierung angehalten",
+  "captureConcern.silent": "Keine neue E-Mail eingegangen",
+  "captureConcern.title": "{mailbox}: {concern}",
+  "captureConcern.since": "Seit {since}",
+  "captureConcern.more_one":
+    "{count} weitere Verbindung benötigt Aufmerksamkeit",
+  "captureConcern.more_other":
+    "{count} weitere Verbindungen benötigen Aufmerksamkeit",
+  "captureConcern.reconnect": "Neu verbinden",
+  "captureConcern.open": "Verbindung öffnen",
+  "captureConcern.dismiss": "Stillewarnung ausblenden",
+  "captureConcern.changed":
+    "Diese Warnung hat sich geändert. Aktualisieren und erneut versuchen.",
+  "captureConcern.connections": "Verbindungen mit Handlungsbedarf",
+  "captureConcern.sinceLabel": "Seit",
+  "captureConcern.member": "Mitglied",
+  "captureConcern.provider": "Anbieter",
+  "captureConcern.mailbox": "Postfach",
+  "captureConcern.condition": "Zustand",
+  "captureConcern.lastSuccess": "Letzte erfolgreiche Synchronisierung",
+  "magic.action.capture_sync_stalled": "{provider} synchronisiert nicht mehr",
+  "magic.action.capture_silent": "{provider} hat keine neue E-Mail geliefert",
   "magic.action.capture_sync_failing": "{provider} kommt nicht hinterher",
   "magic.action.capture_backfill_failed":
     "{provider} konnte den bisherigen Verlauf nicht vollständig lesen",
@@ -19734,8 +19729,233 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
   "analytics.decision.part.commit_evidence": "Bestätigter Commit",
-  "analytics.decision.range": "Modellierte Spanne",
-  "analytics.decision.rangeNote":
-    "Das erwartete Ergebnis sind die beiden Teile auf dem Balken. Die modellierte Spanne ist ein eigenes Modell dafür, wie alle offenen Deals abschließen können, und kann daher davon abweichen.",
   "analytics.decision.part.weighted": "Gewichtete offene Deals",
+  "health.views": "Ansichten des Systemzustands",
+  "health.overview": "Übersicht",
+  "health.diagnostics": "Diagnose",
+  "health.configurationWithheld":
+    "Deine Rolle darf diese Einstellungen nicht ansehen. Frage einen Admin.",
+  "health.configuration": "Konfiguration",
+  "health.loading": "Nachweise werden geladen…",
+  "health.attention": "Handlungsbedarf",
+  "health.stoppedNext":
+    "Sende den Fehlerbericht an den Systembetreiber. Er soll den Abschluss prüfen, die Ursache beheben und nur offene Arbeit neu starten; diese fehlgeschlagenen Läufe starten nicht automatisch neu.",
+  "health.readFailedNext":
+    "Aktualisiere diese Prüfung. Falls sie weiter fehlschlägt, sende den technischen Bericht an den Systembetreiber.",
+  "health.jobStopped": "{kind}: fehlgeschlagene Läufe prüfen",
+  "health.effectUntilFixed": "Bis zur Behebung:",
+  "health.effect.mailSorting":
+    "In der Worklist können E-Mails fehlen oder falsch eingeordnet sein, die eine Antwort oder eine Terminabsprache brauchen. Prüfe deinen Posteingang selbst, bis die Sortierung aufgeholt hat. Du kannst weiterhin E-Mails empfangen und lesen.",
+  "health.effect.jobs":
+    "Die aufgeführten Hintergrundaufgaben können unvollständig bleiben. Die Zahl fehlgeschlagener Läufe zählt weder fehlende Datensätze noch betroffene Teammitglieder; der Betreiber muss die Aufgaben prüfen.",
+  "health.effect.senderReview":
+    "Neue Geschäftskontakte werden möglicherweise nicht angelegt und zugehörige E-Mails bleiben für Teammitglieder unzugänglich, bis die Absenderentscheidung geklärt ist.",
+  "health.effect.heldMail":
+    "Die betroffenen Gespräche bleiben für Teammitglieder verborgen, die nicht an der E-Mail beteiligt waren, bis die Vertraulichkeitsprüfung geklärt ist.",
+  "health.effect.unreadMail":
+    "E-Mails aus dem gemeldeten Zeitraum fehlen möglicherweise im CRM. Spätere E-Mails können weiter ankommen; stelle den Zeitraum wieder her, bevor du dem Verlauf vertraust.",
+  "health.effect.captureRepair":
+    "Einige erfasste Datensätze bleiben möglicherweise verborgen oder unvollständig, bis der Reparaturlauf erfolgreich ist.",
+  "health.effect.intake":
+    "In CRM-Datensätzen und Berichten können Angaben aus den abgelehnten Importen fehlen. Prüfe vor einer erneuten Übermittlung, ob die Datensätze inzwischen erfolgreich importiert wurden.",
+  "health.effect.providers":
+    "KI-Funktionen mit dem betroffenen Anbieter können fehlschlagen oder warten. Funktionen mit einem anderen verfügbaren Anbieter können weiterlaufen.",
+  "health.effect.search":
+    "Die Suche findet möglicherweise nicht alle Datensätze, bis die Indexierung aufgeholt hat. Die Datensätze bleiben gespeichert.",
+  "health.effect.updates":
+    "Die Änderungen dieser Aktualisierung bleiben unvollständig. Bereits gespeicherte Änderungen bleiben erhalten; einige Datensätze können noch ihre bisherigen Werte haben.",
+  "health.effect.recovery":
+    "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
+  "health.effect.automatic":
+    "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
+  "health.effect.readFailed":
+    "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
+  "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",
+  "health.recordedRun": "Aufgezeichneter Lauf {id} · {state} · {time}",
+  "health.effect.unknown":
+    "Der Bericht nennt ein Problem, aber keine betroffene Funktion. Frage den Systembetreiber, es vor einem Neustart zu prüfen.",
+  "health.measure.runs_one": "{count} Lauf",
+  "health.measure.runs_other": "{count} Läufe",
+  "health.measure.threads_one": "{count} Gespräch",
+  "health.measure.threads_other": "{count} Gespräche",
+  "health.measure.mailboxes_one": "{count} Postfach",
+  "health.measure.mailboxes_other": "{count} Postfächer",
+  "health.measure.records_one": "{count} Datensatz",
+  "health.measure.records_other": "{count} Datensätze",
+  "health.measure.updates_one": "{count} Aktualisierung",
+  "health.measure.updates_other": "{count} Aktualisierungen",
+  "health.measure.items_one": "{count} Element",
+  "health.measure.items_other": "{count} Elemente",
+  "health.checked": "Keine Aktion nötig",
+  "health.incomplete": "Systemzustand konnte nicht vollständig geprüft werden",
+  "health.refresh": "Aktualisieren",
+  "health.prioritiesChanged":
+    "Die Prioritäten haben sich geändert. Aktualisieren, um die neue Reihenfolge zu übernehmen.",
+  "health.capabilities": "Alle Prüfungen",
+  "health.unknown": "Nicht aufgezeichnet",
+  "health.stale":
+    "Letzter bekannter Stand; die aktuelle Prüfung wurde nicht abgeschlossen.",
+  "health.failed": "Diese Quelle konnte nicht gelesen werden",
+  "health.withheld": "Berechtigung erforderlich",
+  "health.notMonitored": "Nicht überwacht",
+  "health.availability.available": "Nachweise gelesen",
+  "health.oldestWait": "Älteste ausführbare Arbeit wartet seit {age}",
+  "health.backupsUnmonitored":
+    "Margince erfasst Wiederherstellungstests. Es überwacht keine laufenden Sicherungen.",
+  "health.automaticLimits":
+    "Erstellte und erledigte Einträge zeigen Ergebnisse, keinen Geschäftswert. Kleine Stichproben und die Prüfung der Zuweisung stehen unter Diagnose.",
+  "health.condition.clear": "Bei dieser Prüfung kein Problem erkannt",
+  "health.condition.processing": "In Bearbeitung",
+  "health.condition.retrying": "Erneuter Versuch",
+  "health.condition.waiting_human": "Menschliche Prüfung ausstehend",
+  "health.condition.technical": "Technische Prüfung erforderlich",
+  "health.condition.unverified": "Behebung nicht nachgewiesen",
+  "health.condition.recovered": "Wiederhergestellt",
+  "health.source.jobs": "Hintergrundverarbeitung",
+  "health.source.capture": "E-Mail-Erfassung",
+  "health.source.intake": "Konnektoreingang",
+  "health.source.providers": "KI-Verfügbarkeit",
+  "health.source.search": "Suche",
+  "health.source.updates": "Datenaktualisierungen",
+  "health.source.recovery": "Wiederherstellungsnachweise",
+  "health.source.automatic": "Qualität automatischer Arbeit",
+  "health.impact": "Bekannte Auswirkung",
+  "health.measuredImpact": "Die Quelle hat die betroffene Arbeit gemessen.",
+  "health.possibleImpact":
+    "Arbeit kann verzögert oder unvollständig sein; betroffene Teammitglieder werden nicht gezählt.",
+  "health.unknownImpact": "Der betroffene Umfang ist unbekannt.",
+  "health.scope": "Betroffener Umfang",
+  "health.window": "Berichtszeitraum",
+  "health.currentRetained":
+    "Aktueller gespeicherter Stand; gegebenenfalls aufbewahrter Verlauf",
+  "health.observed": "Letzte Beobachtung",
+  "health.firstObserved": "Erstmals beobachtet",
+  "health.nextAttempt": "Nächster erfasster automatischer Versuch",
+  "health.responsible": "Wer handeln kann",
+  "health.responsible.you": "Du",
+  "health.responsible.mailbox_owner": "Postfachinhaber",
+  "health.responsible.administrator": "Admin",
+  "health.responsible.operator": "Technischer Betreiber",
+  "health.recovery": "Nachweis für die Behebung",
+  "health.recovery.jobs":
+    "Bestätigen, dass die betroffene Arbeit erledigt oder ersetzt wurde. Ein anderer erfolgreicher Lauf genügt nicht.",
+  "health.recovery.capture":
+    "Die betroffene Warteschlange muss abgearbeitet oder die offene Entscheidung geklärt werden.",
+  "health.recovery.intake":
+    "Der Betreiber muss die Verarbeitung der abgewiesenen Einträge prüfen. Ein abgelaufener Zeitraum beweist keine Behebung.",
+  "health.recovery.providers":
+    "Eine erfasste Beobachtung muss die Verfügbarkeit bestätigen; betroffene Arbeit braucht einen eigenen Abschlussnachweis.",
+  "health.recovery.search":
+    "Der Index muss zum konfigurierten Modell passen und offene Einträge fertigstellen.",
+  "health.recovery.updates":
+    "Die betroffene Datenaktualisierung muss ihren Abschluss melden. Ein angenommener Versuch genügt nicht.",
+  "health.recovery.recovery":
+    "Einen erfolgreichen Wiederherstellungstest innerhalb der Zeit- und Datenverlustziele erfassen.",
+  "health.recovery.automatic":
+    "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
+  "health.ownerHandoff":
+    "Den Postfachinhaber bitten, seine Verbindungen oder Erfassungsprüfung zu öffnen. Diese Seite öffnet keine privaten E-Mails.",
+  "health.operatorHandoff":
+    "Ein technischer Betreiber muss den Fall prüfen. Die Diagnoseübersicht für die Übergabe kopieren.",
+  "health.copy": "Technischen Bericht kopieren",
+  "health.copied": "Kopiert",
+  "health.copyRemedy":
+    "Versuche es erneut oder kopiere die technischen Angaben auf dieser Seite von Hand.",
+  "health.inspect": "Problem und nächsten Schritt ansehen",
+  "health.openModels": "Modelle öffnen",
+  "health.openConnections": "Verbindungen öffnen",
+  "health.unit.runs": "Läufe",
+  "health.history": "Aufbewahrter Fehlerverlauf",
+  "health.historyWindow":
+    "Das Zeitfenster gilt für beendete Läufe. Aktuelle Wiederholungsversuche werden unabhängig vom Alter angezeigt.",
+  "health.historyCoverage":
+    "Summen umfassen alle passenden aufbewahrten Läufe, auch außerhalb dieser Seite. Gelöschter Verlauf fehlt. Gruppen belegen keine gemeinsame Ursache.",
+  "health.historyChanged":
+    "Ergebnisse oder Aufbewahrung können sich seit Beginn geändert haben. Zum Abgleich der Summen aktualisieren.",
+  "health.groups": "Gruppierte Läufe",
+  "health.all": "Alle",
+  "health.oneDay": "Letzter Tag",
+  "health.sevenDays": "Letzte sieben Tage",
+  "health.nextPage": "Nächste Seite",
+  "health.sharedScope": "Gemeinsame Verarbeitung",
+  "health.workspaceScope": "Arbeit des Unternehmens",
+  "health.code.queue_checked":
+    "Keine wartenden oder fehlgeschlagenen Läufe im aufbewahrten Verlauf",
+  "health.code.queue_processing": "Hintergrundarbeit läuft oder ist geplant",
+  "health.code.queue_overdue": "Hintergrundarbeit ist verspätet",
+  "health.code.queue_unverified": "Fehlgeschlagene Hintergrundläufe prüfen",
+  "health.code.queue_retrying":
+    "Fehlgeschlagene Arbeit wartet auf einen weiteren Versuch",
+  "health.code.queue_expectation_unknown":
+    "Arbeit ist ausführbar; eine erwartete Wartezeit ist nicht festgelegt",
+  "health.code.capture_checked":
+    "Kein Erfassungsrückstand in den geprüften Kategorien erkannt",
+  "health.code.capture_processing": "Absendeadressen werden eingeordnet",
+  "health.code.capture_uncertain":
+    "Einige Absendeadressen brauchen eine Entscheidung des Postfachverantwortlichen",
+  "health.code.capture_exhausted":
+    "Automatische Versuche der Absendereinordnung sind ausgeschöpft",
+  "health.code.capture_owner_review":
+    "Postfachinhaber müssen Erfassungsentscheidungen prüfen",
+  "health.code.capture_unread":
+    "Ungelesene Postfachzeiträume brauchen einen Wiederherstellungsnachweis",
+  "health.code.capture_held":
+    "Abgelegte Einträge warten auf einen Reparaturlauf",
+  "health.code.capture_repair_unverified":
+    "Ein Erfassungsreparaturlauf wurde nicht erfolgreich beendet",
+  "health.code.intake_no_refusals":
+    "Keine abgewiesenen Konnektoreinträge im Zeitraum; Aktivität ist nicht bestätigt",
+  "health.code.intake_refused": "Einige Konnektoreinträge wurden abgewiesen",
+  "health.code.providers_unobserved":
+    "Noch kein Anbieterergebnis aufgezeichnet",
+  "health.code.providers_not_configured": "Kein KI-Anbieter konfiguriert",
+  "health.code.providers_blocked":
+    "Bei einem KI-Anbieter sind Verfügbarkeitsprobleme erfasst",
+  "health.code.search_unverified":
+    "Vollständigkeit des Index wurde nicht geprüft",
+  "health.code.search_checked": "Der Suchindex passt zum konfigurierten Modell",
+  "health.code.search_processing": "Sucheinträge werden indexiert",
+  "health.code.search_reindex": "Die Suche braucht eine Indexaktualisierung",
+  "health.code.search_not_configured":
+    "Für die Suche ist kein Einbettungsmodell konfiguriert",
+  "health.code.updates_checked": "Keine offenen Datenaktualisierungen erkannt",
+  "health.code.updates_processing": "Datenaktualisierungen warten oder laufen",
+  "health.code.updates_failed":
+    "Eine Datenaktualisierung braucht eine technische Prüfung",
+  "health.code.updates_retrying":
+    "Für eine Datenaktualisierung ist ein weiterer Versuch erfasst",
+  "health.code.updates_review":
+    "Eine Datenaktualisierung braucht eine Administratorprüfung",
+  "health.code.recovery_missing": "Kein Wiederherstellungstest aufgezeichnet",
+  "health.code.recovery_verified":
+    "Der erfasste Wiederherstellungstest erfüllte seine Ziele",
+  "health.code.recovery_unverified":
+    "Der letzte Wiederherstellungstest belegt keine Wiederherstellungsbereitschaft",
+  "health.code.automatic_checked":
+    "Keine Schwelle zur Zuweisungsprüfung in der Stichprobe überschritten",
+  "health.code.automatic_routing":
+    "Die Zuweisung automatischer Arbeit muss geprüft werden",
+  "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
+  "health.code.capture_thread_uncertain":
+    "Einige Unterhaltungen brauchen eine Prüfung durch den Postfachverantwortlichen",
+  "health.queueCoverage":
+    "Der Warteschlangenverlauf wird nur begrenzt aufbewahrt. Sein Fehlen belegt nicht, dass zuvor fehlgeschlagene Arbeit erledigt wurde.",
+
+  "health.evidenceDetails": "Technische Details",
+  "health.impact.jobs":
+    "Die Verarbeitung ist verzögert. Frage den Systembetreiber, die Warteschlange zu prüfen und die Verarbeitung neu zu starten.",
+  "health.impact.capture":
+    "E-Mails bleiben möglicherweise unzugänglich. Frage den Systembetreiber, die fehlgeschlagene Erfassung zu prüfen und neu zu starten.",
+  "health.impact.intake":
+    "Datensätze eines Konnektors wurden abgelehnt. Sende den Bericht an dessen Betreiber, damit er sie korrigiert und erneut übermittelt.",
+  "health.impact.providers":
+    "KI-Aufgaben sind blockiert. Prüfe Zugang, Guthaben und Verfügbarkeit des Anbieters unter Modelle.",
+  "health.impact.search":
+    "Datensätze fehlen möglicherweise in der Suche. Prüfe und starte die Indexaktualisierung.",
+  "health.impact.updates":
+    "Eine Datenaktualisierung braucht Aufmerksamkeit. Prüfe den Fehler oder die angeforderte Freigabe, bevor du fortfährst.",
+  "health.impact.recovery":
+    "Der Wiederherstellungstest hat seine Ziele verfehlt. Frage den Systembetreiber, die Ursache zu beheben und erneut zu testen.",
+  "health.impact.automatic":
+    "Aufgaben werden möglicherweise falsch zugewiesen. Prüfe die Weiterleitung und korrigiere die Zuweisung.",
 };

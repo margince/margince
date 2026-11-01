@@ -34,6 +34,8 @@ records, so a row changes only when a maintainer merges it.
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 1900 ms | over budget (#4912) | 2026-10-29 |
 | `PERF-9` | Analytics screen | < 300 ms | 117 ms | within budget | 2026-10-29 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 478 ms | within budget | 2026-10-29 |
+| `PERF-11` | System health compact overview | < 750 ms | 251 ms | within budget | 2026-11-01 |
+| `PERF-12` | System health diagnostic reads | < 1 s | 76.7 ms | within budget | 2026-11-01 |
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 79.8 ms | within budget | 2026-10-29 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 61.0 ms | within budget | 2026-09-11 |
@@ -176,6 +178,21 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 
 - flow morning_load is at or under 80% of its budget for every seat: remove the row for #7068
 
+## System health
+
+Measured with `make bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets`, as the admin seat.
+
+The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000 leads,
+500 projects and 500,000 activities, owned by 12 reps under 2 managers.
+
+| measurement | seat | p50 | p95 | budget | samples | verdict | notes |
+|---|---|---|---|---|---|---|---|
+| `system_health` | admin | 48.9 ms | 53.7 ms | 750 ms | 30 | within budget | Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2. |
+| `system_health_diagnostics_history` | admin | 8.8 ms | 9.7 ms | 1000 ms | 30 | within budget | Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2. |
+| `system_health_diagnostics_capture` | admin | 71.1 ms | 76.7 ms | 1000 ms | 30 | within budget | Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2. |
+| `system_health_diagnostics_automatic` | admin | 45.6 ms | 49.7 ms | 1000 ms | 30 | within budget | Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2. |
+| `system_health_eight_readers` | admin | 215 ms | 251 ms | 750 ms | 30 | within budget | Eight simultaneous overview requests; whole-round latency; each response <= 50 KiB gzip; Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2. |
+
 ## Strict Home acceptance
 
 Home's acceptance targets, judged without the known-issue list. A row fails when it was not measured,
@@ -280,4 +297,22 @@ Its rows are listed per seat under [Daily use](#daily-use-make-bench-daily).
 | `record_open_company` | 26.3 ms | 32.3 ms | 38.7 ms | 100 ms | 30 |
 | `record_open_deal` | 16.9 ms | 20.6 ms | 22.7 ms | 100 ms | 30 |
 | `record_save_contact` | 50.6 ms | 60.6 ms | 62.0 ms | 150 ms | 30 |
+
+### `make bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets` · measured 2026-11-01
+
+| | |
+|---|---|
+| os / arch | darwin / arm64 |
+| cpu | Apple M5 Max (18 cores) |
+| memory | 48 GiB |
+| toolchain | go1.27.3 |
+| postgres | 16.15 |
+
+| measurement | p50 | p95 | p99 | budget | samples |
+|---|---|---|---|---|---|
+| `system_health` | 48.9 ms | 53.7 ms | 54.4 ms | 750 ms | 30 |
+| `system_health_diagnostics_history` | 8.8 ms | 9.7 ms | 9.8 ms | 1000 ms | 30 |
+| `system_health_diagnostics_capture` | 71.1 ms | 76.7 ms | 76.9 ms | 1000 ms | 30 |
+| `system_health_diagnostics_automatic` | 45.6 ms | 49.7 ms | 51.5 ms | 1000 ms | 30 |
+| `system_health_eight_readers` | 215 ms | 251 ms | 254 ms | 750 ms | 30 |
 

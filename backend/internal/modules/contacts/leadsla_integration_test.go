@@ -833,6 +833,33 @@ func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
 			}
 		})
 	}
+	for name, respond := range map[string]func(*promoteConsentEnv, ids.LeadID) error{
+		"promotion": func(e *promoteConsentEnv, id ids.LeadID) error {
+			_, _, err := e.store.PromoteLead(e.ctx, id, PromoteLeadInput{Trigger: "human_qualify"})
+			return err
+		},
+		"disqualification": func(e *promoteConsentEnv, id ids.LeadID) error {
+			_, err := e.store.DisqualifyLead(e.ctx, id, DisqualifyLeadInput{})
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			lead := e.seedLeadCreatedAt(t, "disposition@example.test", created)
+			if err := respond(e, lead); err != nil {
+				t.Fatal(err)
+			}
+			var response *time.Time
+			if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
+				return tx.QueryRow(e.ctx, `SELECT first_response_at FROM lead WHERE id=$1`, lead).Scan(&response)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if response == nil || !response.Equal(created) {
+				t.Fatalf("response=%v, creation=%s", response, created)
+			}
+		})
+	}
 }
 
 // An activity's occurred_at is caller-supplied and may predate the lead it

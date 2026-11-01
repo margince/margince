@@ -52,6 +52,8 @@ const HEALTH = {
     operator: "Ops On Call",
     notes: "restored copy opened; counts matched",
     recovery_seconds: 8_100,
+    recovery_within_target: true,
+    data_loss_within_target: true,
     data_loss_seconds: 2_400,
   },
 };
@@ -82,7 +84,11 @@ it("says a drill over the target is over it", async () => {
     "GET /admin/recovery-health": () =>
       jsonResponse({
         ...HEALTH,
-        last_drill: { ...HEALTH.last_drill, recovery_seconds: 18_000 },
+        last_drill: {
+          ...HEALTH.last_drill,
+          recovery_seconds: 18_000,
+          recovery_within_target: false,
+        },
       }),
   });
 
@@ -161,3 +167,19 @@ it.each([
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
 });
+
+it.each(["recovery_within_target", "data_loss_within_target"])(
+  "refuses a non-boolean %s assessment",
+  async (field) => {
+    stubRoutes({
+      "GET /admin/recovery-health": () =>
+        jsonResponse({
+          ...HEALTH,
+          last_drill: { ...HEALTH.last_drill, [field]: "yes" },
+        }),
+    });
+    render(<RecoveryHealthCard />);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("within the 4 h target")).toBeNull();
+  },
+);
