@@ -4,6 +4,7 @@
 package webforms
 
 import (
+	"net/url"
 	"sort"
 	"strings"
 	"unicode"
@@ -147,7 +148,7 @@ func readEnquiry(fields []Field, fieldMap map[string]string) Enquiry {
 		case ok && !seen[target]:
 			seen[target] = true
 			e.set(target, value)
-		case strings.HasPrefix(strings.ToLower(f.Name), "utm_"):
+		case isCampaignTag(f.Name):
 			e.UTM = append(e.UTM, Field{Name: strings.ToLower(f.Name), Value: textcut.Runes(value, maxValueLength)})
 		default:
 			e.Extra = append(e.Extra, Field{Name: textcut.Runes(f.Name, maxFieldNameLength), Value: textcut.Runes(value, maxValueLength)})
@@ -180,10 +181,35 @@ func (e *Enquiry) set(target, value string) {
 	case fieldConsent:
 		e.Consent = ticked(value)
 	case fieldPageURL:
-		e.PageURL = textcut.Runes(value, maxValueLength)
+		e.PageURL = textcut.Runes(minimisedAddress(value), maxValueLength)
 	case fieldReferrer:
-		e.Referrer = textcut.Runes(value, maxValueLength)
+		e.Referrer = textcut.Runes(minimisedAddress(value), maxValueLength)
 	}
+}
+
+// isCampaignTag says whether a name is a utm_* campaign parameter, as a form
+// field or in an address's query.
+func isCampaignTag(name string) bool {
+	return strings.HasPrefix(strings.ToLower(name), "utm_")
+}
+
+// minimisedAddress keeps of a page address or referrer only where the visitor
+// was: scheme, host, path, and the utm_* campaign parameters. Any other query
+// parameter, the fragment and a user:password can carry an email or a token, so
+// they are not stored. A value that is not a web address is not stored either.
+func minimisedAddress(raw string) string {
+	address, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (address.Scheme != "http" && address.Scheme != "https") || address.Host == "" {
+		return ""
+	}
+	kept := url.Values{}
+	for name, values := range address.Query() {
+		if isCampaignTag(name) {
+			kept[name] = values
+		}
+	}
+	minimal := url.URL{Scheme: address.Scheme, Host: address.Host, Path: address.Path, RawQuery: kept.Encode()}
+	return minimal.String()
 }
 
 // ticked reads a checkbox: browsers send "on", builders send booleans, and
