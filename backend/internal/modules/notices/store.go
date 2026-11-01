@@ -56,20 +56,6 @@ type Notice struct {
 	CreatedAt    time.Time
 }
 
-// Target is the record a notice is about, when it is about one.
-//
-// Both halves or neither, which the table's own constraint holds: a type with
-// no id names a KIND of thing and cannot be opened, and an id with no type
-// cannot be routed to a screen. The zero value is a notice about no record —
-// a capture backlog, a coach's word — and those are the majority.
-type Target struct {
-	Type string
-	ID   ids.UUID
-}
-
-// Named reports whether this notice points at a record.
-func (t Target) Named() bool { return t.Type != "" && !t.ID.IsZero() }
-
 // NewNotice is one notice to record. It is a struct rather than a parameter
 // list because the dedupe key is the fifth thing a caller might say about a
 // notice, and five positional strings is where a caller starts passing the
