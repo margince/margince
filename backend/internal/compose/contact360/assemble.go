@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
-	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -150,13 +149,7 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 			return err
 		}
 		out.Contact = contact
-		creators, err := auditattribution.CreatorsTx(ctx, tx, "contact", []ids.UUID{contactID.UUID})
-		if err != nil {
-			return err
-		}
-		if created, found := creators[contactID.UUID]; found {
-			out.CreatedBy = created.Wire()
-		}
+		out.CreatedBy = contact.CreatedBy
 		// The scope is a read of the project, gated before any section
 		// filters on it — and as the whole read's refusal, not a section's:
 		// a page narrowed to a project the caller may not see has no honest
@@ -241,6 +234,9 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNetwork, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.networkSection(ctx, tx, contactID, now, out)
+		}},
+		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedPrivacyNoticeDuties, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
+			return s.noticeDutiesSection(ctx, tx, contactID, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.consentSection(ctx, tx, contactID, out)

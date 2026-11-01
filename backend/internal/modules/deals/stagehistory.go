@@ -44,20 +44,37 @@ func (s *Store) recordStageHistory(ctx context.Context, tx pgx.Tx, in stageHisto
 	if err != nil {
 		return err
 	}
+	provenance, importRun := stageMoveProvenance(ctx)
 	args := []any{in.DealID}
-	args = append(args, in.FromStageID, in.ToStageID, in.ChangedBy, in.Amount, in.Currency, in.Probability, in.ApprovalID, in.ReversalOf, semantic, valuation.amount, valuation.currency, valuation.rate, valuation.on, valuation.reason, s.clock().UTC(), in.OwnerID, in.PipelineID, in.LostReasonCode, from, to)
+	args = append(args, in.FromStageID, in.ToStageID, in.ChangedBy, in.Amount, in.Currency, in.Probability, in.ApprovalID, in.ReversalOf, semantic, valuation.amount, valuation.currency, valuation.rate, valuation.on, valuation.reason, s.clock().UTC(), in.OwnerID, in.PipelineID, in.LostReasonCode, from, to, provenance, importRun)
 	placeholders := storekit.Placeholders(args)
 	// Both writers supply the domain owner and pipeline from their mutation,
 	// never the actor who happened to perform the transition.
 	_, err = tx.Exec(ctx, `INSERT INTO deal_stage_history
    (deal_id,from_stage_id,to_stage_id,changed_by,amount_minor_at_change,currency_at_change,
     win_probability_at_change,approval_id,reversal_of,semantic_at_change,base_minor_at_change,base_currency_at_change,fx_rate_at_change,fx_date_at_change,valuation_provenance,changed_at,owner_id_at_change,pipeline_id_at_change,lost_reason_code_at_change,
-    from_position_at_change,to_position_at_change)
+    from_position_at_change,to_position_at_change,provenance,import_run_id)
    VALUES (`+placeholders+`)`, args...)
 	if err != nil {
 		return fmt.Errorf("record stage history: %w", err)
 	}
 	return nil
+}
+
+// Stage move provenance values: the move was made in Margince, or an import run
+// brought it in from the system the deal came from.
+const (
+	stageMoveRecorded = "recorded"
+	stageMoveImported = "imported"
+)
+
+// stageMoveProvenance answers where a move comes from, read off the import
+// mark the import job sets on the context of every write it makes.
+func stageMoveProvenance(ctx context.Context) (string, *ids.UUID) {
+	if run := storekit.ImportRunOf(ctx); run != nil {
+		return stageMoveImported, run
+	}
+	return stageMoveRecorded, nil
 }
 
 // stagePositionsAtMove reads both stages' positions as the move finds them, so

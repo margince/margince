@@ -257,10 +257,8 @@ func TestAnUndatedAcquisitionStillDisclosesItsSource(t *testing.T) {
 	if info.AcquiredAs != "referral" {
 		t.Errorf("the notice says %q, want referral", info.AcquiredAs)
 	}
-	// captured_at stands in, so the page can still say when — it is the row's
-	// own write, which is the best this installation knows.
-	if info.AcquiredAt == nil {
-		t.Error("an undated acquisition disclosed no time at all; captured_at stands in")
+	if info.AcquiredAt != nil {
+		t.Error("an unknown acquisition date was replaced with capture time")
 	}
 }
 

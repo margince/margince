@@ -216,6 +216,44 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(calls).toContain("POST /voice-profiles/vp-1/sources");
   });
 
+  // The first sample mints the profile and swaps the first-sample card for the
+  // full one. A file still being read at that moment belongs to the card that
+  // remains, so its notice still shows.
+  it("reports a sample still in flight when the first one creates the profile", async () => {
+    stubApi();
+    const server = globalThis.fetch;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal("fetch", async (request: Request) => {
+      const preview = new URL(request.url).pathname.endsWith(
+        "/sources/preview",
+      );
+      if (preview && (await request.clone().text()).includes("Second")) {
+        await held;
+      }
+      return server(request);
+    });
+    const user = userEvent.setup();
+    render(<VoiceDnaCard />);
+    await screen.findByLabelText("First writing sample");
+    await user.upload(fileInput(), [
+      new File(["First sample, plain sentences."], "first.txt", {
+        type: "text/plain",
+      }),
+      new File(["Second sample, plain sentences."], "second.txt", {
+        type: "text/plain",
+      }),
+    ]);
+
+    await screen.findByRole("button", { name: /Build Voice DNA/ });
+    release();
+    expect(
+      await screen.findByText(/^second\.txt: .* words added\.$/),
+    ).toBeTruthy();
+  });
+
   // A seat that may READ a Voice DNA but not change one is not offered a
   // control the server would refuse. The card keeps its place and says which
   // posture it is in, once — the design-system rule for a readable surface

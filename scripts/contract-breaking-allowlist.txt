@@ -54,3 +54,4 @@ d27e25da7ca3cd4a9828e08eb961a8a76da07880 950608de6a2004dd11a2b9d56b072ccc81d99e8
 f7fe6ec4b79863203693aa0d7419d4b18311e558 6862fdbfce854e9e3c6527e6b06204c32280a75f ratified-an-introduction-can-be-recorded-after-the-fact-so-reason-and-due-date-are-optional-on-an-ask
 521ac02c81425d74b8be26618c6b157d944f0487 b042d606af4d8de4a500f9b975b258e8b988c190 ratified-a-team-review-sends-no-member-meetings-to-a-seat-that-may-not-read-activities
 733a8dd4c6d535c39b03707d9ba1018659336358 7eb293749cb60ab3169ebb7ed40cb1ecdd01f9c9 ratified-a-partner-stage-is-an-installation-list-not-an-enum
+6689c8fd8ee2ee2dd8c7b76699cf9aebbb3a6030 b76c8b7a5dfeff21cc423ec273f5d8ae6e0260ce ratified-a-team-review-member-handoff-count-is-absent-for-a-reader-without-lead-read

@@ -46,9 +46,13 @@ export function useAnalyticsContext() {
  */
 export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
   const [params] = useUrlParams();
+  const named = params.get("scope");
   const chosen = context?.allowed_scopes.find(
-    (scope) => scopeKey(scope) === params.get("scope"),
+    (scope) => scopeKey(scope) === named,
   );
+  // A link naming a population this reader may not choose is refused aloud.
+  // Answering it with their default would put other figures under its name.
+  const refusedScope = !!context && !!named && !chosen;
 
   const selection = useMemo<AnalyticsSelection | null>(() => {
     if (!context) {
@@ -61,7 +65,7 @@ export function useAnalyticsSelection(context: AnalyticsContext | undefined) {
     replaceDial("scope", scopeKey(scope));
   }, []);
 
-  return { selection, selectScope };
+  return { selection, selectScope, refusedScope };
 }
 
 /**

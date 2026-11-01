@@ -52,7 +52,6 @@
   .board-doc,
   .board-doc-stage,
   .filter-group-box,
-  .compose-reasons,
   .change,
   .share-ceiling,
   .pref-row,
@@ -90,7 +89,8 @@
   .ob-voice-print,
   .ob-voice-result-hero,
   .ob-voice-building,
-  .voicekind
+  .voicekind,
+  .compose-reasons-card
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -150,7 +150,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -188,7 +187,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -233,7 +233,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -271,7 +270,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -331,7 +331,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -369,7 +368,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -414,7 +414,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -452,7 +451,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -497,7 +497,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -535,7 +534,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -595,7 +595,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -633,7 +632,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -678,7 +678,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -716,7 +715,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -761,7 +761,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -799,7 +798,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -844,7 +844,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -882,7 +881,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -916,6 +916,7 @@
   .accountsub,
   .arpanel,
   .mw-aistat-pop,
+  .report-chart-tip,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
   .notifbell-loose
 ) {
@@ -951,6 +952,7 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
+    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose
   )
@@ -997,7 +999,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1035,7 +1036,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1069,6 +1071,7 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
+    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose
   )
@@ -1115,7 +1118,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1153,7 +1155,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -1198,7 +1201,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1236,7 +1238,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1270,6 +1273,7 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
+    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose
   )
@@ -1316,7 +1320,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1354,7 +1357,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -1399,7 +1403,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1437,7 +1440,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   )
   :where(
     .panel,
@@ -1482,7 +1486,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1520,7 +1523,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1619,7 +1623,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1657,7 +1660,8 @@
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
-    .voicekind
+    .voicekind,
+    .compose-reasons-card
   ) {
   background-color: var(--ground);
 }

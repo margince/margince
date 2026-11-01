@@ -86,7 +86,7 @@ func (s *Sink) asSentByColleagueTx(
 // and the receiving server must have authenticated it (fromAuthenticated).
 func colleagueSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.UUID, error) {
 	cp := rec.Counterparty
-	if cp.Direction != connector.DirectionInbound || !fromAuthenticated(rec, cp.Email) {
+	if cp.Direction != connector.DirectionInbound || !SenderAuthenticated(rec, cp.Email) {
 		return ids.Nil, nil
 	}
 	return colleagueTx(ctx, tx, cp.Email)
@@ -148,14 +148,9 @@ func stampMessageEnds(
 	return nil
 }
 
-// fromAuthenticated reports that Gmail's receiving server passed DMARC for the
-// domain of from. Gmail writes its result, under the authserv-id
-// mx.google.com, above every header the sender submitted, so the topmost one
-// is Gmail's own. The trust comes from that position; nothing here verifies a
-// signature on the header. Other
-// transports answer false: Microsoft writes no server name, and an IMAP
-// server is whatever the seat chose.
-func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
+// SenderAuthenticated trusts Gmail's topmost authentication result for the From domain.
+// Other transports cannot establish that the receiving server wrote their header.
+func SenderAuthenticated(rec connector.NormalizedRecord, from string) bool {
 	auth := rec.SenderAuthentication
 	domain := owndomain.OfAddress(from)
 	return rec.CapturedBy == "connector:"+providerGmail && auth.Server == gmailAuthServer &&
@@ -165,7 +160,7 @@ func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 // inboundSenderAuthenticated is the activity's inbound_sender_authenticated
 // stamp: an inbound message whose From the receiving server authenticated.
 func inboundSenderAuthenticated(rec connector.NormalizedRecord, fields ActivityFields) bool {
-	return fields.Direction == connector.DirectionInbound && fromAuthenticated(rec, rec.Counterparty.Email)
+	return fields.Direction == connector.DirectionInbound && SenderAuthenticated(rec, rec.Counterparty.Email)
 }
 
 // senderIsMachine is the activity's sender_is_machine stamp: an inbound mail

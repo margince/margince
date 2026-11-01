@@ -36,11 +36,6 @@ const (
 	// threshold; it is the point below which a single deal moves the answer
 	// by more than the answer is worth.
 	minimumClosedDeals = 20
-	// minimumStageArrivals is how many deals must have reached a stage before
-	// its own rate is used instead of the blended one. Five, for the same
-	// reason and at a smaller scale: a stage two deals have ever entered has
-	// no rate, it has two stories.
-	minimumStageArrivals = 5
 )
 
 // SufficiencyBasis names where the reference came from, because a coverage
@@ -225,20 +220,4 @@ func referenceLanding(history ConversionHistory, call *int64) (SufficiencyBasis,
 	low, high := recent[1], recent[2]
 	median := low/2 + high/2 + (low%2+high%2)/2
 	return BasisHistoricalMedian, median, true
-}
-
-// StageConversion is one stage's own win rate, or the blended one where too few
-// deals have ever reached it.
-//
-// Its own function because the fallback is the part worth naming: a stage two
-// deals have entered has no rate, and using it would let one deal's outcome set
-// the pipeline a whole team is told to build.
-func StageConversion(arrivals, won int, blended float64) float64 {
-	if arrivals < minimumStageArrivals {
-		return blended
-	}
-	if arrivals == 0 {
-		return blended
-	}
-	return float64(won) / float64(arrivals)
 }

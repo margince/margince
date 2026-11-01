@@ -17,8 +17,8 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 35 of 35 | 🟢 Yes | Reliable on 35 of 35 jobs tried. |
-| `gpt-5.6-sol` | Codex CLI | 35 of 35 | 🟢 Yes | Reliable on 35 of 35 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 37 of 37 | 🟢 Yes | Reliable on 37 of 37 jobs tried. |
+| `gpt-5.6-sol` | Codex CLI | 37 of 37 | 🟢 Yes | Reliable on 37 of 37 jobs tried. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -67,6 +67,8 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Is she already here | Is this contact already here is the identify engine | ✅ | ✅ |
 | Catch me up, and show me the brief | Catch-up and the brief each use their own view | ✅ | ✅ |
 | Clear out the dead deals | Ask before archiving what the user did not name | ✅ | ✅ |
+| What are these two deals worth together | Add the two deals in money, not in minor units | ✅ | ✅ |
+| Where do I open it | Give a link to the named deal | ✅ | ✅ |
 
 ---
 
@@ -93,12 +95,12 @@ Everything below is the detail behind the two tables above: which tools each job
 |---|---:|
 | Tools the assistant is offered | 38 |
 | … some case requires | 27 |
-| … some case requires as one of a set | 0 |
-| … **no case requires** | 11 |
-| … of those, permitted somewhere but never required | 5 |
-| Prompt tokens spent on tools no case requires | 4700 |
-| Use cases | 35 |
-| Acceptance criteria the cases declare, each with a statement | 74 |
+| … some case requires as one of a set | 1 |
+| … **no case requires** | 10 |
+| … of those, permitted somewhere but never required | 4 |
+| Prompt tokens spent on tools no case requires | 4393 |
+| Use cases | 37 |
+| Acceptance criteria the cases declare, each with a statement | 76 |
 
 ## By model
 
@@ -106,8 +108,8 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 35 of 35 | 35 | 0 | 82/87 | 94% |
-| `gpt-5.6-sol@codex-cli` | 35 of 35 | 35 | 0 | 82/87 | 94% |
+| `claude-sonnet-5-5@claude-cli` | 37 of 37 | 37 | 0 | 88/93 | 95% |
+| `gpt-5.6-sol@codex-cli` | 37 of 37 | 37 | 0 | 88/93 | 95% |
 
 ## The two surfaces
 
@@ -223,6 +225,10 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case64_catch_me_up_and_the_brief](../../e2e/llm/scenarios/case64-catch-me-up-and-the-brief.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Catch-up and the brief each use their own view | `read_context` |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
 | [case65_clear_out_the_dead_deals](../../e2e/llm/scenarios/case65-clear-out-the-dead-deals.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Ask before archiving what the user did not name | `find_records` or `read_attention` |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
+| [case66_what_are_these_two_worth](../../e2e/llm/scenarios/case66-what-are-these-two-worth.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Add the two deals in money, not in minor units | `find_records` or `read_forecast` or `read_record` |
+| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
+| [case67_where_do_i_open_it](../../e2e/llm/scenarios/case67-where-do-i-open-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 3/3 | 2 | **1** Give a link to the named deal | `find_records` or `read_forecast` or `read_record` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 
@@ -302,6 +308,8 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case63_is_she_already_here` | 1 | Is this contact already here is the identify engine | The question is whether a named contact already exists, so the assistant resolves the entity rather than ranking records by words and leaving the decision to the reader. |
 | `case64_catch_me_up_and_the_brief` | 1 | Catch-up and the brief each use their own view | What has been happening on a record and what is in the morning brief are two views of read_context, and the assistant asks for each rather than answering both from a record search. |
 | `case65_clear_out_the_dead_deals` | 1 | Ask before archiving what the user did not name | The user names no deal, so the model chooses which ones are dead. It names them and asks for a yes before it archives or closes any, because an archive runs at once and cannot be undone from the conversation. |
+| `case66_what_are_these_two_worth` | 1 | Add the two deals in money, not in minor units | The answer gives 68,500 EUR and each deal's own value from readings it made. It does not report a minor-unit figure as money. |
+| `case67_where_do_i_open_it` | 1 | Give a link to the named deal | The answer gives a link to the named deal's page in the app. |
 | `case6_ask_the_company` | 1 | The past cases are found without being named | The question describes what happened and names no account, so working out which accounts it happened to is the test. |
 | `case6_ask_the_company` | 3 | The record's date wins over the prose recalling it | Where a note's prose and the record it recalls disagree about when something happened, the answer carries the date the record holds. |
 | `case6_ask_the_company` | 5 | The disagreement between note and record is pointed out | The answer says that the note and the record do not agree, rather than picking one and leaving the reader unaware there was a conflict. |
@@ -422,7 +430,7 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
-| _no case offers a choice of tools_ | - | - | - | - | - |
+| `read_record` | 307 | `case66_what_are_these_two_worth`, `case67_where_do_i_open_it` | `case10_finish_the_import`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `agent_loop` | `morning_brief`, `overnight_at_risk_sweep` |
 
 ## 4. What no use case requires
 
@@ -430,7 +438,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 11 tools no use case requires, **3 are graded elsewhere** and 8 are untried by any lane.
+So of the 10 tools no use case requires, **2 are graded elsewhere** and 8 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -443,7 +451,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `list_approvals` | 401 | - | `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `enrich` | 395 | `enrich` | - | - |
-| `read_record` | 307 | `agent_loop` | `case10_finish_the_import`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case9_filed_in_the_wrong_place` | `morning_brief`, `overnight_at_risk_sweep` |
 | `list_documents` | 216 | - | `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `read_approval` | 154 | - | `case32_two_words_for_one_thing` | - |
 | `whoami` | 129 | - | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals` | - |

@@ -79,6 +79,30 @@ func quarterStart(day time.Time, fiscalStart int) time.Time {
 	return time.Date(day.Year(), day.Month()-time.Month(offset%3), 1, 0, 0, 0, 0, day.Location())
 }
 
+// Horizon is the whole period a selection names. Interval stops at the
+// cutoff, so a current week, month or quarter runs on here to its own end.
+func Horizon(selection crmcontracts.ReportingSelection, calendar Calendar, interval crmcontracts.ReportingWindow) (crmcontracts.ReportingWindow, error) {
+	zone, err := location(calendar)
+	if err != nil {
+		return crmcontracts.ReportingWindow{}, err
+	}
+	start := interval.StartAt.In(zone)
+	out := crmcontracts.ReportingWindow{StartAt: start, EndAt: interval.EndAt}
+	switch selection.Period {
+	case reportingThisWeek:
+		out.EndAt = start.AddDate(0, 0, 7)
+	case reportingThisMonth:
+		out.EndAt = start.AddDate(0, 1, 0)
+	case reportingThisQuarter:
+		out.EndAt = start.AddDate(0, 3, 0)
+	case reportingCustom:
+		if selection.Interval != nil {
+			out.EndAt = selection.Interval.EndAt.In(zone)
+		}
+	}
+	return out, nil
+}
+
 // TargetWindow uses the complete containing period for target attainment.
 func TargetWindow(interval crmcontracts.ReportingWindow, basis string, calendar Calendar) (crmcontracts.ReportingWindow, error) {
 	zone, err := location(calendar)

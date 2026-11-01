@@ -267,19 +267,19 @@ describe("the brief readings strip", () => {
     },
   );
 
-  // The meetings a disconnected calendar still left on the page are counted:
-  // only its zero is no measurement.
-  it("keeps the count of meetings a disconnected calendar still carries", () => {
+  // The meetings booked by hand still count while the calendar cannot be
+  // read. The figure is a minimum, and the line says how to make it whole.
+  it("counts hand-booked meetings as a minimum while the calendar is unreadable", () => {
     drawDay({
       ...readingsDay({}, [meetingRow("m1", true)]),
       calendar: "unreadable",
     });
 
     expect(meetingsCard().querySelector(".stat-card-value")?.textContent).toBe(
-      "1",
+      "1+",
     );
-    expect(meetingsCard().textContent).not.toContain(
-      en["brief.readings.calendarUnreadable"],
+    expect(meetingsCard().textContent).toContain(
+      en["brief.readings.calendarUnreadableWhy"],
     );
   });
 

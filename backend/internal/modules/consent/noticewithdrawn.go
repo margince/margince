@@ -29,9 +29,9 @@ const captureWithdrewNote = "Withdrawn by capture: the record was made from mail
 // Returns how many cases it closed.
 func SettleWhenCaptureWithdrewTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID, now time.Time) (int, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT id FROM privacy_notice_case
-		 WHERE contact_id = $1 AND state = ANY($2)
-		 ORDER BY id`, contactID, settleableOwedStates)
+		SELECT n.id FROM privacy_notice_case n JOIN contact_acquisition_evidence e ON e.id = n.acquisition_id
+         WHERE n.contact_id = @contact AND n.state = ANY(@states) AND (`+UnverifiedNoticeSourceSQL("n", "e")+`)
+         ORDER BY n.id`, pgx.NamedArgs{entityContact: contactID, "states": SettleableNoticeStates()})
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for a withdrawn contact: %w", err)
 	}

@@ -126,7 +126,7 @@ function LatestRow({
 }
 
 // Who the exchange was with or by. That is the other side of an email, else
-// the colleague who recorded it, else the contact it is linked to.
+// the colleague who recorded it, else the one contact it is linked to.
 function useWhoOf(activity: Activity, view: Company360): string | undefined {
   const nameOf = recordNamesIn(view);
   const email = activity.email_summary;
@@ -142,6 +142,12 @@ function useWhoOf(activity: Activity, view: Company360): string | undefined {
   if (counterparty) {
     return counterparty;
   }
-  const linked = activity.links?.find((link) => link.entity_type === "contact");
-  return linked ? nameOf("contact", linked.entity_id) : undefined;
+  // Links come in id order, so the first of several contacts would be a pick
+  // by id. An exchange with several names none of them.
+  const [linked, ...others] = (activity.links ?? []).filter(
+    (link) => link.entity_type === "contact",
+  );
+  return linked && others.length === 0
+    ? nameOf("contact", linked.entity_id)
+    : undefined;
 }

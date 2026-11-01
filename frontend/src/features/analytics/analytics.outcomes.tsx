@@ -8,7 +8,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
 import { rowCount, rowMoney } from "./analytics.cells";
 import { MySdrWork } from "./analytics.outcomes.sdr";
@@ -42,6 +42,11 @@ export function MyOutcomesView({
 }: Readonly<{ defaultScope: AnalyticsScopeWire; locale: Locale }>) {
   const t = useT();
   const self = defaultScope.kind === "owner" ? (defaultScope.id ?? null) : null;
+  // The pipeline section opens on the same own records these readings count.
+  const pipelineHref = analyticsSectionHref(
+    "pipeline",
+    self ? new Map([["scope", `owner:${self}`]]) : new Map(),
+  );
 
   const pipelineQuery = useQuery({
     queryKey: ["report", "pipeline-current", "outcomes", self],
@@ -138,7 +143,7 @@ export function MyOutcomesView({
               narrow="row"
               label={t("analytics.count")}
               value={pipelineCount}
-              onOpen={() => openAnalyticsSection("pipeline")}
+              href={pipelineHref}
             />
             <StatCard
               narrow="row"
@@ -153,7 +158,7 @@ export function MyOutcomesView({
                   ? t("analytics.noBaseCurrencyWhy")
                   : undefined
               }
-              onOpen={() => openAnalyticsSection("pipeline")}
+              href={pipelineHref}
             />
           </StatStrip>
         </PanelBody>

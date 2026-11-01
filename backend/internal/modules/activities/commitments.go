@@ -37,7 +37,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -262,7 +261,7 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities string, arg func(any) int) (where []string, err error) {
 	where = []string{
 		// The definition of the set, and the partial index's own predicate.
-		sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindTask))),
+		"a.kind = 'task'",
 		"a.is_done = false",
 		activityLive,
 	}
@@ -284,7 +283,7 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities stri
 		where = append(where, sprintf("a.assignee_id = $%d", arg(*in.AssigneeID)))
 	}
 	if in.ExcludeSystemMinted {
-		where = append(where, NotSystemMinted("a", arg))
+		where = append(where, "NOT "+SystemMintedExpr("a"))
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))

@@ -25,8 +25,8 @@ import {
   reasonText,
   subjectHref,
   whenText,
-} from "../worklist/worklist.copy";
-import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
+} from "../../lib/worklistcopy";
+import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
 import { contactHref, useListed } from "../worklist/worklist.row.captions";

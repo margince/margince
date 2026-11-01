@@ -43,25 +43,9 @@ export function QueueBand<RowProps>({
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
-  if (section.items.length === 0) {
-    if (!canReportEmpty) {
-      return null;
-    }
-    return (
-      <div className="worklist-queue-band">
-        <div className="worklist-band">
-          <Eyebrow as="h3">
-            {t(`worklist.band.${section.band}` as const)}
-          </Eyebrow>
-        </div>
-        {/* Said, not left blank. A heading with nothing under it reads as a
-            page that failed to draw. */}
-        <p className="t-body worklist-band-clear">
-          {t(`worklist.bandClear.${section.band}` as const)}
-        </p>
-      </div>
-    );
-  }
+  // An empty band draws nothing. The queue says once that the day is clear,
+  // and a heading per empty band repeated that under every one.
+  if (section.items.length === 0) return null;
   return (
     <div className="worklist-queue-band">
       <div className="worklist-band">
