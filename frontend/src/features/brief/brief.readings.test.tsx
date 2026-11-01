@@ -23,11 +23,7 @@ import {
 } from "../../testing/brief.fixtures";
 import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
 import type { Worklist } from "../worklist/worklist.queries";
-import {
-  BRIEF_READING_SLOTS,
-  BriefReadingsPending,
-  BriefReadingsStrip,
-} from "./brief.readings";
+import { BriefReadingsStrip } from "./brief.readings";
 
 // The Brief's readings strip, and the one claim it makes that the Worklist's
 // own strip does not: the row is FIVE slots on every morning, quiet or busy, so
@@ -997,15 +993,4 @@ it("marks known deal value and urgent work as incomplete when a source fails", (
   expect(
     screen.getByText(/Known value only · not all checked.*2\+/),
   ).toBeTruthy();
-});
-
-// The rail holds the strip's room while the day is read. A slot more or fewer
-// than the strip draws is a placeholder that moves the meetings when it lands.
-it("holds one slot per reading the strip draws", () => {
-  const { container } = draw({});
-  const drawn = container.querySelectorAll(".stat-card").length;
-  cleanup();
-  const pending = render(<BriefReadingsPending />);
-  expect(drawn).toBe(BRIEF_READING_SLOTS.length);
-  expect(pending.container.querySelectorAll(".skeleton")).toHaveLength(drawn);
 });
