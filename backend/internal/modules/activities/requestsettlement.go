@@ -14,7 +14,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -387,14 +386,6 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 		return err
 	}
 	return emitSettlementChanged(ctx, tx, auditID, in.Request.RequestID)
-}
-
-// emitSettlementChanged announces a settlement write on the request it judges,
-// in the audit row's transaction, as every write carries its event.
-func emitSettlementChanged(ctx context.Context, tx pgx.Tx, auditID, request ids.UUID) error {
-	return storekit.EmitEvent(ctx, tx, auditID, request, crmcontracts.PublicEventActivityUpdated{
-		ChangedFields: crmcontracts.PublicEventActivityChangedFields{RequestSettlementChanged: new(true)},
-	})
 }
 
 // settlementProse is the prose half of a verdict, which only still_owed has.
