@@ -25779,6 +25779,15 @@ export interface components {
             wording: string;
             /** @description The privacy policy version the form named, when it named one. */
             policy_version?: string;
+            /**
+             * Format: uuid
+             * @description The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+             */
+            form_id?: string;
+            /** @description The form's name when it was sent. Absent on an older record. */
+            form_name?: string;
+            /** @description The page the form was sent from, as `page_url` keeps it. Absent when the form sent none. */
+            page_url?: string;
         };
         /**
          * @description Who wrote a record in the system it was imported from, when that is not
