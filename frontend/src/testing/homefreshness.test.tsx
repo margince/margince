@@ -75,20 +75,23 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
-it("refreshes externally decided actions and reversed receipts in an open Home", async () => {
+// The handled list and the pending count are cheap and stay live each minute.
+// The receipt assembles the whole day, so it is read again at five minutes.
+it("refreshes decided actions each minute and the receipt once it is five minutes old", async () => {
   const { result } = renderHook(useHome, { wrapper });
   await advance(0);
   expect(result.current.magic?.needs_you).toHaveLength(1);
   expect(result.current.handled?.receipts[0]?.review?.can_undo).toBe(true);
   settled = true;
   await advance(60_001);
-  expect(result.current.magic?.needs_you).toEqual([]);
   expect(result.current.pending?.count).toBe(0);
-  expect(result.current.handled?.receipts).toHaveLength(1);
   expect(result.current.handled?.receipts[0]?.review?.reversed).toBe(true);
   expect(result.current.handled?.receipts[0]?.review?.can_undo).toBe(false);
+  expect(result.current.magic?.needs_you).toHaveLength(1);
+  await advance(4 * 60_000);
+  expect(result.current.magic?.needs_you).toEqual([]);
 });
-it("pauses hidden reads and refreshes on return even inside the cache window", async () => {
+it("pauses hidden reads, and on return refreshes the live reads but not a fresh receipt", async () => {
   const { result } = renderHook(useHome, { wrapper });
   await advance(0);
   focusManager.setFocused(false);
@@ -99,22 +102,22 @@ it("pauses hidden reads and refreshes on return even inside the cache window", a
     focusManager.setFocused(true);
   });
   await advance(0);
-  expect(result.current.magic?.needs_you).toEqual([]);
   expect(result.current.pending?.count).toBe(0);
   expect(result.current.handled?.receipts[0]?.review?.reversed).toBe(true);
+  expect(result.current.magic?.needs_you).toHaveLength(1);
   focusManager.setFocused(false);
   const before = reads.length;
-  await advance(120_000);
+  await advance(10 * 60_000);
   expect(reads).toHaveLength(before);
 });
-it("refreshes a remounted Home even when its cache is still fresh", async () => {
+it("serves a remounted Home its fresh receipt and reads the live lists again", async () => {
   const first = renderHook(useHome, { wrapper });
   await advance(0);
   first.unmount();
   settled = true;
   const second = renderHook(useHome, { wrapper });
   await advance(0);
-  expect(second.result.current.magic?.needs_you).toEqual([]);
+  expect(second.result.current.magic?.needs_you).toHaveLength(1);
   expect(second.result.current.handled?.receipts[0]?.review?.reversed).toBe(
     true,
   );

@@ -114,13 +114,13 @@ describe("the query client defaults", () => {
     expect(staleFor({ queryKey: ["worklist", "handled"] })).toBe(30_000);
   });
 
-  it("reads Home's day on change and once it is five minutes old, never on a cadence", () => {
+  it("reads Home's day on change and once it is five minutes old", () => {
     for (const queryKey of [
       ["worklist", "mine", "all", ""],
       ["magic"],
       ["brief"],
     ]) {
-      expect(liveInterval({ queryKey })).toBe(false);
+      expect(liveInterval({ queryKey })).toBe(5 * 60_000);
       expect(liveOnReturn({ queryKey })).toBe(true);
       expect(staleFor({ queryKey })).toBe(5 * 60_000);
       expect(

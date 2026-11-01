@@ -33,16 +33,13 @@ const LIVE_RECORD_MS = 60_000;
 // Live-read keys give every consumer the same refresh policy.
 // Deal status refreshes facts without asking a model.
 export function liveInterval(query: { queryKey: QueryKey }): number | false {
-  return (
-    isLiveRead(query.queryKey) &&
-    !isHomeDayRead(query.queryKey) &&
-    LIVE_RECORD_MS
-  );
+  if (isHomeDayRead(query.queryKey)) return HOME_DAY_FRESH_MS;
+  return isLiveRead(query.queryKey) && LIVE_RECORD_MS;
 }
 
 // Home's day is read when it opens, again once its answer is this old, and at
-// once after the reader acts on it (invalidateHandledChange). Home is not a
-// live board, and a timer re-read every tab's whole day each minute.
+// once after the reader acts on it (invalidateHandledChange). Each read
+// assembles the reader's whole day on the server; Home is not a live board.
 export const HOME_DAY_FRESH_MS = 5 * 60_000;
 
 /** How long a read serves its cached answer before a mount or return reads again. */
