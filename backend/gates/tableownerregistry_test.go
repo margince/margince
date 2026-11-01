@@ -205,6 +205,7 @@ var tableOwners = map[string]string{
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
 	"activity_request_settlement":   "internal/modules/activities",
+	"activity_reminder_delivery":    "internal/modules/activities",
 	"activity_commitment_admission": "internal/modules/activities",
 	// Which owed mails had their stored original re-read for a calendar method.
 	// Its candidates are owedSQL, which this module owns, so the marker is here
