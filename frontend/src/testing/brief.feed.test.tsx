@@ -668,8 +668,8 @@ it("keeps an unlinked subject in the framed title", () => {
   ).toBeTruthy();
 });
 
-// The day lands under a reader who may already be reading the greeting, so
-// what is still out holds the room it will take rather than pushing in later.
+// The day lands under a reader who may already be reading the greeting. What
+// is still out holds the room it will take, so nothing pushes in later.
 it("waits for the day in the card's own frame", () => {
   stubApi({});
   const { container } = render(<BriefFeed day={undefined} state="loading" />);
