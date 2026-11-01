@@ -11,8 +11,9 @@
 # can see ALL of them while the debt is paid down, rather than seeing only the
 # files that happen to call a renderer.
 #
-# THE COUNT IS EXACT, so paying one debt means lowering the ceiling beside it,
-# and taking one on means raising it where a reader sees the number change.
+# THE COUNT IS EXACT. The ceiling it has to match is `directionDebtCeiling` in
+# gates/directionowner_test.go, so paying one debt means lowering that number in
+# the same change, and taking one on means raising it where a reader sees it.
 #
 # A file waived as a message-state reader does not belong here: it has answered
 # the question, and holding it in both places counts it twice.
