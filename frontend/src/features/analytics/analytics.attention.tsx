@@ -9,7 +9,12 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import {
+  formatMoneyCompact,
+  formatNumber,
+  MONEY_ABSENT,
+} from "../../format/format";
+import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   analyticsSectionHref,
@@ -135,10 +140,12 @@ function findingDetail(
     check.affected_minor == null
       ? undefined
       : t("analytics.attentionAtStake", {
-          amount: formatMoneyOrAbsent(
+          amount: formatMoneyOrWord(
             check.affected_minor,
             check.currency,
             locale,
+            MONEY_ABSENT,
+            formatMoneyCompact,
           ),
         });
   const outOfDate = check.inputs_changed

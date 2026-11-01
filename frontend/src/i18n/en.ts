@@ -19504,6 +19504,9 @@ export const en = {
     "Forecast checks are not available to you.",
   "analytics.decision.part.commit_evidence": "Confirmed commit",
   "analytics.decision.part.weighted": "Weighted open deals",
+  "analytics.decision.range": "Modelled range",
+  "analytics.decision.rangeNote":
+    "Expected finish counts only what is won and in confirmed commit. The modelled range also counts each open deal by its chance to close, so it can sit higher.",
 } as const;
 
 export type MessageKey = keyof typeof en;

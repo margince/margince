@@ -2045,6 +2045,12 @@ span.error-line {
 .stat-card-detail > * {
   display: block;
 }
+/* Two facts get two lines each, so the second is never cut to an ellipsis
+   because the first one wrapped. */
+.stat-card-detail:has(> :nth-child(2)) {
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
 
 /* The label NAMES the reading; it does not announce it. It is sentence-case
    text at the meta size in the SECONDARY ink — quieter than the figure below

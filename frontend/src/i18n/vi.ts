@@ -19174,5 +19174,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.intervention.notPermitted":
     "Bạn không có quyền xem các kiểm tra dự báo.",
   "analytics.decision.part.commit_evidence": "Cam kết đã xác nhận",
+  "analytics.decision.range": "Khoảng theo mô hình",
+  "analytics.decision.rangeNote":
+    "Kết quả dự kiến chỉ tính phần đã thắng và cam kết đã xác nhận. Khoảng theo mô hình còn tính mỗi deal đang mở theo khả năng chốt, nên có thể cao hơn.",
   "analytics.decision.part.weighted": "Deal đang mở theo trọng số",
 };

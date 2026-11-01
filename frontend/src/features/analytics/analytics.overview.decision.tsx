@@ -101,7 +101,9 @@ function Sentence({
 // The expected finish as its two parts, drawn only when both are money of one
 // basis: won plus the forward half of the same measure. A manager's call is
 // one authored total with no parts. A caveat means the plain sum does not
-// hold. Neither draws a bar. What the forecast left out is named.
+// hold. Neither draws a bar. The target and the modelled range sit on the
+// same scale, so a finish below the range reads as a narrower count, not a
+// contradiction. What the forecast left out is named.
 function Composition({
   evaluation,
 }: Readonly<{ evaluation: ReportingEvaluation }>) {
@@ -122,8 +124,21 @@ function Composition({
   const money = (value: number) =>
     reportingCompactAmount(value, currency, currency, locale);
   const { won_minor: won, remaining_minor: remaining } = basis.landing;
-  // Two empty parts draw an empty track; the readings already say zero.
-  if (won + remaining <= 0) return null;
+  const range = rangeOf(landing.range_low_minor, landing.range_high_minor);
+  const target = landing.target_comparison?.target;
+  // The card under the bar states the range in full, with its basis. Equal
+  // ends leave the model nothing to spread, so they draw no bracket.
+  const band =
+    range && range.highMinor > range.lowMinor
+      ? {
+          label: t("analytics.decision.range"),
+          low: range.lowMinor,
+          high: range.highMinor,
+        }
+      : undefined;
+  // With no parts and no range there is nothing on the scale but empty track;
+  // the readings already say zero.
+  if (won + remaining <= 0 && !band) return null;
   const { unpriced, fx } = leftOut(basis);
   const left = [
     unpriced > 0 &&
@@ -153,7 +168,19 @@ function Composition({
             amount: money(remaining),
           },
         ]}
+        marker={
+          target
+            ? {
+                key: "target",
+                label: t("reporting.target"),
+                value: target,
+                amount: money(target),
+              }
+            : undefined
+        }
+        band={band}
       />
+      {band && <p className="t-caption">{t("analytics.decision.rangeNote")}</p>}
       {/* The server's count; an edition captured without it states none. */}
       {basis.included_count != null && (
         <p className="t-caption">
