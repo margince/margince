@@ -1,530 +1,500 @@
-# Worklist base: a proposal for discussion
+# Worklist: a stronger base
 
-Status: proposal, for discussion. No issue and no PR yet.
-Branch: `poc/worklist-feed` (on `main` at `b16d4fa4`).
-Numbers come from the daily bench corpus at scale 0.1 (one workspace,
-15 members, 50,000 activities) on one machine; they are not production
-numbers. The checks behind every claim are in Appendix A.
+A proposal for discussion. No issue and no PR yet. Work so far is on branch
+`poc/worklist-feed`. All figures come from the daily bench data at scale 0.1
+(one workspace, 15 members, 50,000 activities) on one machine. They show
+direction, not production speed.
 
 ---
 
-## 1. The new system: how it works
+## Part 1. What we have now
 
-One engine reads the day. It stays the only place the Worklist rules live.
-Around it, four parts make it cheaper to run, easier to grow, and safe to
-change. Each part below is marked **built** (on the branch) or **proposed**.
+### 1.1 What the Worklist is
 
-### 1.1 At a glance
+The Worklist is one ranked list of everything waiting on a member: customers
+to answer, tasks due, deals at risk, meetings to prepare, approvals to decide,
+duplicates to check, broken mailboxes, privacy deadlines, and more. Home shows
+it as **Today**, and it has two more views, **Decisions** and **System**.
 
-```
-                    ┌──────────────────────────────────────────────────────┐
-  worklist-kinds    │  KIND CATALOG (L2)                                   │
-  .yaml  ─────────► │  what each kind of work is: category, screen, owner, │
-  + extension       │  personal, done-in-place, delivery                   │
-    fragments       └───────────────┬──────────────────────────────────────┘
-                                    │ generated table the engine reads
-                                    ▼
-  GET /worklist ──► ┌──────────────────────────────────────────────────────┐
-                    │  ONE READ, ONE SNAPSHOT                              │
-                    │   plan reuse on for the whole read (L1.1)            │
-                    │   ├─ lanes: one per kind, read live                  │
-                    │   │    access check, identity computed once (L1.2)   │
-                    │   │    waiting scan keeps its own plan (PlanEachBind)│
-                    │   ├─ rank → bands → views → Focus                    │
-                    │   ├─ page + scroll tail (from where lanes stopped,   │
-                    │   │    L1.3)                                         │
-                    │   └─ names for the rows on the page                  │
-                    └───────────────┬──────────────────────────────────────┘
-                                    ▼
-                               the same answer as today, faster
-
-  every change ──► GROUND-TRUTH CHECK (L0): today's answers vs the change's,
-                   field by field, for every member, view and scope
-```
-
-| Part | What it is | Status |
-|---|---|---|
-| L0 Ground-truth check | Today's engine is the truth. A change must give the same answers. | built (PoC test) |
-| L1.1 Whole-read plan reuse | One plan-mode switch for every statement of a read | built (helper + guard); the switch itself is set by the PoC test, the snapshot hook is proposed |
-| L1.2 Identity once per statement | Shared access SQL computes "who am I" once | built |
-| L1.3 Scroll tail continues | The tail resumes where each lane stopped | proposed |
-| L2 Kind catalog | One YAML file says what each kind is; extensions add to it | YAML + loader + census built; generator proposed |
-| L3 Push / precompute | Kept in reserve | parked |
-
-### 1.2 Where the code lives
+The same list answers four questions, called scopes:
 
 ```
- backend/
- ├─ api/worklist-kinds.yaml ............... L2 the catalog (built)
- ├─ tools/gen-worklist/ ................... L2 YAML → Go table (proposed, like tools/gen-jobs)
- ├─ internal/compose/attention/ ........... the engine (unchanged rules)
- │   ├─ handlers.go       GetWorklist: parse query, relationships=omit
- │   ├─ views.go          WorklistView: refuse non-members, open the snapshot
- │   ├─ snapshot.go       inSnapshot, degradable (laneBudget = 4 s)
- │   ├─ worklist.go       worklistIn → assembleDay → worklistFrom
- │   ├─ feed.go           assembleDay: this_morning, needs_you, planned, optional lanes
- │   ├─ optionallanes.go  meetings, at_risk, dsr, notices, bounces, ... (one per kind)
- │   ├─ rank.go, ranksteps.go, bands.go, focus.go, totals.go, backlogtail.go, walk.go
- │   └─ kinds_gen.go ...................... L2 generated table (proposed)
- ├─ internal/platform/database/
- │   ├─ database.go       WithWorkspaceSnapshot (REPEATABLE READ, joins when nested)
- │   ├─ planreuse.go ..................... L1.1 ReuseGenericPlans + PlanEachBind (built)
- │   └─ degradableread.go SAVEPOINT + statement_timeout per lane
- ├─ internal/platform/auth/memberidentity.go  L1.2 identity once (built)
- ├─ internal/modules/activities/waitingsql.go perBind for the waiting scan (built)
- ├─ internal/modules/worklist/kinds.go ..... L2 catalog loader + checks (built)
- └─ internal/compose/worklistparity_poc_test.go  L0 ground-truth check (built, poc tag)
+ mine         what is waiting on me
+ team         what is waiting on my team         (managers)
+ unassigned   what nobody holds yet
+ all          everything I may see               (admins)
 ```
 
-### 1.3 The request path
+### 1.2 Words used in this document
+
+| Word | Meaning |
+|---|---|
+| **Kind** | One type of work on the list, for example `task`, `customer_waiting`, `approval`. There are 29. |
+| **Lane** | The code that reads one kind (sometimes a few related kinds) from the database for this member. About 27 lanes run for one Worklist read. |
+| **Rank** | Putting the rows in order: a level (pinned, waiting customer, promise, risk, agreed, blocking, routine), then a band (now, keep momentum, build pipeline, review), then tie-breakers. |
+| **Database snapshot** | One database transaction that wraps a whole Worklist read, so every lane sees the data as it was at one instant. |
+| **Walk** | The member's scroll through the list. The first page freezes the order of the rows so pages 2, 3, … do not shift. Stored in the table `worklist_snapshot`. |
+| **Query plan** | Before Postgres runs a SQL statement it works out *how* to run it: which index, which join order. That step is called planning. |
+| **Generic plan** | A plan made once for a statement and reused on every run, whatever the values. The opposite, a **custom plan**, is made again on every run for the given values. |
+| **Identity family** | A member plus any old accounts merged into them. Access checks ask "was this written by anyone in my family?" |
+
+### 1.3 How one Worklist read works today
+
+A member opens Home. The browser calls:
 
 ```
  GET /worklist?view=today&scope=mine&relationships=omit&limit=100
-   │
-   ▼ handlers.go  GetWorklist
-   │   relationships=omit → svc.OmittingRelationships()
-   ▼ views.go     WorklistView
-   │   auth.RequireMember (refused before any connection is taken)
-   ▼ snapshot.go  inSnapshot ─► database.WithWorkspaceSnapshot   ┐ one pooled connection,
-   │                             BEGIN ISOLATION LEVEL REPEATABLE READ │ one moment in time
-   │   [L1.1] set_config('plan_cache_mode','force_generic_plan',true) ┘
-   ▼ worklist.go  worklistIn
-   │   resolve scope + owner · decode cursor · readingPins
-   ▼ feed.go      assembleDay  ── lanes, one after another, each in degradable():
-   │     this_morning · needs_you · planned · meetings · at_risk · dsr · notices
-   │     bounces · undelivered · relationship_decay (skipped when omitted) · ...
-   │   then beside the day: waiting_customers [PlanEachBind] · awaiting · plan
-   │                        meeting_horizon · done marks · deal money
-   ▼ worklist.go  worklistFrom   (ranking in memory; the tail reads SQL)
-   │     classify → admit (catalog rules [L2]) → rank → bands → views → Focus
-   │     → counts / readings → cut the page → tail rows [L1.3]
-   │     → walk.go freezeWalk (Detached: its own short transaction)
-   ▼ focus.go     nameWorklistRows (names, deal moves, owners: page rows only)
-   ▼ COMMIT → 200 JSON
 ```
 
-Each stage is timed by `timeStage` and exported as
-`margince_worklist_stage_duration_seconds` and
-`margince_worklist_stage_statements_total`, so the effect of every part
-shows per stage.
+On the server:
 
-### 1.4 The snapshot and plan mode (L1.1)
+```
+ 1  check            is this a member?  (refused before any database work)
+ 2  open snapshot    BEGIN ISOLATION LEVEL REPEATABLE READ
+                     ┌─ one pooled connection for the whole read
+                     └─ every lane below sees the data at the same instant
+ 3  read lanes       one after another, ~27 of them:
+                       this_morning · needs_you (approvals, duplicates, suggestions)
+                       planned (tasks) · meetings · deals at risk · privacy
+                       notices · bounces · system health · relationships ...
+                     then beside them: waiting customers · awaiting reply ·
+                       weekly plan · calendar · done marks · deal money
+                     each lane:
+                       - runs its own SQL, with the member's access rules inside it
+                       - has a savepoint and a 4-second limit; if it fails, the
+                         page names it under "sources_unavailable" and goes on
+ 4  rank             in memory: level → band → tie-breakers → Focus (top 6)
+ 5  cut the page     view + filter + 100 rows
+                     the scroll tail reads more rows when lanes were cut short
+                     freeze the walk (worklist_snapshot) for pages 2, 3, …
+ 6  name the rows    names, deal facts, owners for the 100 rows only
+ 7  commit, answer   rows, counts (exact or "25+"), readings, Focus, cursor
+```
 
-How it works:
+Code: `backend/internal/compose/attention/` (`handlers.go`, `views.go`,
+`worklist.go`, `feed.go`, `optionallanes.go`, `rank.go`, `walk.go`,
+`focus.go`) and `backend/internal/platform/database/database.go`
+(`WithWorkspaceSnapshot`).
+
+### 1.4 The two "snapshots"
+
+The word appears twice in this code, for two different things.
+
+**The database snapshot** (step 2) is one transaction at isolation level
+`REPEATABLE READ`. Postgres freezes its view of the data at the first query, so
+all lanes agree:
+
+```
+ without it:   lane 3 sees deal D open  ── colleague closes D ──  lane 11 sees D closed
+               → the page disagrees with itself
+ with it:      BEGIN … lane 1 … lane 3 … lane 11 … COMMIT
+               → one consistent day; D's change shows on the next read
+```
+
+It uses one connection per read, so the lanes run one after another, never at
+the same time.
+
+**The walk snapshot** (step 5) is a row in the table `worklist_snapshot`:
+
+```
+ id                 uuid   the walk id; travels in the cursor
+ reader_id          uuid   whose walk
+ params_fingerprint text   the question: scope + view/filter + owner
+ as_of              time   when the day was read
+ expires_at         time   created + 4 hours
+ buckets            jsonb  {"urgent":0,"due_today":0,"planned":0,"review":90}
+ rows               jsonb  [{"source":"approval","row_id":"01a1987d-…"}, …]  in order, ≤ 1,000
+```
+
+- It stores **which rows and in what order**, never text. Each page re-reads
+  the live rows under the member's own access.
+- New work waits for a refresh ("New priorities available"). Resolved or
+  hidden work leaves at once.
+- At most 3 walks per member are kept; older ones are swept.
+
+### 1.5 The problems
+
+**Problem 1: it is slow, and the time is not in any one kind.**
+
+PERF-8 asks for a Worklist answer under 1 second. On the bench data today:
+
+```
+ rep, Home call (Today, mine) ................. 1.33 s   over budget
+ manager, team view ........................... 1.55 s   over budget
+ a member with NO work at all ................. 0.57–0.85 s
+ page 2 (resuming the walk) ................... about the same as page 1
+```
+
+Where the time goes, per read:
+
+```
+ database planning ............ 853 ms   ← more than running the SQL
+ running the SQL .............. 489 ms
+ identity-family function ..... ~2,500 calls   ← once per row, not once per read
+ the "rank" stage ............. 108 statements, mostly the scroll tail
+                                re-reading rows the lanes already returned
+```
+
+Why planning is so expensive: the access rules are written into every
+statement, so a single lane statement is 20,000 to 110,000 characters long.
+Postgres plans most of them again on every run.
+
+Why page 2 is as slow as page 1: the walk freezes only the order, so every page
+still runs every lane to re-read the rows live.
+
+So the cost sits in machinery that **all 29 kinds share**: planning, the
+access check and the scroll tail. Making one kind faster does not move it.
+
+**Problem 2: it grows by hand.**
+
+Adding one kind of work today:
+
+```
+ api/crm.yaml                  add it to a closed list (enum)
+ compose/attention/            a lane + a classifier, and an entry in each of
+                               categoryOfSource · destinationOfSource ·
+                               sourceOwnerAnswers · sourceAnswersForTheActorOnly ·
+                               doneInPlace · boundedSources
+ gates/                        census tests
+ frontend/                     labels and rendering
+```
+
+Some of those maps have a default (`categoryOfSource` falls back to `system`),
+so a forgotten entry fails no test. And an extension (`extensions/<unit>/`)
+cannot put real work on the list at all: it can only send a plain notice.
+
+---
+
+## Part 2. Our approach
+
+### 2.1 The idea in one picture
+
+```
+ Keep the engine. Fix what every kind shares. Prove each fix against today.
+
+                     ┌─────────────────────────────────────────────┐
+  L2  KIND CATALOG   │ worklist-kinds.yaml: what each kind is      │ ← easier to grow
+                     └──────────────────────┬──────────────────────┘
+                                            ▼
+                     ┌─────────────────────────────────────────────┐
+  GET /worklist ───► │ the same engine, the same rules             │
+                     │  L1.1 plan reuse for the whole read         │ ← cheaper to run
+                     │  L1.2 identity computed once per statement  │
+                     │  L1.3 scroll tail continues (next)          │
+                     └──────────────────────┬──────────────────────┘
+                                            ▼
+                                 the same answer, faster
+                                            ▲
+  L0  GROUND-TRUTH CHECK ── today's answers vs the change's, field by field ── safe to change
+```
+
+| Part | What | Status |
+|---|---|---|
+| L0 | Ground-truth check | built (PoC test) |
+| L1.1 | Plan reuse for the whole read | built (helper + guard); hooking it into the snapshot is the production step |
+| L1.2 | Identity once per statement | built |
+| L1.3 | Scroll tail continues | next |
+| L2 | Kind catalog | YAML, loader and census built; generator next |
+| L3 | Push / precompute | parked |
+
+### 2.2 Principles
+
+1. **Today's engine is the truth.** Every rule (who sees what, what is urgent,
+   when work leaves) stays where it is. We change how much work the database
+   does, not what it answers.
+2. **Fix shared machinery, once.** A fix for all 29 kinds beats 29 fixes.
+3. **Prove every change.** A change is accepted only if every answer matches
+   today's.
+
+### 2.3 L0: the ground-truth check
+
+```
+            ┌──────────── same data, clock pinned to one instant ────────────┐
+ main   ──► every member × view × scope × named owner × page 2    ──►  recording
+ change ──► the same calls                                         ──►  compare, field by field
+                                                                         every answer must match
+```
+
+- It makes the screens' own calls (`frontend/src/lib/worklistday.ts`: page of
+  100, relationships left out, each view's own filter; the relationships
+  panel's own read).
+- It acts as each member, with their real grants, teams and seat.
+- It compares the whole JSON answer. The walk id and the cursor are left out
+  because they are new on every read; page 2 is compared by what it shows.
+- Replaying `main` against itself matches every answer, so the check is
+  deterministic.
+- File: `backend/internal/compose/worklistparity_poc_test.go`. In production it
+  becomes an integration test that takes its views, scopes and filters from the
+  API contract, so it fails if coverage shrinks.
+
+### 2.4 L1.1: plan reuse for the whole read
+
+The concept:
+
+```
+ custom plan (today, most statements):   [plan ███ run █]  [plan ███ run █]  [plan ███ run █]
+ generic plan (new):                     [plan ███ run █]  [run █]  [run █]  ...
+```
+
+The mechanism: one setting, local to the read's transaction.
 
 ```
  BEGIN ISOLATION LEVEL REPEATABLE READ
  SELECT set_config('plan_cache_mode', 'force_generic_plan', true)   ← whole read
-   lane SQL ...            each statement: plan once, reuse the generic plan
-   SAVEPOINT degradable_read                                         ← per lane
-     SELECT set_config('statement_timeout', '4000', true)
-     lane SQL ...
+   lane SQL …                            reuse each statement's generic plan
+   SAVEPOINT degradable_read             a lane, with its 4 s limit
+     lane SQL …
    RELEASE SAVEPOINT degradable_read
-   ── waiting scan ──
+   ── the waiting-customer scan ──
    SELECT set_config('plan_cache_mode', 'force_custom_plan', true)  ← PlanEachBind
-     waiting SQL ...       planned for its bound values, so it stops at its cap
-   SELECT set_config('plan_cache_mode', 'force_generic_plan', true) ← restored
-   ...
- COMMIT                                                              ← mode ends with the tx
+     waiting SQL …                       planned for its values, so it stops at its cap
+   SELECT set_config('plan_cache_mode', 'force_generic_plan', true) ← put back
+ COMMIT                                  the setting ends with the transaction
 ```
 
-Rules that make it safe:
+- `set_config(…, true)` lives only inside the transaction, so it never leaks to
+  the next request on the same pooled connection.
+- Calls made inside an open snapshot join it, so one switch at the top reaches
+  every lane.
+- **The exception.** A generic plan cannot see values, so it cannot use an
+  index that only applies to some values. The waiting-customer scan depends on
+  that to stop early. It declares this with `database.PlanEachBind(ctx, fn)`,
+  which switches to custom plans around it and puts the mode back after. Both
+  helpers share one function in `backend/internal/platform/database/planreuse.go`.
+- The scan must finish reading its rows inside the wrapper, because the switch
+  back runs on the same connection. All five call sites do.
+- The known risk: on much larger data, a statement that was fast with a custom
+  plan may be slower with a generic one. The full-scale bench must check this.
 
-- `set_config(..., true)` is local to the transaction, so the mode never leaks
-  to the next request on the pooled connection.
-- Nesting is safe. Each helper reads the current mode first and puts it back
-  after. A lane that fails rolls back to its savepoint, which also restores a
-  mode set inside it.
-- Calls nest into the open snapshot instead of opening a new transaction, so
-  one switch at the outside reaches every lane.
-- A statement under `PlanEachBind` must finish reading its rows inside the
-  wrapper, because the restore runs on the same connection (pgx refuses a
-  busy connection). All five waiting call sites collect their rows inside it.
-- Writes that must not take the page down (the walk freeze) run `Detached`,
-  in their own transaction, outside the mode.
-- Why it is faster: the Worklist's statements are 20k–110k characters because
-  access rules are written into each one. Postgres plans such a statement on
-  every run, and planning cost more than running (853 ms against 489 ms per
-  read). A generic plan is made once per connection and reused.
-- The known risk: a generic plan cannot use a partial index whose predicate
-  is a bound value. Those statements opt out with `PlanEachBind`, and the
-  bench at full scale must confirm no statement got slower.
+### 2.5 L1.2: identity computed once per statement
 
-### 1.5 A lane
+The concept:
 
-A lane is one kind's read. Today each is a closure in `optionallanes.go` or a
-fixed step in `assembleDay`:
-
-```go
-type optionalLane struct {
-    name  string                                      // the stage and source name
-    bound bool                                        // wired in this installation?
-    read  func() ([]crmcontracts.AttentionItem, error) // the lane's SQL, as the reader
-    total func() (int, error)                         // exact count, where the lane can say
-    ...
-}
+```
+ today:  row 1 → who is in my family?   row 2 → who is in my family?   … (per row)
+ new:    who is in my family? (once) → compare every row with that list
 ```
 
-- Runs inside `degradable(ctx, laneBudget, ...)`: a savepoint plus a 4 s
-  statement budget. If it fails or times out, the page names it in
-  `sources_unavailable` and the other lanes still answer.
-- Reads only what the reader may see: every statement carries the row-scope
-  and activity access clauses from `platform/auth`.
-- The new system does not change a lane's SQL or rules. L1 changes how its
-  statements are planned and how the shared access clause is written.
-
-### 1.6 The access check (L1.2)
-
-Today a clause inside an `OR` asks, for every activity row, "was this
-captured by me or one of my merged accounts":
+The SQL, in the shared access code (`backend/internal/platform/auth/memberidentity.go`):
 
 ```sql
--- today: correlated, runs member_identity_family() once per row
+-- today: inside an OR, runs member_identity_family() for every activity row
 EXISTS (SELECT 1
           FROM (SELECT unnest(member_identity_family($1::uuid)) AS id) author_identity
          WHERE a.captured_by LIKE $2 || author_identity.id::text)
 
--- new: uncorrelated, Postgres computes the list once per statement (an InitPlan)
+-- new: does not depend on the row, so Postgres computes it once per statement
 a.captured_by LIKE ANY (ARRAY(SELECT $2 || author_identity.id::text
                                 FROM (SELECT unnest(member_identity_family($1::uuid)) AS id) author_identity))
 ```
 
-- `$2` is `'%:'`, bound as an argument, never written into the SQL.
-- Same result: `captured_by` is `NOT NULL`, and the family always holds the
-  member, so the list is never NULL or empty.
-- One function (`memberAuthorshipSQL`) builds it for every query that checks
-  activity access, so every lane gets the change.
+- `$2` is `'%:'`, passed as a value.
+- Same result: `captured_by` is never NULL, and the family always contains the
+  member, so the list is never empty.
+- One function builds this clause for every query that checks activity access,
+  so every lane gets the change.
 
-### 1.7 The kind catalog pipeline (L2)
+### 2.6 L1.3: the scroll tail continues (next)
 
 ```
- backend/api/worklist-kinds.yaml          extensions/<unit>/api/worklist-kinds.yaml
-          │                                         │  overlay: $.kinds['ext_<unit>.<kind>']
-          └──────────────┬──────────────────────────┘
-                         ▼  gen-composition merges (as it does for jobs.yaml)
-          build/composition/api/worklist-kinds.yaml
-                         ▼  tools/gen-worklist  (proposed, like tools/gen-jobs)
-                         │    load + check: no defaults, closed sets, events exist,
-                         │    extension ceiling and screens
+ today:  when a lane was cut short, the tail starts each source from the
+         beginning, re-reads the rows the lane already returned, throws them
+         away, and repeats for up to 4 rounds × 3 sources
+ new:    start each source from where its lane stopped; one guarded read each
+```
+
+Expected to remove most of the 108 statements in the `rank` stage. Not built
+yet. When it is, the ground-truth check must compare the cursor's decoded
+position instead of leaving the cursor out.
+
+### 2.7 L2: the kind catalog
+
+One YAML file says what each kind is, the way `api/jobs.yaml` and
+`api/ai-tasks.yaml` already declare jobs and AI tasks:
+
+```yaml
+# backend/api/worklist-kinds.yaml
+customer_waiting:
+  category: customer_waiting      # which Worklist category
+  destination: today              # which screen: today | review | system_health
+  owner: [named, nobody, unreadable]   # what "whose work" a row may say
+  personal: false                 # true = only the member's own, even in team view
+  done_in_place: false            # true = the row offers "Done"
+  delivery: pull                  # pull = read live by a lane
+```
+
+How it flows:
+
+```
+ backend/api/worklist-kinds.yaml        extensions/<unit>/api/worklist-kinds.yaml
+          └──────────────┬──────────────────────┘   (adds ext_<unit>.<kind>)
+                         ▼  merged, as jobs.yaml fragments are today
+                         ▼  tools/gen-worklist (next): load, check, generate
           internal/compose/attention/kinds_gen.go
                          ▼
-          categoryOfSource · destinationOfSource · sourceOwnerAnswers
-          sourceAnswersForTheActorOnly · doneInPlace   ← read the table, no defaults
-                         ▼
-          census tests compare the table with the contract enum, both ways
+          the engine's maps read this table · tests compare it with the API contract
 ```
 
-The generated table would look like this (sketch):
+- **No defaults.** A missing field, an unknown field, or a value outside its
+  list is refused when the file loads.
+- **Today's rules move, they do not change.** The catalog holds exactly what
+  today's five maps hold (checked: 29 kinds × 5 fields, 0 differences).
+- **Extensions.** A unit declares `ext_<unit>.<kind>` with a `max_level`
+  ceiling, so it can never claim "a customer is waiting" or a pin. Its rows are
+  read by a provider that runs as the member, inside the request, with its own
+  time limit; if it fails, the page names it. On the wire, one new closed
+  source value, `extension`, carries the kind in the existing `kind` field.
+  This part is designed, not built.
+- What stays in Go: how each kind is ranked (classifiers, levels, limits,
+  actions, reasons).
 
-```go
-var kinds = map[crmcontracts.WorklistItemSource]kindSpec{
-    "customer_waiting": {category: "customer_waiting", destination: destinationToday,
-        owner: answers(ownerNamed, ownerNobody, ownerUnreadable)},
-    "task": {category: "tasks", destination: destinationToday,
-        owner: answers(ownerNamed, ownerNobody)},
-    // ... one entry per kind, generated
-}
-```
+### 2.8 What happens when a record changes
 
-Built today: the YAML (29 kinds), the loader with its checks
-(`modules/worklist/kinds.go`), and a census test proving the YAML equals
-today's five maps. Proposed: the generator and switching the maps over.
-
-### 1.8 An extension's kind (proposed)
-
-```go
-// pkg/extension: what a unit implements (sketch)
-type WorklistProvider interface {
-    Kind() string   // "ext_vn.einvoice_rejected", declared in its catalog fragment
-    // Read runs as the reader, inside the snapshot, under degradable() with its
-    // own short budget. It returns record references and closed reason codes,
-    // never titles or text.
-    Read(ctx context.Context, asOf time.Time) ([]WorklistCandidate, error)
-}
-```
+Because every lane reads live inside the snapshot, a change shows on the next
+read with no extra code:
 
 ```
- core: the catalog says category, screen, max_level  →  admit + rank as any kind
- wire: source = "extension" (one new closed value) · kind = "ext_vn.einvoice_rejected"
- fail: slow or failing provider → named in sources_unavailable, page still answers
-```
-
-- No new write access: the provider only reads, as the member, in the request.
-- A unit cannot claim "customer waiting" or a pin: `max_level` is checked when
-  the catalog loads and again when the row is ranked.
-
-### 1.9 The ground-truth check (L0)
-
-```
- for each member (MemberPrincipal: their real grants, teams and seat)
-   for each call the screens make:
-       view today | decisions | system  ×  scope mine | team | unassigned | all
-       + the relationships panel read  + a named owner  + Today page 2
-     WithWorkspaceSnapshot → WorklistView(...)     clock pinned to one instant
-     drop walk id and cursor (made per read) → JSON
- main:    write all answers to a recording
- change:  read again, compare every answer byte for byte; report rows / empty / refused
-```
-
-- Runs against the bench corpus; replaying `main` against itself gives the same
-  answers, so the check is deterministic.
-- Proposed production shape: an integration test that derives its views,
-  scopes and filters from the contract enums, so it fails if coverage shrinks.
-
-### 1.10 When a record changes
-
-Every lane reads live inside the snapshot, so a change to a record shows on
-the next read with no extra code:
-
-```
- task done, due moved, archived ........... next read: gone or moved
- task reassigned A → B .................... next read: A loses it, B has it
- a reply clears a waiting customer ........ next read: gone
- access taken away or given ............... next read: follows the new access
+ a task is done, moved or archived ........ next read: gone or moved
+ a task moves from Anh to Bình ............ next read: Anh loses it, Bình has it
+ a reply answers a waiting customer ....... next read: gone
+ access is taken away or given ............ next read: follows the new access
  time passes (overdue, 14 days stale) ..... judged at read time
 ```
 
-This is the main reason to keep the engine as the one place the rules live.
-The push experiment (Appendix B) needed extra code for each of these lines,
-for each kind.
+This is why the approach keeps the engine. A design that copies work items
+into a separate store needs extra code for every line above, for every kind
+(see 3.3).
+
+### 2.9 What we are not doing now
+
+- **Running lanes in parallel.** It would turn "sum of all lanes" into
+  "slowest lane", but it needs several database connections per request
+  against a pool of 16, and splits the snapshot. Only if L1 is not enough.
+- **Pushing work into a precomputed list (L3).** Fast for expensive kinds, but
+  it needs its own access, routing and freshness code per kind. Parked.
 
 ---
 
-## 2. How the system grows: adding a kind
+## Part 3. Figures and the PoC
 
-### 2.1 A core kind
+### 3.1 Speed, with every answer identical to today
 
-```
- today                                      new
- ─────                                      ───
- api/crm.yaml enum                          api/crm.yaml enum (unchanged)
- category map          ┐                    worklist-kinds.yaml: one entry
- destination map       │ hand-kept Go,      ├─ category, destination
- owner-answers map     │ several with       ├─ owner answers, personal
- personal map          │ silent defaults    ├─ done_in_place, delivery
- done map              ┘                    └─ generated into the engine's table
- lane + classifier                          lane + classifier (unchanged)
- census tests                               census tests read the catalog
-```
-
-One catalog entry:
-
-```yaml
-customer_waiting:
-  category: customer_waiting      # closed set
-  destination: today              # today | review | system_health
-  owner: [named, nobody, unreadable]
-  personal: false
-  done_in_place: false
-  delivery: pull                  # pull | push
-```
-
-- No defaults: a missing field, an unknown field or a value outside its set is
-  refused when the catalog loads.
-- Data driven like `api/jobs.yaml` and `api/ai-tasks.yaml`: a generator
-  compiles the file into the Go table the engine reads, behind a drift gate.
-- What stays in Go: classifiers, levels, caps, horizons, actions, reasons. The
-  catalog says what kind a row is, not how it ranks.
-
-### 2.2 An extension's kind
+The ground-truth check made 269 calls: 60 answers with rows, 93 empty, 116
+refused (a scope that member may not use). Times are means.
 
 ```
- extensions/vn/api/worklist-kinds.yaml          (overlay fragment)
-   $.kinds['ext_vn.einvoice_rejected']:
-       category: tasks
-       destination: today
-       max_level: agreed          ← an extension may never claim "customer waiting"
-       ...
-         │ gen-composition merges fragments
-         ▼
- the same catalog → the same engine → on the wire:
-     source: extension            ← one new closed value (additive)
-     kind:   ext_vn.einvoice_rejected
+                                today (main)   + L1.2     + L1.1 and L1.2   change
+ rep, Home / Worklist call        1.33 s       1.29 s       1.01 s          −24%
+ rep, relationships panel         1.04 s       0.99 s       0.68 s          −35%
+ rep, Decisions / System         ~0.93 s                   ~0.58 s          −38%
+ manager, team view               1.55 s       1.50 s       0.85 s          −45%
+ manager, all                     2.70 s                    2.32 s          −14%
+ unassigned (any view)           ~0.60 s                   ~0.30 s          −50%
+
+ identical to today:              269/269      269/269      269/269
+ plan modes checked: whole read generic → waiting scan custom → generic again
 ```
 
-- The extension's rows come from a lane run as the reader, inside the request,
-  with a time limit. If it is slow or fails, it is named in
-  `sources_unavailable`.
-- The extension gets no new write access. A way to push items from a
-  background job waits until each extension has its own database role.
+PERF-8 asks for under 1 s. After L1.1 and L1.2 the rep's Home call is at the
+line, not under it. L1.3 is the next step for that call, and the bench must
+run at full scale before anyone claims PERF-8.
 
----
-
-## 3. What it gives so far
-
-Every answer identical to `main` (269 of 269):
+### 3.2 Other measurements
 
 ```
-                                     today     new (L1.1 + L1.2)
- rep, Home / Worklist call           1.33 s    1.01 s     −24%
- rep, relationships panel            1.04 s    0.68 s     −35%
- manager, team view                  1.55 s    0.85 s     −45%
- unassigned view                    ~0.60 s   ~0.30 s     −50%
+ identity check alone, 50,000 activities
+   today:  11,033 function calls, 171 ms
+   new:         2 function calls,  29 ms        same 38,968 rows
+
+ kind catalog vs today's maps:  29 kinds × 5 fields, 0 differences
+
+ where the time goes on main (Today, mine, page of 25, live clock)
+   member with no work ........ 0.57–0.85 s
+   page 1 vs page 2 ........... 1.16 s vs 1.02 s
+   per read ................... 853 ms planning, 489 ms running,
+                                ~180 data statements, ~2,500 identity calls
 ```
 
-PERF-8 asks for under 1 s. At this scale the rep's Home call is at the line,
-not under it. L1.3 is the next step for that call, and the bench must run at
-full scale before anyone claims PERF-8.
-
-## 4. Pros and cons
-
-| Part | Pros | Cons |
-|---|---|---|
-| L0 check | Any change can be shown to keep today's behaviour | Only as good as the corpus; 60 answers with rows is thin |
-| L1.1 plan reuse | One switch, every kind | A reused plan cannot use a partial index on a bound value; may be slower on big data |
-| L1.2 identity | ~2,500 fewer calls per read; the gain grows with data | Small now (3–8%) |
-| L1.3 tail | Most of the 108 statements in `rank` | Not built; the check must compare decoded cursors |
-| L2 catalog | A new kind is one entry; tests derive from it; extensions can join | Ranking rules stay in Go |
-| L3 push | Fast for expensive kinds (waiting: 2–19 ms vs 235–323 ms) | Extra code per kind kept breaking; parked |
-
-## 5. Why we need it
-
-- **It keeps growing by hand.** A new kind touches about ten places, and some
-  have silent defaults. An extension can only send a plain notice; it cannot
-  put real work on the list.
-- **It is slow, and not because of any one kind.** A member with no work still
-  waits 0.57–0.85 s. A resumed page costs about as much as the first. Per read
-  the database spends 853 ms planning against 489 ms running, the identity
-  check runs about 2,500 times, and the `rank` stage sends 108 statements.
-  These costs are shared by every kind, so they are fixed once, for all kinds.
-
-## 6. Next steps and questions for the table
-
-1. Build L1.3 (scroll tail) and check it with L0.
-2. Run the bench at full scale (scale 1) and agree the number we accept.
-3. L1 overlaps the open Worklist speed issue (#4912), which has an owner: how
-   do we hand over the check and the two proven changes?
-4. Is the additive `source: extension` contract change acceptable?
-5. Do we agree push stays parked unless L1 falls short?
-
----
-
-## Appendix A. Validation
-
-### A.1 Ground-truth check
+### 3.3 Options we tried and dropped
 
 ```
- 269 answers = 60 with rows · 93 empty · 116 refused (a scope that seat may not use)
-
-                                          identical   rep Home   mgr team   rep panel
- main replayed against itself              269/269     1.33 s     1.55 s     1.04 s
- + L1.2 identity                           269/269     1.29 s     1.50 s     0.99 s
- + L1.1 whole-read plan reuse              269/269     1.01 s     0.85 s     0.68 s
- plan modes: whole read generic → waiting scan custom → generic again   ✔
+ A  push a list per member       fast reads; a copy that must follow every change
+ B  rerun the engine per member   same answers; a rebuild storm on every change
+ C  write items with each change  no lag; every writer in ~35 modules must change
+ D  lanes in parallel             one truth; many connections per request
 ```
 
-Times are means over the members with that seat. The L1.1 row also carries
-L1.2.
-
-### A.2 Where the time goes on main
+We built a mix of A and D for two kinds and measured it:
 
 ```
- member with no work ................... 0.57 – 0.85 s per first page
- first page vs resumed page ............ 1.16 s vs 1.02 s (mean, 12 members)
- per read, rep with 232 open items ..... 853 ms planning, 489 ms running,
-                                         ~180 data statements, ~2,500 identity calls
- rank stage ............................ 354 ms, 108 statements (bench stage table)
+ waiting customers .......... 2–19 ms instead of 235–323 ms
+ tasks ...................... no gain
+ every page of the real Worklist (5 members) ... 715 rows, 0 missing
+ 708 records restricted, no event .............. 0 shown that should not be
 ```
 
-These rows read Today for "mine" at a page of 25 with a live clock; the per
-read rows come from `pg_stat_statements` around 10 reads.
+But every kind needed its own access gate, holder rules, event routing and
+rebuild code, and each review round found a new defect in that per-kind code.
+That is why the approach fixes the shared machinery instead.
 
-### A.3 Identity check in isolation
-
-```
- 50,000 activities, 11,032 not shared with the whole workspace
- correlated EXISTS (today) ........ 11,033 function calls   171 ms
- computed once (new) ..............      2 function calls    29 ms
- same 38,968 rows both ways
-```
-
-### A.4 Kind catalog
-
-```
- 29 kinds × 5 fields (category, destination, owner, personal, done) = today's maps
- mismatches: 0
- loader refuses: missing field, unknown field, value outside its set,
-                 extension above its ceiling, extension on the health screen, ...
-```
-
-### A.5 Independent review
+### 3.4 Review
 
 An independent reviewer checked each version against the code, looking for
-faults:
+faults. The copy-based versions failed with blockers (wrong access gate, a
+capped rebuild, a lock taken in the wrong order). The current approach passed
+with wording fixes, which are applied.
+
+### 3.5 Not proven yet
+
+- Speed on large data: the bench at full scale (scale 1).
+- The check's coverage: filters beyond each view's own; the small writes a read
+  makes (snoozes returning, brief marked as opened, walk freeze); more hard
+  cases in the bench data.
+- L1.3 and the catalog generator are not built.
+
+### 3.6 The PoC branch: `poc/worklist-feed`
 
 ```
- v1 push feed        3 blockers (wrong gate, capped producer, unchecked YAML)
- v2 push, fixed      2 blockers (gate still wrong for waiting; lock order)
- v3 system level     0 blockers, 4 majors (thin coverage, waiting plan, dead test,
-                     wrong population)
- v4 system level     ready to discuss; wording fixes applied
-```
-
-### A.6 Not proven yet
-
-- Speed at full scale (scale 1).
-- L0 coverage: filters beyond each view's own; writes the read performs
-  (brief open, snooze resurfacing, walk freeze); more hard cases in the corpus.
-- L1.3 is not built.
-
-## Appendix B. Options tried and dropped
-
-```
- A  push feed per member        fast reads; but a copy of the truth that must follow every change
- B  rerun the engine per member  same answers; but a rebuild storm on every change
- C  write items in the same tx   no lag; but every writer in ~35 modules must change
- D  pull + registry + parallel   one truth; but needs many connections per request
- →  hybrid: registry + push only where measured  (built, then parked)
-```
-
-The push experiment, kept as evidence:
-
-```
- producer, whole set, 15 members ............ 7.5 s total, ~0.5 s each
- pushed read vs uncapped lane ................ 15/15 identical
- real Worklist, every page, 5 members ........ 715 rows, 0 missing
- task done with no event ..................... gone at once
- reassigned task, after routing both holders . A: gone, B: shown
- stale generation ............................ cannot reopen or re-add
- 708 records restricted, no event ............ 0 leaked
- waiting customers ........................... 2–19 ms instead of 235–323 ms
- tasks ....................................... no gain
-```
-
-Lesson: each pushed kind needed its own access gate, holder rules, event
-routing and producer, and each review round found a new defect in that
-per-kind code. The fix belongs in the machinery every kind shares.
-
-## Appendix C. The branch: `poc/worklist-feed`
-
-```
- fe238892  push two kinds into a per-holder store, serve under a live gate
- c05efee2  declare every kind in worklist-kinds.yaml; a revocation needs no event
- e9751633  whole-set producer, lock-ordered generations, change cases
- 9d0c8e3b  system-level levers measured against main as ground truth
- 0c4126c3  per-bind statements keep their own plans inside whole-read reuse
- 7201e071  this proposal
+ fe238892  push two kinds into a per-member store (the experiment in 3.3)
+ c05efee2  the kind catalog (worklist-kinds.yaml) and its check against today
+ e9751633  push experiment: full rebuilds, ordering, change cases
+ 9d0c8e3b  the ground-truth check; L1.1 and L1.2 measured against main
+ 0c4126c3  PlanEachBind: the waiting scan keeps its own plans
+ later     this proposal
 ```
 
 Files that matter:
 
-```
- backend/api/worklist-kinds.yaml                     the kind catalog (L2)
- backend/internal/modules/worklist/                  catalog loader + push store (Appendix B)
- backend/internal/platform/database/planreuse.go     ReuseGenericPlans + PlanEachBind (L1.1)
- backend/internal/platform/auth/memberidentity.go    identity once per statement (L1.2)
- backend/internal/modules/activities/waitingsql.go   perBind for the waiting scan
- backend/internal/compose/worklistparity_poc_test.go ground-truth check (L0)
- backend/internal/compose/worklist*_poc_test.go      the other measurements
- poc/worklist-proposal.md                            this proposal
-```
+| File | What |
+|---|---|
+| `backend/api/worklist-kinds.yaml` | The kind catalog (L2) |
+| `backend/internal/modules/worklist/kinds.go` | Loads and checks the catalog |
+| `backend/internal/platform/database/planreuse.go` | `ReuseGenericPlans` and `PlanEachBind` (L1.1) |
+| `backend/internal/platform/auth/memberidentity.go` | Identity once per statement (L1.2) |
+| `backend/internal/modules/activities/waitingsql.go` | `perBind`, used by the five waiting call sites |
+| `backend/internal/compose/worklistparity_poc_test.go` | The ground-truth check (L0) |
+| `backend/internal/compose/worklist*_poc_test.go` | The other measurements |
+| `backend/internal/modules/worklist/store.go` | The push experiment's store (3.3) |
 
-How to run the check (needs `make db-up` and a `make bench-daily` corpus):
+How to run the check (needs `make db-up` and a `make bench-daily` data set):
 
 ```
- POC_OWNER_DSN=… POC_APP_DSN=… POC_AS_OF=2026-11-01T20:30:00Z \
- POC_PARITY_OUT=truth.json  go test -tags poc -run TestWorklistParityPoC ./internal/compose   # on main
- POC_PARITY_IN=truth.json POC_PLANS=generic  go test -tags poc -run TestWorklistParityPoC ./internal/compose   # on the branch
+ # on main: record today's answers
+ POC_OWNER_DSN=… POC_APP_DSN=… POC_AS_OF=2026-11-01T20:30:00Z POC_PARITY_OUT=truth.json \
+   go test -tags poc -run TestWorklistParityPoC ./internal/compose
+
+ # on the branch: compare, with plan reuse on
+ POC_OWNER_DSN=… POC_APP_DSN=… POC_AS_OF=2026-11-01T20:30:00Z POC_PARITY_IN=truth.json POC_PLANS=generic \
+   go test -tags poc -run TestWorklistParityPoC ./internal/compose
 ```
 
 The `poc` build tag keeps every PoC test out of `make check` and CI.
+
+### 3.7 Questions for the table
+
+1. Do we agree to keep the engine and fix the shared machinery first (L0 + L1),
+   then the catalog (L2), with push parked?
+2. L1 overlaps the open Worklist speed issue (#4912), which has an owner. How
+   do we hand over the check and the two proven changes?
+3. Is the additive `source: extension` contract change acceptable?
+4. Who runs the full-scale bench, and what number do we accept?
