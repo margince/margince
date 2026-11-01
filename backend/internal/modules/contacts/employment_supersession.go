@@ -40,7 +40,10 @@ func retireSupersededEmployment(ctx context.Context, tx pgx.Tx, id ids.UUID, pro
 		return err
 	}
 	if current.ContactID != nil {
-		return promoteLoneSurvivingEmployment(ctx, tx, *current.ContactID)
+		if err := promoteLoneSurvivingEmployment(ctx, tx, *current.ContactID); err != nil {
+			return err
+		}
+		return fileEmployerTwins(ctx, tx, *current.ContactID, connectorCapturedBy(provider))
 	}
 	return nil
 }
