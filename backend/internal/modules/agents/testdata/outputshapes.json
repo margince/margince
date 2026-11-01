@@ -3190,6 +3190,40 @@
           "summary": {
             "type": "string"
           },
+          "summary_parts": {
+            "type": "object",
+            "properties": {
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "value"
+                  ]
+                }
+              },
+              "more_fields": {
+                "type": "integer"
+              },
+              "sentence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "fields",
+              "more_fields",
+              "sentence"
+            ]
+          },
           "target_id": {
             "type": "string",
             "format": "uuid"
@@ -3523,6 +3557,40 @@
                 },
                 "summary": {
                   "type": "string"
+                },
+                "summary_parts": {
+                  "type": "object",
+                  "properties": {
+                    "fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "value"
+                        ]
+                      }
+                    },
+                    "more_fields": {
+                      "type": "integer"
+                    },
+                    "sentence": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "more_fields",
+                    "sentence"
+                  ]
                 },
                 "target_id": {
                   "type": "string",
@@ -6855,6 +6923,40 @@
                 },
                 "summary": {
                   "type": "string"
+                },
+                "summary_parts": {
+                  "type": "object",
+                  "properties": {
+                    "fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "field": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "field",
+                          "value"
+                        ]
+                      }
+                    },
+                    "more_fields": {
+                      "type": "integer"
+                    },
+                    "sentence": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "fields",
+                    "more_fields",
+                    "sentence"
+                  ]
                 },
                 "target_id": {
                   "type": "string",
@@ -11170,6 +11272,40 @@
           },
           "summary": {
             "type": "string"
+          },
+          "summary_parts": {
+            "type": "object",
+            "properties": {
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "value"
+                  ]
+                }
+              },
+              "more_fields": {
+                "type": "integer"
+              },
+              "sentence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "fields",
+              "more_fields",
+              "sentence"
+            ]
           },
           "target_id": {
             "type": "string",

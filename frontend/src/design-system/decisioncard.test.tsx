@@ -7,6 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import {
   type DecisionApproval,
   DecisionCard,
@@ -35,6 +36,7 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time.",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: PLAIN_SUMMARY_WORDS,
   showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",

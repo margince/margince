@@ -46298,6 +46298,22 @@ export interface components {
             /** @description Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them. */
             conflicts?: components["schemas"]["ApprovalPreviewConflict"][];
         };
+        /** @description An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined, cut at 240 bytes, so the parts can hold a value the summary no longer shows. */
+        ApprovalSummaryParts: {
+            /** @description The act in words, such as "Update deal Acme renewal". */
+            sentence: string;
+            /** @description The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count. */
+            fields: components["schemas"]["ApprovalSummaryField"][];
+            /** @description How many further fields the list leaves out. */
+            more_fields: number;
+        };
+        /** @description One request field a summary lists, and its value as the approver should read it. */
+        ApprovalSummaryField: {
+            /** @description The request field name, as the call sent it. A nested create lists first the parent record it is made under, named in the installation language ("under" in English). */
+            field: string;
+            /** @description The value as text. A cleared field reads as "null". */
+            value: string;
+        };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
             preview?: components["schemas"]["ApprovalPreview"];
@@ -46352,6 +46368,8 @@ export interface components {
             diff_hash?: string | null;
             /** @description One-line description of the proposed change. */
             summary?: string | null;
+            /** @description The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary. */
+            summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /** @description The staged diff/payload that will execute on approve. */
             proposed_change?: {
                 [key: string]: unknown;
@@ -51192,6 +51210,8 @@ export interface components {
              *     the sentence in the reader's own language.
              */
             detail?: string;
+            /** @description On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone. */
+            summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             staged?: components["schemas"]["AttentionStagedFacts"];
             connection?: components["schemas"]["AttentionConnectionFacts"];
             /**
@@ -52008,6 +52028,8 @@ export interface components {
             kind: string;
             /** @description What was done, in the words the act itself recorded. */
             summary: string;
+            /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
+            summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /**
              * Format: date-time
              * @description When it happened.
@@ -52757,6 +52779,8 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
+            summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */

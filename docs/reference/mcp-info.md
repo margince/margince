@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 157.6 KB |
+| Tool catalog | 158.2 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41668 |
+| Approx. wire tokens | 41821 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 47.9 KB | 30% | **No**: a result's shape, never listed to a model |
+| Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
 | Input schemas | 65.5 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
@@ -4193,6 +4193,40 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
               "summary": {
                 "type": "string"
               },
+              "summary_parts": {
+                "properties": {
+                  "fields": {
+                    "items": {
+                      "properties": {
+                        "field": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "field",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "more_fields": {
+                    "type": "integer"
+                  },
+                  "sentence": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "fields",
+                  "more_fields",
+                  "sentence"
+                ],
+                "type": "object"
+              },
               "target_id": {
                 "format": "uuid",
                 "type": "string"
@@ -5776,6 +5810,40 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
         },
         "summary": {
           "type": "string"
+        },
+        "summary_parts": {
+          "properties": {
+            "fields": {
+              "items": {
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "field",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "more_fields": {
+              "type": "integer"
+            },
+            "sentence": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "fields",
+            "more_fields",
+            "sentence"
+          ],
+          "type": "object"
         },
         "target_id": {
           "format": "uuid",

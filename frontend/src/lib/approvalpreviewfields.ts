@@ -1,3 +1,4 @@
+import type { SummaryWords } from "../design-system/approvalsummary";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { MERGE_FIELD_LABELS } from "./approvalpreviewmergefields";
@@ -316,4 +317,13 @@ export function previewFieldLabel(field: string, t: Translator): string {
     default:
       return historyFieldLabel(field, t);
   }
+}
+
+/** The words an approval summary's fields are shown in: the preview's own
+ *  field labels, so a field reads alike in the summary and the preview. */
+export function summaryWords(t: Translator): SummaryWords {
+  return {
+    field: (name) => previewFieldLabel(name, t),
+    more: (count) => t("state.partialCount", { count: String(count) }),
+  };
 }

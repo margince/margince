@@ -29855,8 +29855,11 @@ type Approval struct {
 	Status             ApprovalStatus      `json:"status"`
 
 	// Summary One-line description of the proposed change.
-	Summary        *string             `json:"summary,omitempty"`
-	TargetEntityId *openapi_types.UUID `json:"target_entity_id,omitempty"`
+	Summary *string `json:"summary,omitempty"`
+
+	// SummaryParts The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
+	SummaryParts   *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	TargetEntityId *openapi_types.UUID   `json:"target_entity_id,omitempty"`
 
 	// TargetEntityType Entity the effect mutates (for precondition re-validation).
 	TargetEntityType *string `json:"target_entity_type,omitempty"`
@@ -30058,6 +30061,27 @@ type ApprovalPreviewValue struct {
 
 	// Text Authorized readable value, or a lifecycle code for translation.
 	Text string `json:"text"`
+}
+
+// ApprovalSummaryField One request field a summary lists, and its value as the approver should read it.
+type ApprovalSummaryField struct {
+	// Field The request field name, as the call sent it. A nested create lists first the parent record it is made under, named in the installation language ("under" in English).
+	Field string `json:"field"`
+
+	// Value The value as text. A cleared field reads as "null".
+	Value string `json:"value"`
+}
+
+// ApprovalSummaryParts An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined, cut at 240 bytes, so the parts can hold a value the summary no longer shows.
+type ApprovalSummaryParts struct {
+	// Fields The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count.
+	Fields []ApprovalSummaryField `json:"fields"`
+
+	// MoreFields How many further fields the list leaves out.
+	MoreFields int `json:"more_fields"`
+
+	// Sentence The act in words, such as "Update deal Acme renewal".
+	Sentence string `json:"sentence"`
 }
 
 // ApproveImportRunRequest What the approver read. Without a body, the run is approved at whatever version it holds.
@@ -31182,6 +31206,9 @@ type AttentionItem struct {
 	// `occurred_at` does not say it: a deal's last activity, a connection's last good
 	// sync. A Worklist row marked done comes back once this passes the press.
 	SubjectMovedAt *time.Time `json:"subject_moved_at,omitempty"`
+
+	// SummaryParts On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone.
+	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 
 	// Title The server's own sentence for this item, when it has one — an approval
 	// summary is composed at staging time out of the proposal's own facts.
@@ -51371,6 +51398,9 @@ type Receipt struct {
 	// Summary What was done, in the words the act itself recorded.
 	Summary string `json:"summary"`
 
+	// SummaryParts The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
+	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+
 	// Undo The way back, on a receipt for work that was APPLIED rather than approved.
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
@@ -60736,6 +60766,9 @@ type WorklistItem struct {
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
+
+	// SummaryParts On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone.
+	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
 
 	// Title The server's own sentence for this item, where it has one.
 	Title *string `json:"title,omitempty"`

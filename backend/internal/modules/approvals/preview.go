@@ -109,7 +109,7 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 		rows[i].Preview = preview
 		if (approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(stagedByRow(subjects[i])), HeldBack: heldBack}).PayloadWithheld() {
 			// The staged call and its summary say what the preview held back.
-			rows[i].ProposedChange, rows[i].Evidence, rows[i].Summary = nil, nil, nil
+			withholdPayload(&rows[i])
 		}
 	}
 	return nil

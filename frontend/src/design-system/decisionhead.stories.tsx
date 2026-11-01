@@ -18,6 +18,10 @@ const meta: Meta<typeof DecisionHead> = {
       expired: "Expired",
       draftSubject: "Subject",
       draftBody: "Message",
+      summaryWords: {
+        field: (name) => name,
+        more: (count) => `${count} more not shown`,
+      },
       noContent: "No proposal content",
       loading: "Reading the proposal",
     },

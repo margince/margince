@@ -224,7 +224,8 @@ func stalePreviewWithAnUnnamedValue(masked bool) func(context.Context, crmcontra
 func stagedEmailRow() []crmcontracts.Approval {
 	change := map[string]any{"to": []any{"buyer@masked.test"}}
 	summary := "Write to buyer@masked.test"
-	return []crmcontracts.Approval{{Kind: "send_email", Status: crmcontracts.ApprovalStatusPending, ProposedChange: &change, Summary: &summary}}
+	parts := &crmcontracts.ApprovalSummaryParts{Sentence: "Send email", Fields: []crmcontracts.ApprovalSummaryField{{Field: "to", Value: "buyer@example.test"}}}
+	return []crmcontracts.Approval{{Kind: "send_email", Status: crmcontracts.ApprovalStatusPending, ProposedChange: &change, Summary: &summary, SummaryParts: parts}}
 }
 
 // A preview that is not ready is cleared before it leaves the service. A value
@@ -238,8 +239,8 @@ func TestAMaskedValueKeepsTheStagedCallBackAfterThePreviewIsCleared(t *testing.T
 	if rows[0].Preview == nil || rows[0].Preview.Details != nil {
 		t.Fatalf("the stale preview was not cleared: %+v", rows[0].Preview)
 	}
-	if rows[0].ProposedChange != nil || rows[0].Summary != nil {
-		t.Fatalf("the staged call kept a masked value: %+v %v", rows[0].ProposedChange, rows[0].Summary)
+	if rows[0].ProposedChange != nil || rows[0].Summary != nil || rows[0].SummaryParts != nil {
+		t.Fatalf("the staged call kept a masked value: %+v %v %+v", rows[0].ProposedChange, rows[0].Summary, rows[0].SummaryParts)
 	}
 }
 
@@ -263,13 +264,19 @@ func TestACommittedVerdictWithoutContextCarriesNoPlan(t *testing.T) {
 		return nil, errors.New("the preview reader is down")
 	})
 	summary := "Write to the buyer"
-	subject := row{Kind: "send_email", Status: "pending", ProposedChange: json.RawMessage(`{"to":["buyer@example.test"]}`), Summary: &summary}
+	subject := row{
+		Kind: "send_email", Status: "pending", ProposedChange: json.RawMessage(`{"to":["buyer@example.test"]}`), Summary: &summary,
+		SummaryParts: json.RawMessage(`{"sentence":"Write to the buyer","fields":[{"field":"to","value":"buyer@example.test"}],"more_fields":0}`),
+	}
 	rows := []crmcontracts.Approval{wire(subject, svc.now())}
+	if rows[0].SummaryParts == nil {
+		t.Fatal("the fixture's parts did not read back, so the check below proves nothing")
+	}
 	svc.readCommittedContext(context.Background(), rows, []row{subject})
 	if rows[0].Preview == nil || rows[0].Preview.State != "unavailable" {
 		t.Fatalf("the fallback preview = %+v", rows[0].Preview)
 	}
-	if rows[0].ProposedChange != nil || rows[0].Summary != nil || rows[0].Evidence != nil {
+	if rows[0].ProposedChange != nil || rows[0].Summary != nil || rows[0].Evidence != nil || rows[0].SummaryParts != nil {
 		t.Fatalf("the fallback still carries the plan: %+v %v %v", rows[0].ProposedChange, rows[0].Summary, rows[0].Evidence)
 	}
 }

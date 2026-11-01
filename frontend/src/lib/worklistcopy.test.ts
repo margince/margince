@@ -623,3 +623,35 @@ describe("moveHref — the reconnect move", () => {
     expect(moveOpensComposer(row)).toBe(true);
   });
 });
+
+describe("itemTitle — an approval row", () => {
+  const approval = (over: Partial<WorklistItem>): WorklistItem => ({
+    occurred_precision: "instant",
+    id: "a-1",
+    source: "approval",
+    level: 2,
+    category: "decisions",
+    title: "Update record deal: name=Acme, Inc.",
+    because: [],
+    consequence: "none",
+    actions: ["decide"],
+    ...over,
+  });
+
+  it("keeps the whole title on a surface with no supporting line", () => {
+    const parts = {
+      sentence: "Update record deal",
+      fields: [{ field: "name", value: "Acme, Inc." }],
+      more_fields: 0,
+    };
+    expect(itemTitle(approval({ summary_parts: parts }), t, "en")).toBe(
+      "Update record deal: name=Acme, Inc.",
+    );
+  });
+
+  it("keeps the whole title of a row staged without parts", () => {
+    expect(itemTitle(approval({}), t, "en")).toBe(
+      "Update record deal: name=Acme, Inc.",
+    );
+  });
+});
