@@ -280,3 +280,35 @@ it("removes an old report and its failure notice when the report identity change
   expect(screen.queryByRole("textbox", { name: "Prepared report" })).toBeNull();
   expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
 });
+
+it("does not carry a lazy-report failure into a string copy control", async () => {
+  const user = userEvent.setup();
+  stubClipboard("refuses");
+  function Probe({ lazy }: Readonly<{ lazy: boolean }>) {
+    const copy = useClipboardCopy(
+      lazy ? { key: "report", read: async () => "report" } : "report",
+      LABELS,
+    );
+    return (
+      <>
+        <button type="button" onClick={copy.copy}>
+          {copy.label}
+        </button>
+        {copy.notice}
+      </>
+    );
+  }
+  const view = render(
+    <LocaleProvider initial="en">
+      <Probe lazy />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  await screen.findByText(/clipboard access denied/i);
+  view.rerender(
+    <LocaleProvider initial="en">
+      <Probe lazy={false} />
+    </LocaleProvider>,
+  );
+  expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
+});

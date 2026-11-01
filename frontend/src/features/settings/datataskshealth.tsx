@@ -199,11 +199,10 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
   const mutation = useMutation({
     mutationFn: async (body: Control) =>
       unwrap(await api.POST("/admin/data-tasks/control", { body })),
-    onSettled: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey }),
-        client.invalidateQueries({ queryKey: ["system-health"] }),
-      ]),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: ["system-health"] });
+      return client.invalidateQueries({ queryKey });
+    },
   });
   const actions = taskActions(row, canChange);
   return (

@@ -91,17 +91,17 @@ const CARDS_THE_REGISTER_REACHED = [
 
 describe("the split lost no card", () => {
   function renderedComponents(): Set<string> {
-    const graph = readGraph();
-    const pending = ["features/settings/settings.tsx"];
+    const graph = readGraph(here);
+    const pending = ["settings.tsx"];
     const visited = new Set<string>();
     while (pending.length) {
       const path = pending.pop();
-      if (!path || visited.has(path)) continue;
+      if (!path || path.startsWith("../") || visited.has(path)) continue;
       visited.add(path);
       pending.push(...(graph.get(path) ?? []));
     }
     const source = [...visited]
-      .map((path) => readFileSync(join(here, "../..", path), "utf8"))
+      .map((path) => readFileSync(join(here, path), "utf8"))
       .join("\n");
     return new Set(
       [...source.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((match) => match[1]),

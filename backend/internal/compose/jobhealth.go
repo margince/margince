@@ -225,11 +225,15 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 		assessment := jobs.AssessHealth(k)
 		condition := crmcontracts.JobKindHealthCondition(assessment.Condition)
 		code := crmcontracts.JobKindHealthConditionCode(assessment.Code)
-		expectation := int(assessment.Expectation.Seconds())
+		var expectation *int
+		if assessment.Expectation > 0 {
+			seconds := int(assessment.Expectation.Seconds())
+			expectation = &seconds
+		}
 		discarded, cancelled := int(k.Discarded), int(k.Cancelled)
 		kinds = append(kinds, crmcontracts.JobKindHealth{
 			Kind:      k.Kind,
-			Condition: &condition, ConditionCode: &code, ExpectationSeconds: &expectation, Discarded: &discarded, Cancelled: &cancelled,
+			Condition: &condition, ConditionCode: &code, ExpectationSeconds: expectation, Discarded: &discarded, Cancelled: &cancelled,
 			Queue:                   k.Queue,
 			FleetWide:               k.FleetWide,
 			Waiting:                 int(k.Waiting),

@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { stubClipboard } from "../../design-system/clipboard-testing";
 import { meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { jsonResponse, render } from "../../testing/settings.testkit";
@@ -128,19 +129,15 @@ it("opens configuration without requesting a health report", async () => {
 
 it("copies safe evidence without sending a message", async () => {
   const user = userEvent.setup();
-  const clipboard = vi.fn().mockResolvedValue(undefined);
-  Object.defineProperty(navigator, "clipboard", {
-    configurable: true,
-    value: { writeText: clipboard },
-  });
+  const clipboard = stubClipboard("accepts");
   const fetcher = stub(attentionReport);
   render(<SystemHealthPage />);
   await user.click(await screen.findByText("Technical details"));
   await user.click(
     screen.getByRole("button", { name: "Copy technical report" }),
   );
-  await waitFor(() => expect(clipboard).toHaveBeenCalled());
-  const copied = JSON.parse(clipboard.mock.calls[0][0]);
+  await waitFor(() => expect(clipboard.written).toHaveLength(1));
+  const copied = JSON.parse(clipboard.written[0]);
   expect(copied.source).toBe("jobs");
   expect(copied.queues).toEqual([]);
   expect(copied.history.runs[0]).toMatchObject({
@@ -156,6 +153,7 @@ it("copies safe evidence without sending a message", async () => {
 });
 
 it("withholds source conditions and counts without permission", async () => {
+  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -171,8 +169,9 @@ it("withholds source conditions and counts without permission", async () => {
   });
   render(<SystemHealthPage />);
   await screen.findByRole("heading", { name: "No action needed" });
+  await user.click(screen.getByText("All checks"));
   expect(screen.queryByText(/Permission required/)).toBeNull();
-  expect(screen.queryByText(/Required permission/)).toBeNull();
+  expect(screen.queryByText(/Background jobs/)).toBeNull();
 });
 
 it("leaves automatic retries out of the action list", async () => {

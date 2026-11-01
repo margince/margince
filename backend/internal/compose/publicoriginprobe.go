@@ -64,8 +64,9 @@ type publicOriginProbe struct {
 	clock  func() time.Time
 	ttl    time.Duration
 
-	mu   sync.Mutex
-	last PublicOriginStatus
+	mu      sync.Mutex
+	cacheMu sync.RWMutex
+	last    PublicOriginStatus
 }
 
 func newPublicOriginProbe(origin string, client *http.Client, clock func() time.Time) *publicOriginProbe {
@@ -83,16 +84,20 @@ func newPublicOriginProbe(origin string, client *http.Client, clock func() time.
 func (p *publicOriginProbe) Status(ctx context.Context) PublicOriginStatus {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.last.CheckedAt != nil && p.clock().Sub(*p.last.CheckedAt) < p.ttl {
-		return p.last
+	last := p.Snapshot()
+	if last.CheckedAt != nil && p.clock().Sub(*last.CheckedAt) < p.ttl {
+		return last
 	}
-	p.last = p.probe(ctx)
-	return p.last
+	last = p.probe(ctx)
+	p.cacheMu.Lock()
+	p.last = last
+	p.cacheMu.Unlock()
+	return last
 }
 
 func (p *publicOriginProbe) Snapshot() PublicOriginStatus {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	p.cacheMu.RLock()
+	defer p.cacheMu.RUnlock()
 	return p.last
 }
 

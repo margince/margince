@@ -317,7 +317,7 @@ Only work that needs a person appears here, with its effect until fixed. **All c
 **Diagnostics** shows each source. Filter background runs or open the next page; totals include all runs still kept in that window.
 A canceled run is not a failed run. Deleted runs do not prove the work is done. **Copy technical report** copies recorded errors, attempts and run IDs; it sends no message.
 
-**Configuration** holds background schedules and mail send limits. Edits use the page save bar.
+**System health > Configuration** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
 Moving to another view asks you to save a draft first. Settings search opens the view with the control you asked for.
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
@@ -327,7 +327,7 @@ Moving to another view asks you to save a draft first. Settings search opens the
 - **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
 - **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
-- **Mail capture checks**: when each background pass last worked, contacts and threads waiting in each mailbox, and meetings held back. Counts are shown to the same readers as Background jobs; messages stay with their mailbox owner.
+- **Mail capture checks**: when each background pass last worked, contacts and threads waiting in each mailbox, and meetings held back. Counts are shown to the same readers as Background jobs; contacts, threads and messages stay with their mailbox owner.
 - **Links in outgoing mail**: the address Margince puts in the links it emails, such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not checked**. If nobody outside can reach it, those links open nothing.
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.

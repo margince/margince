@@ -37,7 +37,10 @@ func (s Server) searchSummary(ctx context.Context) (crmcontracts.HealthSource, [
 	f := healthFinding(source, source.Code, source.Condition, report.EntitiesPending, "records")
 	f.Count, f.Unit = nil, nil
 	f.Responsible = crmcontracts.HealthFindingResponsibleAdministrator
-	f.Urgency = 1
+	f.Urgency = 3
+	if source.Condition == healthWaitingHuman {
+		f.Urgency = 1
+	}
 	f.Action.Destination = crmcontracts.HealthActionDestinationSearch
 	return source, []crmcontracts.HealthFinding{f}, nil
 }
@@ -76,7 +79,10 @@ func (s Server) updatesSummary(ctx context.Context) (crmcontracts.HealthSource, 
 		f.Action.Destination = "updates"
 		f.NextAttemptAt = attempts[code]
 		f.Responsible = crmcontracts.HealthFindingResponsibleAdministrator
-		f.Urgency = 1
+		f.Urgency = 3
+		if f.Condition == crmcontracts.HealthFindingConditionWaitingHuman {
+			f.Urgency = 1
+		}
 		if f.Condition == crmcontracts.HealthFindingConditionTechnical {
 			f.Urgency = 0
 		}

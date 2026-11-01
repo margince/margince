@@ -426,8 +426,8 @@ func renderHealthQuestion(b *strings.Builder, records map[string]record) {
 	}
 	fmt.Fprintf(b, "\n<details>\n<summary>How this check was measured</summary>\n\nMeasured on %s on %s (%d cores).\n", r.MeasuredOn, r.Machine.CPU, r.Machine.Cores)
 	renderCorpusFacts(b, r.Corpus)
-	if len(r.Budgets) > 0 {
-		fmt.Fprintf(b, "\n%d samples per check. %s\n", r.Budgets[0].Samples, r.Budgets[0].Note)
+	for _, m := range r.Budgets {
+		fmt.Fprintf(b, "\n%s: %d samples. %s\n", labels[m.Name], m.Samples, m.Note)
 	}
 	fmt.Fprintf(b, "\nRun `make %s` to measure again.\n\n</details>\n\n", benchmarkCommand(healthTarget))
 }

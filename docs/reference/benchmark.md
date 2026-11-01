@@ -111,7 +111,15 @@ Measured on 2026-11-01 on Apple M5 Max (18 cores).
 The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000 leads,
 500 projects and 500,000 activities, owned by 12 reps under 2 managers.
 
-30 samples per check. Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
+Opening Overview: 30 samples. Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
+
+Opening background run history: 30 samples. Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
+
+Checking mail capture: 30 samples. Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
+
+Checking automatic work: 30 samples. Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
+
+Eight readers checking at once: 30 samples. Eight simultaneous overview requests; whole-round latency; each response <= 50 KiB gzip; Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
 
 Run `make bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets` to measure again.
 

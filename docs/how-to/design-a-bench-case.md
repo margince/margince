@@ -159,6 +159,7 @@ evidence shows the server errors as its own symptom. A 422 is allowed only on a 
 ## Measure System health
 
 Run `make bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets` for System health on the admin seat.
+This case is an exception to the daily-screen and admin-seat rules above: operators need bounded reads while investigating a problem.
 It shares the daily corpus but writes its own record after its checks pass.
 The [flow declarations](../../backend/internal/compose/integration/daily_systemhealth_bench_test.go) hold its reads and fixtures.
 The Overview and Diagnostics have their own budget IDs in the [budget registry](../../backend/internal/compose/integration/daily_budgets_bench_test.go).

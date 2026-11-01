@@ -625,7 +625,7 @@ function catalogPage(page: SettingsPageId): Story {
         ? () => {
             installFetchStub({
               ...UNUSED_INSTALLATION_ROUTES,
-              ...healthSessionRoutes(true),
+              ...healthSessionRoutes("configure"),
               "GET /me": everyGrantMe,
               "GET /admin/system-health": () => jsonResponse(healthReport),
             });

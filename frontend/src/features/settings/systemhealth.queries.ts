@@ -156,9 +156,10 @@ export function useJobHistory(
         ) ||
         !report.runs.every(
           (run) =>
-            typeof run.job_id === "number" &&
-            Number.isSafeInteger(run.job_id) &&
-            run.job_id > 0 &&
+            (run.job_id === undefined ||
+              (typeof run.job_id === "number" &&
+                Number.isSafeInteger(run.job_id) &&
+                run.job_id > 0)) &&
             typeof run.kind === "string" &&
             run.kind.length > 0 &&
             ["retryable", "discarded", "cancelled"].includes(run.state) &&

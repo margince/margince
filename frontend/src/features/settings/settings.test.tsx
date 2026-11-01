@@ -862,6 +862,7 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Search index" }),
     ).toBeTruthy();
+    // Unauthorized sources are hidden; their absence makes no claim about queue state.
     expect(
       screen.queryByRole("heading", { name: "Background jobs" }),
     ).toBeNull();

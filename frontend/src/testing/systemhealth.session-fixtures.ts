@@ -9,8 +9,12 @@ import {
 import { defaultOperations } from "./operationsettings.fixtures";
 import { jsonResponse, meRoute, type RouteMap } from "./story-utils";
 
-export function healthSessionRoutes(admin: boolean): RouteMap {
-  return {
+export type HealthSessionAccess = "configure" | "diagnose" | "denied";
+
+export function healthSessionRoutes(access: HealthSessionAccess): RouteMap {
+  const admin = access === "configure";
+  const jobs = access !== "denied";
+  const routes: RouteMap = {
     "GET /me": meRoute(
       admin
         ? {
@@ -20,20 +24,23 @@ export function healthSessionRoutes(admin: boolean): RouteMap {
             data_task: ["read"],
             ai_diagnostics: ["read"],
           }
-        : { job_health: ["read"] },
+        : jobs
+          ? { job_health: ["read"] }
+          : {},
+      {
+        roles: [admin ? "admin" : jobs ? "manager" : "rep"],
+        seat: admin ? "full" : "read",
+      },
     ),
     "GET /admin/system-health": () =>
       jsonResponse({
         ...stoppedMailReport,
+        findings: jobs ? stoppedMailReport.findings : [],
+        action_count: jobs ? stoppedMailReport.action_count : 0,
+        assessment: jobs ? stoppedMailReport.assessment : "checked",
         sources: stoppedMailReport.sources.map((source) =>
-          admin || source.permission === "job_health:read"
-            ? source.id === "jobs"
-              ? {
-                  ...source,
-                  condition: "unverified",
-                  code: "queue_unverified",
-                }
-              : source
+          admin || (jobs && source.permission === "job_health:read")
+            ? source
             : {
                 id: source.id,
                 permission: source.permission,
@@ -176,4 +183,14 @@ export function healthSessionRoutes(admin: boolean): RouteMap {
     "GET /installation/settings": () =>
       jsonResponse({ operations: defaultOperations }),
   };
+  for (const key of Object.keys(routes)) {
+    if (key === "GET /me") continue;
+    const jobRead =
+      key.startsWith("GET /admin/") && key !== "GET /admin/data-tasks";
+    if (!admin && !(jobs && jobRead)) {
+      routes[key] = () =>
+        jsonResponse({ title: "Forbidden", status: 403 }, 403);
+    }
+  }
+  return routes;
 }

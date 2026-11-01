@@ -120,6 +120,7 @@ export const attentionReport: Report = {
 
 export const stoppedMailReport: Report = {
   ...attentionReport,
+  complete: true,
   findings: [
     {
       ...overdueFinding,

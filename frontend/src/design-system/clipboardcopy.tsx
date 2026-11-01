@@ -43,10 +43,16 @@ export function useClipboardCopy(
     identity: string;
     text: string;
   }> | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<Readonly<{
+    identity: string;
+    lazy: boolean;
+  }> | null>(null);
   const [pendingIdentity, setPending] = useState<string | null>(null);
   const attempt = useRef(0);
-  const identity = typeof text === "string" ? text : text.key;
+  const identity = JSON.stringify([
+    typeof text,
+    typeof text === "string" ? text : text.key,
+  ]);
   const pending = pendingIdentity === identity;
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new report identity cancels the previous unfinished read.
   useLayoutEffect(
@@ -78,7 +84,7 @@ export function useClipboardCopy(
       if (mine !== attempt.current) return;
       setWritten(null);
       setPending(null);
-      setFailed(identity);
+      setFailed({ identity, lazy: typeof text !== "string" });
     });
   }
 
@@ -93,7 +99,10 @@ export function useClipboardCopy(
     preparedText: prepared?.identity === identity ? prepared.text : null,
     copy,
     notice:
-      failed !== null && (typeof text === "string" || failed === identity) ? (
+      failed !== null &&
+      (typeof text === "string"
+        ? !failed.lazy
+        : failed.identity === identity) ? (
         <Callout
           tone="danger"
           kind="outcome"

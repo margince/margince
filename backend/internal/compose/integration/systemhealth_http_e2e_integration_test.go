@@ -98,6 +98,7 @@ func TestJobHistoryPagesCompleteGroupsAndDisclosesRetentionChanges(t *testing.T)
 		if row.JobId == nil || seen[*row.JobId] {
 			t.Fatal("duplicate or missing run ID")
 		}
+		seen[*row.JobId] = true
 	}
 	var before crmcontracts.SystemHealth
 	if status := e.Call(t, "GET", "/v1/admin/system-health", nil, nil, &before); status != http.StatusOK {

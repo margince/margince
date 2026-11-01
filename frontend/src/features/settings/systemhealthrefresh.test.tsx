@@ -218,31 +218,42 @@ it("rejects an unknown unit before it can render a misleading count", async () =
   ).toBeNull();
 });
 
-it("keeps the priority notice quiet when a refresh also contains routine findings", async () => {
+it("ignores routine priority changes but reports reordered action findings", async () => {
   const action = attentionReport.findings[0];
   if (!action) throw new Error("missing finding fixture");
+  const other = { ...action, id: "other-action" };
+  const routine = {
+    ...action,
+    id: "routine",
+    requires_action: false,
+    condition: "retrying",
+    code: "queue_retrying",
+  };
+  let phase = 0;
   serve(async () =>
     jsonResponse({
       ...attentionReport,
-      findings: [
-        {
-          ...action,
-          id: "routine",
-          requires_action: false,
-          condition: "retrying",
-          code: "queue_retrying",
-        },
-        action,
-      ],
+      action_count: 2,
+      findings:
+        phase === 0
+          ? [action, other, routine]
+          : phase === 1
+            ? [routine, action, other]
+            : [other, action, routine],
     }),
   );
   render(<SystemHealthPage />);
   await settle();
-  fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-  await settle();
+  phase = 1;
+  await settle(60_000);
   expect(
     screen.queryByText("Priorities changed. Refresh to apply the new order."),
   ).toBeNull();
+  phase = 2;
+  await settle(60_000);
+  expect(
+    screen.getByText("Priorities changed. Refresh to apply the new order."),
+  ).toBeInTheDocument();
 });
 
 it.each(["first_observed_at", "window_start", "window_end"])(
@@ -270,14 +281,7 @@ function HistoryProbe() {
     <p>{query.data ? "History loaded" : "Waiting"}</p>
   );
 }
-it.each([
-  { state: "future-state" },
-  { failed_at: "invalid-date" },
-  { first_failed_at: "invalid-date" },
-  { attempt: -1 },
-  { max_attempts: 1.5 },
-  { reason: { private_field: "not-an-operator-message" } },
-])("rejects malformed retained-run fields: %j", async (override) => {
+function serveHistory(override: object = {}) {
   serve(async () => jsonResponse(attentionReport), {
     observed_at: attentionReport.generated_at,
     cutoff: attentionReport.generated_at,
@@ -299,6 +303,26 @@ it.each([
       },
     ],
   });
+}
+it.each([{}, { job_id: undefined }])(
+  "accepts valid retained-run fields: %j",
+  async (override) => {
+    serveHistory(override);
+    render(<HistoryProbe />);
+    await settle();
+    expect(screen.getByText("History loaded")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  },
+);
+it.each([
+  { state: "future-state" },
+  { failed_at: "invalid-date" },
+  { first_failed_at: "invalid-date" },
+  { attempt: -1 },
+  { max_attempts: 1.5 },
+  { reason: { private_field: "not-an-operator-message" } },
+])("rejects malformed retained-run fields: %j", async (override) => {
+  serveHistory(override);
   render(<HistoryProbe />);
   await settle(4_000);
   expect(screen.getByRole("alert")).toHaveTextContent("History unreadable");

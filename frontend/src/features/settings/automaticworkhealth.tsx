@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -285,12 +285,13 @@ export function useAutomaticWorkHealth(days: Window) {
   const canSee = useCan("job_health", "read");
   const scope = useHealthScope();
   const visible = useHealthVisible();
-  const query = useQuery({
+  const query = useQuery<Health>({
     queryKey: ["automatic-work-health", scope, days],
     enabled: canSee && visible && scope !== undefined,
     // The window control sits in the report; without the last answer held
     // while the next loads, the control would vanish under the pointer.
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === scope ? previous : undefined,
     queryFn: async ({ signal }) => {
       const data = unwrap(
         await api.GET("/admin/automatic-work-health", {

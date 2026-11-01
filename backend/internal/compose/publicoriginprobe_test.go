@@ -160,3 +160,14 @@ func TestNoConfiguredOriginAnswersAnEmptyStatus(t *testing.T) {
 		t.Errorf("status = %+v, want empty", got)
 	}
 }
+
+func TestOriginSnapshotDoesNotTakeTheProbeLock(t *testing.T) {
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	probe := newPublicOriginProbe("https://origin.example.test", nil, func() time.Time { return at })
+	probe.mu.Lock()
+	defer probe.mu.Unlock()
+	status := probe.Snapshot()
+	if status.Origin != "https://origin.example.test" || status.CheckedAt != nil {
+		t.Fatalf("unexpected cached status: %+v", status)
+	}
+}

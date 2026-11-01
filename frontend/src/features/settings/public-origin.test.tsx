@@ -30,10 +30,7 @@ it.each([
     );
     expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText("https://crm.example.test")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Configuration" })).toHaveAttribute(
-      "href",
-      "/#/settings/configuration",
-    );
+    expect(screen.queryByRole("link", { name: "Configuration" })).toBeNull();
     expect(fetcher).not.toHaveBeenCalled();
   },
 );

@@ -34,31 +34,45 @@ func (s Server) jobsSummary(ctx context.Context) (crmcontracts.HealthSource, []c
 	source.ObservedAt = &now
 	source.Condition, source.Code = healthUnknown, "queue_checked"
 	source.Availability = healthUnobserved
+	return summarizeJobKinds(source, rows)
+}
+
+func summarizeJobKinds(source crmcontracts.HealthSource, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 	groups := map[jobHealthGroupKey]*jobHealthSummaryGroup{}
 	for _, row := range rows {
-		assessment := jobs.AssessHealth(row)
+		assessments := []jobs.HealthAssessment{jobs.AssessHealth(row)}
+		if assessments[0].Code != "queue_retrying" {
+			retrying := row
+			retrying.Discarded = 0
+			retrying.OldestWaitingAgeSeconds = nil
+			if assessment := jobs.AssessHealth(retrying); assessment.Code == "queue_retrying" {
+				assessments = append(assessments, assessment)
+			}
+		}
 		if row.OldestWaitingAgeSeconds != nil && (source.OldestWaitSeconds == nil || int(*row.OldestWaitingAgeSeconds) > *source.OldestWaitSeconds) {
 			source.OldestWaitSeconds = secondsOrAbsent(row.OldestWaitingAgeSeconds)
 		}
-		if assessment.Count == 0 || assessment.Condition == string(healthClear) {
-			continue
+		for _, assessment := range assessments {
+			if assessment.Count == 0 || assessment.Condition == string(healthClear) {
+				continue
+			}
+			switch assessment.Condition {
+			case string(healthUnknown):
+				source.Code = assessment.Code
+			case string(healthProcessing):
+				source.Condition, source.Code = healthProcessing, assessment.Code
+				continue
+			}
+			scope := healthWorkspace
+			if row.FleetWide {
+				scope = "shared"
+			}
+			key := jobHealthGroupKey{assessment.Code, scope}
+			if groups[key] == nil {
+				groups[key] = &jobHealthSummaryGroup{kinds: map[string]bool{}}
+			}
+			groups[key].add(row, assessment)
 		}
-		switch assessment.Condition {
-		case string(healthUnknown):
-			source.Code = assessment.Code
-		case string(healthProcessing):
-			source.Condition, source.Code = healthProcessing, assessment.Code
-			continue
-		}
-		scope := healthWorkspace
-		if row.FleetWide {
-			scope = "shared"
-		}
-		key := jobHealthGroupKey{assessment.Code, scope}
-		if groups[key] == nil {
-			groups[key] = &jobHealthSummaryGroup{kinds: map[string]bool{}}
-		}
-		groups[key].add(row, assessment)
 	}
 	source, findings := groupedJobHealth(source, groups)
 	return source, findings, nil
@@ -169,15 +183,18 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	add("capture_owner_review", healthWaitingHuman, categories.OwnerReviewMailboxes, "mailboxes", "mailbox_owner")
 	add("capture_unread", healthUnverified, categories.UnreadMailboxes, "mailboxes", "mailbox_owner")
 	add("capture_held", healthProcessing, held.Count, "records", "operator")
+	repairUnverified := false
 	for _, sweep := range sweeps {
 		if sweep.LastRun == nil {
 			source.Availability = healthUnobserved
 			continue
 		}
 		if sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeFailed || sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeSkipped {
-			add("capture_repair_unverified", healthUnverified, 1, "runs", "operator")
-			break
+			repairUnverified = true
 		}
+	}
+	if repairUnverified {
+		add("capture_repair_unverified", healthUnverified, 1, "runs", "operator")
 	}
 	if classifier.Exhausted > 0 {
 		source.Condition, source.Code = healthTechnical, "capture_exhausted"

@@ -24,6 +24,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -133,8 +134,9 @@ func automaticWorkWindow(ctx context.Context, tx pgx.Tx, now time.Time, days int
 		return "", time.Time{}, time.Time{}, fmt.Errorf("automatic work: loading zone: %w", err)
 	}
 	local := now.In(loc)
-	last := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
-	return zone, last.AddDate(0, 0, 1-days), last, nil
+	last := storekit.StartOfDay(local, loc)
+	anchor := time.Date(local.Year(), local.Month(), local.Day(), 12, 0, 0, 0, loc).AddDate(0, 0, 1-days)
+	return zone, storekit.StartOfDay(anchor, loc), last, nil
 }
 
 func calendarDay(t time.Time) openapi_types.Date {

@@ -10,7 +10,10 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { healthSessionRoutes } from "../../testing/systemhealth.session-fixtures";
+import {
+  type HealthSessionAccess,
+  healthSessionRoutes,
+} from "../../testing/systemhealth.session-fixtures";
 import { HealthSessionPage } from "../../testing/systemhealth-session";
 import { SystemHealthPage } from "./settings.systemhealth";
 import {
@@ -85,9 +88,9 @@ export const SourceFailed: Story = {
   }),
 };
 
-function session(admin: boolean) {
+function session(access: HealthSessionAccess) {
   return () => {
-    installFetchStub(healthSessionRoutes(admin));
+    installFetchStub(healthSessionRoutes(access));
     return (
       <StoryProviders>
         <HealthSessionPage />
@@ -95,9 +98,9 @@ function session(admin: boolean) {
     );
   };
 }
-export const AdminSession: Story = { render: session(true) };
-export const CSOSession: Story = { render: session(true) };
-export const LimitedRoleSession: Story = { render: session(false) };
+export const AdminSession: Story = { render: session("configure") };
+export const CSOSession: Story = { render: session("diagnose") };
+export const LimitedRoleSession: Story = { render: session("denied") };
 
 export const PartialCapture: Story = {
   render: story({

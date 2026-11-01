@@ -211,7 +211,7 @@ Also called: AI timeout, reasoning effort, thinking budget, slow AI task.
 
 ### How do I see whether an AI provider is working?
 Open **Settings**, then **System health**. The **Overview** shows a provider problem when it needs action, with its effect and next step.
-For the recorded errors, open **Diagnostics**, choose **AI availability**, and read **AI provider status**. Each error names the provider, reason, **Started** and **Next check**.
+For the recorded errors, open **Diagnostics**, choose **AI availability**, and read **AI provider status**. Each error names the provider, reason and **Started**. Blocked providers also show **Next check**.
 
 The card shows errors found during calls. If none are recorded, that does not prove every provider is available. Opening the page does not test a provider. Only roles with **AI diagnostics read** can see these details.
 **AI models** also shows a badge on each provider with a problem under **Providers**.

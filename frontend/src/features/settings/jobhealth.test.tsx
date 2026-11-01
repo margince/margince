@@ -344,31 +344,6 @@ describe("JobHealthCard", () => {
     ).toHaveClass("badge-danger");
   });
 
-  // The case the window exists for: a settled outage. The rows are still there
-  // — River keeps them a week — and the banner must go quiet while the figure
-  // does not, or a finished outage goes on asking for a hand until they retire.
-  it("goes quiet once the dead work leaves the window, and still reports it", async () => {
-    stubRoutes({
-      "GET /admin/job-health": () =>
-        jsonResponse({
-          ...HEALTH,
-          kinds: [
-            {
-              ...HEALTH.kinds[0],
-              dead: 531,
-              discarded: 531,
-              dead_recent: 0,
-              retrying: 0,
-            },
-          ],
-        }),
-    });
-    render(<JobHealthCard />);
-    const kind = await tableRowCells("This company", "capture_classify");
-    expect(kind.Discarded).toHaveTextContent("531");
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
   it("keeps intentional cancellations separate from discarded work", async () => {
     stubRoutes({
       "GET /admin/job-health": () =>

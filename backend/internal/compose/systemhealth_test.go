@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -163,6 +164,30 @@ func TestHealthActionsExcludeAutomaticProcessing(t *testing.T) {
 	for _, condition := range []crmcontracts.HealthSourceCondition{"technical", "waiting_human", "unverified"} {
 		if !healthFinding(source, "queue_overdue", condition, 1, "runs").RequiresAction {
 			t.Fatalf("%s lost its next action", condition)
+		}
+	}
+}
+
+func TestJobSummaryKeepsLiveRetriesBesideDiscardedHistory(t *testing.T) {
+	next := time.Date(2026, 1, 1, 1, 0, 0, 0, time.UTC)
+	age := 600.0
+	for _, row := range []jobs.KindHealth{
+		{Kind: "capture_classify", Discarded: 12, FutureRetries: 2, Retrying: 2, NextAttemptAt: &next},
+		{Kind: "unregistered_kind", Discarded: 12, FutureRetries: 2, Retrying: 2, NextAttemptAt: &next, Waiting: 1, Runnable: 1, OldestWaitingAgeSeconds: &age},
+		{Kind: "unregistered_kind", FutureRetries: 2, Retrying: 2, NextAttemptAt: &next, Waiting: 1, Runnable: 1, OldestWaitingAgeSeconds: &age},
+	} {
+		_, findings, err := summarizeJobKinds(healthSource("jobs", healthReadObject), []jobs.KindHealth{row})
+		if err != nil {
+			t.Fatal(err)
+		}
+		counts := map[string]int{}
+		for _, finding := range findings {
+			if finding.Count != nil {
+				counts[finding.Code] = *finding.Count
+			}
+		}
+		if counts["queue_unverified"] != int(row.Discarded) || counts["queue_retrying"] != 2 {
+			t.Fatalf("history hid current retries: %+v", findings)
 		}
 	}
 }

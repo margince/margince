@@ -2,13 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
-import { routeHash } from "../../lib/router";
-import { settingsHref } from "../../lib/settingsrouting";
 
 /**
  * The address this installation puts in the links it emails, and whether it
@@ -39,9 +36,6 @@ export function PublicOriginCard({
   return (
     <Panel title={t("connectors.originTitle")}>
       <PanelBody>
-        <AppLink href={routeHash(settingsHref("configuration"))}>
-          {t("health.configuration")}
-        </AppLink>
         <PanelIntro>{t("connectors.originSub")}</PanelIntro>
         <SettingList>
           <SettingRow

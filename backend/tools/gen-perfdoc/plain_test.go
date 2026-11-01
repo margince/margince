@@ -184,3 +184,15 @@ func TestAHealthRecordRendersWithoutADailyRecord(t *testing.T) {
 		t.Error("a standalone health record was omitted")
 	}
 }
+
+func TestHealthMeasurementsKeepEachChecksSampleCountAndNote(t *testing.T) {
+	page := renderPlain(map[string]record{healthTarget: {Budgets: []measurement{
+		{Name: "system_health", Samples: 30, Note: "single request"},
+		{Name: "system_health_eight_readers", Samples: 12, Note: "whole-round latency"},
+	}}})
+	for _, want := range []string{"Opening Overview: 30 samples. single request", "Eight readers checking at once: 12 samples. whole-round latency"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("measurement missing: %s", want)
+		}
+	}
+}
