@@ -5,9 +5,8 @@ import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
@@ -16,16 +15,13 @@ import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
-import {
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingPeriodIsEmpty,
-} from "./reporting.model";
+import type { ReportingSelection } from "./reporting.model";
 import {
   useReportingCatalog,
   useReportingEvaluation,
@@ -168,7 +164,6 @@ function OverviewBody({
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const shape = VIEW_SHAPE[view];
   const { metrics, blocks } = viewRequest(view, catalog, period);
   const selection: ReportingSelection = {
@@ -188,6 +183,8 @@ function OverviewBody({
   const validPeriod = validDates && metrics.length > 0;
   const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
+  const { evidence, openEvidence, closeEvidence } =
+    useSelectionEvidence(contextKey);
   const invalidSelection =
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
@@ -209,7 +206,7 @@ function OverviewBody({
         }
         caption={
           validDates
-            ? resultsThrough(query.data, locale, t)
+            ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
       >
@@ -226,7 +223,6 @@ function OverviewBody({
             onChange: (from, through) => {
               setStart(from);
               setEnd(through);
-              setEvidence(null);
             },
           }}
           onChange={(next) => {
@@ -242,7 +238,6 @@ function OverviewBody({
               setTargetBasis(next.target_basis);
             if (next.close_window !== closeWindow)
               setCloseWindow(next.close_window);
-            setEvidence(null);
           }}
         />
       </FilterBar>
@@ -261,7 +256,7 @@ function OverviewBody({
               <ReportingCharts
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}
-                onEvidence={setEvidence}
+                onEvidence={openEvidence}
                 onApplySelection={(next) => {
                   // The server named the selection; the page only moves its
                   // dials to it.
@@ -270,7 +265,6 @@ function OverviewBody({
                     setPipelineId(next.pipeline_id ?? "");
                   if (scopeKey(next.scope) !== scopeKey(scope))
                     replaceDial("scope", scopeKey(next.scope));
-                  setEvidence(null);
                 }}
               />
               {evidence && (
@@ -278,7 +272,7 @@ function OverviewBody({
                   key={`${contextKey}:${JSON.stringify(evidence)}`}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
               {saving && (
@@ -322,36 +316,4 @@ export function validDateRange(
   end: string,
 ): boolean {
   return period !== "custom" || !!(start && end);
-}
-
-// "Results through" only while the period is still running: a closed period
-// ends where it says it does, and the line would only repeat it. A period read
-// at its first instant holds no time, which is said rather than drawn as zeros.
-export function resultsThrough(
-  evaluation: ReportingEvaluation | undefined,
-  locale: Locale,
-  t: Translator,
-): string | undefined {
-  if (
-    !evaluation ||
-    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
-  ) {
-    return undefined;
-  }
-  if (reportingPeriodIsEmpty(evaluation.context.interval)) {
-    return t("reporting.periodNotStarted", {
-      at: formatDateTime(
-        evaluation.context.interval.start_at,
-        locale,
-        evaluation.context.timezone,
-      ),
-    });
-  }
-  return t("reporting.resultsThrough", {
-    at: formatDateTime(
-      evaluation.context.interval.end_at,
-      locale,
-      evaluation.context.timezone,
-    ),
-  });
 }

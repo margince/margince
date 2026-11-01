@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -40,7 +41,7 @@ const (
 // movement with its own bucket: a number that moved because the rules changed
 // must not be reported as the business moving. Bump it when a reading's
 // membership or arithmetic changes.
-const DefinitionVersion = "forecast_v2"
+const DefinitionVersion = "forecast_v4"
 
 // Column and payload keys shared by the insert and the audit payload. Named
 // rather than repeated, because a key written in two places can come to be
@@ -73,6 +74,19 @@ type NewSnapshot struct {
 	// QualifiedPolicyVersion is the viability policy the qualified readings
 	// applied, empty while qualification was off.
 	QualifiedPolicyVersion string
+	// SelfCorrecting, EvidenceCutoff and RiskSignalsVersion are the basis the
+	// chances stood on. A nil SelfCorrecting stores NULL: not recorded.
+	SelfCorrecting     *bool
+	EvidenceCutoff     *time.Time
+	RiskSignalsVersion string
+}
+
+// StampChances records on a snapshot the basis its readings' chances stood on.
+// Every snapshot writer calls it with the assembly its readings came from.
+func (s *NewSnapshot) StampChances(from Assembly) {
+	s.SelfCorrecting = new(from.SelfCorrecting)
+	s.EvidenceCutoff = new(from.EvidenceCutoff)
+	s.RiskSignalsVersion = from.RiskSignalsVersion
 }
 
 // TakeSnapshot freezes one set of readings, with the rows they were summed
@@ -98,7 +112,11 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 		return ids.Nil, err
 	}
 
-	id, err := s.insertSnapshot(ctx, tx, in, capturedBy)
+	landing, err := s.frozenLanding(ctx, tx, in)
+	if err != nil {
+		return ids.Nil, err
+	}
+	id, err := s.insertSnapshot(ctx, tx, in, landing, capturedBy)
 	if err != nil {
 		return ids.Nil, err
 	}
@@ -168,6 +186,7 @@ func (s *Store) writeContributions(
 			"close_provisional", "category", "stage_probability", "stage_id", "weighted_minor",
 			"in_won", "in_evidence", "in_best_case", "in_open", "in_lost", "exclusion_reason",
 			"qualification", "audit_id", "approval_id", "captured_by",
+			"typed_probability", "evidence_n", "risk_signals", "risk_signal_facts", "risk_effect",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -195,6 +214,10 @@ func (s *Store) writeContributions(
 			if row.AmountMinor == nil {
 				currency = nil
 			}
+			facts, err := signalFacts(row.Signals)
+			if err != nil {
+				return nil, fmt.Errorf("forecasting: contribution %d: %w", i, err)
+			}
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				currency, row.BaseMinor, nil, nil,
@@ -203,6 +226,7 @@ func (s *Store) writeContributions(
 				row.InWon, row.InEvidence, row.InBestCase, row.InOpen, row.InLost,
 				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
+				row.TypedProbability, row.EvidenceN, SignalCodes(row.Signals), facts, row.Effect,
 			}, nil
 		}))
 	if err != nil {
@@ -246,6 +270,15 @@ func checkSnapshot(in NewSnapshot) error {
 	return nil
 }
 
+// signalFacts is the signals as the jsonb column stores them; nil stores NULL,
+// a deal nobody assessed.
+func signalFacts(in []Signal) ([]byte, error) {
+	if in == nil {
+		return nil, nil
+	}
+	return json.Marshal(in)
+}
+
 // nullableID keeps an absent owner out of the column as NULL. A deal with no
 // owner is a real state, and the empty string is not a user id.
 func nullableID(raw string) *ids.UUID {
@@ -286,52 +319,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 		return snapshotSide{}, err
 	}
 
-	rows, err := tx.Query(ctx, `
-		SELECT deal_id, owner_id, amount_minor, currency, base_minor,
-		       effective_close_date, close_provisional, category, stage_probability,
-		       weighted_minor, in_won, in_evidence, in_best_case, in_open, in_lost,
-		       exclusion_reason, qualification, audit_id, approval_id
-		FROM forecast_contribution
-		WHERE snapshot_id = $1
-		ORDER BY deal_id`, id)
+	rows, err := tx.Query(ctx, ContributionSelect+`
+		WHERE c.snapshot_id = $1
+		ORDER BY c.deal_id`, id)
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: reading the snapshot's contributions: %w", err)
 	}
-	defer rows.Close()
-
-	out.Contributions, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (Contribution, error) {
-		var c Contribution
-		var dealID ids.UUID
-		var owner *ids.UUID
-		var currency, category, exclusion, qualification *string
-		var probability *int
-		var weighted *int64
-		err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
-			&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
-			&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
-			&exclusion, &qualification, &c.AuditID, &c.ApprovalID)
-		c.DealID = dealID.String()
-		if owner != nil {
-			c.Owner = owner.String()
-		}
-		if currency != nil {
-			c.Currency = *currency
-		}
-		if category != nil {
-			c.Category = *category
-		}
-		if exclusion != nil {
-			c.ExclusionReason = *exclusion
-		}
-		if probability != nil {
-			c.StageProbability = *probability
-		}
-		c.Qualification = viability.Qualification(derefString(qualification))
-		if weighted != nil {
-			c.WeightedMinor = *weighted
-		}
-		return c, err
-	})
+	out.Contributions, err = pgx.CollectRows(rows, CollectContribution)
 	if err != nil {
 		return snapshotSide{}, fmt.Errorf("forecasting: collecting the snapshot's contributions: %w", err)
 	}
@@ -436,4 +430,58 @@ func sameID(a, b *ids.UUID) bool {
 		return a == b
 	}
 	return *a == *b
+}
+
+// ContributionSelect reads frozen contribution rows, aliased c, in the order
+// CollectContribution scans them. A frozen share reads through the same pair,
+// so the two cannot come to read a row two ways.
+const ContributionSelect = `SELECT c.deal_id, c.owner_id, c.amount_minor, c.currency, c.base_minor,
+		c.effective_close_date, c.close_provisional, c.category, c.stage_probability,
+		c.weighted_minor, c.in_won, c.in_evidence, c.in_best_case, c.in_open, c.in_lost,
+		c.exclusion_reason, c.qualification, c.audit_id, c.approval_id,
+		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect
+		FROM forecast_contribution c`
+
+// CollectContribution scans one row read with ContributionSelect.
+func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
+	var c Contribution
+	var dealID ids.UUID
+	var owner *ids.UUID
+	var currency, category, exclusion, qualification *string
+	var probability *int
+	var weighted *int64
+	var stage *ids.UUID
+	var facts []byte
+	err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
+		&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
+		&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
+		&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
+		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
+	if err == nil && facts != nil {
+		err = json.Unmarshal(facts, &c.Signals)
+	}
+	if stage != nil {
+		c.StageID = stage.String()
+	}
+	c.DealID = dealID.String()
+	if owner != nil {
+		c.Owner = owner.String()
+	}
+	if currency != nil {
+		c.Currency = *currency
+	}
+	if category != nil {
+		c.Category = *category
+	}
+	if exclusion != nil {
+		c.ExclusionReason = *exclusion
+	}
+	if probability != nil {
+		c.StageProbability = *probability
+	}
+	c.Qualification = viability.Qualification(derefString(qualification))
+	if weighted != nil {
+		c.WeightedMinor = *weighted
+	}
+	return c, err
 }

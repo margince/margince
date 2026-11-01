@@ -41,6 +41,10 @@ To add a document to a Deal Room in Margince, open the deal's **Deal Room** tab 
 If the file is not on the deal yet, click **Upload a file** first. Margince files it on the deal, and it appears in the picker. "Documents and comments appear to buyers immediately."
 Also called: share a file with the buyer, upload a PDF to the room.
 
+### Why does a document in my deal room say "Buyers do not see this"?
+A document in a deal room says **Buyers do not see this** when its file is no longer in the deal's Files area. The file was archived, deleted, hidden, or its email was unlinked. To clear the badge, remove the file from the room. A closed, expired or archived room cannot be changed.
+Also called: missing room file, deleted document in a room, buyer cannot open a file, stale document.
+
 ### How do I pause, close or set an end date on a deal room?
 To pause or close a Deal Room in Margince, open the deal's **Deal Room** tab and click **Manage room**.
 1. Under **Room access**, choose **Live**, **Paused** or **Closed**. Choosing **Closed** shows "Close this Deal Room?" in the dialog; nothing changes until you save.

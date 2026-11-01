@@ -34,6 +34,7 @@ const FULL: InstallationSettings = {
   call_telegram: true,
   call_zalo: true,
   individual_performance: true,
+  forecast_self_correcting: true,
 };
 
 // A write that lands at once, or one the server refused.

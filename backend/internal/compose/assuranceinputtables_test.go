@@ -38,6 +38,7 @@ var announcedBy = map[string]struct{ family, why string }{
 	"assurance_resolution":     {"forecast", "an answer to a finding is forecast.exception_resolved"},
 	"audit_log":                {"deal", "the close-date pushes counted are deal.updated writes"},
 	"deal_stage_evidence":      {"deal", "evidence for an exit criterion is announced as deal.updated"},
+	"deal_stage_history":       {"deal", "a stage move is written with its deal.stage_changed event"},
 	"deal_suggestion_evidence": {"deal_suggestion", "evidence is written with its suggestion"},
 	"relationship":             {"deal", "a deal's stakeholder edge is announced as deal.updated on the deal"},
 	"stage_exit_criterion":     {"stage", "a stage's exit criteria are announced as stage.updated"},

@@ -3,35 +3,35 @@
   "totals": {
     "tools": 38,
     "driven": 27,
-    "required_only_as_one_of_a_set": 0,
-    "never_driven": 11,
-    "permitted_but_never_required": 5,
-    "tokens_served_but_never_driven": 4700,
-    "use_case_cases": 35,
-    "acceptance_criteria_named": 74,
+    "required_only_as_one_of_a_set": 1,
+    "never_driven": 10,
+    "permitted_but_never_required": 4,
+    "tokens_served_but_never_driven": 4393,
+    "use_case_cases": 37,
+    "acceptance_criteria_named": 76,
     "tools_added_by_shipped_units": 0,
-    "never_driven_but_graded_elsewhere": 3
+    "never_driven_but_graded_elsewhere": 2
   },
   "models": [
     {
       "model": "claude-sonnet-5-5@claude-cli",
-      "cases_with_a_committed_run": 35,
-      "cases_that_reached_their_bar": 35,
+      "cases_with_a_committed_run": 37,
+      "cases_that_reached_their_bar": 37,
       "cases_below_their_bar": 0,
-      "runs": 87,
-      "passed": 82,
-      "reliability": 0.9425287356321839,
+      "runs": 93,
+      "passed": 88,
+      "reliability": 0.946236559139785,
       "cases_below_their_bar_named": [],
       "route": "Claude Code CLI"
     },
     {
       "model": "gpt-5.6-sol@codex-cli",
-      "cases_with_a_committed_run": 35,
-      "cases_that_reached_their_bar": 35,
+      "cases_with_a_committed_run": 37,
+      "cases_that_reached_their_bar": 37,
       "cases_below_their_bar": 0,
-      "runs": 87,
-      "passed": 82,
-      "reliability": 0.9425287356321839,
+      "runs": 93,
+      "passed": 88,
+      "reliability": 0.946236559139785,
       "cases_below_their_bar_named": [],
       "route": "Codex CLI"
     }
@@ -1233,6 +1233,78 @@
       ]
     },
     {
+      "name": "case66_what_are_these_two_worth",
+      "title": "What are these two deals worth together",
+      "file": "case66-what-are-these-two-worth.yaml",
+      "criteria": [
+        1
+      ],
+      "requires": [],
+      "requires_one_of": [
+        [
+          "find_records",
+          "read_forecast",
+          "read_record"
+        ]
+      ],
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
+    },
+    {
+      "name": "case67_where_do_i_open_it",
+      "title": "Where do I open it",
+      "file": "case67-where-do-i-open-it.yaml",
+      "criteria": [
+        1
+      ],
+      "requires": [],
+      "requires_one_of": [
+        [
+          "find_records",
+          "read_forecast",
+          "read_record"
+        ]
+      ],
+      "by_model": [
+        {
+          "model": "claude-sonnet-5-5@claude-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "claude:cli",
+          "search": "semantic"
+        },
+        {
+          "model": "gpt-5.6-sol@codex-cli",
+          "runs": 3,
+          "passed": 3,
+          "pass_at": 2,
+          "held": true,
+          "driver": "gpt:cli",
+          "search": "semantic"
+        }
+      ]
+    },
+    {
       "name": "case9_filed_in_the_wrong_place",
       "title": "Filed in the wrong place",
       "file": "case9-filed-in-the-wrong-place.yaml",
@@ -1677,6 +1749,18 @@
       "statement": "The user names no deal, so the model chooses which ones are dead. It names them and asks for a yes before it archives or closes any, because an archive runs at once and cannot be undone from the conversation."
     },
     {
+      "case": "case66_what_are_these_two_worth",
+      "number": 1,
+      "name": "Add the two deals in money, not in minor units",
+      "statement": "The answer gives 68,500 EUR and each deal's own value from readings it made. It does not report a minor-unit figure as money."
+    },
+    {
+      "case": "case67_where_do_i_open_it",
+      "number": 1,
+      "name": "Give a link to the named deal",
+      "statement": "The answer gives a link to the named deal's page in the app."
+    },
+    {
       "case": "case6_ask_the_company",
       "number": 1,
       "name": "The past cases are found without being named",
@@ -1810,55 +1894,6 @@
       "measured_by_model": {}
     },
     {
-      "name": "read_record",
-      "tokens": 307,
-      "agents": [
-        "morning_brief",
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case10_finish_the_import",
-        "case1_log_it",
-        "case23_find_us_a_slot",
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing",
-        "case33_two_cards_for_one_company",
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case42_can_i_answer_on_whatsapp",
-        "case43_the_fair_leads_are_prospects",
-        "case44_chase_what_is_slipping",
-        "case45_move_the_deal_on",
-        "case46_get_us_in_a_room",
-        "case47_tidy_the_fair_list",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case49_who_can_introduce_us",
-        "case4_use_the_moment",
-        "case50_what_moved_my_quarter",
-        "case54_a_word_from_the_fair",
-        "case56_not_the_same",
-        "case58_quiet_for_three_weeks",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case5_before_the_meeting",
-        "case60_send_one_draft_one",
-        "case61_what_have_i_promised",
-        "case63_is_she_already_here",
-        "case64_catch_me_up_and_the_brief",
-        "case65_clear_out_the_dead_deals",
-        "case6_ask_the_company",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "measured_by_model": {}
-    },
-    {
       "name": "list_documents",
       "tokens": 216,
       "agents": [],
@@ -1919,6 +1954,58 @@
       "measured_by_model": {}
     },
     {
+      "name": "read_record",
+      "tokens": 307,
+      "agents": [
+        "morning_brief",
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [
+        "case66_what_are_these_two_worth",
+        "case67_where_do_i_open_it"
+      ],
+      "permitted_in_cases": [
+        "case10_finish_the_import",
+        "case1_log_it",
+        "case23_find_us_a_slot",
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing",
+        "case33_two_cards_for_one_company",
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case42_can_i_answer_on_whatsapp",
+        "case43_the_fair_leads_are_prospects",
+        "case44_chase_what_is_slipping",
+        "case45_move_the_deal_on",
+        "case46_get_us_in_a_room",
+        "case47_tidy_the_fair_list",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case49_who_can_introduce_us",
+        "case4_use_the_moment",
+        "case50_what_moved_my_quarter",
+        "case54_a_word_from_the_fair",
+        "case56_not_the_same",
+        "case58_quiet_for_three_weeks",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case5_before_the_meeting",
+        "case60_send_one_draft_one",
+        "case61_what_have_i_promised",
+        "case63_is_she_already_here",
+        "case64_catch_me_up_and_the_brief",
+        "case65_clear_out_the_dead_deals",
+        "case6_ask_the_company",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": true,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
       "name": "read_reports",
       "tokens": 1912,
       "agents": [],
@@ -1951,7 +2038,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1836,
+      "tokens": 1846,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1963,7 +2050,9 @@
         "case6_ask_the_company"
       ],
       "required_as_one_of_a_set_by_cases": [
-        "case65_clear_out_the_dead_deals"
+        "case65_clear_out_the_dead_deals",
+        "case66_what_are_these_two_worth",
+        "case67_where_do_i_open_it"
       ],
       "permitted_in_cases": [
         "case10_finish_the_import",
@@ -2166,13 +2255,16 @@
     },
     {
       "name": "read_forecast",
-      "tokens": 824,
+      "tokens": 875,
       "agents": [],
       "required_by_cases": [
         "case22_can_i_trust_the_numbers",
         "case50_what_moved_my_quarter"
       ],
-      "required_as_one_of_a_set_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [
+        "case66_what_are_these_two_worth",
+        "case67_where_do_i_open_it"
+      ],
       "permitted_in_cases": [
         "case45_move_the_deal_on",
         "case49_who_can_introduce_us",
@@ -2198,7 +2290,7 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 808,
+      "tokens": 821,
       "agents": [],
       "required_by_cases": [
         "case47_tidy_the_fair_list"

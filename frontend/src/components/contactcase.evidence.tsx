@@ -5,8 +5,7 @@ import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
-import { formatPercent } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { mayDecidePair, PairActions } from "./contactcase.pair";
 import type { ContactCase, ContactCaseOutcome } from "./contactcase.queries";
@@ -24,6 +23,8 @@ const FIELD_LABELS: Readonly<Record<string, MessageKey>> = {
   phone: "contactCase.field.phone",
   matched_lane: "contactCase.field.matchedOn",
   channel_identity: "contactCase.field.chatAccount",
+  linkedin: "contactCase.field.linkedin",
+  domain: "contactCase.field.domain",
 };
 
 function EvidenceLine({ evidence }: Readonly<{ evidence: Evidence }>) {
@@ -48,7 +49,6 @@ export function CaseEvidence({
   onPairMerged: () => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   return (
     <section className="contactcase-section">
       <Eyebrow as="h3">{t("contactCase.evidence.title")}</Eyebrow>
@@ -60,16 +60,10 @@ export function CaseEvidence({
                 left: memberLabel(contactCase, edge.left_id),
                 right: memberLabel(contactCase, edge.right_id),
               })}{" "}
-              {edge.status === "not_a_duplicate" ? (
+              {edge.status === "not_a_duplicate" && (
                 <Badge tone="warning">
                   {t("contactCase.evidence.different")}
                 </Badge>
-              ) : (
-                <span className="t-caption">
-                  {t("contactCase.evidence.match", {
-                    percent: formatPercent(edge.confidence, locale),
-                  })}
-                </span>
               )}
             </span>
             {edge.evidence.length > 0 && (

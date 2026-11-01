@@ -61,11 +61,44 @@ const SLIPPING = {
   ],
 };
 
+const READINGS = {
+  period_start: "2026-10-01",
+  period_end: "2026-12-31",
+  won_minor: 4_000_000,
+  evidence_minor: 6_500_000,
+  best_case_minor: 9_000_000,
+  open_minor: 12_000_000,
+  weighted_minor: 7_300_000,
+  eligible_count: 14,
+  priced_count: 12,
+  base_currency: "EUR",
+};
+
+const CATCH_UP = {
+  anchor: {
+    record_type: "deal",
+    record_id: "0195c3a0-0000-7000-8000-0000000000d1",
+  },
+  sections: [
+    {
+      name: "recent_touches",
+      items: [
+        {
+          summary: "Call about the pilot",
+          occurred_at: "2026-10-27T09:30:00Z",
+        },
+      ],
+    },
+  ],
+};
+
 const VIEWS = [
   { file: "create-followups", populated: () => FILED },
   { file: "approval", populated: () => APPROVAL },
   { file: "approval-queue", populated: () => QUEUE },
   { file: "attention", populated: () => SLIPPING },
+  { file: "forecast", populated: () => READINGS },
+  { file: "context", populated: () => CATCH_UP },
   { file: "update", populated: () => UPDATED },
 ] as const;
 

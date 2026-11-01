@@ -539,6 +539,10 @@ func (stubs) ListSdrWaitingHandoffs(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "ListSdrWaitingHandoffs")
 }
 
+func (stubs) ListSdrUpcomingMeetings(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSdrUpcomingMeetingsParams) {
+	httperr.NotImplemented(w, r, "ListSdrUpcomingMeetings")
+}
+
 func (stubs) GetSdrTeamReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSdrTeamReviewParams) {
 	httperr.NotImplemented(w, r, "GetSdrTeamReview")
 }
@@ -2111,6 +2115,10 @@ func (stubs) RevokeForecastShare(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "RevokeForecastShare")
 }
 
+func (stubs) GetForecastStageChances(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetForecastStageChances")
+}
+
 func (stubs) ListFxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListFxRatesParams) {
 	httperr.NotImplemented(w, r, "ListFxRates")
 }
@@ -2901,6 +2909,22 @@ func (stubs) GetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Reque
 
 func (stubs) SetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SetControllerParticulars")
+}
+
+func (stubs) ListNoticeCaseReviews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCaseReviewsParams) {
+	httperr.NotImplemented(w, r, "ListNoticeCaseReviews")
+}
+
+func (stubs) GetNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetNoticeCaseReview")
+}
+
+func (stubs) AssignNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AssignNoticeCaseReview")
+}
+
+func (stubs) AssessNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AssessNoticeSource")
 }
 
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {

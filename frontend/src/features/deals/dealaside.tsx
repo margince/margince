@@ -14,7 +14,7 @@ import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { provenanceLabel } from "../../design-system/provenance";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -311,12 +311,15 @@ function registrationRows(
       "source",
       "deal.recordedBy",
       provenanceLabel(
-        provenanceOf(
-          deal.captured_by,
-          reads.viewerId,
-          deal.author,
-          deal.source,
-          deal.imported_from,
+        withCreator(
+          provenanceOf(
+            deal.captured_by,
+            reads.viewerId,
+            deal.author,
+            deal.source,
+            deal.imported_from,
+          ),
+          deal.created_by,
         ),
         t,
         undefined,

@@ -73,6 +73,7 @@ const (
 	filterSourceSystem        = "source_system"
 	filterSourceID            = "source_id"
 	filterRelationshipMark    = "relationship_mark"
+	filterPartnerAccepted     = "partner_accepted"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
@@ -166,10 +167,12 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 	filterTagMode: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
 		in.TagMode = tagModeOrDefault(v)
 	}),
-	filterFromContact: storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
-	filterIndustry:    storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
-	filterCountry:     storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
-	filterSizeBand:    storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),
+	filterFromContact:     storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterIndustry:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
+	filterCountry:         storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
+	filterSizeBand:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),
+	leadPartnerField:      storekit.FilterID(func(in *ListLeadsInput, id *ids.CompanyID) { in.Partner.CompanyID = id }),
+	filterPartnerAccepted: storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.Partner.Accepted = v }),
 }
 
 // ListFilters names what SearchEntity can narrow one entity type by. An entity

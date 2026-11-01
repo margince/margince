@@ -133,3 +133,23 @@ it("shows recorded estimate observations and admits a missing basis", () => {
     ),
   ).toBeNull();
 });
+
+it("reports a decided approval by its sentence and the values it set", () => {
+  const result = receiptSummary(
+    {
+      id: "receipt",
+      kind: "update_record",
+      summary: "Update record deal: name=Acme, Inc.",
+      summary_parts: {
+        sentence: "Update record deal",
+        fields: [{ field: "name", value: "Acme, Inc." }],
+        more_fields: 0,
+      },
+      occurred_at: "2026-09-13T08:00:00Z",
+    },
+    (key, values) => translate("en", key, values),
+    "en",
+    viewerZone(),
+  );
+  expect(result).toBe("Update record deal — Name: Acme, Inc.");
+});

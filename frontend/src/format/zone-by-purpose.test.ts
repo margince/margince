@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/privacy/noticesource.test.tsx",
+    why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
+  },
+  {
     file: "features/analytics/reporting.questioncard.test.tsx",
     why: "A bound card shows the calendar its saved question keeps; that stored basis names a zone, and the note must print it as stored.",
   },
@@ -182,7 +186,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A backdated entry's wire date must be the picked day in zones a day ahead of UTC at the moment of logging, so each case names the zone it is logged in.",
   },
   {
-    file: "features/worklist/worklist.held.test.ts",
+    file: "lib/worklistheld.test.ts",
     why: "A date-only meeting reads on the record's clock and a timed one on the reader's, and the two only differ between named zones far apart.",
   },
   {
@@ -290,10 +294,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Regional notation must preserve explicit timezone and midnight fixtures.",
   },
 
-  {
-    file: "features/worklist/worklist.leadfacts.test.ts",
-    why: "Proves a date-only provisional close keeps its day east and west of UTC.",
-  },
   {
     file: "features/worklist/taskduedate.test.tsx",
     why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",

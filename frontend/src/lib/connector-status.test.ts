@@ -9,6 +9,7 @@ import {
   type ConnectorStatus,
   errorClassKey,
   healthBadge,
+  isConnectedAtAll,
   isUnhealthy,
   missingSendGrant,
   needsReconnect,
@@ -197,6 +198,27 @@ describe("serviceHealth", () => {
     expect(serviceHealth(service("gcal", { status: "error" }))).toBe(
       "needs_attention",
     );
+  });
+});
+
+describe("isConnectedAtAll", () => {
+  it("counts a service still set up, whatever its sync is doing", () => {
+    expect(isConnectedAtAll(service("gmail"))).toBe(true);
+    expect(
+      isConnectedAtAll(
+        service("gmail", { last_sync_error_class: "unreachable" }),
+      ),
+    ).toBe(true);
+    expect(isConnectedAtAll(service("gcal", { status: "error" }))).toBe(true);
+  });
+
+  it("does not count one removed or expired", () => {
+    expect(isConnectedAtAll(service("gcal", { status: "disconnected" }))).toBe(
+      false,
+    );
+    expect(
+      isConnectedAtAll(service("gcal", { status: "reauth_required" })),
+    ).toBe(false);
   });
 });
 

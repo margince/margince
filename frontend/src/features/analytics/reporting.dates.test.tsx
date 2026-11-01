@@ -32,7 +32,7 @@ it("shows the server cutoff when a custom range includes future days", async () 
       <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
-  expect(await screen.findByText(/^Results through /)).toHaveTextContent(
+  expect(await screen.findByText(/^Actuals through /)).toHaveTextContent(
     "22/09/2026, 14:00",
   );
   expect(
@@ -171,5 +171,5 @@ it("says this week has not started yet instead of a backwards range at Monday mi
     await screen.findByText(/^The period starts .*nothing has happened/),
   ).toHaveTextContent("21/09/2026, 00:00");
   expect(screen.getAllByText("This week")[0]).toBeVisible();
-  expect(screen.queryByText(/^Results through /)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^Actuals through /)).not.toBeInTheDocument();
 });
