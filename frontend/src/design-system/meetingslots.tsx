@@ -54,8 +54,6 @@ export type MeetingDay = Readonly<{
 // is the slot's accessible name; `time` is the short face drawn in the column.
 // Without `onSelect` the week is a preview of times somebody else will choose
 // from: the same columns at the same size, the times drawn but not pressable.
-// `blocked` holds the starts that cannot be pressed now, such as a time that
-// overlaps one already chosen.
 export function MeetingWeek({
   days,
   selected,
@@ -66,6 +64,7 @@ export function MeetingWeek({
 }: Readonly<{
   days: readonly MeetingDay[];
   selected: readonly string[];
+  // Starts that cannot be pressed now, such as a time overlapping a choice.
   blocked?: readonly string[];
   onSelect?: (slot: { start: string; end: string }) => void;
   emptyDay: string;
