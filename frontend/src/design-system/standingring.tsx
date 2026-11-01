@@ -157,6 +157,9 @@ export function ScoreRing({
   label,
   caption,
   peek,
+  display,
+  reach,
+  size = "default",
 }: Readonly<{
   score: number;
   tone: ReadingTone;
@@ -165,6 +168,11 @@ export function ScoreRing({
   // The word under the number ("Score").
   caption: string;
   peek?: PeekContent;
+  // The centre's figure when it is not the bare score ("53%").
+  display?: string;
+  // A second, fainter arc to where the reading is expected to land, out of 100.
+  reach?: number;
+  size?: "default" | "compact";
 }>) {
   const { locale } = useLocale();
   const card = peek && peek.items.length > 0 ? peek : undefined;
@@ -178,9 +186,22 @@ export function ScoreRing({
     pressOpens: true,
   });
   return (
-    <RingFrame label={label} tone={tone} interactive={card !== undefined}>
+    <RingFrame
+      label={label}
+      tone={tone}
+      interactive={card !== undefined}
+      size={size}
+    >
       <svg viewBox={`0 0 ${RING.size} ${RING.size}`} aria-hidden="true">
         <Track />
+        {reach != null && reach > score && (
+          <circle
+            className="standing-ring-reach"
+            {...CIRCLE}
+            style={{ stroke: readingColours(tone).mark }}
+            strokeDasharray={fillDash(Math.min(reach, 100) / 100)}
+          />
+        )}
         {score > 0 && (
           <circle
             className="standing-ring-fill"
@@ -192,7 +213,7 @@ export function ScoreRing({
       </svg>
       <span className="standing-ring-centre">
         <span className="standing-ring-score" aria-hidden={card !== undefined}>
-          {formatNumber(score, locale)}
+          {display ?? formatNumber(score, locale)}
         </span>
         {card ? (
           <button
@@ -233,12 +254,14 @@ function RingFrame({
   tone,
   tooltip,
   interactive = false,
+  size = "default",
   children,
 }: Readonly<{
   label: string;
   tone: ReadingTone;
   tooltip?: Tooltip<HTMLDivElement>;
   interactive?: boolean;
+  size?: "default" | "compact";
   children: ReactNode;
 }>) {
   const vars: RingVars = { "--standing-ring-ink": readingColours(tone).ink };
@@ -246,6 +269,7 @@ function RingFrame({
   return (
     <div
       className="standing-ring"
+      data-size={size}
       {...named}
       style={vars}
       ref={tooltip?.ref}

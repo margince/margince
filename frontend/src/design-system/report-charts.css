@@ -250,7 +250,8 @@
   position: relative;
   display: block;
   height: 1.25rem;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgInset);
 }
 .report-chart-bullet-fill {
@@ -262,7 +263,8 @@
   left: 0;
   width: var(--report-mark-width);
   background: var(--accent);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 .report-chart-bullet-target {
   position: absolute;
@@ -335,7 +337,7 @@
   gap: var(--space-3);
 }
 .report-chart[data-size="compact"] .report-chart-column-pair {
-  height: 5rem;
+  height: 7.5rem;
 }
 .report-chart-column-group {
   min-width: 0;
