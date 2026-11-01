@@ -1,15 +1,22 @@
 import { Button, Disclosure, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { SegmentBar } from "../../design-system/readings";
+import { BarList, SegmentBar } from "../../design-system/readings";
 import {
   BulletChart,
   CumulativeChart,
   RangeChart,
 } from "../../design-system/report-charts";
 import { Waterfall } from "../../design-system/waterfall";
-import { formatDateTime, formatMoneyCompact } from "../../format/format";
-import { type Translator, useLocale, useT } from "../../i18n";
+import {
+  formatDateTime,
+  formatMoneyCompact,
+  formatNumber,
+  MONEY_ABSENT,
+} from "../../format/format";
+import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { CohortTable } from "./reporting.cohort";
+import { withDealCount } from "./reporting.dealcount";
+import { breakdownLabel } from "./reporting.grouplabel";
 import {
   blockLabel,
   type MetricNames,
@@ -28,7 +35,6 @@ import "./reporting.css";
 
 type EvidenceAction = (reference: ReportingEvidenceRef) => void;
 
-import { Breakdown, StageDistribution } from "./reporting.groups";
 export function ChartBody({
   chart,
   evaluation,
@@ -43,6 +49,7 @@ export function ChartBody({
 }>) {
   const t = useT();
   const metricName = useMetricNames();
+  const plural = usePlural();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
@@ -138,13 +145,37 @@ export function ChartBody({
       );
     case "stage_distribution":
       return (
-        <StageDistribution
-          chart={chart}
-          evaluation={evaluation}
-          label={shared.label}
-          format={format}
-          onSelect={onSelect}
-        />
+        <>
+          <p className="reporting-headline t-num">
+            {reportingCompactAmount(
+              evaluation.metrics.find((metric) => metric.id === chart.metric)
+                ?.value,
+              chart.unit,
+              evaluation.context.currency,
+              locale,
+            )}
+          </p>
+          <GroupedBars
+            chart={chart}
+            label={shared.label}
+            amount={(point) =>
+              withDealCount(
+                reportingCompactAmount(
+                  point.value,
+                  chart.unit,
+                  evaluation.context.currency,
+                  locale,
+                ),
+                point.observations,
+                plural,
+                locale,
+              )
+            }
+            format={format}
+            countHeader={t("reporting.stageDeals")}
+            onSelect={onSelect}
+          />
+        </>
       );
     case "breakdown":
       return (
@@ -289,6 +320,129 @@ export function ChartBody({
     case "metric_reading":
       return null;
   }
+}
+
+type ChartPoint = ReportingChart["points"][number];
+
+// The groups a lead or partner figure splits into. A count's records are its
+// value, so only a sum names how many records each group holds.
+function Breakdown({
+  chart,
+  evaluation,
+  label,
+  format,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+  label: string;
+  format: (value: number | null | undefined) => string;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const named = {
+    ...chart,
+    points: chart.points.map((point) => ({
+      ...point,
+      label: breakdownLabel(point.key, point.label, t),
+    })),
+  };
+  return (
+    <GroupedBars
+      chart={named}
+      label={label}
+      amount={(point) =>
+        reportingCompactAmount(
+          point.value,
+          chart.unit,
+          evaluation.context.currency,
+          locale,
+        )
+      }
+      format={format}
+      countHeader={
+        chart.unit === "count" ? undefined : t("reporting.recordCount")
+      }
+      onSelect={onSelect}
+    />
+  );
+}
+
+// A figure split into groups: a bar per group that opens its records, and the
+// same groups as a table under a disclosure.
+function GroupedBars({
+  chart,
+  label,
+  amount,
+  format,
+  countHeader,
+  onSelect,
+}: Readonly<{
+  chart: ReportingChart;
+  label: string;
+  amount: (point: ChartPoint & { value: number }) => string;
+  format: (value: number | null | undefined) => string;
+  countHeader?: string;
+  onSelect: (key: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
+      <BarList
+        label={label}
+        rows={chart.points.flatMap((point) =>
+          point.value == null
+            ? []
+            : [
+                {
+                  key: point.key,
+                  label: point.label,
+                  value: point.value,
+                  amount: amount({ ...point, value: point.value }),
+                },
+              ],
+        )}
+        onSelect={onSelect}
+      />
+      <Disclosure className="report-chart-data" summary={t("reporting.data")}>
+        <DataTable
+          label={label}
+          rows={chart.points}
+          rowKey={(point) => point.key}
+          columns={[
+            {
+              key: "label",
+              header: label,
+              render: (point) => (
+                <Button variant="link" onClick={() => onSelect(point.key)}>
+                  {point.label}
+                </Button>
+              ),
+            },
+            {
+              key: "value",
+              header: t("reporting.actual"),
+              render: (point) => format(point.value),
+            },
+            ...(countHeader == null
+              ? []
+              : [
+                  {
+                    key: "count",
+                    header: countHeader,
+                    render: (point: ChartPoint) =>
+                      point.observations == null
+                        ? MONEY_ABSENT
+                        : formatNumber(point.observations, locale),
+                  },
+                ]),
+          ]}
+        />
+      </Disclosure>
+    </>
+  );
 }
 
 export function chartTitle(

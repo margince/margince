@@ -19,13 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// CaptureHealth is the reader's own capture connections needing the reader's
-// hand — re-authentication, a connection in error, a failing sync, a history
-// import that ended in error. One concern per connection, its worst condition,
-// derived by the capture module from the same view its settings screen lists.
-//
-// Capture is per-user, so the seam refuses a principal with no human behind
-// it and the lane renders that refusal as withheld.
+// CaptureHealth reads the reader's worst concern for each capture connection.
+// A principal without a human is refused, and its lane renders as withheld.
 type CaptureHealth interface {
 	CaptureConcerns(ctx context.Context) ([]CaptureConcern, error)
 }
@@ -48,8 +43,8 @@ type CaptureConcern struct {
 	// hour-old outage and a mailbox idling between ticks reach here identically
 	// without it.
 	FailingSince *time.Time
-	// LastSyncedAt is the connection's last good sync, nil when it never had one.
-	LastSyncedAt *time.Time
+	// SubjectMovedAt is the evidence that can reopen a completed concern.
+	SubjectMovedAt *time.Time
 }
 
 // AIWork is the reader's own AI runs that went wrong — failed inside the

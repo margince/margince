@@ -23,9 +23,6 @@
    same way, so it is spaced alike wherever it is drawn. */
 .analytics-body,
 .analytics-stack {
-  /* Every two-column row of the Overview shares this split, so the column
-     edges run straight down the page. */
-  --analytics-split: minmax(0, 5fr) minmax(0, 3fr);
   display: flex;
   flex-direction: column;
   gap: var(--gapCards);
@@ -58,18 +55,9 @@
    enough for both to keep their lines, one under the other below that. */
 .analytics-pair {
   display: grid;
-  grid-template-columns: var(--analytics-split);
-  align-items: stretch;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  align-items: start;
   gap: var(--gapCards);
-}
-/* A card wrapped in its own box still reaches the foot of the row. */
-.analytics-pair > :not(.panel) {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.analytics-pair > :not(.panel) > .panel:last-child {
-  flex: 1;
 }
 @media (max-width: 1100px) {
   .analytics-pair {
@@ -130,26 +118,6 @@
   }
 }
 
-/* Sales review's board: rows of two cards that stretch to one height, so
-   every row ends on one line. A slot stacks its cards and its last one grows. */
-.analytics-board {
-  align-items: stretch;
-}
-.analytics-board > div {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gapCards);
-  min-width: 0;
-}
-.analytics-board > div > :last-child {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-.analytics-board > div > :last-child > .panel {
-  flex: 1;
-}
-
 /* One of a pair standing alone takes the row; a pair with neither drops out of
    the stack rather than leaving a gap. */
 .analytics-pair > :only-child {
@@ -176,21 +144,6 @@
 .analytics-hero-value {
   font: var(--fontDisplayFigure);
 }
-/* The figure and its link beside the ring of its target share. */
-.analytics-hero-headline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  align-self: stretch;
-}
-.analytics-hero-lead {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  min-width: 0;
-}
 /* Under the figure: the target it is read against, and the period before. */
 .analytics-hero-aside {
   display: flex;
@@ -209,33 +162,9 @@
 .analytics-hero-body > :only-child {
   grid-column: 1 / -1;
 }
-/* With no trend to draw but an aside to show, the two stand side
-   by side, so the card is not one narrow column beside empty space. */
-.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
-  display: grid;
-  grid-template-columns: minmax(12rem, auto) minmax(0, 1fr);
-  column-gap: var(--space-8);
-  align-items: start;
-}
-.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) > * {
-  grid-column: 1;
-  justify-self: start;
-}
-.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
-  > .analytics-hero-aside {
-  grid-column: 2;
-  grid-row: 1 / span 6;
-  align-self: center;
-}
 @media (max-width: 900px) {
-  .analytics-hero-body,
-  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
+  .analytics-hero-body {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
-    > .analytics-hero-aside {
-    grid-column: 1;
-    grid-row: auto;
   }
 }
 
@@ -278,28 +207,16 @@
   margin-top: var(--space-4);
 }
 
-/* All open pipeline, the secondary reading over the stock charts, on its own
-   slim card so it sits on the grid like every other block. */
+/* All open pipeline, the secondary reading over the stock charts. */
 .analytics-open-line {
   margin: 0;
-  padding: var(--space-3) var(--space-5);
-}
-
-/* The lead's readings share one card that stands as tall as the lead. */
-.analytics-readings {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.analytics-readings > .stat-strip-wrap {
-  padding: var(--space-2) var(--space-5);
 }
 
 /* Sales review's lead row: the outcome and its trend, and the three readings
    stacked beside them. Under 1100px the readings go under the lead. */
 .analytics-lead {
   display: grid;
-  grid-template-columns: var(--analytics-split);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
   align-items: stretch;
   gap: var(--gapCards);
 }
@@ -309,17 +226,6 @@
   flex-direction: column;
   gap: var(--gapCards);
   min-width: 0;
-}
-/* The lead's two columns end on one line: the last card of each grows, and a
-   readings row stretches its cards with it. */
-.analytics-lead > .analytics-column > :last-child {
-  flex: 1;
-}
-.analytics-lead > .analytics-column > .stat-strip-wrap {
-  display: flex;
-}
-.analytics-lead > .analytics-column > .stat-strip-wrap > .stat-strip {
-  flex: 1;
 }
 @media (max-width: 1100px) {
   .analytics-lead {

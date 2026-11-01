@@ -170,12 +170,13 @@ var meetingFollowUpsSQL = `
 	   -- follow-up already made. Only the recipients count, uncapped: a
 	   -- contact the reader cannot see must not make a row vanish. Their own
 	   -- mail after it is the waiting queue's business, not this reminder's.
-	   AND NOT EXISTS (SELECT 1 FROM (SELECT heard.activity_id FROM activity_link heard
+	   -- The recipient set must not be scanned once per later activity.
+	   AND NOT EXISTS (WITH touched AS MATERIALIZED (SELECT heard.activity_id FROM activity_link heard
 	                                   WHERE heard.contact_id = ANY(attendees.recipients)
 	                                  UNION ALL
 	                                  SELECT reached.activity_id FROM activity_participant reached
-	                                   WHERE reached.contact_id = ANY(attendees.recipients)) touched
-	                     JOIN activity later ON later.id = touched.activity_id
+	                                   WHERE reached.contact_id = ANY(attendees.recipients))
+	                   SELECT 1 FROM touched JOIN activity later ON later.id = touched.activity_id
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'

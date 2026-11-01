@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button, StatCard } from "../../design-system/atoms";
-import { Panel } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
 import {
   formatDateAbbrev,
@@ -44,35 +43,31 @@ export function SalesReadings({
   const money = (value: number | undefined) =>
     reportingCompactAmount(value, context.currency, context.currency, locale);
   return (
-    <Panel className="analytics-readings">
-      <StatStrip label={t("analytics.overview.readings")} density="compact">
-        <ExpectedFinish
+    <StatStrip label={t("analytics.overview.readings")} density="compact">
+      <ExpectedFinish
+        evaluation={evaluation}
+        money={money}
+        forecastHref={forecastHref}
+      />
+      <CoverageReading
+        comparison={metricOf(evaluation, "forecast_landing")?.target_comparison}
+        money={money}
+      />
+      {metricOf(evaluation, "closed_win_rate") ? (
+        <MetricReading
           evaluation={evaluation}
-          money={money}
-          forecastHref={forecastHref}
+          id="closed_win_rate"
+          detail={t("analytics.overview.winRateBasis")}
+          onEvidence={onEvidence}
         />
-        <CoverageReading
-          comparison={
-            metricOf(evaluation, "forecast_landing")?.target_comparison
-          }
-          money={money}
+      ) : (
+        <StatCard
+          narrow="row"
+          label={t("analytics.overview.winRate")}
+          value={t("analytics.readingUnavailable")}
         />
-        {metricOf(evaluation, "closed_win_rate") ? (
-          <MetricReading
-            evaluation={evaluation}
-            id="closed_win_rate"
-            detail={t("analytics.overview.winRateBasis")}
-            onEvidence={onEvidence}
-          />
-        ) : (
-          <StatCard
-            narrow="row"
-            label={t("analytics.overview.winRate")}
-            value={t("analytics.readingUnavailable")}
-          />
-        )}
-      </StatStrip>
-    </Panel>
+      )}
+    </StatStrip>
   );
 }
 
@@ -99,8 +94,6 @@ function ExpectedFinish({
       />
     );
   const basis = landing.forecast_basis;
-  // The bar measures the finish against the quarter's target, when one is set.
-  const target = landing.target_comparison?.target;
   const lines =
     landing.value == null
       ? undefined
@@ -120,11 +113,6 @@ function ExpectedFinish({
         )
       }
       href={landing.value != null ? forecastHref : undefined}
-      meter={
-        landing.value != null && target
-          ? { filled: landing.value, total: target }
-          : undefined
-      }
     />
   );
 }
@@ -215,34 +203,32 @@ export function OpenPipelineLine({
   const count = open.coverage.eligible_count;
   const reason = open.coverage.status !== "ok" && open.coverage.reason;
   return (
-    <Panel>
-      <p className="analytics-open-line">
-        <span className="analytics-attention-title">
-          {t(
-            context.close_interval
-              ? "analytics.overview.openClosing"
-              : "analytics.overview.allOpen",
-          )}
-          : {readingValue(open, evaluation, t, locale)}
-        </span>{" "}
-        <span className="t-caption">
-          {[
-            count == null
-              ? t("reporting.openPipelineAsOf", { at })
-              : plural("reporting.openPipelineBasis", count, {
-                  count: formatNumber(count, locale),
-                  at,
-                }),
-            open.coverage.withheld && t("analytics.overview.partlyHidden"),
-            reason,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>{" "}
-        <Button variant="link" onClick={() => onEvidence(open.evidence)}>
-          {t("reporting.viewRecords")}
-        </Button>
-      </p>
-    </Panel>
+    <p className="analytics-open-line">
+      <span className="analytics-attention-title">
+        {t(
+          context.close_interval
+            ? "analytics.overview.openClosing"
+            : "analytics.overview.allOpen",
+        )}
+        : {readingValue(open, evaluation, t, locale)}
+      </span>{" "}
+      <span className="t-caption">
+        {[
+          count == null
+            ? t("reporting.openPipelineAsOf", { at })
+            : plural("reporting.openPipelineBasis", count, {
+                count: formatNumber(count, locale),
+                at,
+              }),
+          open.coverage.withheld && t("analytics.overview.partlyHidden"),
+          reason,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </span>{" "}
+      <Button variant="link" onClick={() => onEvidence(open.evidence)}>
+        {t("reporting.viewRecords")}
+      </Button>
+    </p>
   );
 }

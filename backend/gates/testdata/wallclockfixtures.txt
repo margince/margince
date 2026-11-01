@@ -135,6 +135,7 @@ internal/compose/integration/daily_bench_test.go 1
 internal/compose/integration/daily_flows_bench_test.go 4
 internal/compose/integration/daily_seats_bench_test.go 1
 internal/compose/integration/daily_seed_bench_test.go 2
+internal/compose/integration/daily_systemhealth_bench_test.go 1
 internal/compose/integration/dealfigures_integration_test.go 2
 internal/compose/integration/dealstatus_facts_integration_test.go 1
 internal/compose/integration/dealsuggestion_http_integration_test.go 1
@@ -283,6 +284,7 @@ internal/compose/signalextract_test.go 2
 internal/compose/signalextractwindow_integration_test.go 1
 internal/compose/sitereadstore_integration_test.go 2
 internal/compose/stageevidencetrigger_integration_test.go 19
+internal/compose/systemhealthcost_bench_test.go 1
 internal/compose/systemreminder_integration_test.go 8
 internal/compose/tagscout_integration_test.go 18
 internal/compose/tasklistorder_integration_test.go 6
@@ -299,8 +301,8 @@ internal/compose/weekly/weeklyrelevance_integration_test.go 1
 internal/compose/weekly/weeklyscorecard_integration_test.go 1
 internal/compose/weeklymetricscoverage_integration_test.go 1
 internal/compose/weeklyplancapacity_integration_test.go 1
-internal/compose/worklistbacklog_integration_test.go 2
 internal/compose/worklistageout_integration_test.go 1
+internal/compose/worklistbacklog_integration_test.go 2
 internal/modules/activities/activityread_test.go 2
 internal/modules/activities/answertouchequivalence_integration_test.go 2
 internal/modules/activities/awaitingreply_integration_test.go 1

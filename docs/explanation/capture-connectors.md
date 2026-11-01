@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
+<!-- describes: backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -526,3 +526,17 @@ The pipeline is live; these were left out of scope:
   [outbound-webhooks.md](outbound-webhooks.md).
 - What every module owns, including the tables and HTTP surface of `capture`:
   [reference/modules.md](../reference/modules.md).
+
+## A stopped connection needs help
+
+The connection health classifier supplies the owner banner, feed and System health.
+It finds failed connections and imports, late syncs, and mailboxes with no recent delivery.
+Delivery time changes only to the newest arrival time the mail provider reports in a
+completed sync. Mail filtered out still proves delivery; sender date headers, unknown
+arrival times, backfills and calendar events do not. Replaying old mail cannot restart the timer. The sync snapshot fence
+stops an old pull from changing the new connection's health.
+
+The owner can dismiss a silence warning. A later delivery followed by another silence brings
+the warning back. Sync failures cannot be dismissed. Connection settings use the existing
+lifecycle audit; the event catalog has no connection entity. Admin and ops read connection
+state through the same classifier without reading correspondence.

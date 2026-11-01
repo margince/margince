@@ -28,7 +28,19 @@ import (
 // took, and an administrator comparing them would be told the difference is a
 // backlog.
 func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontracts.CaptureHealth, error) {
-	out := crmcontracts.CaptureHealth{GeneratedAt: now.UTC()}
+	out := crmcontracts.CaptureHealth{GeneratedAt: now.UTC(), ConnectionConcerns: []crmcontracts.CaptureConnectionConcern{}}
+	concerns, err := capture.FleetConcernsTx(ctx, tx, now)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	for _, concern := range concerns {
+		v := concern.Connection
+		out.ConnectionConcerns = append(out.ConnectionConcerns, crmcontracts.CaptureConnectionConcern{
+			UserId: openapi_types.UUID(concern.UserID), DisplayName: concern.DisplayName, ConnectionId: openapi_types.UUID(v.ID),
+			Provider: v.Provider, AccountLabel: v.AccountLabel, Concern: crmcontracts.CaptureConcernKind(v.Concern),
+			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt,
+		})
+	}
 	mailboxes, err := captureMailboxHealth(ctx, tx, now)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
@@ -49,6 +61,11 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Sweeps = sweeps
+	categories, err := capture.ReadOperationalCategoriesTx(ctx, tx)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.Categories = &crmcontracts.CaptureHealthCategories{MachineThreads: categories.MachineThreads, UncertainThreads: categories.UncertainThreads, OwnerReviewMailboxes: categories.OwnerReviewMailboxes, UnreadMailboxes: categories.UnreadMailboxes}
 	return out, nil
 }
 

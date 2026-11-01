@@ -11,11 +11,17 @@ import (
 
 // ConnectionView supplies settings and health without exposing provider credentials.
 type ConnectionView struct {
-	ID             ids.UUID
-	Provider       string
-	Status         string
-	Cursor         []byte
-	WatchExpiresAt *time.Time
+	SyncStalled           bool
+	ConnectedAt           time.Time
+	LastDeliveryAt        *time.Time
+	SilenceDismissedSince *time.Time
+	Concern               string
+	ConcernSince          *time.Time
+	ID                    ids.UUID
+	Provider              string
+	Status                string
+	Cursor                []byte
+	WatchExpiresAt        *time.Time
 	// A missing provider grant is unknown, not an empty scope.
 	ProviderScopes []string
 	// AccountLabel is display text, never an identity or routing key.

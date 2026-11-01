@@ -916,7 +916,6 @@
   .accountsub,
   .arpanel,
   .mw-aistat-pop,
-  .report-chart-tip,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
   .notifbell-loose
 ) {
@@ -952,7 +951,6 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose
   )
@@ -1071,7 +1069,6 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose
   )
@@ -1273,7 +1270,6 @@
     .accountsub,
     .arpanel,
     .mw-aistat-pop,
-    .report-chart-tip,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose
   )

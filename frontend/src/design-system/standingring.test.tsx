@@ -85,34 +85,4 @@ describe("the score ring", () => {
     expect(document.querySelector(".standing-ring-fill")).toBeNull();
     expect(screen.getByRole("img")).toHaveTextContent("0of 100");
   });
-
-  it("shows its own centre figure and a lighter arc to an expected reach", () => {
-    render(
-      <ScoreRing
-        score={53}
-        reach={95}
-        display="53%"
-        size="compact"
-        tone="warning"
-        label="Target reached: 53%"
-        caption="Target"
-      />,
-    );
-    expect(screen.getByRole("img")).toHaveTextContent("53%Target");
-    expect(screen.getByRole("img")).toHaveAttribute("data-size", "compact");
-    expect(document.querySelector(".standing-ring-reach")).not.toBeNull();
-  });
-
-  it("draws no reach arc at or below the score", () => {
-    render(
-      <ScoreRing
-        score={60}
-        reach={40}
-        tone="success"
-        label="Score 60"
-        caption="Target"
-      />,
-    );
-    expect(document.querySelector(".standing-ring-reach")).toBeNull();
-  });
 });

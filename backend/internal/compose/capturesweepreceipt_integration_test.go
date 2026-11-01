@@ -122,7 +122,7 @@ func readHealth(t *testing.T, e *integration.Env) crmcontracts.CaptureHealth {
 	var health crmcontracts.CaptureHealth
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		health, err = readCaptureHealth(context.Background(), tx, time.Now().UTC())
+		health, err = readCaptureHealth(e.Admin(), tx, time.Now().UTC())
 		return err
 	}); err != nil {
 		t.Fatalf("reading capture health: %v", err)

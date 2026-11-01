@@ -292,6 +292,28 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    // Operators and mailbox owners are human roles, not contact record types.
+    "health.stoppedNext",
+    "health.readFailedNext",
+    "health.effect.jobs",
+    "health.effect.senderReview",
+    "health.effect.automatic",
+    "health.effect.unknown",
+    "health.condition.waiting_human",
+    "health.possibleImpact",
+    "health.responsible.operator",
+    "health.recovery.intake",
+    "health.ownerHandoff",
+    "health.operatorHandoff",
+    "health.code.capture_processing",
+    "health.code.capture_uncertain",
+    "health.code.capture_exhausted",
+    "health.impact.jobs",
+    "health.impact.capture",
+    "health.impact.intake",
+    "health.impact.recovery",
+    "health.impact.automatic",
+
     // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
     "contactCase.intro",
     "contactCase.pair.notSame",

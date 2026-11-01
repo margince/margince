@@ -8961,31 +8961,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hàng đợi nền đang trống. Không có tác vụ nào đang chờ, đang chạy, đang thử lại hay đã hỏng.",
   "jobs.workspaceKinds": "Công ty này",
   "jobs.workspaceEmpty": "Công ty này không có tác vụ nền nào.",
-  "jobs.dispatcherKinds": "Bộ điều phối toàn hệ thống",
+  "jobs.dispatcherKinds": "Công việc nền dùng chung",
   "jobs.dispatcherSub":
-    "Các dòng không thuộc công ty nào: bộ điều phối phân việc cho mọi công ty và bản thân bộ điều phối không chạy việc nào. Số liệu của các dòng này thuộc về bản cài đặt.",
-  "jobs.dispatcherEmpty":
-    "Không có dòng điều phối nào. Các nhịp định kỳ sẽ thêm lại, nên danh sách trống nghĩa là hiện chưa có dòng nào được lên lịch.",
+    "Các lượt chạy này phục vụ toàn bộ hệ thống. Số liệu không giới hạn trong công ty này.",
+  "jobs.dispatcherEmpty": "Hiện không còn lưu lượt chạy nền dùng chung nào.",
   "jobs.col.job": "Tác vụ",
   "jobs.col.queue": "Hàng đợi",
   "jobs.col.waiting": "Đang chờ",
   "jobs.col.running": "Đang chạy",
   "jobs.col.retrying": "Đang thử lại",
-  "jobs.col.dead": "Đã hỏng",
+  "jobs.col.expectation": "Giới hạn thời gian chờ",
   "jobs.col.oldestWait": "Chờ lâu nhất",
   "jobs.col.state": "Trạng thái",
   "jobs.col.reason": "Lý do",
   "jobs.col.attempt": "Lần thử",
   "jobs.col.failedAt": "Lỗi lúc",
   "jobs.col.jobId": "Mã tác vụ",
-  "jobs.deadTitle_one": "{count} tác vụ đã hỏng trong {hours} giờ qua",
-  "jobs.deadTitle_other": "{count} tác vụ đã hỏng trong {hours} giờ qua",
-  "jobs.deadTotal":
-    "{count} tác vụ bị loại bỏ hoặc bị hủy trong 7 ngày qua, cũng là thời hạn lưu trữ của các mục này.",
-  "jobs.deadBody_one":
-    "{count} tác vụ đã bị loại bỏ hoặc bị hủy và sẽ không chạy nếu không có can thiệp. Tác vụ bị loại bỏ đã dùng hết mọi lần thử; tác vụ bị hủy là do đã chủ động dừng.",
-  "jobs.deadBody_other":
-    "{count} tác vụ đã bị loại bỏ hoặc bị hủy và sẽ không chạy nếu không có can thiệp. Tác vụ bị loại bỏ đã dùng hết mọi lần thử; tác vụ bị hủy là do đã chủ động dừng.",
   "jobs.failures": "Lỗi gần đây",
   "jobs.failuresSub": "Mới nhất trước, tối đa 50.",
   "jobs.failuresEmpty": "Chưa ghi nhận lỗi nào.",
@@ -9080,32 +9071,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.providerHealth": "Trạng thái nhà cung cấp AI",
   "settings.providerHealthSub":
     "Từng nhà cung cấp AI có đang phản hồi hay không, theo ghi nhận của máy chủ này.",
-  "systemHealth.strip": "Trạng thái",
   "systemHealth.asOf": "Tính đến {time}",
-  "systemHealth.checking": "Đang kiểm tra…",
-  "systemHealth.unread": "Không kiểm tra được",
   "systemHealth.notSetUp": "Chưa thiết lập",
-  "systemHealth.jobs.idle": "Đang rảnh",
-  "systemHealth.jobs.keepingUp": "Đang theo kịp",
-  "systemHealth.jobs.dead_one": "{count} đã hỏng",
-  "systemHealth.jobs.dead_other": "{count} đã hỏng",
-  "systemHealth.jobs.retrying_one": "{count} đang thử lại",
-  "systemHealth.jobs.retrying_other": "{count} đang thử lại",
-  "systemHealth.intake.label": "Mục từ trình kết nối",
-  "systemHealth.intake.none": "Không có",
-  "systemHealth.intake.refused_one": "{count} bị từ chối",
-  "systemHealth.intake.refused_other": "{count} bị từ chối",
-  "systemHealth.providers.answering": "Đang phản hồi",
-  "systemHealth.providers.affected_one": "{count} cần xử lý",
-  "systemHealth.providers.affected_other": "{count} cần xử lý",
-  "systemHealth.providers.standIn": "Nhà cung cấp thử nghiệm tích hợp",
-  "systemHealth.providers.standInDetail":
-    "Không thể gọi các mô hình đã gán. Thêm khóa trong mục Mô hình AI.",
-  "systemHealth.providers.standInPartialDetail":
-    "Một số cấp đang trả lời bằng nhà cung cấp thử nghiệm tích hợp. Thêm khóa của các cấp đó trong mục Mô hình AI.",
   "providerHealth.adminOnly":
     "Trạng thái nhà cung cấp AI áp dụng cho toàn bộ bản cài đặt và cần quyền mà vai trò hiện tại không có.",
-  "providerHealth.healthy": "Tất cả nhà cung cấp AI đang phản hồi.",
   "providerHealth.noneConfigured":
     "Chưa thiết lập nhà cung cấp AI nào nên chưa có gì để kiểm tra.",
   "aiProviderHealth.label.degraded": "Suy giảm",
@@ -18325,6 +18294,29 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.decided_kind": "Đã quyết định mà không hỏi: {kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
+  "captureConcern.reauth": "Cần kết nối lại",
+  "captureConcern.error": "Lỗi kết nối",
+  "captureConcern.failing": "Đồng bộ gặp lỗi",
+  "captureConcern.backfill": "Nhập lịch sử gặp lỗi",
+  "captureConcern.stalled": "Đồng bộ đã dừng",
+  "captureConcern.silent": "Không nhận được thư gần đây",
+  "captureConcern.title": "{mailbox}: {concern}",
+  "captureConcern.since": "Từ {since}",
+  "captureConcern.more_one": "{count} kết nối khác cần chú ý",
+  "captureConcern.more_other": "{count} kết nối khác cần chú ý",
+  "captureConcern.reconnect": "Kết nối lại",
+  "captureConcern.open": "Mở kết nối",
+  "captureConcern.dismiss": "Ẩn cảnh báo không có thư",
+  "captureConcern.changed": "Cảnh báo đã thay đổi. Tải lại và thử lại.",
+  "captureConcern.connections": "Kết nối cần chú ý",
+  "captureConcern.sinceLabel": "Từ",
+  "captureConcern.member": "Thành viên",
+  "captureConcern.provider": "Nhà cung cấp",
+  "captureConcern.mailbox": "Hộp thư",
+  "captureConcern.condition": "Tình trạng",
+  "captureConcern.lastSuccess": "Lần đồng bộ thành công gần nhất",
+  "magic.action.capture_sync_stalled": "{provider} đã dừng đồng bộ",
+  "magic.action.capture_silent": "{provider} không nhận được thư gần đây",
   "magic.action.capture_sync_failing": "{provider} đang đồng bộ không kịp",
   "magic.action.capture_backfill_failed":
     "{provider} không thể đọc hết lịch sử",
@@ -19204,8 +19196,223 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.intervention.notPermitted":
     "Bạn không có quyền xem các kiểm tra dự báo.",
   "analytics.decision.part.commit_evidence": "Cam kết đã xác nhận",
-  "analytics.decision.range": "Khoảng theo mô hình",
-  "analytics.decision.rangeNote":
-    "Kết quả dự kiến là hai phần trên thanh. Khoảng theo mô hình là một mô hình riêng về cách mọi deal đang mở có thể chốt, nên có thể lệch khỏi hai phần đó.",
   "analytics.decision.part.weighted": "Deal đang mở theo trọng số",
+  "health.views": "Chế độ xem tình trạng hệ thống",
+  "health.overview": "Tổng quan",
+  "health.diagnostics": "Chẩn đoán",
+  "health.configurationWithheld":
+    "Vai trò của bạn không được xem các cài đặt này. Hãy hỏi quản trị viên.",
+  "health.configuration": "Cấu hình",
+  "health.loading": "Đang tải bằng chứng…",
+  "health.attention": "Cần chú ý",
+  "health.stoppedNext":
+    "Gửi báo cáo lỗi cho người vận hành. Họ cần kiểm tra việc hoàn tất, sửa nguyên nhân và chỉ khởi động lại công việc chưa xong; các lượt chạy thất bại này không tự thử lại.",
+  "health.readFailedNext":
+    "Làm mới kiểm tra này. Nếu vẫn thất bại, gửi báo cáo kỹ thuật cho người vận hành.",
+  "health.jobStopped": "{kind}: cần xem xét lượt chạy bị lỗi",
+  "health.effectUntilFixed": "Trong khi chưa khắc phục:",
+  "health.effect.mailSorting":
+    "Trong Danh sách công việc, thư cần trả lời hoặc theo dõi cuộc hẹn có thể bị thiếu hoặc xếp sai thứ tự. Hãy tự kiểm tra hộp thư đến cho đến khi phân loại bắt kịp. Bạn vẫn có thể nhận và đọc thư.",
+  "health.effect.jobs":
+    "Công việc nền được liệt kê có thể chưa hoàn tất. Số lượt chạy thất bại không phải số bản ghi thiếu hay số người bị ảnh hưởng; người vận hành cần kiểm tra các tác vụ đó.",
+  "health.effect.senderReview":
+    "Liên hệ doanh nghiệp mới có thể chưa được tạo và đồng nghiệp có thể chưa xem được thư liên quan cho đến khi có quyết định về người gửi.",
+  "health.effect.heldMail":
+    "Các cuộc trao đổi liên quan vẫn bị ẩn với đồng nghiệp không có trong thư cho đến khi hoàn tất xét duyệt bảo mật.",
+  "health.effect.unreadMail":
+    "Thư trong khoảng thời gian được báo cáo có thể thiếu trong CRM. Thư mới hơn vẫn có thể đến; hãy khôi phục khoảng thời gian đó trước khi dựa vào lịch sử.",
+  "health.effect.captureRepair":
+    "Một số bản ghi đã thu thập có thể vẫn bị ẩn hoặc chưa hoàn tất cho đến khi lượt sửa chữa thành công.",
+  "health.effect.intake":
+    "Bản ghi CRM và báo cáo có thể thiếu thông tin từ các lần nhập bị từ chối này. Trước khi gửi lại, hãy kiểm tra xem các bản ghi đã được nhập thành công sau đó chưa.",
+  "health.effect.providers":
+    "Tính năng AI dùng nhà cung cấp bị ảnh hưởng có thể thất bại hoặc phải chờ. Tính năng dùng nhà cung cấp khác còn hoạt động vẫn có thể tiếp tục.",
+  "health.effect.search":
+    "Tìm kiếm có thể bỏ sót bản ghi cho đến khi chỉ mục bắt kịp. Bản thân các bản ghi vẫn được lưu.",
+  "health.effect.updates":
+    "Các thay đổi do bản cập nhật này xử lý vẫn chưa hoàn tất. Thay đổi đã lưu vẫn được giữ; một số bản ghi có thể còn giá trị cũ.",
+  "health.effect.recovery":
+    "Công việc CRM bình thường vẫn có thể tiếp tục. Khi xảy ra sự cố, khôi phục có thể lâu hơn hoặc mất nhiều dữ liệu mới hơn mức mục tiêu cho phép.",
+  "health.effect.automatic":
+    "Công việc tự động có thể đến sai đồng nghiệp, khiến việc theo dõi bị giao sai người cho đến khi sửa cách phân công.",
+  "health.effect.readFailed":
+    "Kiểm tra này không hiển thị được trạng thái hiện tại. Kiểm tra thất bại không có nghĩa tính năng bên dưới đã dừng.",
+  "health.reportCopyFailed": "Không thể sao chép báo cáo kỹ thuật",
+  "health.recordedRun": "Lượt chạy đã ghi {id} · {state} · {time}",
+  "health.effect.unknown":
+    "Báo cáo ghi nhận vấn đề nhưng chưa xác định tính năng bị ảnh hưởng. Nhờ người vận hành kiểm tra trước khi khởi động lại.",
+  "health.measure.runs_one": "{count} lượt chạy",
+  "health.measure.runs_other": "{count} lượt chạy",
+  "health.measure.threads_one": "{count} cuộc trao đổi",
+  "health.measure.threads_other": "{count} cuộc trao đổi",
+  "health.measure.mailboxes_one": "{count} hộp thư",
+  "health.measure.mailboxes_other": "{count} hộp thư",
+  "health.measure.records_one": "{count} bản ghi",
+  "health.measure.records_other": "{count} bản ghi",
+  "health.measure.updates_one": "{count} bản cập nhật",
+  "health.measure.updates_other": "{count} bản cập nhật",
+  "health.measure.items_one": "{count} mục",
+  "health.measure.items_other": "{count} mục",
+  "health.checked": "Không cần thao tác",
+  "health.incomplete": "Chưa thể kiểm tra đầy đủ tình trạng hệ thống",
+  "health.refresh": "Làm mới",
+  "health.prioritiesChanged":
+    "Mức ưu tiên đã thay đổi. Làm mới để áp dụng thứ tự mới.",
+  "health.capabilities": "Tất cả kiểm tra",
+  "health.unknown": "Chưa ghi nhận",
+  "health.stale": "Bằng chứng gần nhất; lần kiểm tra mới chưa hoàn tất.",
+  "health.failed": "Không đọc được nguồn này",
+  "health.withheld": "Cần quyền truy cập",
+  "health.notMonitored": "Chưa được giám sát",
+  "health.availability.available": "Đã đọc bằng chứng",
+  "health.oldestWait": "Công việc có thể chạy lâu nhất đã chờ: {age}",
+  "health.backupsUnmonitored":
+    "Margince ghi nhận diễn tập khôi phục. Hệ thống không giám sát việc sao lưu có đang chạy hay không.",
+  "health.automaticLimits":
+    "Số lượng tạo và hoàn thành mô tả kết quả, chưa chứng minh giá trị kinh doanh. Xem mẫu nhỏ và việc phân công trong Chẩn đoán.",
+  "health.condition.clear": "Lần kiểm tra này không phát hiện vấn đề",
+  "health.condition.processing": "Đang xử lý",
+  "health.condition.retrying": "Đang thử lại",
+  "health.condition.waiting_human": "Đang chờ người xử lý",
+  "health.condition.technical": "Cần kiểm tra kỹ thuật",
+  "health.condition.unverified": "Chưa xác minh việc khôi phục",
+  "health.condition.recovered": "Đã khôi phục",
+  "health.source.jobs": "Xử lý nền",
+  "health.source.capture": "Thu thập thư",
+  "health.source.intake": "Tiếp nhận từ kết nối",
+  "health.source.providers": "Khả năng hoạt động của AI",
+  "health.source.search": "Tìm kiếm",
+  "health.source.updates": "Cập nhật dữ liệu",
+  "health.source.recovery": "Bằng chứng khôi phục",
+  "health.source.automatic": "Chất lượng công việc tự động",
+  "health.impact": "Ảnh hưởng đã biết",
+  "health.measuredImpact": "Nguồn đã đo lường công việc bị ảnh hưởng.",
+  "health.possibleImpact":
+    "Công việc có thể bị chậm hoặc chưa hoàn tất; chưa đo số người bị ảnh hưởng.",
+  "health.unknownImpact": "Chưa biết phạm vi bị ảnh hưởng.",
+  "health.scope": "Phạm vi ảnh hưởng",
+  "health.window": "Khoảng báo cáo",
+  "health.currentRetained": "Trạng thái đang lưu; lịch sử còn giữ lại nếu có",
+  "health.observed": "Quan sát mới nhất",
+  "health.firstObserved": "Lần đầu quan sát",
+  "health.nextAttempt": "Lần thử tự động tiếp theo đã ghi nhận",
+  "health.responsible": "Ai có thể xử lý",
+  "health.responsible.you": "Bạn",
+  "health.responsible.mailbox_owner": "Chủ hộp thư",
+  "health.responsible.administrator": "Quản trị viên",
+  "health.responsible.operator": "Người vận hành kỹ thuật",
+  "health.recovery": "Bằng chứng cần để xác nhận đã xử lý",
+  "health.recovery.jobs":
+    "Xác nhận công việc bị ảnh hưởng đã hoàn tất hoặc được thay thế. Một lần chạy khác thành công chưa đủ.",
+  "health.recovery.capture":
+    "Hàng đợi liên quan phải được xử lý hết hoặc chủ hộp thư giải quyết quyết định đang chờ.",
+  "health.recovery.intake":
+    "Người vận hành cần xác minh các bản ghi bị từ chối đã được xử lý. Khoảng báo cáo hết hạn không chứng minh đã sửa.",
+  "health.recovery.providers":
+    "Cần quan sát được ghi nhận để xác minh nhà cung cấp hoạt động; công việc trong hàng đợi cần bằng chứng hoàn tất riêng.",
+  "health.recovery.search":
+    "Chỉ mục phải khớp mô hình đã cấu hình và xử lý xong các bản ghi đang chờ.",
+  "health.recovery.updates":
+    "Bản cập nhật liên quan phải báo hoàn tất. Việc chấp nhận thử lại chưa xác nhận đã hoàn thành.",
+  "health.recovery.recovery":
+    "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
+  "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
+  "health.ownerHandoff":
+    "Nhờ chủ hộp thư mở Kết nối hoặc phần duyệt thư của họ. Trang này không mở thư riêng của người khác.",
+  "health.operatorHandoff":
+    "Người vận hành kỹ thuật cần kiểm tra. Sao chép bản tóm tắt chẩn đoán để bàn giao.",
+  "health.copy": "Sao chép báo cáo kỹ thuật",
+  "health.copied": "Đã sao chép",
+  "health.copyRemedy":
+    "Thử lại hoặc sao chép thủ công chi tiết chẩn đoán trên trang này.",
+  "health.inspect": "Xem vấn đề và bước tiếp theo",
+  "health.openModels": "Mở Mô hình",
+  "health.openConnections": "Mở Kết nối",
+  "health.unit.runs": "lần chạy",
+  "health.history": "Lịch sử lỗi còn lưu",
+  "health.historyWindow":
+    "Khoảng thời gian áp dụng cho các lượt chạy đã kết thúc. Các lượt đang thử lại được hiển thị bất kể thời gian đã trôi qua.",
+  "health.historyCoverage":
+    "Tổng bao gồm mọi lần chạy phù hợp còn lưu, kể cả ngoài trang này. Không bao gồm lịch sử đã xóa. Cùng nhóm không chứng minh cùng nguyên nhân.",
+  "health.historyChanged":
+    "Kết quả hoặc dữ liệu lưu có thể đã thay đổi từ lúc bắt đầu duyệt. Làm mới để đối chiếu tổng.",
+  "health.groups": "Các lần chạy theo nhóm",
+  "health.all": "Tất cả",
+  "health.oneDay": "Một ngày qua",
+  "health.sevenDays": "Bảy ngày qua",
+  "health.nextPage": "Trang tiếp",
+  "health.sharedScope": "Xử lý chung",
+  "health.workspaceScope": "Công việc công ty",
+  "health.code.queue_checked":
+    "Không có lượt chạy chờ hoặc thất bại trong lịch sử còn lưu",
+  "health.code.queue_processing": "Công việc nền đang xử lý hoặc đã lên lịch",
+  "health.code.queue_overdue": "Công việc nền đang bị chậm",
+  "health.code.queue_unverified": "Cần xem xét lượt chạy nền bị lỗi",
+  "health.code.queue_retrying": "Công việc lỗi đang chờ lần thử khác",
+  "health.code.queue_expectation_unknown":
+    "Công việc có thể chạy; chưa có thời gian chờ dự kiến",
+  "health.code.capture_checked":
+    "Không phát hiện tồn đọng thư trong các loại đã kiểm tra",
+  "health.code.capture_processing": "Đang phân loại người gửi",
+  "health.code.capture_uncertain":
+    "Một số người gửi cần chủ hộp thư quyết định",
+  "health.code.capture_exhausted":
+    "Phân loại người gửi đã hết số lần thử tự động",
+  "health.code.capture_owner_review":
+    "Chủ hộp thư có quyết định thu thập cần duyệt",
+  "health.code.capture_unread": "Khoảng thư chưa đọc cần xác minh khôi phục",
+  "health.code.capture_held": "Bản ghi đã lưu đang chờ lượt sửa chữa",
+  "health.code.capture_repair_unverified":
+    "Một lượt sửa chữa thu thập thư chưa hoàn tất thành công",
+  "health.code.intake_no_refusals":
+    "Không có bản ghi kết nối bị từ chối trong kỳ; chưa xác minh hoạt động",
+  "health.code.intake_refused": "Một số bản ghi kết nối bị từ chối",
+  "health.code.providers_unobserved": "Chưa ghi nhận kết quả từ nhà cung cấp",
+  "health.code.providers_not_configured": "Chưa cấu hình nhà cung cấp AI",
+  "health.code.providers_blocked":
+    "Nhà cung cấp AI đã ghi nhận vấn đề khả dụng",
+  "health.code.search_unverified": "Chưa kiểm tra độ đầy đủ của chỉ mục",
+  "health.code.search_checked": "Chỉ mục tìm kiếm khớp mô hình đã cấu hình",
+  "health.code.search_processing": "Đang lập chỉ mục tìm kiếm",
+  "health.code.search_reindex": "Tìm kiếm cần cập nhật chỉ mục",
+  "health.code.search_not_configured":
+    "Tìm kiếm chưa cấu hình mô hình embedding",
+  "health.code.updates_checked":
+    "Không phát hiện bản cập nhật dữ liệu chưa xong",
+  "health.code.updates_processing": "Cập nhật dữ liệu đang chờ hoặc xử lý",
+  "health.code.updates_failed": "Bản cập nhật dữ liệu cần kiểm tra kỹ thuật",
+  "health.code.updates_retrying":
+    "Bản cập nhật dữ liệu đã ghi nhận lần thử khác",
+  "health.code.updates_review": "Bản cập nhật dữ liệu cần quản trị viên duyệt",
+  "health.code.recovery_missing": "Chưa ghi nhận thử khôi phục",
+  "health.code.recovery_verified":
+    "Diễn tập khôi phục đã ghi nhận đạt mục tiêu",
+  "health.code.recovery_unverified":
+    "Diễn tập gần nhất chưa chứng minh sẵn sàng khôi phục",
+  "health.code.automatic_checked":
+    "Mẫu đã kiểm tra chưa vượt ngưỡng cần xem lại phân công",
+  "health.code.automatic_routing": "Cần xem lại phân công công việc tự động",
+  "health.code.capture_thread_processing": "Đang phân loại chuỗi thư",
+  "health.code.capture_thread_uncertain":
+    "Một số phân loại chuỗi thư cần chủ hộp thư duyệt",
+  "health.queueCoverage":
+    "Lịch sử hàng đợi chỉ được giữ trong thời gian giới hạn. Việc không còn lịch sử không chứng minh công việc từng lỗi đã hoàn tất.",
+
+  "health.evidenceDetails": "Chi tiết kỹ thuật",
+  "health.impact.jobs":
+    "Công việc bị chậm. Nhờ người vận hành kiểm tra hàng đợi và khởi động lại tác vụ bị kẹt.",
+  "health.impact.capture":
+    "Thư có thể chưa truy cập được. Nhờ người vận hành kiểm tra và khởi động lại tác vụ thu thập bị lỗi.",
+  "health.impact.intake":
+    "Một số bản ghi từ trình kết nối bị từ chối. Gửi báo cáo cho người vận hành trình kết nối để sửa và gửi lại.",
+  "health.impact.providers":
+    "Tác vụ AI bị chặn. Kiểm tra quyền truy cập, số dư và tình trạng nhà cung cấp trong Mô hình.",
+  "health.impact.search":
+    "Một số bản ghi có thể chưa xuất hiện trong tìm kiếm. Xem xét và bắt đầu cập nhật chỉ mục.",
+  "health.impact.updates":
+    "Một bản cập nhật dữ liệu cần xử lý. Kiểm tra lỗi hoặc yêu cầu xét duyệt trước khi tiếp tục.",
+  "health.impact.recovery":
+    "Lần thử khôi phục không đạt mục tiêu. Nhờ người vận hành khắc phục và thử lại.",
+  "health.impact.automatic":
+    "Công việc có thể được giao sai người. Xem xét cách phân công và sửa người chịu trách nhiệm.",
 };

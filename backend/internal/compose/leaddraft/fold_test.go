@@ -255,3 +255,51 @@ func TestAColleaguesInboundMailIsOurSideSpeaking(t *testing.T) {
 		t.Errorf("last outbound = %q, want our colleague's at %q", in.Recipient.LastOutbound, want)
 	}
 }
+
+// Each arm of the side rule, one row at a time, so the stamp it moves is the
+// only one that could have. A row read by the wrong arm lands on the wrong
+// stamp, and with several rows the newest would hide that.
+func TestWhichSideAStampLandsOnFollowsTheVoiceThenTheTransport(t *testing.T) {
+	t.Parallel()
+	at := when.Add(-1 * time.Hour)
+	voiced := func(kind crmcontracts.ActivityAuthorKind, dir crmcontracts.ActivityDirection) crmcontracts.Activity {
+		row := act("019fe7ae-0000-7000-8000-00000000000e", at, dir, "Re: Pricing", "A line.")
+		row.Voice = &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: kind}}
+		return row
+	}
+	noDirection := func() crmcontracts.Activity {
+		row := voiced(crmcontracts.ActivityAuthorKindColleague, crmcontracts.ActivityDirectionOutbound)
+		row.Direction = nil
+		return row
+	}
+	stamp := at.Format(time.RFC3339)
+	for _, c := range []struct {
+		name            string
+		row             crmcontracts.Activity
+		inbound, outbnd string
+	}{
+		{
+			"their word though it left here",
+			voiced(crmcontracts.ActivityAuthorKindContactRecord, crmcontracts.ActivityDirectionOutbound),
+			stamp, "",
+		},
+		{
+			"our word though it arrived",
+			voiced(crmcontracts.ActivityAuthorKindColleague, crmcontracts.ActivityDirectionInbound),
+			"", stamp,
+		},
+		{
+			"a machine names no side, so the transport answers",
+			voiced(crmcontracts.ActivityAuthorKindMachine, crmcontracts.ActivityDirectionInbound),
+			stamp, "",
+		},
+		{"a logged row is not a side speaking", noDirection(), "", ""},
+	} {
+		in := leaddraft.FromLead(lead(nil), []crmcontracts.Activity{c.row},
+			leaddraft.Request{}, draftfloor.Envelope{})
+		if in.Recipient.LastInbound != c.inbound || in.Recipient.LastOutbound != c.outbnd {
+			t.Errorf("%s: inbound %q outbound %q, want %q and %q", c.name,
+				in.Recipient.LastInbound, in.Recipient.LastOutbound, c.inbound, c.outbnd)
+		}
+	}
+}

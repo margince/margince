@@ -59,11 +59,13 @@ describe("the units offered on a settings page", () => {
   it("names the unit by its title alone and opens its own screen", () => {
     unitsForSecretScope.mockReturnValue([DISPACT]);
     renderCard("user");
-    // The row's chevron is the keyboard path, named with the unit it opens.
-    fireEvent.click(
-      screen.getByRole("button", { name: "Settings for Dispact" }),
-    );
-    expect(globalThis.location.hash).toBe("#/ext/dispact-connector");
+    // The row's chevron is the keyboard path and a real link, named with the
+    // unit it opens. Its address can be copied rather than only pressed.
+    expect(
+      screen
+        .getByRole("link", { name: "Settings for Dispact" })
+        .getAttribute("href"),
+    ).toBe("/#/ext/dispact-connector");
     // The name is visible text, not only part of the chevron's accessible name.
     expect(screen.getByTestId("ext-unit-dispact-connector").textContent).toBe(
       "Dispact",
@@ -91,7 +93,7 @@ describe("the units offered on a settings page", () => {
     ]);
     renderCard("user");
     expect(
-      screen.getByRole("button", { name: "Settings for Open notes" }),
+      screen.getByRole("link", { name: "Settings for Open notes" }),
     ).toBeTruthy();
     expect(screen.getByTestId("ext-unit-open_notes").textContent).toBe(
       "Open notes",
@@ -126,8 +128,11 @@ describe("the units offered on a settings page", () => {
       },
     ]);
     renderCard("user");
-    expect(screen.getAllByRole("button")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "Settings for Notes" }));
-    expect(globalThis.location.hash).toBe("#/ext/notes");
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(
+      screen
+        .getByRole("link", { name: "Settings for Notes" })
+        .getAttribute("href"),
+    ).toBe("/#/ext/notes");
   });
 });

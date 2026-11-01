@@ -3,7 +3,10 @@
 
 package capture
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // One broken connection outranks a live one: a reader with two calendars, one
 // failing, cannot read an empty day as free. A parked one is the user's own
@@ -36,6 +39,9 @@ func TestReachOfSaysWhetherTheProvidersFeedTheProduct(t *testing.T) {
 		}, ReachLive},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			for i := range tc.views {
+				classifyConnection(&tc.views[i], time.Time{})
+			}
 			if got := reachOf(tc.views, calendars); got != tc.want {
 				t.Fatalf("reachOf = %q, want %q", got, tc.want)
 			}

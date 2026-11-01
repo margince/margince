@@ -1,6 +1,14 @@
 /** @vitest-environment happy-dom */
 import { cleanup, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { SLOWEST_MEASURED_TEST_MS } from "../vitest.budget";
 import type { components } from "./api/schema";
 import {
@@ -162,6 +170,16 @@ const SETTLE_MS = 10_000;
 // own budget, and the failure names the test rather than the read that was slow
 // (the arithmetic vitest.budget.ts records).
 const TWO_SETTLES_MS = SETTLE_MS * 2 + SLOWEST_MEASURED_TEST_MS;
+
+// The record screen is one of thirty the shell splits out, so mounting the app
+// asks for its chunk. Importing it here pays that before any waiter runs.
+//
+// Under a loaded suite the chunk can outlast a waiter's whole budget. The
+// screen never commits, Suspense holds its pending frame, and the failure
+// names this test rather than the import.
+beforeAll(async () => {
+  await import("./features/contacts/contactpage");
+});
 
 beforeEach(() => {
   vi.stubGlobal("localStorage", memoryStorage());
