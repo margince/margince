@@ -123,10 +123,10 @@ Also called: GDPR, privacy tick box, DSGVO, opt-in.
 
 ### What should my privacy notice say about the form?
 When you run Margince yourself, you decide what happens to what the form asks for, so your own privacy notice must name the form. Put these in it:
-- **What the form asks for:** the fields on your form, such as name, email, phone, company and message, and the page it was sent from.
+- **What the form asks for:** the fields on your form, such as name, email, phone, company and message. Also the page it was sent from, and the page before it when there is one.
 - **Why:** to answer the prospect's question.
-- **On what basis:** the question itself (GDPR `Article 6(1)(b)`), or a business reason of your own for the contact (`Article 6(1)(f)`). Ask for consent only for something more, such as newsletters.
-- **Where it goes:** to your Margince. A form built in Webflow, Typeform or Tally passes through that service first. If your Margince sends lead details to an AI model or a data provider, name that too.
+- **On what basis:** the steps the prospect asked for before a contract, where the form's details are needed for them (GDPR `Article 6(1)(b)`). Or a `legitimate interest` of yours in the contact (`Article 6(1)(f)`): name it, and why it comes before the prospect's own. Ask for consent only for something more, such as newsletters.
+- **Where it goes:** to your Margince. A Typeform or Tally form, or a Webflow form sent through the **Webflow webhook**, passes through that service first. A Webflow form whose **Action** is the **Form address** goes straight to your Margince. If your Margince sends lead details to an AI model or a data provider, name that too.
 - **How long it is kept:** as long as your rules say. See [How do I change how long Margince keeps data?](retention-exports-and-deletion.md#how-do-i-change-how-long-margince-keeps-data)
 - **Where to read more:** a link to your privacy policy, close to the form.
 Also called: privacy notice, privacy policy, GDPR notice.
