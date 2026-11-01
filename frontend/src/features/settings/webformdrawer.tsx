@@ -48,6 +48,8 @@ export type WebFormDraft = Readonly<{
   consentRequired: boolean;
   consentWording: string;
   consentPolicyVersion: string;
+  privacyNotice: string;
+  privacyNoticeUrl: string;
   redirectUrl: string;
   successMessage: string;
 }>;
@@ -62,6 +64,8 @@ export function draftFor(form?: WebForm): WebFormDraft {
     consentRequired: form?.consent_required ?? false,
     consentWording: form?.consent_wording ?? "",
     consentPolicyVersion: form?.consent_policy_version ?? "",
+    privacyNotice: form?.privacy_notice ?? "",
+    privacyNoticeUrl: form?.privacy_notice_url ?? "",
     redirectUrl: form?.redirect_url ?? "",
     successMessage: form?.success_message ?? "",
   };
@@ -143,6 +147,8 @@ export function webFormBodyOf(draft: WebFormDraft, form?: WebForm) {
     consent_required: draft.consentRequired,
     consent_wording: optional(draft.consentWording),
     consent_policy_version: optional(draft.consentPolicyVersion),
+    privacy_notice: optional(draft.privacyNotice),
+    privacy_notice_url: optional(draft.privacyNoticeUrl),
     redirect_url: optional(draft.redirectUrl),
     success_message: optional(draft.successMessage),
   };
@@ -177,6 +183,8 @@ const FIELDS_WITH_A_SLOT = new Set([
   "owner_id",
   "consent_wording",
   "consent_policy_version",
+  "privacy_notice",
+  "privacy_notice_url",
   "redirect_url",
   "success_message",
 ]);
@@ -384,6 +392,11 @@ export function WebFormDrawer({
             </>
           )}
         </div>
+        <PrivacyNoticeFields
+          draft={draft}
+          errors={fieldErrors}
+          onChange={set}
+        />
         <div className="form-stack webform-part">
           {draft.sender === "browser" && (
             <Field
@@ -439,5 +452,56 @@ export function WebFormDrawer({
         </Button>
       </DrawerFoot>
     </Modal>
+  );
+}
+
+// The notice the form shows under it at the point of collection, and the
+// policy it links to. Both are optional: an enquiry needs a notice, not consent.
+function PrivacyNoticeFields({
+  draft,
+  errors,
+  onChange,
+}: Readonly<{
+  draft: WebFormDraft;
+  errors: ReadonlyMap<string, string>;
+  onChange: (patch: Partial<WebFormDraft>) => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="form-stack webform-part">
+      <Field
+        label={t("webForms.field.privacyNotice")}
+        hint={t("webForms.field.privacyNoticeHint")}
+        error={errors.get("privacy_notice")}
+      >
+        {(field) => (
+          <Textarea
+            {...field}
+            rows={2}
+            value={draft.privacyNotice}
+            onChange={(event) =>
+              onChange({ privacyNotice: event.target.value })
+            }
+          />
+        )}
+      </Field>
+      <Field
+        label={t("webForms.field.privacyNoticeUrl")}
+        hint={t("webForms.field.privacyNoticeUrlHint")}
+        error={errors.get("privacy_notice_url")}
+      >
+        {(field) => (
+          <TextInput
+            {...field}
+            type="url"
+            value={draft.privacyNoticeUrl}
+            placeholder={t("webForms.field.privacyNoticeUrlPlaceholder")}
+            onChange={(event) =>
+              onChange({ privacyNoticeUrl: event.target.value })
+            }
+          />
+        )}
+      </Field>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 ## web_form
 
-20 columns · primary key `(id)` · referenced by 1 foreign key
+22 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,8 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 | `lead_origin` | `text` |  | The `/lead-origins` key every lead from this form carries. |
 | `name` | `text` | yes | At most 200 characters. |
 | `owner_id` | `uuid` |  | Who owns the leads this form creates; null leaves them in the unassigned queue. |
+| `privacy_notice` | `text` |  | The privacy notice the form shows under it at the point of collection, such as what the details are used for. |
+| `privacy_notice_url` | `text` |  | The https address of the privacy policy the notice links to. |
 | `redirect_url` | `text` |  | Where a plain HTML post is sent after a submission. |
 | `secret_ref` | `text` |  |  |
 | `sender` | `text` | yes | One of `browser`, `server`, `webflow`, `typeform`, `tally`. |
@@ -46,6 +48,8 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 - `web_form_form_key_key`: `UNIQUE (form_key)`
 - `web_form_key_shape`: `CHECK ((form_key ~ '^[A-Za-z0-9_-]{16,64}$'))`
 - `web_form_name_present`: `CHECK (((length(btrim(name)) > 0) AND (length(name) <= 200)))`
+- `web_form_privacy_notice_bounded`: `CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500)))`
+- `web_form_privacy_notice_url_https`: `CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~~ 'https://%') AND (length(privacy_notice_url) <= 2000))))`
 - `web_form_redirect_https`: `CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://')))`
 - `web_form_sender_check`: `CHECK ((sender = ANY (ARRAY['browser', 'server', 'webflow', 'typeform', 'tally'])))`
 - `web_form_state_check`: `CHECK ((state = ANY (ARRAY['active', 'paused'])))`
