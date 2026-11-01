@@ -209,18 +209,22 @@ export function ChartPanel({
   evaluation,
   editionId,
   onEvidence,
+  flatHead,
 }: Readonly<{
   chart: ReportingChart;
   wide: boolean;
   evaluation: ReportingEvaluation;
   editionId?: string;
   onEvidence: EvidenceAction;
+  // The one-line head of a panel among the Overview's cards.
+  flatHead?: boolean;
 }>) {
   const t = useT();
   const metricName = useMetricNames();
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
+      flatHead={flatHead}
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }

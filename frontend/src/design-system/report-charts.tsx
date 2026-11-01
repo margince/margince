@@ -9,6 +9,7 @@ import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
 import { readingScale } from "./report-charts.model";
 import { ReadingTable } from "./report-charts.table";
 
+export { DonutChart, type DonutPart } from "./report-charts.donut";
 export { CumulativeChart } from "./report-charts.line";
 export type { ChartReading } from "./report-charts.model";
 

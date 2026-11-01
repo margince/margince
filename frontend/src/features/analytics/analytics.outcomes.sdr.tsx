@@ -237,7 +237,7 @@ export function WaitingOnOthers({
     <Panel title={t("analytics.sdrWaiting")}>
       <PanelBody>
         <PanelIntro>{t("analytics.sdrWaitingIntro")}</PanelIntro>
-        <StatStrip>
+        <StatStrip density="compact">
           <StatCard
             narrow="row"
             label={t("analytics.sdrWaitingCount")}

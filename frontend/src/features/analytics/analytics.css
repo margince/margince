@@ -23,6 +23,9 @@
    same way, so it is spaced alike wherever it is drawn. */
 .analytics-body,
 .analytics-stack {
+  /* Every two-column row of the Overview shares this split, so the column
+     edges run straight down the page. */
+  --analytics-split: minmax(0, 5fr) minmax(0, 3fr);
   display: flex;
   flex-direction: column;
   gap: var(--gapCards);
@@ -55,9 +58,18 @@
    enough for both to keep their lines, one under the other below that. */
 .analytics-pair {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  align-items: start;
+  grid-template-columns: var(--analytics-split);
+  align-items: stretch;
   gap: var(--gapCards);
+}
+/* A card wrapped in its own box still reaches the foot of the row. */
+.analytics-pair > :not(.panel) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.analytics-pair > :not(.panel) > .panel:last-child {
+  flex: 1;
 }
 @media (max-width: 1100px) {
   .analytics-pair {
@@ -118,35 +130,24 @@
   }
 }
 
-/* Sales review's board: two columns that each stack their cards, so the short
-   summary has today's stock under it instead of empty space beside the longer
-   action list. */
+/* Sales review's board: rows of two cards that stretch to one height, so
+   every row ends on one line. A slot stacks its cards and its last one grows. */
 .analytics-board {
   align-items: stretch;
 }
-.analytics-slot-stock {
+.analytics-board > div {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--gapCards);
+  min-width: 0;
 }
-/* One column on a narrow screen, in reading order: summary, actions, stock,
-   owners. The columns step aside so their slots are the grid's own items. */
-@media (max-width: 1100px) {
-  .analytics-board > .analytics-column {
-    display: contents;
-  }
-  .analytics-slot-summary {
-    order: 1;
-  }
-  .analytics-slot-actions {
-    order: 2;
-  }
-  .analytics-slot-stock {
-    order: 3;
-  }
-  .analytics-slot-owners {
-    order: 4;
-  }
+.analytics-board > div > :last-child {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.analytics-board > div > :last-child > .panel {
+  flex: 1;
 }
 
 /* One of a pair standing alone takes the row; a pair with neither drops out of
@@ -174,6 +175,21 @@
 }
 .analytics-hero-value {
   font: var(--fontDisplayFigure);
+}
+/* The figure and its link beside the ring of its target share. */
+.analytics-hero-headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-self: stretch;
+}
+.analytics-hero-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
 }
 /* Under the figure: the target it is read against, and the period before. */
 .analytics-hero-aside {
@@ -262,16 +278,28 @@
   margin-top: var(--space-4);
 }
 
-/* All open pipeline, the secondary reading over the stock charts. */
+/* All open pipeline, the secondary reading over the stock charts, on its own
+   slim card so it sits on the grid like every other block. */
 .analytics-open-line {
   margin: 0;
+  padding: var(--space-3) var(--space-5);
+}
+
+/* The lead's readings share one card that stands as tall as the lead. */
+.analytics-readings {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.analytics-readings > .stat-strip-wrap {
+  padding: var(--space-2) var(--space-5);
 }
 
 /* Sales review's lead row: the outcome and its trend, and the three readings
    stacked beside them. Under 1100px the readings go under the lead. */
 .analytics-lead {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  grid-template-columns: var(--analytics-split);
   align-items: stretch;
   gap: var(--gapCards);
 }
@@ -281,6 +309,17 @@
   flex-direction: column;
   gap: var(--gapCards);
   min-width: 0;
+}
+/* The lead's two columns end on one line: the last card of each grows, and a
+   readings row stretches its cards with it. */
+.analytics-lead > .analytics-column > :last-child {
+  flex: 1;
+}
+.analytics-lead > .analytics-column > .stat-strip-wrap {
+  display: flex;
+}
+.analytics-lead > .analytics-column > .stat-strip-wrap > .stat-strip {
+  flex: 1;
 }
 @media (max-width: 1100px) {
   .analytics-lead {

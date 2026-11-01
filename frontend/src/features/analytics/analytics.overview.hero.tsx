@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { Meter } from "../../design-system/readings";
+import type { ReadingTone } from "../../design-system/readingtone";
+import { ScoreRing } from "../../design-system/standingring";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
@@ -59,43 +60,96 @@ export function HeroAside({
   );
 }
 
+/**
+ * Sales won as a share of the quarter's target, with a lighter part of the
+ * ring up to the expected finish. Drawn only while the two are compared.
+ */
+export function TargetRing({
+  evaluation,
+}: Readonly<{ evaluation: ReportingEvaluation }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const comparison = compared(evaluation);
+  const reading = useAttained(evaluation, comparison);
+  if (!comparison || !reading || comparison.won == null || !comparison.target)
+    return null;
+  const share = (comparison.won / comparison.target) * 100;
+  const reach =
+    comparison.landing == null
+      ? undefined
+      : (comparison.landing / comparison.target) * 100;
+  return (
+    <ScoreRing
+      size="compact"
+      score={share}
+      reach={reach}
+      display={`${formatNumber(Math.round(reading.percent ?? share), locale)}%`}
+      tone={gapTone(comparison.gap)}
+      label={`${t("analytics.hero.attainment")}: ${reading.attained}`}
+      caption={t("reporting.target")}
+    />
+  );
+}
+
+// Without its gap the ring claims neither side of the target.
+function gapTone(gap: number | null | undefined): ReadingTone {
+  if (gap == null) return "neutral";
+  return gap > 0 ? "warning" : "success";
+}
+
+function compared(evaluation: ReportingEvaluation): Comparison | undefined {
+  const comparison = metricOf(
+    evaluation,
+    "forecast_landing",
+  )?.target_comparison;
+  return comparison?.status === "compared" ||
+    comparison?.status === "target_reached"
+    ? comparison
+    : undefined;
+}
+
+// The server's attainment, only when it measures the same target, and the
+// sentence that states it.
+function useAttained(
+  evaluation: ReportingEvaluation,
+  comparison: Comparison | undefined,
+) {
+  const t = useT();
+  const { locale } = useLocale();
+  if (!comparison) return undefined;
+  const { currency } = evaluation.context;
+  const money = (value: number | undefined) =>
+    reportingCompactAmount(value, currency, currency, locale);
+  const won = metricOf(evaluation, "bookings_won");
+  const percent =
+    won?.attainment != null && won.target === comparison.target
+      ? won.attainment
+      : undefined;
+  const attained =
+    percent == null
+      ? t("reporting.compare.remainingBasis", {
+          won: money(comparison.won),
+          target: money(comparison.target),
+        })
+      : t("analytics.hero.attained", {
+          percent: formatNumber(Math.round(percent), locale),
+          target: money(comparison.target),
+        });
+  return { percent, attained, money };
+}
+
 function TargetProgress({
   evaluation,
   comparison,
 }: Readonly<{ evaluation: ReportingEvaluation; comparison: Comparison }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const { currency } = evaluation.context;
-  const money = (value: number | undefined) =>
-    reportingCompactAmount(value, currency, currency, locale);
-  const won = metricOf(evaluation, "bookings_won");
-  // The percentage is the server's, and only when it measures the same target.
-  const percent =
-    won?.attainment != null && won.target === comparison.target
-      ? won.attainment
-      : undefined;
+  const reading = useAttained(evaluation, comparison);
+  if (!reading) return null;
+  const { money } = reading;
   const { gap } = comparison;
   return (
     <>
-      {comparison.won != null && comparison.target ? (
-        <Meter
-          value={comparison.won}
-          max={comparison.target}
-          label={t("analytics.hero.attainment")}
-          dense
-        />
-      ) : null}
-      <p className="t-caption">
-        {percent == null
-          ? t("reporting.compare.remainingBasis", {
-              won: money(comparison.won),
-              target: money(comparison.target),
-            })
-          : t("analytics.hero.attained", {
-              percent: formatNumber(Math.round(percent), locale),
-              target: money(comparison.target),
-            })}
-      </p>
+      <p className="t-caption">{reading.attained}</p>
       <p className="t-caption">
         {comparison.status === "target_reached"
           ? t("reporting.compare.reached")

@@ -5,10 +5,10 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Button, StatCard } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { StatStrip } from "../../design-system/statstrip";
+import { DonutChart } from "../../design-system/report-charts";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
@@ -215,23 +215,25 @@ export function HandoffCohort({
                   })}
                 </p>
                 {cohort.rounds > 0 && (
-                  <StatStrip label={title}>
-                    {(
+                  <DonutChart
+                    label={title}
+                    total={formatNumber(cohort.rounds, locale)}
+                    totalLabel={t("reporting.selectedValue")}
+                    parts={(
                       [
-                        ["accepted", cohort.accepted],
-                        ["recycled", cohort.recycled],
-                        ["rejected", cohort.rejected],
-                        ["waiting", cohort.waiting],
+                        ["accepted", cohort.accepted, "success"],
+                        ["recycled", cohort.recycled, "warning"],
+                        ["rejected", cohort.rejected, "danger"],
+                        ["waiting", cohort.waiting, "neutral"],
                       ] as const
-                    ).map(([outcome, count]) => (
-                      <StatCard
-                        key={outcome}
-                        narrow="row"
-                        label={t(`analytics.prospect.cohort.${outcome}`)}
-                        value={formatNumber(count, locale)}
-                      />
-                    ))}
-                  </StatStrip>
+                    ).map(([outcome, count, tone]) => ({
+                      key: outcome,
+                      label: t(`analytics.prospect.cohort.${outcome}`),
+                      value: count,
+                      amount: formatNumber(count, locale),
+                      tone,
+                    }))}
+                  />
                 )}
               </>
             );

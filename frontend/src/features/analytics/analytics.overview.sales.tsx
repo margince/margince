@@ -28,7 +28,7 @@ import {
   scopeDials,
 } from "./analytics.overview.context";
 import { DecisionSummary } from "./analytics.overview.decision";
-import { HeroAside } from "./analytics.overview.hero";
+import { HeroAside, TargetRing } from "./analytics.overview.hero";
 import {
   InterventionPanel,
   useInterventions,
@@ -204,6 +204,7 @@ function SalesReviewBody({
                   evaluation={evaluation}
                   charts={charts}
                   onEvidence={openEvidence}
+                  mark={<TargetRing evaluation={evaluation} />}
                   aside={
                     <HeroAside
                       evaluation={evaluation}
@@ -267,11 +268,10 @@ function SalesReviewBody({
   );
 }
 
-// Two columns that fill to a like height: the summary over today's stock,
-// the actions over sales by owner. The action list has one place, so it never
-// moves while the figures load. Its sources are its own, so a failed
-// evaluation leaves it. On a narrow screen the slots fall into one column,
-// actions second.
+// Two rows of two cards that fill to a like height: the summary beside the
+// actions, then today's stock beside sales by owner. The action list has one
+// place, so it never moves while the figures load. Its sources are its own, so
+// a failed evaluation leaves it.
 function SalesBoard({
   answered,
   charts,
@@ -291,20 +291,24 @@ function SalesBoard({
   actions: ReactNode;
 }>) {
   return (
-    <div className="analytics-pair analytics-board">
-      <div className="analytics-column">
-        {answered && (
-          <div className="analytics-slot-summary">
+    <>
+      <div className="analytics-pair analytics-board">
+        {/* Always present, so the actions keep their column while it loads. */}
+        <div>
+          {answered && (
             <DecisionSummary
               evaluation={answered}
               checks={checks}
               forecastHref={forecastHref}
               onEvidence={onEvidence}
             />
-          </div>
-        )}
-        {answered && (
-          <div className="analytics-slot-stock">
+          )}
+        </div>
+        <div>{actions}</div>
+      </div>
+      {answered && (
+        <div className="analytics-pair analytics-board">
+          <div>
             <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
             {charts && (
               <StockChart
@@ -315,21 +319,18 @@ function SalesBoard({
               />
             )}
           </div>
-        )}
-      </div>
-      <div className="analytics-column">
-        <div className="analytics-slot-actions">{actions}</div>
-        {answered && charts && (
-          <div className="analytics-slot-owners">
-            <StockChart
-              charts={charts}
-              kind="owner_attainment"
-              onEvidence={onEvidence}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+          {charts && (
+            <div>
+              <StockChart
+                charts={charts}
+                kind="owner_attainment"
+                onEvidence={onEvidence}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 

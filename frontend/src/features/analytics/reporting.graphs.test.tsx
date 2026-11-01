@@ -506,10 +506,14 @@ it("shows how many priced deals make each stage's value", () => {
     </StoryProviders>,
   );
   expect(
-    screen.getByRole("button", { name: /Discovery: .+ · 1 priced deal$/ }),
+    screen.getByRole("button", {
+      name: /Discovery: .+ · 1 priced deal, 27%$/,
+    }),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: /Proposal: .+ · 7 priced deals$/ }),
+    screen.getByRole("button", {
+      name: /Proposal: .+ · 7 priced deals, 41%$/,
+    }),
   ).toBeInTheDocument();
 });
 

@@ -97,6 +97,7 @@ export function SalesHero({
   charts,
   onEvidence,
   aside,
+  mark,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   // The chart read, apart from the figures: pending, failed or answered, or
@@ -107,6 +108,8 @@ export function SalesHero({
     from?: ReportingEvaluation,
   ) => void;
   aside?: ReactNode;
+  // A reading drawn beside the figure, such as its share of the target.
+  mark?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -130,32 +133,40 @@ export function SalesHero({
       <PanelBody>
         <div className="analytics-hero-body">
           <div className="analytics-hero-figure">
-            <p className="analytics-hero-value t-num">
-              {readingValue(won, evaluation, t, locale)}
-            </p>
-            {/* With the chart drawn, its foot names the period. */}
-            {!trend && (
-              <p className="t-caption">
-                {reportingPeriodLabel(
-                  context.interval,
-                  context.timezone,
-                  locale,
+            <div className="analytics-hero-headline">
+              <div className="analytics-hero-lead">
+                <p className="analytics-hero-value t-num">
+                  {readingValue(won, evaluation, t, locale)}
+                </p>
+                {/* With the chart drawn, its foot names the period. */}
+                {!trend && (
+                  <p className="t-caption">
+                    {reportingPeriodLabel(
+                      context.interval,
+                      context.timezone,
+                      locale,
+                    )}
+                  </p>
                 )}
-              </p>
-            )}
-            {won?.coverage.withheld && (
-              <p className="t-caption">
-                {t("analytics.overview.partlyHidden")}
-              </p>
-            )}
-            {won?.coverage.status !== "ok" && won?.coverage.reason && (
-              <p className="t-caption">{won.coverage.reason}</p>
-            )}
-            {won && (
-              <Button variant="link" onClick={() => onEvidence(won.evidence)}>
-                {t("reporting.viewRecords")}
-              </Button>
-            )}
+                {won?.coverage.withheld && (
+                  <p className="t-caption">
+                    {t("analytics.overview.partlyHidden")}
+                  </p>
+                )}
+                {won?.coverage.status !== "ok" && won?.coverage.reason && (
+                  <p className="t-caption">{won.coverage.reason}</p>
+                )}
+                {won && (
+                  <Button
+                    variant="link"
+                    onClick={() => onEvidence(won.evidence)}
+                  >
+                    {t("reporting.viewRecords")}
+                  </Button>
+                )}
+              </div>
+              {mark}
+            </div>
             {aside}
           </div>
           {trend && trendRead && (
@@ -195,6 +206,7 @@ export function BoardChart({
     <ChartPanel
       chart={chart}
       wide={false}
+      flatHead
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
