@@ -13,6 +13,8 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { healthSessionRoutes } from "../../testing/systemhealth.session-fixtures";
+import { HealthSessionPage } from "../../testing/systemhealth-session";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
 import {
@@ -21,6 +23,7 @@ import {
   NOTIFICATION_ROUTES,
   UNUSED_INSTALLATION_ROUTES,
 } from "./settingspages.fixtures";
+import { healthReport } from "./systemhealth.fixtures";
 
 // The settings entries and the cards each one carries. Every story installs the
 // fetch stub those cards read through, so the render is deterministic and
@@ -617,10 +620,25 @@ const everyGrantMe = () =>
 function catalogPage(page: SettingsPageId): Story {
   return {
     parameters: { settingsPage: page },
-    render: tab(page, {
-      "GET /me": everyGrantMe,
-      ...UNUSED_INSTALLATION_ROUTES,
-    }),
+    render:
+      page === "system-health"
+        ? () => {
+            installFetchStub({
+              ...UNUSED_INSTALLATION_ROUTES,
+              ...healthSessionRoutes(true),
+              "GET /me": everyGrantMe,
+              "GET /admin/system-health": () => jsonResponse(healthReport),
+            });
+            return (
+              <StoryProviders>
+                <HealthSessionPage />
+              </StoryProviders>
+            );
+          }
+        : tab(page, {
+            "GET /me": everyGrantMe,
+            ...UNUSED_INSTALLATION_ROUTES,
+          }),
   };
 }
 

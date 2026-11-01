@@ -222,8 +222,14 @@ func deadWorkWindow(ctx context.Context, pool *pgxpool.Pool) (time.Duration, err
 func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.JobHealth {
 	kinds := make([]crmcontracts.JobKindHealth, 0, len(health.Kinds))
 	for _, k := range health.Kinds {
+		assessment := jobs.AssessHealth(k)
+		condition := crmcontracts.JobKindHealthCondition(assessment.Condition)
+		code := crmcontracts.JobKindHealthConditionCode(assessment.Code)
+		expectation := int(assessment.Expectation.Seconds())
+		discarded, cancelled := int(k.Discarded), int(k.Cancelled)
 		kinds = append(kinds, crmcontracts.JobKindHealth{
-			Kind:                    k.Kind,
+			Kind:      k.Kind,
+			Condition: &condition, ConditionCode: &code, ExpectationSeconds: &expectation, Discarded: &discarded, Cancelled: &cancelled,
 			Queue:                   k.Queue,
 			FleetWide:               k.FleetWide,
 			Waiting:                 int(k.Waiting),
@@ -235,8 +241,19 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 		})
 	}
 
-	failures := make([]crmcontracts.JobFailure, 0, len(health.Failures))
-	for _, f := range health.Failures {
+	failures := jobFailuresResponse(health.Failures)
+
+	return crmcontracts.JobHealth{
+		GeneratedAt:     time.Now().UTC(),
+		DeadWindowHours: int(window / time.Hour),
+		Kinds:           kinds,
+		RecentFailures:  failures,
+	}
+}
+
+func jobFailuresResponse(rows []jobs.Failure) []crmcontracts.JobFailure {
+	failures := make([]crmcontracts.JobFailure, 0, len(rows))
+	for _, f := range rows {
 		rendered := renderFailure(f)
 		failures = append(failures, crmcontracts.JobFailure{
 			Kind:        f.Kind,
@@ -257,12 +274,7 @@ func jobHealthResponse(health jobs.Health, window time.Duration) crmcontracts.Jo
 		})
 	}
 
-	return crmcontracts.JobHealth{
-		GeneratedAt:     time.Now().UTC(),
-		DeadWindowHours: int(window / time.Hour),
-		Kinds:           kinds,
-		RecentFailures:  failures,
-	}
+	return failures
 }
 
 // secondsOrAbsent TRUNCATES a measured age to whole seconds, and keeps an

@@ -55,6 +55,8 @@ var published = []publishedBudget{
 	{"PERF-8", "Worklist and Home, as the screen calls them", "< 1 s", []string{dailyTarget}},
 	{"PERF-9", "Analytics screen", "< 300 ms", []string{dailyTarget}},
 	{"PERF-10", "Search as the screen calls it", "< 1 s", []string{dailyTarget}},
+	{"PERF-11", "System health compact overview", "<= 750 ms", []string{healthTarget}},
+	{"PERF-12", "System health diagnostic reads", "<= 1 s", []string{healthTarget}},
 	{"LOAD-1", "A cheap request while the team starts at once", "< 150 ms", []string{dailyTarget}},
 	{"CAP-PARAM-1", "Capture to timeline", "60 s p95", []string{"bench-capture"}},
 	{"MOBILE-AC-2", "Record open, perceived, Fast-3G", "< 300 ms perceived", []string{"bench-mobile"}},
@@ -62,6 +64,7 @@ var published = []publishedBudget{
 
 // dailyTarget is the bench whose rows carry a seat and a stored verdict.
 const dailyTarget = "bench-daily"
+const healthTarget = "bench-system-health"
 
 type machine struct {
 	OS        string `json:"os"`

@@ -2,14 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { EmptyState, StatCard } from "../../design-system/atoms";
+import { EmptyState } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, type QueryLike } from "../../design-system/querystates";
-import { StatStrip } from "../../design-system/statstrip";
-import { useT } from "../../i18n";
 import { useMe } from "../../lib/session";
-import type { HealthReading } from "./systemhealthreadings";
 
 // Withheld, not absent: a missing card reads as "nothing is queued". The /me
 // probe comes first because every grant reads false while /me is in flight.
@@ -70,48 +67,5 @@ export function HealthCard<Data>({
         </CardBoundary>
       )}
     </Panel>
-  );
-}
-
-export type HealthSlot = Readonly<{
-  key: string;
-  label: string;
-  reading: HealthReading;
-}>;
-
-/**
- * The page's readings in one row. Each states its answer in words and tone,
- * and says more only when the answer is not clean. A reading the reader may
- * not see has no slot; its card below says why.
- */
-export function HealthStrip({
-  slots,
-  stamp,
-}: Readonly<{ slots: readonly HealthSlot[]; stamp?: string }>) {
-  const t = useT();
-  const shown = slots.flatMap(({ key, label, reading }) =>
-    reading.card ? [{ key, label, card: reading.card }] : [],
-  );
-  if (shown.length === 0) {
-    return null;
-  }
-  return (
-    <StatStrip
-      label={t("systemHealth.strip")}
-      density="compact"
-      floor={stamp && t("systemHealth.asOf", { time: stamp })}
-    >
-      {shown.map(({ key, label, card }) => (
-        <StatCard
-          key={key}
-          narrow="row"
-          label={label}
-          value={card.value}
-          tone={card.tone}
-          detail={card.detail}
-          href={card.href}
-        />
-      ))}
-    </StatStrip>
   );
 }

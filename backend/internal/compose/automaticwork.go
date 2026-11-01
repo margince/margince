@@ -80,17 +80,10 @@ func (h automaticWorkHandlers) GetAutomaticWorkHealth(
 // readAutomaticWorkHealth builds the report for the `days` calendar days that
 // end today in the installation's zone.
 func readAutomaticWorkHealth(ctx context.Context, tx pgx.Tx, now time.Time, days int) (crmcontracts.AutomaticWorkHealth, error) {
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
+	zone, from, lastDay, err := automaticWorkWindow(ctx, tx, now, days)
 	if err != nil {
 		return crmcontracts.AutomaticWorkHealth{}, err
 	}
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		return crmcontracts.AutomaticWorkHealth{}, fmt.Errorf("automatic work: loading zone %q: %w", zone, err)
-	}
-	local := now.In(loc)
-	lastDay := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
-	from := lastDay.AddDate(0, 0, 1-days)
 	rows, err := readAutomaticWorkRows(ctx, tx, zone, from, now)
 	if err != nil {
 		return crmcontracts.AutomaticWorkHealth{}, err
@@ -128,6 +121,20 @@ func readAutomaticWorkHealth(ctx context.Context, tx pgx.Tx, now time.Time, days
 		})
 	}
 	return out, nil
+}
+
+func automaticWorkWindow(ctx context.Context, tx pgx.Tx, now time.Time, days int) (string, time.Time, time.Time, error) {
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return "", time.Time{}, time.Time{}, err
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return "", time.Time{}, time.Time{}, fmt.Errorf("automatic work: loading zone: %w", err)
+	}
+	local := now.In(loc)
+	last := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
+	return zone, last.AddDate(0, 0, 1-days), last, nil
 }
 
 func calendarDay(t time.Time) openapi_types.Date {
@@ -233,13 +240,7 @@ func tallies(colleague colleagueDays) []crmcontracts.AutomaticWorkTally {
 			tally.ByDay = append(tally.ByDay, crmcontracts.AutomaticWorkDay{Date: calendarDay(day), Counts: counts})
 			sumCounts(&tally.Counts, counts)
 		}
-		created := tally.Counts.Created
-		tally.SmallSample = created < automaticWorkSmallSample
-		if kind.RecordsNotMine && created > 0 {
-			share := float32(tally.Counts.NotMine) / float32(created)
-			tally.NotMineShare = &share
-			tally.AboveThreshold = !tally.SmallSample && share > automaticWorkShareThreshold
-		}
+		tally.SmallSample, tally.NotMineShare, tally.AboveThreshold = automaticRouting(tally.Counts, kind.RecordsNotMine)
 		out = append(out, tally)
 	}
 	return out
@@ -254,4 +255,13 @@ func sumCounts(total *crmcontracts.AutomaticWorkCounts, day crmcontracts.Automat
 	total.Completed += day.Completed
 	total.Expired += day.Expired
 	total.Open += day.Open
+}
+
+func automaticRouting(counts crmcontracts.AutomaticWorkCounts, recordsNotMine bool) (bool, *float32, bool) {
+	small := counts.Created < automaticWorkSmallSample
+	if !recordsNotMine || counts.Created == 0 {
+		return small, nil, false
+	}
+	share := float32(counts.NotMine) / float32(counts.Created)
+	return small, &share, !small && share > automaticWorkShareThreshold
 }

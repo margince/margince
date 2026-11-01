@@ -863,6 +863,27 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
+  /admin/system-health:
+    get:
+      tags: [Identity]
+      operationId: getSystemHealth
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Scoped capability readings and evidence coverage for System health.
+      description: >
+        Human sessions admitted by any existing System health page grant. Each source is
+        checked against its own grant before reading. Failed sources remain explicit beside
+        successful sources. Observations are independent, not a database snapshot.
+        Reads stored evidence only; never starts a probe, model call or repair.
+      responses:
+        '200':
+          description: Capability readings, findings and monitoring limits.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SystemHealth'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
   /admin/job-health:
     get:
       tags: [Identity]
@@ -892,6 +913,33 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+
+  /admin/job-health/history:
+    get:
+      tags: [Identity]
+      operationId: getJobHealthHistory
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Grouped totals and a bounded page of retained job failures.
+      description: >
+        Requires job_health:read. Totals cover all retained matching runs at observation time,
+        not only the returned page. Traversal uses a fixed creation cutoff and descending row ID.
+        Outcomes and retention may change between pages; continuation explicitly reports that
+        possibility. Groups describe kind and state, never a shared root cause.
+      parameters:
+        - {name: cursor, in: query, schema: {type: string, maxLength: 2048}}
+        - {name: kind, in: query, schema: {type: string, maxLength: 200}}
+        - {name: state, in: query, schema: {type: string, enum: [retryable, discarded, cancelled]}}
+        - {name: days, in: query, schema: {type: integer, minimum: 1, maximum: 7, default: 7}}
+      responses:
+        '200':
+          description: All group totals and up to fifty matching retained runs.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/JobHealthHistory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
 
   /admin/capture-health:
     get:
@@ -60550,6 +60598,8 @@ components:
         what is waiting inside it is not named at all.
       required: [generated_at, mailboxes, classifier, held_meetings, sweeps]
       properties:
+        categories:
+          $ref: '#/components/schemas/CaptureHealthCategories'
         generated_at: { type: string, format: date-time }
         mailboxes:
           type: array
@@ -60565,6 +60615,16 @@ components:
             One row per repair pass, always all of them, in a fixed order. A pass that has
             never run is listed with no `last_run`, not left out.
           items: { $ref: '#/components/schemas/CaptureSweepHealth' }
+
+    CaptureHealthCategories:
+      type: object
+      additionalProperties: false
+      required: [machine_threads, uncertain_threads, owner_review_mailboxes, unread_mailboxes]
+      properties:
+        machine_threads: {type: integer}
+        uncertain_threads: {type: integer}
+        owner_review_mailboxes: {type: integer}
+        unread_mailboxes: {type: integer}
 
     CaptureHeldMeetings:
       type: object
@@ -60875,6 +60935,8 @@ components:
       description: One rehearsal of the restore procedure, as the drill ledger holds it.
       required: [started_at, finished_at, restored_to, outcome, operator, notes, recovery_seconds, data_loss_seconds]
       properties:
+        recovery_within_target: {type: boolean}
+        data_loss_within_target: {type: boolean}
         started_at: { type: string, format: date-time }
         finished_at:
           type: [string, 'null']
@@ -61048,6 +61110,111 @@ components:
           type: array
           items: {type: string}
 
+    SystemHealth:
+      type: object
+      additionalProperties: false
+      required: [generated_at, assessment, sources, findings, complete, action_count]
+      properties:
+        generated_at: {type: string, format: date-time}
+        public_origin:
+          $ref: '#/components/schemas/PublicOriginStatus'
+        assessment: {type: string, enum: [attention, checked, incomplete]}
+        sources:
+          type: array
+          maxItems: 8
+          items: {$ref: '#/components/schemas/HealthSource'}
+        findings:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/HealthFinding'}
+        complete: {type: boolean, description: Whether all authorized sources have sufficient evidence.}
+        action_count: {type: integer, minimum: 0, description: Number of findings requiring a human action.}
+    HealthSource:
+      type: object
+      additionalProperties: false
+      required: [id, availability, condition, code, permission, scope]
+      properties:
+        id: {type: string}
+        availability: {type: string, enum: [available, unknown, stale, failed, withheld, not_configured, not_monitored]}
+        condition: {type: string, enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown]}
+        code: {type: string, description: "Safe presentation code, never raw failure text."}
+        permission: {type: string}
+        scope: {type: string, enum: [workspace, installation, shared]}
+        observed_at: {type: string, format: date-time}
+        oldest_wait_seconds: {type: integer, minimum: 0}
+        automatic_work:
+          $ref: '#/components/schemas/AutomaticWorkCounts'
+        expectation_seconds: {type: integer, minimum: 0}
+        count: {type: integer, minimum: 0}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads]}
+        window_start: {type: string, format: date-time}
+        window_end: {type: string, format: date-time}
+    HealthFinding:
+      type: object
+      additionalProperties: false
+      required: [id, source, code, condition, urgency, scope, impact, responsible, recovery, action, requires_action]
+      properties:
+        id: {type: string, description: Stable identity of the source condition and affected scope.}
+        source: {type: string}
+        code: {type: string}
+        condition: {type: string, enum: [processing, retrying, waiting_human, technical, unverified, unknown]}
+        requires_action: {type: boolean, description: The owner requires a human action rather than normal processing or automatic retry.}
+        job_kinds: {type: array, maxItems: 8, items: {type: string}}
+        job_kinds_truncated: {type: boolean}
+        urgency: {type: integer, minimum: 0, maximum: 3}
+        scope: {type: string, enum: [workspace, installation, shared]}
+        impact: {type: string, enum: [measured, possible, unknown]}
+        responsible: {type: string, enum: [you, mailbox_owner, administrator, operator]}
+        recovery: {type: string, description: Safe recovery criterion code.}
+        observed_at: {type: string, format: date-time}
+        first_observed_at: {type: string, format: date-time}
+        next_attempt_at: {type: string, format: date-time}
+        count: {type: integer, minimum: 0}
+        unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads]}
+        window_start: {type: string, format: date-time}
+        window_end: {type: string, format: date-time}
+        action:
+          $ref: '#/components/schemas/HealthAction'
+    HealthAction:
+      type: object
+      additionalProperties: false
+      required: [destination, available]
+      properties:
+        destination: {type: string, enum: [diagnostics, connections, models, search, updates, configuration]}
+        available: {type: boolean}
+        reason: {type: string}
+
+    JobHealthHistory:
+      type: object
+      additionalProperties: false
+      required: [observed_at, cutoff, window_start, groups, runs, has_more, population_may_have_changed, coverage]
+      properties:
+        observed_at: {type: string, format: date-time}
+        cutoff: {type: string, format: date-time}
+        window_start: {type: string, format: date-time, description: Lower bound for finished runs. Current retryable runs are included at every age.}
+        groups:
+          type: array
+          items: {$ref: '#/components/schemas/JobHealthGroup'}
+        runs:
+          type: array
+          maxItems: 50
+          items: {$ref: '#/components/schemas/JobFailure'}
+        next_cursor: {type: string}
+        has_more: {type: boolean}
+        population_may_have_changed: {type: boolean}
+        coverage: {type: string, enum: [retained_only]}
+    JobHealthGroup:
+      type: object
+      additionalProperties: false
+      required: [kind, state, fleet_wide, count, first_at, latest_at]
+      properties:
+        kind: {type: string}
+        state: {type: string, enum: [retryable, discarded, cancelled]}
+        fleet_wide: {type: boolean}
+        count: {type: integer}
+        first_at: {type: string, format: date-time}
+        latest_at: {type: string, format: date-time}
+
     JobHealth:
       type: object
       additionalProperties: false
@@ -61087,16 +61254,19 @@ components:
         dead:
           type: integer
           description: >
-            Discarded or cancelled: this work will not happen without intervention. A discarded
-            job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE —
-            River retains a discarded row for seven days and a cancelled one for a day, so this
-            is up to a week's history and a report figure, not a call to action.
+            Legacy sum of retained discarded and cancelled runs. A discarded job spent every attempt;
+            a cancelled job was stopped intentionally. Retention bounds this history.
+            This total alone does not establish a current fault or a need to intervene.
         dead_recent:
           type: integer
           description: >
-            The same count inside `dead_window_hours`. This is the one to alarm on: an outage that
-            ended an hour ago and one still running are indistinguishable in `dead`, and that is
-            the distinction a maintenance banner exists to draw.
+            The same legacy aggregate inside `dead_window_hours`. Use condition and condition_code
+            for the server assessment; a cancellation does not establish a fault.
+        condition: {type: string, enum: [unknown, processing, retrying, technical, unverified]}
+        condition_code: {type: string, enum: [queue_checked, queue_processing, queue_overdue, queue_unverified, queue_retrying, queue_expectation_unknown]}
+        discarded: {type: integer}
+        cancelled: {type: integer}
+        expectation_seconds: {type: integer}
         oldest_waiting_age_seconds:
           type: [integer, 'null']
           description: >

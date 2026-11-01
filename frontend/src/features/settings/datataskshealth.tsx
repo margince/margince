@@ -15,6 +15,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
 import { HomeRepairControls } from "./homerepair";
@@ -79,9 +80,11 @@ function validProgress(row: Progress): boolean {
 
 function useDataTasks() {
   const canSee = useCan("data_task", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey,
-    enabled: canSee,
+    queryKey: [...queryKey, scope],
+    enabled: canSee && visible && scope !== undefined,
     queryFn: async ({ signal }) => {
       const result = unwrap(await api.GET("/admin/data-tasks", { signal }));
       if (!Array.isArray(result?.data) || !result.data.every(validProgress)) {
@@ -196,7 +199,11 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
   const mutation = useMutation({
     mutationFn: async (body: Control) =>
       unwrap(await api.POST("/admin/data-tasks/control", { body })),
-    onSettled: () => client.invalidateQueries({ queryKey }),
+    onSettled: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey }),
+        client.invalidateQueries({ queryKey: ["system-health"] }),
+      ]),
   });
   const actions = taskActions(row, canChange);
   return (

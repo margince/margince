@@ -11818,6 +11818,36 @@ func (e GrowthFitSubScoreDimension) Valid() bool {
 	}
 }
 
+// Defines values for HealthActionDestination.
+const (
+	HealthActionDestinationConfiguration HealthActionDestination = "configuration"
+	HealthActionDestinationConnections   HealthActionDestination = "connections"
+	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
+	HealthActionDestinationModels        HealthActionDestination = "models"
+	HealthActionDestinationSearch        HealthActionDestination = "search"
+	HealthActionDestinationUpdates       HealthActionDestination = "updates"
+)
+
+// Valid indicates whether the value is a known member of the HealthActionDestination enum.
+func (e HealthActionDestination) Valid() bool {
+	switch e {
+	case HealthActionDestinationConfiguration:
+		return true
+	case HealthActionDestinationConnections:
+		return true
+	case HealthActionDestinationDiagnostics:
+		return true
+	case HealthActionDestinationModels:
+		return true
+	case HealthActionDestinationSearch:
+		return true
+	case HealthActionDestinationUpdates:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthDimensionRating.
 const (
 	HealthDimensionRatingAtRisk HealthDimensionRating = "at_risk"
@@ -11872,6 +11902,252 @@ func (e HealthDimensionReasonCode) Valid() bool {
 	case HealthDimensionReasonCodeSeveralContacts:
 		return true
 	case HealthDimensionReasonCodeSingleThreaded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFindingCondition.
+const (
+	HealthFindingConditionProcessing   HealthFindingCondition = "processing"
+	HealthFindingConditionRetrying     HealthFindingCondition = "retrying"
+	HealthFindingConditionTechnical    HealthFindingCondition = "technical"
+	HealthFindingConditionUnknown      HealthFindingCondition = "unknown"
+	HealthFindingConditionUnverified   HealthFindingCondition = "unverified"
+	HealthFindingConditionWaitingHuman HealthFindingCondition = "waiting_human"
+)
+
+// Valid indicates whether the value is a known member of the HealthFindingCondition enum.
+func (e HealthFindingCondition) Valid() bool {
+	switch e {
+	case HealthFindingConditionProcessing:
+		return true
+	case HealthFindingConditionRetrying:
+		return true
+	case HealthFindingConditionTechnical:
+		return true
+	case HealthFindingConditionUnknown:
+		return true
+	case HealthFindingConditionUnverified:
+		return true
+	case HealthFindingConditionWaitingHuman:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFindingImpact.
+const (
+	HealthFindingImpactMeasured HealthFindingImpact = "measured"
+	HealthFindingImpactPossible HealthFindingImpact = "possible"
+	HealthFindingImpactUnknown  HealthFindingImpact = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the HealthFindingImpact enum.
+func (e HealthFindingImpact) Valid() bool {
+	switch e {
+	case HealthFindingImpactMeasured:
+		return true
+	case HealthFindingImpactPossible:
+		return true
+	case HealthFindingImpactUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFindingResponsible.
+const (
+	HealthFindingResponsibleAdministrator HealthFindingResponsible = "administrator"
+	HealthFindingResponsibleMailboxOwner  HealthFindingResponsible = "mailbox_owner"
+	HealthFindingResponsibleOperator      HealthFindingResponsible = "operator"
+	HealthFindingResponsibleYou           HealthFindingResponsible = "you"
+)
+
+// Valid indicates whether the value is a known member of the HealthFindingResponsible enum.
+func (e HealthFindingResponsible) Valid() bool {
+	switch e {
+	case HealthFindingResponsibleAdministrator:
+		return true
+	case HealthFindingResponsibleMailboxOwner:
+		return true
+	case HealthFindingResponsibleOperator:
+		return true
+	case HealthFindingResponsibleYou:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFindingScope.
+const (
+	HealthFindingScopeInstallation HealthFindingScope = "installation"
+	HealthFindingScopeShared       HealthFindingScope = "shared"
+	HealthFindingScopeWorkspace    HealthFindingScope = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the HealthFindingScope enum.
+func (e HealthFindingScope) Valid() bool {
+	switch e {
+	case HealthFindingScopeInstallation:
+		return true
+	case HealthFindingScopeShared:
+		return true
+	case HealthFindingScopeWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFindingUnit.
+const (
+	HealthFindingUnitItems     HealthFindingUnit = "items"
+	HealthFindingUnitMailboxes HealthFindingUnit = "mailboxes"
+	HealthFindingUnitRecords   HealthFindingUnit = "records"
+	HealthFindingUnitRuns      HealthFindingUnit = "runs"
+	HealthFindingUnitThreads   HealthFindingUnit = "threads"
+	HealthFindingUnitUpdates   HealthFindingUnit = "updates"
+)
+
+// Valid indicates whether the value is a known member of the HealthFindingUnit enum.
+func (e HealthFindingUnit) Valid() bool {
+	switch e {
+	case HealthFindingUnitItems:
+		return true
+	case HealthFindingUnitMailboxes:
+		return true
+	case HealthFindingUnitRecords:
+		return true
+	case HealthFindingUnitRuns:
+		return true
+	case HealthFindingUnitThreads:
+		return true
+	case HealthFindingUnitUpdates:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthSourceAvailability.
+const (
+	HealthSourceAvailabilityAvailable     HealthSourceAvailability = "available"
+	HealthSourceAvailabilityFailed        HealthSourceAvailability = "failed"
+	HealthSourceAvailabilityNotConfigured HealthSourceAvailability = "not_configured"
+	HealthSourceAvailabilityNotMonitored  HealthSourceAvailability = "not_monitored"
+	HealthSourceAvailabilityStale         HealthSourceAvailability = "stale"
+	HealthSourceAvailabilityUnknown       HealthSourceAvailability = "unknown"
+	HealthSourceAvailabilityWithheld      HealthSourceAvailability = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the HealthSourceAvailability enum.
+func (e HealthSourceAvailability) Valid() bool {
+	switch e {
+	case HealthSourceAvailabilityAvailable:
+		return true
+	case HealthSourceAvailabilityFailed:
+		return true
+	case HealthSourceAvailabilityNotConfigured:
+		return true
+	case HealthSourceAvailabilityNotMonitored:
+		return true
+	case HealthSourceAvailabilityStale:
+		return true
+	case HealthSourceAvailabilityUnknown:
+		return true
+	case HealthSourceAvailabilityWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthSourceCondition.
+const (
+	HealthSourceConditionClear        HealthSourceCondition = "clear"
+	HealthSourceConditionProcessing   HealthSourceCondition = "processing"
+	HealthSourceConditionRecovered    HealthSourceCondition = "recovered"
+	HealthSourceConditionRetrying     HealthSourceCondition = "retrying"
+	HealthSourceConditionTechnical    HealthSourceCondition = "technical"
+	HealthSourceConditionUnknown      HealthSourceCondition = "unknown"
+	HealthSourceConditionUnverified   HealthSourceCondition = "unverified"
+	HealthSourceConditionWaitingHuman HealthSourceCondition = "waiting_human"
+)
+
+// Valid indicates whether the value is a known member of the HealthSourceCondition enum.
+func (e HealthSourceCondition) Valid() bool {
+	switch e {
+	case HealthSourceConditionClear:
+		return true
+	case HealthSourceConditionProcessing:
+		return true
+	case HealthSourceConditionRecovered:
+		return true
+	case HealthSourceConditionRetrying:
+		return true
+	case HealthSourceConditionTechnical:
+		return true
+	case HealthSourceConditionUnknown:
+		return true
+	case HealthSourceConditionUnverified:
+		return true
+	case HealthSourceConditionWaitingHuman:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthSourceScope.
+const (
+	HealthSourceScopeInstallation HealthSourceScope = "installation"
+	HealthSourceScopeShared       HealthSourceScope = "shared"
+	HealthSourceScopeWorkspace    HealthSourceScope = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the HealthSourceScope enum.
+func (e HealthSourceScope) Valid() bool {
+	switch e {
+	case HealthSourceScopeInstallation:
+		return true
+	case HealthSourceScopeShared:
+		return true
+	case HealthSourceScopeWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthSourceUnit.
+const (
+	HealthSourceUnitItems     HealthSourceUnit = "items"
+	HealthSourceUnitMailboxes HealthSourceUnit = "mailboxes"
+	HealthSourceUnitRecords   HealthSourceUnit = "records"
+	HealthSourceUnitRuns      HealthSourceUnit = "runs"
+	HealthSourceUnitThreads   HealthSourceUnit = "threads"
+	HealthSourceUnitUpdates   HealthSourceUnit = "updates"
+)
+
+// Valid indicates whether the value is a known member of the HealthSourceUnit enum.
+func (e HealthSourceUnit) Valid() bool {
+	switch e {
+	case HealthSourceUnitItems:
+		return true
+	case HealthSourceUnitMailboxes:
+		return true
+	case HealthSourceUnitRecords:
+		return true
+	case HealthSourceUnitRuns:
+		return true
+	case HealthSourceUnitThreads:
+		return true
+	case HealthSourceUnitUpdates:
 		return true
 	default:
 		return false
@@ -13216,6 +13492,99 @@ func (e JobFailureState) Valid() bool {
 	case JobFailureStateDiscarded:
 		return true
 	case JobFailureStateRetryable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobHealthGroupState.
+const (
+	JobHealthGroupStateCancelled JobHealthGroupState = "cancelled"
+	JobHealthGroupStateDiscarded JobHealthGroupState = "discarded"
+	JobHealthGroupStateRetryable JobHealthGroupState = "retryable"
+)
+
+// Valid indicates whether the value is a known member of the JobHealthGroupState enum.
+func (e JobHealthGroupState) Valid() bool {
+	switch e {
+	case JobHealthGroupStateCancelled:
+		return true
+	case JobHealthGroupStateDiscarded:
+		return true
+	case JobHealthGroupStateRetryable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobHealthHistoryCoverage.
+const (
+	JobHealthHistoryCoverageRetainedOnly JobHealthHistoryCoverage = "retained_only"
+)
+
+// Valid indicates whether the value is a known member of the JobHealthHistoryCoverage enum.
+func (e JobHealthHistoryCoverage) Valid() bool {
+	switch e {
+	case JobHealthHistoryCoverageRetainedOnly:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobKindHealthCondition.
+const (
+	JobKindHealthConditionProcessing JobKindHealthCondition = "processing"
+	JobKindHealthConditionRetrying   JobKindHealthCondition = "retrying"
+	JobKindHealthConditionTechnical  JobKindHealthCondition = "technical"
+	JobKindHealthConditionUnknown    JobKindHealthCondition = "unknown"
+	JobKindHealthConditionUnverified JobKindHealthCondition = "unverified"
+)
+
+// Valid indicates whether the value is a known member of the JobKindHealthCondition enum.
+func (e JobKindHealthCondition) Valid() bool {
+	switch e {
+	case JobKindHealthConditionProcessing:
+		return true
+	case JobKindHealthConditionRetrying:
+		return true
+	case JobKindHealthConditionTechnical:
+		return true
+	case JobKindHealthConditionUnknown:
+		return true
+	case JobKindHealthConditionUnverified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobKindHealthConditionCode.
+const (
+	JobKindHealthConditionCodeQueueChecked            JobKindHealthConditionCode = "queue_checked"
+	JobKindHealthConditionCodeQueueExpectationUnknown JobKindHealthConditionCode = "queue_expectation_unknown"
+	JobKindHealthConditionCodeQueueOverdue            JobKindHealthConditionCode = "queue_overdue"
+	JobKindHealthConditionCodeQueueProcessing         JobKindHealthConditionCode = "queue_processing"
+	JobKindHealthConditionCodeQueueRetrying           JobKindHealthConditionCode = "queue_retrying"
+	JobKindHealthConditionCodeQueueUnverified         JobKindHealthConditionCode = "queue_unverified"
+)
+
+// Valid indicates whether the value is a known member of the JobKindHealthConditionCode enum.
+func (e JobKindHealthConditionCode) Valid() bool {
+	switch e {
+	case JobKindHealthConditionCodeQueueChecked:
+		return true
+	case JobKindHealthConditionCodeQueueExpectationUnknown:
+		return true
+	case JobKindHealthConditionCodeQueueOverdue:
+		return true
+	case JobKindHealthConditionCodeQueueProcessing:
+		return true
+	case JobKindHealthConditionCodeQueueRetrying:
+		return true
+	case JobKindHealthConditionCodeQueueUnverified:
 		return true
 	default:
 		return false
@@ -20095,6 +20464,27 @@ func (e SubscriptionConfirmationPageState) Valid() bool {
 	}
 }
 
+// Defines values for SystemHealthAssessment.
+const (
+	SystemHealthAssessmentAttention  SystemHealthAssessment = "attention"
+	SystemHealthAssessmentChecked    SystemHealthAssessment = "checked"
+	SystemHealthAssessmentIncomplete SystemHealthAssessment = "incomplete"
+)
+
+// Valid indicates whether the value is a known member of the SystemHealthAssessment enum.
+func (e SystemHealthAssessment) Valid() bool {
+	switch e {
+	case SystemHealthAssessmentAttention:
+		return true
+	case SystemHealthAssessmentChecked:
+		return true
+	case SystemHealthAssessmentIncomplete:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TagColor.
 const (
 	TagColorAmber  TagColor = "amber"
@@ -24133,6 +24523,27 @@ func (e PreviewHomeRepairJSONBodySource) Valid() bool {
 	case PreviewHomeRepairJSONBodySourceTask:
 		return true
 	case PreviewHomeRepairJSONBodySourceVerdict:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetJobHealthHistoryParamsState.
+const (
+	GetJobHealthHistoryParamsStateCancelled GetJobHealthHistoryParamsState = "cancelled"
+	GetJobHealthHistoryParamsStateDiscarded GetJobHealthHistoryParamsState = "discarded"
+	GetJobHealthHistoryParamsStateRetryable GetJobHealthHistoryParamsState = "retryable"
+)
+
+// Valid indicates whether the value is a known member of the GetJobHealthHistoryParamsState enum.
+func (e GetJobHealthHistoryParamsState) Valid() bool {
+	switch e {
+	case GetJobHealthHistoryParamsStateCancelled:
+		return true
+	case GetJobHealthHistoryParamsStateDiscarded:
+		return true
+	case GetJobHealthHistoryParamsStateRetryable:
 		return true
 	default:
 		return false
@@ -33240,6 +33651,8 @@ type CaptureExclusionScope string
 // is named because an administrator cannot act on "somewhere in the installation";
 // what is waiting inside it is not named at all.
 type CaptureHealth struct {
+	Categories *CaptureHealthCategories `json:"categories,omitempty"`
+
 	// Classifier The sender queue as a whole, across every mailbox.
 	Classifier  CaptureClassifierHealth `json:"classifier"`
 	GeneratedAt time.Time               `json:"generated_at"`
@@ -33256,6 +33669,14 @@ type CaptureHealth struct {
 	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
 	// never run is listed with no `last_run`, not left out.
 	Sweeps []CaptureSweepHealth `json:"sweeps"`
+}
+
+// CaptureHealthCategories defines model for CaptureHealthCategories.
+type CaptureHealthCategories struct {
+	MachineThreads       int `json:"machine_threads"`
+	OwnerReviewMailboxes int `json:"owner_review_mailboxes"`
+	UncertainThreads     int `json:"uncertain_threads"`
+	UnreadMailboxes      int `json:"unread_mailboxes"`
 }
 
 // CaptureHeldMeetings Captured records already filed under a contact that are still held to their
@@ -43600,6 +44021,16 @@ type HandoverCounts struct {
 	Task int `json:"task"`
 }
 
+// HealthAction defines model for HealthAction.
+type HealthAction struct {
+	Available   bool                    `json:"available"`
+	Destination HealthActionDestination `json:"destination"`
+	Reason      *string                 `json:"reason,omitempty"`
+}
+
+// HealthActionDestination defines model for HealthAction.Destination.
+type HealthActionDestination string
+
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
 //
 // The reason is REQUIRED. A rating with no sentence behind it is the unexplainable score
@@ -43659,6 +44090,84 @@ type HealthDimensionReasonParams struct {
 	Days        *int               `json:"days,omitempty"`
 	Total       *int               `json:"total,omitempty"`
 }
+
+// HealthFinding defines model for HealthFinding.
+type HealthFinding struct {
+	Action          HealthAction           `json:"action"`
+	Code            string                 `json:"code"`
+	Condition       HealthFindingCondition `json:"condition"`
+	Count           *int                   `json:"count,omitempty"`
+	FirstObservedAt *time.Time             `json:"first_observed_at,omitempty"`
+
+	// Id Stable identity of the source condition and affected scope.
+	Id                string              `json:"id"`
+	Impact            HealthFindingImpact `json:"impact"`
+	JobKinds          *[]string           `json:"job_kinds,omitempty"`
+	JobKindsTruncated *bool               `json:"job_kinds_truncated,omitempty"`
+	NextAttemptAt     *time.Time          `json:"next_attempt_at,omitempty"`
+	ObservedAt        *time.Time          `json:"observed_at,omitempty"`
+
+	// Recovery Safe recovery criterion code.
+	Recovery string `json:"recovery"`
+
+	// RequiresAction The owner requires a human action rather than normal processing or automatic retry.
+	RequiresAction bool                     `json:"requires_action"`
+	Responsible    HealthFindingResponsible `json:"responsible"`
+	Scope          HealthFindingScope       `json:"scope"`
+	Source         string                   `json:"source"`
+	Unit           *HealthFindingUnit       `json:"unit,omitempty"`
+	Urgency        int                      `json:"urgency"`
+	WindowEnd      *time.Time               `json:"window_end,omitempty"`
+	WindowStart    *time.Time               `json:"window_start,omitempty"`
+}
+
+// HealthFindingCondition defines model for HealthFinding.Condition.
+type HealthFindingCondition string
+
+// HealthFindingImpact defines model for HealthFinding.Impact.
+type HealthFindingImpact string
+
+// HealthFindingResponsible defines model for HealthFinding.Responsible.
+type HealthFindingResponsible string
+
+// HealthFindingScope defines model for HealthFinding.Scope.
+type HealthFindingScope string
+
+// HealthFindingUnit defines model for HealthFinding.Unit.
+type HealthFindingUnit string
+
+// HealthSource defines model for HealthSource.
+type HealthSource struct {
+	// AutomaticWork Each created item holds exactly one outcome, so the outcomes add up to `created`.
+	AutomaticWork *AutomaticWorkCounts     `json:"automatic_work,omitempty"`
+	Availability  HealthSourceAvailability `json:"availability"`
+
+	// Code Safe presentation code, never raw failure text.
+	Code               string                `json:"code"`
+	Condition          HealthSourceCondition `json:"condition"`
+	Count              *int                  `json:"count,omitempty"`
+	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty"`
+	Id                 string                `json:"id"`
+	ObservedAt         *time.Time            `json:"observed_at,omitempty"`
+	OldestWaitSeconds  *int                  `json:"oldest_wait_seconds,omitempty"`
+	Permission         string                `json:"permission"`
+	Scope              HealthSourceScope     `json:"scope"`
+	Unit               *HealthSourceUnit     `json:"unit,omitempty"`
+	WindowEnd          *time.Time            `json:"window_end,omitempty"`
+	WindowStart        *time.Time            `json:"window_start,omitempty"`
+}
+
+// HealthSourceAvailability defines model for HealthSource.Availability.
+type HealthSourceAvailability string
+
+// HealthSourceCondition defines model for HealthSource.Condition.
+type HealthSourceCondition string
+
+// HealthSourceScope defines model for HealthSource.Scope.
+type HealthSourceScope string
+
+// HealthSourceUnit defines model for HealthSource.Unit.
+type HealthSourceUnit string
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string
@@ -45674,13 +46183,50 @@ type JobHealth struct {
 	RecentFailures []JobFailure `json:"recent_failures"`
 }
 
+// JobHealthGroup defines model for JobHealthGroup.
+type JobHealthGroup struct {
+	Count     int                 `json:"count"`
+	FirstAt   time.Time           `json:"first_at"`
+	FleetWide bool                `json:"fleet_wide"`
+	Kind      string              `json:"kind"`
+	LatestAt  time.Time           `json:"latest_at"`
+	State     JobHealthGroupState `json:"state"`
+}
+
+// JobHealthGroupState defines model for JobHealthGroup.State.
+type JobHealthGroupState string
+
+// JobHealthHistory defines model for JobHealthHistory.
+type JobHealthHistory struct {
+	Coverage                 JobHealthHistoryCoverage `json:"coverage"`
+	Cutoff                   time.Time                `json:"cutoff"`
+	Groups                   []JobHealthGroup         `json:"groups"`
+	HasMore                  bool                     `json:"has_more"`
+	NextCursor               *string                  `json:"next_cursor,omitempty"`
+	ObservedAt               time.Time                `json:"observed_at"`
+	PopulationMayHaveChanged bool                     `json:"population_may_have_changed"`
+	Runs                     []JobFailure             `json:"runs"`
+
+	// WindowStart Lower bound for finished runs. Current retryable runs are included at every age.
+	WindowStart time.Time `json:"window_start"`
+}
+
+// JobHealthHistoryCoverage defines model for JobHealthHistory.Coverage.
+type JobHealthHistoryCoverage string
+
 // JobKindHealth defines model for JobKindHealth.
 type JobKindHealth struct {
-	// Dead Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a discarded row for seven days and a cancelled one for a day, so this is up to a week's history and a report figure, not a call to action.
+	Cancelled     *int                        `json:"cancelled,omitempty"`
+	Condition     *JobKindHealthCondition     `json:"condition,omitempty"`
+	ConditionCode *JobKindHealthConditionCode `json:"condition_code,omitempty"`
+
+	// Dead Legacy sum of retained discarded and cancelled runs. A discarded job spent every attempt; a cancelled job was stopped intentionally. Retention bounds this history. This total alone does not establish a current fault or a need to intervene.
 	Dead int `json:"dead"`
 
-	// DeadRecent The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw.
-	DeadRecent int `json:"dead_recent"`
+	// DeadRecent The same legacy aggregate inside `dead_window_hours`. Use condition and condition_code for the server assessment; a cancellation does not establish a fault.
+	DeadRecent         int  `json:"dead_recent"`
+	Discarded          *int `json:"discarded,omitempty"`
+	ExpectationSeconds *int `json:"expectation_seconds,omitempty"`
 
 	// FleetWide True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no workspace.
 	FleetWide bool `json:"fleet_wide"`
@@ -45699,6 +46245,12 @@ type JobKindHealth struct {
 	// Waiting Available, scheduled or pending: queued and not yet started.
 	Waiting int `json:"waiting"`
 }
+
+// JobKindHealthCondition defines model for JobKindHealth.Condition.
+type JobKindHealthCondition string
+
+// JobKindHealthConditionCode defines model for JobKindHealth.ConditionCode.
+type JobKindHealthConditionCode string
 
 // JurisdictionDeadline defines model for JurisdictionDeadline.
 type JurisdictionDeadline struct {
@@ -53804,7 +54356,8 @@ type ResponseMetrics struct {
 // RestoreDrill One rehearsal of the restore procedure, as the drill ledger holds it.
 type RestoreDrill struct {
 	// DataLossSeconds Started minus the restore point. The restore point is what the operator gave to drill-start, so this figure is only as true as that input.
-	DataLossSeconds int `json:"data_loss_seconds"`
+	DataLossSeconds      int   `json:"data_loss_seconds"`
+	DataLossWithinTarget *bool `json:"data_loss_within_target,omitempty"`
 
 	// FinishedAt Null while the drill runs, and on a drill nobody closed.
 	FinishedAt *time.Time `json:"finished_at"`
@@ -53817,7 +54370,8 @@ type RestoreDrill struct {
 	Outcome  RestoreDrillOutcome `json:"outcome"`
 
 	// RecoverySeconds Finished minus started. Null until the drill finishes.
-	RecoverySeconds *int `json:"recovery_seconds"`
+	RecoverySeconds      *int  `json:"recovery_seconds"`
+	RecoveryWithinTarget *bool `json:"recovery_within_target,omitempty"`
 
 	// RestoredTo The point in time the backup was restored to.
 	RestoredTo time.Time `json:"restored_to"`
@@ -56378,6 +56932,28 @@ type SubscriptionConfirmationPageKind string
 
 // SubscriptionConfirmationPageState Their answer today, so somebody who already said yes is not asked as though they had not.
 type SubscriptionConfirmationPageState string
+
+// SystemHealth defines model for SystemHealth.
+type SystemHealth struct {
+	// ActionCount Number of findings requiring a human action.
+	ActionCount int                    `json:"action_count"`
+	Assessment  SystemHealthAssessment `json:"assessment"`
+
+	// Complete Whether all authorized sources have sufficient evidence.
+	Complete    bool            `json:"complete"`
+	Findings    []HealthFinding `json:"findings"`
+	GeneratedAt time.Time       `json:"generated_at"`
+
+	// PublicOrigin The address this installation puts in outgoing links, and whether it answered when last asked.
+	// Reported so an operator can SEE the value rather than discover it from a recipient; the boot and
+	// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
+	// process can reach the origin — it cannot say a recipient's mail client can.
+	PublicOrigin *PublicOriginStatus `json:"public_origin,omitempty"`
+	Sources      []HealthSource      `json:"sources"`
+}
+
+// SystemHealthAssessment defines model for SystemHealth.Assessment.
+type SystemHealthAssessment string
 
 // Tag A tag. Mirrors the `tag` table.
 type Tag struct {
@@ -62305,6 +62881,17 @@ type PreviewHomeRepairJSONBody struct {
 
 // PreviewHomeRepairJSONBodySource defines parameters for PreviewHomeRepair.
 type PreviewHomeRepairJSONBodySource string
+
+// GetJobHealthHistoryParams defines parameters for GetJobHealthHistory.
+type GetJobHealthHistoryParams struct {
+	Cursor *string                         `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Kind   *string                         `form:"kind,omitempty" json:"kind,omitempty"`
+	State  *GetJobHealthHistoryParamsState `form:"state,omitempty" json:"state,omitempty"`
+	Days   *int                            `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// GetJobHealthHistoryParamsState defines parameters for GetJobHealthHistory.
+type GetJobHealthHistoryParamsState string
 
 // PreviewMailDealRepairJSONBody defines parameters for PreviewMailDealRepair.
 type PreviewMailDealRepairJSONBody struct {
@@ -82318,6 +82905,9 @@ type ServerInterface interface {
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
+	// Grouped totals and a bounded page of retained job failures.
+	// (GET /admin/job-health/history)
+	GetJobHealthHistory(w http.ResponseWriter, r *http.Request, params GetJobHealthHistoryParams)
 	// Preview what the captured-mail deal repair does and leaves unresolved.
 	// (POST /admin/mail-deal-repair/preview)
 	PreviewMailDealRepair(w http.ResponseWriter, r *http.Request)
@@ -82330,6 +82920,9 @@ type ServerInterface interface {
 	// Reset an installation that armed the capability to its first-boot state.
 	// (POST /admin/reset-data)
 	ResetData(w http.ResponseWriter, r *http.Request)
+	// Scoped capability readings and evidence coverage for System health.
+	// (GET /admin/system-health)
+	GetSystemHealth(w http.ResponseWriter, r *http.Request)
 	// Download the Margince skill for an AI tool, as a ZIP.
 	// (GET /agent-bundle)
 	DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request)
@@ -85378,6 +85971,12 @@ func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Grouped totals and a bounded page of retained job failures.
+// (GET /admin/job-health/history)
+func (_ Unimplemented) GetJobHealthHistory(w http.ResponseWriter, r *http.Request, params GetJobHealthHistoryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Preview what the captured-mail deal repair does and leaves unresolved.
 // (POST /admin/mail-deal-repair/preview)
 func (_ Unimplemented) PreviewMailDealRepair(w http.ResponseWriter, r *http.Request) {
@@ -85399,6 +85998,12 @@ func (_ Unimplemented) PauseReportingSchedules(w http.ResponseWriter, r *http.Re
 // Reset an installation that armed the capability to its first-boot state.
 // (POST /admin/reset-data)
 func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Scoped capability readings and evidence coverage for System health.
+// (GET /admin/system-health)
+func (_ Unimplemented) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92826,6 +93431,84 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// GetJobHealthHistory operation middleware
+func (siw *ServerInterfaceWrapper) GetJobHealthHistory(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetJobHealthHistoryParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetJobHealthHistory(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewMailDealRepair operation middleware
 func (siw *ServerInterfaceWrapper) PreviewMailDealRepair(w http.ResponseWriter, r *http.Request) {
 
@@ -92897,6 +93580,26 @@ func (siw *ServerInterfaceWrapper) ResetData(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ResetData(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSystemHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSystemHealth(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132832,6 +133535,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/job-health/history", wrapper.GetJobHealthHistory)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/mail-deal-repair/preview", wrapper.PreviewMailDealRepair)
 	})
 	r.Group(func(r chi.Router) {
@@ -132842,6 +133548,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/admin/reset-data", wrapper.ResetData)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/system-health", wrapper.GetSystemHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-bundle", wrapper.DownloadAgentSkillBundle)

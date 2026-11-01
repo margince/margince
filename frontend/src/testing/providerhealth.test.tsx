@@ -7,10 +7,10 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { jsonResponse, render } from "../../testing/settings.testkit";
-import { AiProviderKeysCard } from "../ai/ai-provider-keys";
-import { ProviderHealthCard } from "./providerhealth";
+import { AiProviderKeysCard } from "../features/ai/ai-provider-keys";
+import { ProviderHealthCard } from "../features/settings/providerhealth";
+import { type GrantSpec, meFixture } from "./mefixture";
+import { jsonResponse, render } from "./settings.testkit";
 
 // One endpoint feeds the System health card and the Providers list, so the two
 // surfaces are exercised against the same stub.
@@ -95,11 +95,11 @@ afterEach(() => {
 });
 
 describe("ProviderHealthCard", () => {
-  it("says every provider is answering when the list is empty", async () => {
+  it("does not infer availability from an empty fault list", async () => {
     stubBackend([]);
     render(<ProviderHealthCard />);
     expect(
-      await screen.findByText("All AI providers are answering."),
+      await screen.findByText("No provider result recorded yet"),
     ).toBeInTheDocument();
   });
 

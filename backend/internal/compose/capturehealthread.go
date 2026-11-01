@@ -49,6 +49,11 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Sweeps = sweeps
+	categories, err := capture.ReadOperationalCategoriesTx(ctx, tx)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.Categories = &crmcontracts.CaptureHealthCategories{MachineThreads: categories.MachineThreads, UncertainThreads: categories.UncertainThreads, OwnerReviewMailboxes: categories.OwnerReviewMailboxes, UnreadMailboxes: categories.UnreadMailboxes}
 	return out, nil
 }
 

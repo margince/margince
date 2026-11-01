@@ -19,7 +19,6 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { tableRowCells } from "../../testing/tablerow.testkit";
 import { JobHealthCard } from "./jobhealth";
-import { DeadWorkCallout } from "./jobhealthdead";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -86,8 +85,13 @@ const HEALTH = {
       running: 1,
       retrying: 2,
       dead: 0,
+      discarded: 0,
+      cancelled: 0,
       dead_recent: 0,
       oldest_waiting_age_seconds: 4_500,
+      condition: "technical",
+      condition_code: "queue_overdue",
+      expectation_seconds: 60,
     },
     {
       kind: "retention_sweep_dispatch",
@@ -97,6 +101,8 @@ const HEALTH = {
       running: 0,
       retrying: 0,
       dead: 0,
+      discarded: 0,
+      cancelled: 0,
       dead_recent: 0,
       oldest_waiting_age_seconds: null,
     },
@@ -151,17 +157,21 @@ describe("JobHealthCard", () => {
     expect(kind.Waiting).toHaveTextContent("12");
     expect(kind.Running).toHaveTextContent("1");
     expect(kind.Retrying).toHaveTextContent("2");
-    expect(kind.Dead).toHaveTextContent("0");
+    expect(kind.Discarded).toHaveTextContent("0");
     expect(kind.Queue).toHaveTextContent("default");
+    expect(kind.State).toHaveTextContent("Needs technical attention");
+    expect(kind["Declared wait limit"]).toHaveTextContent("1 minute");
     // The kind is River's identifier, verbatim, in both the count row and the
     // failure below it, which is how an operator ties the two together.
     expect(screen.getAllByText("capture_classify").length).toBe(2);
     const dispatcher = await tableRowCells(
-      "Fleet dispatchers",
+      "Shared background work",
       "retention_sweep_dispatch",
     );
-    expect(dispatcher.Dead).toHaveTextContent("0");
-    expect(screen.getByText(/rows with no company/i)).toBeInTheDocument();
+    expect(dispatcher.Discarded).toHaveTextContent("0");
+    expect(
+      screen.getByText(/counts are not limited to this company/i),
+    ).toBeInTheDocument();
     // Each reading is named, so fleet work never reads as this company's.
     expect(
       screen.getByRole("heading", { name: "This company" }),
@@ -184,7 +194,7 @@ describe("JobHealthCard", () => {
     const failure = await tableRowCells("Recent failures", "capture_classify");
     expect(within(failure.Job).getByText("Mail sorting")).toBeInTheDocument();
     const unnamed = await tableRowCells(
-      "Fleet dispatchers",
+      "Shared background work",
       "retention_sweep_dispatch",
     );
     expect(unnamed.Job).toHaveTextContent(/^retention_sweep_dispatch$/);
@@ -194,7 +204,7 @@ describe("JobHealthCard", () => {
     stubRoutes();
     render(<JobHealthCard />);
     const dispatcher = await tableRowCells(
-      "Fleet dispatchers",
+      "Shared background work",
       "retention_sweep_dispatch",
     );
     // A null age means nothing of the kind is queued, which is not a wait of zero.
@@ -306,32 +316,32 @@ describe("JobHealthCard", () => {
       "GET /admin/job-health": () =>
         jsonResponse({
           ...HEALTH,
-          kinds: [{ ...HEALTH.kinds[0], dead: 3, dead_recent: 3, retrying: 0 }],
+          kinds: [
+            {
+              ...HEALTH.kinds[0],
+              dead: 3,
+              discarded: 3,
+              dead_recent: 3,
+              retrying: 0,
+            },
+          ],
           recent_failures: [
             { ...HEALTH.recent_failures[0], state: "discarded", attempt: 5 },
           ],
         }),
     });
     render(<JobHealthCard />);
-    // An interrupting notice, not a quiet pill: dead work does not resume on
-    // its own, so it must not be something a reader can scroll past.
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveClass("callout-danger");
-    expect(alert).toHaveTextContent(/will not run without intervention/i);
-    expect(alert).toHaveTextContent(/3 jobs were discarded or canceled/);
-    // The span, in the sentence. A count with no window asks the reader to
-    // guess, and the guess is "since forever".
-    expect(alert).toHaveTextContent(/last 24h/i);
-    // Nothing to say about a week that holds no more than the day does.
-    expect(alert).not.toHaveTextContent(/7 days/i);
+    await tableRowCells("This company", "capture_classify");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     // And the count itself carries the tone on the row it belongs to.
     const kind = await tableRowCells("This company", "capture_classify");
-    expect(within(kind.Dead).getByText("3").closest(".badge")).toHaveClass(
+    expect(within(kind.Discarded).getByText("3").closest(".badge")).toHaveClass(
       "badge-danger",
     );
-    expect(screen.getByText("Discarded").closest(".badge")).toHaveClass(
-      "badge-danger",
-    );
+    const failure = await tableRowCells("Recent failures", "capture_classify");
+    expect(
+      within(failure.State).getByText("Discarded").closest(".badge"),
+    ).toHaveClass("badge-danger");
   });
 
   // The case the window exists for: a settled outage. The rows are still there
@@ -343,43 +353,43 @@ describe("JobHealthCard", () => {
         jsonResponse({
           ...HEALTH,
           kinds: [
-            { ...HEALTH.kinds[0], dead: 531, dead_recent: 0, retrying: 0 },
+            {
+              ...HEALTH.kinds[0],
+              dead: 531,
+              discarded: 531,
+              dead_recent: 0,
+              retrying: 0,
+            },
           ],
         }),
     });
     render(<JobHealthCard />);
     const kind = await tableRowCells("This company", "capture_classify");
-    expect(kind.Dead).toHaveTextContent("531");
+    expect(kind.Discarded).toHaveTextContent("531");
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  // And when both are non-zero and differ, the week's total travels WITH the
-  // alarm rather than instead of it.
-  it("names the week's total beside the window's count", async () => {
+  it("keeps intentional cancellations separate from discarded work", async () => {
     stubRoutes({
       "GET /admin/job-health": () =>
         jsonResponse({
           ...HEALTH,
           kinds: [
-            { ...HEALTH.kinds[0], dead: 531, dead_recent: 4, retrying: 0 },
+            {
+              ...HEALTH.kinds[0],
+              discarded: 0,
+              cancelled: 4,
+              dead: 4,
+              dead_recent: 4,
+            },
           ],
         }),
     });
     render(<JobHealthCard />);
-    const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent(/4 dead jobs in the last 24h/i);
-    expect(alert).toHaveTextContent(
-      /531 discarded or canceled in the last 7 days/i,
-    );
-  });
-
-  it("speaks of a single dead job in the singular", () => {
-    const kinds = [{ ...HEALTH.kinds[0], dead: 1, dead_recent: 1 }];
-    const health = { ...HEALTH, kinds, recent_failures: [] };
-    render(<DeadWorkCallout health={health} />);
-    const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent(/1 dead job in the last 24h/i);
-    expect(alert).toHaveTextContent(/1 job was discarded or canceled/i);
+    const kind = await tableRowCells("This company", "capture_classify");
+    expect(kind.Canceled).toHaveTextContent("4");
+    expect(kind.Canceled.querySelector(".badge-danger")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("keeps a healthy report free of the dead-work alert", async () => {

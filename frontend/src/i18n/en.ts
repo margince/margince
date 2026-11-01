@@ -9235,17 +9235,16 @@ export const en = {
     "The background queue is empty. No jobs are waiting, running, retrying or dead.",
   "jobs.workspaceKinds": "This company",
   "jobs.workspaceEmpty": "No background jobs for this company.",
-  "jobs.dispatcherKinds": "Fleet dispatchers",
+  "jobs.dispatcherKinds": "Shared background work",
   "jobs.dispatcherSub":
-    "Rows with no company: a dispatcher distributes work to every company and runs none itself. Their counts belong to the installation.",
-  "jobs.dispatcherEmpty":
-    "No dispatcher rows. Periodic ticks re-insert them, so an empty list means none is scheduled now.",
+    "These runs serve the installation. Their counts are not limited to this company.",
+  "jobs.dispatcherEmpty": "No shared background runs are currently retained.",
   "jobs.col.job": "Job",
   "jobs.col.queue": "Queue",
   "jobs.col.waiting": "Waiting",
   "jobs.col.running": "Running",
   "jobs.col.retrying": "Retrying",
-  "jobs.col.dead": "Dead",
+  "jobs.col.expectation": "Declared wait limit",
   "jobs.col.oldestWait": "Oldest wait",
   "jobs.col.state": "State",
   "jobs.col.reason": "Reason",
@@ -9255,14 +9254,6 @@ export const en = {
   // The window is in the TITLE, not only the body: a count with no span asks
   // the reader to guess, and the guess is "since forever" — which is what made
   // a finished outage keep this red for a week.
-  "jobs.deadTitle_one": "{count} dead job in the last {hours}h",
-  "jobs.deadTitle_other": "{count} dead jobs in the last {hours}h",
-  "jobs.deadTotal":
-    "{count} discarded or canceled in the last 7 days, the retention period for these records.",
-  "jobs.deadBody_one":
-    "{count} job was discarded or canceled and will not run without intervention. Discarded jobs used every attempt; canceled jobs were stopped on purpose.",
-  "jobs.deadBody_other":
-    "{count} jobs were discarded or canceled and will not run without intervention. Discarded jobs used every attempt; canceled jobs were stopped on purpose.",
   "jobs.failures": "Recent failures",
   "jobs.failuresSub": "Most recent first, up to 50.",
   "jobs.failuresEmpty": "No failures recorded.",
@@ -9356,32 +9347,10 @@ export const en = {
   "settings.providerHealth": "AI provider status",
   "settings.providerHealthSub":
     "Whether each AI provider is answering, as this server has seen it.",
-  "systemHealth.strip": "Status",
   "systemHealth.asOf": "As of {time}",
-  "systemHealth.checking": "Checking…",
-  "systemHealth.unread": "Could not check",
   "systemHealth.notSetUp": "Not set up",
-  "systemHealth.jobs.idle": "Idle",
-  "systemHealth.jobs.keepingUp": "Keeping up",
-  "systemHealth.jobs.dead_one": "{count} dead",
-  "systemHealth.jobs.dead_other": "{count} dead",
-  "systemHealth.jobs.retrying_one": "{count} retrying",
-  "systemHealth.jobs.retrying_other": "{count} retrying",
-  "systemHealth.intake.label": "Connector records",
-  "systemHealth.intake.none": "None",
-  "systemHealth.intake.refused_one": "{count} refused",
-  "systemHealth.intake.refused_other": "{count} refused",
-  "systemHealth.providers.answering": "Answering",
-  "systemHealth.providers.affected_one": "{count} needs attention",
-  "systemHealth.providers.affected_other": "{count} need attention",
-  "systemHealth.providers.standIn": "Built-in test provider",
-  "systemHealth.providers.standInDetail":
-    "The bound models cannot be called. Add a key under AI models.",
-  "systemHealth.providers.standInPartialDetail":
-    "Some tiers answer from the built-in test provider. Add their keys under AI models.",
   "providerHealth.adminOnly":
     "AI provider status covers the whole installation and requires a permission your role does not have.",
-  "providerHealth.healthy": "All AI providers are answering.",
   "providerHealth.noneConfigured":
     "No AI provider is set up, so there is nothing to check.",
   "aiProviderHealth.label.degraded": "Degraded",
@@ -19529,6 +19498,224 @@ export const en = {
   "analytics.decision.range": "Modelled range",
   "analytics.decision.rangeNote":
     "The expected finish is the two parts on the bar. The modelled range is a separate model of how every open deal may close, so it can sit apart from them.",
+  "health.views": "System health views",
+  "health.overview": "Overview",
+  "health.diagnostics": "Diagnostics",
+  "health.configurationWithheld":
+    "Your role cannot view these settings. Ask an administrator.",
+  "health.configuration": "Configuration",
+  "health.loading": "Loading evidence…",
+  "health.attention": "Attention needed",
+  "health.stoppedNext":
+    "Send the error report to your system operator. They should check completion, fix the cause and restart only unfinished work; these failed runs will not retry.",
+  "health.readFailedNext":
+    "Refresh this check. If it still fails, send the technical report to your system operator.",
+  "health.jobStopped": "{kind}: failed runs need review",
+  "health.effectUntilFixed": "While unresolved:",
+  "health.effect.mailSorting":
+    "In Worklist, emails that need a reply or a meeting follow-up may be missing or in the wrong order. Check your inbox manually until sorting catches up. You can still receive and read email.",
+  "health.effect.jobs":
+    "The listed background work may remain unfinished. The failed-run count is not a count of missing records or affected team members; the operator must check the listed jobs.",
+  "health.effect.senderReview":
+    "New business contacts may not be created and related mail may stay unavailable to colleagues until the sender decision is resolved.",
+  "health.effect.heldMail":
+    "The affected conversations stay hidden from colleagues who were not on the mail until the confidentiality review is resolved.",
+  "health.effect.unreadMail":
+    "Mail from the reported period may be missing from the CRM. Later mail can still arrive; recover that period before relying on the history.",
+  "health.effect.captureRepair":
+    "Some captured records may remain hidden or unfinished until the repair pass succeeds.",
+  "health.effect.intake":
+    "CRM records and reports may be missing information from these rejected imports. Check whether the records were imported successfully later before resubmitting them.",
+  "health.effect.providers":
+    "AI features using the affected provider may fail or wait. Features using another available provider can continue.",
+  "health.effect.search":
+    "Search may miss records until indexing catches up. The records themselves remain saved.",
+  "health.effect.updates":
+    "The changes handled by this update remain incomplete. Already saved changes stay saved; some records may still have their previous values.",
+  "health.effect.recovery":
+    "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
+  "health.effect.automatic":
+    "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
+  "health.effect.readFailed":
+    "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
+  "health.reportCopyFailed": "Could not copy the technical report",
+  "health.recordedRun": "Recorded run {id} · {state} · {time}",
+  "health.effect.unknown":
+    "The report identifies a problem but not the affected feature. Ask your system operator to inspect it before restarting work.",
+  "health.measure.runs_one": "{count} run",
+  "health.measure.runs_other": "{count} runs",
+  "health.measure.threads_one": "{count} thread",
+  "health.measure.threads_other": "{count} threads",
+  "health.measure.mailboxes_one": "{count} mailbox",
+  "health.measure.mailboxes_other": "{count} mailboxes",
+  "health.measure.records_one": "{count} record",
+  "health.measure.records_other": "{count} records",
+  "health.measure.updates_one": "{count} update",
+  "health.measure.updates_other": "{count} updates",
+  "health.measure.items_one": "{count} item",
+  "health.measure.items_other": "{count} items",
+  "health.checked": "No action needed",
+  "health.incomplete": "Health could not be fully checked",
+  "health.refresh": "Refresh",
+  "health.prioritiesChanged":
+    "Priorities changed. Refresh to apply the new order.",
+  "health.capabilities": "All checks",
+  "health.unknown": "Not recorded",
+  "health.stale": "Last known evidence; the latest check did not complete.",
+  "health.failed": "This source could not be read",
+  "health.withheld": "Permission required",
+  "health.notMonitored": "Not monitored",
+  "health.availability.available": "Evidence read",
+  "health.oldestWait": "Oldest runnable wait: {age}",
+  "health.backupsUnmonitored":
+    "Margince records restore drills. It does not monitor whether backups are running.",
+  "health.automaticLimits":
+    "Creation and completion counts describe outcomes, not business value. Small samples and routing reviews remain available in Diagnostics.",
+  "health.condition.clear": "No issue detected in this check",
+  "health.condition.processing": "Processing",
+  "health.condition.retrying": "Retrying",
+  "health.condition.waiting_human": "Needs human review",
+  "health.condition.technical": "Needs technical attention",
+  "health.condition.unverified": "Recovery not verified",
+  "health.condition.recovered": "Recovered",
+  "health.source.jobs": "Background processing",
+  "health.source.capture": "Mail capture",
+  "health.source.intake": "Connector intake",
+  "health.source.providers": "AI availability",
+  "health.source.search": "Search",
+  "health.source.updates": "Data updates",
+  "health.source.recovery": "Recovery evidence",
+  "health.source.automatic": "Automatic work quality",
+  "health.impact": "Known impact",
+  "health.measuredImpact": "The source measured the affected work.",
+  "health.possibleImpact":
+    "Work may be delayed or incomplete; affected team members are not counted.",
+  "health.unknownImpact": "The affected scope is not known.",
+  "health.scope": "Affected scope",
+  "health.window": "Reporting window",
+  "health.currentRetained":
+    "Current stored state; retained history where applicable",
+  "health.observed": "Latest observation",
+  "health.firstObserved": "First observed",
+  "health.nextAttempt": "Next recorded automatic attempt",
+  "health.responsible": "Who can act",
+  "health.responsible.you": "You",
+  "health.responsible.mailbox_owner": "Mailbox owner",
+  "health.responsible.administrator": "Administrator",
+  "health.responsible.operator": "Technical operator",
+  "health.recovery": "Evidence needed to clear this",
+  "health.recovery.jobs":
+    "Confirm the affected work completed or was superseded. A later unrelated success is insufficient.",
+  "health.recovery.capture":
+    "The affected queue must drain or its owner must settle the pending decision.",
+  "health.recovery.intake":
+    "The operator must verify handling of the refused records. An expired window does not prove repair.",
+  "health.recovery.providers":
+    "A recorded provider observation must establish availability; affected queued work needs its own completion evidence.",
+  "health.recovery.search":
+    "The index must match the configured model and finish its pending records.",
+  "health.recovery.updates":
+    "The affected data update must report completion. Accepting a retry does not establish completion.",
+  "health.recovery.recovery":
+    "Record a successful restore drill within the recovery and data-loss targets.",
+  "health.recovery.automatic":
+    "Review routing outcomes over a sufficiently large sample.",
+  "health.ownerHandoff":
+    "Ask the mailbox owner to open their own Connections or capture review. This page cannot open their private mail.",
+  "health.operatorHandoff":
+    "A technical operator must investigate. Copy the diagnostic summary for the handoff.",
+  "health.copy": "Copy technical report",
+  "health.copied": "Copied",
+  "health.copyRemedy":
+    "Try again, or copy the diagnostic details from this page manually.",
+  "health.inspect": "See problem and next step",
+  "health.openModels": "Open Models",
+  "health.openConnections": "Open Connections",
+  "health.unit.runs": "runs",
+  "health.history": "Retained failure history",
+  "health.historyWindow":
+    "The time window applies to finished runs. Current retries are included regardless of age.",
+  "health.historyCoverage":
+    "Totals cover all matching retained runs, including runs beyond this page. Deleted history is not covered. Groups do not establish a shared cause.",
+  "health.historyChanged":
+    "Outcomes or retention may have changed since the traversal began. Refresh to reconcile totals.",
+  "health.groups": "Grouped runs",
+  "health.all": "All",
+  "health.oneDay": "Last day",
+  "health.sevenDays": "Last seven days",
+  "health.nextPage": "Next page",
+  "health.sharedScope": "Shared processing",
+  "health.workspaceScope": "Company work",
+  "health.code.queue_checked": "No waiting or failed runs in retained history",
+  "health.code.queue_processing": "Background work is processing or scheduled",
+  "health.code.queue_overdue": "Background work is delayed",
+  "health.code.queue_unverified": "Failed background runs need review",
+  "health.code.queue_retrying": "Failed work is waiting for another attempt",
+  "health.code.queue_expectation_unknown":
+    "Work is runnable; no waiting-time expectation is declared",
+  "health.code.capture_checked":
+    "No capture backlog detected in checked categories",
+  "health.code.capture_processing": "Sender classification is processing",
+  "health.code.capture_uncertain": "Some senders need an owner decision",
+  "health.code.capture_exhausted":
+    "Sender classification exhausted its automatic attempts",
+  "health.code.capture_owner_review":
+    "Mailbox owners have capture decisions to review",
+  "health.code.capture_unread":
+    "Unread mailbox periods need recovery verification",
+  "health.code.capture_held": "Filed records are waiting for a repair pass",
+  "health.code.capture_repair_unverified":
+    "A capture repair pass did not finish successfully",
+  "health.code.intake_no_refusals":
+    "No refused connector records in the reporting window; activity is not verified",
+  "health.code.intake_refused": "Some connector records were refused",
+  "health.code.providers_unobserved": "No provider result recorded yet",
+  "health.code.providers_not_configured": "No AI provider is configured",
+  "health.code.providers_blocked":
+    "An AI provider has recorded availability problems",
+  "health.code.search_unverified": "Index completeness has not been checked",
+  "health.code.search_checked": "The search index matches its configured model",
+  "health.code.search_processing": "Search records are being indexed",
+  "health.code.search_reindex": "Search needs an index update",
+  "health.code.search_not_configured":
+    "Search has no embedding model configured",
+  "health.code.updates_checked": "No unfinished data updates detected",
+  "health.code.updates_processing": "Data updates are pending or processing",
+  "health.code.updates_failed": "A data update needs technical attention",
+  "health.code.updates_retrying": "A data update has another attempt recorded",
+  "health.code.updates_review": "A data update needs administrator review",
+  "health.code.recovery_missing": "No restore test recorded",
+  "health.code.recovery_verified":
+    "The recorded restore drill met its recovery targets",
+  "health.code.recovery_unverified":
+    "The latest restore drill does not establish recovery readiness",
+  "health.code.automatic_checked":
+    "No routing-review threshold exceeded in the checked sample",
+  "health.code.automatic_routing": "Automatic work routing needs review",
+  "health.code.capture_thread_processing":
+    "Thread classification is processing",
+  "health.code.capture_thread_uncertain":
+    "Some thread classifications need owner review",
+  "health.queueCoverage":
+    "Queue history is retained for a limited time. Its absence cannot establish that previously failed work was completed.",
+
+  "health.evidenceDetails": "Technical details",
+  "health.impact.jobs":
+    "Work is delayed. Ask your system operator to check the queue and restart stalled processing.",
+  "health.impact.capture":
+    "Mail may remain unavailable. Ask your system operator to check and restart the failed capture work.",
+  "health.impact.intake":
+    "Some connector records were refused. Send the refusal report to the connector operator to correct and resubmit them.",
+  "health.impact.providers":
+    "AI work is blocked. Check provider access, credit, and availability in Models.",
+  "health.impact.search":
+    "Some records may be missing from search. Review and start the index update.",
+  "health.impact.updates":
+    "A data update needs attention. Check its error or review request before continuing.",
+  "health.impact.recovery":
+    "The restore test did not meet its targets. Ask your system operator to fix the problem and run another test.",
+  "health.impact.automatic":
+    "Work may be assigned to the wrong colleague. Review routing and correct the owner.",
 } as const;
 
 export type MessageKey = keyof typeof en;

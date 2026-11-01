@@ -187,6 +187,10 @@ func (stubs) GetJobHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetJobHealth")
 }
 
+func (stubs) GetJobHealthHistory(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetJobHealthHistoryParams) {
+	httperr.NotImplemented(w, r, "GetJobHealthHistory")
+}
+
 func (stubs) PreviewMailDealRepair(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewMailDealRepair")
 }
@@ -201,6 +205,10 @@ func (stubs) PauseReportingSchedules(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) ResetData(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ResetData")
+}
+
+func (stubs) GetSystemHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetSystemHealth")
 }
 
 func (stubs) DownloadAgentSkillBundle(w nethttp.ResponseWriter, r *nethttp.Request) {

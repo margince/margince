@@ -27,6 +27,7 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { HealthCard } from "./healthcard";
@@ -282,15 +283,18 @@ function isAutomaticWorkHealth(data: Health | undefined): data is Health {
 // `job_health:read`, the grant every System health card shares.
 export function useAutomaticWorkHealth(days: Window) {
   const canSee = useCan("job_health", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey: ["automatic-work-health", days],
-    enabled: canSee,
+    queryKey: ["automatic-work-health", scope, days],
+    enabled: canSee && visible && scope !== undefined,
     // The window control sits in the report; without the last answer held
     // while the next loads, the control would vanish under the pointer.
     placeholderData: keepPreviousData,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const data = unwrap(
         await api.GET("/admin/automatic-work-health", {
+          signal,
           params: { query: { days: Number(days) } },
         }),
       );

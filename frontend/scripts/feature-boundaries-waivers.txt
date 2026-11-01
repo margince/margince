@@ -99,10 +99,6 @@ reach features/capture/capture-activity.tsx features/mail/openemaildrawer.tsx
 reach features/capture/connection-outcomes.tsx features/import/linkedin-reach.tsx
 reach features/capture/emailaccesseditor.tsx features/lists/audiencemembers.tsx
 reach features/capture/held-threads.tsx features/mail/openemaildrawer.tsx
-reach features/capture/providerhealth.test.tsx features/ai/ai-provider-keys.tsx
-reach features/capture/providerhealth.tsx features/ai/ai-provider-names.ts
-reach features/capture/providerhealth.tsx features/ai/ai-settings.css
-reach features/capture/providerhealth.tsx features/settings/healthcard.tsx
 reach features/companies/companies.archived.test.tsx app/queryclient.ts
 reach features/companies/companies.body.tsx features/brief/meetingbrief/index.ts
 reach features/companies/companies.body.tsx features/mail/compose.tsx
@@ -368,7 +364,6 @@ reach features/settings/preferences.tsx features/privacy/publicpage.tsx
 reach features/settings/rate-manual.tsx features/ai/ai-routing-fields.tsx
 reach features/settings/rates.stories.tsx features/ai/ai-price-sync.tsx
 reach features/settings/rates.test.tsx features/ai/ai-price-sync.tsx
-reach features/settings/rates.tsx features/ai/ai-provider-names.ts
 reach features/settings/releaseskew.tsx features/sign-in/auth.tsx
 reach features/settings/settings-audit.tsx app/nav.ts
 reach features/settings/settings-chrome.test.tsx app/shell.tsx
@@ -383,7 +378,6 @@ reach features/settings/settings.privacy.tsx features/privacy/privacy.correction
 reach features/settings/settings.privacy.tsx features/privacy/privacy.purposes.tsx
 reach features/settings/settings.privacy.tsx features/privacy/privacy.tsx
 reach features/settings/settings.privacy.tsx features/privacy/retention.tsx
-reach features/settings/settings.systemhealth.tsx features/capture/providerhealth.tsx
 reach features/settings/settings.test.tsx app/account.tsx
 reach features/settings/settings.test.tsx features/mail/composesignoff.tsx
 reach features/settings/settings.tsx features/ai/ai-admin.tsx

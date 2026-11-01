@@ -91,3 +91,28 @@ Every rep and manager opens the app, the Worklist, Home and a few records at the
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | `admin_rail` | ⚪ Not measured | ⚪ Not measured | Not measured yet. |
+
+## How quickly can I check System health?
+
+These times cover server reads as an admin, not the page in your browser.
+
+| Check | Time | Result |
+|---|---|---|
+| Opening Overview | 🟢 Under a quarter of a second | Fast. |
+| Opening background run history | 🟢 Under a quarter of a second | Fast. |
+| Checking mail capture | 🟢 Under a quarter of a second | Fast. |
+| Checking automatic work | 🟢 Under a quarter of a second | Fast. |
+| Eight readers checking at once | 🟢 Under a second | Fast. |
+
+<details>
+<summary>How this check was measured</summary>
+
+Measured on 2026-11-01 on Apple M5 Max (18 cores).
+The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000 leads,
+500 projects and 500,000 activities, owned by 12 reps under 2 managers.
+
+30 samples per check. Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2.
+
+Run `make bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets` to measure again.
+
+</details>

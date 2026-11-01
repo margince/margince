@@ -311,27 +311,27 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
+**System health** opens on **Overview**: what needs work, who can act and the next step.
+Only work that needs a person appears here, with its effect until fixed. **All checks** holds service status; **Diagnostics** shows the technical details.
+
+**Diagnostics** shows each source. Filter background runs or open the next page; totals include all runs still kept in that window.
+A canceled run is not a failed run. Deleted runs do not prove the work is done. **Copy technical report** copies recorded errors, attempts and run IDs; it sends no message.
+
+**Configuration** holds background schedules and mail send limits. Edits use the page save bar.
+Moving to another view asks you to save a draft first. Settings search opens the view with the control you asked for.
+
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
   prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
   Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
 - **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
-- **AI provider status**: whether each AI provider is answering, as the app and its background jobs found it, in one view. See [AI providers](ai-providers.md).
-- **Mail capture checks**: whether the passes that fix mail capture in the
-  background keep up. It shows when each last worked, and how many contacts and
-  threads wait in each mailbox. It also shows how many filed meetings are held
-  back in the whole installation. It shows counts only; the contacts and messages stay
-  in view to their mailbox owner alone. The same readers as Background jobs see
-  it.
+- **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
+- **Mail capture checks**: when each background pass last worked, contacts and threads waiting in each mailbox, and meetings held back. Counts are shown to the same readers as Background jobs; messages stay with their mailbox owner.
 - **Links in outgoing mail**: the address Margince puts in the links it emails, such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not checked**. If nobody outside can reach it, those links open nothing.
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
-- **Restore drills**: when a restore from a backup was last tested, if it
-  passed, and how long it took against the targets. Whoever runs the
-  installation records each test. Margince does not see backups, so the card
-  says "Not observed by Margince" for the last backup. The same readers as
-  Background jobs see it.
+- **Restore drills**: when a restore was tested, if it passed, and how long it took against the targets. Whoever runs the installation records each test. Margince does not see backups; the card says "Not observed by Margince". The same readers as Background jobs see it.
 - **Reset data**: takes an installation back to how it was on its first start.
   It deletes every record and setting, but keeps the company and its users, so
   everyone can still sign in. It appears only where whoever runs the

@@ -59,6 +59,8 @@ const PASSED = {
     operator: "Ops On Call",
     notes: "Restored copy opened; record counts matched the source.",
     recovery_seconds: 8_100,
+    recovery_within_target: true,
+    data_loss_within_target: true,
     data_loss_seconds: 2_400,
   },
 };
@@ -74,6 +76,8 @@ export const FailedOverTarget: Story = {
       outcome: "failed",
       notes: "Object store sync was a day behind the database.",
       recovery_seconds: 19_800,
+      recovery_within_target: false,
+      data_loss_within_target: false,
       data_loss_seconds: 5_400,
     },
   }),

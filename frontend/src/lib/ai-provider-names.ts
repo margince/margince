@@ -1,16 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import type { DECISION_PROVIDERS, PROVIDERS } from "./ai-routing-fields";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
-type Provider =
-  | (typeof PROVIDERS)[number]
-  | (typeof DECISION_PROVIDERS)[number];
-
-// Keyed by the routing form's mirrors of the server registries, so an adapter
-// added there without a name here fails the typecheck.
 const PROVIDER_NAMES = {
   anthropic: "aiProviders.name.anthropic",
   openai_compatible: "aiProviders.name.openaiCompatible",
@@ -22,9 +15,11 @@ const PROVIDER_NAMES = {
   ollama: "aiProviders.name.ollama",
   vllm: "aiProviders.name.vllm",
   fake: "aiProviders.name.fake",
-} as const satisfies Record<Provider, MessageKey>;
+} as const satisfies Record<string, MessageKey>;
 
-function isNamed(provider: string): provider is Provider {
+export type NamedProvider = keyof typeof PROVIDER_NAMES;
+
+function isNamed(provider: string): provider is NamedProvider {
   return Object.hasOwn(PROVIDER_NAMES, provider);
 }
 

@@ -13,6 +13,7 @@ import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
 
@@ -51,15 +52,15 @@ function formatWindow(seconds: number, t: Translator, locale: Locale): string {
 }
 
 function againstTarget(
-  seconds: number,
+  within: boolean | undefined,
   target: number,
   t: Translator,
   locale: Locale,
 ) {
-  const key: MessageKey =
-    seconds <= target
-      ? "recoveryHealth.withinTarget"
-      : "recoveryHealth.overTarget";
+  if (within === undefined) return t("health.unknown");
+  const key: MessageKey = within
+    ? "recoveryHealth.withinTarget"
+    : "recoveryHealth.overTarget";
   return t(key, { target: formatWindow(target, t, locale) });
 }
 
@@ -97,7 +98,7 @@ function drillFacts(
         drill.recovery_seconds === null
           ? undefined
           : againstTarget(
-              drill.recovery_seconds,
+              drill.recovery_within_target,
               health.recovery_target_seconds,
               t,
               locale,
@@ -108,7 +109,7 @@ function drillFacts(
       term: t("recoveryHealth.dataLoss"),
       value: formatWindow(drill.data_loss_seconds, t, locale),
       note: againstTarget(
-        drill.data_loss_seconds,
+        drill.data_loss_within_target,
         health.data_loss_target_seconds,
         t,
         locale,
@@ -210,11 +211,13 @@ function RecoveryBody({
 // the grant every System health card shares.
 export function useRecoveryHealth() {
   const canSee = useCan("job_health", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey: ["recovery-health"],
-    enabled: canSee,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/admin/recovery-health"));
+    queryKey: ["recovery-health", scope],
+    enabled: canSee && visible && scope !== undefined,
+    queryFn: async ({ signal }) => {
+      const data = unwrap(await api.GET("/admin/recovery-health", { signal }));
       if (!isRecoveryHealth(data)) {
         throw new Error("malformed recovery-health response");
       }

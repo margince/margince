@@ -90,6 +90,12 @@ func (p *publicOriginProbe) Status(ctx context.Context) PublicOriginStatus {
 	return p.last
 }
 
+func (p *publicOriginProbe) Snapshot() PublicOriginStatus {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.last
+}
+
 // probe performs one attempt against the origin's health endpoint.
 //
 // Any status below 500 counts as reachable, and that is the question

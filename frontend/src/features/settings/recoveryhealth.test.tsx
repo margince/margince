@@ -52,6 +52,8 @@ const HEALTH = {
     operator: "Ops On Call",
     notes: "restored copy opened; counts matched",
     recovery_seconds: 8_100,
+    recovery_within_target: true,
+    data_loss_within_target: true,
     data_loss_seconds: 2_400,
   },
 };
@@ -82,7 +84,11 @@ it("says a drill over the target is over it", async () => {
     "GET /admin/recovery-health": () =>
       jsonResponse({
         ...HEALTH,
-        last_drill: { ...HEALTH.last_drill, recovery_seconds: 18_000 },
+        last_drill: {
+          ...HEALTH.last_drill,
+          recovery_seconds: 18_000,
+          recovery_within_target: false,
+        },
       }),
   });
 
