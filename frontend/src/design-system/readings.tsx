@@ -385,8 +385,8 @@ export function SegmentBar({
   label: string;
 }>) {
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is whichever is larger, the parts or the mark: a call beyond what
-  // the parts reach leaves recessed track between them, which is the gap.
+  // The scale is the larger of the parts and the mark. A mark beyond the parts
+  // leaves recessed track between them, and that track is the gap.
   const scale = Math.max(total, marker?.value ?? 0);
   return (
     <div className="segbar">
