@@ -97,7 +97,6 @@ export function SalesHero({
   charts,
   onEvidence,
   aside,
-  mark,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   // The chart read, apart from the figures: pending, failed or answered, or
@@ -108,8 +107,6 @@ export function SalesHero({
     from?: ReportingEvaluation,
   ) => void;
   aside?: ReactNode;
-  // A reading drawn beside the figure, such as its share of the target.
-  mark?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -133,40 +130,32 @@ export function SalesHero({
       <PanelBody>
         <div className="analytics-hero-body">
           <div className="analytics-hero-figure">
-            <div className="analytics-hero-headline">
-              <div className="analytics-hero-lead">
-                <p className="analytics-hero-value t-num">
-                  {readingValue(won, evaluation, t, locale)}
-                </p>
-                {/* With the chart drawn, its foot names the period. */}
-                {!trend && (
-                  <p className="t-caption">
-                    {reportingPeriodLabel(
-                      context.interval,
-                      context.timezone,
-                      locale,
-                    )}
-                  </p>
+            <p className="analytics-hero-value t-num">
+              {readingValue(won, evaluation, t, locale)}
+            </p>
+            {/* With the chart drawn, its foot names the period. */}
+            {!trend && (
+              <p className="t-caption">
+                {reportingPeriodLabel(
+                  context.interval,
+                  context.timezone,
+                  locale,
                 )}
-                {won?.coverage.withheld && (
-                  <p className="t-caption">
-                    {t("analytics.overview.partlyHidden")}
-                  </p>
-                )}
-                {won?.coverage.status !== "ok" && won?.coverage.reason && (
-                  <p className="t-caption">{won.coverage.reason}</p>
-                )}
-                {won && (
-                  <Button
-                    variant="link"
-                    onClick={() => onEvidence(won.evidence)}
-                  >
-                    {t("reporting.viewRecords")}
-                  </Button>
-                )}
-              </div>
-              {mark}
-            </div>
+              </p>
+            )}
+            {won?.coverage.withheld && (
+              <p className="t-caption">
+                {t("analytics.overview.partlyHidden")}
+              </p>
+            )}
+            {won?.coverage.status !== "ok" && won?.coverage.reason && (
+              <p className="t-caption">{won.coverage.reason}</p>
+            )}
+            {won && (
+              <Button variant="link" onClick={() => onEvidence(won.evidence)}>
+                {t("reporting.viewRecords")}
+              </Button>
+            )}
             {aside}
           </div>
           {trend && trendRead && (
@@ -206,7 +195,6 @@ export function BoardChart({
     <ChartPanel
       chart={chart}
       wide={false}
-      flatHead
       evaluation={evaluation}
       onEvidence={onEvidence}
     />
@@ -214,40 +202,37 @@ export function BoardChart({
 }
 
 /**
- * One chart of the chart read. The gated one says in its place that the read
- * is pending or failed. The other draws only once there is an answer, so a
- * failure is said once, and the figures above stand either way.
+ * Today's stock by stage beside the permitted sales by owner, from the chart
+ * read. While it is read, or when it failed, it says so in its own place and
+ * the figures above it stand.
  */
-export function StockChart({
+export function StockCharts({
   charts,
-  kind,
-  gated,
   onEvidence,
 }: Readonly<{
   charts: UseQueryResult<ReportingEvaluation>;
-  kind: ReportingChart["kind"];
-  gated?: boolean;
   onEvidence: (
     reference: ReportingEvidenceRef,
     from?: ReportingEvaluation,
   ) => void;
 }>) {
   const t = useT();
-  const draw = (read: ReportingEvaluation) => (
-    <BoardChart
-      evaluation={read}
-      kind={kind}
-      onEvidence={(reference) => onEvidence(reference, read)}
-    />
-  );
-  // Ungated, a failed or refreshing read draws nothing rather than stale data.
-  if (!gated)
-    return !charts.isPending && !charts.isError && charts.data
-      ? draw(charts.data)
-      : null;
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
-      {draw}
+      {(read) => (
+        <div className="analytics-pair">
+          <BoardChart
+            evaluation={read}
+            kind="stage_distribution"
+            onEvidence={(reference) => onEvidence(reference, read)}
+          />
+          <BoardChart
+            evaluation={read}
+            kind="owner_attainment"
+            onEvidence={(reference) => onEvidence(reference, read)}
+          />
+        </div>
+      )}
     </QueryGate>
   );
 }

@@ -19526,9 +19526,6 @@ export const en = {
     "Forecast checks are not available to you.",
   "analytics.decision.part.commit_evidence": "Confirmed commit",
   "analytics.decision.part.weighted": "Weighted open deals",
-  "analytics.decision.range": "Modelled range",
-  "analytics.decision.rangeNote":
-    "The expected finish is the two parts on the bar. The modelled range is a separate model of how every open deal may close, so it can sit apart from them.",
   "health.views": "System health views",
   "health.overview": "Overview",
   "health.diagnostics": "Diagnostics",
