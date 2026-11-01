@@ -1200,7 +1200,7 @@ export const en = {
   "reporting.period": "Date range",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "All pipelines",
-  "reporting.resultsThrough": "Results through {at}",
+  "reporting.actualsThrough": "Actuals through {at}",
   "reporting.periodNotStarted":
     "The period starts {at}; nothing has happened in it yet",
   "reporting.writtenNoneWon": "No sales won in {period}.",
@@ -1304,10 +1304,10 @@ export const en = {
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
   "reporting.compare.reached": "Target reached",
-  "reporting.compare.coverageAll": "Coverage, all open deals",
+  "reporting.compare.coverageAll": "Coverage, deals closing this quarter",
   "reporting.compare.coverageQualified": "Coverage, qualified deals",
   "reporting.compare.coverageBasis":
-    "{open} open in this quarter, over what is left to win",
+    "{open} eligible to close this quarter / {remaining} still to win",
   "reporting.compare.qualifiedBasis":
     "{open} in qualified deals, over what is left to win",
   "reporting.compare.ratio": "{ratio}×",
@@ -1413,7 +1413,17 @@ export const en = {
   "reporting.data": "View chart as table",
   "reporting.evidence": "Evidence",
   "reporting.evidenceStale":
-    "The figures changed after this report loaded. Retry to reload the report, then open the evidence again.",
+    "The figures changed after this page loaded, so the records may differ from the figure you opened. Retry to read the figures again, then open the records.",
+  "reporting.evidenceReadAt":
+    "Figures read {at}, in {currency}. The records are listed as they stood then.",
+  "reporting.evidenceFrozenAt":
+    "Snapshot saved {at}, in {currency}. The records are listed as they stood then.",
+  "reporting.evidenceZero":
+    "Nothing counted toward this figure, so no records are listed. The figure is a measured zero.",
+  "reporting.evidenceWithheld":
+    "This figure is hidden from you, so its records and their count are not shown.",
+  "reporting.evidenceUnavailable":
+    "This figure could not be read, so there are no records to list. Retry to read it again.",
   "reporting.exportStale":
     "The figures changed after this report loaded. Retry to reload the report, then export it again.",
   "reporting.details": "Details",
@@ -3354,6 +3364,7 @@ export const en = {
   "stat.evidence": "Evidence",
   "stat.evidence.rests": "What this rests on",
   "stat.open": "Open",
+  "stat.records": "View records",
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
@@ -7227,6 +7238,10 @@ export const en = {
     "The executed plan and the rows this number reconciles to",
   "analytics.reportDeals": "Open deals by stage",
   "analytics.sections": "Analytics sections",
+  "analytics.scopeRefused": "This link names figures you cannot open",
+  "analytics.scopeRefusedBody":
+    "It asks about a colleague or a team outside what you may see. Nothing is shown in its place until you choose.",
+  "analytics.scopeRefusedUse": "Show {scope}",
   "analytics.sectionForecast": "Forecast",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Overview",
@@ -7234,31 +7249,42 @@ export const en = {
   "analytics.overview.sales": "Sales review",
   "analytics.overview.prospecting": "My prospecting",
   "analytics.overview.readings": "Opening readings",
+  "analytics.overview.charts": "Charts",
   "analytics.overview.expectedFinish": "Expected finish",
+  "analytics.overview.coverage": "Coverage",
+  "analytics.overview.allOpen": "All open pipeline",
+  "analytics.overview.openClosing": "Open pipeline closing this quarter",
   "analytics.overview.quarterOnly": "This quarter only",
-  "analytics.overview.finishBasis": "End of this fiscal quarter, from {basis}",
   "analytics.overview.winRateBasis": "Of the deals closed in this period",
   "analytics.overview.summary": "Summary",
   "analytics.overview.notCompared": "Not compared",
-  "analytics.overview.notComparedDetail": "The note below says why",
-  "analytics.overview.covers": "Covers {ratio}× of {remaining} left to win",
-  "analytics.overview.openDeals_one": "{count} open deal",
-  "analytics.overview.openDeals_other": "{count} open deals",
   "analytics.overview.saveView": "Save view",
   "analytics.overview.templates": "Report templates",
+  "analytics.overview.saveViewNote":
+    "Saving adds a report under Reports. Overview stays as it is.",
+  "analytics.overview.pipelineGone":
+    "This view names a pipeline you cannot open",
+  "analytics.overview.pipelineGoneBody":
+    "It may have been archived, or it is not shared with you. Choose a pipeline to see figures.",
+  "analytics.overview.pipelineDefault": "Use the default pipeline",
+  "analytics.overview.pipelineAll": "Use all pipelines",
   "analytics.overview.salesNothing":
     "No forecast check is open for this scope.",
   "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
   "analytics.overview.quarterOnlyBody":
     "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
   "analytics.overview.setTarget": "Set targets",
-  "analytics.overview.setTargetBody":
-    "Set a sales target for this quarter to see the gap and the coverage.",
   "analytics.overview.targetWho":
     "A colleague who manages targets, most often an admin or a sales manager, can set one.",
+  "analytics.overview.targetWhoShort":
+    "An admin or a sales manager can usually set one.",
   "analytics.overview.sinceTitle": "Since the last capture",
   "analytics.overview.historyStarts":
     "Comparison starts after a second compatible capture.",
+  "analytics.overview.historyFrom":
+    "History starts {date}. Movement shows after the next capture, {next}.",
+  "analytics.overview.historyNext":
+    "History starts with the next capture, {next}. Movement shows once a second one follows.",
   "analytics.overview.noMovement":
     "The open pipeline did not move between the two captures.",
   "analytics.overview.partlyHidden": "Part of this figure is hidden from you",
@@ -7268,52 +7294,88 @@ export const en = {
     "{count} leads still waiting for a reply",
   "analytics.overview.monthlyTitle": "Monthly targets, {month}",
   "analytics.overview.noMonthlyTarget": "No monthly target set",
-  "analytics.overview.setMonthlyTargetBody":
-    "Set a monthly target for meetings or accepted handoffs to see what is left this month.",
   "analytics.overview.noHandoffs":
     "Leads qualified is your main outcome, because this company does not use SDR handoffs.",
   "analytics.overview.changeWorkflow": "Change in Setup",
   "analytics.overview.workflowWho": "An admin can set this up in Setup.",
   "analytics.attentionIncomplete":
     "Some checks could not be read, so this list may be short.",
-  "analytics.overview.mainOutcome": "Main outcome",
   "analytics.overview.workflowFailed":
     "Could not read whether this company uses SDR handoffs.",
-  "analytics.overview.workflowTitle": "SDR handoffs",
+  "analytics.prospect.results": "Your results",
+  "analytics.prospect.withheld": "Hidden from you",
+  "analytics.prospect.failed": "Could not be read",
+  "analytics.prospect.failedDetail":
+    "The source did not answer. Try again later.",
+  "analytics.prospect.basisAccepted": "Handoffs accepted into a deal, {period}",
+  "analytics.prospect.noArrivals":
+    "No lead arrived {period}, so none could be qualified",
+  "analytics.prospect.basisQualified":
+    "Of {arrived} leads that arrived {period}",
+  "analytics.prospect.weeksFailed": "The recent weeks could not be read.",
+  "analytics.prospect.noMeetingsWeek": "No meetings recorded as held this week",
+  "analytics.prospect.noMeetingsPeriod":
+    "No meetings recorded as held in this period",
+  "analytics.prospect.unansweredWithheld":
+    "The count of unanswered leads is hidden from you",
+  "analytics.prospect.unansweredFailed":
+    "Unanswered leads could not be counted",
+  "analytics.prospect.tooFew": "Too few",
+  "analytics.prospect.tooFewResponses":
+    "Too few answered leads to give a typical time.",
+  "analytics.prospect.upcoming": "Booked meetings",
+  "analytics.prospect.upcomingThrough": "Next 14 days, through {date}",
+  "analytics.prospect.weeksLabel": "{metric} per week",
+  "analytics.prospect.weeksByArrival":
+    "Each lead counts in the week it arrived.",
+  "analytics.prospect.weeksUnderWay": "The last week counts up to now.",
+  "analytics.prospect.weeksByAcceptance":
+    "Each handoff counts in the week it was accepted.",
+  "analytics.prospect.historyTitle": "How your outcomes developed",
+  "analytics.prospect.historyCaption": "Week by week since {from}.",
+  "analytics.prospect.blocked": "Recipient cannot act",
+  "analytics.prospect.unassigned": "Shared queue",
+  "analytics.prospect.returned": "Sent back",
+  "analytics.prospect.returnedAgo": "Sent back {age} ago",
+  "analytics.prospect.noReason": "No reason given",
+  "analytics.prospect.noUpcoming": "No meetings booked in the next 14 days",
+  "analytics.prospect.restrictedRecord": "A record you cannot open",
+  "analytics.prospect.prepTitle": "Meetings to prepare",
+  "analytics.prospect.upcomingTitle": "Meetings coming up",
+  "analytics.prospect.cohortTitle": "What happened to your handoffs",
+  "analytics.prospect.cohortPeriods":
+    "Shown for a week or a month. Choose one of those periods to see it.",
+  "analytics.prospect.cohortCaption_one":
+    "{count} handoff you submitted {period}, as it stands now",
+  "analytics.prospect.cohortCaption_other":
+    "{count} handoffs you submitted {period}, as they stand now",
+  "analytics.prospect.cohort.accepted": "Accepted",
+  "analytics.prospect.cohort.recycled": "Sent back",
+  "analytics.prospect.cohort.rejected": "Rejected",
+  "analytics.prospect.cohort.waiting": "Not decided yet",
+  "analytics.doNext.title": "Do next",
+  "analytics.doNext.all_one": "{count} item in your Worklist",
+  "analytics.doNext.all_other": "All {count} items in your Worklist",
+  "analytics.doNext.open": "Open",
+  "analytics.doNext.openNamed": "Open {title}",
   "analytics.overview.gapMissing": "The comparison came back without a gap.",
   "analytics.overview.team": "Team prospecting",
   "analytics.team.chooseTeam": "Choose a team",
   "analytics.team.chooseTeamBody":
     "Team prospecting reviews a team or the whole company. Choose one in the scope above; one colleague’s work is in My prospecting.",
   "analytics.team.todaysMembers":
-    "These figures follow today’s team. A member who left takes their past handoffs with them.",
-  "analytics.team.countedOnce":
-    "Each figure counts the team’s work once. A meeting several members attended is one meeting here.",
-  "analytics.team.feedback": "Handoff feedback",
+    "These figures follow today’s team. A member who left takes their past work with them, and one who joined brings theirs.",
   "analytics.team.withheld":
     "Individual performance is off, and these figures would show one colleague’s work.",
-  "analytics.team.decided": "Decisions in this period",
   "analytics.team.submitted": "Submitted",
-  "analytics.team.submittedDetail": "Rounds handed on, resubmissions included",
   "analytics.team.accepted": "Accepted",
-  "analytics.team.acceptedDetail":
-    "Each deal once, credited to who handed it on",
   "analytics.team.returned": "Returned",
-  "analytics.team.returnedDetail": "Sent back to try again",
   "analytics.team.rejected": "Rejected",
-  "analytics.team.rejectedDetail": "Refused for good",
   "analytics.team.cohort_one":
     "Of the {count} round handed on in this period: {accepted} accepted, {returned} returned, {rejected} rejected and {waiting} still waiting.",
   "analytics.team.cohort_other":
     "Of the {count} rounds handed on in this period: {accepted} accepted, {returned} returned, {rejected} rejected and {waiting} still waiting.",
   "analytics.team.medianDecision": "Half were decided within {hours}.",
-  "analytics.team.smallSampleTitle": "A small sample",
-  "analytics.team.smallSample":
-    "Fewer than {below} rounds is too few to compare. Read the counts, not a rate, and nothing here says how hard anyone worked.",
-  "analytics.team.waitingNow_one":
-    "{count} handoff is waiting for a decision now.",
-  "analytics.team.waitingNow_other":
-    "{count} handoffs are waiting for a decision now.",
   "analytics.team.blocked_one":
     "{count} of them waits on someone who can no longer act.",
   "analytics.team.blocked_other":
@@ -7324,7 +7386,6 @@ export const en = {
     "{count} handoff events were recorded before their submitter was kept, so no member’s row counts them.",
   "analytics.team.reasons": "Reasons given",
   "analytics.team.reason": "Reason",
-  "analytics.team.outcome": "Outcome",
   "analytics.team.count": "Count",
   "analytics.team.membersWithheld":
     "Individual performance is off, so no member’s figures are shown.",
@@ -7338,6 +7399,77 @@ export const en = {
     "A meeting several members attended counts in each of their rows, so the rows can add up to more than the team.",
   "analytics.team.truncated":
     "The team has more members than this table shows.",
+  "analytics.team.standing": "Where the team stands",
+  "analytics.team.acceptedRate":
+    "{rate} of these {rounds} rounds were accepted.",
+  "analytics.team.tooFewForRate":
+    "Fewer than {below} is too few for a rate, so none is shown.",
+  "analytics.team.qualifiedOf_one":
+    "{qualified} of the {count} lead that arrived in this period is qualified so far. The others are still open or were disqualified.",
+  "analytics.team.qualifiedOf_other":
+    "{qualified} of the {count} leads that arrived in this period are qualified so far. The others are still open or were disqualified.",
+  "analytics.team.qualifiedRate": "That is {rate} of the leads that arrived.",
+  "analytics.team.waitingRow_one": "{count} handoff waits for a decision",
+  "analytics.team.waitingRow_other": "{count} handoffs wait for a decision",
+  "analytics.team.waitingBasis": "Waiting now",
+  "analytics.team.returnedRow_one":
+    "{count} handoff was sent back in this period",
+  "analytics.team.returnedRow_other":
+    "{count} handoffs were sent back in this period",
+  "analytics.team.rejectedRow_one":
+    "{count} handoff was rejected in this period",
+  "analytics.team.rejectedRow_other":
+    "{count} handoffs were rejected in this period",
+  "analytics.team.decidedBasis": "Decided in this period, whenever handed on",
+  "analytics.team.mostOften": "Most often: {reason}",
+  "analytics.team.unansweredRow_one":
+    "{count} lead still waits for a first reply",
+  "analytics.team.unansweredRow_other":
+    "{count} leads still wait for a first reply",
+  "analytics.team.unansweredBasis": "Wrote in during this period, no reply yet",
+  "analytics.team.unansweredHidden":
+    "Leads waiting for a reply are hidden from you.",
+  "analytics.team.unansweredFailed":
+    "Leads waiting for a reply could not be read.",
+  "analytics.team.unansweredPending":
+    "Leads waiting for a reply are still being read.",
+  "analytics.team.qualifiedHidden": "Qualified leads are hidden from you.",
+  "analytics.team.handoffsHidden": "Handoffs are hidden from you.",
+  "analytics.team.hiddenBasis":
+    "Your role does not include this. Nothing here says it is zero.",
+  "analytics.team.nothingWaits": "Nothing waits on the team in this period.",
+  "analytics.team.showHandoffs": "Show handoffs",
+  "analytics.team.showReasons": "Show reasons",
+  "analytics.team.showLeads": "Show leads",
+  "analytics.team.reasonsReturned": "Why handoffs were sent back",
+  "analytics.team.reasonsRejected": "Why handoffs were rejected",
+  "analytics.team.reasonsBasis":
+    "Decisions made {span}, whenever the handoff was handed on: {total} in all.",
+  "analytics.team.noReason": "No reason recorded",
+  "analytics.team.reasonsCut":
+    "Only the 50 most common reasons are listed, so they add up to less than the total.",
+  "analytics.team.waitingTitle": "Handoffs waiting for a decision",
+  "analytics.team.waitingListBasis":
+    "Waiting now, oldest first. Each row names the prospect and who it waits on.",
+  "analytics.team.qualified": "Qualified",
+  "analytics.team.unanswered": "Unanswered",
+  "analytics.team.target": "Monthly target",
+  "analytics.team.targetOf": "{actual} of {target}",
+  "analytics.team.noTarget": "No target",
+  "analytics.team.qualificationBasis":
+    "Qualified counts the leads that arrived in this period and are qualified so far. Unanswered counts the leads that wrote in during this period and have no reply yet. Both count for each lead’s owner now, so a reassigned lead counts for its new owner.",
+  "analytics.team.handoffBasis":
+    "Submitted, returned and rejected count what happened in this period. Accepted counts each deal once, in the period it was first accepted. Waiting now is as of today. Each counts for whoever handed it on at the time.",
+  "analytics.team.targetBasis":
+    "Targets are monthly. Each compares the qualified leads that arrived {month} so far with that member’s own target.",
+  "analytics.team.meetingsHidden": "Meetings are hidden from you.",
+  "analytics.team.leadsHidden":
+    "Qualified and unanswered leads are hidden from you.",
+  "analytics.team.targetsHidden": "Targets are hidden from you.",
+  "analytics.team.rowsNotTeam":
+    "The rows need not add up to the team’s figures. A lead with no owner is in no row.",
+  "analytics.team.notARanking":
+    "The rows are in name order, not a ranking. A small count says nothing about how hard anyone worked.",
   "analytics.sectionPerformance": "Performance",
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
@@ -7565,9 +7697,6 @@ export const en = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads still waiting for a first reply",
   "analytics.sdrQualifiedOf": "{qualified} of {arrived}",
-  "analytics.sdrUpcomingMeetings": "Meetings coming up",
-  "analytics.sdrUpcomingMeetingsDetail":
-    "Booked and not yet held, today’s count.",
   "analytics.sdrWaiting": "Handoffs waiting on others",
   "analytics.sdrWaitingIntro":
     "Handoffs you submitted that nobody has decided yet. A handoff that was sent back and submitted again waits from the new submission.",
@@ -7586,10 +7715,8 @@ export const en = {
   "analytics.sdrWaitingSinceResubmit":
     "Waiting {age} since you submitted it again",
   "analytics.sdrRestrictedProspect": "A prospect you cannot open",
-  "analytics.sdrNeedsYou": "Waiting on you",
   "analytics.sdrOpenWorklist": "Open Worklist",
   "analytics.sdrNothingNeedsYou": "Nothing needs you right now",
-  "analytics.sdrWorkCount": "Items to do: {total}. Urgent: {urgent}.",
   "analytics.sdrWorkIncomplete":
     "Some of your work could not be read, so this list may be missing items.",
   "analytics.myMeetings": "My meetings",
@@ -7834,6 +7961,14 @@ export const en = {
   "forecast.makeup": "How the period adds up",
   "forecast.alreadyWon": "Already won",
   "forecast.updateCall": "Update forecast",
+  "forecast.mismatch.pipeline": "The forecast covers every pipeline",
+  "forecast.mismatch.pipelineBody":
+    "The figure you came from counts one pipeline. The forecast cannot narrow to one, so it would count more deals than that figure.",
+  "forecast.mismatch.allPipelines": "Show all pipelines",
+  "forecast.mismatch.period": "The forecast reads this week, month or quarter",
+  "forecast.mismatch.periodBody":
+    "The figure you came from covers another period. Choose one the forecast reads.",
+  "forecast.mismatch.quarter": "Show this quarter",
   "forecast.callExplains":
     "Enter the total you expect to win this period, including sales already won.",
   "forecast.expectedTotal": "Expected total for this period",
@@ -13664,12 +13799,34 @@ export const en = {
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
   "forecast.landing": "Landing",
-  "forecast.landingFrom": "Projected · {won} won + {remaining} to come",
-  "forecast.landingFromCall": "From the call · {won} won so far",
-  "forecast.range": "8 in 10 outcomes between {low} and {high}",
-  "forecast.rangeBasis":
-    "Based on the chances in use. Each open deal is won or lost by its chance over many runs. At most one outcome in ten falls below the range, and at most one in ten above it. The range assumes the chances are right.",
   "forecast.landingRecords": "From the deal records",
+  "forecast.landingUnrecorded": "Not recorded",
+  "forecast.basis.commit_evidence": "Won + confirmed commit",
+  "forecast.basis.weighted": "Won + weighted open deals",
+  "forecast.basis.manager_call": "Manager’s call",
+  "forecast.basis.unknown": "Basis not recorded",
+  "forecast.split": "{won} won + {remaining} to come",
+  "forecast.callNotAdded": "Manager’s call {call}, not added",
+  "forecast.recordsProject": "Records alone project {amount}",
+  "forecast.callAbsentLine": "No call recorded, so commit is shown",
+  "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
+  "forecast.model.quarter": "Modelled quarter finish",
+  "forecast.model.month": "Modelled month finish",
+  "forecast.model.week": "Modelled week finish",
+  "forecast.model.value": "{low} to {high}",
+  "forecast.model.detail":
+    "Central 80% of modelled outcomes under current chances",
+  "forecast.model.includes": "Includes {won} already won",
+  "forecast.model.unpriced_one": "{count} unpriced deal left out",
+  "forecast.model.unpriced_other": "{count} unpriced deals left out",
+  "forecast.model.fxMissing_one":
+    "{count} deal without an exchange rate left out",
+  "forecast.model.fxMissing_other":
+    "{count} deals without an exchange rate left out",
+  "forecast.model.none": "No range",
+  "forecast.model.noneDetail": "No modelled range was drawn for this period.",
+  "forecast.model.basis":
+    "Won money plus each priced open deal in this period, won or lost by its chance in use over many runs. 8 in 10 modelled outcomes fall in this range. It assumes the chances are right, and it is not a measured forecast accuracy.",
   "forecast.landingRecordsDetail":
     "Won plus Commit deals with confirmed close dates, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
@@ -19280,6 +19437,72 @@ export const en = {
   "sharedMergeReviews.switch": "Owners merge duplicates",
   "sharedMergeReviews.readOnly": "An admin changes this setting.",
   "sharedMergeReviews.notSaved": "Setting was not saved.",
+  "review.findingGone":
+    "This finding is no longer open. It was answered or withdrawn after the link was made.",
+  "review.onlyType": "Showing only: {finding}.",
+  "review.showAll": "Show every finding",
+  "review.readOnly": "Read only",
+  "analytics.hero.attainment": "Sales won against the quarter’s target",
+  "analytics.hero.attained": "{percent}% of the {target} target",
+  "analytics.hero.remaining": "{amount} still to win",
+  "analytics.hero.shortfall":
+    "Projected shortfall {amount}, from an expected finish of {landing}",
+  "analytics.hero.surplus":
+    "Projected surplus {amount}, from an expected finish of {landing}",
+  "analytics.hero.prior": "Same point of the previous period: {amount}",
+  "analytics.hero.noPrior": "No earlier period to compare with yet.",
+  "analytics.overview.more": "More",
+  "analytics.overview.filtersToggle": "Filters",
+  "analytics.overview.chipPipeline": "Pipeline: {name}",
+  "analytics.overview.chipClose": "Closing: {window}",
+  "analytics.overview.winRate": "Closed win rate",
+  "analytics.overview.coverageNotCompared": "The note under Sales won says why",
+  "analytics.intervention.scope":
+    "These checks cover every pipeline and close date in this scope.",
+  "analytics.intervention.viewAll": "View all checks",
+  "analytics.intervention.review": "Review {subject}",
+  "analytics.intervention.reviewFinding": "Review a forecast check",
+  "analytics.intervention.answer": "Answer",
+  "analytics.intervention.open": "Open",
+  "analytics.intervention.unassigned": "Unassigned",
+  "analytics.intervention.since": "Found {date}",
+  "analytics.intervention.findings_one": "{count} finding",
+  "analytics.intervention.findings_other": "{count} findings",
+  "analytics.intervention.deals_one": "{count} deal",
+  "analytics.intervention.deals_other": "{count} deals",
+  "analytics.intervention.other_one": "{count} not about a deal",
+  "analytics.intervention.other_other": "{count} not about a deal",
+  "analytics.intervention.allChecks": "All open checks: {counts}",
+  "analytics.intervention.show": "Show",
+  "analytics.intervention.maintenance": "Connection maintenance",
+  "analytics.intervention.maintenanceBody_one":
+    "1 data source could not be read in the last check.",
+  "analytics.intervention.maintenanceBody_other":
+    "{count} data sources could not be read in the last check.",
+  "analytics.decision.composition": "What the expected finish is made of",
+  "analytics.decision.won": "Won",
+  "analytics.decision.included":
+    "Counts {included} of the {eligible} open deals the forecast considered.",
+  "analytics.decision.excluded": "Left out: {parts}.",
+  "analytics.decision.unpriced_one": "{count} deal with no amount",
+  "analytics.decision.unpriced_other": "{count} deals with no amount",
+  "analytics.decision.fx_one": "{count} deal with no exchange rate",
+  "analytics.decision.fx_other": "{count} deals with no exchange rate",
+  "reporting.writtenChecksFailed":
+    "The open checks could not be read, so nothing is said here about what needs attention.",
+  "reporting.writtenChecksNone": "No open checks need an answer.",
+  "reporting.writtenChecks_one":
+    "{count} open check on {deals} needs an answer.",
+  "reporting.writtenChecks_other":
+    "{count} open checks on {deals} need an answer.",
+  "reporting.writtenChecksOnly_one": "{count} open check needs an answer.",
+  "reporting.writtenChecksOnly_other": "{count} open checks need an answer.",
+  "reporting.writtenChecksDeals_one": "{count} deal",
+  "reporting.writtenChecksDeals_other": "{count} deals",
+  "analytics.intervention.notPermitted":
+    "Forecast checks are not available to you.",
+  "analytics.decision.part.commit_evidence": "Confirmed commit",
+  "analytics.decision.part.weighted": "Weighted open deals",
 } as const;
 
 export type MessageKey = keyof typeof en;

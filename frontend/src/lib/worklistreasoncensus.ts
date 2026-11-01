@@ -11,7 +11,7 @@
 // backend/gates/worklistreasonkinds_test.go holds KNOWN_REASONS equal to the
 // contract's WorklistReason.kind enum, and each kind to an English sentence.
 
-import type { WorklistReason } from "./worklist.queries";
+import type { WorklistReason } from "./worklisttypes";
 
 // Every reason this client has a sentence for.
 //

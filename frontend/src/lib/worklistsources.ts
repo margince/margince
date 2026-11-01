@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 export const reachNames = {
   domain_question: "brief.coverage.source.domain_question",

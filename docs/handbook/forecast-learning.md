@@ -61,28 +61,38 @@ deal out, the panel says so. A shared frozen forecast says the same in its CSV
 file, in the column `contributions_limited`. If you own none of its deals, the
 file holds one row that says only that.
 
-## The range beside the landing
+## The modelled finish beside the landing
 
-The **Landing** card on the forecast shows a line such as "8 in 10 outcomes
-between €610,000 and €880,000". **Expected finish** in Sales review shows the same
-line.
+The **Landing** card on the forecast names what it counts, such as
+**Won + confirmed commit**, and then the won and still-to-come amounts. A
+manager's call that the landing does not use shows on the same card as a
+figure that is not added. Next to it, **Modelled quarter finish** shows a span
+such as "€610k to €880k". **Expected finish** in Sales review and
+**Modelled quarter finish** beside it work the same way.
 
 To find the two amounts, the forecast runs the period many times. Each
-time, every open deal is won or lost at the probability the forecast uses for
+time, every priced open deal is won or lost at the probability the forecast uses for
 it, with its risk. Money already won is always in. In at least 8 of every 10 runs,
 the period ends between the two amounts. At most one run in 10 ends below the low
 amount, and at most one ends above the high amount.
 
-The range takes each probability in use as right. It does not check it. The landing
-figure is worked out in a different way, so it can sit outside the range. While
-the forecast corrects itself, a stage with few closed deals has a probability
-the forecast is not so sure of. That makes the range wider.
+The range takes each probability in use as right. It does not check it, and it
+says nothing about how close past forecasts came. The landing figure is
+worked out in a different way, so it can sit outside the range. While the
+forecast corrects itself, a stage with few closed deals has a probability the
+forecast is not so sure of. That makes the range wider.
 
-On both cards, **Evidence** says what the range rests on. The card's other
-line, such as the won and still-to-come amounts, moves there too. On the forecast,
-**Open** on the **Landing** card goes to **Deals behind the weighted figure**.
-That list holds the deals the range was built from, each with its probability. A frozen
-forecast keeps the range it showed that day.
+The card says which deals the range leaves out: a deal with no amount, or one
+with no exchange rate. When there is no range, it says **No range**.
+**Evidence** on the card says what the range rests on. On the forecast,
+**Open** on **Modelled quarter finish** goes to **Deals behind the weighted
+figure**. That list holds the deals the range was built from, each with its
+probability. A frozen forecast keeps the range it showed that day.
+
+A shared forecast shows the same two cards. A snapshot keeps the measure its
+landing used and the manager's call it used. The call shows only to someone
+allowed to see it; for anyone else the card shows the deals' own projection. A
+snapshot taken before Margince kept its landing says **Basis not recorded**.
 
 ## Switch it off
 

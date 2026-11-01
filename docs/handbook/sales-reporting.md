@@ -12,6 +12,8 @@ Above the figures, a few sentences sum up the position. They say what was won ag
 
 The row of figures at the top shows sales won, the closed win rate, qualified pipeline created and open pipeline. Open pipeline also gives the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click a figure to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
 
+The line under **Forecast landing** names what it counts, such as **Won + weighted open deals**. A report saved before this line existed says **Basis not recorded**.
+
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
 “This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
@@ -30,7 +32,7 @@ With the time span set to this quarter, **This quarter against its target** sits
 
 - **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
 - **Left to win** is the target minus sales won so far, and never below zero.
-- **Coverage, all open deals** is the open value expected to close this quarter, over what is left to win.
+- **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
 - **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
 
 When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:

@@ -39,10 +39,13 @@ export function ChartBody({
   chart,
   evaluation,
   onEvidence,
+  trendSize,
 }: Readonly<{
   chart: ReportingChart;
   evaluation: ReportingEvaluation;
   onEvidence: EvidenceAction;
+  /** `compact` is a shorter trend, for one beside a lead figure. */
+  trendSize?: "default" | "compact";
 }>) {
   const t = useT();
   const metricName = useMetricNames();
@@ -112,6 +115,7 @@ export function ChartBody({
                   label: t("reporting.target"),
                 }
           }
+          size={trendSize}
         />
       );
     }

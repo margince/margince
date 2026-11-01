@@ -276,6 +276,7 @@ internal/compose/restoredrill_integration_test.go 7
 internal/compose/retentiongraph_integration_test.go 1
 internal/compose/riskverdict_integration_test.go 6
 internal/compose/schedulingcalendar_integration_test.go 1
+internal/compose/sdrteammembers_integration_test.go 1
 internal/compose/securitytxt_test.go 1
 internal/compose/sendvoiceoutcome_integration_test.go 1
 internal/compose/settleconversation_integration_test.go 3

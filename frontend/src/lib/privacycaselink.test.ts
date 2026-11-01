@@ -2,9 +2,9 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { components } from "../../api/schema";
-import { rowHref } from "../worklist/worklist.copy";
-import { caseHref, caseInParams, useLinkedCase } from "./privacy.caselink";
+import type { components } from "../api/schema";
+import { caseHref, caseInParams, useLinkedCase } from "./privacycaselink";
+import { rowHref } from "./worklistcopy";
 
 // The worklist has named subject requests on their statutory clock since that
 // lane shipped, and its row linked to the QUEUE. An officer following it landed

@@ -1253,7 +1253,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
-  "reporting.resultsThrough": "Ergebnisse bis {at}",
+  "reporting.actualsThrough": "Ist-Werte bis {at}",
   "reporting.periodNotStarted":
     "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
   "reporting.writtenNoneWon": "Kein Umsatz gewonnen im Zeitraum {period}.",
@@ -1366,10 +1366,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.remaining": "Noch zu gewinnen",
   "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
   "reporting.compare.reached": "Ziel erreicht",
-  "reporting.compare.coverageAll": "Deckung, alle offenen Deals",
+  "reporting.compare.coverageAll":
+    "Deckung, Deals mit Abschluss in diesem Quartal",
   "reporting.compare.coverageQualified": "Deckung, qualifizierte Deals",
   "reporting.compare.coverageBasis":
-    "{open} offen in diesem Quartal, im Verhältnis zum Rest",
+    "{open} mit Abschluss in diesem Quartal / {remaining} noch zu gewinnen",
   "reporting.compare.qualifiedBasis":
     "{open} in qualifizierten Deals, im Verhältnis zum Rest",
   "reporting.compare.ratio": "{ratio}×",
@@ -1481,7 +1482,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.data": "Als Tabelle anzeigen",
   "reporting.evidence": "Belege",
   "reporting.evidenceStale":
-    "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und öffne die Belege dann noch einmal.",
+    "Die Zahlen haben sich geändert, nachdem diese Seite geladen wurde. Die Datensätze können daher von der geöffneten Zahl abweichen. Lies die Zahlen mit „Erneut versuchen“ neu und öffne die Datensätze dann noch einmal.",
+  "reporting.evidenceReadAt":
+    "Zahlen gelesen am {at}, in {currency}. Die Datensätze erscheinen im Stand von damals.",
+  "reporting.evidenceFrozenAt":
+    "Snapshot gespeichert am {at}, in {currency}. Die Datensätze erscheinen im Stand von damals.",
+  "reporting.evidenceZero":
+    "Nichts zählt zu dieser Zahl, daher erscheinen keine Datensätze. Die Zahl ist eine gemessene Null.",
+  "reporting.evidenceWithheld":
+    "Diese Zahl ist für dich verborgen, daher erscheinen weder ihre Datensätze noch deren Anzahl.",
+  "reporting.evidenceUnavailable":
+    "Diese Zahl konnte nicht gelesen werden, daher gibt es keine Datensätze. Versuch es erneut, um sie noch einmal zu lesen.",
   "reporting.exportStale":
     "Die Zahlen haben sich geändert, nachdem dieser Bericht geladen wurde. Lade den Bericht mit „Erneut versuchen“ neu und exportiere ihn dann noch einmal.",
   "reporting.details": "Details",
@@ -3407,6 +3418,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Beleg",
   "stat.evidence.rests": "Worauf das beruht",
   "stat.open": "Öffnen",
+  "stat.records": "Datensätze anzeigen",
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
@@ -7208,6 +7220,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
   "analytics.reportDeals": "Offene Deals nach Phase",
   "analytics.sections": "Analytics-Bereiche",
+  "analytics.scopeRefused":
+    "Dieser Link nennt Zahlen, die du nicht öffnen kannst",
+  "analytics.scopeRefusedBody":
+    "Er fragt nach einem Teammitglied oder einem Team außerhalb dessen, was du sehen darfst. Bis du wählst, wird nichts an seiner Stelle gezeigt.",
+  "analytics.scopeRefusedUse": "{scope} zeigen",
   "analytics.sectionForecast": "Prognose",
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Überblick",
@@ -7215,20 +7232,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.sales": "Vertriebsüberblick",
   "analytics.overview.prospecting": "Meine Akquise",
   "analytics.overview.readings": "Wichtigste Kennzahlen",
+  "analytics.overview.charts": "Diagramme",
   "analytics.overview.expectedFinish": "Erwartetes Ergebnis",
+  "analytics.overview.coverage": "Deckung",
+  "analytics.overview.allOpen": "Gesamte offene Pipeline",
+  "analytics.overview.openClosing":
+    "Offene Pipeline mit Abschluss in diesem Quartal",
   "analytics.overview.quarterOnly": "Nur dieses Quartal",
-  "analytics.overview.finishBasis":
-    "Ende dieses Geschäftsquartals, aus {basis}",
   "analytics.overview.winRateBasis":
     "Von den in diesem Zeitraum abgeschlossenen Deals",
   "analytics.overview.summary": "Zusammenfassung",
   "analytics.overview.notCompared": "Nicht verglichen",
-  "analytics.overview.notComparedDetail": "Der Hinweis unten nennt den Grund",
-  "analytics.overview.covers": "Deckt {ratio}× der noch offenen {remaining}",
-  "analytics.overview.openDeals_one": "{count} offener Deal",
-  "analytics.overview.openDeals_other": "{count} offene Deals",
   "analytics.overview.saveView": "Ansicht speichern",
   "analytics.overview.templates": "Berichtsvorlagen",
+  "analytics.overview.saveViewNote":
+    "Speichern legt einen Bericht unter Berichte an. Die Übersicht bleibt, wie sie ist.",
+  "analytics.overview.pipelineGone":
+    "Diese Ansicht nennt eine Pipeline, die du nicht öffnen kannst",
+  "analytics.overview.pipelineGoneBody":
+    "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
+  "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
+  "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
   "analytics.overview.salesNothing":
     "Für diesen Bereich ist keine Prognoseprüfung offen.",
   "analytics.overview.quarterOnlyTitle":
@@ -7236,13 +7260,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.quarterOnlyBody":
     "Erwartetes Ergebnis und Abstand zum Ziel gelten für das laufende Geschäftsquartal. Zeige dieses Quartal, um sie zu sehen.",
   "analytics.overview.setTarget": "Ziele setzen",
-  "analytics.overview.setTargetBody":
-    "Setze ein Umsatzziel für dieses Quartal, um Abstand und Abdeckung zu sehen.",
   "analytics.overview.targetWho":
     "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
+  "analytics.overview.targetWhoShort":
+    "Das können meist Admins oder die Vertriebsleitung.",
   "analytics.overview.sinceTitle": "Seit der letzten Erfassung",
   "analytics.overview.historyStarts":
     "Der Vergleich beginnt nach einer zweiten passenden Erfassung.",
+  "analytics.overview.historyFrom":
+    "Die Historie beginnt am {date}. Die Bewegung erscheint nach der nächsten Erfassung am {next}.",
+  "analytics.overview.historyNext":
+    "Die Historie beginnt mit der nächsten Erfassung am {next}. Die Bewegung erscheint, sobald eine zweite folgt.",
   "analytics.overview.noMovement":
     "Die offene Pipeline hat sich zwischen den beiden Erfassungen nicht bewegt.",
   "analytics.overview.partlyHidden":
@@ -7253,8 +7281,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Leads warten noch auf eine Antwort",
   "analytics.overview.monthlyTitle": "Monatsziele, {month}",
   "analytics.overview.noMonthlyTarget": "Kein Monatsziel gesetzt",
-  "analytics.overview.setMonthlyTargetBody":
-    "Setze ein Monatsziel für Termine oder angenommene Übergaben, um zu sehen, was diesen Monat fehlt.",
   "analytics.overview.noHandoffs":
     "Qualifizierte Leads sind dein wichtigstes Ergebnis, weil dieses Unternehmen keine SDR-Übergaben nutzt.",
   "analytics.overview.changeWorkflow": "In der Einrichtung ändern",
@@ -7262,46 +7288,89 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Admins können das in der Einrichtung festlegen.",
   "analytics.attentionIncomplete":
     "Einige Prüfungen konnten nicht gelesen werden, daher kann diese Liste unvollständig sein.",
-  "analytics.overview.mainOutcome": "Wichtigstes Ergebnis",
   "analytics.overview.workflowFailed":
     "Ob dieses Unternehmen SDR-Übergaben nutzt, konnte nicht gelesen werden.",
-  "analytics.overview.workflowTitle": "SDR-Übergaben",
+  "analytics.prospect.results": "Deine Ergebnisse",
+  "analytics.prospect.withheld": "Für dich verborgen",
+  "analytics.prospect.failed": "Konnte nicht gelesen werden",
+  "analytics.prospect.failedDetail":
+    "Die Quelle hat nicht geantwortet. Versuch es später erneut.",
+  "analytics.prospect.basisAccepted":
+    "Als Deal angenommene Übergaben, {period}",
+  "analytics.prospect.noArrivals":
+    "{period} ist kein Lead eingegangen, also konnte keiner qualifiziert werden",
+  "analytics.prospect.basisQualified":
+    "Von {arrived} Leads, die {period} eingegangen sind",
+  "analytics.prospect.weeksFailed":
+    "Die letzten Wochen konnten nicht gelesen werden.",
+  "analytics.prospect.noMeetingsWeek":
+    "Diese Woche sind keine Termine als stattgefunden erfasst",
+  "analytics.prospect.noMeetingsPeriod":
+    "In diesem Zeitraum sind keine Termine als stattgefunden erfasst",
+  "analytics.prospect.unansweredWithheld":
+    "Die Zahl unbeantworteter Leads ist für dich verborgen",
+  "analytics.prospect.unansweredFailed":
+    "Unbeantwortete Leads konnten nicht gezählt werden",
+  "analytics.prospect.tooFew": "Zu wenige",
+  "analytics.prospect.tooFewResponses":
+    "Zu wenige beantwortete Leads für eine typische Zeit.",
+  "analytics.prospect.upcoming": "Gebuchte Termine",
+  "analytics.prospect.upcomingThrough": "Nächste 14 Tage, bis {date}",
+  "analytics.prospect.weeksLabel": "{metric} pro Woche",
+  "analytics.prospect.weeksByArrival":
+    "Jeder Lead zählt in der Woche, in der er eingegangen ist.",
+  "analytics.prospect.weeksUnderWay": "Die letzte Woche zählt bis jetzt.",
+  "analytics.prospect.weeksByAcceptance":
+    "Jede Übergabe zählt in der Woche, in der sie angenommen wurde.",
+  "analytics.prospect.historyTitle":
+    "Wie sich deine Ergebnisse entwickelt haben",
+  "analytics.prospect.historyCaption": "Woche für Woche seit {from}.",
+  "analytics.prospect.blocked": "Kann nicht mehr handeln",
+  "analytics.prospect.unassigned": "Gemeinsame Warteschlange",
+  "analytics.prospect.returned": "Zurückgegeben",
+  "analytics.prospect.returnedAgo": "Vor {age} zurückgegeben",
+  "analytics.prospect.noReason": "Kein Grund angegeben",
+  "analytics.prospect.noUpcoming":
+    "Keine Termine in den nächsten 14 Tagen gebucht",
+  "analytics.prospect.restrictedRecord":
+    "Ein Datensatz, den du nicht öffnen kannst",
+  "analytics.prospect.prepTitle": "Termine zum Vorbereiten",
+  "analytics.prospect.upcomingTitle": "Anstehende Termine",
+  "analytics.prospect.cohortTitle": "Was aus deinen Übergaben wurde",
+  "analytics.prospect.cohortPeriods":
+    "Für eine Woche oder einen Monat angezeigt. Wähle einen dieser Zeiträume.",
+  "analytics.prospect.cohortCaption_one":
+    "{count} Übergabe, die du {period} eingereicht hast, nach aktuellem Stand",
+  "analytics.prospect.cohortCaption_other":
+    "{count} Übergaben, die du {period} eingereicht hast, nach aktuellem Stand",
+  "analytics.prospect.cohort.accepted": "Angenommen",
+  "analytics.prospect.cohort.recycled": "Zurückgegeben",
+  "analytics.prospect.cohort.rejected": "Abgelehnt",
+  "analytics.prospect.cohort.waiting": "Noch nicht entschieden",
+  "analytics.doNext.title": "Als Nächstes",
+  "analytics.doNext.all_one": "{count} Eintrag in deiner Worklist",
+  "analytics.doNext.all_other": "Alle {count} Einträge in deiner Worklist",
+  "analytics.doNext.open": "Öffnen",
+  "analytics.doNext.openNamed": "{title} öffnen",
   "analytics.overview.gapMissing": "Der Vergleich kam ohne Abstand zurück.",
   "analytics.overview.team": "Team-Akquise",
   "analytics.team.chooseTeam": "Wähle ein Team",
   "analytics.team.chooseTeamBody":
     "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
   "analytics.team.todaysMembers":
-    "Diese Zahlen folgen dem heutigen Team. Ein Mitglied, das gegangen ist, nimmt seine früheren Übergaben mit.",
-  "analytics.team.countedOnce":
-    "Jede Zahl zählt die Arbeit des Teams einmal. Ein Termin mit mehreren Mitgliedern ist hier ein Termin.",
-  "analytics.team.feedback": "Rückmeldung zu Übergaben",
+    "Diese Zahlen folgen dem heutigen Team. Wer gegangen ist, nimmt die frühere Arbeit mit, und wer neu dazukam, bringt die eigene mit.",
   "analytics.team.withheld":
     "Die Einzelleistung ist ausgeschaltet, und diese Zahlen würden die Arbeit eines einzelnen Teammitglieds zeigen.",
-  "analytics.team.decided": "Entscheidungen in diesem Zeitraum",
   "analytics.team.submitted": "Übergeben",
-  "analytics.team.submittedDetail":
-    "Übergaberunden, erneute Übergaben eingeschlossen",
   "analytics.team.accepted": "Angenommen",
-  "analytics.team.acceptedDetail":
-    "Jeder Deal einmal, gutgeschrieben dem Mitglied, das übergeben hat",
   "analytics.team.returned": "Zurückgegeben",
-  "analytics.team.returnedDetail": "Zurückgeschickt für einen neuen Versuch",
   "analytics.team.rejected": "Abgelehnt",
-  "analytics.team.rejectedDetail": "Endgültig abgelehnt",
   "analytics.team.cohort_one":
     "Von {count} Runde aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
   "analytics.team.cohort_other":
     "Von {count} Runden aus diesem Zeitraum: {accepted} angenommen, {returned} zurückgegeben, {rejected} abgelehnt und {waiting} noch offen.",
   "analytics.team.medianDecision":
     "Die Hälfte war innerhalb von {hours} entschieden.",
-  "analytics.team.smallSampleTitle": "Eine kleine Stichprobe",
-  "analytics.team.smallSample":
-    "Weniger als {below} Runden sind zu wenige für einen Vergleich. Lies die Anzahl, keine Quote. Nichts hier sagt, wie viel jemand gearbeitet hat.",
-  "analytics.team.waitingNow_one":
-    "{count} Übergabe wartet gerade auf eine Entscheidung.",
-  "analytics.team.waitingNow_other":
-    "{count} Übergaben warten gerade auf eine Entscheidung.",
   "analytics.team.blocked_one":
     "{count} davon wartet auf jemanden, der nicht mehr handeln kann.",
   "analytics.team.blocked_other":
@@ -7312,7 +7381,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Übergabe-Ereignisse wurden erfasst, bevor das übergebende Mitglied gespeichert wurde. Keine Zeile eines Mitglieds zählt sie.",
   "analytics.team.reasons": "Genannte Gründe",
   "analytics.team.reason": "Grund",
-  "analytics.team.outcome": "Ergebnis",
   "analytics.team.count": "Anzahl",
   "analytics.team.membersWithheld":
     "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
@@ -7326,6 +7394,83 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Termin mit mehreren Mitgliedern zählt in jeder ihrer Zeilen. Die Zeilen können daher zusammen mehr ergeben als das Team.",
   "analytics.team.truncated":
     "Das Team hat mehr Mitglieder, als diese Tabelle zeigt.",
+  "analytics.team.standing": "Wo das Team steht",
+  "analytics.team.acceptedRate":
+    "{rate} dieser {rounds} Runden wurden angenommen.",
+  "analytics.team.tooFewForRate":
+    "Weniger als {below} sind zu wenige für eine Quote, darum steht hier keine.",
+  "analytics.team.qualifiedOf_one":
+    "{qualified} von {count} Lead aus diesem Zeitraum ist bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
+  "analytics.team.qualifiedOf_other":
+    "{qualified} von {count} Leads aus diesem Zeitraum sind bisher qualifiziert. Die anderen sind noch offen oder wurden disqualifiziert.",
+  "analytics.team.qualifiedRate": "Das sind {rate} der eingegangenen Leads.",
+  "analytics.team.waitingRow_one":
+    "{count} Übergabe wartet auf eine Entscheidung",
+  "analytics.team.waitingRow_other":
+    "{count} Übergaben warten auf eine Entscheidung",
+  "analytics.team.waitingBasis": "Wartet jetzt",
+  "analytics.team.returnedRow_one":
+    "{count} Übergabe wurde in diesem Zeitraum zurückgegeben",
+  "analytics.team.returnedRow_other":
+    "{count} Übergaben wurden in diesem Zeitraum zurückgegeben",
+  "analytics.team.rejectedRow_one":
+    "{count} Übergabe wurde in diesem Zeitraum abgelehnt",
+  "analytics.team.rejectedRow_other":
+    "{count} Übergaben wurden in diesem Zeitraum abgelehnt",
+  "analytics.team.decidedBasis":
+    "In diesem Zeitraum entschieden, egal wann übergeben",
+  "analytics.team.mostOften": "Am häufigsten: {reason}",
+  "analytics.team.unansweredRow_one":
+    "{count} Lead wartet noch auf eine erste Antwort",
+  "analytics.team.unansweredRow_other":
+    "{count} Leads warten noch auf eine erste Antwort",
+  "analytics.team.unansweredBasis":
+    "In diesem Zeitraum geschrieben, noch ohne Antwort",
+  "analytics.team.unansweredHidden":
+    "Leads, die auf eine Antwort warten, sind für dich verborgen.",
+  "analytics.team.unansweredFailed":
+    "Leads, die auf eine Antwort warten, konnten nicht gelesen werden.",
+  "analytics.team.unansweredPending":
+    "Leads, die auf eine Antwort warten, werden noch gelesen.",
+  "analytics.team.qualifiedHidden":
+    "Qualifizierte Leads sind für dich verborgen.",
+  "analytics.team.handoffsHidden": "Übergaben sind für dich verborgen.",
+  "analytics.team.hiddenBasis":
+    "Deine Rolle umfasst das nicht. Das heißt nicht, dass es null ist.",
+  "analytics.team.nothingWaits":
+    "In diesem Zeitraum wartet nichts auf das Team.",
+  "analytics.team.showHandoffs": "Übergaben zeigen",
+  "analytics.team.showReasons": "Gründe zeigen",
+  "analytics.team.showLeads": "Leads zeigen",
+  "analytics.team.reasonsReturned": "Warum Übergaben zurückgegeben wurden",
+  "analytics.team.reasonsRejected": "Warum Übergaben abgelehnt wurden",
+  "analytics.team.reasonsBasis":
+    "Entscheidungen vom {span}, egal wann übergeben: insgesamt {total}.",
+  "analytics.team.noReason": "Kein Grund erfasst",
+  "analytics.team.reasonsCut":
+    "Nur die 50 häufigsten Gründe stehen hier, darum ergeben sie weniger als die Summe.",
+  "analytics.team.waitingTitle": "Übergaben, die auf eine Entscheidung warten",
+  "analytics.team.waitingListBasis":
+    "Wartet jetzt, die älteste zuerst. Jede Zeile nennt den Interessenten und auf wen er wartet.",
+  "analytics.team.qualified": "Qualifiziert",
+  "analytics.team.unanswered": "Unbeantwortet",
+  "analytics.team.target": "Monatsziel",
+  "analytics.team.targetOf": "{actual} von {target}",
+  "analytics.team.noTarget": "Kein Ziel",
+  "analytics.team.qualificationBasis":
+    "Qualifiziert zählt die Leads aus diesem Zeitraum, die bisher qualifiziert sind. Unbeantwortet zählt die Leads, die in diesem Zeitraum geschrieben haben und noch keine Antwort haben. Beide zählen für das Teammitglied, das heute für den Lead verantwortlich ist, ein neu zugewiesener Lead also beim neuen.",
+  "analytics.team.handoffBasis":
+    "Übergeben, zurückgegeben und abgelehnt zählen, was in diesem Zeitraum geschah. Angenommen zählt jeden Deal einmal, im Zeitraum seiner ersten Annahme. Wartet jetzt gilt für heute. Alles zählt für das Teammitglied, das damals übergeben hat.",
+  "analytics.team.targetBasis":
+    "Ziele gelten pro Monat. Jedes vergleicht die bisher qualifizierten Leads vom {month} mit dem eigenen Ziel des Mitglieds.",
+  "analytics.team.meetingsHidden": "Termine sind für dich verborgen.",
+  "analytics.team.leadsHidden":
+    "Qualifizierte und unbeantwortete Leads sind für dich verborgen.",
+  "analytics.team.targetsHidden": "Ziele sind für dich verborgen.",
+  "analytics.team.rowsNotTeam":
+    "Die Zeilen müssen nicht die Zahlen des Teams ergeben. Ein Lead, für den niemand verantwortlich ist, steht in keiner Zeile.",
+  "analytics.team.notARanking":
+    "Die Zeilen stehen nach Namen, nicht als Rangliste. Eine kleine Zahl sagt nichts darüber, wie viel jemand gearbeitet hat.",
   "analytics.sectionPerformance": "Leistung",
   "analytics.sectionOutcomes": "Meine Ergebnisse",
   "analytics.sectionCoverage": "Datenabdeckung",
@@ -7560,9 +7705,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads, die noch auf eine erste Antwort warten",
   "analytics.sdrQualifiedOf": "{qualified} von {arrived}",
-  "analytics.sdrUpcomingMeetings": "Anstehende Termine",
-  "analytics.sdrUpcomingMeetingsDetail":
-    "Gebucht und noch nicht stattgefunden, Stand heute.",
   "analytics.sdrWaiting": "Übergaben, die auf andere warten",
   "analytics.sdrWaitingIntro":
     "Übergaben, die du eingereicht hast und über die noch niemand entschieden hat. Eine zurückgegebene und neu eingereichte Übergabe wartet ab der neuen Einreichung.",
@@ -7583,10 +7725,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wartet seit {age}, seit du sie neu eingereicht hast",
   "analytics.sdrRestrictedProspect":
     "Ein Interessent, den du nicht öffnen kannst",
-  "analytics.sdrNeedsYou": "Wartet auf dich",
   "analytics.sdrOpenWorklist": "Worklist öffnen",
   "analytics.sdrNothingNeedsYou": "Gerade wartet nichts auf dich",
-  "analytics.sdrWorkCount": "Zu erledigen: {total}. Dringend: {urgent}.",
   "analytics.sdrWorkIncomplete":
     "Ein Teil deiner Arbeit konnte nicht gelesen werden, daher fehlen hier vielleicht Einträge.",
   "analytics.myMeetings": "Meine Termine",
@@ -7831,6 +7971,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.makeup": "So setzt sich der Zeitraum zusammen",
   "forecast.alreadyWon": "Bereits gewonnen",
   "forecast.updateCall": "Einschätzung aktualisieren",
+  "forecast.mismatch.pipeline": "Die Prognose umfasst jede Pipeline",
+  "forecast.mismatch.pipelineBody":
+    "Die Zahl, von der du kommst, zählt eine Pipeline. Die Prognose kann nicht auf eine eingrenzen und würde mehr Deals zählen als diese Zahl.",
+  "forecast.mismatch.allPipelines": "Alle Pipelines zeigen",
+  "forecast.mismatch.period":
+    "Die Prognose liest diese Woche, diesen Monat oder dieses Quartal",
+  "forecast.mismatch.periodBody":
+    "Die Zahl, von der du kommst, gilt für einen anderen Zeitraum. Wähle einen, den die Prognose liest.",
+  "forecast.mismatch.quarter": "Dieses Quartal zeigen",
   "forecast.callExplains":
     "Gib den erwarteten Gesamtumsatz für diesen Zeitraum ein, einschließlich bereits gewonnener Deals.",
   "forecast.expectedTotal": "Erwartete Summe für diesen Zeitraum",
@@ -13696,13 +13845,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "forecast.landing": "Erwartetes Ergebnis",
-  "forecast.landingFrom":
-    "Hochgerechnet · {won} gewonnen + {remaining} erwartet",
-  "forecast.landingFromCall": "Aus der Einschätzung · bisher {won} gewonnen",
-  "forecast.range": "8 von 10 Ergebnissen zwischen {low} und {high}",
-  "forecast.rangeBasis":
-    "Beruht auf den genutzten Chancen. Jeder offene Deal wird in vielen Durchläufen mit seiner Chance gewonnen oder verloren. Höchstens ein Ergebnis von zehn liegt unter der Spanne und höchstens eines von zehn darüber. Die Spanne setzt voraus, dass die Chancen stimmen.",
   "forecast.landingRecords": "Aus den Deal-Daten",
+  "forecast.landingUnrecorded": "Nicht erfasst",
+  "forecast.basis.commit_evidence": "Gewonnen + bestätigter Commit",
+  "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
+  "forecast.basis.manager_call": "Einschätzung der Führungskraft",
+  "forecast.basis.unknown": "Grundlage nicht erfasst",
+  "forecast.split": "{won} gewonnen + {remaining} erwartet",
+  "forecast.callNotAdded":
+    "Einschätzung der Führungskraft {call}, nicht addiert",
+  "forecast.recordsProject": "Die Deal-Daten allein ergeben {amount}",
+  "forecast.callAbsentLine": "Keine Einschätzung erfasst, daher Commit",
+  "forecast.callBelowLine":
+    "Unter den bereits gewonnenen {won}, wie erfasst gezeigt",
+  "forecast.model.quarter": "Modelliertes Quartalsergebnis",
+  "forecast.model.month": "Modelliertes Monatsergebnis",
+  "forecast.model.week": "Modelliertes Wochenergebnis",
+  "forecast.model.value": "{low} bis {high}",
+  "forecast.model.detail":
+    "Mittlere 80 % der modellierten Ergebnisse bei den aktuellen Chancen",
+  "forecast.model.includes": "Enthält bereits gewonnene {won}",
+  "forecast.model.unpriced_one": "{count} Deal ohne Betrag nicht enthalten",
+  "forecast.model.unpriced_other": "{count} Deals ohne Betrag nicht enthalten",
+  "forecast.model.fxMissing_one":
+    "{count} Deal ohne Wechselkurs nicht enthalten",
+  "forecast.model.fxMissing_other":
+    "{count} Deals ohne Wechselkurs nicht enthalten",
+  "forecast.model.none": "Keine Spanne",
+  "forecast.model.noneDetail":
+    "Für diesen Zeitraum wurde keine modellierte Spanne berechnet.",
+  "forecast.model.basis":
+    "Gewonnener Umsatz plus jeder offene Deal mit Betrag in diesem Zeitraum, in vielen Durchläufen nach seiner Chance gewonnen oder verloren. 8 von 10 modellierten Ergebnissen liegen in dieser Spanne. Die Spanne setzt voraus, dass die Chancen stimmen, und ist keine gemessene Prognosegenauigkeit.",
   "forecast.landingRecordsDetail":
     "Gewonnen plus Commit-Deals mit bestätigtem Abschlussdatum, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
@@ -19461,4 +19634,75 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sharedMergeReviews.switch": "Verantwortliche führen zusammen",
   "sharedMergeReviews.readOnly": "Diese Einstellung ändert ein Admin.",
   "sharedMergeReviews.notSaved": "Einstellung wurde nicht gespeichert.",
+  "review.findingGone":
+    "Dieser Befund ist nicht mehr offen. Er wurde beantwortet oder zurückgezogen, nachdem der Link entstand.",
+  "review.onlyType": "Nur angezeigt: {finding}.",
+  "review.showAll": "Alle Befunde zeigen",
+  "review.readOnly": "Nur lesen",
+  "analytics.hero.attainment":
+    "Gewonnener Umsatz im Vergleich zum Quartalsziel",
+  "analytics.hero.attained": "{percent} % des Ziels von {target}",
+  "analytics.hero.remaining": "Noch {amount} zu gewinnen",
+  "analytics.hero.shortfall":
+    "Erwartete Lücke {amount}, bei einem erwarteten Abschluss von {landing}",
+  "analytics.hero.surplus":
+    "Erwarteter Überschuss {amount}, bei einem erwarteten Abschluss von {landing}",
+  "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
+  "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
+  "analytics.overview.more": "Mehr",
+  "analytics.overview.filtersToggle": "Filter",
+  "analytics.overview.chipPipeline": "Pipeline: {name}",
+  "analytics.overview.chipClose": "Abschluss: {window}",
+  "analytics.overview.winRate": "Gewinnquote abgeschlossener Deals",
+  "analytics.overview.coverageNotCompared":
+    "Der Hinweis unter dem gewonnenen Umsatz sagt, warum",
+  "analytics.intervention.scope":
+    "Diese Prüfungen umfassen jede Pipeline und jedes Abschlussdatum in diesem Bereich.",
+  "analytics.intervention.viewAll": "Alle Prüfungen ansehen",
+  "analytics.intervention.review": "{subject} prüfen",
+  "analytics.intervention.reviewFinding": "Eine Prognoseprüfung ansehen",
+  "analytics.intervention.answer": "Beantworten",
+  "analytics.intervention.open": "Öffnen",
+  "analytics.intervention.unassigned": "Nicht zugewiesen",
+  "analytics.intervention.since": "Gefunden am {date}",
+  "analytics.intervention.findings_one": "{count} Befund",
+  "analytics.intervention.findings_other": "{count} Befunde",
+  "analytics.intervention.deals_one": "{count} Deal",
+  "analytics.intervention.deals_other": "{count} Deals",
+  "analytics.intervention.other_one": "{count} ohne Deal",
+  "analytics.intervention.other_other": "{count} ohne Deal",
+  "analytics.intervention.allChecks": "Alle offenen Prüfungen: {counts}",
+  "analytics.intervention.show": "Zeigen",
+  "analytics.intervention.maintenance": "Wartung der Verbindungen",
+  "analytics.intervention.maintenanceBody_one":
+    "1 Datenquelle konnte bei der letzten Prüfung nicht gelesen werden.",
+  "analytics.intervention.maintenanceBody_other":
+    "{count} Datenquellen konnten bei der letzten Prüfung nicht gelesen werden.",
+  "analytics.decision.composition":
+    "Woraus sich der erwartete Abschluss zusammensetzt",
+  "analytics.decision.won": "Gewonnen",
+  "analytics.decision.included":
+    "Zählt {included} der {eligible} offenen Deals, die die Prognose betrachtet hat.",
+  "analytics.decision.excluded": "Nicht enthalten: {parts}.",
+  "analytics.decision.unpriced_one": "{count} Deal ohne Betrag",
+  "analytics.decision.unpriced_other": "{count} Deals ohne Betrag",
+  "analytics.decision.fx_one": "{count} Deal ohne Wechselkurs",
+  "analytics.decision.fx_other": "{count} Deals ohne Wechselkurs",
+  "reporting.writtenChecksFailed":
+    "Die offenen Prüfungen konnten nicht gelesen werden. Darum steht hier nichts dazu, was Aufmerksamkeit braucht.",
+  "reporting.writtenChecksNone": "Keine offene Prüfung braucht eine Antwort.",
+  "reporting.writtenChecks_one":
+    "{count} offene Prüfung zu {deals} braucht eine Antwort.",
+  "reporting.writtenChecks_other":
+    "{count} offene Prüfungen zu {deals} brauchen eine Antwort.",
+  "reporting.writtenChecksOnly_one":
+    "{count} offene Prüfung braucht eine Antwort.",
+  "reporting.writtenChecksOnly_other":
+    "{count} offene Prüfungen brauchen eine Antwort.",
+  "reporting.writtenChecksDeals_one": "{count} Deal",
+  "reporting.writtenChecksDeals_other": "{count} Deals",
+  "analytics.intervention.notPermitted":
+    "Prognoseprüfungen stehen dir nicht zur Verfügung.",
+  "analytics.decision.part.commit_evidence": "Bestätigter Commit",
+  "analytics.decision.part.weighted": "Gewichtete offene Deals",
 };

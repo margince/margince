@@ -30,6 +30,11 @@
 .analytics-body {
   margin-top: var(--space-4);
 }
+/* Holds the Overview's way back to the control a reader left through, and
+   adds no box: its children keep the body's column and gap. */
+.analytics-overview {
+  display: contents;
+}
 
 /* The aside over a readings strip says how to read it, so it sits on the
    strip's top edge at a label's distance, not flush against the panes. */
@@ -82,17 +87,28 @@
    it is answered on the right, and the door drops under the words on a phone. */
 .analytics-attention-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
 .analytics-attention-text {
-  flex: 1 1 16rem;
+  flex: 1 1 auto;
   min-width: 0;
 }
 .analytics-attention-title {
   font-weight: var(--fontWeightMedium);
+}
+
+/* A summary beside the table it summarises: the table takes the wider
+   column, since its figures need the room. */
+.analytics-pair-table {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+@media (max-width: 1100px) {
+  .analytics-pair-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* One of a pair standing alone takes the row; a pair with neither drops out of
@@ -108,7 +124,7 @@
    running total that reached it in the room beside it. */
 .analytics-hero-body {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
+  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
   align-items: start;
   gap: var(--space-6);
 }
@@ -119,7 +135,14 @@
   gap: var(--space-1);
 }
 .analytics-hero-value {
-  font: var(--fontDisplayLarge);
+  font: var(--fontDisplayFigure);
+}
+/* Under the figure: the target it is read against, and the period before. */
+.analytics-hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: stretch;
 }
 /* A grid track never shrinks below its content, so the chart is let shrink. */
 .analytics-hero-chart {
@@ -143,4 +166,58 @@
 /* While its page is open, Reports holds the strong edge. */
 .analytics-tab-verbs .btn-ghost[aria-current="page"] {
   --ghostEdge: var(--borderStrong);
+}
+
+/* The active filters, always in view beside the control that changes them. */
+.analytics-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The summary's sentences, one per line, each opening what it rests on. */
+.analytics-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.analytics-decision-link {
+  text-align: start;
+  white-space: normal;
+}
+.analytics-composition {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+/* All open pipeline, the secondary reading over the stock charts. */
+.analytics-open-line {
+  margin: 0;
+}
+
+/* Sales review's lead row: the outcome and its trend, and the three readings
+   stacked beside them. Under 1100px the readings go under the lead. */
+.analytics-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  align-items: stretch;
+  gap: var(--gapCards);
+}
+/* One column of the lead row: its cards stacked at the gap between cards. */
+.analytics-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .analytics-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

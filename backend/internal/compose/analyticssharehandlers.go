@@ -198,7 +198,13 @@ func (h analyticsShareHandlers) serveSnapshot(
 	out.Readings.SelfCorrecting = frame.SelfCorrecting
 	out.Readings.ContributionsLimited = &frozen.Limited
 	out.Withheld = shared.Withheld
-	return nil
+	// A snapshot frozen before the landing was kept states none.
+	if frame.LandingMeasure == nil {
+		return nil
+	}
+	landing, err := frozenShareLanding(ctx, tx, share.Scope, shared.Readings, frame)
+	out.Readings.Landing = &landing
+	return err
 }
 
 // serveLive re-runs the reading under this caller's grants.
@@ -222,50 +228,18 @@ func (h analyticsShareHandlers) serveLive(
 	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
 	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
 	out.Withheld = assembly.Limited
-	return nil
-}
-
-// snapshotFrame reads the period, zone and currency a frozen state was computed
-// under, and the instant it describes.
-//
-// Read from the snapshot rather than carried on the share row: they are the
-// snapshot's own facts, and copying them onto the share at issue time would be
-// a second place for each of them to be wrong.
-type shareFrame struct {
-	Period       forecasting.Period
-	BaseCurrency string
-	TakenAt      time.Time
-	// SelfCorrecting is whether the frozen chances moved with recorded
-	// outcomes; nil on a snapshot frozen before it was kept.
-	SelfCorrecting *bool
-}
-
-// The timezone is JOINed from the setting row rather than read through
-// platform/settings, whose gate is this un-RLS'd table's only control: a share
-// link carries no seat at all, so there is no principal to gate against, and
-// the frame is one row that a second statement would turn into a round trip
-// inside the share's transaction. Ratified in
-// backend/gates/settingreaders_test.go.
-func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, error) {
-	var out shareFrame
-	var zoneName string
-	if err := tx.QueryRow(ctx, `
-		SELECT s.period_start, s.period_end, s.base_currency, s.taken_at,
-		       COALESCE(st.value #>> '{}', 'UTC'), s.self_correcting
-		FROM forecast_snapshot s
-		LEFT JOIN setting st ON st.key = 'installation.timezone'
-		WHERE s.id = $1`, id).Scan(
-		&out.Period.StartDate, &out.Period.EndDate, &out.BaseCurrency, &out.TakenAt,
-		&zoneName, &out.SelfCorrecting); err != nil {
-		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
-	}
-	zone, err := time.LoadLocation(zoneName)
+	// The landing GET /forecast gives this reader, with the call only where
+	// the reader may see it.
+	call, seen, err := forecastCallSeen(ctx, tx, h.forecast, period, share.Scope, false)
 	if err != nil {
-		return shareFrame{}, fmt.Errorf(
-			"compose: the installation zone %q is not a zone: %w", zoneName, err)
+		return err
 	}
-	out.Period.Zone = zone
-	return out, nil
+	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, seenCall(call, seen))
+	if err != nil {
+		return err
+	}
+	out.Readings.Landing = &landing
+	return nil
 }
 
 // shareFromBody turns the request into what the store takes, refusing what the

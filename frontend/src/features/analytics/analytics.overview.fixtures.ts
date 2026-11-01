@@ -6,6 +6,7 @@
 // module so the tests and the stories describe one server.
 
 import type { components } from "../../api/schema";
+import { dayInZone, startOfDayInZone } from "../../format/timezone";
 import {
   interval,
   REPORTING_FIXTURE_ZONE,
@@ -86,9 +87,18 @@ function definition(id: MetricID): Definition {
     supports_target: true,
     allowed_filters: ["scope", "period", "target_basis"],
     definition: `${reportingMetricNames[id]}, as the server defines it.`,
-    blocks: id === "open_pipeline" ? ["pipeline_movement"] : [],
+    blocks: BLOCKS_OF[id] ?? [],
   };
 }
+
+// The charts each metric owns, as the server's catalog declares them: a chart
+// is asked together with the metric it belongs to.
+const BLOCKS_OF: Partial<Record<MetricID, Definition["blocks"]>> = {
+  bookings_won: ["bookings_trend", "owner_attainment"],
+  open_pipeline: ["stage_distribution", "pipeline_movement"],
+  stage_age: ["stage_age"],
+  qualified_pipeline_created: ["owner_attainment"],
+};
 
 /** The catalog a seat reading both presets is given. */
 export const overviewCatalog: components["schemas"]["ReportingCatalog"] = {
@@ -140,7 +150,47 @@ export const compared: Comparison = {
   remaining: 38_000_000,
   open_pipeline: 136_000_000,
   coverage: 3.58,
+  // Where each figure of the comparison is read from, as the server names it.
+  operands: {
+    won: { metric: "forecast_landing", context_id: "forecast_won" },
+    landing: { metric: "forecast_landing", context_id: "forecast_landing" },
+    open_pipeline: { metric: "forecast_landing", context_id: "forecast_open" },
+  },
 };
+
+const SALES_QUARTER = {
+  start_at: "2026-06-30T22:00:00Z",
+  end_at: "2026-09-30T22:00:00Z",
+};
+
+type Basis = NonNullable<Metric["forecast_basis"]>;
+type LandingShape = Basis["landing"];
+
+/**
+ * What a landing rests on, as the server sends it beside the figure. A call
+ * landing sets its amount apart; every other measure is won plus the rest.
+ */
+export function landingBasis(
+  landing: Partial<LandingShape> & { won: number; remaining: number },
+  over: Partial<Omit<Basis, "landing">> = {},
+): Basis {
+  const { won, remaining, ...shape } = landing;
+  return {
+    landing: {
+      measure: "commit_evidence",
+      amount_minor: won + remaining,
+      won_minor: won,
+      remaining_minor: remaining,
+      ...shape,
+    },
+    period: SALES_QUARTER,
+    eligible_count: 18,
+    priced_count: 18,
+    fx_missing_count: 0,
+    included_count: 18,
+    ...over,
+  };
+}
 
 export function salesEvaluation(
   over: Readonly<{
@@ -155,10 +205,8 @@ export function salesEvaluation(
       ...reportingStoryEvaluation.context,
       scope: TEAM,
       period_kind: "this_quarter",
-      target_interval: {
-        start_at: "2026-06-30T22:00:00Z",
-        end_at: "2026-09-30T22:00:00Z",
-      },
+      horizon: SALES_QUARTER,
+      target_interval: SALES_QUARTER,
     },
     selection: {
       ...reportingStoryEvaluation.selection,
@@ -175,6 +223,12 @@ export function salesEvaluation(
       }),
       metric("forecast_landing", 76_000_000, {
         target_comparison: over.comparison ?? compared,
+        forecast_basis: landingBasis({
+          won: 42_000_000,
+          remaining: 34_000_000,
+        }),
+        range_low_minor: 61_000_000,
+        range_high_minor: 98_000_000,
       }),
     ],
     charts: over.charts ?? [],
@@ -240,6 +294,35 @@ export function teamEvaluation(): ReportingEvaluation {
 
 type TeamReview = components["schemas"]["SdrTeamReview"];
 
+type TeamHandoffs = components["schemas"]["SdrTeamHandoffs"];
+
+/** The DACH team's handoffs this week: six rounds, one still waiting. */
+export function teamHandoffs(over: Partial<TeamHandoffs> = {}): TeamHandoffs {
+  return {
+    outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 1 },
+    cohort: {
+      rounds: 6,
+      accepted: 3,
+      rejected: 1,
+      recycled: 1,
+      waiting: 1,
+      median_decision_hours: 20,
+    },
+    waiting: { waiting: 2, unassigned: 0, blocked: 1, returned: 1 },
+    reasons: [
+      { outcome: "rejected", label: "Wrong territory", given: true, count: 1 },
+      {
+        outcome: "recycled",
+        label: "Needs more qualification",
+        given: true,
+        count: 1,
+      },
+    ],
+    unattributed: 0,
+    ...over,
+  };
+}
+
 /** The DACH team's handoff review: two SDRs, one round still waiting. */
 export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
   return {
@@ -252,29 +335,16 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
     small_sample_below: 5,
     membership_basis: "current",
     meetings: { held: 7, limited_history: false },
-    handoffs: {
-      outcomes: { submitted: 6, accepted: 3, rejected: 1, recycled: 1 },
-      cohort: {
-        rounds: 4,
-        accepted: 2,
-        rejected: 1,
-        recycled: 0,
-        waiting: 1,
-        median_decision_hours: 20,
-      },
-      waiting: { waiting: 2, unassigned: 0, blocked: 1, returned: 1 },
-      reasons: [
-        { outcome: "rejected", label: "Wrong territory", count: 1 },
-        { outcome: "recycled", label: "Needs more qualification", count: 1 },
-      ],
-      unattributed: 0,
-    },
+    handoffs: teamHandoffs(),
     members_withheld: false,
+    withheld_figures: [],
     members: [
       {
         id: SELF,
         label: "Riley Rep",
         meetings_held: 4,
+        qualified: 3,
+        unanswered: 1,
         submitted: 4,
         accepted: 2,
         rejected: 1,
@@ -286,6 +356,8 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
         id: "00000000-0000-4000-8000-0000000000a2",
         label: "Sam SDR",
         meetings_held: 4,
+        qualified: 2,
+        unanswered: 1,
         submitted: 2,
         accepted: 1,
         rejected: 0,
@@ -298,6 +370,10 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
     ...over,
   };
 }
+
+/** Whether an evaluation request is the movement read below the readings. */
+export const isMovement = (url: URL) =>
+  url.searchParams.getAll("blocks").includes("pipeline_movement");
 
 /** The movement read with no second capture yet. */
 export function startingMovement(): ReportingEvaluation {
@@ -323,8 +399,8 @@ export function startingMovement(): ReportingEvaluation {
 
 export type Seat = "leader" | "sdr";
 
-// A day with nothing on it, every source read: the Worklist's own shape.
-const QUIET_DAY: components["schemas"]["Worklist"] = {
+/** A day with nothing on it, every source read: the Worklist's own shape. */
+export const QUIET_DAY: components["schemas"]["Worklist"] = {
   as_of: interval.end_at,
   scope: "mine",
   scope_options: ["mine"],
@@ -378,6 +454,12 @@ const READS: GrantSpec = {
   pipeline: ["read"],
 };
 
+/** A reader who may also see how far the input check read each source. */
+export const COVERAGE_GRANTS: GrantSpec = {
+  ...READS,
+  data_coverage: ["read"],
+};
+
 /** Who may change what the Overview's setup notes are about. */
 export const ADMIN_GRANTS: GrantSpec = {
   ...READS,
@@ -390,6 +472,45 @@ export const ADMIN_GRANTS: GrantSpec = {
  * Every read the Overview makes but the evaluation, which the caller answers
  * by its query. `template` is the framework the workspace runs.
  */
+const SALES_PIPELINE = {
+  id: "sales",
+  name: "Sales",
+  is_default: true,
+  position: 0,
+  stages: [],
+};
+
+/** A second pipeline beside the default one, so a choice between them shows. */
+export const RENEWALS_PIPELINE = {
+  id: "renewals",
+  name: "Renewals",
+  is_default: false,
+  position: 1,
+  stages: [],
+};
+
+function pipelinePage(pipelines: readonly (typeof SALES_PIPELINE)[]) {
+  return jsonResponse({
+    data: pipelines,
+    page: { next_cursor: null, has_more: false },
+  });
+}
+
+/** `GET /pipelines` with the default pipeline and Renewals beside it. */
+export const twoPipelines = () =>
+  pipelinePage([SALES_PIPELINE, RENEWALS_PIPELINE]);
+
+/** The fourteen days the summary counts booked meetings in, from `asOf`. */
+export function upcomingWindow(asOf: string) {
+  // Fourteen days from the reporting zone's day, ending at its midnight.
+  const day = dayInZone(Date.parse(asOf), REPORTING_FIXTURE_ZONE);
+  return {
+    start_at: asOf,
+    end_at: startOfDayInZone(day, REPORTING_FIXTURE_ZONE, 14),
+    timezone: REPORTING_FIXTURE_ZONE,
+  };
+}
+
 export function overviewRoutes(
   over: Readonly<{
     seat?: Seat;
@@ -397,8 +518,17 @@ export function overviewRoutes(
     grants?: GrantSpec;
     summary?: () => Response | Promise<Response>;
     checks?: () => Response | Promise<Response>;
+    coverage?: () => Response | Promise<Response>;
     framework?: () => Response | Promise<Response>;
     team?: () => Response | Promise<Response>;
+    worklist?: () => Response | Promise<Response>;
+    handoffs?: () => Response | Promise<Response>;
+    meetings?: () => Response | Promise<Response>;
+    // The handoffs sent back: the waiting route asked with state=returned,
+    // which the route map cannot tell apart, so openOverview answers it.
+    returned?: () => Response;
+    pipelines?: () => Response | Promise<Response>;
+    evidence?: () => Response | Promise<Response>;
   }> = {},
 ): RouteMap {
   const seat = over.seat ?? "leader";
@@ -415,21 +545,17 @@ export function overviewRoutes(
           ...reportingStoryFramework,
           definition: { ...reportingStoryFramework.definition, template },
         })),
-    "GET /pipelines": () =>
-      jsonResponse({
-        data: [
-          {
-            id: "sales",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages: [],
-          },
-        ],
-        page: { next_cursor: null, has_more: false },
-      }),
+    "GET /pipelines": over.pipelines ?? (() => pipelinePage([SALES_PIPELINE])),
     "GET /forecast/assurance/exceptions":
       over.checks ?? (() => jsonResponse({ data: [] })),
+    "GET /analytics/coverage":
+      over.coverage ??
+      (() =>
+        jsonResponse({
+          run_id: "00000000-0000-4000-8000-0000000000c1",
+          as_of: interval.end_at,
+          sources: [],
+        })),
     "GET /analytics/sdr-summary":
       over.summary ??
       (() =>
@@ -441,11 +567,31 @@ export function overviewRoutes(
             template === "sdr"
               ? { waiting: 2, unassigned: 0, blocked: 0, returned: 0 }
               : undefined,
-          upcoming_meetings: 5,
+          upcoming_meetings: 0,
+          upcoming_window: upcomingWindow(interval.end_at),
         })),
-    "GET /analytics/sdr-summary/handoffs": () =>
-      jsonResponse({ as_of: interval.end_at, rows: [] }),
+    "GET /analytics/sdr-summary/handoffs":
+      over.handoffs ??
+      (() => jsonResponse({ as_of: interval.end_at, rows: [] })),
+    "GET /analytics/sdr-summary/meetings":
+      over.meetings ??
+      (() =>
+        jsonResponse({
+          as_of: interval.end_at,
+          window: upcomingWindow(interval.end_at),
+          rows: [],
+        })),
     "GET /analytics/sdr-team": over.team ?? (() => jsonResponse(teamReview())),
-    "GET /worklist": () => jsonResponse(QUIET_DAY),
+    "GET /worklist": over.worklist ?? (() => jsonResponse(QUIET_DAY)),
+    // The records behind a figure: none, unless the case lists some.
+    "GET /analytics/evidence":
+      over.evidence ??
+      (() =>
+        jsonResponse({
+          context: salesEvaluation().context,
+          metric: "bookings_won",
+          rows: [],
+          truncated: false,
+        })),
   };
 }

@@ -4652,6 +4652,9 @@ public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_
 public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.forecast_snapshot.forecast_snapshot_is_frozen CREATE TRIGGER forecast_snapshot_is_frozen BEFORE UPDATE ON public.forecast_snapshot FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()
+public.forecast_snapshot.forecast_snapshot_landing_call_is_the_landing CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'::text))))
+public.forecast_snapshot.forecast_snapshot_landing_call_minor_js_safe CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_landing_measure_known CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
@@ -4676,6 +4679,8 @@ public.forecast_snapshot.forward_measure text gen=- def=-
 public.forecast_snapshot.fx_missing_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_snapshot.input_fingerprint text gen=- def=-
+public.forecast_snapshot.landing_call_minor bigint gen=- def=-
+public.forecast_snapshot.landing_measure text gen=- def=-
 public.forecast_snapshot.local_day date NOT NULL gen=- def=-
 public.forecast_snapshot.open_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.period_end date NOT NULL gen=- def=-

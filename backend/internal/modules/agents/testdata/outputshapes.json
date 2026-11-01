@@ -7456,6 +7456,21 @@
                 "currency": {
                   "type": "string"
                 },
+                "destination": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string"
+                    },
+                    "screen": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "screen"
+                  ]
+                },
                 "first_seen_at": {
                   "type": "string"
                 },
@@ -7496,10 +7511,92 @@
                 "type"
               ]
             }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "deals": {
+                  "type": "integer"
+                },
+                "destination": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string"
+                    },
+                    "screen": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "screen"
+                  ]
+                },
+                "exposure": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "amount_minor": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_minor",
+                      "currency"
+                    ]
+                  }
+                },
+                "findings": {
+                  "type": "integer"
+                },
+                "other_findings": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "deals",
+                "destination",
+                "exposure",
+                "findings",
+                "other_findings",
+                "type"
+              ]
+            }
+          },
+          "totals": {
+            "type": "object",
+            "properties": {
+              "deals": {
+                "type": "integer"
+              },
+              "findings": {
+                "type": "integer"
+              },
+              "other_findings": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "deals",
+              "findings",
+              "other_findings"
+            ]
           }
         },
         "required": [
-          "data"
+          "data",
+          "groups",
+          "totals"
         ]
       },
       "evidence": {
@@ -12885,6 +12982,21 @@
                 "currency": {
                   "type": "string"
                 },
+                "destination": {
+                  "properties": {
+                    "mode": {
+                      "type": "string"
+                    },
+                    "screen": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "screen"
+                  ],
+                  "type": "object"
+                },
                 "first_seen_at": {
                   "type": "string"
                 },
@@ -13002,6 +13114,67 @@
           },
           "fx_missing_count": {
             "type": "integer"
+          },
+          "groups": {
+            "items": {
+              "properties": {
+                "deals": {
+                  "type": "integer"
+                },
+                "destination": {
+                  "properties": {
+                    "mode": {
+                      "type": "string"
+                    },
+                    "screen": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "screen"
+                  ],
+                  "type": "object"
+                },
+                "exposure": {
+                  "items": {
+                    "properties": {
+                      "amount_minor": {
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "amount_minor",
+                      "currency"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "findings": {
+                  "type": "integer"
+                },
+                "other_findings": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "deals",
+                "destination",
+                "exposure",
+                "findings",
+                "other_findings",
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "array"
           },
           "landing": {
             "properties": {
@@ -13169,6 +13342,25 @@
           },
           "timezone": {
             "type": "string"
+          },
+          "totals": {
+            "properties": {
+              "deals": {
+                "type": "integer"
+              },
+              "findings": {
+                "type": "integer"
+              },
+              "other_findings": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "deals",
+              "findings",
+              "other_findings"
+            ],
+            "type": "object"
           },
           "weighted_minor": {
             "type": "integer"

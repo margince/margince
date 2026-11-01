@@ -12775,6 +12775,39 @@ func (e InputCheckSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for InputCheckDestinationMode.
+const (
+	InputCheckDestinationModeAnswer InputCheckDestinationMode = "answer"
+	InputCheckDestinationModeRead   InputCheckDestinationMode = "read"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckDestinationMode enum.
+func (e InputCheckDestinationMode) Valid() bool {
+	switch e {
+	case InputCheckDestinationModeAnswer:
+		return true
+	case InputCheckDestinationModeRead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InputCheckDestinationScreen.
+const (
+	InputCheckDestinationScreenForecastReview InputCheckDestinationScreen = "forecast_review"
+)
+
+// Valid indicates whether the value is a known member of the InputCheckDestinationScreen enum.
+func (e InputCheckDestinationScreen) Valid() bool {
+	switch e {
+	case InputCheckDestinationScreenForecastReview:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstallationSettingsBaseLanguage.
 const (
 	InstallationSettingsBaseLanguageDe InstallationSettingsBaseLanguage = "de"
@@ -18490,6 +18523,27 @@ func (e SdrHandoffSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for SdrMeetingRecordType.
+const (
+	SdrMeetingRecordTypeCompany SdrMeetingRecordType = "company"
+	SdrMeetingRecordTypeContact SdrMeetingRecordType = "contact"
+	SdrMeetingRecordTypeLead    SdrMeetingRecordType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the SdrMeetingRecordType enum.
+func (e SdrMeetingRecordType) Valid() bool {
+	switch e {
+	case SdrMeetingRecordTypeCompany:
+		return true
+	case SdrMeetingRecordTypeContact:
+		return true
+	case SdrMeetingRecordTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrSummaryWorkflow.
 const (
 	SdrSummaryWorkflowHandoff       SdrSummaryWorkflow = "handoff"
@@ -18502,6 +18556,21 @@ func (e SdrSummaryWorkflow) Valid() bool {
 	case SdrSummaryWorkflowHandoff:
 		return true
 	case SdrSummaryWorkflowQualification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamMemberTargetsMetric.
+const (
+	SdrTeamMemberTargetsMetricLeadsPromoted SdrTeamMemberTargetsMetric = "leads_promoted"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamMemberTargetsMetric enum.
+func (e SdrTeamMemberTargetsMetric) Valid() bool {
+	switch e {
+	case SdrTeamMemberTargetsMetricLeadsPromoted:
 		return true
 	default:
 		return false
@@ -18523,6 +18592,36 @@ func (e SdrTeamReviewMembershipBasis) Valid() bool {
 	}
 }
 
+// Defines values for SdrTeamReviewWithheldFigures.
+const (
+	SdrTeamReviewWithheldFiguresHandoffs   SdrTeamReviewWithheldFigures = "handoffs"
+	SdrTeamReviewWithheldFiguresLeads      SdrTeamReviewWithheldFigures = "leads"
+	SdrTeamReviewWithheldFiguresMeetings   SdrTeamReviewWithheldFigures = "meetings"
+	SdrTeamReviewWithheldFiguresQualified  SdrTeamReviewWithheldFigures = "qualified"
+	SdrTeamReviewWithheldFiguresTargets    SdrTeamReviewWithheldFigures = "targets"
+	SdrTeamReviewWithheldFiguresUnanswered SdrTeamReviewWithheldFigures = "unanswered"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewWithheldFigures enum.
+func (e SdrTeamReviewWithheldFigures) Valid() bool {
+	switch e {
+	case SdrTeamReviewWithheldFiguresHandoffs:
+		return true
+	case SdrTeamReviewWithheldFiguresLeads:
+		return true
+	case SdrTeamReviewWithheldFiguresMeetings:
+		return true
+	case SdrTeamReviewWithheldFiguresQualified:
+		return true
+	case SdrTeamReviewWithheldFiguresTargets:
+		return true
+	case SdrTeamReviewWithheldFiguresUnanswered:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SdrTeamReviewWorkflow.
 const (
 	SdrTeamReviewWorkflowHandoff       SdrTeamReviewWorkflow = "handoff"
@@ -18535,6 +18634,24 @@ func (e SdrTeamReviewWorkflow) Valid() bool {
 	case SdrTeamReviewWorkflowHandoff:
 		return true
 	case SdrTeamReviewWorkflowQualification:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrUpcomingMeetingStartsPrecision.
+const (
+	SdrUpcomingMeetingStartsPrecisionDay     SdrUpcomingMeetingStartsPrecision = "day"
+	SdrUpcomingMeetingStartsPrecisionInstant SdrUpcomingMeetingStartsPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the SdrUpcomingMeetingStartsPrecision enum.
+func (e SdrUpcomingMeetingStartsPrecision) Valid() bool {
+	switch e {
+	case SdrUpcomingMeetingStartsPrecisionDay:
+		return true
+	case SdrUpcomingMeetingStartsPrecisionInstant:
 		return true
 	default:
 		return false
@@ -24280,9 +24397,49 @@ func (e ListSdrWaitingHandoffsParamsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ListSdrWaitingHandoffsParamsState.
+const (
+	ListSdrWaitingHandoffsParamsStateReturned ListSdrWaitingHandoffsParamsState = "returned"
+	ListSdrWaitingHandoffsParamsStateWaiting  ListSdrWaitingHandoffsParamsState = "waiting"
+)
+
+// Valid indicates whether the value is a known member of the ListSdrWaitingHandoffsParamsState enum.
+func (e ListSdrWaitingHandoffsParamsState) Valid() bool {
+	switch e {
+	case ListSdrWaitingHandoffsParamsStateReturned:
+		return true
+	case ListSdrWaitingHandoffsParamsStateWaiting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSdrUpcomingMeetingsParamsScopeKind.
+const (
+	ListSdrUpcomingMeetingsParamsScopeKindOwner     ListSdrUpcomingMeetingsParamsScopeKind = "owner"
+	ListSdrUpcomingMeetingsParamsScopeKindTeam      ListSdrUpcomingMeetingsParamsScopeKind = "team"
+	ListSdrUpcomingMeetingsParamsScopeKindWorkspace ListSdrUpcomingMeetingsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSdrUpcomingMeetingsParamsScopeKind enum.
+func (e ListSdrUpcomingMeetingsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSdrUpcomingMeetingsParamsScopeKindOwner:
+		return true
+	case ListSdrUpcomingMeetingsParamsScopeKindTeam:
+		return true
+	case ListSdrUpcomingMeetingsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetSdrTeamReviewParamsScopeKind.
 const (
 	GetSdrTeamReviewParamsScopeKindManagedTeams GetSdrTeamReviewParamsScopeKind = "managed_teams"
+	GetSdrTeamReviewParamsScopeKindOwner        GetSdrTeamReviewParamsScopeKind = "owner"
 	GetSdrTeamReviewParamsScopeKindTeam         GetSdrTeamReviewParamsScopeKind = "team"
 	GetSdrTeamReviewParamsScopeKindWorkspace    GetSdrTeamReviewParamsScopeKind = "workspace"
 )
@@ -24291,6 +24448,8 @@ const (
 func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 	switch e {
 	case GetSdrTeamReviewParamsScopeKindManagedTeams:
+		return true
+	case GetSdrTeamReviewParamsScopeKindOwner:
 		return true
 	case GetSdrTeamReviewParamsScopeKindTeam:
 		return true
@@ -44609,10 +44768,13 @@ type InputCheck struct {
 	AffectedMinor *int64 `json:"affected_minor,omitempty"`
 
 	// Claim What the record says, as structured values only.
-	Claim       *map[string]interface{} `json:"claim,omitempty"`
-	Currency    *string                 `json:"currency,omitempty"`
-	FirstSeenAt time.Time               `json:"first_seen_at"`
-	Id          openapi_types.UUID      `json:"id"`
+	Claim    *map[string]interface{} `json:"claim,omitempty"`
+	Currency *string                 `json:"currency,omitempty"`
+
+	// Destination Where this finding is reviewed, and whether this caller may answer it there. Absent on a list that does not say, such as the team weekly.
+	Destination *InputCheckDestination `json:"destination,omitempty"`
+	FirstSeenAt time.Time              `json:"first_seen_at"`
+	Id          openapi_types.UUID     `json:"id"`
 
 	// InputsChanged True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
 	InputsChanged *bool `json:"inputs_changed"`
@@ -44646,6 +44808,55 @@ type InputCheckStatus string
 
 // InputCheckSubjectKind What the finding is about. `forecast_call` is a manager's standing call whose pipeline moved since it was made, or can no longer be compared with it; `subject_id` is the call, and the finding has no `subject`.
 type InputCheckSubjectKind string
+
+// InputCheckDestination The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
+type InputCheckDestination struct {
+	// Mode `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+	Mode InputCheckDestinationMode `json:"mode"`
+
+	// Screen The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+	Screen InputCheckDestinationScreen `json:"screen"`
+}
+
+// InputCheckDestinationMode `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+type InputCheckDestinationMode string
+
+// InputCheckDestinationScreen The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+type InputCheckDestinationScreen string
+
+// InputCheckExposure defines model for InputCheckExposure.
+type InputCheckExposure struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+}
+
+// InputCheckGroup The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings.
+type InputCheckGroup struct {
+	// Deals How many distinct deals those findings are about.
+	Deals int `json:"deals"`
+
+	// Destination The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
+	Destination InputCheckDestination `json:"destination"`
+
+	// Exposure The money in question, one entry per currency and never summed across currencies. A deal counts once, at the largest amount any of its findings in this group names. A finding with no amount adds nothing, which is not the same as nothing at stake.
+	Exposure []InputCheckExposure `json:"exposure"`
+
+	// Findings How many findings of this type.
+	Findings int `json:"findings"`
+
+	// OtherFindings Findings of this type about something other than a deal, such as a forecast call or a signal.
+	OtherFindings int `json:"other_findings"`
+
+	// Type The finding type, as `InputCheck.type` spells it.
+	Type string `json:"type"`
+}
+
+// InputCheckTotals Every finding in the list, with deals counted once however many findings they carry.
+type InputCheckTotals struct {
+	Deals         int `json:"deals"`
+	Findings      int `json:"findings"`
+	OtherFindings int `json:"other_findings"`
+}
 
 // InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 type InstallationBrand struct {
@@ -52460,8 +52671,11 @@ type ReportingContext struct {
 	EvaluatedAt       time.Time        `json:"evaluated_at"`
 
 	// FiscalYearStartMonth The fiscal start month in force. Absent on older editions.
-	FiscalYearStartMonth  *int                 `json:"fiscal_year_start_month,omitempty"`
-	FrameworkRevision     int64                `json:"framework_revision"`
+	FiscalYearStartMonth *int  `json:"fiscal_year_start_month,omitempty"`
+	FrameworkRevision    int64 `json:"framework_revision"`
+
+	// Horizon The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
+	Horizon               *ReportingWindow     `json:"horizon,omitempty"`
 	Interval              ReportingWindow      `json:"interval"`
 	MemberIds             []openapi_types.UUID `json:"member_ids"`
 	PeriodKind            string               `json:"period_kind"`
@@ -52609,6 +52823,38 @@ type ReportingExecutionList struct {
 	NextCursor *string              `json:"next_cursor,omitempty"`
 }
 
+// ReportingForecastBasis `forecast_landing` only: what the landing and its range rest on, the same answer
+// GET /forecast gives. Absent where no landing is shown, and on editions captured before
+// the field existed; a reader then says the basis is unknown and never guesses one.
+//
+// The range in `range_low_minor` and `range_high_minor` is a model of finishes: won money
+// plus each priced eligible open deal won or lost by its chance in use. It is not the
+// landing's uncertainty, and it omits the deals counted by `eligible_count` minus
+// `priced_count` and by `fx_missing_count`.
+type ReportingForecastBasis struct {
+	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
+	CallMinor *int64 `json:"call_minor,omitempty"`
+
+	// EligibleCount Deals the forecast considered, priced or not.
+	EligibleCount int64 `json:"eligible_count"`
+
+	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.
+	FxMissingCount int64 `json:"fx_missing_count"`
+
+	// IncludedCount The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
+	IncludedCount *int64 `json:"included_count,omitempty"`
+
+	// Landing Where the period finishes if nothing changes, and what that answer rests on.
+	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+	Landing ForecastLanding `json:"landing"`
+
+	// Period The fiscal quarter the landing and the range project, half-open.
+	Period ReportingWindow `json:"period"`
+
+	// PricedCount How many of them carried an amount; an unpriced deal adds nothing to the range.
+	PricedCount int64 `json:"priced_count"`
+}
+
 // ReportingFramework defines model for ReportingFramework.
 type ReportingFramework struct {
 	Definition  ReportingFrameworkInput `json:"definition"`
@@ -52634,8 +52880,18 @@ type ReportingMetric struct {
 	Coverage    ReportingCoverage    `json:"coverage"`
 	Denominator *float64             `json:"denominator,omitempty"`
 	Evidence    ReportingEvidenceRef `json:"evidence"`
-	Id          ReportingMetricID    `json:"id"`
-	Numerator   *float64             `json:"numerator,omitempty"`
+
+	// ForecastBasis `forecast_landing` only: what the landing and its range rest on, the same answer
+	// GET /forecast gives. Absent where no landing is shown, and on editions captured before
+	// the field existed; a reader then says the basis is unknown and never guesses one.
+	//
+	// The range in `range_low_minor` and `range_high_minor` is a model of finishes: won money
+	// plus each priced eligible open deal won or lost by its chance in use. It is not the
+	// landing's uncertainty, and it omits the deals counted by `eligible_count` minus
+	// `priced_count` and by `fx_missing_count`.
+	ForecastBasis *ReportingForecastBasis `json:"forecast_basis,omitempty"`
+	Id            ReportingMetricID       `json:"id"`
+	Numerator     *float64                `json:"numerator,omitempty"`
 
 	// RangeHighMinor `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
 	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
@@ -52650,10 +52906,12 @@ type ReportingMetric struct {
 	// what is left to win. Present only on the `forecast_landing` metric.
 	// Every amount is in minor units of the context currency.
 	//
-	// - `gap` is `target` minus `landing`: positive is short, negative is ahead.
-	// - `remaining` is `target` minus `won`, never below zero.
-	// - `coverage` is `open_pipeline` divided by `remaining`: the open deals
-	//   expected to close in the quarter, over what is left to win.
+	// - `gap` is `target` minus `landing`, the projected shortfall: positive is
+	//   short, negative is ahead.
+	// - `remaining` is `target` minus `won`, the sales still to win, never below
+	//   zero. It is a different figure from `gap`.
+	// - `open_pipeline` is the open deals eligible to close in the quarter, not
+	//   every open deal. `coverage` is `open_pipeline` divided by `remaining`.
 	//
 	// `won` and `open_pipeline` come from the same forecast reading as
 	// `landing`, so a won deal is never counted twice. A manager call is a
@@ -52978,10 +53236,12 @@ type ReportingTarget struct {
 // what is left to win. Present only on the `forecast_landing` metric.
 // Every amount is in minor units of the context currency.
 //
-//   - `gap` is `target` minus `landing`: positive is short, negative is ahead.
-//   - `remaining` is `target` minus `won`, never below zero.
-//   - `coverage` is `open_pipeline` divided by `remaining`: the open deals
-//     expected to close in the quarter, over what is left to win.
+//   - `gap` is `target` minus `landing`, the projected shortfall: positive is
+//     short, negative is ahead.
+//   - `remaining` is `target` minus `won`, the sales still to win, never below
+//     zero. It is a different figure from `gap`.
+//   - `open_pipeline` is the open deals eligible to close in the quarter, not
+//     every open deal. `coverage` is `open_pipeline` divided by `remaining`.
 //
 // `won` and `open_pipeline` come from the same forecast reading as
 // `landing`, so a won deal is never counted twice. A manager call is a
@@ -53832,7 +54092,12 @@ type SdrHandoffOutcomes struct {
 
 // SdrHandoffReasonCount defines model for SdrHandoffReasonCount.
 type SdrHandoffReasonCount struct {
-	Count   int                          `json:"count"`
+	Count int `json:"count"`
+
+	// Given False for the decisions that recorded no reason, so the reasons of one outcome add up to its count in `outcomes`.
+	Given bool `json:"given"`
+
+	// Label The reason's name. Empty when `given` is false.
 	Label   string                       `json:"label"`
 	Outcome SdrHandoffReasonCountOutcome `json:"outcome"`
 }
@@ -53876,17 +54141,33 @@ type SdrHandoffTotals struct {
 	Waiting int `json:"waiting"`
 }
 
+// SdrMeetingRecord The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company.
+type SdrMeetingRecord struct {
+	Id    openapi_types.UUID   `json:"id"`
+	Label string               `json:"label"`
+	Type  SdrMeetingRecordType `json:"type"`
+}
+
+// SdrMeetingRecordType defines model for SdrMeetingRecord.Type.
+type SdrMeetingRecordType string
+
 // SdrSummary defines model for SdrSummary.
 type SdrSummary struct {
 	// AsOf The instant both counts were read at.
 	AsOf     time.Time         `json:"as_of"`
 	Handoffs *SdrHandoffTotals `json:"handoffs,omitempty"`
 
+	// HandoffsWithheld True when the workflow hands prospects on and the reader may not read leads, where handoffs are kept, so `handoffs` is absent. Absent otherwise.
+	HandoffsWithheld *bool `json:"handoffs_withheld,omitempty"`
+
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
 
-	// UpcomingMeetings Booked meetings that start after `as_of`, credited to the scope.
+	// UpcomingMeetings Booked meetings that have not happened by `as_of` and start before `upcoming_window.end_at`, credited to the scope.
 	UpcomingMeetings *int `json:"upcoming_meetings,omitempty"`
+
+	// UpcomingWindow The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+	UpcomingWindow *SdrUpcomingWindow `json:"upcoming_window,omitempty"`
 
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`.
 	Workflow SdrSummaryWorkflow `json:"workflow"`
@@ -53900,7 +54181,7 @@ type SdrTeamHandoffs struct {
 	Cohort   SdrHandoffCohort   `json:"cohort"`
 	Outcomes SdrHandoffOutcomes `json:"outcomes"`
 
-	// Reasons The reasons given for the rejections and returns in `outcomes`, most often first.
+	// Reasons Why the rejections and returns in `outcomes` were decided, most often first: decisions made in the period, not the rounds submitted in it. With no more than 50 groups, the counts of one outcome add up to its count in `outcomes`.
 	Reasons []SdrHandoffReasonCount `json:"reasons"`
 
 	// Unattributed Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them.
@@ -53917,9 +54198,9 @@ type SdrTeamMeetings struct {
 	LimitedHistory bool `json:"limited_history"`
 }
 
-// SdrTeamMember defines model for SdrTeamMember.
+// SdrTeamMember One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included.
 type SdrTeamMember struct {
-	Accepted int                `json:"accepted"`
+	Accepted *int               `json:"accepted,omitempty"`
 	Id       openapi_types.UUID `json:"id"`
 	Label    string             `json:"label"`
 
@@ -53928,13 +54209,38 @@ type SdrTeamMember struct {
 
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
-	Recycled           int        `json:"recycled"`
-	Rejected           int        `json:"rejected"`
-	Submitted          int        `json:"submitted"`
+
+	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
+	Qualified *int                 `json:"qualified,omitempty"`
+	Recycled  *int                 `json:"recycled,omitempty"`
+	Rejected  *int                 `json:"rejected,omitempty"`
+	Submitted *int                 `json:"submitted,omitempty"`
+	Target    *SdrTeamMemberTarget `json:"target,omitempty"`
+
+	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`.
+	Unanswered *int `json:"unanswered,omitempty"`
 
 	// Waiting This member's handoffs waiting on somebody else now.
-	Waiting int `json:"waiting"`
+	Waiting *int `json:"waiting,omitempty"`
 }
+
+// SdrTeamMemberTarget defines model for SdrTeamMemberTarget.
+type SdrTeamMemberTarget struct {
+	// Actual Leads that arrived in the target month up to `as_of`, owned by the member now and qualified by `as_of`: the `qualified` rule over the month.
+	Actual int `json:"actual"`
+
+	// Value The member's own target for `member_targets.metric` over `member_targets.window`.
+	Value int64 `json:"value"`
+}
+
+// SdrTeamMemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
+type SdrTeamMemberTargets struct {
+	Metric SdrTeamMemberTargetsMetric `json:"metric"`
+	Window ReportingWindow            `json:"window"`
+}
+
+// SdrTeamMemberTargetsMetric defines model for SdrTeamMemberTargets.Metric.
+type SdrTeamMemberTargetsMetric string
 
 // SdrTeamReview defines model for SdrTeamReview.
 type SdrTeamReview struct {
@@ -53943,7 +54249,10 @@ type SdrTeamReview struct {
 	Handoffs *SdrTeamHandoffs `json:"handoffs,omitempty"`
 	Interval ReportingWindow  `json:"interval"`
 	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
-	Members  []SdrTeamMember  `json:"members"`
+
+	// MemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
+	MemberTargets *SdrTeamMemberTargets `json:"member_targets,omitempty"`
+	Members       []SdrTeamMember       `json:"members"`
 
 	// MembersTruncated The team has more measurable members than `members` holds.
 	MembersTruncated bool `json:"members_truncated"`
@@ -53966,6 +54275,9 @@ type SdrTeamReview struct {
 	// Withheld Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent.
 	Withheld bool `json:"withheld"`
 
+	// WithheldFigures The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `qualified` and `unanswered` each leave out that one figure when a field mask withholds a column its reading reads, on some leads or on all: a count over the leads left would read as measured. `targets` needs target read, lead read and an unmasked `qualified`, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.
+	WithheldFigures []SdrTeamReviewWithheldFigures `json:"withheld_figures"`
+
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 	Workflow SdrTeamReviewWorkflow `json:"workflow"`
 }
@@ -53973,12 +54285,65 @@ type SdrTeamReview struct {
 // SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
 type SdrTeamReviewMembershipBasis string
 
+// SdrTeamReviewWithheldFigures defines model for SdrTeamReview.WithheldFigures.
+type SdrTeamReviewWithheldFigures string
+
 // SdrTeamReviewWorkflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 type SdrTeamReviewWorkflow string
 
+// SdrUpcomingMeeting defines model for SdrUpcomingMeeting.
+type SdrUpcomingMeeting struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Record The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company.
+	Record *SdrMeetingRecord `json:"record,omitempty"`
+
+	// Restricted The seat may read the meeting but none of the records it is linked to, so `record` is absent.
+	Restricted bool `json:"restricted"`
+
+	// StartsAt The meeting's start.
+	StartsAt time.Time `json:"starts_at"`
+
+	// StartsPrecision `day` when only the day is known; `starts_at` is then midday of that day, in UTC.
+	StartsPrecision SdrUpcomingMeetingStartsPrecision `json:"starts_precision"`
+
+	// Title The meeting's subject. A meeting whose subject the seat may not read is neither counted nor listed.
+	Title string `json:"title"`
+}
+
+// SdrUpcomingMeetingStartsPrecision `day` when only the day is known; `starts_at` is then midday of that day, in UTC.
+type SdrUpcomingMeetingStartsPrecision string
+
+// SdrUpcomingMeetingPage defines model for SdrUpcomingMeetingPage.
+type SdrUpcomingMeetingPage struct {
+	AsOf time.Time `json:"as_of"`
+
+	// NextCursor Absent on the last page.
+	NextCursor *string              `json:"next_cursor,omitempty"`
+	Rows       []SdrUpcomingMeeting `json:"rows"`
+
+	// Window The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+	Window SdrUpcomingWindow `json:"window"`
+}
+
+// SdrUpcomingWindow The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is.
+type SdrUpcomingWindow struct {
+	// EndAt Midnight at the start of the fourteenth day after today, in `timezone`. A meeting that starts at or after it is not counted.
+	EndAt time.Time `json:"end_at"`
+
+	// StartAt Equal to `as_of`: a meeting that has already happened is not upcoming.
+	StartAt time.Time `json:"start_at"`
+
+	// Timezone The reporting zone the days are counted in.
+	Timezone string `json:"timezone"`
+}
+
 // SdrWaitingHandoff defines model for SdrWaitingHandoff.
 type SdrWaitingHandoff struct {
-	Id        openapi_types.UUID   `json:"id"`
+	Id openapi_types.UUID `json:"id"`
+
+	// Reason Why the recipient sent it back, from the reason catalog. Only on a `returned` row.
+	Reason    *string              `json:"reason,omitempty"`
 	Recipient *SdrHandoffRecipient `json:"recipient,omitempty"`
 
 	// Restricted The seat may not read the prospect, so `subject` is absent.
@@ -53988,7 +54353,7 @@ type SdrWaitingHandoff struct {
 	Resubmitted bool               `json:"resubmitted"`
 	Subject     *SdrHandoffSubject `json:"subject,omitempty"`
 
-	// SubmitterId Who submitted the current round.
+	// SubmitterId Who submitted the current round. Absent while the installation shows no individual performance, unless the submitter is the reader.
 	SubmitterId *openapi_types.UUID `json:"submitter_id,omitempty"`
 
 	// WaitingSince The start of the current submission.
@@ -54978,6 +55343,12 @@ type ShareCaptureHoldHistoryResponse struct {
 // The numbers are about THEM. A snapshot share re-sums the frozen contributions this
 // caller may read rather than serving the stored totals, so two colleagues opening
 // the same link can correctly see different figures.
+//
+// `readings.landing` is the landing GET /forecast gives this caller: a live share
+// computes it now, and a snapshot share from the measure and manager call it froze.
+// The call counts only for a caller who may see it. A snapshot frozen before its
+// landing was kept has no `readings.landing`, and a reader says its basis is not
+// recorded.
 type SharedForecastView struct {
 	// AsOf The instant a snapshot share's state describes. Absent on a live share.
 	AsOf *time.Time `json:"as_of,omitempty"`
@@ -61989,6 +62360,9 @@ type ListSdrWaitingHandoffsParams struct {
 	// ScopeId The owner or team named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
+	// State `waiting`: submitted and not yet decided. `returned`: sent back to the submitter.
+	State *ListSdrWaitingHandoffsParamsState `form:"state,omitempty" json:"state,omitempty"`
+
 	// Cursor Opaque position from a previous page's `next_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
@@ -61997,12 +62371,37 @@ type ListSdrWaitingHandoffsParams struct {
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
 type ListSdrWaitingHandoffsParamsScopeKind string
 
+// ListSdrWaitingHandoffsParamsState defines parameters for ListSdrWaitingHandoffs.
+type ListSdrWaitingHandoffsParamsState string
+
+// ListSdrUpcomingMeetingsParams defines parameters for ListSdrUpcomingMeetings.
+type ListSdrUpcomingMeetingsParams struct {
+	// ScopeKind Whose meetings to list. Omitted means the seat's own default population.
+	ScopeKind *ListSdrUpcomingMeetingsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+
+	// ScopeId The owner or team named by `scope_kind`.
+	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+
+	// WindowStart The summary's `upcoming_window.start_at`. Not after now.
+	WindowStart *time.Time `form:"window_start,omitempty" json:"window_start,omitempty"`
+
+	// WindowEnd The summary's `upcoming_window.end_at`, which must be the end that `window_start` declares.
+	WindowEnd *time.Time `form:"window_end,omitempty" json:"window_end,omitempty"`
+
+	// Cursor Opaque position from a previous page's `next_cursor`. Needs the window it was read in.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListSdrUpcomingMeetingsParamsScopeKind defines parameters for ListSdrUpcomingMeetings.
+type ListSdrUpcomingMeetingsParamsScopeKind string
+
 // GetSdrTeamReviewParams defines parameters for GetSdrTeamReview.
 type GetSdrTeamReviewParams struct {
-	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it.
+	// ScopeKind Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews the requesting seat's own work, which My prospecting reads; any other owner is 404, whatever the seat may measure.
 	ScopeKind *GetSdrTeamReviewParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
 
-	// ScopeId The team named by `scope_kind`.
+	// ScopeId The team or owner named by `scope_kind`.
 	ScopeId *openapi_types.UUID `form:"scope_id,omitempty" json:"scope_id,omitempty"`
 
 	// Period The period, in the installation's reporting zone.
@@ -81866,6 +82265,9 @@ type ServerInterface interface {
 	// The handoffs waiting on somebody else, oldest wait first, one page at a time.
 	// (GET /analytics/sdr-summary/handoffs)
 	ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams)
+	// The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
+	// (GET /analytics/sdr-summary/meetings)
+	ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request, params ListSdrUpcomingMeetingsParams)
 	// How a team's handoffs ended and what still waits, for coaching.
 	// (GET /analytics/sdr-team)
 	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
@@ -85172,6 +85574,12 @@ func (_ Unimplemented) GetSdrSummary(w http.ResponseWriter, r *http.Request, par
 // The handoffs waiting on somebody else, oldest wait first, one page at a time.
 // (GET /analytics/sdr-summary/handoffs)
 func (_ Unimplemented) ListSdrWaitingHandoffs(w http.ResponseWriter, r *http.Request, params ListSdrWaitingHandoffsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
+// (GET /analytics/sdr-summary/meetings)
+func (_ Unimplemented) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request, params ListSdrUpcomingMeetingsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -95918,6 +96326,19 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 		return
 	}
 
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "cursor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -95946,6 +96367,110 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListSdrWaitingHandoffs(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSdrUpcomingMeetings operation middleware
+func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSdrUpcomingMeetingsParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window_start" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_start", r.URL.Query(), &params.WindowStart, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_start"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_start", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "window_end" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "window_end", r.URL.Query(), &params.WindowEnd, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "window_end"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "window_end", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSdrUpcomingMeetings(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132055,6 +132580,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-summary/handoffs", wrapper.ListSdrWaitingHandoffs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/sdr-summary/meetings", wrapper.ListSdrUpcomingMeetings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)

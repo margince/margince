@@ -112,7 +112,11 @@ func (s *Store) TakeSnapshot(ctx context.Context, tx pgx.Tx, in NewSnapshot) (id
 		return ids.Nil, err
 	}
 
-	id, err := s.insertSnapshot(ctx, tx, in, capturedBy)
+	landing, err := s.frozenLanding(ctx, tx, in)
+	if err != nil {
+		return ids.Nil, err
+	}
+	id, err := s.insertSnapshot(ctx, tx, in, landing, capturedBy)
 	if err != nil {
 		return ids.Nil, err
 	}

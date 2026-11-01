@@ -20198,9 +20198,15 @@ export interface paths {
          *     target time is configured anywhere, so only the age is given.
          *
          *     `upcoming_meetings` counts booked meetings, and meetings a calendar synced with no status,
-         *     that have not happened by `as_of`, credited by the
-         *     meeting credit rule the held-meetings reading uses. It is absent for a seat that may not
-         *     read activities.
+         *     that have not happened by `as_of` and start inside `upcoming_window`: today and the
+         *     thirteen days after it, in the installation's reporting zone. They are credited by the
+         *     meeting credit rule the held-meetings reading uses. `GET /analytics/sdr-summary/meetings`
+         *     lists the same meetings in the same window. Both are absent for a seat that may not read
+         *     activities.
+         *
+         *     Each count needs its own grant of the reader. `handoffs` needs lead read, where handoffs
+         *     are kept; without it `handoffs_withheld` is true and `handoffs` is absent, so a seat that
+         *     may read activities alone still gets its upcoming meetings.
          *
          *     Both counts are one statement each over the scope, never a read per row. The scope is
          *     checked as every analytics read checks it: an owner or team the seat may not measure
@@ -20225,11 +20231,39 @@ export interface paths {
         /**
          * The handoffs waiting on somebody else, oldest wait first, one page at a time.
          * @description The rows behind `SdrSummary.handoffs.waiting`, in the same scope, ordered by when the
-         *     current wait began and then by id. A prospect the seat may not read is listed as
-         *     `restricted` with no name and no id. A handoff carries no deal while it waits, so no
-         *     deal field is ever part of a row.
+         *     current wait began and then by id. With `state=returned` they are the rows behind
+         *     `SdrSummary.handoffs.returned` instead: sent back and waiting on their submitter, each
+         *     aged from its return and carrying the reason given. A prospect the seat may not read is
+         *     listed as `restricted` with no name and no id. A handoff carries no deal while it waits,
+         *     so no deal field is ever part of a row.
          */
         get: operations["listSdrWaitingHandoffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sdr-summary/meetings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The meetings behind `SdrSummary.upcoming_meetings`, soonest first, one page at a time.
+         * @description The same meetings `upcoming_meetings` counts, in the same scope and window, ordered by
+         *     start and then by id, so the pages together hold that count. Send the summary's
+         *     `upcoming_window.start_at` and `end_at` as `window_start` and `window_end` on every page,
+         *     so a clock that moves between the summary and a later page still reads the summary's
+         *     population. A cursor is only read with a window. Without one, the window starts now. The title is read
+         *     under the meeting's own field mask, and the linked record under that record's row scope
+         *     and field mask.
+         */
+        get: operations["listSdrUpcomingMeetings"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20270,6 +20304,13 @@ export interface paths {
          *
          *     An event recorded before the submitter was kept with it is counted in `unattributed`, for
          *     the whole company only, and in no member's row.
+         *
+         *     A member's `qualified` and `unanswered` use the rules of the Leads qualified and Leads
+         *     still waiting for a reply readings, credited to each lead's owner now. A member's
+         *     `target` is held against the month in `member_targets`, never against a week. Each
+         *     figure needs its own grant, and the requesting reader's grants decide, never the
+         *     member's. All member figures are read in one statement per figure for the whole page of
+         *     members, and the targets in one more.
          */
         get: operations["getSdrTeamReview"];
         put?: never;
@@ -40939,8 +40980,61 @@ export interface components {
              */
             workflow: "handoff" | "qualification";
             handoffs?: components["schemas"]["SdrHandoffTotals"];
-            /** @description Booked meetings that start after `as_of`, credited to the scope. */
+            /** @description True when the workflow hands prospects on and the reader may not read leads, where handoffs are kept, so `handoffs` is absent. Absent otherwise. */
+            handoffs_withheld?: boolean;
+            /** @description Booked meetings that have not happened by `as_of` and start before `upcoming_window.end_at`, credited to the scope. */
             upcoming_meetings?: number;
+            upcoming_window?: components["schemas"]["SdrUpcomingWindow"];
+        };
+        /** @description The span `upcoming_meetings` and the meeting list count in. It is present whenever `upcoming_meetings` is. */
+        SdrUpcomingWindow: {
+            /**
+             * Format: date-time
+             * @description Equal to `as_of`: a meeting that has already happened is not upcoming.
+             */
+            start_at: string;
+            /**
+             * Format: date-time
+             * @description Midnight at the start of the fourteenth day after today, in `timezone`. A meeting that starts at or after it is not counted.
+             */
+            end_at: string;
+            /** @description The reporting zone the days are counted in. */
+            timezone: string;
+        };
+        SdrUpcomingMeeting: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description The meeting's start.
+             */
+            starts_at: string;
+            /**
+             * @description `day` when only the day is known; `starts_at` is then midday of that day, in UTC.
+             * @enum {string}
+             */
+            starts_precision: "instant" | "day";
+            /** @description The meeting's subject. A meeting whose subject the seat may not read is neither counted nor listed. */
+            title: string;
+            /** @description The seat may read the meeting but none of the records it is linked to, so `record` is absent. */
+            restricted: boolean;
+            record?: components["schemas"]["SdrMeetingRecord"];
+        };
+        /** @description The first customer record the meeting is linked to that the seat may read, a lead before a contact before a company. */
+        SdrMeetingRecord: {
+            /** @enum {string} */
+            type: "lead" | "contact" | "company";
+            /** Format: uuid */
+            id: string;
+            label: string;
+        };
+        SdrUpcomingMeetingPage: {
+            /** Format: date-time */
+            as_of: string;
+            window: components["schemas"]["SdrUpcomingWindow"];
+            rows: components["schemas"]["SdrUpcomingMeeting"][];
+            /** @description Absent on the last page. */
+            next_cursor?: string;
         };
         SdrHandoffTotals: {
             /** @description Handoffs submitted and not yet decided. */
@@ -40972,10 +41066,12 @@ export interface components {
             subject?: components["schemas"]["SdrHandoffSubject"];
             /**
              * Format: uuid
-             * @description Who submitted the current round.
+             * @description Who submitted the current round. Absent while the installation shows no individual performance, unless the submitter is the reader.
              */
             submitter_id?: string;
             recipient?: components["schemas"]["SdrHandoffRecipient"];
+            /** @description Why the recipient sent it back, from the reason catalog. Only on a `returned` row. */
+            reason?: string;
         };
         SdrHandoffSubject: {
             /** @enum {string} */
@@ -41032,6 +41128,25 @@ export interface components {
             members: components["schemas"]["SdrTeamMember"][];
             /** @description The team has more measurable members than `members` holds. */
             members_truncated: boolean;
+            /** @description The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `qualified` and `unanswered` each leave out that one figure when a field mask withholds a column its reading reads, on some leads or on all: a count over the leads left would read as measured. `targets` needs target read, lead read and an unmasked `qualified`, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode. */
+            withheld_figures: ("meetings" | "handoffs" | "leads" | "qualified" | "unanswered" | "targets")[];
+            member_targets?: components["schemas"]["SdrTeamMemberTargets"];
+        };
+        /** @description What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week. */
+        SdrTeamMemberTargets: {
+            /** @enum {string} */
+            metric: "leads_promoted";
+            /** @description The whole reporting month that holds the last counted instant of the period, which is the month an evaluation with `target_basis` month reads. */
+            window: components["schemas"]["ReportingWindow"];
+        };
+        SdrTeamMemberTarget: {
+            /**
+             * Format: int64
+             * @description The member's own target for `member_targets.metric` over `member_targets.window`.
+             */
+            value: number;
+            /** @description Leads that arrived in the target month up to `as_of`, owned by the member now and qualified by `as_of`: the `qualified` rule over the month. */
+            actual: number;
         };
         SdrTeamMeetings: {
             /** @description Held customer meetings in the period credited to the team, each counted once. */
@@ -41043,7 +41158,7 @@ export interface components {
             outcomes: components["schemas"]["SdrHandoffOutcomes"];
             cohort: components["schemas"]["SdrHandoffCohort"];
             waiting: components["schemas"]["SdrHandoffTotals"];
-            /** @description The reasons given for the rejections and returns in `outcomes`, most often first. */
+            /** @description Why the rejections and returns in `outcomes` were decided, most often first: decisions made in the period, not the rounds submitted in it. With no more than 50 groups, the counts of one outcome add up to its count in `outcomes`. */
             reasons: components["schemas"]["SdrHandoffReasonCount"][];
             /** @description Decisions and submissions in the period that recorded no submitter, counted for the whole company only. No team can tell whether they were its own, and no member's row holds them. */
             unattributed: number;
@@ -41072,21 +41187,30 @@ export interface components {
         SdrHandoffReasonCount: {
             /** @enum {string} */
             outcome: "rejected" | "recycled";
+            /** @description The reason's name. Empty when `given` is false. */
             label: string;
+            /** @description False for the decisions that recorded no reason, so the reasons of one outcome add up to its count in `outcomes`. */
+            given: boolean;
             count: number;
         };
+        /** @description One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included. */
         SdrTeamMember: {
             /** Format: uuid */
             id: string;
             label: string;
             /** @description Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is. */
             meetings_held?: number;
-            submitted: number;
-            accepted: number;
-            rejected: number;
-            recycled: number;
+            /** @description Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`. */
+            qualified?: number;
+            /** @description Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`. */
+            unanswered?: number;
+            target?: components["schemas"]["SdrTeamMemberTarget"];
+            submitted?: number;
+            accepted?: number;
+            rejected?: number;
+            recycled?: number;
             /** @description This member's handoffs waiting on somebody else now. */
-            waiting: number;
+            waiting?: number;
             /**
              * Format: date-time
              * @description When this member's longest current wait began. Absent with nothing waiting.
@@ -41228,6 +41352,8 @@ export interface components {
             population_fingerprint: string;
             interval: components["schemas"]["ReportingWindow"];
             target_interval?: components["schemas"]["ReportingWindow"];
+            /** @description The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed. */
+            horizon?: components["schemas"]["ReportingWindow"];
             close_interval?: components["schemas"]["ReportingWindow"];
             timezone: string;
             currency: string;
@@ -41382,6 +41508,7 @@ export interface components {
              * @description `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
              */
             range_high_minor?: number;
+            forecast_basis?: components["schemas"]["ReportingForecastBasis"];
         };
         /**
          * @description Where the current fiscal quarter's expected landing stands against a
@@ -41389,10 +41516,12 @@ export interface components {
          *     what is left to win. Present only on the `forecast_landing` metric.
          *     Every amount is in minor units of the context currency.
          *
-         *     - `gap` is `target` minus `landing`: positive is short, negative is ahead.
-         *     - `remaining` is `target` minus `won`, never below zero.
-         *     - `coverage` is `open_pipeline` divided by `remaining`: the open deals
-         *       expected to close in the quarter, over what is left to win.
+         *     - `gap` is `target` minus `landing`, the projected shortfall: positive is
+         *       short, negative is ahead.
+         *     - `remaining` is `target` minus `won`, the sales still to win, never below
+         *       zero. It is a different figure from `gap`.
+         *     - `open_pipeline` is the open deals eligible to close in the quarter, not
+         *       every open deal. `coverage` is `open_pipeline` divided by `remaining`.
          *
          *     `won` and `open_pipeline` come from the same forecast reading as
          *     `landing`, so a won deal is never counted twice. A manager call is a
@@ -41460,6 +41589,46 @@ export interface components {
             coverage?: number;
             qualified?: components["schemas"]["ReportingQualifiedCoverage"];
             operands?: components["schemas"]["ReportingComparisonOperands"];
+        };
+        /**
+         * @description `forecast_landing` only: what the landing and its range rest on, the same answer
+         *     GET /forecast gives. Absent where no landing is shown, and on editions captured before
+         *     the field existed; a reader then says the basis is unknown and never guesses one.
+         *
+         *     The range in `range_low_minor` and `range_high_minor` is a model of finishes: won money
+         *     plus each priced eligible open deal won or lost by its chance in use. It is not the
+         *     landing's uncertainty, and it omits the deals counted by `eligible_count` minus
+         *     `priced_count` and by `fx_missing_count`.
+         */
+        ReportingForecastBasis: {
+            landing: components["schemas"]["ForecastLanding"];
+            /** @description The fiscal quarter the landing and the range project, half-open. */
+            period: components["schemas"]["ReportingWindow"];
+            /**
+             * Format: int64
+             * @description The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
+             */
+            call_minor?: number;
+            /**
+             * Format: int64
+             * @description Deals the forecast considered, priced or not.
+             */
+            eligible_count: number;
+            /**
+             * Format: int64
+             * @description How many of them carried an amount; an unpriced deal adds nothing to the range.
+             */
+            priced_count: number;
+            /**
+             * Format: int64
+             * @description Priced deals with no exchange rate to the base currency, left out of every total.
+             */
+            fx_missing_count: number;
+            /**
+             * Format: int64
+             * @description The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
+             */
+            included_count?: number;
         };
         /**
          * @description Coverage over the deals the qualified forecast keeps, beside the
@@ -42542,6 +42711,46 @@ export interface components {
             last_seen_at: string;
             /** @description True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way. */
             inputs_changed: boolean | null;
+            /** @description Where this finding is reviewed, and whether this caller may answer it there. Absent on a list that does not say, such as the team weekly. */
+            destination?: components["schemas"]["InputCheckDestination"];
+        };
+        /** @description The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse. */
+        InputCheckDestination: {
+            /**
+             * @description The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+             * @enum {string}
+             */
+            screen: "forecast_review";
+            /**
+             * @description `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+             * @enum {string}
+             */
+            mode: "answer" | "read";
+        };
+        /** @description The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings. */
+        InputCheckGroup: {
+            /** @description The finding type, as `InputCheck.type` spells it. */
+            type: string;
+            /** @description How many findings of this type. */
+            findings: number;
+            /** @description How many distinct deals those findings are about. */
+            deals: number;
+            /** @description Findings of this type about something other than a deal, such as a forecast call or a signal. */
+            other_findings: number;
+            /** @description The money in question, one entry per currency and never summed across currencies. A deal counts once, at the largest amount any of its findings in this group names. A finding with no amount adds nothing, which is not the same as nothing at stake. */
+            exposure: components["schemas"]["InputCheckExposure"][];
+            destination: components["schemas"]["InputCheckDestination"];
+        };
+        InputCheckExposure: {
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+        };
+        /** @description Every finding in the list, with deals counted once however many findings they carry. */
+        InputCheckTotals: {
+            findings: number;
+            deals: number;
+            other_findings: number;
         };
         ResolveInputCheck: {
             /**
@@ -42855,6 +43064,12 @@ export interface components {
          *     The numbers are about THEM. A snapshot share re-sums the frozen contributions this
          *     caller may read rather than serving the stored totals, so two colleagues opening
          *     the same link can correctly see different figures.
+         *
+         *     `readings.landing` is the landing GET /forecast gives this caller: a live share
+         *     computes it now, and a snapshot share from the measure and manager call it froze.
+         *     The call counts only for a caller who may see it. A snapshot frozen before its
+         *     landing was kept has no `readings.landing`, and a reader says its basis is not
+         *     recorded.
          */
         SharedForecastView: {
             /**
@@ -84959,6 +85174,9 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["InputCheck"][];
+                        /** @description The same findings grouped by type, in the order each type first appears in `data`. Counted over the whole list this caller may see, never a page of it. */
+                        groups: components["schemas"]["InputCheckGroup"][];
+                        totals: components["schemas"]["InputCheckTotals"];
                     };
                 };
             };
@@ -85354,6 +85572,8 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 /** @description The owner or team named by `scope_kind`. */
                 scope_id?: string;
+                /** @description `waiting`: submitted and not yet decided. `returned`: sent back to the submitter. */
+                state?: "waiting" | "returned";
                 /** @description Opaque position from a previous page's `next_cursor`. */
                 cursor?: string;
                 limit?: number;
@@ -85379,12 +85599,48 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listSdrUpcomingMeetings: {
+        parameters: {
+            query?: {
+                /** @description Whose meetings to list. Omitted means the seat's own default population. */
+                scope_kind?: "owner" | "team" | "workspace";
+                /** @description The owner or team named by `scope_kind`. */
+                scope_id?: string;
+                /** @description The summary's `upcoming_window.start_at`. Not after now. */
+                window_start?: string;
+                /** @description The summary's `upcoming_window.end_at`, which must be the end that `window_start` declares. */
+                window_end?: string;
+                /** @description Opaque position from a previous page's `next_cursor`. Needs the window it was read in. */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of upcoming meetings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SdrUpcomingMeetingPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getSdrTeamReview: {
         parameters: {
             query?: {
-                /** @description Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. */
-                scope_kind?: "team" | "workspace" | "managed_teams";
-                /** @description The team named by `scope_kind`. */
+                /** @description Which team to review. Omitted, or `managed_teams`, means the seat's own default population, as the evaluator reads it. `owner` reviews the requesting seat's own work, which My prospecting reads; any other owner is 404, whatever the seat may measure. */
+                scope_kind?: "team" | "workspace" | "managed_teams" | "owner";
+                /** @description The team or owner named by `scope_kind`. */
                 scope_id?: string;
                 /** @description The period, in the installation's reporting zone. */
                 period?: "this_week" | "last_week" | "this_month" | "last_month";

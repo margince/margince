@@ -4,9 +4,9 @@
 // Worklist copy names records, supported moves and concrete reasons.
 
 import { describe, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
-import type { Translator } from "../../i18n";
-import { translate } from "../../i18n";
+import { viewerZone } from "../format/timezone";
+import type { Translator } from "../i18n";
+import { translate } from "../i18n";
 import {
   itemTitle,
   KNOWN_SOURCES,
@@ -16,8 +16,8 @@ import {
   reasonText,
   sourceName,
   sourceUnavailableText,
-} from "./worklist.copy";
-import type { WorklistItem, WorklistReason } from "./worklist.queries";
+} from "./worklistcopy";
+import type { WorklistItem, WorklistReason } from "./worklisttypes";
 
 const t: Translator = (key, params) => translate("en", key, params);
 // The "still renders a full date" case below only asserts the year, so the

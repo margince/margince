@@ -178,19 +178,14 @@ func (h Handlers) GetForecast(
 			return nil
 		}
 		var called *int64
-		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
-		switch {
-		case !mayAssert:
-			// The call exists for others; this seat is shown none.
-		case err == nil:
+		call, seen, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
+		if err != nil {
+			return err
+		}
+		if seen {
 			wire := callToWire(call)
 			out.CurrentCall = &wire
 			called = &call.AmountMinor
-		case IsNoStandingCall(err):
-			// Nobody has called this period. A real answer, and absent rather
-			// than an error.
-		default:
-			return err
 		}
 		return h.project(ctx, tx, &out, period, scope, readings, called, at, baseCurrency)
 	})
@@ -218,6 +213,21 @@ func MayAssertAbout(ctx context.Context, tx pgx.Tx, resolve ResolveScopeFunc, sc
 	default:
 		return false, err
 	}
+}
+
+// CallSeen is the standing call a seat sees for a resolved population. Its
+// bool is false when the seat may not assert about it, or nobody has called. The
+// forecast endpoint, the forecast_readings tool and the reporting landing all
+// read the call through it, so the three agree on one landing.
+func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, period Period, scope Scope) (Call, bool, error) {
+	if !mayAssert || scope.Kind == ScopeManagedTeams {
+		return Call{}, false, nil
+	}
+	call, err := store.CurrentCallTx(ctx, tx, period, scope)
+	if IsNoStandingCall(err) {
+		return Call{}, false, nil
+	}
+	return call, err == nil, err
 }
 
 // project adds where the period lands and whether the pipeline supports it.
@@ -270,14 +280,15 @@ func LandingFor(
 	if err != nil {
 		return crmcontracts.ForecastLanding{}, err
 	}
-	return landingToWire(landing), nil
+	return LandingToWire(landing), nil
 }
 
-// landingToWire maps a projection onto the wire shape.
+// LandingToWire maps a projection onto the wire shape. The reporting metric
+// calls it too, so both state one landing.
 //
 // The caveat is omitted rather than sent empty when there is none: an empty
 // string would render as a warning that says nothing.
-func landingToWire(in Landing) crmcontracts.ForecastLanding {
+func LandingToWire(in Landing) crmcontracts.ForecastLanding {
 	out := crmcontracts.ForecastLanding{
 		AmountMinor:    in.AmountMinor,
 		Measure:        crmcontracts.ForecastLandingMeasure(in.Measure),

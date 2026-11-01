@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { routeHash } from "../../lib/router";
-import { settingsHref } from "../../lib/settingsrouting";
+import { routeHash } from "./router";
+import { settingsHref } from "./settingsrouting";
 import {
   currentParams,
   replaceDial,
   type UrlParams,
   useUrlParams,
-} from "../../lib/urlstate";
+} from "./urlstate";
 
 /**
  * The address of ONE rights case, and the state that keeps a card's open row

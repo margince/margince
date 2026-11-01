@@ -2,13 +2,9 @@
 <!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting -->
 # Analytics and forecasting
 
-**Analytics** in Margince is the reporting screen. It shows forecast, pipeline
-reports, sales performance, time in stage, your own outcomes, delivery and data
-coverage. It is in the sidebar under **Insights**. It answers two different
-kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
+**Analytics** in Margince is the reporting screen. It shows forecast, pipeline reports, sales performance, time in stage, your own outcomes, delivery and data coverage. It is in the sidebar under **Insights**. It answers two different kinds of question and keeps them apart: what the records say, and what somebody expects will happen.
 
-Every number here opens the records it was made from. If a figure looks wrong,
-open it rather than guessing.
+Every number here opens the records it was made from. If a figure looks wrong, open it rather than guessing.
 
 ## Common reporting tasks
 
@@ -81,41 +77,44 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 
 When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and **Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in [Sales reporting](sales-reporting.md).
 
-Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet.
-
-The section is part of the address, so a link to one opens it.
+Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
 
 ## Overview
 
 Analytics opens on **Overview**, the first tab, which has two views: **Sales review** and **My prospecting**. A reader who measures a team also gets **Team prospecting**. The view a link names opens first, then the one you chose last. With neither, a reader who measures their own records in a company set up for SDR teams gets **My prospecting**. Everyone else gets **Sales review**. Each view shows its readings, a few sentences on what they mean, and what needs you.
 
-**Sales review** opens on this fiscal quarter with **Sales won** at the top, beside a line of its total over the period. Under it are **Expected finish**, **Gap to target**, **Closed win rate** and **Open pipeline**, which says how far open deals cover what is left. With no sales target there is no gap to show, and **Set targets** shows to a seat that may set them. On another period, **Show this quarter** brings the comparison back. Next come the open pipeline by stage and sales won by team member, then the open forecast checks beside a short summary. Last is **Since the last capture**, which shows how the open pipeline moved and needs two captures before it can compare.
+**Sales review** opens on this fiscal quarter. The record scope and the period stand at the top. The pipeline and the expected close window sit behind **Filters**, and two chips under the controls always show what they hold. **Save view**, **Report templates** and **Export CSV** sit behind **More**. The line under the filters names the whole quarter, such as "1 October – 31 December", and the time the results run up to.
 
-**My prospecting** opens on this week with your own **Meetings held**, **Accepted handoffs**, **Leads qualified** and **First response time**. **Monthly targets** shows this month’s targets on a panel of its own. Without SDR handoffs, **Meetings coming up** takes the place of accepted handoffs, and the handoff panel is left out. **Waiting on you** and **Handoffs waiting on others** follow. A figure that could not be read says so, and the sentences leave it out. **Save view** keeps the view as a report, and **Report templates** opens prepared reports such as **My prospecting progress**.
+**Sales won** leads, beside a line of its total over the period. Under it you see how much of the quarter's target it reached and what is still to win. **Projected shortfall** is the target minus the expected finish. With enough history, the same point of the last period shows too. With no sales target there is no gap to show, and **Set targets** shows to a seat that may set them. A target set for a different scope, such as one team, says why it cannot compare and offers a view that can.
 
-**Team prospecting** shows a team’s meetings held, accepted handoffs and qualified leads, each counted once for the team. **Handoff feedback** counts what was handed on, accepted, returned (sent back to try again) and rejected in the period. It says how each round handed on in the period ended, why, and what still waits; under five rounds is a small sample. **Members** has one row per colleague you may measure, in name order, and a shared meeting counts in each row. The figures follow who is on the team today. With **Show individual performance** off, no row shows, and a total that would show one colleague’s work is held back.
+Three readings follow. **Expected finish** names what it counts, such as **Won + confirmed commit** or **Manager’s call**, and a call it does not use is shown, not added. **Coverage** names both of its amounts: the open value due to close this quarter, over what is still to win. **Closed win rate** is the share of closed deals that were won. **Summary** then says where the quarter stands and how many forecast checks are open, and each sentence opens what it rests on. While a figure or the checks could not be read, no sentence says the quarter is on target.
+
+**Needs your attention** names the three most urgent open forecast checks. Each says which deal to review and why, who owns it (or **Unassigned**), when it was found and how much money it puts in question. **Answer** opens that check on the forecast review, and a seat that may only read it gets **Open**. Below, all open checks are counted by kind, in checks and in deals, and **Show** lists one kind. The checks cover every pipeline and close date of the record scope. A data source the last check could not read shows as **Connection maintenance**, apart from the checks.
+
+A bar in **Summary** shows what the expected finish is made of, with the deals it left out. **Modelled quarter finish** is the span that 8 in 10 runs of the forecast end in, not a margin around the expected finish. On another period, **Show this quarter** brings the comparison back. **All open pipeline** follows, then the open pipeline by stage and sales won by team member, in name order. With **Show individual performance** off, the team member chart shows no names. Last is **Since the last capture**, which shows how the open pipeline moved and needs two captures before it can compare.
+
+**My prospecting** opens on this week, and **Your results** leads with the outcome your company counts. That is **Accepted handoffs** when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, and a week with no reading stays empty. Under it, **Monthly targets** names its own month, so a week is never set against a month. Three readings follow: **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days.
+
+A zero, a hidden figure, a failed one and a day that cannot be read each say so in their own words. **Summary** and **Do next** sit beside your results, and **Open** on a Worklist item goes to its record, where you complete it. **Handoffs waiting on others** names each recipient, how long the handoff has waited since it was last sent, and whether the recipient can still act. A handoff sent back to you shows the reason given; without SDR handoffs, **Meetings to prepare** lists your booked meetings instead. Lower down, **How your outcomes developed** shows each week, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
+
+**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with qualified leads where it does not. **Where the team stands** says how the rounds handed on in the period, or the leads that arrived in it, ended so far. A share shows only when at least five rounds or leads are behind it. Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
+
+**Members** has one row per colleague you may measure, in name order, with the columns of the company’s way of working. With qualified leads as the main outcome, a row shows qualified leads, meetings held, leads waiting for a reply and the member’s own monthly target. A lead counts for the colleague who owns it now, a handoff for whoever handed it on, and the team is today’s team. The rows need not add up to the team: a lead with no owner is in no row, and a shared meeting is in each. A figure your role may not see is named under the table, never shown as zero, and with **Show individual performance** off no row shows. A total of one colleague’s work is held back, and a team of you and one colleague hides its readings and movement, with the reason.
+
+Each view keeps its own record scope, pipeline, period, close window and dates. **All pipelines** on Sales review is still set when you come back from the other views. A link that names a view and its filters opens what it names and changes nothing you chose. What you chose is kept per account in this browser until you sign out. The links out of a view carry its filters, and Back returns to the same filters, place and card. Forecast covers every pipeline, so it says so first when the figure you came from counts one pipeline of several.
+
+A link to figures you may not see says **This link names figures you cannot open** instead of showing other figures.
 
 ## Which records a number covers
 
-Every Analytics reading covers a set of records, and the screen always says
-which.
-
-Where you have more than one to choose from, it is a picker labelled **Record
-scope**. Where you have only one, which is the usual case for a rep, it is a
-plain sentence instead: **"These numbers cover {scope}."**
+Every Analytics reading covers a set of records, and the screen always says which. Where you have more than one to choose from, it is a picker labelled **Record scope**. Where you have only one, which is the usual case for a rep, it is a plain sentence instead: **"These numbers cover {scope}."**
 
 Every seat is offered **Whole company**, every live team and its own records.
-Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are
-never offered. A rep still opens on their own records.
+Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are never offered. A rep still opens on their own records.
 
-A total counts the whole scope you picked. An owner chart, ranking or list shows
-only the owners you may measure, and the answer says so. A scope with no deals
-says so instead of showing zeros, and points you to **Whole company** if you
-own none.
+A total counts the whole scope you picked. An owner chart, ranking or list shows only the owners you may measure, and the answer says so. A scope with no deals says so instead of showing zeros, and points you to **Whole company** if you own none.
 
-The scope picker rules Performance, Forecast, Pipeline and Custom reports, so
-these sections count the same records. Delivery does not follow the picker: it
-covers every project you can read, and says so on the page.
+The scope picker rules Performance, Forecast, Pipeline and Custom reports, so these sections count the same records. Delivery does not follow the picker: it covers every project you can read, and says so on the page.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only

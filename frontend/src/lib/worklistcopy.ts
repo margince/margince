@@ -1,31 +1,31 @@
-import { sourceName } from "./worklist.sources";
+import { sourceName } from "./worklistsources";
 
-export { sourceName } from "./worklist.sources";
+export { sourceName } from "./worklistsources";
 
-import { floorFigure } from "../../format/figure";
-import { formatNumber } from "../../format/format";
-import type { Locale, useT } from "../../i18n";
-import { isMessageKey, translatePlural } from "../../i18n";
-import { aiTaskLabel } from "../../lib/ai-task-label";
+import { floorFigure } from "../format/figure";
+import { formatNumber } from "../format/format";
+import type { Locale, useT } from "../i18n";
+import { isMessageKey, translatePlural } from "../i18n";
+import { aiTaskLabel } from "./ai-task-label";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
   THREAD_PARAM,
-} from "../../lib/contactpage.address";
-import { ENTITY, recordRoute } from "../../lib/entity";
-import { routeHash } from "../../lib/router";
-import { settingsHref } from "../../lib/settingsrouting";
-import { caseHref } from "../privacy/privacy.caselink";
-import { connectionName, connectionTitleKey } from "./worklist.connection";
-import { nonBuyerRequest } from "./worklist.eyebrow";
-import type { Worklist, WorklistItem } from "./worklist.queries";
+} from "./contactpage.address";
+import { ENTITY, recordRoute } from "./entity";
+import { caseHref } from "./privacycaselink";
+import { routeHash } from "./router";
+import { settingsHref } from "./settingsrouting";
+import { connectionName, connectionTitleKey } from "./worklistconnection";
+import { nonBuyerRequest } from "./worklisteyebrow";
+import type { Worklist, WorklistItem } from "./worklisttypes";
 
 export {
   dealFactsText,
   phrasedReasons,
   reasonText,
   whenText,
-} from "./worklist.copy.reasons";
+} from "./worklistcopyreasons";
 
 export type T = ReturnType<typeof useT>;
 
@@ -98,7 +98,7 @@ export function rowHref(item: WorklistItem): string | undefined {
 // officer arrived at twenty rows with nothing saying which one they had been
 // sent to read, and the case they wanted was as likely to be below the fold as
 // on screen. The row's `id` IS the case id, so the address can name it
-// (privacy.caselink.ts opens it on arrival).
+// (privacycaselink.ts opens it on arrival).
 //
 // Still no verb. The queue answers these and this page cannot, so the row says
 // where the case is and stops there — the difference between telling somebody

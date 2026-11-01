@@ -108,6 +108,18 @@ it("says open pipeline is a count now and the expected finish is this quarter's"
         value: 76000000,
         coverage: { status: "ok", withheld: false },
         evidence: { metric: "forecast_landing", context_id: "state" },
+        forecast_basis: {
+          landing: {
+            amount_minor: 76000000,
+            measure: "weighted",
+            won_minor: 42000000,
+            remaining_minor: 34000000,
+          },
+          period: reportingStoryEvaluation.context.interval,
+          eligible_count: 3,
+          priced_count: 3,
+          fx_missing_count: 0,
+        },
       },
     ],
   };
@@ -119,7 +131,9 @@ it("says open pipeline is a count now and the expected finish is this quarter's"
   expect(await screen.findByText("Forecast landing")).toBeVisible();
   expect(screen.getByText(/^Open deals: 3 · as of /)).toBeVisible();
   expect(
-    screen.getByText("This fiscal quarter, from the deal forecast"),
+    screen.getByText(
+      "This fiscal quarter, from the deal forecast · Won + weighted open deals",
+    ),
   ).toBeVisible();
   const labels = screen
     .getAllByText(/^(Sales won|Forecast landing|Open pipeline)$/)
@@ -169,7 +183,7 @@ it("opens the forecast section from the forecast landing, not an empty evidence 
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
     </StoryProviders>,
   );
-  await userEvent.setup().click(screen.getByRole("button", { name: "Open" }));
+  await userEvent.setup().click(screen.getByRole("link", { name: "Open" }));
   expect(onEvidence).not.toHaveBeenCalled();
   expect(window.location.hash).toMatch(/^#\/analytics\/forecast/);
 });

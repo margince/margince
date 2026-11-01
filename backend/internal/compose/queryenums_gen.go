@@ -61,10 +61,14 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/analytics/sdr-summary/handoffs": {
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
+		{Name: "state", Values: []string{"waiting", "returned"}, Array: false, Explode: true},
+	},
+	"GET /v1/analytics/sdr-summary/meetings": {
+		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/sdr-team": {
 		{Name: "period", Values: []string{"this_week", "last_week", "this_month", "last_month"}, Array: false, Explode: true},
-		{Name: "scope_kind", Values: []string{"team", "workspace", "managed_teams"}, Array: false, Explode: true},
+		{Name: "scope_kind", Values: []string{"team", "workspace", "managed_teams", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/approvals": {
 		{Name: "status", Values: []string{"pending", "approved", "rejected"}, Array: false, Explode: true},
@@ -304,6 +308,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/analytics/sdr-summary/handoffs": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/sdr-summary/meetings": {
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/analytics/targets": {

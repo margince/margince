@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { providerName } from "../../format/connectorprovider";
-import type { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import type { WorklistItem } from "./worklist.queries";
+import { providerName } from "../format/connectorprovider";
+import type { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import type { WorklistItem } from "./worklisttypes";
 
 // The words a capture health row owes its connection: which provider it is,
 // and whether it carries mail or a calendar.

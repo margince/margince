@@ -7836,11 +7836,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, groups, totals]
                 properties:
                   data:
                     type: array
                     items: {$ref: '#/components/schemas/InputCheck'}
+                  groups:
+                    type: array
+                    description: >-
+                      The same findings grouped by type, in the order each type first appears in `data`. Counted over the whole list this caller may see, never a page of it.
+                    items: {$ref: '#/components/schemas/InputCheckGroup'}
+                  totals: {$ref: '#/components/schemas/InputCheckTotals'}
                 additionalProperties: false
         '400':
           description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
@@ -19024,6 +19030,10 @@ components:
           $ref: '#/components/schemas/ReportingWindow'
         target_interval:
           $ref: '#/components/schemas/ReportingWindow'
+        horizon:
+          allOf: [{$ref: '#/components/schemas/ReportingWindow'}]
+          description: >-
+            The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
         close_interval:
           $ref: '#/components/schemas/ReportingWindow'
         timezone:
@@ -19295,6 +19305,8 @@ components:
           maximum: 9007199254740991
           description: >-
             `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
+        forecast_basis:
+          $ref: '#/components/schemas/ReportingForecastBasis'
     ReportingTargetComparison:
       type: object
       additionalProperties: false
@@ -19378,6 +19390,46 @@ components:
           $ref: '#/components/schemas/ReportingQualifiedCoverage'
         operands:
           $ref: '#/components/schemas/ReportingComparisonOperands'
+    ReportingForecastBasis:
+      type: object
+      additionalProperties: false
+      description: |-
+        `forecast_landing` only: what the landing and its range rest on, the same answer
+        GET /forecast gives. Absent where no landing is shown, and on editions captured before
+        the field existed; a reader then says the basis is unknown and never guesses one.
+      required: [landing, period, eligible_count, priced_count, fx_missing_count]
+      properties:
+        landing:
+          $ref: '#/components/schemas/ForecastLanding'
+        period:
+          allOf: [{$ref: '#/components/schemas/ReportingWindow'}]
+          description: The fiscal quarter the landing and the range project, half-open.
+        call_minor:
+          type: integer
+          format: int64
+          description: >-
+            The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
+        eligible_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Deals the forecast considered, priced or not.
+        priced_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: How many of them carried an amount; an unpriced deal adds nothing to the range.
+        fx_missing_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Priced deals with no exchange rate to the base currency, left out of every total.
+        included_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: >-
+            The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
     ReportingQualifiedCoverage:
       type: object
       additionalProperties: false
@@ -20537,6 +20589,62 @@ components:
           nullable: true
           description: >-
             True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
+        destination:
+          allOf: [{$ref: '#/components/schemas/InputCheckDestination'}]
+          description: >-
+            Where this finding is reviewed, and whether this caller may answer it there. Absent on a list that does not say, such as the team weekly.
+      additionalProperties: false
+    InputCheckDestination:
+      type: object
+      description: >-
+        The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
+      required: [screen, mode]
+      properties:
+        screen:
+          type: string
+          enum: [forecast_review]
+          description: The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+        mode:
+          type: string
+          enum: [answer, read]
+          description: >-
+            `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+      additionalProperties: false
+    InputCheckGroup:
+      type: object
+      description: >-
+        The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings.
+      required: [type, findings, deals, other_findings, exposure, destination]
+      properties:
+        type: {type: string, description: "The finding type, as `InputCheck.type` spells it."}
+        findings: {type: integer, minimum: 0, description: How many findings of this type.}
+        deals: {type: integer, minimum: 0, description: How many distinct deals those findings are about.}
+        other_findings:
+          type: integer
+          minimum: 0
+          description: Findings of this type about something other than a deal, such as a forecast call or a signal.
+        exposure:
+          type: array
+          description: >-
+            The money in question, one entry per currency and never summed across currencies. A deal counts once, at the largest amount any of its findings in this group names. A finding with no amount adds nothing, which is not the same as nothing at stake.
+          items: {$ref: '#/components/schemas/InputCheckExposure'}
+        destination: {$ref: '#/components/schemas/InputCheckDestination'}
+      additionalProperties: false
+    InputCheckExposure:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+      additionalProperties: false
+    InputCheckTotals:
+      type: object
+      description: Every finding in the list, with deals counted once however many findings they carry.
+      required: [findings, deals, other_findings]
+      properties:
+        findings: {type: integer, minimum: 0}
+        deals: {type: integer, minimum: 0}
+        other_findings: {type: integer, minimum: 0}
       additionalProperties: false
     DataCoverage:
       type: object
