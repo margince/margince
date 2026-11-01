@@ -44,7 +44,7 @@ export function prefetchHome(
     });
   };
   const day = worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW);
-  // Held only while the read is in flight: once it answers there is nothing to
+  // Held only while the read is in flight. Once it answers there is nothing to
   // abort, and a held observer would count as a screen showing the day.
   const release = new InfiniteQueryObserver(client, {
     ...day,
