@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Skeleton } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { isoWeekOf } from "../../format/calendarday";
 import {
@@ -100,6 +100,9 @@ export type GlanceFacts = Readonly<{
    *  from the ranked queue, the weekly's from the counts the week was frozen
    *  with. Neither can describe the other. */
   view: BriefView;
+  /** The ranked queue is still being read, so the opening sentence's line is
+   *  held rather than pushing the page down when it lands. */
+  pending?: boolean;
   /** When the agent wrote the morning brief, for the provenance badge. Only
    *  the reader's own morning carries one. */
   briefedAt?: string;
@@ -155,6 +158,7 @@ export function BriefGlance({
   day,
   week,
   view,
+  pending,
   briefedAt,
   controls,
   titleAside,
@@ -198,7 +202,7 @@ export function BriefGlance({
         </div>
       )}
       {!narratedWeek(view, week) && (
-        <GlanceOpening view={view} sentence={sentence} />
+        <GlanceOpening view={view} sentence={sentence} pending={pending} />
       )}
       {briefedAt && (
         <p className="glance-briefed">
@@ -222,9 +226,11 @@ function narratedWeek(view: BriefView, week: GlanceFacts["week"]): boolean {
 function GlanceOpening({
   view,
   sentence,
+  pending = false,
 }: Readonly<{
   view: BriefView;
   sentence: BriefSentence | null;
+  pending?: boolean;
 }>) {
   const t = useT();
   if (sentence)
@@ -233,7 +239,15 @@ function GlanceOpening({
         {t(sentence.key, sentence.values)}
       </p>
     );
-  if (view === "morning") return null;
+  if (view === "morning")
+    return pending ? (
+      <div
+        className="glance-sentence glance-sentence-pending"
+        aria-hidden="true"
+      >
+        <Skeleton width="16ch" />
+      </div>
+    ) : null;
   return <p className="glance-sentence">{t("brief.glance.introWeekly")}</p>;
 }
 

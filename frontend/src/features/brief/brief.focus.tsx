@@ -5,7 +5,10 @@
 // beside it. The panel's head, states and foot are in brief.feed.tsx.
 
 import { useRef } from "react";
-import { TaskNextSteps } from "../../components/tasknextsteps";
+import {
+  TaskNextSteps,
+  TaskNextStepsPending,
+} from "../../components/tasknextsteps";
 import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -67,12 +70,16 @@ export function Triage({
     }
   };
   // A task row's id is its activity's, so the card reads the task it shows.
-  const task = useActivity(lead.id, lead.source === "task").data;
+  const isTask = lead.source === "task";
+  const taskRead = useActivity(lead.id, isTask);
+  const task = taskRead.data;
+  const taskPending = isTask && taskRead.isPending;
   const cardVerbs =
-    onContext || task ? (
+    onContext || task || taskPending ? (
       <>
         {/* The drafted mail stands beside Done, ahead of the way to read
             more: it is the task's next step, the details are about it. */}
+        {taskPending && <TaskNextStepsPending />}
         {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
