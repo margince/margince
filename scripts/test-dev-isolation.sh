@@ -272,19 +272,19 @@ check "$tmp_root" "$(dev_state_root)" \
 
 # One worktree's stack, recorded the way dev.sh records it.
 mkdir -p "$tmp_root/first"
-printf 'SLUG=first\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=64\n' >"$tmp_root/first/env"
+printf 'SLUG=first\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=%s\n' "$DEV_REDIS_DB_MIN" >"$tmp_root/first/env"
 
 read_registry second
-check "64" "$TAKEN_DBS" "the registry reports the other stack's Redis database"
+check "$DEV_REDIS_DB_MIN" "$TAKEN_DBS" "the registry reports the other stack's Redis database"
 check "8081" "$TAKEN_PORTS" "and its frontend port"
-check "65" "$(pick_free_db)" \
-      "a second stack takes the next free Redis database, never 64 again"
+check "$((DEV_REDIS_DB_MIN + 1))" "$(pick_free_db)" \
+      "a second stack takes the next free Redis database, never the taken one again"
 check "8082" "$(pick_free_port)" \
       "and the next free port"
 
 # The same slug reclaims its own, so a restart keeps its URL and its streams.
 read_registry first
-check "64" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
+check "$DEV_REDIS_DB_MIN" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
 check "8081" "$MINE_PORT" "and its own port"
 
 # The registry only knows about OUR stacks. A foreign listener must still take a
@@ -308,7 +308,7 @@ rm -rf "$tmp_root"/*
 export STACK_STARTER_PID=$$
 claimed="$(claim_stack "alpha")"
 read -r alpha_db alpha_port <<<"$claimed"
-check "64" "$alpha_db" "the first stack claims the bottom of the Redis block"
+check "$DEV_REDIS_DB_MIN" "$alpha_db" "the first stack claims the bottom of the Redis block"
 check "8081" "$alpha_port" "and the bottom of the port range"
 check "1" "$([[ -f "$tmp_root/alpha/env" ]] && echo 1 || echo 0)" \
       "the reservation is on disk BEFORE anything binds — a claim visible only once the stack is up is not a claim"
@@ -317,7 +317,7 @@ check "1" "$(grep -c "^STARTER_PID=$$\$" "$tmp_root/alpha/env")" \
 
 claimed="$(claim_stack "beta")"
 read -r beta_db beta_port <<<"$claimed"
-check "65" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
+check "$((DEV_REDIS_DB_MIN + 1))" "$beta_db" "a second slug cannot be handed the first slug's Redis database"
 check "8082" "$beta_port" "nor its port"
 
 claimed="$(claim_stack "alpha")"
