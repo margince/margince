@@ -31,6 +31,7 @@ export function SalesHeader({
   dates,
   caption,
   evaluation,
+  charts,
   saved,
   scope,
   onChange,
@@ -43,6 +44,9 @@ export function SalesHeader({
   caption: ReactNode;
   // The answered evaluation, once there is one to save or export.
   evaluation: ReportingEvaluation | undefined;
+  // The chart read, whose chart rows the export carries after the figures.
+  // The export waits for it, so it never leaves the charts out unsaid.
+  charts?: Readonly<{ data?: ReportingEvaluation; isPending: boolean }>;
   saved: ReportingSelection | undefined;
   scope: string;
   onChange: (next: ReportingSelection) => void;
@@ -91,7 +95,12 @@ export function SalesHeader({
       </Button>
       <OverflowMenu label={t("analytics.overview.more")}>
         <OverviewSaveActions selection={saved} scope={scope} />
-        {evaluation && <ReportingExportButton evaluation={evaluation} />}
+        {evaluation && !charts?.isPending && (
+          <ReportingExportButton
+            evaluation={evaluation}
+            charts={charts?.data}
+          />
+        )}
       </OverflowMenu>
       {open && (
         <ReportingFilters
