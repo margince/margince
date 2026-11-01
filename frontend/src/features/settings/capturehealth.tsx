@@ -29,6 +29,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { CaptureConnectionsHealth } from "./captureconnectionshealth";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/capture-health — whether mailbox capture keeps up with its own
@@ -339,6 +340,10 @@ function CaptureHealthBody({
         columns={sweepColumns(health, t, plural, locale, zone)}
         rows={[...health.sweeps]}
         rowKey={(sweep) => sweep.sweep}
+      />
+      <CaptureConnectionsHealth
+        rows={health.connection_concerns ?? []}
+        zone={zone}
       />
       {health.mailboxes.length > 0 && (
         <>

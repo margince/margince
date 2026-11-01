@@ -65,6 +65,7 @@ const run = (
 });
 
 const KEEPING_UP: Health = {
+  connection_concerns: [],
   generated_at: GENERATED,
   mailboxes: [],
   classifier: { pending: 0, unsure: 0, exhausted: 0 },
@@ -111,6 +112,7 @@ export const KeepingUp: Story = {
 // failed stage, and a pass stopped at its bound. Two mailboxes carry backlogs.
 export const NeedsAttention: Story = {
   render: story({
+    connection_concerns: [],
     generated_at: GENERATED,
     mailboxes: [
       {

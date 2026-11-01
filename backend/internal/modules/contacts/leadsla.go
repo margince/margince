@@ -140,7 +140,7 @@ const slaBreachedColumn = "sla_breached_at"
 
 // firstResponseSet is the SET fragment every disposition write carries: the
 // first genuine response is recorded once and never moved.
-const firstResponseSet = firstResponseColumn + ` = COALESCE(` + firstResponseColumn + `, now())`
+var firstResponseSet = firstResponseColumn + ` = COALESCE(` + firstResponseColumn + `, ` + firstResponseAtSQL("lead", "now()") + `)`
 
 // RecordLeadFirstResponse stamps the lead's first genuine response from an
 // outbound activity (formulas §18.1) — the one first-response trigger that
