@@ -275,9 +275,11 @@ describe("Providers list", () => {
     allow.ai_diagnostics = [];
     await act(() => client.invalidateQueries({ queryKey: ["me"] }));
 
-    await waitFor(() => expect(screen.queryByText("Key rejected")).toBeNull());
-    for (const [key] of previous)
-      expect(client.getQueryData(key)).toBeUndefined();
+    await waitFor(() => {
+      expect(screen.queryByText("Key rejected")).toBeNull();
+      for (const [key] of previous)
+        expect(client.getQueryData(key)).toBeUndefined();
+    });
   });
 
   it("draws no health without the diagnostics grant, and does not ask", async () => {
