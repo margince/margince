@@ -6,10 +6,9 @@ import { EmptyState } from "../../design-system/atoms";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useProviderHealth } from "../../lib/ai-provider-health";
+import { providerName } from "../../lib/ai-provider-names";
 import { useCan } from "../../lib/capability";
-import { providerName } from "../ai/ai-provider-names";
-import { HealthCard } from "../settings/healthcard";
-import "../ai/ai-settings.css";
+import { HealthCard } from "./healthcard";
 
 // Settings → System health: every AI provider that is not answering. The
 // Providers list shows the same entries per row; both read useProviderHealth.
@@ -35,7 +34,7 @@ export function ProviderHealthCard() {
                 {t(
                   (configured ?? []).length === 0
                     ? "providerHealth.noneConfigured"
-                    : "providerHealth.healthy",
+                    : "health.code.providers_unobserved",
                 )}
               </EmptyState>
             </PanelBody>

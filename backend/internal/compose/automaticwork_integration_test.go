@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -372,5 +373,27 @@ func TestAutomaticWorkCountsAReplayedMachineCreateOnce(t *testing.T) {
 	_, tally := tallyOf(t, f.report(t, created.Add(2*time.Hour), 7), f.e.Rep1, crmcontracts.AutomaticWorkKindNamePromiseTask)
 	if tally.Counts.Created != 1 {
 		t.Errorf("a task whose machine create was replayed counts %d times, want once", tally.Counts.Created)
+	}
+}
+
+func TestAutomaticWorkWindowStartsOnTheRequestedDayAcrossAMidnightDSTChange(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	zone := "America/Santiago"
+	if _, err := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).UpdateInstallation(ctx, identity.InstallationPatch{Timezone: &zone}); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 9, 6, 15, 0, 0, 0, time.UTC)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, from, last, err := automaticWorkWindow(ctx, tx, now, 1)
+		if err != nil {
+			return err
+		}
+		if from.Format(time.DateOnly) != "2026-09-06" || !from.Equal(last) || from.Hour() != 1 {
+			t.Fatalf("window starts %v, last day %v; want first valid instant on September 6", from, last)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }

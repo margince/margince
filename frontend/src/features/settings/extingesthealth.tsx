@@ -22,6 +22,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { extensionTitle } from "../../lib/extensions";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
 
@@ -154,11 +155,15 @@ function ExtensionIngestBody({
 // the job card's question for the same reader, so the same grant decides both.
 export function useExtensionIngestHealth() {
   const canSee = useCan("job_health", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey: ["extension-ingest-health"],
-    enabled: canSee,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/admin/extension-ingest-health"));
+    queryKey: ["extension-ingest-health", scope],
+    enabled: canSee && visible && scope !== undefined,
+    queryFn: async ({ signal }) => {
+      const data = unwrap(
+        await api.GET("/admin/extension-ingest-health", { signal }),
+      );
       // Rejected, not defaulted: `?? []` would draw the clean state, a claim about
       // the installation this response never made.
       if (

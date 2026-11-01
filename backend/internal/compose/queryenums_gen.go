@@ -18,6 +18,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/activities/latest-inbound": {
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
+	"GET /v1/admin/job-health/history": {
+		{Name: "state", Values: []string{"retryable", "discarded", "cancelled"}, Array: false, Explode: true},
+	},
 	"GET /v1/ai/call-stats": {
 		{Name: "group", Values: []string{"provider", "model", "served_model", "served_provider", "tier", "task"}, Array: false, Explode: true},
 		{Name: "window", Values: []string{"24h", "7d", "30d"}, Array: false, Explode: true},
@@ -274,6 +277,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/admin/automatic-work-health": {
+		{Name: "days", Minimum: 1},
+	},
+	"GET /v1/admin/job-health/history": {
 		{Name: "days", Minimum: 1},
 	},
 	"GET /v1/ai/available-models/{provider}": {

@@ -5,7 +5,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type { Middleware } from "openapi-fetch";
+import { useEffect, useRef } from "react";
 import { api } from "../api/client";
+import { healthScope } from "./healthscopekey";
 import { problemMessage, unwrap } from "./problem";
 import { forgetSeat } from "./storage";
 
@@ -81,7 +83,8 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // the installation's singleton company itself, so the probe needs nothing but
 // the session cookie.
 export function useMe(enabled = true) {
-  return useQuery({
+  const client = useQueryClient();
+  const query = useQuery({
     queryKey: ["me"],
     enabled,
     staleTime: 5 * 60_000,
@@ -94,6 +97,17 @@ export function useMe(enabled = true) {
     retry: false,
     queryFn: readSession,
   });
+  const scope = healthScope(query.data);
+  const previousScope = useRef(scope);
+  useEffect(() => {
+    const previous = previousScope.current;
+    if (previous !== undefined && previous !== scope)
+      client.removeQueries({
+        predicate: (entry) => entry.queryKey.includes(previous),
+      });
+    previousScope.current = scope;
+  }, [client, scope]);
+  return query;
 }
 
 // The boundary's one reading of /me; the connection screen's check shares it.

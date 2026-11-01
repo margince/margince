@@ -11,6 +11,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -51,5 +52,20 @@ func TestTheMeetingFollowUpStatementCarriesOneContentGate(t *testing.T) {
 	}
 	if got := auth.ContentGateCopies(sql); got != 1 {
 		t.Fatalf("the meeting follow-up read carries %d content gates, want 1", got)
+	}
+}
+
+func TestTheMeetingFollowUpMaterializesRecipientsBeforeCheckingLaterActivities(t *testing.T) {
+	everyMeeting := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	query, _, err := meetingFollowUpsStatement(teamScopedCtx(), clocktest.Now(t), 3, everyMeeting, AwaitingReplyScanCap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalized := strings.Join(strings.Fields(query), " ")
+	// The fence prevents recipient links from being scanned once per later activity.
+	for _, part := range []string{"NOT EXISTS (WITH touched AS MATERIALIZED (", "SELECT 1 FROM touched JOIN activity later"} {
+		if !strings.Contains(normalized, part) {
+			t.Fatalf("meeting recipients are not materialized before checking later activities: missing %q", part)
+		}
 	}
 }

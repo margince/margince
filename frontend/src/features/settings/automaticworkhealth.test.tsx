@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { meFixture } from "../../testing/mefixture";
@@ -214,4 +214,24 @@ it("withholds the card from a seat without the grant, and asks the server nothin
   expect(
     sent.some((line) => line.startsWith("GET /admin/automatic-work-health")),
   ).toBe(false);
+});
+
+it("hides the previous reader's automatic work while the new scope loads", async () => {
+  stubRoutes();
+  const { client } = render(<AutomaticWorkHealthCard />);
+  await screen.findAllByText("Ada Rep");
+  const originalFetch = fetch;
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("/admin/automatic-work-health"))
+      return new Promise<Response>(() => {});
+    return originalFetch(input, init);
+  });
+  act(() =>
+    client.setQueryData(["me"], {
+      ...meFixture({ roles: ["admin"], allow: { job_health: ["read"] } }),
+      workspace_name: "Another synthetic workspace",
+    }),
+  );
+  await waitFor(() => expect(screen.queryAllByText("Ada Rep")).toHaveLength(0));
 });
