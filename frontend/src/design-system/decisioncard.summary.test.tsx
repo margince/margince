@@ -39,7 +39,8 @@ const staged: DecisionApproval = {
   created_at: "2026-08-24T07:41:00.000Z",
   expires_at: "2026-08-24T18:00:00.000Z",
   proposed_change: {},
-  summary: "Update record deal: name=Acme, Inc. renewal",
+  summary:
+    "Update record deal: name=Acme, Inc. renewal, stage_id=Negotiation, +2 more",
   summary_parts: {
     sentence: "Update record deal",
     fields: [
@@ -87,7 +88,7 @@ describe("DecisionCard — a summary staged with its parts", () => {
     );
     expect(
       screen.getByRole("article", {
-        name: "Update record deal: name=Acme, Inc. renewal",
+        name: "Update record deal: name=Acme, Inc. renewal, stage_id=Negotiation, +2 more",
       }),
     ).toBeInTheDocument();
   });

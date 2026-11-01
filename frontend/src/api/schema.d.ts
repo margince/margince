@@ -46298,7 +46298,7 @@ export interface components {
             /** @description Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them. */
             conflicts?: components["schemas"]["ApprovalPreviewConflict"][];
         };
-        /** @description An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined. */
+        /** @description An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined, cut at 240 bytes, so the parts can hold a value the summary no longer shows. */
         ApprovalSummaryParts: {
             /** @description The act in words, such as "Update deal Acme renewal". */
             sentence: string;
@@ -46309,7 +46309,7 @@ export interface components {
         };
         /** @description One request field a summary lists, and its value as the approver should read it. */
         ApprovalSummaryField: {
-            /** @description The request field name, as the call sent it. */
+            /** @description The request field name, as the call sent it. A nested create lists first the parent record it is made under, named in the installation language ("under" in English). */
             field: string;
             /** @description The value as text. A cleared field reads as "null". */
             value: string;

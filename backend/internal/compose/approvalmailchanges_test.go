@@ -215,3 +215,33 @@ func TestADigestLineKeepsTheSummaryValuesTheSubjectLeavesBelow(t *testing.T) {
 		t.Errorf("email subject with an empty sentence = %q, want the whole summary", got)
 	}
 }
+
+// A preview line the email cannot render, here an owner the reader may not
+// see, leaves the summary's own value to be listed. Summary lines share the
+// email's limit with the preview lines.
+func TestAChangeEmailListsWhatThePreviewHidAndCountsItInTheLimit(t *testing.T) {
+	words := mailcopy.For("en")
+	parts := &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal", Fields: []crmcontracts.ApprovalSummaryField{
+		{Field: "owner_id", Value: "u-7"},
+	}}
+	hidden := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{
+		{Field: "owner_id", Before: previewText(previewValueUnavailable, ""), After: previewText("owner", "Rainer")},
+	}}
+	got := factsText(changeMailFacts(crmcontracts.Approval{SummaryParts: parts, Preview: hidden}, words))
+	if !strings.Contains(got, ": u-7") {
+		t.Errorf("email dropped the owner the preview could not render:\n%s", got)
+	}
+
+	full := make([]crmcontracts.ApprovalPreviewChange, mailChangeLimit)
+	for i := range full {
+		full[i] = crmcontracts.ApprovalPreviewChange{
+			Field: fmt.Sprintf("field_%d", i), Before: previewText(previewValueText, "a"), After: previewText(previewValueText, "b"),
+		}
+	}
+	facts := changeMailFacts(crmcontracts.Approval{SummaryParts: parts, Preview: &crmcontracts.ApprovalPreview{
+		Version: 1, State: previewReadyState, Changes: full,
+	}}, words)
+	if got := factsText(facts); strings.Contains(got, "u-7") || !strings.Contains(got, ": +1 more") {
+		t.Errorf("a summary line past the limit was listed or not counted:\n%s", got)
+	}
+}

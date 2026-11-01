@@ -35,11 +35,17 @@ export function summaryPartsWithout(
   parts: SummaryParts | undefined,
   shown: ReadonlySet<string>,
 ): SummaryParts | undefined {
-  if (!parts) return undefined;
+  if (!listable(parts)) return undefined;
   const fields = parts.fields.filter((entry) => !shown.has(entry.field));
   return fields.length > 0 || parts.more_fields > 0
     ? { ...parts, fields }
     : undefined;
+}
+
+// Parts with no sentence leave the whole summary as the headline, and that
+// already carries the values, so they are not listed again.
+function listable(parts: SummaryParts | undefined): parts is SummaryParts {
+  return parts !== undefined && parts.sentence !== "";
 }
 
 function summaryFacts(parts: SummaryParts, words: SummaryWords): Fact[] {
@@ -59,7 +65,7 @@ export function summaryFieldsLine(
   parts: SummaryParts | undefined,
   words: SummaryWords,
 ): string | undefined {
-  if (!parts) return undefined;
+  if (!listable(parts)) return undefined;
   const line = summaryFacts(parts, words)
     .map((fact) => (fact.term ? `${fact.term}: ${fact.value}` : fact.value))
     .join(" · ");
@@ -71,7 +77,7 @@ export function SummaryFields({
   parts,
   words,
 }: Readonly<{ parts: SummaryParts | undefined; words: SummaryWords }>) {
-  if (!parts) return null;
+  if (!listable(parts)) return null;
   const facts = summaryFacts(parts, words);
   return facts.length > 0 ? <FactList facts={facts} /> : null;
 }

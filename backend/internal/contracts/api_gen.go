@@ -30065,14 +30065,14 @@ type ApprovalPreviewValue struct {
 
 // ApprovalSummaryField One request field a summary lists, and its value as the approver should read it.
 type ApprovalSummaryField struct {
-	// Field The request field name, as the call sent it.
+	// Field The request field name, as the call sent it. A nested create lists first the parent record it is made under, named in the installation language ("under" in English).
 	Field string `json:"field"`
 
 	// Value The value as text. A cleared field reads as "null".
 	Value string `json:"value"`
 }
 
-// ApprovalSummaryParts An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined.
+// ApprovalSummaryParts An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined, cut at 240 bytes, so the parts can hold a value the summary no longer shows.
 type ApprovalSummaryParts struct {
 	// Fields The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count.
 	Fields []ApprovalSummaryField `json:"fields"`

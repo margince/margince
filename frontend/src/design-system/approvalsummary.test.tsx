@@ -69,9 +69,13 @@ describe("an approval summary taken apart", () => {
   });
 
   it("leaves out the fields a surface already draws", () => {
-    expect(summaryPartsWithout(parts, new Set(["name"]))?.fields).toEqual([
-      { field: "owner_id", value: "null" },
-    ]);
+    expect(summaryPartsWithout(parts, new Set(["name"]))).toEqual({
+      ...parts,
+      fields: [{ field: "owner_id", value: "null" }],
+    });
+    expect(
+      summaryPartsWithout({ ...parts, sentence: "" }, new Set()),
+    ).toBeUndefined();
     expect(
       summaryPartsWithout(
         { ...parts, more_fields: 0 },

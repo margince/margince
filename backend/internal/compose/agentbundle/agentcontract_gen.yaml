@@ -21834,7 +21834,7 @@ components:
     ApprovalSummaryParts:
       type: object
       description: >-
-        An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined.
+        An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined, cut at 240 bytes, so the parts can hold a value the summary no longer shows.
       required: [sentence, fields, more_fields]
       properties:
         sentence: {type: string, description: 'The act in words, such as "Update deal Acme renewal".'}
@@ -21849,7 +21849,7 @@ components:
       description: One request field a summary lists, and its value as the approver should read it.
       required: [field, value]
       properties:
-        field: {type: string, description: 'The request field name, as the call sent it.'}
+        field: {type: string, description: 'The request field name, as the call sent it. A nested create lists first the parent record it is made under, named in the installation language ("under" in English).'}
         value: {type: string, description: 'The value as text. A cleared field reads as "null".'}
     Approval:
       type: object
