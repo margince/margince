@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
+import { meFixture } from "../src/testing/mefixture";
 import { reportingStoryEvaluation } from "../src/testing/reporting.fixtures";
 import { mockApi } from "./seed";
 
@@ -86,6 +87,22 @@ const CHECKS = {
 async function openSalesReview(page: Page, evaluation: unknown = QUARTER) {
   await page.setViewportSize(VIEWPORT);
   await mockApi(page);
+  // The mock's admin holds no forecast grant, so the checks would be withheld.
+  await page.route("**/v1/me", (route) =>
+    route.fulfill({
+      json: meFixture({
+        rowScope: "all",
+        allow: {
+          deal: ["read"],
+          forecast: ["read"],
+          pipeline: ["read"],
+          report_definition: ["read", "create"],
+          reporting_framework: ["read"],
+          installation_settings: ["read"],
+        },
+      }),
+    }),
+  );
   await page.route(/\/v1\/analytics\/evaluate/, (route) =>
     route.fulfill({ json: evaluation }),
   );
