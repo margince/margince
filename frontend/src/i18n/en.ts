@@ -15130,6 +15130,14 @@ export const en = {
   "webForms.field.redirectUrlHint":
     "Where a visitor goes after sending. Empty shows the success message.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/thanks",
+  "webForms.field.privacyNotice": "Privacy notice",
+  "webForms.field.privacyNoticeHint":
+    "Shown under the browser form: how the details are used, and on what legal basis.",
+  "webForms.field.privacyNoticeUrl": "Privacy policy link",
+  "webForms.field.privacyNoticeUrlHint":
+    "The https address of your privacy policy. The notice links to it.",
+  "webForms.field.privacyNoticeUrlPlaceholder":
+    "https://www.example.com/privacy",
   "webForms.field.owner": "Owner of new leads",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",

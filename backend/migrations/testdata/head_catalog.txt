@@ -8734,6 +8734,8 @@ public.web_form.id uuid NOT NULL gen=- def=uuidv7()
 public.web_form.lead_origin text gen=- def=-
 public.web_form.name text NOT NULL gen=- def=-
 public.web_form.owner_id uuid gen=- def=-
+public.web_form.privacy_notice text gen=- def=-
+public.web_form.privacy_notice_url text gen=- def=-
 public.web_form.redirect_url text gen=- def=-
 public.web_form.secret_ref text gen=- def=-
 public.web_form.sender text NOT NULL gen=- def=-
@@ -8752,6 +8754,8 @@ public.web_form.web_form_name_present CHECK (((length(btrim(name)) > 0) AND (len
 public.web_form.web_form_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.web_form.web_form_owner_id_retirement_guard CREATE TRIGGER web_form_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.web_form FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active'::text)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.web_form.web_form_pkey PRIMARY KEY (id)
+public.web_form.web_form_privacy_notice_bounded CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500)))
+public.web_form.web_form_privacy_notice_url_https CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)'::text) AND (length(privacy_notice_url) <= 2000))))
 public.web_form.web_form_redirect_https CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://'::text)))
 public.web_form.web_form_sender_check CHECK ((sender = ANY (ARRAY['browser'::text, 'server'::text, 'webflow'::text, 'typeform'::text, 'tally'::text])))
 public.web_form.web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))

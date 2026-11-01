@@ -43,6 +43,8 @@ const (
 	maxNameLength           = 200
 	maxConsentWordingLength = 2000
 	maxSuccessMessage       = 500
+	maxPrivacyNotice        = 500
+	maxAddressLength        = 2000
 	maxAllowedOrigins       = 20
 	maxFieldMapEntries      = 50
 	maxFieldNameLength      = 100
@@ -65,6 +67,8 @@ type Form struct {
 	ConsentRequired      bool
 	ConsentPolicyVersion *string
 	ConsentWording       *string
+	PrivacyNotice        *string
+	PrivacyNoticeURL     *string
 	RedirectURL          *string
 	SuccessMessage       *string
 	State                string
@@ -81,15 +85,15 @@ func (f Form) SecretConfigured() bool { return f.SecretRef != nil }
 // formColumns ends with the form's last post, read beside the row so every
 // answer that carries a form carries it, an edit's echo included.
 const formColumns = `id, name, form_key, sender, allowed_origins, secret_ref, lead_origin, owner_id,
-	field_map, consent_required, consent_policy_version, consent_wording, redirect_url,
-	success_message, state, version, created_at, updated_at, archived_at,
+	field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
+	privacy_notice_url, redirect_url, success_message, state, version, created_at, updated_at, archived_at,
 	(SELECT last_post_at FROM web_form_last_post WHERE form_id = web_form.id)`
 
 func scanForm(r pgx.Row) (Form, error) {
 	var f Form
 	err := r.Scan(&f.ID, &f.Name, &f.Key, &f.Sender, &f.AllowedOrigins, &f.SecretRef, &f.LeadOrigin,
 		&f.OwnerID, &f.FieldMap, &f.ConsentRequired, &f.ConsentPolicyVersion, &f.ConsentWording,
-		&f.RedirectURL, &f.SuccessMessage, &f.State, &f.Version, &f.CreatedAt, &f.UpdatedAt, &f.ArchivedAt,
+		&f.PrivacyNotice, &f.PrivacyNoticeURL, &f.RedirectURL, &f.SuccessMessage, &f.State, &f.Version, &f.CreatedAt, &f.UpdatedAt, &f.ArchivedAt,
 		&f.LastPostAt)
 	return f, err
 }
@@ -198,13 +202,30 @@ func checkFieldMap(m map[string]string) error {
 	return nil
 }
 
+// checkPrivacyNotice bounds the notice a form shows under it, and holds the
+// policy it links to to an https address, as a redirect is held.
+func checkPrivacyNotice(notice, link *string) error {
+	if err := checkBounded(colPrivacyNotice, notice, maxPrivacyNotice); err != nil {
+		return err
+	}
+	if err := checkHTTPS(colPrivacyNoticeURL, link); err != nil {
+		return err
+	}
+	return checkBounded(colPrivacyNoticeURL, link, maxAddressLength)
+}
+
 func checkRedirect(raw *string) error {
+	return checkHTTPS(colRedirectURL, raw)
+}
+
+// checkHTTPS refuses an address a visitor's browser should not be sent to.
+func checkHTTPS(field string, raw *string) error {
 	if raw == nil {
 		return nil
 	}
 	u, err := url.Parse(*raw)
-	if err != nil || u.Scheme != schemeHTTPS || u.Host == "" || u.User != nil {
-		return badInput(colRedirectURL, "must be an https address")
+	if err != nil || u.Scheme != schemeHTTPS || u.Hostname() == "" || u.User != nil {
+		return badInput(field, "must be an https address")
 	}
 	return nil
 }

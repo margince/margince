@@ -78,3 +78,33 @@ describe("the browser form snippet's fill time", () => {
     expect(load()).toBe(String(Date.parse("2026-10-31T10:00:00Z")));
   });
 });
+
+// The notice a form shows at the point of collection, under its button. It is
+// the admin's text, so it lands escaped, and the policy is a link beside it.
+describe("the browser form snippet's privacy notice", () => {
+  const url = "https://margince.test/v1/forms/abc";
+  const markupOf = (notice: Partial<WebForm>) => {
+    document.body.innerHTML = browserSnippet({ ...form, ...notice }, url).split(
+      "<script>",
+    )[0];
+    return document.querySelector("form p");
+  };
+
+  it("says the notice and links the policy under the button", () => {
+    const line = markupOf({
+      privacy_notice: "We use <your> details to answer you.",
+      privacy_notice_url: "https://www.acme.test/privacy",
+    });
+    expect(line?.textContent).toBe(
+      "We use <your> details to answer you. Privacy policy",
+    );
+    expect(line?.querySelector("a")?.getAttribute("href")).toBe(
+      "https://www.acme.test/privacy",
+    );
+    expect(line?.previousElementSibling?.tagName).toBe("BUTTON");
+  });
+
+  it("shows nothing when the form names no notice", () => {
+    expect(markupOf({})).toBeNull();
+  });
+});

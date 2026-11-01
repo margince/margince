@@ -14809,6 +14809,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Nơi khách đến sau khi gửi. Để trống sẽ hiện thông báo thành công.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/cam-on",
+  "webForms.field.privacyNotice": "Thông báo quyền riêng tư",
+  "webForms.field.privacyNoticeHint":
+    "Hiện dưới biểu mẫu trình duyệt: thông tin được dùng thế nào và dựa trên cơ sở pháp lý nào.",
+  "webForms.field.privacyNoticeUrl": "Liên kết chính sách quyền riêng tư",
+  "webForms.field.privacyNoticeUrlHint":
+    "Địa chỉ https của chính sách quyền riêng tư. Thông báo liên kết tới đó.",
+  "webForms.field.privacyNoticeUrlPlaceholder":
+    "https://www.example.com/quyen-rieng-tu",
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
   "webForms.field.ownerHint":
     "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",

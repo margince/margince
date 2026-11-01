@@ -48,3 +48,4 @@
 1793445933_a_mail_without_its_original_says_so_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793514621_notice_source_assessment.down.sql | * | the procedural block only checks whether source evidence exists and refuses before DDL; it rewrites no rows
 1793531111_notice_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793536357_a_website_forms_privacy_notice_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

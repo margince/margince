@@ -15205,6 +15205,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.redirectUrlHint":
     "Wohin ein Besucher nach dem Senden geht. Leer zeigt die Erfolgsmeldung.",
   "webForms.field.redirectUrlPlaceholder": "https://www.example.com/danke",
+  "webForms.field.privacyNotice": "Datenschutzhinweis",
+  "webForms.field.privacyNoticeHint":
+    "Steht unter dem Browser-Formular: wie die Angaben genutzt werden und auf welcher Rechtsgrundlage.",
+  "webForms.field.privacyNoticeUrl": "Link zur Datenschutzerklärung",
+  "webForms.field.privacyNoticeUrlHint":
+    "Die https-Adresse deiner Datenschutzerklärung. Der Hinweis verlinkt sie.",
+  "webForms.field.privacyNoticeUrlPlaceholder":
+    "https://www.example.com/datenschutz",
   "webForms.field.owner": "Verantwortlich für neue Leads",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
