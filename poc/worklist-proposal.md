@@ -518,7 +518,7 @@ with wording fixes, which are applied.
  e9751633  push experiment: full rebuilds, ordering, change cases
  9d0c8e3b  the ground-truth check; plan reuse and identity change measured
  0c4126c3  PlanEachBind: the waiting scan keeps its own plans
- next      the frontend kind table generated from the catalog
+ b551b735  the frontend kind table generated from the catalog
  later     this proposal
 ```
 
