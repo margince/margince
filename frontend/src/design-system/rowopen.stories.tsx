@@ -106,7 +106,8 @@ export const OpensALink: Story = {
     const link = await canvas.findByRole("link", {
       name: "Open Renewal reminder",
     });
-    await expect(link).toHaveAttribute("href", "#/tasks/t-1");
+    // The rendered address carries the leading slash AppLink gives it.
+    await expect(link).toHaveAttribute("href", "/#/tasks/t-1");
     await expect(
       canvas.queryByRole("button", { name: "Open Renewal reminder" }),
     ).toBeNull();
