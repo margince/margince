@@ -250,6 +250,20 @@ func (s *Service) windowStart(
 	return ResolveWindow(ctx, s.brief, since, asOf)
 }
 
+// windowKey names the window a receipt with no since covers: the reader's
+// brief cutoff once their brief has run, or the rolling day before it.
+func (s *Service) windowKey(ctx context.Context) (string, error) {
+	asOf := s.now().UTC()
+	from, err := s.windowStart(ctx, nil, asOf)
+	if err != nil {
+		return "", err
+	}
+	if from.Equal(asOf.Add(-defaultWindow)) {
+		return "day", nil
+	}
+	return from.Format(time.RFC3339Nano), nil
+}
+
 // ResolveWindow is the one answer to where Done for you starts. Home's lane
 // and the worklist's receipts both ask it, so the two never show two windows.
 func ResolveWindow(

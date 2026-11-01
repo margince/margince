@@ -6,6 +6,7 @@ package compose
 import (
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -47,9 +48,10 @@ func writersOf(r *http.Request) []ids.UUID {
 	if !ok {
 		return nil
 	}
+	// An agent's UserID is often the human it acts for, so the two can be one.
 	var out []ids.UUID
 	for _, id := range []ids.UUID{actor.UserID, actor.OnBehalfOf} {
-		if !id.IsZero() {
+		if !id.IsZero() && !slices.Contains(out, id) {
 			out = append(out, id)
 		}
 	}

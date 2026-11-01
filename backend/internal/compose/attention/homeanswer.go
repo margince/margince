@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -53,7 +54,7 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 	if err != nil {
 		return out, err
 	}
-	walk, started, err := walkStartedBy(out, q)
+	walk, started, err := walkStartedBy(out)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
@@ -69,11 +70,13 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 
 // walkStartedBy is the walk a first page's cursor resumes, so a cached page is
 // never served once its walk can no longer be continued.
-func walkStartedBy(out crmcontracts.Worklist, q worklistQuestion) (ids.UUID, bool, error) {
+func walkStartedBy(out crmcontracts.Worklist) (ids.UUID, bool, error) {
 	if out.NextCursor == nil {
 		return ids.UUID{}, false, nil
 	}
-	cursor, err := decodeCursor(*out.NextCursor, q.scope, q.filter, q.owner)
+	// Read as minted, not as decodeCursor asks: the page was minted under the
+	// question the service resolved, which the request may spell differently.
+	cursor, err := storekit.DecodeOpaque[worklistCursor](*out.NextCursor)
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("attention: reading the walk a page started: %w", err)
 	}

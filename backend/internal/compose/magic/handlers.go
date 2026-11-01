@@ -83,7 +83,12 @@ func (h Handlers) receipt(ctx context.Context, since *time.Time, limit int) (crm
 	if h.home == nil || !cacheable || since != nil {
 		return h.svc.Read(ctx, since, limit)
 	}
-	key := fmt.Sprintf("limit=%d", limit)
+	// A new brief moves the window, so the window is part of the question.
+	window, err := h.svc.windowKey(ctx)
+	if err != nil {
+		return crmcontracts.MagicReceipt{}, err
+	}
+	key := fmt.Sprintf("limit=%d&window=%s", limit, window)
 	if out, hit, err := homecache.Lookup[crmcontracts.MagicReceipt](ctx, h.home, reader, homecache.Magic, key); err != nil || hit {
 		return out, err
 	}

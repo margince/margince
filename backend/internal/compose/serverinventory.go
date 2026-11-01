@@ -87,7 +87,7 @@ type Server struct {
 	// restore seam the reversal route uses — the receipt's offer and the write's
 	// refusal have to be one judgment.
 	magicService *magic.Service
-	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's
+	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads

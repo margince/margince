@@ -79,3 +79,35 @@ func TestHomeOpensOnItsCachedWorklistUntilTheFenceOrTheReadersWriteEndsIt(t *tes
 		t.Error("a change of reach left Home on the answer from before it")
 	}
 }
+
+// The first page's cursor is minted under the question the service resolved.
+// A request that leaves the scope to its default is still cached and served.
+func TestACachedFirstPageKeepsTheWalkItsDefaultSpellingStarted(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Home Walk", "admin@homewalk.test", "Admin")
+	var admin ids.UUID
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT id FROM app_user WHERE email = 'admin@homewalk.test'`).Scan(&admin); err != nil {
+		t.Fatal(err)
+	}
+	overdueTask(t, e, admin, "First of two")
+	overdueTask(t, e, admin, "Second of two")
+
+	const onePage = "/v1/worklist?filter=all&relationships=omit&view=today&limit=1"
+	var first, again struct {
+		NextCursor *string `json:"next_cursor"`
+	}
+	if status := e.Call(t, "GET", onePage, nil, nil, &first); status != http.StatusOK || first.NextCursor == nil {
+		t.Fatalf("first page → %d with cursor %v, want 200 and a walk to continue", status, first.NextCursor)
+	}
+	if status := e.Call(t, "GET", onePage, nil, nil, &again); status != http.StatusOK {
+		t.Fatalf("the cached first page → %d", status)
+	}
+	if again.NextCursor == nil || *again.NextCursor != *first.NextCursor {
+		t.Errorf("the second read did not serve the cached page and its walk")
+	}
+	var next json.RawMessage
+	if status := e.Call(t, "GET", onePage+"&cursor="+*again.NextCursor, nil, nil, &next); status != http.StatusOK {
+		t.Errorf("the cached page's cursor → %d, want the walk to continue", status)
+	}
+}
