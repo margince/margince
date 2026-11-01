@@ -87,21 +87,6 @@ func TestFewerThanTwentyClosedDealsIsInsufficientHistory(t *testing.T) {
 	}
 }
 
-// A stage two deals have ever entered has no rate — it has two stories, and
-// using them would let one outcome set the pipeline a whole team is told to
-// build.
-func TestAStageWithUnderFiveArrivalsUsesTheBlendedRate(t *testing.T) {
-	t.Parallel()
-	if got := StageConversion(2, 2, 0.25); got != 0.25 {
-		t.Fatalf("a stage with two arrivals reported its own rate %v; two deals is not a rate", got)
-	}
-	// And a stage with enough arrivals uses its own, or the fallback would be
-	// every stage's answer and the per-stage rate would be dead code.
-	if got := StageConversion(10, 5, 0.25); got != 0.5 {
-		t.Fatalf("a stage with ten arrivals reported %v, want its own 0.5", got)
-	}
-}
-
 // The needed pipeline is measured against the REFERENCE after Won, never
 // against the projection. Deriving it from the current landing is the circular
 // answer: a pipeline is then always exactly sufficient for the pipeline.

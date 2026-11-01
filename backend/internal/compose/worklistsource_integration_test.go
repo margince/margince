@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestWorklistCommitmentKeepsItsContactAndReadableSource(t *testing.T) {
@@ -125,7 +127,7 @@ func TestWorklistApprovalKeepsAnArchivedSourceReachable(t *testing.T) {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Scope renewal", pipeline, open, &e.Rep1)
 	queue := approvalsServiceWithEffects(e.Pool)
-	approval, err := queue.Stage(onBehalfOf(e.AgentCtx(), e.Rep1), approvals.StageInput{
+	approval, err := queue.Stage(onBehalfOf(commitmentDispatchCtx(e), e.Rep1), approvals.StageInput{
 		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send revised scope","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`),
 		DiffHash: "archived-scope-review", TargetType: "deal", TargetID: deal, Summary: "Send revised scope",
 		Evidence: []approvals.Evidence{{SourceType: "activity", SourceID: ids.UUID(source.Id), Snippet: "Send revised scope."}},
@@ -160,4 +162,10 @@ func TestWorklistApprovalKeepsAnArchivedSourceReachable(t *testing.T) {
 		return
 	}
 	t.Fatal("pending approval disappeared with its archived source")
+}
+
+// commitmentDispatchCtx stages a promise the way the commitment dispatch does:
+// as the system, with no passport, so its decider's approval runs it.
+func commitmentDispatchCtx(e *integration.Env) context.Context {
+	return principal.WithActor(sightContext(e), principal.Principal{Type: principal.PrincipalSystem, ID: "system:commitment-dispatch"})
 }

@@ -155,6 +155,25 @@ describe("the duplicate card", () => {
     expect(labels(root)).toEqual(["Not the same"]);
   });
 
+  it("offers no merge the server would refuse this reader", () => {
+    const data = createFollowupsFixture.data as {
+      id: string;
+      duplicate_candidates: Array<Record<string, unknown>>;
+    };
+    const withPair = (over: Record<string, unknown>) =>
+      mount({
+        ...data,
+        duplicate_candidates: [{ ...data.duplicate_candidates[0], ...over }],
+      });
+    expect(labels(withPair({ can_merge: false }))).toEqual(["Not the same"]);
+    expect(labels(withPair({ keep_id: data.id }))).toEqual(["Not the same"]);
+    expect(
+      labels(
+        withPair({ keep_id: data.duplicate_candidates[0]?.other_record_id }),
+      ),
+    ).toContain("Merge into the existing record");
+  });
+
   it("asks the assistant in chat when the host will not run tools for a view", async () => {
     proxies = false;
     const root = mount();

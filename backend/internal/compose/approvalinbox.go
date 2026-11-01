@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -161,8 +162,11 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		ExpiresAt:      a.ExpiresAt,
 		DecidedAt:      a.DecidedAt,
 	}
-	if a.Summary != nil {
+	// A withheld plan stays behind here too, whatever the wire carried.
+	withheld := approvalplan.Withheld(a.Preview)
+	if a.Summary != nil && !withheld {
 		out.Summary = *a.Summary
+		out.SummaryParts = a.SummaryParts
 	}
 	if a.DiffHash != nil {
 		out.DiffHash = *a.DiffHash
@@ -176,26 +180,15 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 	if !withPayload {
 		return out
 	}
-	out.ProposedChange = stagedPayload(a.ProposedChange)
-	out.Evidence = stagedEvidence(a.Evidence)
 	if a.TargetLabel != nil {
 		out.TargetLabel = *a.TargetLabel
 	}
-	out.Changes = stagedChanges(a.Preview)
-	return out
-}
-
-// stagedChanges carries the inbox's preview of each changed field. Only a ready
-// preview names the change completely; any other state carries none, as the
-// inbox then shows none. The tool surface writes each label.
-func stagedChanges(preview *crmcontracts.ApprovalPreview) []agents.FieldChange {
-	if preview == nil || preview.State != previewReadyState {
-		return nil
+	out.Preview = a.Preview
+	if withheld {
+		return out
 	}
-	out := make([]agents.FieldChange, 0, len(preview.Changes))
-	for _, change := range preview.Changes {
-		out = append(out, agents.FieldChange{Field: change.Field, Before: change.Before, After: change.After})
-	}
+	out.ProposedChange = stagedPayload(a.ProposedChange)
+	out.Evidence = stagedEvidence(a.Evidence)
 	return out
 }
 

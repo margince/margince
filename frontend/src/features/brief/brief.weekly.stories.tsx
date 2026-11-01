@@ -336,6 +336,29 @@ function bothBlocks() {
   return { lead, deal };
 }
 
+// A seat that may not read activities. The server sends the meeting figures as
+// zeros and says they are withheld, so the panel draws no meeting row.
+export const ScorecardMeetingsWithheld: Story = {
+  render: frozen(
+    <InTheWeeksPanel>
+      <ScorecardPanel
+        scorecard={{
+          ...bothBlocks(),
+          lead: {
+            ...bothBlocks().lead,
+            meetings_booked: 0,
+            meetings_held: 0,
+            meetings_no_show: 0,
+            meetings_partial_history: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+        meetingsWithheld
+      />
+    </InTheWeeksPanel>,
+  ),
+};
+
 // A clean week and an empty one. Every lead that arrived got a recorded first
 // response and none breached; the row says so and claims no target met. No
 // deal was open, so the three coverage cards have no denominator. One arm for

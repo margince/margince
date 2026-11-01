@@ -179,13 +179,29 @@ export const EveryDealPricedPhone: Story = {
   tags: ["uat-phone"],
 };
 
-function recipient(kind: "live" | "snapshot") {
+// A share states its landing and modelled finish. A snapshot frozen before
+// the landing was kept says its basis is not recorded and keeps its range.
+function recipient(kind: "live" | "snapshot", landingKept = true) {
   return () => {
+    const shared = readings({
+      range_low_minor: 200_000_00,
+      range_high_minor: 360_000_00,
+    });
     const view = {
       kind,
       target: "forecast",
       as_of: kind === "snapshot" ? "2026-07-14T06:00:00Z" : undefined,
-      readings: readings(),
+      readings: landingKept
+        ? {
+            ...shared,
+            landing: {
+              amount_minor: shared.won_minor + shared.evidence_minor,
+              measure: "commit_evidence",
+              won_minor: shared.won_minor,
+              remaining_minor: shared.evidence_minor,
+            },
+          }
+        : shared,
       withheld: false,
     } satisfies components["schemas"]["SharedForecastView"];
     installFetchStub({
@@ -200,3 +216,6 @@ function recipient(kind: "live" | "snapshot") {
 }
 export const LiveRecipient: Story = { render: recipient("live") };
 export const SnapshotRecipient: Story = { render: recipient("snapshot") };
+export const SnapshotRecipientBeforeTheLandingWasKept: Story = {
+  render: recipient("snapshot", false),
+};

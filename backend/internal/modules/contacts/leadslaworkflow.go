@@ -136,8 +136,9 @@ func (leadStatusLadder) IdempotencyKey(ev workflow.Event) string {
 	return "lead_status_ladder:" + ev.ID.String()
 }
 
-// ladderStepFor reads one touch as the step it earns: an inbound reply or a
-// booked/held meeting is engagement; any other outbound touch is contact. A
+// ladderStepFor reads one touch as the step it earns. An inbound reply or a
+// meeting meetingProof counts is engagement, if current as captured. Any other
+// outbound touch is contact. A
 // system-captured outbound with no prior inbound — a cold sequence mail — is
 // still contact: we reached out, whoever pressed send.
 //
@@ -150,7 +151,10 @@ func (leadStatusLadder) IdempotencyKey(ev workflow.Event) string {
 // engagement: writing about a lead is not the lead writing back.
 func ladderStepFor(t leadResponseTouch) (LeadStatus, bool) {
 	switch {
-	case t.direction == "inbound", t.kind == "meeting" && (t.meetingStatus == "booked" || t.meetingStatus == "held"):
+	case t.direction == "inbound", t.kind == "meeting" && meetingProves(t.meetingStatus, t.declined):
+		if !t.currentWhenCaptured {
+			return "", false
+		}
 		return LeadStatusEngaged, true
 	case t.direction == touchOutbound, humanLoggedNote(t):
 		return LeadStatusContacted, true
@@ -173,6 +177,32 @@ type leadResponseTouch struct {
 	kind          string
 	meetingStatus string
 	source        string
+	// declined is leadDeclinedSQL: the lead said no to the meeting's invitation.
+	declined bool
+	// currentWhenCaptured is leadTouchCurrentSQL: an import of old engagement
+	// earns no step.
+	currentWhenCaptured bool
+}
+
+// leadTouchColumns are the columns a leadResponseTouch scans, in order after
+// lead, for the activity `a` linked to the lead leadRef names.
+func leadTouchColumns(ctx context.Context, leadRef string, arg func(any) int) string {
+	return `coalesce(a.direction, ''), a.captured_by, a.occurred_at, ` + inboundBeforeSQL(leadRef, "a") + `,
+	       a.kind, coalesce(a.meeting_status, ''), a.source, ` + occurredday.ProvenSQL("a") + `,
+	       ` + leadDeclinedSQL(leadRef, "a") + `, ` + leadTouchCurrentSQL(ctx, arg)
+}
+
+// leadTouchCurrentSQL is whether the activity `a` fell inside the waiting
+// horizon when it was captured, the horizon lead evidence is held to. Judged
+// at capture, a later archive re-derives the same steps it first earned.
+func leadTouchCurrentSQL(ctx context.Context, arg func(any) int) string {
+	return storekit.SourceWithinHorizonAtSQL("a", "a.created_at", slaNow(ctx), arg)
+}
+
+// scanLeadTouch reads leadTouchColumns into t.
+func scanLeadTouch(rows pgx.Rows, t *leadResponseTouch, lead ...any) error {
+	return rows.Scan(append(lead, &t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound,
+		&t.kind, &t.meetingStatus, &t.source, &t.respondedAt, &t.declined, &t.currentWhenCaptured)...)
 }
 
 // activitySourceManual is the activity `source` the Log composer stamps: the
@@ -236,19 +266,20 @@ func humanCaptured(t leadResponseTouch) bool {
 func (s *Store) leadResponseTouches(ctx context.Context, activityID ids.ActivityID) ([]leadResponseTouch, error) {
 	var out []leadResponseTouch
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT l.lead_id, coalesce(a.direction, ''), a.captured_by, a.occurred_at, `+inboundBeforeSQL("l.lead_id", "a")+`,
-			       a.kind, coalesce(a.meeting_status, ''), a.source, `+occurredday.ProvenSQL("a")+`
+		args := []any{activityID}
+		arg := func(value any) int { args = append(args, value); return len(args) }
+		q := `SELECT l.lead_id, ` + leadTouchColumns(ctx, "l.lead_id", arg) + `
 			FROM activity_link l JOIN activity a ON a.id = l.activity_id
 			WHERE l.activity_id = $1 AND l.lead_id IS NOT NULL AND a.archived_at IS NULL
-			  AND `+auth.ActivityAvailableClause("a"), activityID)
+			  AND ` + auth.ActivityAvailableClause("a")
+		rows, err := tx.Query(ctx, q, args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var t leadResponseTouch
-			if err := rows.Scan(&t.lead, &t.direction, &t.capturedBy, &t.occurredAt, &t.hadInbound, &t.kind, &t.meetingStatus, &t.source, &t.respondedAt); err != nil {
+			if err := scanLeadTouch(rows, &t, &t.lead); err != nil {
 				return err
 			}
 			out = append(out, t)

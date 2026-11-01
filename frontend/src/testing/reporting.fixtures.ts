@@ -52,6 +52,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
     pipeline_id: "sales",
     population_fingerprint: "fixture-dach",
     interval,
+    horizon: { start_at: interval.start_at, end_at: "2026-09-30T22:00:00Z" },
     target_interval: {
       start_at: interval.start_at,
       end_at: "2026-09-30T22:00:00Z",
@@ -417,3 +418,96 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
       },
     ],
   };
+
+/**
+ * A reporting period as the server frames it in REPORTING_FIXTURE_ZONE. It
+ * holds the read instant, the actuals window, the whole period and the target
+ * window. Berlin leaves summer time at 01:00Z on 25 Oct 2026, so a window
+ * across that day has an hour more.
+ */
+export type ReportingFixtureFrame = Readonly<{
+  clock: string;
+  periodKind: components["schemas"]["ReportingSelection"]["period"];
+  interval: components["schemas"]["ReportingWindow"];
+  horizon: components["schemas"]["ReportingWindow"];
+  targetInterval: components["schemas"]["ReportingWindow"];
+  fiscalYearStartMonth: number;
+}>;
+
+export const reportingFixtureFrames = {
+  // Calendar Q4 read on its first month's last day: actuals stop on 31 Oct
+  // while the target runs to 31 Dec, across the summer-time change.
+  quarterCutoff: {
+    clock: "2026-10-31T16:00:00Z",
+    periodKind: "this_quarter",
+    interval: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-10-31T16:00:00Z",
+    },
+    horizon: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-12-31T23:00:00Z",
+    },
+    targetInterval: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-12-31T23:00:00Z",
+    },
+    fiscalYearStartMonth: 1,
+  },
+  // A business year from February: Q3 runs 1 Aug to 31 Oct and opens in
+  // summer time, then closes in winter time.
+  fiscalQuarter: {
+    clock: "2026-10-20T10:00:00Z",
+    periodKind: "this_quarter",
+    interval: {
+      start_at: "2026-07-31T22:00:00Z",
+      end_at: "2026-10-20T10:00:00Z",
+    },
+    horizon: {
+      start_at: "2026-07-31T22:00:00Z",
+      end_at: "2026-10-31T23:00:00Z",
+    },
+    targetInterval: {
+      start_at: "2026-07-31T22:00:00Z",
+      end_at: "2026-10-31T23:00:00Z",
+    },
+    fiscalYearStartMonth: 2,
+  },
+  // The week from Monday 26 Oct crosses into November, while its targets
+  // stay October's.
+  weekAcrossMonths: {
+    clock: "2026-10-29T09:00:00Z",
+    periodKind: "this_week",
+    interval: {
+      start_at: "2026-10-25T23:00:00Z",
+      end_at: "2026-10-29T09:00:00Z",
+    },
+    horizon: {
+      start_at: "2026-10-25T23:00:00Z",
+      end_at: "2026-11-01T23:00:00Z",
+    },
+    targetInterval: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-10-31T23:00:00Z",
+    },
+    fiscalYearStartMonth: 1,
+  },
+  // The week of 19 Oct holds the summer-time change, so it is 169 hours long.
+  weekWithClockChange: {
+    clock: "2026-10-25T18:00:00Z",
+    periodKind: "this_week",
+    interval: {
+      start_at: "2026-10-18T22:00:00Z",
+      end_at: "2026-10-25T18:00:00Z",
+    },
+    horizon: {
+      start_at: "2026-10-18T22:00:00Z",
+      end_at: "2026-10-25T23:00:00Z",
+    },
+    targetInterval: {
+      start_at: "2026-09-30T22:00:00Z",
+      end_at: "2026-10-31T23:00:00Z",
+    },
+    fiscalYearStartMonth: 1,
+  },
+} as const satisfies Record<string, ReportingFixtureFrame>;

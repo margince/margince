@@ -149,8 +149,8 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
 - Beside them: **Numbers**, **Upcoming meetings**, **Check applied changes**.
-A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date, the emails synced overnight, and how many items wait, how many are
-urgent and how many meetings you have. Press any key or click to go on.
+A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
+in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Today?
@@ -165,8 +165,8 @@ and in the Worklist.
 - A task due today or late is urgent, unless it is prospecting work.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
-- Work for current customers comes before prospecting. A lead with no reply target shows "no
-  response target set", with no made-up deadline.
+- A deal at risk with a task due within 7 days shows once, as that task with the risk on it.
+- Work for current customers comes before prospecting.
 - A close date Margince set for now asks you to confirm the forecast; it is not a customer promise.
   See [Close dates Margince sets](the-pipeline.md#close-dates-margince-sets).
 

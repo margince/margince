@@ -27,6 +27,10 @@ type Subject struct {
 	CloseProvisional bool
 	Category         string
 	StageName        string
+	// StageID is the deal's stage, and StageEnteredAt when it last entered it,
+	// or its creation when it never moved.
+	StageID        string
+	StageEnteredAt time.Time
 	// The total of the most recent sent or accepted offer, when there is one.
 	OfferTotalMinor *int64
 	// The total of the signed contract, when there is one.
@@ -232,7 +236,7 @@ func closeUnconfirmed() Rule {
 // the finding, and it is invisible to anyone looking at the deal today.
 func closePushed() Rule {
 	return Rule{Type: TypeClosePushed, Version: "v1", Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
-		if s.CloseDatePushes <= cfg.MaxClosePushes {
+		if !closeKeepsMoving(s, cfg) {
 			return nil
 		}
 		return &Finding{

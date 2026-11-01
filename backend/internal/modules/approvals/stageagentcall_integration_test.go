@@ -17,11 +17,13 @@ package approvals
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -81,9 +83,16 @@ func (e *stagingEnv) seedCompany(t *testing.T) ids.UUID {
 // and not the property under test here.
 func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 	t.Helper()
+	if _, err := e.svc.Decide(e.asDecider(), id, true, nil); err != nil {
+		t.Fatalf("approving %s: %v", id, err)
+	}
+}
+
+// asDecider is the human who lent the passport, with sight of every target.
+func (e *stagingEnv) asDecider() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	ctx = principal.WithActor(ctx, principal.Principal{
+	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
@@ -98,9 +107,6 @@ func (e *stagingEnv) approve(t *testing.T, id ids.ApprovalID) {
 			},
 		},
 	})
-	if _, err := e.svc.Decide(ctx, id, true, nil); err != nil {
-		t.Fatalf("approving %s: %v", id, err)
-	}
 }
 
 // A released decision belongs to the credential it was granted to. Another
@@ -375,5 +381,41 @@ func TestAPassportLessAgentIsRefusedTheSecondTimeToo(t *testing.T) {
 	}
 	if rows != 1 {
 		t.Errorf("the target carries %d approvals, want only the one a passport staged", rows)
+	}
+}
+
+// The summary's parts are stored cleaned beside the joined line, and the read
+// returns them as staged.
+func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
+	e := setupStaging(t)
+	passport := e.seedPassport(t)
+	in := e.agentCall(e.seedCompany(t))
+	in.Summary = "Read stainzer.at: depth=2"
+	in.SummaryParts = &crmcontracts.ApprovalSummaryParts{
+		Sentence: "Read stainzer.at",
+		Fields:   []crmcontracts.ApprovalSummaryField{{Field: "depth", Value: "2\u202e, note=x"}},
+	}
+
+	staged, _, err := e.svc.StageAgentCall(e.asPassport(passport), in)
+	if err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	stored, err := e.svc.Get(e.asDecider(), staged)
+	if err != nil {
+		t.Fatalf("reading the staged row: %v", err)
+	}
+	got := wire(stored, e.svc.now()).SummaryParts
+	want := []crmcontracts.ApprovalSummaryField{{Field: "depth", Value: "2, note=x"}}
+	if got == nil || got.Sentence != "Read stainzer.at" || !slices.Equal(got.Fields, want) {
+		t.Errorf("read back parts %+v, want the sentence and %+v", got, want)
+	}
+
+	in.DiffHash, in.SummaryParts = "c276f78957b5b2fc-no-parts", nil
+	plain, _, err := e.svc.StageAgentCall(e.asPassport(passport), in)
+	if err != nil {
+		t.Fatalf("staging without parts: %v", err)
+	}
+	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(row, e.svc.now()).SummaryParts != nil {
+		t.Errorf("a staging without parts read back %v (err %v), want none", row.SummaryParts, err)
 	}
 }

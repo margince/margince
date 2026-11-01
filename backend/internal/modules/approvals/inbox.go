@@ -51,6 +51,7 @@ type row struct {
 	// card says nothing rather than saying unknown.
 	TargetLabel    *string
 	Summary        *string
+	SummaryParts   json.RawMessage
 	ProposedChange json.RawMessage
 	DiffHash       string
 	ExpiresAt      time.Time
@@ -77,6 +78,7 @@ type row struct {
 	// StagedInConversationOf is the colleague whose own live conversation with
 	// an AI client staged this, nil for any other staging.
 	StagedInConversationOf *ids.UUID
+	ContextDigest          *string
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, staged_by_connection,
@@ -84,7 +86,7 @@ const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, stage
 	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
 	bundle_id, evidence, effect_failed_at, effect_failure, effect_ran_at, requested_decider_id,
-	staged_in_conversation_of`
+	staged_in_conversation_of, context_digest, summary_parts`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
@@ -93,7 +95,7 @@ func scan(r pgx.Row) (row, error) {
 		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
 		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure, &a.EffectRanAt, &a.RequestedDecider,
-		&a.StagedInConversationOf)
+		&a.StagedInConversationOf, &a.ContextDigest, &a.SummaryParts)
 	return a, err
 }
 

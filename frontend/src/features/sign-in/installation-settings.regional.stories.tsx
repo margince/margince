@@ -32,6 +32,7 @@ function RegionalFields({
     call_telegram: true,
     call_zalo: true,
     individual_performance: true,
+    forecast_self_correcting: true,
     date_format: "dmy",
     time_format: "24h",
   });

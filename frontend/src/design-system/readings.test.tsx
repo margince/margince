@@ -200,6 +200,23 @@ describe("SegmentBar lays disjoint parts end to end", () => {
     ).toEqual(["Already won€25", "Evidence€50", "Call€100"]);
   });
 
+  // A modelled range is another measure on the same scale. It stretches the
+  // scale, sits apart as a bracket, and is named in the legend.
+  it("puts a range past the parts on their scale, apart from them", () => {
+    const { container } = render(
+      <SegmentBar
+        label="Period"
+        parts={PARTS}
+        band={{ label: "Modelled range", low: 50, high: 100 }}
+      />,
+    );
+    expect(widths(container)).toEqual(["25%", "50%"]);
+    const span = container.querySelector<HTMLElement>(".segbar-band-span");
+    expect([span?.style.left, span?.style.width]).toEqual(["50%", "50%"]);
+    const legend = screen.getByRole("list", { name: "Period" });
+    expect(legend.lastElementChild?.textContent).toBe("Modelled range");
+  });
+
   it("draws an empty track when nothing has been measured", () => {
     const { container } = render(
       <SegmentBar

@@ -34,6 +34,9 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		CompanyFacts: LeadCompanyFactFilters{
 			Industry: enumArg(params.Industry), Country: params.Country, SizeBand: enumArg(params.SizeBand),
 		},
+		Partner: LeadPartnerFilter{
+			CompanyID: idArg[ids.CompanyKind](params.PartnerCompanyId), Accepted: params.PartnerAccepted,
+		},
 	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {

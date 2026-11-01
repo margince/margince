@@ -127,7 +127,7 @@ func CompanyHierarchyRollup(ctx context.Context, pool *pgxpool.Pool, rootID ids.
 		}
 
 		fx := &fxConverter{tx: tx, rates: deals.NewFXRates(baseCurrency, asOf), asOf: asOf}
-		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx); err != nil {
+		if result.WeightedPipelineMinor, err = weightedPipelineMinor(ctx, tx, included, fx, asOf); err != nil {
 			return err
 		}
 		if result.ClosedWonMinor, err = closedWonMinorIn(ctx, tx, included, result.ClosedWonPeriod, asOf, baseCurrency); err != nil {
@@ -326,6 +326,7 @@ func (c *fxConverter) toBase(ctx context.Context, amountMinor int64, currency st
 // (a deal may honestly have no amount yet) and its stage's live win
 // probability.
 type openDealRow struct {
+	id, stageID    string
 	amountMinor    *int64
 	currency       *string
 	winProbability int
@@ -336,7 +337,13 @@ type openDealRow struct {
 // deal, then sum, so the total reconciles exactly to its parts). Rows
 // are collected before converting because the FX lookup queries the
 // same transaction's connection.
-func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, fx *fxConverter) (int64, error) {
+func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, fx *fxConverter, asOf time.Time) (int64, error) {
+	// Each deal at the chance the forecast weights it by, the risk effect
+	// included where one is learned, so this total and the forecast agree.
+	chances, err := readForecastChanceTable(ctx, tx, asOf)
+	if err != nil {
+		return 0, err
+	}
 	// The stage join deliberately carries NO archived_at filter, matching
 	// the forecast report's join: archiving a stage reshapes the pipeline
 	// vocabulary, it must never silently zero the open deals still in it.
@@ -351,7 +358,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		return 0, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT %s, d.currency, s.win_probability
+		SELECT d.id::text, d.stage_id::text, %s, d.currency, s.win_probability
 		FROM deal d
 		JOIN stage s ON s.id = d.stage_id
 		WHERE d.company_id = ANY($1) AND d.status = 'open' AND d.archived_at IS NULL`, amount),
@@ -361,7 +368,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 	}
 	openRows, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (openDealRow, error) {
 		var d openDealRow
-		err := row.Scan(&d.amountMinor, &d.currency, &d.winProbability)
+		err := row.Scan(&d.id, &d.stageID, &d.amountMinor, &d.currency, &d.winProbability)
 		return d, err
 	})
 	if err != nil {
@@ -379,7 +386,7 @@ func weightedPipelineMinor(ctx context.Context, tx pgx.Tx, included []ids.UUID, 
 		if err != nil {
 			return 0, err
 		}
-		weighted, err := values.WeightedValue(baseMinor, d.winProbability)
+		weighted, err := values.WeightedValue(baseMinor, chances.applied(d.id, d.stageID, d.winProbability))
 		if err != nil {
 			return 0, err
 		}

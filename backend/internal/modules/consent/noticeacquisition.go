@@ -19,8 +19,8 @@ import (
 // reader can judge a deadline years in the past instead of trusting it.
 type NoticeAcquisition struct {
 	Kind string
-	// OccurredAt is nil where the recording door did not know; the deadline
-	// then ran from CapturedAt, as compose/noticecaseopen.go dates it.
+	// OccurredAt is nil when the date is unknown. For a confirmed indirect source,
+	// CapturedAt bounds the latest possible deadline; it is not the acquisition date.
 	OccurredAt     *time.Time
 	CapturedAt     time.Time
 	CapturedBy     string
@@ -100,4 +100,23 @@ func attachOneAcquisition(ctx context.Context, tx pgx.Tx, c *NoticeCase) error {
 	}
 	*c = one[0]
 	return nil
+}
+
+// WireDeadline distinguishes a latest possible deadline from a confirmed source date.
+func (a *NoticeAcquisition) WireDeadline(upperBound bool) *crmcontracts.NoticeAcquisition {
+	out := a.Wire()
+	if out != nil && upperBound {
+		out.DeadlineIsUpperBound = &upperBound
+	}
+	return out
+}
+
+func (c NoticeCase) deadlineIsUpperBound() bool {
+	if c.DueAt == nil {
+		return false
+	}
+	if c.SourceKind != nil {
+		return c.SourceObtainedAt == nil
+	}
+	return c.Acquisition != nil && c.Acquisition.OccurredAt == nil
 }

@@ -113,7 +113,7 @@ function stubRoutes(
       sent.push({ key, url: url.pathname + url.search, body });
       const override = overrides[key];
       if (override) return override();
-      if (key === "GET /privacy/notice-cases") {
+      if (key === "GET /privacy/notice-case-reviews") {
         return queuePage([OWED]);
       }
       if (key === "GET /users") {
@@ -170,7 +170,9 @@ describe("the disclosure-duty queue", () => {
     render(<NoticeCasesCard />);
 
     await findDuty("Lena Hoffmann");
-    const listed = sent.find((s) => s.key === "GET /privacy/notice-cases");
+    const listed = sent.find(
+      (s) => s.key === "GET /privacy/notice-case-reviews",
+    );
     expect(listed?.url).toContain("state=open");
     expect(listed?.url).toContain("state=assigned");
     expect(listed?.url).toContain("state=queued");
@@ -217,7 +219,7 @@ describe("the disclosure-duty queue", () => {
 
   it("says when a duty rests on no evidence and when its contact is not available", async () => {
     stubRoutes({
-      "GET /privacy/notice-cases": () =>
+      "GET /privacy/notice-case-reviews": () =>
         queuePage([{ ...OWED, contact_name: null, acquisition: null }]),
     });
     render(<NoticeCasesCard />);
@@ -293,7 +295,7 @@ describe("the disclosure-duty queue", () => {
   it("offers no actions on a duty that has already ended", async () => {
     // The server refuses both, so offering them would be a button that fails.
     stubRoutes({
-      "GET /privacy/notice-cases": () => queuePage([EXCUSED]),
+      "GET /privacy/notice-case-reviews": () => queuePage([EXCUSED]),
     });
     render(<NoticeCasesCard />);
 
@@ -374,7 +376,9 @@ describe("the disclosure-duty queue", () => {
     );
 
     await waitFor(() => {
-      const reads = sent.filter((s) => s.key === "GET /privacy/notice-cases");
+      const reads = sent.filter(
+        (s) => s.key === "GET /privacy/notice-case-reviews",
+      );
       const last = reads[reads.length - 1];
       expect(last?.url).toContain("state=completed");
       expect(last?.url).toContain("state=exempt_with_reason");
@@ -391,7 +395,7 @@ describe("the disclosure-duty queue", () => {
     // excused case A would open case B with A's words and A's claim already
     // filled in, one keystroke from confirming them.
     stubRoutes({
-      "GET /privacy/notice-cases": () =>
+      "GET /privacy/notice-case-reviews": () =>
         queuePage([OWED, { ...OWED, id: "case-3", contact_name: "Mia Klein" }]),
       "POST /privacy/notice-cases/case-1/excuse": () =>
         jsonResponse({ ...OWED, state: "exempt_with_reason" }),
@@ -426,7 +430,7 @@ describe("the disclosure-duty queue", () => {
 
   it("says why it is empty rather than showing nothing", async () => {
     stubRoutes({
-      "GET /privacy/notice-cases": () => queuePage([]),
+      "GET /privacy/notice-case-reviews": () => queuePage([]),
     });
     render(<NoticeCasesCard />);
 
@@ -490,9 +494,9 @@ describe("the disclosure-duty queue", () => {
     const sent: Sent[] = [];
     stubRoutes(
       {
-        "GET /privacy/notice-cases": () => {
+        "GET /privacy/notice-case-reviews": () => {
           const asked = sent.filter(
-            (s) => s.key === "GET /privacy/notice-cases",
+            (s) => s.key === "GET /privacy/notice-case-reviews",
           );
           const first = asked.length === 1;
           return jsonResponse({
@@ -520,7 +524,9 @@ describe("the disclosure-duty queue", () => {
     expect(screen.getByText("Lena Hoffmann")).toBeInTheDocument();
     // And the second request carried the cursor the first page handed back,
     // rather than re-asking for the same page forever.
-    const asked = sent.filter((s) => s.key === "GET /privacy/notice-cases");
+    const asked = sent.filter(
+      (s) => s.key === "GET /privacy/notice-case-reviews",
+    );
     expect(asked).toHaveLength(2);
     expect(asked[1].url).toContain("cursor=page-2");
   });

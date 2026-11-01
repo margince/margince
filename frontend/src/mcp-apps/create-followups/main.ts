@@ -50,6 +50,8 @@ const MERGEABLE = new Set(["contact", "company"]);
 type Candidate = {
   id: string;
   otherID: string;
+  /** The server lets this reader merge the new record into the other one. */
+  mayMergeIn: boolean;
   evidence: { label: string; mine: string; theirs: string }[];
 };
 
@@ -78,6 +80,9 @@ function candidatesOf(data: Record<string, unknown>): Candidate[] {
     .map((c) => ({
       id: asText(c.candidate_id),
       otherID: asText(c.other_record_id),
+      mayMergeIn:
+        (c.keep_id === undefined || c.keep_id === c.other_record_id) &&
+        c.can_merge !== false,
       evidence: asList(c.evidence)
         .map(asRecord)
         .map((e) => ({
@@ -223,7 +228,7 @@ function choices(
   }
   const busy = outcome?.kind === "busy";
   const row = el("div", "choices");
-  const mergeable = MERGEABLE.has(recordType);
+  const mergeable = MERGEABLE.has(recordType) && candidate.mayMergeIn;
   if (canCallTools()) {
     if (mergeable) {
       row.appendChild(

@@ -28,6 +28,7 @@ export type ContactVerdict = Readonly<{
 // The wire carries no tone for a rule. An owed thing that slipped is danger,
 // an owed thing still on time is warning, a reply after silence is good news.
 const MOMENT_TONE: Readonly<Record<ContactMomentRule, ReadingTone>> = {
+  privacy_notice_due: "warning",
   overdue_promise: "danger",
   gone_quiet: "danger",
   open_promise: "warning",
@@ -192,6 +193,18 @@ function exchangeTone(
   return inbound + outbound > 0 ? "warning" : "neutral";
 }
 
+export function colleaguesInTouch(view: Contact360) {
+  const colleagues = view.network?.colleagues ?? [];
+  if (
+    colleagues.some(
+      (colleague) =>
+        colleague.interactions_90d > 0 && colleague.two_way === undefined,
+    )
+  )
+    return undefined;
+  return colleagues.filter((colleague) => colleague.two_way === true);
+}
+
 function reachDim(
   view: Contact360,
   t: Translator,
@@ -200,10 +213,15 @@ function reachDim(
   if (omitted(view, "network")) {
     return null;
   }
-  const inTouch = (view.network?.colleagues ?? []).filter(
-    (colleague) => colleague.interactions_90d > 0,
-  );
+  const inTouch = colleaguesInTouch(view);
   const label = t("contact.standing.dim.reach");
+  if (!inTouch)
+    return {
+      key: "reach",
+      label,
+      value: t("record.notShown"),
+      tone: "neutral",
+    };
   if (inTouch.length === 0) {
     return {
       key: "reach",

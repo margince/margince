@@ -11,9 +11,9 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { reasonText } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
-import { reasonText } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import { rowAnswer } from "./worklist.row.answer";
 
