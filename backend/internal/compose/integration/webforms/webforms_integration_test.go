@@ -206,6 +206,12 @@ func TestAFormNoteAnswersTheSubmissionFieldByField(t *testing.T) {
 	if c := sent.Consent; c == nil || !c.Ticked || c.Wording != "You may contact me." || deref(c.PolicyVersion) != "2026-10" {
 		t.Errorf("consent = %+v, want the ticked box with its wording and policy version", c)
 	}
+	// The consent proves itself: it names the form and the page it was given on.
+	if c := sent.Consent; c != nil && (c.FormId == nil || c.FormId.String() != form.ID || deref(c.FormName) != "Contact" ||
+		deref(c.PageUrl) != siteOrigin+"/pricing") {
+		t.Errorf("consent names form %v %q and page %q, want %s \"Contact\" and the pricing page",
+			c.FormId, deref(c.FormName), deref(c.PageUrl), form.ID)
+	}
 }
 
 func deref(s *string) string {

@@ -9026,6 +9026,12 @@ components:
         ticked: {type: boolean}
         wording: {type: string, description: 'The words the box showed, as the admin wrote them when the form was sent.'}
         policy_version: {type: string, description: 'The privacy policy version the form named, when it named one.'}
+        form_id:
+          type: string
+          format: uuid
+          description: The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+        form_name: {type: string, description: 'The form''s name when it was sent. Absent on an older record.'}
+        page_url: {type: string, description: 'The page the form was sent from, as `page_url` keeps it. Absent when the form sent none.'}
     SourceAuthor:
       type: object
       description: |-
