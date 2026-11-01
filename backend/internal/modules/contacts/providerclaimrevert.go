@@ -118,7 +118,8 @@ func RevertProviderFills(ctx context.Context, tx pgx.Tx, providerName string, su
 	// Once, after every bought edge is gone: asked per edge, the answer depends
 	// on the order the ledger rows came back in.
 	if heldEmployer && retiredEmployment {
-		if err := promoteLoneSurvivingEmployment(ctx, tx, ids.From[ids.ContactKind](subject)); err != nil {
+		if err := promoteThenFileEmployerTwins(ctx, tx,
+			ids.From[ids.ContactKind](subject), connectorCapturedBy(providerName)); err != nil {
 			return out, err
 		}
 	}
