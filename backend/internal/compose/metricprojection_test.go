@@ -214,6 +214,9 @@ func TestReportingOutcomesUseTheSelectedIntervalAcrossMonths(t *testing.T) {
 	if chart.Interval == nil || !chart.Interval.StartAt.Equal(start) || !chart.Interval.EndAt.Equal(frame.Interval.EndAt) || len(chart.Points) != 1 || chart.Points[0].Value == nil || *chart.Points[0].Value != 2 || chart.Points[0].Evidence.ContextId != "interval" {
 		t.Fatalf("outcomes did not preserve the requested week: %+v", chart)
 	}
+	if at := chart.Points[0].At; at == nil || !at.Equal(start) {
+		t.Fatalf("a weekly point is placed at its week's start, not %v", at)
+	}
 }
 
 func TestReportingTrendOmitsMissingOrPartialComparisonHistory(t *testing.T) {

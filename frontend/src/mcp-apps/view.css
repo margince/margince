@@ -706,3 +706,60 @@ ol {
 .dcard-evidence .evidence-list li {
   font-style: italic;
 }
+
+/* Readings as bars against the largest: the label, the bar and the figure on
+   one line each, so the eye compares the lengths down one column. */
+.view-bars {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.view-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(72px, 2fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.view-bar .view-share {
+  inline-size: 100%;
+}
+
+.view-bar-label {
+  overflow: hidden;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-bar-figure {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A titled part of a story card, with a hairline above each part after the
+   first. */
+.context-part {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+}
+
+.context-part + .context-part {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.context-lines {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.context-line-text {
+  margin: 0;
+}

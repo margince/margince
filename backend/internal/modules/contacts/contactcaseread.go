@@ -144,7 +144,7 @@ func (a caseAuthority) mergeMode() crmcontracts.ContactCaseMergeMode {
 		return crmcontracts.ContactCaseMergeModeOrdinary
 	case a.delegate(members):
 		return crmcontracts.ContactCaseMergeModeDelegated
-	case slices.ContainsFunc(a.c.Edges, func(e caseEdge) bool { return a.mergeOffer(e).May }):
+	case slices.ContainsFunc(a.c.Edges, a.caseMergeable):
 		return crmcontracts.ContactCaseMergeModePair
 	}
 	return crmcontracts.ContactCaseMergeModeNone
@@ -162,6 +162,18 @@ func (a caseAuthority) mergeOffer(e caseEdge) MergeOffer {
 		return MergeOffer{}
 	}
 	return OfferMerge(e.Left, e.Right, PairWriters{Left: a.writable[e.Left], Right: a.writable[e.Right]}, true)
+}
+
+// caseMergeable is mergeOffer for the case route, which also names an owner
+// for the result. That is the kept end's live owner, or any live owner of the
+// two. admitCasePair and decideContactCaseTx refuse every other owner.
+func (a caseAuthority) caseMergeable(e caseEdge) bool {
+	offer := a.mergeOffer(e)
+	owning := []ids.UUID{e.Left, e.Right}
+	if offer.Keep != nil {
+		owning = []ids.UUID{*offer.Keep}
+	}
+	return offer.May && len(a.c.liveOwners(owning)) > 0
 }
 
 func memberIDsOf(c contactCase) []ids.UUID {

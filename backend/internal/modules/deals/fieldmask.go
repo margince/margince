@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,13 +57,17 @@ var dealWithholders = map[string]func(*crmcontracts.Deal){
 }
 
 // finishDealPage is what every page of deals goes through before it leaves the
-// store, the one-row page of a single read included: the read masks, and the
-// newest email each card dates. One spelling, because the list, the
-// transaction-scoped list and the single read each used to compose the passes
-// by hand, and a pass added to one of them was a fact the other two stopped
-// stating.
+// store, a single read's one-row page included. It applies the read masks,
+// names who created each deal, and dates the newest email on each card. The
+// lists and the single read share it, so a pass added here reaches all three.
 func finishDealPage(ctx context.Context, tx pgx.Tx, page []crmcontracts.Deal) error {
 	if err := maskDeals(ctx, tx, page); err != nil {
+		return err
+	}
+	if err := auditattribution.StampCreators(ctx, tx, "deal", page,
+		func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+		auditattribution.NoneWithheld[crmcontracts.Deal],
+		func(d *crmcontracts.Deal, who *crmcontracts.PrincipalAttribution) { d.CreatedBy = who }); err != nil {
 		return err
 	}
 	return attachLastEmail(ctx, tx, page)

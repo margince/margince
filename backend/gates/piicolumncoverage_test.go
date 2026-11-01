@@ -194,6 +194,9 @@ var erasureColumnBaseline = map[string][]string{
 		"co_target_entity_type",
 		// Which staging rule named the decider: one of four fixed words.
 		"requested_decider_source",
+		// A hex hash of the facts a kind's approval was staged on; it holds
+		// nothing a subject wrote and cannot be read back into them.
+		"context_digest",
 	},
 	"comms_outbound": {
 		// The delivery's half of the decision vocabulary, read by the worker

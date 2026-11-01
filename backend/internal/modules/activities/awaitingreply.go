@@ -310,14 +310,18 @@ func awaitingCandidatesSQL(asOf, sentByReader, window string) string {
 
 // awaitingNeedSQL names the activities the follow-up statement reads: each
 // candidate, its thread, and what came after it with a contact it went to.
-// Each arm keeps only terms the statement's own test also holds.
+// Each arm keeps only terms the statement's own test also holds. A contact's
+// history is read once, from its earliest candidate, not once per mail.
 func awaitingNeedSQL() string {
 	return threadNeedSQL(followUpCandidates) + `
-	 UNION SELECT later.id FROM ` + followUpCandidates + ` c
-	   JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
-	   JOIN activity_link heard ON heard.contact_id = sent.contact_id
+	 UNION SELECT later.id FROM (
+	        SELECT sent.contact_id, min(c.occurred_at) AS since
+	          FROM ` + followUpCandidates + ` c
+	          JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
+	         GROUP BY 1) recipient
+	   JOIN activity_link heard ON heard.contact_id = recipient.contact_id
 	   JOIN activity later ON later.id = heard.activity_id AND later.restricted_at IS NULL
-	    AND later.occurred_at > c.occurred_at -- occurred_at raw: the statement's own after-the-mail order, which this set may not narrow
+	    AND later.occurred_at > recipient.since -- occurred_at raw: the statement's own after-the-mail order, which this set may not narrow
 `
 }
 

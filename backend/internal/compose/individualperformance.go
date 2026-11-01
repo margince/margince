@@ -303,6 +303,32 @@ func loneColleagueCoverage(frame crmcontracts.ReportingContext) crmcontracts.Rep
 	return withheld
 }
 
+// teamBelowFloor answers, while the switch is off, whether a team scope has
+// other members but fewer than fewestColleagues live ones. That is the floor
+// the team review holds. It reads membership, not the seats a figure credits.
+// In a team of two, a figure credited to the reader can be a colleague's work.
+func teamBelowFloor(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, owners reporting.MeasurableOwners) (bool, error) {
+	if !owners.IndividualOff || scope.Kind != ScopeKindTeam || scope.Id == nil {
+		return false, nil
+	}
+	var members []ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(array_agg(user_id), '{}') FROM team_membership WHERE team_id = $1`, ids.UUID(*scope.Id)).Scan(&members); err != nil {
+		return false, fmt.Errorf("compose: reading a team's members for the floor: %w", err)
+	}
+	thin, err := thinGroups(ctx, tx, [][]ids.UUID{members})
+	if err != nil {
+		return false, err
+	}
+	return thin[0], nil
+}
+
+// thinTeamCoverage withholds a figure of a team that teamBelowFloor holds back.
+func thinTeamCoverage(frame crmcontracts.ReportingContext) crmcontracts.ReportingCoverage {
+	withheld := reportingGap(reportingUnavailable, reporting.ExplanationCopy(frame).Say(reportingCoverageWords.ThinTeam))
+	withheld.Withheld = true
+	return withheld
+}
+
 // withoutLoneColleagueMetrics drops, from a frozen edition's facts, every
 // metric whose figure a lone colleague besides the reader makes up, and says
 // whether it dropped any.
@@ -398,15 +424,16 @@ func explainWithheldOwners(ctx context.Context, tx pgx.Tx, out *reporting.Evalua
 
 // requireFrozenShareMeasurable asks a frozen reading what a live one is asked
 // on every read, while the switch is off. A snapshot of a colleague's forecast
-// is that colleague's number, however old. It also clears every colleague's
-// seat off the rows, which the export would otherwise print.
-func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) error {
+// is that colleague's number, however old. It answers only the reader's own
+// rows, which the export prints, as the live per-deal rows do. limited says at
+// least one row was withheld, as ForecastReaderContributions says it.
+func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecasting.Scope, rows []SharedContribution) (visible []SharedContribution, limited bool, err error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
-		return err
+		return rows, false, err
 	}
 	if _, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope)); err != nil {
-		return err
+		return nil, false, err
 	}
 	owners, categories := []ids.UUID{}, []string{}
 	for _, row := range rows {
@@ -415,12 +442,41 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 		}
 	}
 	if err := requireNoLoneColleague(ctx, tx, categoryGroups(owners, categories)); err != nil {
-		return err
+		return nil, false, err
 	}
-	for index := range rows {
-		if rows[index].Owner != nil && !auth.MayMeasureSeat(ctx, false, *rows[index].Owner) {
-			rows[index].Owner = nil
+	own := make([]SharedContribution, 0, len(rows))
+	for _, row := range rows {
+		if row.Owner != nil && readerOwnsRow(ctx, *row.Owner) {
+			own = append(own, row)
 		}
 	}
-	return nil
+	return own, len(own) < len(rows), nil
+}
+
+// readerOwnsRow is the per-deal row rule while the switch is off: a row stays
+// only when the deal is the reader's own. Shares and live rows both ask it.
+func readerOwnsRow(ctx context.Context, owner ids.UUID) bool {
+	return auth.MayMeasureSeat(ctx, false, owner)
+}
+
+// ForecastReaderContributions narrows the forecast's per-deal rows to what this
+// reader may see one by one. While the switch is off a row names a seat. So
+// only the reader's own deals stay, with no owner on them, as evidence does.
+// The HTTP door and the forecast tool both ask it. limited says at least one
+// row was withheld, which both doors tell their reader.
+func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution) (visible []forecasting.Contribution, limited bool, err error) {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return rows, false, err
+	}
+	out := make([]forecasting.Contribution, 0, len(rows))
+	for _, row := range rows {
+		owner, err := ids.Parse(row.Owner)
+		if err != nil || !readerOwnsRow(ctx, owner) {
+			continue
+		}
+		row.Owner = ""
+		out = append(out, row)
+	}
+	return out, len(out) < len(rows), nil
 }

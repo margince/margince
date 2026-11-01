@@ -89,6 +89,10 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 		if len(landing) == 1 {
 			out.Value = landing[0].Row.Value
 		}
+		low, high := metricFacts(facts, def.Id, forecastRangeLowContext), metricFacts(facts, def.Id, forecastRangeHighContext)
+		if len(low) == 1 && len(high) == 1 {
+			out.RangeLowMinor, out.RangeHighMinor = low[0].Money, high[0].Money
+		}
 		out.Coverage.Status = coverage.Status
 	case reportingClosedWinRate:
 		projectClosedRate(&out, cohort)

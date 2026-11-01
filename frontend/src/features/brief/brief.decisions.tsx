@@ -32,6 +32,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
@@ -114,6 +115,7 @@ function deckLabels(
     showLess: t("brief.deck.showLess"),
     noContent: t("common.empty"),
     loading: t("brief.panel.decisions"),
+    summaryWords: summaryWords(t),
   };
   return {
     card,

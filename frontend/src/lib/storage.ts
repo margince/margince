@@ -115,10 +115,24 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
-  // The Analytics Overview view a reader chose last. Seat: it is about their work.
+  // The Overview view a reader chose before choices were kept per account.
+  // Read once as a fallback and removed by the next choice.
   analyticsOverviewView: {
     name: "margince.analytics.overviewView",
     area: "local",
+    lifetime: "seat",
+  },
+  // The Overview view and each view's dials a reader chose, per account id.
+  analyticsOverview: {
+    prefix: "margince.analytics.overview:",
+    area: "local",
+    lifetime: "seat",
+  },
+  // Each Overview view's dials as this tab last showed them, per account id.
+  // A shared link lands here and never in the account's own choice above.
+  analyticsOverviewTab: {
+    prefix: "margince.analytics.overviewTab:",
+    area: "session",
     lifetime: "seat",
   },
 } as const satisfies Record<string, Declared>;

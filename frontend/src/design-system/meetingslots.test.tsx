@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
@@ -80,4 +81,37 @@ it("draws a preview week's times without offering them to be pressed", () => {
   const monday = screen.getByRole("group", { name: "Mon 5 Oct" });
   expect(monday.textContent).toContain("Monday 5 October, 09:00");
   expect(screen.queryByRole("button")).toBeNull();
+});
+
+it("will not press a blocked time, and keeps a chosen one pressable", () => {
+  const chosen = "2026-10-05T07:00:00Z";
+  const blocked = "2026-10-05T07:15:00Z";
+  const slot = (start: string, time: string) => ({
+    start,
+    end: new Date(Date.parse(start) + 30 * 60000).toISOString(),
+    label: `Monday 5 October, ${time}`,
+    time,
+  });
+  render(
+    <MeetingWeek
+      days={[
+        {
+          key: "2026-10-05",
+          weekday: "Mon",
+          date: "5 Oct",
+          slots: [slot(chosen, "09:00"), slot(blocked, "09:15")],
+        },
+      ]}
+      selected={[chosen]}
+      blocked={[chosen, blocked]}
+      emptyDay="No free time"
+      onSelect={() => undefined}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Monday 5 October, 09:15" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Monday 5 October, 09:00" }),
+  ).toBeEnabled();
 });

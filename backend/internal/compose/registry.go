@@ -139,7 +139,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	searchRetriever, retriever := registryRetrievers(pool, embedder)
 	// One engine ranks search_records and resolves an intent tool's record_name.
 	recordSearch := recordSearchSeam(pool)
-	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, meetingReadiness{store: activities.NewStore(db)})
+	agents.RegisterIntentTools(registry, retriever, meetingBrief, recordSearch, provider, meetingReadiness{store: activities.NewStore(db)})
 	agents.RegisterChannelProviderTools(registry, channelProviderDirectory{})
 	agents.RegisterContextSearchTool(registry, provider, retriever)
 	agents.RegisterRecordSearchTool(registry, provider, recordSearch)

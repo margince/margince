@@ -61,9 +61,10 @@ func (c evaluationCorpus) vintage(id string, period [2]time.Time, takenOn int, w
 		ID: id, Context: "workspace::", PeriodStart: period[0], PeriodEnd: period[1],
 		LocalDay: c.day(takenOn), TakenAt: c.day(takenOn).Add(6 * time.Hour), Trigger: TriggerDaily,
 		Definition: DefinitionVersion, Currency: "EUR", Eligible: 3, Priced: 3, Rows: 3,
-		WonMinor: won, Weighted: weighted, OpenMinor: open, Evidence: evidence,
-		Tallies: TallyOpenDeals(deals),
-		Outcome: &VintageOutcome{WonMinor: outcome}, TrainOutcome: &VintageOutcome{WonMinor: outcome},
+		WonMinor: won, Weighted: weighted, TypedWeighted: weighted, OpenMinor: open, Evidence: evidence,
+		Sufficiency: EvidenceNone,
+		Tallies:     TallyOpenDeals(deals),
+		Outcome:     &VintageOutcome{WonMinor: outcome}, TrainOutcome: &VintageOutcome{WonMinor: outcome},
 	}
 }
 

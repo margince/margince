@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -225,26 +225,19 @@ describe("what was handled for the reader", () => {
     expect(screen.getByText(en["worklist.handled.truncated"])).toBeTruthy();
   });
 
-  // The COMMON day, and the one the panel used to draw worst. An empty list is
-  // what most days answer with — the contract says so — and the state derived
-  // from the query's flags alone called it `ready`: a table's three column
-  // names over no rows, which says neither "nothing was done" nor anything
-  // else. The sentence is the whole answer, so the table must not be there
-  // beside it drawing a header for rows that do not exist.
-  it("says nothing was done rather than drawing an empty table", async () => {
+  // The COMMON day: an empty list is what most days answer with. The panel
+  // draws nothing then, so the queue's own sentence is the only one.
+  it("draws no panel on a day with nothing done", async () => {
     stubHandled({
       as_of: "2026-09-05T09:00:00Z",
       truncated: false,
       receipts: [],
     });
 
-    render(panel());
+    const { container } = render(panel());
 
-    expect(await screen.findByText(en["worklist.handled.empty"])).toBeTruthy();
-    expect(screen.queryByRole("table")).toBeNull();
-    // And no figure in the footer band either: a count of nothing is a row of
-    // chrome saying zero on a panel that has already said it in words.
-    expect(screen.queryByText(/^Recent changes: \d+$/)).toBeNull();
+    await waitFor(() => expect(container.childElementCount).toBe(0));
+    expect(screen.queryByText(en["worklist.handled.title"])).toBeNull();
   });
 
   // An answer carrying no list AT ALL is not a quiet day. `receipts` is

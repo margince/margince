@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The notification panel recognises a subject that is only these pairs
@@ -27,7 +29,9 @@ func TestSummaryFieldPairsMatchTheFixtureThePanelParses(t *testing.T) {
 		t.Fatalf("the fixture holds %d lines for %d bodies", len(want), len(bodies))
 	}
 	for i, body := range bodies {
-		got := strings.Join(summaryFields(inEnglish, []byte(body)), ", ")
+		parts := crmcontracts.ApprovalSummaryParts{Sentence: "Act"}
+		parts.Fields, parts.MoreFields = summaryFieldsWhere(inEnglish, []byte(body), nil)
+		got := strings.TrimPrefix(summaryLine(inEnglish, parts), "Act: ")
 		if got != want[i] {
 			t.Errorf("body %d renders %q, the fixture holds %q", i, got, want[i])
 		}
