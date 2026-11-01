@@ -287,6 +287,16 @@ read_registry first
 check "$DEV_REDIS_DB_MIN" "$MINE_DB" "the slug's own recorded Redis database is reclaimed"
 check "8081" "$MINE_PORT" "and its own port"
 
+# A database recorded before the block moved is not reclaimed: it may now be the
+# integration lane's, and a suite that believes it owns the database flushes it.
+mkdir -p "$tmp_root/stale"
+printf 'SLUG=stale\nFE_PORT=8089\nAPI_PORT=18089\nREDIS_DB=%s\n' \
+      "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/stale/env"
+read_registry stale
+check "" "$MINE_DB" "a recorded Redis database below the block is not reclaimed"
+check "8089" "$MINE_PORT" "while the port it recorded still is"
+rm -rf "$tmp_root/stale"
+
 # The registry only knows about OUR stacks. A foreign listener must still take a
 # port out of play, or bind fails and wait_ready polls somebody else's server.
 listener_on=8082

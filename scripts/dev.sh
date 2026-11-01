@@ -590,7 +590,14 @@ read_registry() { # slug
     # shellcheck disable=SC1090
     . "$state_file"
     if [[ "$other" == "$want" ]]; then
-      MINE_DB="$REDIS_DB"; MINE_PORT="$FE_PORT"
+      # A database recorded before the block moved is not ours to reclaim. It
+      # may now belong to the integration lane, whose fixtures flush the
+      # database they are given between tests.
+      if [[ -n "$REDIS_DB" ]] \
+        && (( REDIS_DB >= DEV_REDIS_DB_MIN && REDIS_DB <= DEV_REDIS_DB_MAX )); then
+        MINE_DB="$REDIS_DB"
+      fi
+      MINE_PORT="$FE_PORT"
       continue
     fi
     [[ -n "$REDIS_DB" ]] && TAKEN_DBS="${TAKEN_DBS}${TAKEN_DBS:+ }${REDIS_DB}"
