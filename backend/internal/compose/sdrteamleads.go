@@ -35,7 +35,7 @@ type sdrTeamLeads struct{ qualified, unanswered, monthQualified int }
 // their row scope and field masks, in one statement for every seat. A lead counts
 // for its owner now. month is nil when no target is read.
 func readSdrTeamLeads(ctx context.Context, tx pgx.Tx, seats []ids.UUID, window sdrTeamWindow, month *sdrTeamWindow, at time.Time) (map[ids.UUID]sdrTeamLeads, error) {
-	if err := auth.Require(ctx, string(recordTypeLead), principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var b reportingBindings
