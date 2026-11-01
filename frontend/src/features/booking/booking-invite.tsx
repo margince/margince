@@ -152,9 +152,9 @@ export function BookingInviteScreen({
   );
 }
 
-// A proposal offers up to three times and an invite exactly one, so a pick
-// toggles within the mode's bound rather than silently growing past it. A time
-// that shares minutes with a pick offers that pick twice. It is refused.
+// A proposal offers up to three times and an invite exactly one. A pick toggles
+// within the mode's bound rather than silently growing past it. A time that
+// shares minutes with a pick offers that pick twice, so it is refused.
 export function togglePick(
   current: readonly BookingSlot[],
   slot: BookingSlot,

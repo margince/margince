@@ -57,7 +57,7 @@ Also called: call off a meeting, delete a meeting.
 
 ### How do I offer a contact a few times to choose from?
 To offer times in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, then choose **Propose times**.
-1. Pick two or three **Times to offer** in the calendar. A time that overlaps one you picked cannot be picked.
+1. Pick two or three **Times to offer** in the calendar. Two times you offer cannot share a minute.
 2. Choose **Review email**, read the email, and send it.
 The contact gets a personal link with your times. It books one meeting, and runs out after 7 days or at the last time offered.
 Also called: suggest times, propose a slot, send options.
