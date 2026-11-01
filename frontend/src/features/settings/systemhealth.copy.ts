@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { PluralBase } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { CAPTURE_CONCERNS } from "../../lib/captureconcern";
 
 type Source = components["schemas"]["HealthSource"];
 type Finding = components["schemas"]["HealthFinding"];
@@ -33,6 +34,12 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   queue_expectation_unknown: "health.code.queue_expectation_unknown",
   capture_thread_processing: "health.code.capture_thread_processing",
   capture_thread_uncertain: "health.code.capture_thread_uncertain",
+  capture_connection_reauth_required: CAPTURE_CONCERNS.reauth_required,
+  capture_connection_connection_error: CAPTURE_CONCERNS.connection_error,
+  capture_connection_sync_failing: CAPTURE_CONCERNS.sync_failing,
+  capture_connection_backfill_failed: CAPTURE_CONCERNS.backfill_failed,
+  capture_connection_sync_stalled: CAPTURE_CONCERNS.sync_stalled,
+  capture_connection_capture_silent: CAPTURE_CONCERNS.capture_silent,
   capture_checked: "health.code.capture_checked",
   capture_processing: "health.code.capture_processing",
   capture_uncertain: "health.code.capture_uncertain",

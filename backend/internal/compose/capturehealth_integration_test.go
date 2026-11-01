@@ -64,7 +64,7 @@ func TestCaptureHealthCountsABacklogAnAdminCannotSee(t *testing.T) {
 	var health crmcontracts.CaptureHealth
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		health, err = readCaptureHealth(ctx, tx, time.Now().UTC())
+		health, err = readCaptureHealth(e.Admin(), tx, time.Now().UTC())
 		return err
 	}); err != nil {
 		t.Fatalf("reading capture health: %v", err)

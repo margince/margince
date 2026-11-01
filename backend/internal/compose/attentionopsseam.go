@@ -103,13 +103,13 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 	out := make([]attention.CaptureConcern, 0, len(concerns))
 	for _, concern := range concerns {
 		out = append(out, attention.CaptureConcern{
-			ConnectionID: concern.ConnectionID,
-			Kind:         concern.Kind,
-			Provider:     concern.Provider,
-			AccountLabel: concern.AccountLabel,
-			Calendar:     slices.Contains(calendarProviders, concern.Provider),
-			FailingSince: concern.FailingSince,
-			LastSyncedAt: concern.LastSyncedAt,
+			ConnectionID:   concern.ConnectionID,
+			Kind:           concern.Kind,
+			Provider:       concern.Provider,
+			AccountLabel:   concern.AccountLabel,
+			Calendar:       slices.Contains(calendarProviders, concern.Provider),
+			FailingSince:   concern.FailingSince,
+			SubjectMovedAt: concern.ChangedAt,
 		})
 	}
 	return out, nil

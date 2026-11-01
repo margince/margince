@@ -3970,6 +3970,36 @@ func (e BulkVerb) Valid() bool {
 	}
 }
 
+// Defines values for CaptureConcernKind.
+const (
+	CaptureConcernKindBackfillFailed  CaptureConcernKind = "backfill_failed"
+	CaptureConcernKindCaptureSilent   CaptureConcernKind = "capture_silent"
+	CaptureConcernKindConnectionError CaptureConcernKind = "connection_error"
+	CaptureConcernKindReauthRequired  CaptureConcernKind = "reauth_required"
+	CaptureConcernKindSyncFailing     CaptureConcernKind = "sync_failing"
+	CaptureConcernKindSyncStalled     CaptureConcernKind = "sync_stalled"
+)
+
+// Valid indicates whether the value is a known member of the CaptureConcernKind enum.
+func (e CaptureConcernKind) Valid() bool {
+	switch e {
+	case CaptureConcernKindBackfillFailed:
+		return true
+	case CaptureConcernKindCaptureSilent:
+		return true
+	case CaptureConcernKindConnectionError:
+		return true
+	case CaptureConcernKindReauthRequired:
+		return true
+	case CaptureConcernKindSyncFailing:
+		return true
+	case CaptureConcernKindSyncStalled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureConnectionMailPosture.
 const (
 	CaptureConnectionMailPostureClassified CaptureConnectionMailPosture = "classified"
@@ -33406,6 +33436,9 @@ type CaptureClassifierHealth struct {
 	Unsure int `json:"unsure"`
 }
 
+// CaptureConcernKind defines model for CaptureConcernKind.
+type CaptureConcernKind string
+
 // CaptureConnection A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
 // credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
 // server-side by `credential_ref`.
@@ -33419,7 +33452,11 @@ type CaptureConnection struct {
 	// CanBackfill Whether this provider's connector can import older mail at all. False means
 	// `POST /connectors/{provider}/backfill` and its estimate refuse with `422
 	// connector_unsupported`, so a client offers no import rather than one that fails.
-	CanBackfill bool `json:"can_backfill"`
+	CanBackfill bool                `json:"can_backfill"`
+	Concern     *CaptureConcernKind `json:"concern,omitempty"`
+
+	// ConcernSince When the current concern began.
+	ConcernSince *time.Time `json:"concern_since,omitempty"`
 
 	// ContextTag The one existing word every record this connector creates is filed under, so
 	// "which records came in from this source" has an answer. Absent when the operator
@@ -33517,6 +33554,18 @@ type CaptureConnectionProvider string
 
 // CaptureConnectionStatus Connection state; `reauth_required` when the stored token expired/was revoked upstream.
 type CaptureConnectionStatus string
+
+// CaptureConnectionConcern defines model for CaptureConnectionConcern.
+type CaptureConnectionConcern struct {
+	AccountLabel  *string            `json:"account_label"`
+	Concern       CaptureConcernKind `json:"concern"`
+	ConnectionId  openapi_types.UUID `json:"connection_id"`
+	DisplayName   *string            `json:"display_name"`
+	LastSuccessAt *time.Time         `json:"last_success_at"`
+	Provider      string             `json:"provider"`
+	Since         *time.Time         `json:"since"`
+	UserId        openapi_types.UUID `json:"user_id"`
+}
 
 // CaptureConnectionListResponse defines model for CaptureConnectionListResponse.
 type CaptureConnectionListResponse struct {
@@ -33654,8 +33703,11 @@ type CaptureHealth struct {
 	Categories *CaptureHealthCategories `json:"categories,omitempty"`
 
 	// Classifier The sender queue as a whole, across every mailbox.
-	Classifier  CaptureClassifierHealth `json:"classifier"`
-	GeneratedAt time.Time               `json:"generated_at"`
+	Classifier CaptureClassifierHealth `json:"classifier"`
+
+	// ConnectionConcerns Active connection concerns for live members. Names account state, never correspondence.
+	ConnectionConcerns []CaptureConnectionConcern `json:"connection_concerns"`
+	GeneratedAt        time.Time                  `json:"generated_at"`
 
 	// HeldMeetings Captured records already filed under a contact that are still held to their
 	// participants because, when they arrived, they named nobody the workspace knew. The
@@ -42191,6 +42243,12 @@ type DiscoveredLeadSource struct {
 	// Key The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.
 	Key       string `json:"key"`
 	LeadCount int    `json:"lead_count"`
+}
+
+// DismissCaptureSilenceRequest defines model for DismissCaptureSilenceRequest.
+type DismissCaptureSilenceRequest struct {
+	// Since The concern_since of the silence episode being dismissed. A changed episode returns 409.
+	Since time.Time `json:"since"`
 }
 
 // DismissContactMomentRequest Which moment to hide, and the evidence it was showing when the reader hid it. Both are
@@ -70564,6 +70622,9 @@ type SetConnectorMailPostureJSONRequestBody = SetMailPostureRequest
 // SetConnectorSignatureEnrichmentJSONRequestBody defines body for SetConnectorSignatureEnrichment for application/json ContentType.
 type SetConnectorSignatureEnrichmentJSONRequestBody = SetSignatureEnrichmentRequest
 
+// DismissConnectorSilenceJSONRequestBody defines body for DismissConnectorSilence for application/json ContentType.
+type DismissConnectorSilenceJSONRequestBody = DismissCaptureSilenceRequest
+
 // CreateConsentPurposeJSONRequestBody defines body for CreateConsentPurpose for application/json ContentType.
 type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
 
@@ -83821,6 +83882,9 @@ type ServerInterface interface {
 	// Set this mailbox's own answer to the nightly signature pass.
 	// (PUT /connectors/{provider}/signature-enrichment)
 	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// Dismiss the owner's current mailbox silence warning.
+	// (POST /connectors/{provider}/silence/dismiss)
+	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
@@ -87769,6 +87833,12 @@ func (_ Unimplemented) SetConnectorMailPosture(w http.ResponseWriter, r *http.Re
 // Set this mailbox's own answer to the nightly signature pass.
 // (PUT /connectors/{provider}/signature-enrichment)
 func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Dismiss the owner's current mailbox silence warning.
+// (POST /connectors/{provider}/silence/dismiss)
+func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105961,6 +106031,38 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetConnectorSignatureEnrichment(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DismissConnectorSilence operation middleware
+func (siw *ServerInterfaceWrapper) DismissConnectorSilence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DismissConnectorSilence(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -134449,6 +134551,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/connectors/{provider}/signature-enrichment", wrapper.SetConnectorSignatureEnrichment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/connectors/{provider}/silence/dismiss", wrapper.DismissConnectorSilence)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/consent-purposes", wrapper.ListConsentPurposes)

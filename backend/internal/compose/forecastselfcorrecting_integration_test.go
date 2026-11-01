@@ -77,12 +77,9 @@ func (f *stageCohortFixture) forecastOverHTTP(t *testing.T, today time.Time) crm
 func (f *stageCohortFixture) forecastOverHTTPAs(reader context.Context, t *testing.T, today time.Time) crmcontracts.ForecastReadings {
 	t.Helper()
 	handlers := newForecastHandlers(f.env.Pool, func() time.Time { return today })
-	workspace, with := crmcontracts.GetForecastParamsScopeKindWorkspace, true
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/forecast", nil).WithContext(reader)
-	handlers.GetForecast(rec, req, crmcontracts.GetForecastParams{
-		AsOf: &openapi_types.Date{Time: today}, ScopeKind: &workspace, Contributions: &with,
-	})
+	req := httptest.NewRequest(http.MethodGet, "/forecast?as_of="+today.Format(time.DateOnly)+"&scope_kind=workspace&contributions=true", nil).WithContext(reader)
+	crmcontracts.Handler(Server{forecastHandlers: handlers}).ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /forecast answered %d: %s", rec.Code, rec.Body.String())
 	}
@@ -198,7 +195,24 @@ func TestRecordedOutcomesMoveTheChanceAndImportedOrLegacyMovesDoNot(t *testing.T
 		t.Fatalf("the tool answered weighted %d open %d, the HTTP door %d and %d", overTool.WeightedMinor, overTool.OpenMinor, overHTTP.WeightedMinor, overHTTP.OpenMinor)
 	}
 	if wire := asToolRows(t, *overHTTP.Contributions); !reflect.DeepEqual(wire, overTool.Contributions) {
-		t.Fatalf("the tool's rows differ from the HTTP door's:\n tool %+v\n http %+v", overTool.Contributions, wire)
+		for index := range wire {
+			if index >= len(overTool.Contributions) {
+				break
+			}
+			if reflect.DeepEqual(wire[index], overTool.Contributions[index]) {
+				continue
+			}
+			tool, err := json.Marshal(overTool.Contributions[index])
+			if err != nil {
+				t.Fatal(err)
+			}
+			http, err := json.Marshal(wire[index])
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Fatalf("forecast row %d differs: tool %s; HTTP %s", index, tool, http)
+		}
+		t.Fatalf("forecast contribution lengths differ: tool %d; HTTP %d", len(overTool.Contributions), len(wire))
 	}
 }
 

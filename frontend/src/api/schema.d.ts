@@ -12178,6 +12178,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/{provider}/silence/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss the owner's current mailbox silence warning.
+         * @description Only the authenticated human owner's mailbox is changed. Dismissal lasts until
+         *     another mail delivery followed by three days of silence. Errors and stalled syncs
+         *     cannot be dismissed. Repeating a dismissal of the same episode is harmless.
+         *     The connection lifecycle audit records this setting without correspondence.
+         */
+        post: operations["dismissConnectorSilence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/mail-posture": {
         parameters: {
             query?: never;
@@ -25422,6 +25459,29 @@ export interface components {
             /** @description The size of the whole shipped baseline. */
             total: number;
         };
+        /** @enum {string} */
+        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "backfill_failed" | "sync_stalled" | "capture_silent";
+        DismissCaptureSilenceRequest: {
+            /**
+             * Format: date-time
+             * @description The concern_since of the silence episode being dismissed. A changed episode returns 409.
+             */
+            since: string;
+        };
+        CaptureConnectionConcern: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string | null;
+            /** Format: uuid */
+            connection_id: string;
+            provider: string;
+            account_label: string | null;
+            concern: components["schemas"]["CaptureConcernKind"];
+            /** Format: date-time */
+            since: string | null;
+            /** Format: date-time */
+            last_success_at: string | null;
+        };
         /**
          * @description A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
          *     credential itself is NEVER in this shape — it lives encrypted in the vault, referenced only
@@ -25457,6 +25517,13 @@ export interface components {
             watch_expires_at?: string | null;
             /** @description The granted provider scopes. */
             scopes: string[];
+            /** @description The same effective concern the attention card and System health read. Absent when healthy or silence is dismissed. */
+            concern?: components["schemas"]["CaptureConcernKind"];
+            /**
+             * Format: date-time
+             * @description When the current concern began.
+             */
+            concern_since?: string | null;
             /**
              * Format: date-time
              * @description Last sync attempt (CAP-DDL-5); null before the first.
@@ -43919,6 +43986,8 @@ export interface components {
          */
         CaptureHealth: {
             categories?: components["schemas"]["CaptureHealthCategories"];
+            /** @description Active connection concerns for live members. Names account state, never correspondence. */
+            connection_concerns: components["schemas"]["CaptureConnectionConcern"][];
             /** Format: date-time */
             generated_at: string;
             /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
@@ -74579,6 +74648,49 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    dismissConnectorSilence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     credential submission, and test_mailbox connects immediately with neither (a QC-only
+                 *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
+                 *     real deployment answers connector_unsupported for it, the same as for an unrecognized
+                 *     provider). `gmail`/`gcal` = Google mail+calendar, `graph`/`graphcal` =
+                 *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
+                 *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
+                 *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissCaptureSilenceRequest"];
+            };
+        };
+        responses: {
+            /** @description The owner's updated connection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     setConnectorMailPosture: {

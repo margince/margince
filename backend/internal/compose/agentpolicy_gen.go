@@ -786,6 +786,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/connectors/{provider}/backfill/preview":                       {Op: "previewConnectorBackfill", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/connectors/{provider}/connect":                                {Op: "connectConnector", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/connectors/{provider}/disconnect":                             {Op: "disconnectConnector", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/connectors/{provider}/silence/dismiss":                        {Op: "dismissConnectorSilence", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/consent-purposes":                                             {Op: "createConsentPurpose", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts":                                                     {Op: "createContact", Access: "tool", Tool: "create_record", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/contacts/card-photos":                                         {Op: "importCardPhoto", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
