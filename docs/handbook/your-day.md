@@ -176,7 +176,7 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
 
-The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Home reads your day when you open it, again once it is five minutes old, and right after you act on it. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
+The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Keep date**, **Accept** or **Undo**.
 

@@ -88,7 +88,9 @@ it("refreshes decided actions each minute and the receipt once it is five minute
   expect(result.current.handled?.receipts[0]?.review?.reversed).toBe(true);
   expect(result.current.handled?.receipts[0]?.review?.can_undo).toBe(false);
   expect(result.current.magic?.needs_you).toHaveLength(1);
-  await advance(4 * 60_000);
+  await advance(3 * 60_000);
+  expect(result.current.magic?.needs_you).toHaveLength(1);
+  await advance(60_000);
   expect(result.current.magic?.needs_you).toEqual([]);
 });
 it("pauses hidden reads, and on return refreshes the live reads but not a fresh receipt", async () => {

@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import {
+  homeDayWait,
   readWorklistPage,
   untilNextDue,
   WORKLIST_PAGE_ROWS,
@@ -40,6 +41,13 @@ describe("the Home day's refresh", () => {
   it("does not come at all when no loaded row is still to come due", () => {
     expect(untilNextDue([page(["2026-10-31T08:00:00Z"])], now)).toBe(false);
     expect(untilNextDue([], now)).toBe(false);
+  });
+
+  it("reads the day again at five minutes when nothing comes due sooner", () => {
+    expect(homeDayWait([page(["2026-10-31T09:01:00Z"])], now)).toBe(61_000);
+    expect(homeDayWait([page(["2026-10-31T11:00:00Z"])], now)).toBe(5 * 60_000);
+    expect(homeDayWait([page(["2026-10-31T08:00:00Z"])], now)).toBe(5 * 60_000);
+    expect(homeDayWait([], now)).toBe(5 * 60_000);
   });
 
   it("replaces the minute poll on the reader's own day only", () => {

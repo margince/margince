@@ -31,6 +31,11 @@ export function isLiveWorkRead(key: QueryKey): boolean {
   );
 }
 
+// Home's day is read when it opens, again once its answer is this old, and at
+// once after the reader acts on it (invalidateHandledChange). Each read
+// assembles the reader's whole day on the server; Home is not a live board.
+export const HOME_DAY_FRESH_MS = 5 * 60_000;
+
 // Home's day: the worklist it opens on, the brief and the receipt. Each costs
 // the server a whole assembly, so it is read on change, not on a cadence.
 export function isHomeDayRead(key: QueryKey): boolean {
