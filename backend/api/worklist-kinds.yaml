@@ -1,0 +1,246 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+#
+# backend/api/worklist-kinds.yaml: every kind of row the Worklist can show,
+# and what the engine needs to know about it. PROOF OF CONCEPT.
+#
+# One entry per kind. Today the same facts are spread over hand-kept Go maps
+# in compose/attention (categoryOfSource, destinationOfSource,
+# sourceOwnerAnswers, sourceAnswersForTheActorOnly, doneInPlace); the PoC
+# census test proves this file states each of them identically.
+#
+# An extension adds a kind through an overlay fragment that targets
+# $.kinds['ext.<unit>.<kind>'], the way it adds a job kind to jobs.yaml.
+#
+# Every field is required. There are no defaults, because a default is a
+# decision nobody made for the new kind.
+#
+#   category       the Worklist category, a closed set: customer_waiting,
+#                  leads, deals_at_risk, meetings, tasks, decisions,
+#                  relationships, system. The view follows from it.
+#   destination    the screen the row belongs on: today, review, system_health.
+#                  A fold (batch) has none; its members answer.
+#   owner          the owner answers a row of this kind may state: named,
+#                  nobody, the_reader, from_the_deal, unreadable.
+#   personal       true when the read is bound to the acting member, so a
+#                  wider scope reaches no more of it.
+#   done_in_place  true when the row itself offers Done.
+#   delivery       pull (read live per request) or push (built in the
+#                  background into work_item, served under a live gate).
+#   producer       for push: the events that rebuild the holder's items, and
+#                  the stored times the read judges against the clock.
+#   max_level      extensions only: the highest level a row may claim.
+
+kinds:
+  # Seller work: somebody waits, a date arrives, or revenue moves.
+  customer_waiting:
+    category: customer_waiting
+    destination: today
+    owner: [named, nobody, unreadable]
+    personal: false
+    done_in_place: false
+    delivery: push
+    producer: {events: [activity.created, activity.updated, activity.audience_changed], clock: [asked_at]}
+  lead_response:
+    category: leads
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+    delivery: pull
+  deal_at_risk:
+    category: deals_at_risk
+    destination: today
+    owner: [from_the_deal]
+    personal: false
+    done_in_place: true
+    delivery: pull
+  brief_item:
+    category: deals_at_risk
+    destination: today
+    owner: [from_the_deal]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  meeting:
+    category: meetings
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+    delivery: pull
+  meeting_outcome:
+    category: meetings
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  task:
+    category: tasks
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: push
+    producer: {events: [activity.created, activity.updated, activity.completed], clock: [due_at, remind_at]}
+  weekly_commitment:
+    category: tasks
+    destination: today
+    owner: [named]
+    personal: true
+    done_in_place: false
+    delivery: pull
+  conversation_claim:
+    category: tasks
+    destination: today
+    owner: [nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  awaiting_reply:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  meeting_follow_up:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  relationship_decay:
+    category: relationships
+    destination: today
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  bounce:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  undelivered:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  failed_approval:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: false
+    delivery: pull
+  notice:
+    category: system
+    destination: today
+    owner: [the_reader]
+    personal: true
+    done_in_place: false
+    delivery: pull
+
+  # Judgements: work waits on somebody deciding.
+  approval:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  dedupe_candidate:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  contact_case:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+    delivery: pull
+  deal_suggestion:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  tag_suggestion:
+    category: decisions
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: false
+    delivery: pull
+  introduction_request:
+    category: decisions
+    destination: review
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  dsr:
+    category: system
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+    delivery: pull
+  notice_case:
+    category: system
+    destination: review
+    owner: [named, nobody]
+    personal: false
+    done_in_place: true
+    delivery: pull
+  domain_question:
+    category: system
+    destination: review
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+
+  # The product reporting on itself.
+  capture_health:
+    category: system
+    destination: system_health
+    owner: [the_reader]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  ai_work_health:
+    category: system
+    destination: system_health
+    owner: [nobody]
+    personal: true
+    done_in_place: true
+    delivery: pull
+  automation_run:
+    category: system
+    destination: system_health
+    owner: [nobody]
+    personal: false
+    done_in_place: true
+    delivery: pull
+
+  # A fold stands for a group of other rows. Its destination is its members'.
+  batch:
+    category: system
+    destination: none
+    owner: [named, nobody, the_reader, from_the_deal, unreadable]
+    personal: false
+    done_in_place: true
+    delivery: pull

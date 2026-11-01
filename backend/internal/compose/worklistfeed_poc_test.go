@@ -272,7 +272,12 @@ func TestWorklistFeedPoC(t *testing.T) {
 		break
 	}
 
-	// 4. Size: other holders' rows must not slow one holder's read.
+	// 4. Rights change with no event and no producer run: restrict some listed
+	// records, then the store read must keep exactly what the
+	// live lanes keep.
+	pocNarrowedAudience(t, owner, members, produced, lanes, store, asOf, kinds)
+
+	// 5. Size: other holders' rows must not slow one holder's read.
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO work_item (kind, subject_id, holder_id, sort_at, version)
 		SELECT 'task', a.id, gen_random_uuid(), a.due_at, 1
@@ -296,4 +301,107 @@ func TestWorklistFeedPoC(t *testing.T) {
 		}
 		t.Logf("store read with %d rows in work_item: %s %v", rowsNow, m.id.String()[:8], took.Round(time.Microsecond))
 	}
+}
+
+func pocNarrowedAudience(
+	t *testing.T, owner *pgxpool.Pool, members []pocMember, produced map[ids.UUID][]worklist.Item,
+	lanes pocLanes, store *worklist.Store, asOf time.Time, kinds []string,
+) {
+	t.Helper()
+	ctx := context.Background()
+	restricted := map[string]bool{}
+	var subjects []ids.UUID
+	for _, m := range members {
+		for i, it := range produced[m.id] {
+			if i%3 == 0 {
+				subjects = append(subjects, it.Subject)
+				restricted[it.Kind+":"+it.Subject.String()] = true
+			}
+		}
+	}
+	if len(subjects) == 0 {
+		t.Fatal("no listed record to restrict")
+	}
+	// A real restriction records retention evidence that this throwaway corpus
+	// lacks, so the proof writes and undoes it with the user triggers paused.
+	write := func(statement string, among []ids.UUID) {
+		t.Helper()
+		tx, err := owner.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }() //craft:ignore T2 rollback after commit is a no-op
+		for _, sql := range []string{`ALTER TABLE activity DISABLE TRIGGER USER`, statement, `ALTER TABLE activity ENABLE TRIGGER USER`} {
+			var args []any
+			if sql == statement {
+				args = []any{among}
+			}
+			if _, err := tx.Exec(ctx, sql, args...); err != nil {
+				t.Fatalf("%s: %v", statement, err)
+			}
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var classless []ids.UUID
+	if err := owner.QueryRow(ctx, `SELECT coalesce(array_agg(id), '{}') FROM activity WHERE id = ANY($1) AND retention_class IS NULL`,
+		subjects).Scan(&classless); err != nil {
+		t.Fatal(err)
+	}
+	write(`UPDATE activity SET restricted_at = now(), restricted_reason = 'poc', archived_at = now(),
+		restricted_until = now() + interval '30 days',
+		retention_class = coalesce(retention_class, 'commercial_correspondence'),
+		retention_class_at = coalesce(retention_class_at, now()) WHERE id = ANY($1)`, subjects)
+	t.Cleanup(func() {
+		write(`UPDATE activity SET restricted_at = NULL, restricted_reason = NULL, restricted_until = NULL,
+			archived_at = NULL WHERE id = ANY($1)`, subjects)
+		write(`UPDATE activity SET retention_class = NULL, retention_class_at = NULL WHERE id = ANY($1)`, classless)
+	})
+	leaked, owed, refilled, agreed := 0, 0, 0, 0
+	for _, m := range members {
+		laneTasks, laneWaiting, err := lanes.read(m.ctx, m.id, asOf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		page, err := store.Read(m.ctx, m.id, kinds, 1000)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := map[string]bool{}
+		for _, key := range pocSubjects(append(laneTasks, laneWaiting...)) {
+			want[key] = true
+		}
+		was := map[string]bool{}
+		for _, key := range pocSubjects(produced[m.id]) {
+			was[key] = true
+		}
+		got := map[string]bool{}
+		for _, key := range pocSubjects(page.Items) {
+			got[key] = true
+			if restricted[key] || !want[key] {
+				leaked++ // the store shows what the lanes no longer may
+			}
+		}
+		same := len(got) == len(want)
+		for key := range want {
+			switch {
+			case got[key]:
+			case was[key]:
+				owed++ // the store dropped what the lanes still show
+				same = false
+			default:
+				refilled++ // new to the lane: a producer run brings it
+				same = false
+			}
+		}
+		if same {
+			agreed++
+		}
+	}
+	if leaked > 0 || owed > 0 {
+		t.Errorf("after restricting: %d rows leaked, %d rows wrongly dropped", leaked, owed)
+	}
+	t.Logf("rights change: restricted %d records with no event; leaked %d, wrongly dropped %d; %d rows are new to the lanes and wait for a producer run; %d of %d members identical",
+		len(subjects), leaked, owed, refilled, agreed, len(members))
 }
