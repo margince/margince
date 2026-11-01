@@ -38,7 +38,7 @@ var (
 	})
 	ConnectorStateKey = config.Define(config.Spec[string]{
 		Key: "connector_state_key", Env: "MARGINCE_CONNECTOR_STATE_KEY", Flag: "connector-state-key", Type: config.String, Secret: true, Roles: apiOnly,
-		Doc: "HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows.",
+		Doc: "HMAC key of at least 32 bytes signing the OAuth connect state and the questions an MCP tool asks in the chat; required for the Gmail and Graph connect flows.",
 	})
 	MetricsToken = config.Define(config.Spec[string]{
 		Key: "metrics_token", Env: "MARGINCE_METRICS_TOKEN", Flag: "metrics-token", Type: config.String, Secret: true, Roles: apiOnly,

@@ -56,22 +56,25 @@ const noticeNoteLimit = 500
 // NoticeCase is one duty as a reader of the queue sees it, with everything the
 // three writes below can have put on it.
 type NoticeCase struct {
-	ID             ids.UUID
-	ContactID      ids.ContactID
-	AcquisitionID  ids.UUID
-	Rule           NoticeRule
-	DueAt          time.Time
-	State          NoticeState
-	AllowedRoutes  []string
-	OwnerUserID    *ids.UUID
-	AssignedAt     *time.Time
-	Attempts       int
-	ResolutionNote *string
-	ResolvedBy     *ids.UUID
-	BlockedReason  *string
-	CompletedAt    *time.Time
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID               ids.UUID
+	ContactID        ids.ContactID
+	AcquisitionID    ids.UUID
+	Rule             NoticeRule
+	DueAt            *time.Time
+	SourceKind       *string
+	SourceObtainedAt *time.Time
+	SourceReviewNote *string
+	State            NoticeState
+	AllowedRoutes    []string
+	OwnerUserID      *ids.UUID
+	AssignedAt       *time.Time
+	Attempts         int
+	ResolutionNote   *string
+	ResolvedBy       *ids.UUID
+	BlockedReason    *string
+	CompletedAt      *time.Time
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 	// Acquisition is read beside the row rather than in noticeCaseColumns,
 	// because it lives in the table the deadline was computed from.
 	Acquisition *NoticeAcquisition
@@ -87,7 +90,7 @@ type NoticeCase struct {
 const noticeCaseColumns = `
 	id, contact_id, acquisition_id, rule, due_at, state, allowed_routes,
 	owner_user_id, assigned_at, attempts, resolution_note, resolved_by,
-	blocked_reason, completed_at, created_at, updated_at`
+	blocked_reason, completed_at, created_at, updated_at, source_kind, source_obtained_at, source_review_note`
 
 func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 	var c NoticeCase
@@ -95,117 +98,8 @@ func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 		&c.ID, &c.ContactID, &c.AcquisitionID, &c.Rule, &c.DueAt, &c.State,
 		&c.AllowedRoutes, &c.OwnerUserID, &c.AssignedAt, &c.Attempts,
 		&c.ResolutionNote, &c.ResolvedBy, &c.BlockedReason, &c.CompletedAt,
-		&c.CreatedAt, &c.UpdatedAt)
+		&c.CreatedAt, &c.UpdatedAt, &c.SourceKind, &c.SourceObtainedAt, &c.SourceReviewNote)
 	return c, err
-}
-
-// ListNoticeCases answers the queue: every case in the states asked for,
-// soonest deadline first.
-//
-// The explicit compliance queue uses privacy-request authority, including
-// cases about contacts outside ordinary CRM visibility. The contact-linked
-// agenda applies contact access separately because its action opens the contact.
-//
-// An empty `states` means every unresolved one, which is what a queue asks for
-// when it asks for nothing in particular. A caller that wants closed cases has
-// to name them, so a screen cannot accidentally show a duty as owed because it
-// forgot to filter.
-func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit int, cursor string) ([]NoticeCase, storekit.Page, error) {
-	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if limit <= 0 || limit > noticeCaseListMax {
-		limit = noticeCaseListMax
-	}
-	wanted := make([]string, 0, len(states))
-	for _, st := range states {
-		if !knownNoticeState(st) {
-			return nil, storekit.Page{}, &ValidationError{Field: fieldState, Reason: "not a notice-case state"}
-		}
-		wanted = append(wanted, string(st))
-	}
-	if len(wanted) == 0 {
-		wanted = unresolvedNoticeStates()
-	}
-	var out []NoticeCase
-	var page storekit.Page
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		sql, args, err := noticeCaseListQuery(wanted, cursor, limit)
-		if err != nil {
-			return err
-		}
-		rows, err := tx.Query(ctx, sql, args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			c, err := scanNoticeCase(rows)
-			if err != nil {
-				return err
-			}
-			out = append(out, c)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if len(out) <= limit {
-			return attachAcquisitions(ctx, tx, out)
-		}
-		out = out[:limit]
-		last := out[limit-1]
-		token, err := storekit.EncodeOpaque(noticeCaseCursor{DueAt: last.DueAt, ID: last.ID})
-		if err != nil {
-			return err
-		}
-		page = storekit.Page{HasMore: true, NextCursor: token}
-		return attachAcquisitions(ctx, tx, out)
-	})
-	return out, page, err
-}
-
-// noticeCaseCursor is where a page of the queue stopped: the last row's
-// deadline and its id.
-//
-// BOTH, because the queue is ordered by both. The subject-request queue beside
-// this one pages on a bare id and can, since it orders by id alone; here an id
-// is not a position. Two duties can fall due in the same second, and a walk
-// resumed on id would skip every case whose deadline is later and whose id
-// happens to be smaller — silently, which is the shape of defect this queue
-// already had at a larger scale.
-type noticeCaseCursor struct {
-	DueAt time.Time `json:"due"`
-	ID    ids.UUID  `json:"id"`
-}
-
-// noticeCaseListQuery assembles the keyset-paged queue SQL and its args: the
-// state filter, an optional "after this deadline and id" arm, and the +1
-// over-fetch ListNoticeCases uses to tell a full page from a last one.
-//
-// The row comparison is spelled as a tuple rather than as an OR of two arms,
-// which is the same ordering the index reads and one fewer place to get the
-// tie-break wrong. A malformed cursor is the client's mistake and says so,
-// rather than answering an empty queue — a privacy officer told there is
-// nothing left to do is the one answer this route must never guess at.
-func noticeCaseListQuery(states []string, cursor string, limit int) (string, []any, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	sql := "SELECT" + noticeCaseColumns + storekit.SQLf(" FROM privacy_notice_case WHERE state = ANY($%d)", arg(states))
-	if cursor != "" {
-		after, err := storekit.DecodeOpaque[noticeCaseCursor](cursor)
-		// BOTH halves, not the id alone. The envelope proves the token is one
-		// of ours, not that it names a position in THIS queue: a created_at
-		// cursor from any other route shares the `id` field and decodes
-		// cleanly here, leaving the deadline at its zero value — which pages
-		// from the year zero and hands the officer the whole queue again as
-		// though it were their next page.
-		if err != nil || after.DueAt.IsZero() || after.ID.IsZero() {
-			return "", nil, &storekit.MalformedCursorError{}
-		}
-		sql += storekit.SQLf(" AND (due_at, id) > ($%d, $%d)", arg(after.DueAt), arg(after.ID))
-	}
-	sql += storekit.SQLf(" ORDER BY due_at, id LIMIT $%d", arg(limit+1))
-	return sql, args, nil
 }
 
 // GetNoticeCase reads one duty, for a surface that opens a single case rather
@@ -222,16 +116,28 @@ func noticeCaseListQuery(states []string, cursor string, limit int) (string, []a
 // Held by: TestOneSelectListSpellsTheNoticeCaseRow
 // (backend/gates/noticecasecolumns_test.go)
 func (s *Store) GetNoticeCase(ctx context.Context, id ids.UUID) (NoticeCase, error) {
+	return s.readNoticeCase(ctx, id, false)
+}
+
+// GetNoticeCaseReview keeps the source record readable while its duty is unconfirmed.
+func (s *Store) GetNoticeCaseReview(ctx context.Context, id ids.UUID) (NoticeCase, error) {
+	return s.readNoticeCase(ctx, id, true)
+}
+
+func (s *Store) readNoticeCase(ctx context.Context, id ids.UUID, includeReviews bool) (NoticeCase, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
 		return NoticeCase{}, err
 	}
 	var out NoticeCase
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = scanNoticeCase(tx.QueryRow(ctx, `
-			SELECT`+noticeCaseColumns+`
-			  FROM privacy_notice_case
-			 WHERE id = $1`, id))
+		var args []any
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		where := storekit.SQLf("id = $%d", arg(id))
+		if !includeReviews {
+			where += " AND " + noticeDutyClause(arg)
+		}
+		out, err = scanNoticeCase(tx.QueryRow(ctx, "SELECT"+noticeCaseColumns+" FROM privacy_notice_case WHERE "+where, args...))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -265,7 +171,16 @@ func knownNoticeState(state NoticeState) bool {
 // Those cases still take the owner — somebody is looking at the obstacle — they
 // just do not pretend the duty moved.
 func (s *Store) AssignNoticeCase(ctx context.Context, id ids.UUID, owner ids.UUID) (NoticeCase, error) {
-	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
+	return s.setNoticeCaseOwner(ctx, id, owner, false)
+}
+
+// AssignNoticeCaseReview lets an officer claim source work without asserting a duty.
+func (s *Store) AssignNoticeCaseReview(ctx context.Context, id ids.UUID, owner ids.UUID) (NoticeCase, error) {
+	return s.setNoticeCaseOwner(ctx, id, owner, true)
+}
+
+func (s *Store) setNoticeCaseOwner(ctx context.Context, id ids.UUID, owner ids.UUID, includeReviews bool) (NoticeCase, error) {
+	if err := requireNoticeCaseUpdate(ctx); err != nil {
 		return NoticeCase{}, err
 	}
 	var out NoticeCase
@@ -273,6 +188,15 @@ func (s *Store) AssignNoticeCase(ctx context.Context, id ids.UUID, owner ids.UUI
 		current, err := lockNoticeCase(ctx, tx, id)
 		if err != nil {
 			return err
+		}
+		if !includeReviews {
+			exists, err := noticeDutyExistsTx(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				return apperrors.ErrNotFound
+			}
 		}
 		if terminalNoticeStates()[current.State] {
 			return &ValidationError{
@@ -332,7 +256,7 @@ type ExcuseInput struct {
 // overwrite a real discharge with a claim about one, and the second note would
 // read as the reason the first thing happened.
 func (s *Store) ExcuseNoticeCase(ctx context.Context, id ids.UUID, in ExcuseInput) (NoticeCase, error) {
-	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
+	if err := requireNoticeCaseUpdate(ctx); err != nil {
 		return NoticeCase{}, err
 	}
 	if !excusingNoticeStates()[in.State] {
@@ -379,11 +303,21 @@ func (s *Store) ExcuseNoticeCase(ctx context.Context, id ids.UUID, in ExcuseInpu
 		if err != nil {
 			return err
 		}
+		if current.State == NoticeSourceReview {
+			return &ValidationError{Field: fieldState, Reason: "confirm the acquisition source before closing a source review"}
+		}
 		if terminalNoticeStates()[current.State] {
 			return &ValidationError{
 				Field:  fieldState,
 				Reason: "a duty that has already ended is not excused a second time",
 			}
+		}
+		established, err := noticeDutyExistsTx(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if !established {
+			return &ValidationError{Field: fieldState, Reason: "confirm the acquisition source before closing a source review"}
 		}
 		// blocked_reason IS CLEARED, and this is the case that makes it
 		// necessary rather than tidy. The table holds that a reason is present
@@ -442,13 +376,13 @@ func lockNoticeCase(ctx context.Context, tx pgx.Tx, id ids.UUID) (NoticeCase, er
 func auditNoticeCase(
 	ctx context.Context, tx pgx.Tx, before, after NoticeCase, extra map[string]any,
 ) error {
-	now := map[string]any{fieldState: string(after.State), fieldRule: string(after.Rule)}
+	now := map[string]any{fieldState: string(after.State), fieldRule: string(after.Rule), "allowed_routes": after.AllowedRoutes}
 	maps.Copy(now, extra)
 	// The before-image carries the OWNER as well as the state, because a
 	// reassignment moves the owner while the state stays `assigned` — an image
 	// of the state alone would record "assigned to assigned" and lose which
 	// seat the work was taken from, which is the only fact a reassignment has.
-	was := map[string]any{fieldState: string(before.State)}
+	was := map[string]any{fieldState: string(before.State), fieldRule: string(before.Rule), fieldDueAt: before.DueAt, "blocked_reason": before.BlockedReason != nil, "allowed_routes": before.AllowedRoutes}
 	if before.OwnerUserID != nil {
 		was[fieldOwner] = before.OwnerUserID.String()
 	}
@@ -457,4 +391,11 @@ func auditNoticeCase(
 		return fmt.Errorf("audit the notice case: %w", err)
 	}
 	return nil
+}
+
+func requireNoticeCaseUpdate(ctx context.Context) error {
+	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
+		return err
+	}
+	return requireDSRAdmin(ctx, principal.ActionRead)
 }

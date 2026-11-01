@@ -20,7 +20,7 @@ package gates
 //
 // So: every kind a producer emits must be declared, and every kind the contract
 // declares must be renderable. The client drops a kind missing from
-// `KNOWN_REASONS` (worklist.reasoncensus.ts) without a word, so the second
+// `KNOWN_REASONS` (lib/worklistreasoncensus.ts) without a word, so the second
 // direction is read from that census and the English catalog.
 
 import (
@@ -46,7 +46,7 @@ import (
 const whereReasonsAreMinted = "internal/compose/attention"
 
 const (
-	frontendReasonCensus  = "../frontend/src/features/worklist/worklist.reasoncensus.ts"
+	frontendReasonCensus  = "../frontend/src/lib/worklistreasoncensus.ts"
 	frontendReasonCatalog = "../frontend/src/i18n/en.ts"
 )
 

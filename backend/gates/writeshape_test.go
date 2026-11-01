@@ -34,6 +34,7 @@ import (
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:RecordSubjectWroteTx":        "source evidence is recorded with its privacy notice decision, like RelabelHeldMailTx; the closed event catalog has no acquisition-evidence event, and contact.updated would claim a change to contact fields that did not happen",
 	"internal/modules/contacts:refreshContactPhoneEvidence": "refreshing a duplicate question's evidence is review-flow state, like filing and reopening it. The closed event catalog defines no dedupe type, and no subscriber acts on a proposed match. Its audit records the replacement score and reason",
 
 	"internal/modules/contacts:RecordOfferedValues":  "the last value a feed offered for a company field, kept beside the record's own value. The closed catalog has no type for it, and company.updated would announce a change the record did not undergo, since the record keeps its value whenever a user edited it. Nothing downstream is left stale: the read serves the table on every request. The audit row names the source and the fields and never the values, which may hold personal data",

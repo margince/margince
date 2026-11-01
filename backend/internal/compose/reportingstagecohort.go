@@ -46,10 +46,13 @@ const (
 // stageCohortOutcomes is the order a stage point lists its outcomes in.
 var stageCohortOutcomes = []string{cohortAdvanced, cohortWon, cohortLost, cohortRegressed, cohortLeftPipeline, cohortUnresolved, cohortHistoryPartial}
 
-// stageExitSQL names the outcome of an entry from its next move, nx. Won and
-// lost need only the meaning the move recorded; a direction needs both of its
-// recorded positions, and without them the outcome is history_partial.
+// stageExitSQL names the outcome of an entry from its next move, nx. A next
+// move an import brought in is history_partial: it says nothing about how this
+// team sells. A move saved before provenance was kept counts. Won and lost need
+// only the meaning the move recorded. A direction needs both of its recorded
+// positions, and without them the outcome is history_partial too.
 const stageExitSQL = `CASE WHEN nx.changed_at IS NULL THEN '` + cohortUnresolved + `'
+	WHEN nx.provenance = 'imported' THEN '` + cohortHistoryPartial + `'
 	WHEN nx.semantic_at_change = 'won' THEN '` + cohortWon + `'
 	WHEN nx.semantic_at_change = 'lost' THEN '` + cohortLost + `'
 	WHEN nx.pipeline_id_at_change IS DISTINCT FROM e.pipeline_id THEN '` + cohortLeftPipeline + `'
@@ -66,13 +69,6 @@ func cohortWindow(frame crmcontracts.ReportingContext) (time.Time, time.Time) {
 		end = frame.EvaluatedAt
 	}
 	return frame.Interval.StartAt, end
-}
-
-// stageMoveOrder is the order one deal's moves were written in. Two moves can
-// share an instant, and the write sequence orders them; rows written before it
-// was kept fall back to their id. alias is a compile-time literal.
-func stageMoveOrder(alias string) string {
-	return "(" + alias + ".changed_at,COALESCE(" + alias + ".write_seq,0)," + alias + ".id)"
 }
 
 // cohortOutcomeGroup is the evidence group of one outcome's members: within a
@@ -112,18 +108,18 @@ func readReportingStageConversion(ctx context.Context, tx pgx.Tx, frame crmcontr
  (EXTRACT(EPOCH FROM (COALESCE(nx.changed_at,` + cutoff + `::timestamptz)-e.changed_at))/86400)::float8,
  e.stage_id::text,COALESCE(s.name,` + b.add(said.Say(reportingLabelWords.Unmapped)) + `),` + stageExitSQL + `,'` + stageCohortProvenance + `',COALESCE(s."position",0),
  '','',
- EXISTS(SELECT 1 FROM deal_stage_history r WHERE r.deal_id=e.deal_id AND r.to_stage_id=e.stage_id AND ` + stageMoveOrder("r") + `<` + stageMoveOrder("eh") + `),
+ EXISTS(SELECT 1 FROM deal_stage_history r WHERE r.deal_id=e.deal_id AND r.to_stage_id=e.stage_id AND ` + weekly.StageMoveOrder("r") + `<` + weekly.StageMoveOrder("eh") + `),
  COALESCE(pv.semantic_at_change IN ('won','lost'),false)
  FROM (` + weekly.StageEntriesSQL(b.add(start), b.add(end), narrowing) + `) e
  JOIN deal_stage_history eh ON eh.id=e.id
  JOIN deal t ON t.id=e.deal_id
  LEFT JOIN stage s ON s.id=e.stage_id
  LEFT JOIN app_user u ON u.id=e.owner_id
- LEFT JOIN LATERAL (SELECT x.changed_at,x.semantic_at_change,x.pipeline_id_at_change,x.from_position_at_change,x.to_position_at_change
-   FROM deal_stage_history x WHERE x.deal_id=e.deal_id AND ` + stageMoveOrder("x") + `>` + stageMoveOrder("eh") + ` AND x.changed_at<` + cutoff + `
+ LEFT JOIN LATERAL (SELECT x.changed_at,x.provenance,x.semantic_at_change,x.pipeline_id_at_change,x.from_position_at_change,x.to_position_at_change
+   FROM deal_stage_history x WHERE x.deal_id=e.deal_id AND ` + weekly.StageMoveOrder("x") + `>` + weekly.StageMoveOrder("eh") + ` AND x.changed_at<` + cutoff + `
    ORDER BY x.changed_at,COALESCE(x.write_seq,0),x.id LIMIT 1) nx ON true
  LEFT JOIN LATERAL (SELECT p.semantic_at_change FROM deal_stage_history p
-   WHERE p.deal_id=e.deal_id AND ` + stageMoveOrder("p") + `<` + stageMoveOrder("eh") + ` ORDER BY p.changed_at DESC,COALESCE(p.write_seq,0) DESC,p.id DESC LIMIT 1) pv ON true
+   WHERE p.deal_id=e.deal_id AND ` + weekly.StageMoveOrder("p") + `<` + weekly.StageMoveOrder("eh") + ` ORDER BY p.changed_at DESC,COALESCE(p.write_seq,0) DESC,p.id DESC LIMIT 1) pv ON true
  WHERE ` + fieldScope + ` ORDER BY e.id LIMIT ` + b.add(reportingFactLimit+1)
 	facts, err := scanStageCohortFacts(ctx, tx, query, b, said)
 	if err != nil {
@@ -132,7 +128,7 @@ func readReportingStageConversion(ctx context.Context, tx pgx.Tx, frame crmcontr
 	coverage := crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}
 	for _, fact := range facts {
 		if fact.Outcome == cohortHistoryPartial {
-			coverage = reportingGap(reportingPartial, said.Say(cohortWords.StageOrderUnknown))
+			coverage = reportingGap(reportingPartial, said.Say(cohortWords.ExitNotRecorded))
 			coverage.Withheld = withheld
 			break
 		}

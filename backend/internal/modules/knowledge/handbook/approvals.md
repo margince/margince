@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
 # Approvals
 
 An approval in Margince is a change an agent proposed but was not allowed to
@@ -16,6 +16,11 @@ A deal win also names its effects on linked correspondence and eligible delivery
 
 Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
 Request a new proposal with current context, or reject the old one.
+
+Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run
+touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can
+see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
+that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
 ## Reading an import proposal
 
@@ -92,7 +97,9 @@ Margince tells one colleague about each approval: the one it is for. That is the
 
 A promise read from mail or a meeting and **Add contact from mail** are the exception. Only the colleague who made the promise, or whose mailbox the sender wrote to, is told, and only they may answer it. If they cannot be asked, nobody is.
 
-The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
+The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and after the change. The other details the card lists follow, up to eight lines in all. Each further change the card lists under **Also changes** follows, in the card's words. It also says why you are asked.
+
+The email leaves out any value you may not see. If the change touches a record you cannot open, the email shows none of the plan. Like the card, it says a colleague who can see it must decide.
 
 The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out. No email goes out for an approval your own connected AI tool raised while you work with it, because the conversation shows it to you. It still waits in your approvals list and your digest.
 Also called: approval email, decision needed, who gets notified, approval notice.

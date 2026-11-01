@@ -76,6 +76,47 @@ export const WithRelationships: Story = {
   },
 };
 
+// A partner's own page. It referred o-2, which reads "Referred", and was itself
+// referred by o-3, which reads "Referred by": one kind, read from each end.
+export const ReferralsFromThePartner: Story = {
+  render: () => {
+    const referral = {
+      ...employmentRel,
+      kind: "referred_by",
+      role: null,
+      contact_id: null,
+    };
+    stubWithSession(
+      {
+        "GET /relationships": () =>
+          jsonResponse({
+            data: [
+              {
+                ...referral,
+                id: "rel-r1",
+                company_id: "o-2",
+                counterparty_company_id: "o-1",
+              },
+              {
+                ...referral,
+                id: "rel-r2",
+                company_id: "o-1",
+                counterparty_company_id: "o-3",
+              },
+            ],
+            page: { next_cursor: null, has_more: false },
+          }),
+      },
+      MAY_WRITE_RELATIONSHIPS,
+    );
+    return (
+      <StoryProviders>
+        <RelationshipsTab scope={{ company_id: "o-1" }} />
+      </StoryProviders>
+    );
+  },
+};
+
 /** The add form, open: the counterparty search above the edge's own fields. */
 export const Adding: Story = {
   ...WithRelationships,

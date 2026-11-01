@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { isMailbox } from "../format/connectorprovider";
 import { connectorsPollInterval } from "./capture-progress";
 import { problemCode, throwProblem } from "./problem";
 
@@ -58,4 +59,17 @@ export function useConnectors(
     // dialog all draw the run from this read.
     refetchInterval: (query) => connectorsPollInterval(query.state.data),
   });
+}
+
+/**
+ * Whether this reader has a mailbox the product can send from: a connected
+ * mail connection, not a calendar. Unanswered reads as none, because a drawer
+ * offered on a guess would open onto a refusal.
+ */
+export function useMailboxConnected(): boolean {
+  const connectors = useConnectors();
+  return (connectors.data?.data ?? []).some(
+    (connection) =>
+      connection.status === "connected" && isMailbox(connection.provider),
+  );
 }

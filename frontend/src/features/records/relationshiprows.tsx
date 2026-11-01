@@ -25,7 +25,6 @@ import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import "../../design-system/querystates.css";
 import { EntityRef } from "../../components/entityref";
-import { KIND_LABELS } from "../../lib/relationshipkinds";
 import "./relationshiprows.css";
 import {
   AddRelationshipAction,
@@ -33,6 +32,7 @@ import {
   dateRange,
   fetchRelationships,
   invalidateAfterEdge,
+  kindLabelFor,
   orNull,
   type Relationship,
   type RelationshipScope,
@@ -162,7 +162,7 @@ export function RelationshipRows({
             {
               key: "kind",
               term: t("rel.kind"),
-              value: <Badge>{t(KIND_LABELS[rel.kind])}</Badge>,
+              value: <Badge>{t(kindLabelFor(rel, scope))}</Badge>,
             },
           ]),
       {
@@ -260,7 +260,7 @@ export function RelationshipRows({
             key: "kind",
             header: t("rel.kind"),
             render: (rel: Relationship) => (
-              <Badge>{t(KIND_LABELS[rel.kind])}</Badge>
+              <Badge>{t(kindLabelFor(rel, scope))}</Badge>
             ),
           },
         ]),

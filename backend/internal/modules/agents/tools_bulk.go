@@ -202,6 +202,9 @@ func (t bulkUpdateRecords) Handle(ctx context.Context, in json.RawMessage) (json
 			return nil, &BadArgsError{Cause: fmt.Errorf("%s needs record_type, verb and items", args.Mode)}
 		}
 		if args.Mode == bulkModeExecute {
+			if err := confirmBulkInChat(ctx, args); err != nil {
+				return nil, err
+			}
 			return t.changer.ExecuteBulkChange(ctx, cmd)
 		}
 		if cmd.ConfirmToken != "" {
@@ -226,6 +229,9 @@ func (t bulkUpdateRecords) undo(ctx context.Context, args bulkUpdateRecordsArgs)
 		return nil, &BadArgsError{Cause: fmt.Errorf("%s takes only batch_id and confirm_token; the batch names the rest", args.Mode)}
 	}
 	if args.Mode == bulkModeUndo {
+		if err := confirmBulkInChat(ctx, args); err != nil {
+			return nil, err
+		}
 		return t.changer.UndoBulkChange(ctx, *args.BatchID, args.ConfirmToken)
 	}
 	if args.ConfirmToken != "" {

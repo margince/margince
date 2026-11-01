@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { Badge } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { formatDateTime, formatNumber } from "../../format/format";
@@ -16,6 +17,7 @@ import {
   reportingPeriodLabel,
 } from "./reporting.model";
 
+// The chart's foot line: what period or moment it covers, and whom it credits.
 export function ChartContext({
   chart,
   evaluation,
@@ -27,7 +29,7 @@ export function ChartContext({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const { timezone, currency } = evaluation.context;
+  const { timezone } = evaluation.context;
   return (
     <div className="reporting-context">
       <span className="t-caption">
@@ -52,10 +54,43 @@ export function ChartContext({
             : t("reporting.all_open")}
         </span>
       )}
+      {chart.capture_status?.failure && (
+        <p className="t-caption" role="status">
+          {chart.capture_status.failure}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Beside the chart's title: coverage short of complete, said where it
+// qualifies the figure, and one door to everything the figure was read from.
+export function ChartDetails({
+  chart,
+  evaluation,
+}: Readonly<{
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { timezone, currency } = evaluation.context;
+  return (
+    <div className="reporting-details">
+      {chart.coverage.status !== "ok" && (
+        <Badge tone="warning">
+          {t(`reporting.status.${chart.coverage.status}`)}
+        </Badge>
+      )}
       <Popover
-        onHover
-        className="evmark-trigger t-caption"
-        label={t("reporting.contextDetails")}
+        variant="ghost"
+        className="btn-icon reporting-details-trigger"
+        label={
+          <>
+            <Info aria-hidden="true" />
+            <span className="sr-only">{t("reporting.contextDetails")}</span>
+          </>
+        }
       >
         <p>
           {evaluation.context.scope.label} · {timezone}
@@ -117,36 +152,21 @@ export function ChartContext({
         {chart.coverage.status !== "ok" && chart.coverage.reason && (
           <p>{chart.coverage.reason}</p>
         )}
+        {chart.kind === "stage_age" && <SampleDetails chart={chart} />}
       </Popover>
-      {chart.kind === "stage_age" && <SampleDetails chart={chart} />}
-      {/* Coverage short of complete is said beside the period, where it
-          qualifies the figure; the reason joins the details above. */}
-      {chart.coverage.status !== "ok" && (
-        <Badge tone="warning">
-          {t(`reporting.status.${chart.coverage.status}`)}
-        </Badge>
-      )}
-      {chart.capture_status?.failure && (
-        <p className="t-caption" role="status">
-          {chart.capture_status.failure}
-        </p>
-      )}
     </div>
   );
 }
 
-// How many deals each stage's durations were read from, beside the chart's
-// other details rather than under the chart it qualifies.
+// How many deals each stage's durations were read from, with the chart's other
+// details rather than under the chart it qualifies.
 function SampleDetails({ chart }: Readonly<{ chart: ReportingChart }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <Popover
-      onHover
-      className="evmark-trigger t-caption"
-      label={t("reporting.sampleDetails")}
-    >
+    <>
+      <p className="t-caption">{t("reporting.sampleDetails")}</p>
       {chart.points.map((point) => (
         <p key={point.key} className="t-caption">
           {point.label} ·{" "}
@@ -160,7 +180,7 @@ function SampleDetails({ chart }: Readonly<{ chart: ReportingChart }>) {
             : ""}
         </p>
       ))}
-    </Popover>
+    </>
   );
 }
 

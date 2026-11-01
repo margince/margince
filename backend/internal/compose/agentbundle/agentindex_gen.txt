@@ -275,7 +275,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /meeting-prep` | prepForMeeting | Get ready for a meeting about one record. | Read records | at once |
 | `GET /context-search` | searchContext | The records most relevant to a description, ranked by meaning as well as words. | Read records | at once |
 | `POST /workspace-queries` | queryWorkspace | Answer a query plan over the workspace's records. | Read records | at once |
-| `POST /entity-resolutions` | resolveEntities | Whether the contacts and companies in a payload are already records here. | Read records | at once |
+| `POST /entity-resolutions` | resolveEntities | Find out whether a contact or company is already a record here, before creating one. | Read records | at once |
 | `GET /record-fields` | describeRecordFields | The fields a record create or update may write, for each record type. | Read records | at once |
 | `GET /list-filters` | describeListFilters | The filters a record list may be narrowed by, for each record type. | Read records | at once |
 | `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | Read records | at once |

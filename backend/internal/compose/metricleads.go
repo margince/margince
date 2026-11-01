@@ -49,7 +49,7 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 	case reportingLeadsCreated:
 		fields = append(fields, "origin")
 	case reportingLeadsPromoted:
-		fields = append(fields, "qualified_deal_id")
+		fields = append(fields, "qualified_deal_id", "promoted_at")
 	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
 	case reportingLeadCohortOutcomes:
@@ -164,11 +164,23 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,
- CASE WHEN l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<` + at + ` THEN 1 ELSE 0 END::float8,'lead_created','',''
+ CASE WHEN ` + leadQualifiedBySQL(at) + ` THEN 1 ELSE 0 END::float8,'lead_created','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + countedLeadSQL + ` AND l.created_at>=` + b.add(reportingEarliest(frame)) + ` AND l.created_at<` + at + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsPromoted, string(recordTypeLead), query, b, withheld)
+}
+
+// leadQualifiedBySQL holds for a lead qualified into a deal before at: the
+// Leads qualified reading's value, which the team review's members share.
+func leadQualifiedBySQL(at string) string {
+	return "l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<" + at
+}
+
+// leadAwaitingBySQL holds for a lead that wrote in, is still open and had no
+// first reply before at. It is the rule of Leads still waiting for a reply.
+func leadAwaitingBySQL(at string) string {
+	return "l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=" + at + ") AND " + auth.LiveLeadInquiryClause("l")
 }
 
 // leadArrivedSQL is the arrival cohort both response readings count from: a
@@ -230,8 +242,7 @@ func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame cr
 	}
 	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
- WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=` + at + `)
- AND ` + auth.LiveLeadInquiryClause("l") + ` AND ` + scope + `
+ WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND ` + leadAwaitingBySQL(at) + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsAwaitingResponse, string(recordTypeLead), query, b, withheld)
 }

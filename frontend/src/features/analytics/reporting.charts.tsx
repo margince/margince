@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { Button, EmptyState } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { ChartBody, chartTitle } from "./reporting.chartbody";
-import { ChartContext } from "./reporting.chartcontext";
+import { ChartContext, ChartDetails } from "./reporting.chartcontext";
 import {
   type LaidOutItem,
   type LaidOutSection,
@@ -200,31 +200,36 @@ function itemKey(item: LaidOutItem): string {
     : `question:${item.question.id}`;
 }
 
-// One chart in its panel. The head holds the title alone. What the figure
-// covers and the door to its records sit in the foot, so a row of cards reads
-// as titles over charts.
+// One chart in its panel. The head holds the title and one quiet door to what
+// the figure was read from. What it covers and the door to its records share
+// one foot line, so a row of cards reads as titles over charts.
 export function ChartPanel({
   chart,
   wide,
   evaluation,
   editionId,
   onEvidence,
+  flatHead,
 }: Readonly<{
   chart: ReportingChart;
   wide: boolean;
   evaluation: ReportingEvaluation;
   editionId?: string;
   onEvidence: EvidenceAction;
+  // The one-line head of a panel among the Overview's cards.
+  flatHead?: boolean;
 }>) {
   const t = useT();
   const metricName = useMetricNames();
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
+      flatHead={flatHead}
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
       title={chartTitle(chart, evaluation, t, metricName)}
+      titleAction={<ChartDetails chart={chart} evaluation={evaluation} />}
       footer={
         <>
           <ChartContext
@@ -256,7 +261,13 @@ export function ChartPanel({
             onEvidence={onEvidence}
           />
         ) : (
-          <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
+          // An empty chart keeps its frame: the baseline and the reason where
+          // the marks would be, not a recessed box that reads as a field.
+          <div className="reporting-chart-empty">
+            <p className="t-caption">
+              {chart.coverage.reason ?? t("common.empty")}
+            </p>
+          </div>
         )}
       </PanelBody>
     </Panel>

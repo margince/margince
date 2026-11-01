@@ -423,6 +423,7 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		Author:              author,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		PartnerCompanyID:    idArg[ids.CompanyKind](req.PartnerCompanyId),
 		CustomFields:        req.AdditionalProperties,
 		RequestedContactID:  idArg[ids.ContactKind](req.ContactId),
 	}

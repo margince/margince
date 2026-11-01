@@ -16,6 +16,8 @@ To put a contact form on your website, open **Settings → Website forms** and c
 4. Choose **Create form**. The **Connect** dialog lists the steps, each with what to copy.
 5. Choose **Copy code** and paste the code into your page where the form goes. In a site builder, set the form to send to the **Form address** instead.
 Style the form as you like, but keep each field's `name`. A post from a website not on the list is refused.
+
+To check that the code works, send one test message from your page. Once Margince accepts it, the form's row shows **Last post** and the date. Until then it shows **No post recorded yet**.
 Also called: contact form, request form, lead form, web form, embed a form.
 
 ### Can I keep the form I already have?
@@ -36,7 +38,7 @@ Also called: field names, map fields, custom fields, my own form, Contact Form 7
 ### What happens when someone sends the form?
 Margince adds a lead with the prospect's name, email, phone and company, and the source **Website**. Everything the prospect wrote goes into a note on the lead's timeline.
 
-Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version.
+Open the note to see each field under its own label. The page it came from is a link, and the consent is a badge with its policy version. Margince stores that page, and the page before it, only as a web address. It drops the text after `?` except the `utm_` names, the text after `#`, and any name and password in the address. Text that is not a web address is not stored.
 
 If a lead or contact already has that email address, Margince adds the note to it and makes no new lead. A double click on the send button adds one note. If the address was erased on request, Margince keeps nothing, and the prospect sees the same message as any other.
 
@@ -113,11 +115,27 @@ Also called: spam, bots, junk leads.
 
 A prospect who sends, goes back and sends again keeps the first time, so the second message lands. That needs a browser that lets the page store it. In a browser that blocks this, a second send within three seconds of going back is still dropped. The code on your page does not update itself. Copy the **Code to paste** again when it changes.
 
+### How do I show a privacy notice under the form?
+To show one, edit the form and type it in **Privacy notice**, such as how the details are used. Add your privacy policy's `https` address in **Privacy policy link**. Fill either one, or both.
+
+The **Code to paste** for a browser form then shows the notice under the send button, and a link when you added one. A form you keep, or one a builder or your server sends, needs its own notice on your page. For what the notice says, such as the legal basis, see [What should my privacy notice say about the form?](#what-should-my-privacy-notice-say-about-the-form).
+Also called: privacy notice, privacy link, data use notice.
+
 ### How do I ask for consent?
-To ask for consent, edit the form and tick **Require consent before a submission is taken**. Type the text beside the tick box in **Consent wording**, and the version of your privacy policy if you have one. A post without the box ticked is refused. The note on each lead keeps the wording and the version, above the quote, as a record of what the prospect agreed to.
+To ask for consent, edit the form and tick **Require consent before a submission is taken**. Type the text beside the tick box in **Consent wording**, and the version of your privacy policy if you have one. A post without the box ticked is refused. The note on each lead keeps the wording and the version, above the quote, as a record of what the prospect agreed to. A record made now also names the form, and the page it was sent from when the form sends one.
 
 If the box is not required and the prospect leaves it empty, the note shows the consent as **Not agreed**. Consent to be contacted about a question is not consent to newsletters, so Margince does not add the lead to any mailing list.
 Also called: GDPR, privacy tick box, DSGVO, opt-in.
+
+### What should my privacy notice say about the form?
+When you run Margince yourself, you decide what happens to what the form asks for, so your own privacy notice must name the form. Put these in it:
+- **What the form asks for:** the fields on your form, such as name, email, phone, company and message. Also the page it was sent from, and the page before it when there is one.
+- **Why:** to answer the prospect's question.
+- **On what basis:** the steps the prospect asked for before a contract, where the form's details are needed for them (GDPR `Article 6(1)(b)`). Or a `legitimate interest` of yours in the contact (`Article 6(1)(f)`): name it, and why it comes before the prospect's own. Ask for consent only for something more, such as newsletters.
+- **Where it goes:** to your Margince. A Typeform or Tally form, or a Webflow form sent through the **Webflow webhook**, passes through that service first. A Webflow form whose **Action** is the **Form address** goes straight to your Margince. If your Margince sends lead details to an AI model or a data provider, name that too.
+- **How long it is kept:** as long as your rules say. See [How do I change how long Margince keeps data?](retention-exports-and-deletion.md#how-do-i-change-how-long-margince-keeps-data)
+- **Where to read more:** a link to your privacy policy, close to the form.
+Also called: privacy notice, privacy policy, GDPR notice.
 
 ### How do I stop a form?
 To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A paused form refuses posts until you choose **Resume form**. To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address.

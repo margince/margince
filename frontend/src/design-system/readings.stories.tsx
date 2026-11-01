@@ -316,3 +316,29 @@ export const LongStageNames: Story = {
     />
   ),
 };
+
+// A modelled range is not one of the parts. Its bracket under the track says
+// where the model expects the finish, on the parts' own scale.
+export const SegmentBarWithARange: Story = {
+  render: () => (
+    <SegmentBar
+      label="What the expected finish is made of"
+      parts={[
+        { key: "won", label: "Won", value: 420_000, amount: "€420K" },
+        {
+          key: "commit",
+          label: "Confirmed commit",
+          value: 340_000,
+          amount: "€340K",
+        },
+      ]}
+      marker={{
+        key: "target",
+        label: "Target",
+        value: 800_000,
+        amount: "€800K",
+      }}
+      band={{ label: "Modelled range", low: 610_000, high: 980_000 }}
+    />
+  ),
+};

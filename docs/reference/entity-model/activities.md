@@ -97,7 +97,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `activity_audience_check`: `CHECK ((audience = ANY (ARRAY['workspace', 'participants', 'selected'])))`
-- `activity_body_completeness_check`: `CHECK ((body_completeness = ANY (ARRAY['complete', 'partial', 'unreadable', 'forwarded', 'unassessed'])))`
+- `activity_body_completeness_check`: `CHECK ((body_completeness = ANY (ARRAY['complete', 'partial', 'unreadable', 'forwarded', 'unassessed', 'unverifiable'])))`
 - `activity_calendar_method_check`: `CHECK ((calendar_method = ANY (ARRAY['PUBLISH', 'REQUEST', 'REPLY', 'ADD', 'CANCEL', 'REFRESH', 'COUNTER', 'DECLINECOUNTER'])))`
 - `activity_capture_label_check`: `CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment', 'meeting', 'noise']))))`
 - `activity_capture_label_stamped`: `CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))`

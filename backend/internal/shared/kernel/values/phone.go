@@ -33,6 +33,14 @@ type Phone struct{ s string }
 // PhoneSeparators, so the gate can hold the browser mirror in contacturi.ts to it.
 const InternationalDialPrefix = "00"
 
+// NationalTrunkMarkPattern finds the trunk zero written in brackets right after
+// the country code, as in "+49 (0) 30 …". A caller from abroad never dials it,
+// so ParsePhone keeps the prefix and code and drops the mark. A "(0)" further in
+// is a digit. Exported for the browser mirror's gate.
+const NationalTrunkMarkPattern = `^(\+|00)([0-9]{1,3})[ \t.\-/]*\(0\)`
+
+var nationalTrunkMark = regexp.MustCompile(NationalTrunkMarkPattern)
+
 // PhoneSeparators are the characters ParsePhone drops as formatting.
 func PhoneSeparators() []string { return []string{" ", "\t", "(", ")", ".", "-", "/"} }
 
@@ -47,7 +55,7 @@ func newSeparatorStripper() *strings.Replacer {
 }
 
 func ParsePhone(raw string) (Phone, error) {
-	cleaned := phoneSeparators.Replace(strings.TrimSpace(raw))
+	cleaned := phoneSeparators.Replace(nationalTrunkMark.ReplaceAllString(strings.TrimSpace(raw), "$1$2"))
 	if cleaned == "" {
 		return Phone{}, &ParseError{Field: "phone", Code: "phone_empty", Message: "a phone number is required"}
 	}
