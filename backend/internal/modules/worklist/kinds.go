@@ -49,7 +49,7 @@ type Trigger struct {
 	By    string `yaml:"by"`
 }
 
-// Catalog is every declared kind, by name.
+// Catalog maps a kind's name to its declaration.
 type Catalog map[string]Kind
 
 var (

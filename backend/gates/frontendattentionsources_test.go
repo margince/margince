@@ -42,16 +42,16 @@ import (
 
 const (
 	attentionContract    = "api/crm.yaml"
-	frontendAttentionMap = "../frontend/src/lib/worklistcopy.ts"
+	frontendAttentionMap = "../frontend/src/lib/worklistkinds.gen.ts"
 )
 
-// focusSurfaceEntry reads one `source: "surface"` pair out of the map.
+// focusSurfaceEntry reads one `source: "surface"` pair out of a TypeScript map.
 var focusSurfaceEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*(?:["'][a-z]+["']|true)`)
 
-// tsCommentInSources strips comments before the entries are read: the map is
-// commented and the prose names sources, so a source deleted from the map but
-// mentioned above it would keep this gate green.
-var tsCommentInSources = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+// kindTableRow matches one row of the generated table: a key at the start of
+// a line, then the opening brace of its fields, so the fields' own keys are
+// never read as kinds.
+var kindTableRow = regexp.MustCompile(`(?m)^\s+"?([a-z][a-z0-9_.]*)"?:\s*\{`)
 
 // contract is as much of the OpenAPI document as this gate reads: one schema's
 // one property's enum. Named down to that so the corpus comes from the path the
@@ -97,36 +97,31 @@ func contractSources(t *testing.T) []string {
 	return slices.Compact(sources)
 }
 
-// surfacedSources reads the KNOWN_SOURCES literal out of the TypeScript module.
-//
-// The map moved when the lane page became the ranked queue: the decision lane's
-// FOCUS_SURFACE chose which BODY to draw, and this one decides whether a source
-// has a sentence at all. The invariant is the same either way — a source the
-// contract can emit and the client cannot name reaches a reader as an
-// identifier — so the gate follows the map rather than being deleted with the
-// page it used to guard.
+// surfacedSources reads the kinds out of the generated frontend table, the one
+// KNOWN_SOURCES re-exports. A source the contract can emit and the client
+// cannot name reaches a reader as an identifier, so every contract source must
+// have a row there, and every row a contract source.
 func surfacedSources(t *testing.T) []string {
 	t.Helper()
 	source, err := os.ReadFile(frontendAttentionMap)
 	if err != nil {
-		t.Fatalf("reading the frontend focus-surface map: %v", err)
+		t.Fatalf("reading the frontend kind table: %v", err)
 	}
-	const opener = "const KNOWN_SOURCES = {"
+	const opener = "export const WORKLIST_KINDS = {"
 	start := strings.Index(string(source), opener)
 	if start < 0 {
 		t.Fatalf("no %s declaration in %s", opener, frontendAttentionMap)
 	}
-	body := string(source)[start:]
+	body := string(source)[start+len(opener):]
 	if end := strings.Index(body, "\n}"); end >= 0 {
 		body = body[:end]
 	}
-	body = tsCommentInSources.ReplaceAllString(body, "")
 	var sources []string
-	for _, match := range focusSurfaceEntry.FindAllStringSubmatch(body, -1) {
+	for _, match := range kindTableRow.FindAllStringSubmatch(body, -1) {
 		sources = append(sources, match[1])
 	}
 	if len(sources) == 0 {
-		t.Fatalf("read no entries out of KNOWN_SOURCES — the parser has stopped seeing the map")
+		t.Fatalf("read no rows out of WORKLIST_KINDS: the parser has stopped seeing the table")
 	}
 	slices.Sort(sources)
 	return slices.Compact(sources)

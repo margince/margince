@@ -703,6 +703,13 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-worklist
+
+# The frontend's table of Worklist kinds, from backend/api/worklist-kinds.yaml.
+# tools/gen-worklist's own test fails a stale table; run it with -count=1, since
+# the table lives outside this module and the test cache does not watch it.
+gen-worklist: ## Regenerate frontend/src/lib/worklistkinds.gen.ts from the kind catalog
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-worklist
 
 # Every file the settings registry is the source of: the settings tables in
 # docs/reference/configuration.md, config/margince.example.yaml,

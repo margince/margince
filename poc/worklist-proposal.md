@@ -114,7 +114,7 @@ the same time.
 
 ### 1.5 The problems
 
-**Problem 1: it is slow, and the time is not in any one kind.**
+Problem 1. It is slow, and the time is not in any one kind.
 
 PERF-8 asks for a Worklist answer under 1 second. On the bench data today:
 
@@ -145,7 +145,7 @@ still runs every lane to re-read the rows live.
 So the cost sits in machinery that **all 29 kinds share**: planning, the
 access check and the scroll tail. Making one kind faster does not move it.
 
-**Problem 2: it grows by hand.**
+Problem 2. It grows by hand.
 
 Adding one kind of work today:
 
@@ -194,11 +194,11 @@ cannot put real work on the list at all: it can only send a plain notice.
 
 | Piece | What it does | Built on the branch? |
 |---|---|---|
-| Kind catalog | One YAML file says what each kind of work is; extensions add to it | YAML, loader and checks: yes. Generator: next |
+| Kind catalog | One YAML file says what each kind of work is; extensions add to it | YAML, loader, checks and the frontend table: yes. Backend table: next |
 | Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | Yes (switched on by the test; the production hook is next) |
 | Identity check once | The "who am I" list is computed once per statement, not once per row | Yes |
 | Scroll tail continues | Scrolling starts where each lane stopped instead of from the beginning | Next |
-| Ground-truth check | Proves a change gives exactly today's answers | Yes |
+| Ground-truth check | Proves a change gives today's answers, field by field | Yes |
 
 ### 2.2 Principles
 
@@ -309,17 +309,19 @@ How it flows:
 
 ```
  backend/api/worklist-kinds.yaml        extensions/<unit>/api/worklist-kinds.yaml
-          └──────────────┬──────────────────────┘   (adds ext_<unit>.<kind>)
-                         ▼  merged, as jobs.yaml fragments are today
-                         ▼  tools/gen-worklist (next): load, check, generate
-          internal/compose/attention/kinds_gen.go
-                         ▼
-          the engine's maps read this table · tests compare it with the API contract
+          └──────────────┬──────────────────────┘   (adds ext_<unit>.<kind>; merge is next)
+                         ▼  tools/gen-worklist: load, check, generate
+          ┌──────────────┴──────────────────────────────┐
+          ▼                                             ▼
+ internal/compose/attention/kinds_gen.go     frontend/src/lib/worklistkinds.gen.ts
+ the engine's maps read it (next)            the frontend names kinds from it (built)
+          ▼                                             ▼
+ tests compare both with the API contract, and fail a stale file
 ```
 
 - **No defaults.** A missing field, an unknown field, or a value outside its
   list is refused when the file loads.
-- **Today's rules move, they do not change.** The catalog holds exactly what
+- **Today's rules move, they do not change.** The catalog holds what
   today's five maps hold (checked: 29 kinds × 5 fields, 0 differences).
 - **Extensions.** A unit declares `ext_<unit>.<kind>` with a `max_level`
   ceiling, so it can never claim "a customer is waiting" or a pin. Its rows are
@@ -330,7 +332,56 @@ How it flows:
 - What stays in Go: how each kind is ranked (classifiers, levels, limits,
   actions, reasons).
 
-### 2.7 What happens when a record changes
+### 2.7 The kind catalog in the frontend
+
+The frontend already takes its types from the API contract
+(`frontend/src/api/schema.d.ts`, generated from `backend/api/crm.yaml`), and the
+server already sends each row's category, screen and actions. What it still
+kept by hand was the list of kinds it can name: `KNOWN_SOURCES` in
+`frontend/src/lib/worklistcopy.ts`, 29 entries typed one by one.
+
+Now `tools/gen-worklist` writes that list from the catalog:
+
+```ts
+// frontend/src/lib/worklistkinds.gen.ts  (generated, do not edit)
+export const WORKLIST_KINDS = {
+  approval: {
+    category: "decisions",
+    titleKey: "worklist.untitled.approval",
+  },
+  customer_waiting: {
+    category: "customer_waiting",
+    titleKey: "worklist.untitled.customer_waiting",
+  },
+  // ... one row per kind in the catalog
+} as const satisfies Record<string, { category: Category; titleKey: string }>;
+```
+
+```
+ worklistcopy.ts     KNOWN_SOURCES = WORKLIST_KINDS      (was a hand-typed list of 29)
+ en.ts · de.ts · vi.ts   every titleKey must exist, or generation fails
+ Category            typed from the API contract, so a category the API
+                     does not know does not compile
+```
+
+- **One place to add a kind.** A new catalog entry reaches the frontend through
+  `make gen-worklist`. If its title is missing in any language, generation
+  stops and names the missing key.
+- **Extension titles.** An extension kind's title key sits under its unit
+  (`ext_vn.einvoice_rejected` → `extVn.worklist.einvoice_rejected`), the prefix
+  every unit's own locale keys already use.
+- **Presentation only.** The table names a kind and says it exists. What a row
+  does (its screen, rank, counts and actions) still comes on the row from the
+  API, as the contract requires. The few rules written for one kind
+  (`customer_waiting`'s eyebrow, a Done rule) stay as code.
+- **Checks.** `tools/gen-worklist`'s own test fails if the generated file is
+  stale (run it with `-count=1`: the file lives outside the backend module, so
+  Go's test cache does not see it change). The gate
+  `backend/gates/frontendattentionsources_test.go` now reads the generated
+  table and fails if a kind the API can send has no row, or a row names a kind
+  the API cannot send.
+
+### 2.8 What happens when a record changes
 
 Because every lane reads live inside the snapshot, a change shows on the next
 read with no extra code:
@@ -347,7 +398,7 @@ This is why the approach keeps the engine. A design that copies work items
 into a separate store needs extra code for every line above, for every kind
 (see 3.3).
 
-### 2.8 How we keep it safe: the ground-truth check
+### 2.9 How we keep it safe: the ground-truth check
 
 ```
             ┌──────────── same data, clock pinned to one instant ────────────┐
@@ -368,7 +419,7 @@ into a separate store needs extra code for every line above, for every kind
   becomes an integration test that takes its views, scopes and filters from the
   API contract, so it fails if coverage shrinks.
 
-### 2.9 What we are not doing now
+### 2.10 What we are not doing now
 
 - **Running lanes in parallel.** It would turn "sum of all lanes" into
   "slowest lane", but it needs several database connections per request
@@ -455,7 +506,9 @@ with wording fixes, which are applied.
 - The check's coverage: filters beyond each view's own; the small writes a read
   makes (snoozes returning, brief marked as opened, walk freeze); more hard
   cases in the bench data.
-- The scroll tail change and the catalog generator are not built.
+- Not built yet: the scroll tail change, the backend side of the catalog
+  generator (the engine's maps reading a generated table), and the merge of
+  extension catalog fragments.
 
 ### 3.6 The PoC branch: `poc/worklist-feed`
 
@@ -465,6 +518,7 @@ with wording fixes, which are applied.
  e9751633  push experiment: full rebuilds, ordering, change cases
  9d0c8e3b  the ground-truth check; plan reuse and identity change measured
  0c4126c3  PlanEachBind: the waiting scan keeps its own plans
+ next      the frontend kind table generated from the catalog
  later     this proposal
 ```
 
@@ -474,6 +528,8 @@ Files that matter:
 |---|---|
 | `backend/api/worklist-kinds.yaml` | The kind catalog |
 | `backend/internal/modules/worklist/kinds.go` | Loads and checks the catalog |
+| `backend/tools/gen-worklist/` | Generates the frontend kind table; checks titles in every language |
+| `frontend/src/lib/worklistkinds.gen.ts` | The generated frontend kind table |
 | `backend/internal/platform/database/planreuse.go` | `ReuseGenericPlans` and `PlanEachBind` (plan reuse) |
 | `backend/internal/platform/auth/memberidentity.go` | The identity check, once per statement |
 | `backend/internal/modules/activities/waitingsql.go` | `perBind`, used by the five waiting call sites |

@@ -1,3 +1,4 @@
+import { WORKLIST_KINDS } from "./worklistkinds.gen";
 import { sourceName } from "./worklistsources";
 
 export { sourceName } from "./worklistsources";
@@ -387,44 +388,15 @@ export function sourceUnavailableText(
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
-// The sources this build can name without its own sentence.
+// The sources this build can name without its own sentence: every kind in
+// backend/api/worklist-kinds.yaml, generated into worklistkinds.gen.ts.
 //
 // Exported so a gate over these sentences derives its corpus from here rather
 // than keeping a second copy of the list: a hand-maintained census goes short
 // of its subject the moment a source is added, and going short is the one way
 // this kind of check must not break — it reads a smaller product, reports PASS,
 // and leaves no failing assertion to notice.
-export const KNOWN_SOURCES = {
-  approval: true,
-  dedupe_candidate: true,
-  contact_case: true,
-  deal_suggestion: true,
-  tag_suggestion: true,
-  task: true,
-  weekly_commitment: true,
-  brief_item: true,
-  conversation_claim: true,
-  customer_waiting: true,
-  awaiting_reply: true,
-  meeting_follow_up: true,
-  lead_response: true,
-  deal_at_risk: true,
-  meeting: true,
-  meeting_outcome: true,
-  relationship_decay: true,
-  failed_approval: true,
-  dsr: true,
-  notice_case: true,
-  capture_health: true,
-  ai_work_health: true,
-  bounce: true,
-  undelivered: true,
-  automation_run: true,
-  notice: true,
-  introduction_request: true,
-  domain_question: true,
-  batch: true,
-} as const;
+export const KNOWN_SOURCES = WORKLIST_KINDS;
 
 function knownSource(
   source: WorklistItem["source"],
