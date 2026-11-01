@@ -146,7 +146,7 @@ func TestTheDirectionCensusSeesAPlantedReader(t *testing.T) {
 // per-entry reasons.
 const (
 	directionRegisterPath = "directionspellers.txt"
-	directionDebtCeiling  = 57
+	directionDebtCeiling  = 56
 )
 
 func readDirectionRegister(t *testing.T) map[string]bool {

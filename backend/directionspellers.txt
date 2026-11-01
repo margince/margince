@@ -71,7 +71,6 @@ internal/modules/contacts/enrichcandidates.go
 internal/modules/contacts/ensureactivity.go
 internal/modules/contacts/initialsrepair.go
 internal/modules/contacts/leadslaworkflow.go
-internal/modules/contacts/relationshipchange.go
 internal/modules/deals/championcover.go
 internal/modules/deals/engagement.go
 internal/modules/deals/evidenceauthorship.go
