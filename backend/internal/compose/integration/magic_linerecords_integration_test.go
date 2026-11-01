@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -136,10 +137,10 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 // other action still shows its images, and so does its record.
 func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 	e := Setup(t)
-	since := time.Now().Add(-time.Hour)
+	since := clocktest.Now(t).Add(-time.Hour)
 	seedDealActions(t, e, e.Rep1, 1, "advance_stage", `{"next_step": "Qualify"}`, `{"next_step": "Propose"}`)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	svc := magic.NewService(e.Pool, nil, time.Now)
+	svc := magic.NewService(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
 
 	receipt, err := svc.Read(ctx, &since, 20)
 	if err != nil {

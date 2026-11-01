@@ -333,8 +333,8 @@ func imagesDeferred(action string) bool {
 
 // loadDeferredImages reads the images the arms left unread, for the entries a
 // page shows, in one statement. The ids come from the scoped arms; the erasure
-// boundary is asked again, so a scrub certified since the arm read is not
-// republished. A row it no longer serves keeps no images.
+// boundary and a message's hold are asked again, so neither is undone by the
+// gap since the arm read. A row it no longer serves keeps no images.
 func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
 	at := map[ids.UUID]int{}
 	for i, e := range entries {
@@ -351,11 +351,15 @@ func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
+	// A message put on hold since the arm read it is withheld like an erased one.
 	query := fmt.Sprintf(`
-		SELECT a.id, a.before, a.after
-		  FROM audit_log a
-		 WHERE a.id = ANY($%d) AND %s`,
-		arg(auditIDs), privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))))
+		SELECT entry.id, entry.before, entry.after
+		  FROM audit_log entry
+		 WHERE entry.id = ANY($%d) AND %s
+		   AND (entry.entity_type <> 'activity' OR EXISTS (
+		         SELECT 1 FROM activity held WHERE held.id = entry.entity_id AND %s))`,
+		arg(auditIDs), privacy.UnscrubbedImageSQL("entry", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))),
+		auth.ActivityAvailableClause("held"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("read the shown machine actions' images: %w", err)
