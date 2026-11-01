@@ -10,7 +10,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `id` | `uuid` | yes | Primary key. |
+| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `attachments` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `attempts` | `integer`, default `0` | yes |  |

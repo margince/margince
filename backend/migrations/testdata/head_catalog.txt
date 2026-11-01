@@ -1914,7 +1914,7 @@ public.capture_owner_identity_withdrawn.capture_owner_identity_withdrawn_user_id
 public.capture_owner_identity_withdrawn.capture_owner_identity_withdrawn_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
 public.capture_owner_identity_withdrawn.created_at timestamp with time zone NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn.created_by text NOT NULL gen=- def=-
-public.capture_owner_identity_withdrawn.id uuid NOT NULL gen=- def=-
+public.capture_owner_identity_withdrawn.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_owner_identity_withdrawn.kind text NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn.source text NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn.user_id uuid NOT NULL gen=- def=-
@@ -2167,7 +2167,7 @@ public.commission_entry.created_at timestamp with time zone NOT NULL gen=- def=n
 public.commission_entry.currency currency_code NOT NULL gen=- def=-
 public.commission_entry.deal_id uuid NOT NULL gen=- def=-
 public.commission_entry.fx_rate_to_base numeric(20,10) gen=- def=-
-public.commission_entry.id uuid NOT NULL gen=- def=-
+public.commission_entry.id uuid NOT NULL gen=- def=uuidv7()
 public.commission_entry.margin_tier_at_accrual text gen=- def=-
 public.commission_entry.partner_company_id uuid NOT NULL gen=- def=-
 public.commission_entry.rate_bps integer NOT NULL gen=- def=-
@@ -2221,7 +2221,7 @@ public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::t
 public.comms_outbound.from_address text gen=- def=-
 public.comms_outbound.from_name text gen=- def=-
 public.comms_outbound.html_body text gen=- def=-
-public.comms_outbound.id uuid NOT NULL gen=- def=-
+public.comms_outbound.id uuid NOT NULL gen=- def=uuidv7()
 public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
 public.comms_outbound.inline_logo_key text gen=- def=-
@@ -4570,7 +4570,7 @@ public.forecast_capture_status.context_key text NOT NULL gen=- def=-
 public.forecast_capture_status.failure text gen=- def=-
 public.forecast_capture_status.forecast_capture_status_context_key_key UNIQUE (context_key)
 public.forecast_capture_status.forecast_capture_status_pkey PRIMARY KEY (id)
-public.forecast_capture_status.id uuid NOT NULL gen=- def=-
+public.forecast_capture_status.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_capture_status.last_attempt_at timestamp with time zone NOT NULL gen=- def=-
 public.forecast_capture_status.last_success_at timestamp with time zone gen=- def=-
 public.forecast_capture_status.next_capture_at timestamp with time zone NOT NULL gen=- def=-
@@ -5938,7 +5938,7 @@ public.mail_draft.cc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
 public.mail_draft.html_body text gen=- def=-
-public.mail_draft.id uuid NOT NULL gen=- def=-
+public.mail_draft.id uuid NOT NULL gen=- def=uuidv7()
 public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.mail_draft.mail_draft_author_id_retirement_guard CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')
@@ -7040,7 +7040,7 @@ public.report_definition.audience_team_id uuid gen=- def=-
 public.report_definition.created_at timestamp with time zone NOT NULL gen=- def=-
 public.report_definition.description text gen=- def=-
 public.report_definition.draft_revision bigint gen=- def=-
-public.report_definition.id uuid NOT NULL gen=- def=-
+public.report_definition.id uuid NOT NULL gen=- def=uuidv7()
 public.report_definition.name text NOT NULL gen=- def=-
 public.report_definition.owner_id uuid NOT NULL gen=- def=-
 public.report_definition.report_definition_audience_check CHECK ((audience = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
@@ -7077,7 +7077,7 @@ public.report_edition acl=margince_owner=arwdDxt/margince_owner,margince_app=arw
 public.report_edition.captured_at timestamp with time zone NOT NULL gen=- def=-
 public.report_edition.execution_id uuid NOT NULL gen=- def=-
 public.report_edition.expired_at timestamp with time zone gen=- def=-
-public.report_edition.id uuid NOT NULL gen=- def=-
+public.report_edition.id uuid NOT NULL gen=- def=uuidv7()
 public.report_edition.intended_due_at timestamp with time zone NOT NULL gen=- def=-
 public.report_edition.manifest jsonb NOT NULL gen=- def=-
 public.report_edition.owner_id uuid NOT NULL gen=- def=-
@@ -7132,7 +7132,7 @@ public.report_execution.attempt bigint NOT NULL gen=- def=0
 public.report_execution.edition_id uuid gen=- def=-
 public.report_execution.execution_key text NOT NULL gen=- def=-
 public.report_execution.fence bigint NOT NULL gen=- def=0
-public.report_execution.id uuid NOT NULL gen=- def=-
+public.report_execution.id uuid NOT NULL gen=- def=uuidv7()
 public.report_execution.intended_due_at timestamp with time zone NOT NULL gen=- def=-
 public.report_execution.interval_end timestamp with time zone NOT NULL gen=- def=-
 public.report_execution.interval_start timestamp with time zone NOT NULL gen=- def=-
@@ -7188,7 +7188,7 @@ public.report_run_pkey CREATE UNIQUE INDEX report_run_pkey ON public.report_run 
 public.report_schedule acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_schedule.definition jsonb NOT NULL gen=- def=-
 public.report_schedule.enabled boolean NOT NULL gen=- def=-
-public.report_schedule.id uuid NOT NULL gen=- def=-
+public.report_schedule.id uuid NOT NULL gen=- def=uuidv7()
 public.report_schedule.last_status text gen=- def=-
 public.report_schedule.next_due_at timestamp with time zone NOT NULL gen=- def=-
 public.report_schedule.owner_id uuid NOT NULL gen=- def=-
@@ -7307,7 +7307,7 @@ public.runner_job_pkey CREATE UNIQUE INDEX runner_job_pkey ON public.runner_job 
 public.runner_job_trigger_unique CREATE UNIQUE INDEX runner_job_trigger_unique ON public.runner_job USING btree (agent_spec, trigger_ref)
 public.sales_target acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target.created_at timestamp with time zone NOT NULL gen=- def=-
-public.sales_target.id uuid NOT NULL gen=- def=-
+public.sales_target.id uuid NOT NULL gen=- def=uuidv7()
 public.sales_target.metric text NOT NULL gen=- def=-
 public.sales_target.period_end timestamp with time zone NOT NULL gen=- def=-
 public.sales_target.period_kind text NOT NULL gen=- def=-
@@ -7368,7 +7368,7 @@ public.scheduled_send.anchor_activity_id uuid gen=- def=-
 public.scheduled_send.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.delivery_id uuid gen=- def=-
 public.scheduled_send.held_reason text gen=- def=-
-public.scheduled_send.id uuid NOT NULL gen=- def=-
+public.scheduled_send.id uuid NOT NULL gen=- def=uuidv7()
 public.scheduled_send.origin_kind text NOT NULL gen=- def=-
 public.scheduled_send.origin_links jsonb gen=- def=-
 public.scheduled_send.payload jsonb NOT NULL gen=- def=-
@@ -8190,7 +8190,7 @@ public.transcript_read.attempt integer NOT NULL gen=- def=1
 public.transcript_read.attempt_at timestamp with time zone NOT NULL gen=- def=now()
 public.transcript_read.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.transcript_read.finished_at timestamp with time zone gen=- def=-
-public.transcript_read.id uuid NOT NULL gen=- def=-
+public.transcript_read.id uuid NOT NULL gen=- def=uuidv7()
 public.transcript_read.line_count integer NOT NULL gen=- def=0
 public.transcript_read.proposal_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
 public.transcript_read.requested_by text NOT NULL gen=- def=-
