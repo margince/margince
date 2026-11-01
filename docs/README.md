@@ -133,6 +133,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   used, and record the time it takes.
 - [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
   holds, and how to compose one.
+- [run-from-container-images.md](how-to/run-from-container-images.md): what each image holds, and
+  which part starts first.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
   (`make e2e-ai`).
 - [certify-a-decision-site.md](how-to/certify-a-decision-site.md): test a model for one place in the code
