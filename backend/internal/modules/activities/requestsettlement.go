@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -375,17 +376,25 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 	// what it is. A first judgement CREATES and has no prior state to image; a
 	// later one REPLACES, and carries what the row said before.
 	if before == nil {
-		if _, err := storekit.Audit(ctx, tx, "create", "activity",
-			in.Request.RequestID, nil, after); err != nil {
+		auditID, err := storekit.Audit(ctx, tx, "create", "activity", in.Request.RequestID, nil, after)
+		if err != nil {
 			return err
 		}
-		return nil
+		return emitSettlementChanged(ctx, tx, auditID, in.Request.RequestID)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "activity",
-		in.Request.RequestID, before, after); err != nil {
+	auditID, err := storekit.Audit(ctx, tx, "update", "activity", in.Request.RequestID, before, after)
+	if err != nil {
 		return err
 	}
-	return nil
+	return emitSettlementChanged(ctx, tx, auditID, in.Request.RequestID)
+}
+
+// emitSettlementChanged announces a settlement write on the request it judges,
+// in the audit row's transaction, as every write carries its event.
+func emitSettlementChanged(ctx context.Context, tx pgx.Tx, auditID, request ids.UUID) error {
+	return storekit.EmitEvent(ctx, tx, auditID, request, crmcontracts.PublicEventActivityUpdated{
+		ChangedFields: crmcontracts.PublicEventActivityChangedFields{RequestSettlementChanged: new(true)},
+	})
 }
 
 // settlementProse is the prose half of a verdict, which only still_owed has.

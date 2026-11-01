@@ -323,6 +323,50 @@ func TestUnsureRecordsTheQuestionAndChangesNothingElse(t *testing.T) {
 	}
 }
 
+// Every settlement write carries its event, as every write does. An unsure
+// verdict touches no task, so the settlement row is the whole write, and it
+// must not commit without its outbox row.
+func TestEverySettlementWriteLeavesOneEventPerAuditRow(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	request := seedEmailRequest(t, e, "Judged twice", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, request, "Hm.", requestInstant.Add(time.Hour))
+
+	// The first verdict creates the settlement row and the second replaces it,
+	// so both of the writer's audit sites are reached.
+	candidate := repliedIDs(t, e, requestInstant.Add(48*time.Hour))[request]
+	for range 2 {
+		if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
+			Request: candidate, Verdict: RequestUnsure, Confidence: 0.4, DecidedBy: "test-model",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	audits, unannounced := settlementAudits(t, e, request, settlementVerdictCol)
+	if audits != 2 {
+		t.Fatalf("the two verdicts wrote %d settlement audit row(s), want 2", audits)
+	}
+	if unannounced != 0 {
+		t.Errorf("%d of %d settlement audit rows have no outbox row", unannounced, audits)
+	}
+}
+
+// settlementAudits counts the request's audit rows that wrote column, and those
+// of them with no outbox row beside them.
+func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string) (audits, unannounced int) {
+	t.Helper()
+	if err := e.owner.QueryRow(e.as(), `
+		SELECT count(*), count(*) FILTER (WHERE NOT EXISTS (
+		         SELECT 1 FROM event_outbox o WHERE o.envelope->'trace'->>'audit_log_id' = a.id::text))
+		  FROM audit_log a
+		 WHERE a.entity_type = 'activity' AND a.entity_id = $1 AND a.after ? $2`,
+		request, column).Scan(&audits, &unannounced); err != nil {
+		t.Fatal(err)
+	}
+	return audits, unannounced
+}
+
 // Somebody picking the work back up outranks the machine's verdict. Without
 // this the queue and the task list disagree: a reopened reminder sits on a
 // request every other reader reports as settled.
