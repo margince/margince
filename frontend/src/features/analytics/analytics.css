@@ -85,16 +85,23 @@
 
 /* One thing that needs the reader: what it is on the left, the door to where
    it is answered on the right, and the door drops under the words on a phone. */
+/* A row's title shares its line with the door; the lines under it take the
+   row's whole width, so they wrap less. */
 .analytics-attention-row {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  column-gap: var(--space-3);
 }
 .analytics-attention-text {
-  flex: 1 1 auto;
-  min-width: 0;
+  display: contents;
+}
+.analytics-attention-text > :not(:first-child) {
+  grid-column: 1 / -1;
+}
+.analytics-attention-row > :last-child {
+  grid-row: 1;
+  grid-column: 2;
 }
 .analytics-attention-title {
   font-weight: var(--fontWeightMedium);
@@ -143,6 +150,10 @@
   flex-direction: column;
   gap: var(--space-1);
   align-self: stretch;
+}
+/* Short facts, one per line: the gap spaces them, not the prose rhythm. */
+.analytics-hero-aside > p {
+  margin: 0;
 }
 /* A grid track never shrinks below its content, so the chart is let shrink. */
 .analytics-hero-chart {

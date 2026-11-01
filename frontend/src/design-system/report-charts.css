@@ -121,6 +121,12 @@
 .report-chart[data-size="compact"] {
   position: relative;
 }
+.report-chart[data-size="compact"] .report-chart-legend {
+  margin-bottom: var(--space-2);
+}
+.report-chart[data-size="compact"] .report-chart-data {
+  margin-top: var(--space-1);
+}
 .report-chart[data-size="compact"] .report-chart-focus {
   position: absolute;
   inset-block-start: 0;
