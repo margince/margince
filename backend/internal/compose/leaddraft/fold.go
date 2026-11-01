@@ -83,6 +83,36 @@ func greetingNames(full string) (first, last string) {
 	return strings.Join(strings.Fields(full), " "), ""
 }
 
+// wroteItOurSide answers who held the pen.
+//
+// The row's voice when it names a side. A colleague writing from one of our own
+// domains arrives inbound, and direction alone calls that mail theirs.
+//
+// A machine and an unresolved sender name no side, so those read the transport.
+func wroteItOurSide(activity crmcontracts.Activity) (ours, known bool) {
+	// Direction first, because having one is what makes a row correspondence. A
+	// note or a task is written down rather than sent, whoever authored it, so
+	// no side spoke and neither stamp moves.
+	if activity.Direction == nil {
+		return false, false
+	}
+	if voice := activity.Voice; voice != nil && voice.Author != nil {
+		switch voice.Author.Kind {
+		case crmcontracts.ActivityAuthorKindColleague:
+			return true, true
+		case crmcontracts.ActivityAuthorKindContactRecord:
+			return false, true
+		}
+	}
+	switch *activity.Direction {
+	case crmcontracts.ActivityDirectionOutbound:
+		return true, true
+	case crmcontracts.ActivityDirectionInbound:
+		return false, true
+	}
+	return false, false
+}
+
 // lastEachWay is when each side last wrote, zero for a direction that never
 // happened.
 //
@@ -96,18 +126,14 @@ func greetingNames(full string) (first, last string) {
 // latest of it. An activity with no direction is not a side speaking.
 func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Time) {
 	for _, activity := range activities {
-		if activity.Direction == nil {
+		ours, known := wroteItOurSide(activity)
+		switch {
+		case !known:
 			continue
-		}
-		switch *activity.Direction {
-		case crmcontracts.ActivityDirectionInbound:
-			if inbound.IsZero() {
-				inbound = activity.OccurredAt.UTC()
-			}
-		case crmcontracts.ActivityDirectionOutbound:
-			if outbound.IsZero() {
-				outbound = activity.OccurredAt.UTC()
-			}
+		case ours && outbound.IsZero():
+			outbound = activity.OccurredAt.UTC()
+		case !ours && inbound.IsZero():
+			inbound = activity.OccurredAt.UTC()
 		}
 		if !inbound.IsZero() && !outbound.IsZero() {
 			return inbound, outbound
