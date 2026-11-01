@@ -1,0 +1,84 @@
+# THE DIRECTION-SPELLING DEBT REGISTER — a count, not a permission.
+#
+# relstrength owns the rule for which side of a relationship wrote a message:
+# TheyWroteSQL admits what the contact sent, and WeWroteSQL what we sent. A
+# reader that spells `direction = '…'` in its own SQL has answered that question
+# for itself, and two answers to one question drift until they disagree where a
+# user can see it. One already did: the relationship-change fold counted a
+# colleague's reply on the contact's thread as the contact writing.
+#
+# Every file below spells the column today. The register exists so the census
+# can see ALL of them while the debt is paid down, rather than seeing only the
+# files that happen to call a renderer.
+#
+# THE COUNT IS EXACT. The ceiling it has to match is `directionDebtCeiling` in
+# gates/directionowner_test.go, so paying one debt means lowering that number in
+# the same change, and taking one on means raising it where a reader sees it.
+#
+# A file waived as a message-state reader does not belong here: it has answered
+# the question, and holding it in both places counts it twice.
+#
+# To remove a line:
+# move that file onto the rule, or, if it asks about one message rather than a
+# relationship, move it to messageStateReaders with a sentence saying so.
+#
+# There are no per-entry reasons here on purpose. Sixty rationalisations would
+# read as sixty permissions, and the gate would retire instead of sharpen.
+#
+# Sorted, one path per line.
+internal/compose/briefs/briefsnoozelift.go
+internal/compose/capturewhichdeal.go
+internal/compose/company360/roleproposalwrite.go
+internal/compose/datatask_leadmail.go
+internal/compose/datatask_senderauth.go
+internal/compose/dealscoutsql.go
+internal/compose/introadvance.go
+internal/compose/network/intronote.go
+internal/compose/ownsentmailrepair.go
+internal/compose/vcardingest.go
+internal/modules/activities/answered.go
+internal/modules/activities/capturelabel.go
+internal/modules/activities/citedthread.go
+internal/modules/activities/colleaguesender.go
+internal/modules/activities/deliveryreportrepair.go
+internal/modules/activities/emailparties.go
+internal/modules/activities/latestinbound.go
+internal/modules/activities/machinesender.go
+internal/modules/activities/messageidentity.go
+internal/modules/activities/owedreview.go
+internal/modules/activities/owedverdict.go
+internal/modules/activities/participantbackfill.go
+internal/modules/activities/promisefollowup.go
+internal/modules/activities/replyverdict.go
+internal/modules/activities/requestsettlementevidence.go
+internal/modules/activities/requeststate.go
+internal/modules/activities/responsemetrics.go
+internal/modules/activities/senderauth.go
+internal/modules/activities/sentthread.go
+internal/modules/activities/waitingcards.go
+internal/modules/activities/waitingsql.go
+internal/modules/capture/correspondencegate.go
+internal/modules/capture/heldmailtask.go
+internal/modules/capture/noisemailscope.go
+internal/modules/capture/pendingclaim.go
+internal/modules/capture/purgepersonal.go
+internal/modules/capture/sinkpersonalparts.go
+internal/modules/capture/sinkreply.go
+internal/modules/consent/authorizeevidence.go
+internal/modules/consent/qualifyingground.go
+internal/modules/contacts/acquiredhistory.go
+internal/modules/contacts/domainvendor.go
+internal/modules/contacts/enrichcandidates.go
+internal/modules/contacts/ensureactivity.go
+internal/modules/contacts/initialsrepair.go
+internal/modules/contacts/leadslaworkflow.go
+internal/modules/deals/championcover.go
+internal/modules/deals/engagement.go
+internal/modules/deals/evidenceauthorship.go
+internal/modules/privacy/sarjudgements.go
+internal/platform/auth/leadinquiry.go
+internal/platform/database/storekit/answered.go
+internal/platform/database/storekit/commitmentwork.go
+internal/platform/database/storekit/leadengagement.go
+internal/platform/database/storekit/mailresponsibility.go
+internal/shared/kernel/correspondence/conversation.go
