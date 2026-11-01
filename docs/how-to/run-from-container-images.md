@@ -13,9 +13,10 @@ The worker takes work from the queue, so nothing calls it to do its job. It
 does answer on `observe_addr` when that is set, serving `/healthz`, `/readyz`
 and `/metrics`, and nothing at all when it is unset.
 
-Every base is pinned by digest, and the Go and Node stages build for the
-target's architecture, so one build definition produces images for more than
-one platform.
+Every base is pinned by digest, and both build stages run on the builder's own
+platform. The Go ones cross-compile for the target architecture; the web assets
+are the same whatever the target, so they are built once. One build definition
+therefore produces images for more than one platform.
 
 ## The API migrates before it serves
 
