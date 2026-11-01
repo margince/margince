@@ -91,3 +91,21 @@ it("leaves the read running when Home already watches it", async () => {
   expect(worklist()?.aborted).toBe(false);
   home();
 });
+
+// Once the read answers there is nothing to abort. A hold left in place would
+// count as a screen showing the day, and Home's mount would skip its re-read.
+it("lets go of the day's Worklist once its read answers", async () => {
+  vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+    Response.json(brief),
+  );
+  const client = createQueryClient();
+  prefetchHome(client, new Map());
+  const day = () =>
+    client.getQueryCache().find({
+      queryKey: worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW)
+        .queryKey,
+      exact: true,
+    });
+  await vi.waitFor(() => expect(day()?.state.fetchStatus).toBe("idle"));
+  expect(day()?.getObserversCount()).toBe(0);
+});

@@ -23,7 +23,7 @@ import { notePrefetched } from "./queryclient";
 //
 // The returned cleanup belongs to the route. A prefetch has no observer, so a
 // reader who leaves first would leave the day's Worklist assembling. Holding one
-// until cleanup lets React Query abort that read once nothing observes its key.
+// lets React Query abort that read once nothing observes its key.
 export function prefetchHome(
   client: QueryClient,
   params: UrlParams,
@@ -44,10 +44,17 @@ export function prefetchHome(
     });
   };
   const day = worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW);
-  const holdDay = new InfiniteQueryObserver(client, day).subscribe(
-    () => undefined,
+  // Held only while the read is in flight: once it answers there is nothing to
+  // abort, and a held observer would count as a screen showing the day.
+  const release = new InfiniteQueryObserver(client, {
+    ...day,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  }).subscribe(() => undefined);
+  prefetched(day.queryKey, () =>
+    client.prefetchInfiniteQuery(day).then(release),
   );
-  prefetched(day.queryKey, () => client.prefetchInfiniteQuery(day));
   prefetched(morningBriefOptions.queryKey, () =>
     client.prefetchQuery(morningBriefOptions),
   );
@@ -55,5 +62,5 @@ export function prefetchHome(
   prefetched(handledForYouOptions.queryKey, () =>
     client.prefetchInfiniteQuery(handledForYouOptions),
   );
-  return holdDay;
+  return release;
 }
