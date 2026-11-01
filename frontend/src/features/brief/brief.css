@@ -257,6 +257,12 @@
 .brief-morning .glance-greeting {
   font: var(--fontDisplayLarge);
 }
+/* One line of the sentence's own face, held while the day is read. */
+.glance-sentence-pending {
+  display: flex;
+  align-items: center;
+  min-block-size: 1lh;
+}
 .brief-morning .glance-sentence {
   font: var(--fontLead);
   max-width: none;

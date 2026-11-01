@@ -113,3 +113,61 @@ it("a task owed to a contact keeps Done and offers the drafted mail before the d
     card.queryByRole("button", { name: en["record.verb.email"] }),
   ).toBeNull();
 });
+
+// The verbs arrive after the card: the task is read, then its contact. Their
+// row holds one verb's room meanwhile, so the card does not grow under a reader.
+it("a task lead holds its verbs' room until the task and its contact are read", async () => {
+  let landTask: (response: Response) => void = () => {};
+  let landContact: ((response: Response) => void) | undefined;
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
+    "GET /activities/task-1": () =>
+      new Promise<Response>((land) => {
+        landTask = land;
+      }),
+    "GET /contacts/c-1": () =>
+      new Promise<Response>((land) => {
+        landContact = land;
+      }),
+  });
+  render(
+    <StoryProviders>
+      <Triage
+        rows={[LEAD]}
+        at={0}
+        lead={LEAD}
+        onChoose={() => {}}
+        onOpenEmail={() => {}}
+        onContext={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const article = await screen.findByRole("article");
+  expect(article.querySelector(".skeleton")).not.toBeNull();
+
+  landTask(
+    jsonResponse({
+      id: "task-1",
+      kind: "task",
+      subject: LEAD.title,
+      occurred_at: "2026-09-08T09:00:00Z",
+      is_done: false,
+      links: [{ entity_type: "contact", entity_id: "c-1" }],
+    }),
+  );
+  await vi.waitFor(() => expect(landContact).toBeDefined());
+  expect(article.querySelector(".skeleton")).not.toBeNull();
+
+  landContact?.(
+    jsonResponse({
+      id: "c-1",
+      full_name: "Alice Brandt",
+      primary_email: "alice@example.com",
+    }),
+  );
+  const card = within(article);
+  expect(
+    await card.findByRole("link", { name: en["record.verb.email"] }),
+  ).toBeTruthy();
+  expect(article.querySelector(".skeleton")).toBeNull();
+});

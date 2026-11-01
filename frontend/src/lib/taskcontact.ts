@@ -9,10 +9,12 @@ import { contactQuery } from "./contact.queries";
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
 
-/** The contact a task is about, and whether the task was read out of a call. */
+/** The contact a task is about, and whether the task was read out of a call.
+ *  `pending` is a contact still being read, so a caller can hold its place. */
 export type TaskContact = Readonly<{
   contact: Contact | undefined;
   fromCall: boolean;
+  pending: boolean;
 }>;
 
 // The page's contact when the task links it, else its one contact link. Links
@@ -46,9 +48,9 @@ export function useTaskContact(
   const fromCall =
     source?.kind === "call" && source.content_state !== "withheld";
   if (contactId === undefined) {
-    return { contact: undefined, fromCall: false };
+    return { contact: undefined, fromCall: false, pending: false };
   }
   // A failed current read hides the cached answer, for useActivity's reason.
   const contact = pageContact ?? (read.isError ? undefined : read.data);
-  return { contact, fromCall };
+  return { contact, fromCall, pending: !pageContact && read.isPending };
 }

@@ -4,7 +4,7 @@
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
-import { Modal } from "../../design-system/atoms";
+import { Modal, PendingBody } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
@@ -146,6 +146,7 @@ export function BriefScreen() {
       week={review.data}
       firstName={firstName}
       now={new Date(nowMs)}
+      pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
       titleAside={morning ? undefined : <WeekStepper />}
@@ -293,6 +294,16 @@ function PersonalMorning({
                   run={brief.data}
                   onRetry={() => void query.refetch()}
                 />
+              </div>
+            )}
+            {/* The figures stand above the meetings, so their wait holds
+                their place rather than letting the meetings rise and fall. */}
+            {state === "loading" && (
+              <div className="brief-overview">
+                <Eyebrow as="h2" className="brief-section-label">
+                  {t("brief.rail.numbers")}
+                </Eyebrow>
+                <PendingBody label={t("state.loading")} lines={8} />
               </div>
             )}
             <SchedulePanel day={day} state={state} />
