@@ -121,6 +121,16 @@ To ask for consent, edit the form and tick **Require consent before a submission
 If the box is not required and the prospect leaves it empty, the note shows the consent as **Not agreed**. Consent to be contacted about a question is not consent to newsletters, so Margince does not add the lead to any mailing list.
 Also called: GDPR, privacy tick box, DSGVO, opt-in.
 
+### What should my privacy notice say about the form?
+When you run Margince yourself, you decide what happens to what the form asks for, so your own privacy notice must name the form. Put these in it:
+- **What the form asks for:** the fields on your form, such as name, email, phone, company and message, and the page it was sent from.
+- **Why:** to answer the prospect's question.
+- **On what basis:** the question itself (GDPR `Article 6(1)(b)`), or a business reason of your own for the contact (`Article 6(1)(f)`). Ask for consent only for something more, such as newsletters.
+- **Where it goes:** to your Margince. A form built in Webflow, Typeform or Tally passes through that service first. If your Margince sends lead details to an AI model or a data provider, name that too.
+- **How long it is kept:** as long as your rules say. See [How do I change how long Margince keeps data?](retention-exports-and-deletion.md#how-do-i-change-how-long-margince-keeps-data)
+- **Where to read more:** a link to your privacy policy, close to the form.
+Also called: privacy notice, privacy policy, GDPR notice.
+
 ### How do I stop a form?
 To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A paused form refuses posts until you choose **Resume form**. To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address.
 Also called: turn off form, disable form, delete form.
