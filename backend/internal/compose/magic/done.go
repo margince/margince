@@ -332,9 +332,9 @@ func imagesDeferred(action string) bool {
 }
 
 // loadDeferredImages reads the images the arms left unread, for the entries a
-// page shows, in one statement. The ids come from the scoped arms; the erasure
-// boundary and a message's hold are asked again, so neither is undone by the
-// gap since the arm read. A row it no longer serves keeps no images.
+// page shows, in one statement. The ids come from the scoped arms. The erasure
+// boundary and a message's hold are asked again, as either may have moved since
+// the arm read. A row it no longer serves keeps no images.
 func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
 	at := map[ids.UUID]int{}
 	for i, e := range entries {
