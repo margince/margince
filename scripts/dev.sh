@@ -564,14 +564,14 @@ stack_server_pids() { # dsn [redis_addr]
   done
 }
 
-# The Redis instance serves 80 logical databases in three blocks that must not
+# The Redis instance serves 81 logical databases in three blocks that must not
 # overlap (docker-compose.dev.yml says the same): 0 is the primary
-# worktree's stack, 1..63 belong to the parallel integration lane one per
-# package, and 64..79 are these per-worktree stacks. A stack landing in the test
+# worktree's stack, 1..64 belong to the parallel integration lane one per
+# package, and 65..80 are these per-worktree stacks. A stack landing in the test
 # range would have its streams FLUSHDB'd mid-run by a suite that believes it
 # owns the database.
-DEV_REDIS_DB_MIN=64
-DEV_REDIS_DB_MAX=79
+DEV_REDIS_DB_MIN=65
+DEV_REDIS_DB_MAX=80
 
 # read_registry SLUG — what every OTHER recorded stack holds, and what this slug
 # already holds itself. Sets TAKEN_DBS / TAKEN_PORTS (space-separated) and

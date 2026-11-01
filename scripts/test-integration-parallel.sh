@@ -195,7 +195,7 @@ GO_DIRS=(backend)
 # It is one PER PACKAGE, not per concurrent job — a package's keys must survive
 # the whole package, and a slot freed by a finished package cannot be handed on
 # while its successor is still reading.
-REDIS_DBS=63
+REDIS_DBS=64
 
 # Candidate packages: every directory in the module that holds test files. Which
 # of them belong to THIS lane is decided by the build-constraint scan in
