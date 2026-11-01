@@ -9026,6 +9026,12 @@ components:
         ticked: {type: boolean}
         wording: {type: string, description: 'The words the box showed, as the admin wrote them when the form was sent.'}
         policy_version: {type: string, description: 'The privacy policy version the form named, when it named one.'}
+        form_id:
+          type: string
+          format: uuid
+          description: The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+        form_name: {type: string, description: 'The form''s name when it was sent. Absent on an older record.'}
+        page_url: {type: string, description: 'The page the form was sent from, as `page_url` keeps it. Absent when the form sent none.'}
     SourceAuthor:
       type: object
       description: |-
@@ -12249,6 +12255,7 @@ components:
       type: object
       required: [id, rule, due_at, blocked]
       properties:
+        deadline_is_upper_bound: {type: boolean, description: 'The acquisition date is unknown; this is the latest possible deadline.'}
         id: {type: string, format: uuid}
         rule: {type: string, enum: [art13, art14]}
         due_at: {type: string, format: date-time}
@@ -12399,6 +12406,10 @@ components:
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Activity'}}
             page: {$ref: '#/components/schemas/PageInfo'}
+        privacy_source_reviews:
+          type: array
+          description: Unassessed sources for this contact. No confirmed duty or legal deadline. Withheld with the privacy_notice_duties section.
+          items: {type: string, format: uuid}
         privacy_notice_duties:
           type: array
           description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.

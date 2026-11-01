@@ -15462,6 +15462,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/privacy/notice-case-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Disclosure duties this installation owes, soonest deadline first.
+         * @description Acquisition-source reviews and notice duties, under human privacy-request read authority.
+         *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
+         *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
+         *     Pages use due time for duties and recorded time for reviews, with id as the tie-breaker.
+         */
+        get: operations["listNoticeCaseReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/notice-case-reviews/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One disclosure duty.
+         * @description The administrative record for a source review or notice duty. Human privacy-request read
+         *     authority covers the record; contact names remain limited by ordinary contact visibility.
+         */
+        get: operations["getNoticeCaseReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/notice-case-reviews/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Give a disclosure duty an owner.
+         * @description Records who is working this duty, so the queue shows a claimed case rather than a pile
+         *     nobody has taken.
+         *
+         *     An `open` case moves to `assigned`. A `queued` case already has a disclosure on its way and
+         *     a `blocked` one names an obstacle, so both take the owner and keep their state — somebody
+         *     looking at an obstacle has not cleared it, and saying the duty moved would be a claim about
+         *     work that has not happened. A case that has already ended takes no owner and answers 422.
+         */
+        post: operations["assignNoticeCaseReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/notice-case-reviews/{id}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm the source of an unassessed contact. */
+        post: operations["assessNoticeSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/communication-reviews/{id}": {
         parameters: {
             query?: never;
@@ -25686,6 +25779,15 @@ export interface components {
             wording: string;
             /** @description The privacy policy version the form named, when it named one. */
             policy_version?: string;
+            /**
+             * Format: uuid
+             * @description The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+             */
+            form_id?: string;
+            /** @description The form's name when it was sent. Absent on an older record. */
+            form_name?: string;
+            /** @description The page the form was sent from, as `page_url` keeps it. Absent when the form sent none. */
+            page_url?: string;
         };
         /**
          * @description Who wrote a record in the system it was imported from, when that is not
@@ -31691,6 +31793,8 @@ export interface components {
             activity_id: string;
         };
         ContactNoticeDuty: {
+            /** @description The acquisition date is unknown; this is the latest possible deadline. */
+            deadline_is_upper_bound?: boolean;
             /** Format: uuid */
             id: string;
             /** @enum {string} */
@@ -31796,6 +31900,8 @@ export interface components {
                 data: components["schemas"]["Activity"][];
                 page: components["schemas"]["PageInfo"];
             };
+            /** @description Unassessed sources for this contact. No confirmed duty or legal deadline. Withheld with the privacy_notice_duties section. */
+            privacy_source_reviews?: string[];
             /** @description Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld. */
             privacy_notice_duties?: components["schemas"]["ContactNoticeDuty"][];
             /** @description Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger. */
@@ -47526,6 +47632,22 @@ export interface components {
          */
         NoticeCaseState: "open" | "assigned" | "queued" | "delivery_failed" | "completed" | "provided_elsewhere" | "exempt_with_reason" | "blocked" | "not_required";
         /**
+         * @description Where a disclosure duty or source assessment stands. `source_review` needs acquisition-source review and has no computed deadline or sending route.
+         *
+         *     `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+         *     on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+         *     `completed` is a disclosure this installation sent and delivered.
+         *     `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+         *     `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+         *     reason attached, kept so nothing already closed is reinterpreted.
+         *
+         *     There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+         *     fact — a stored one would leave every late case looking on time whenever a sweep failed to
+         *     run.
+         * @enum {string}
+         */
+        NoticeCaseReviewState: "source_review" | "open" | "assigned" | "queued" | "delivery_failed" | "completed" | "provided_elsewhere" | "exempt_with_reason" | "blocked" | "not_required";
+        /**
          * @description One Art. 13 or Art. 14 disclosure duty: whose it is, what put it there, and by when.
          *
          *     `contact_id` is carried because the duty is discharged on that contact's own screen. There
@@ -47543,6 +47665,15 @@ export interface components {
              *     the name stays as visible as the record.
              */
             contact_name?: string | null;
+            /** @description The source confirmed by a privacy officer; the original acquisition evidence is retained. */
+            source_kind?: string | null;
+            /**
+             * Format: date-time
+             * @description The actual acquisition date confirmed during source review.
+             */
+            source_obtained_at?: string | null;
+            /** @description The evidence for the source assessment, in the privacy officer's words. */
+            source_review_note?: string | null;
             acquisition?: components["schemas"]["NoticeAcquisition"];
             /**
              * @description Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
@@ -47571,13 +47702,69 @@ export interface components {
             created_at: string;
         };
         /**
-         * @description The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
-         *     `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
-         *     happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+         * @description One acquisition-source review or confirmed disclosure duty. Source reviews have no deadline or sending route; a confirmed indirect source remains owed when its date is unknown.
+         *
+         *     `contact_id` is carried because the duty is discharged on that contact's own screen. There
+         *     is no notice-case screen to route to, so a row naming only the case would prompt a reader
+         *     with nowhere to go.
+         */
+        NoticeCaseReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contact_id: string;
+            /**
+             * @description The contact's display name. Absent or null when the caller may not read that contact, or
+             *     it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+             *     the name stays as visible as the record.
+             */
+            contact_name?: string | null;
+            /** @description The source confirmed by a privacy officer; the original acquisition evidence is retained. */
+            source_kind?: string | null;
+            /**
+             * Format: date-time
+             * @description The actual acquisition date confirmed during source review.
+             */
+            source_obtained_at?: string | null;
+            /** @description The evidence for the source assessment, in the privacy officer's words. */
+            source_review_note?: string | null;
+            acquisition?: components["schemas"]["NoticeAcquisition"];
+            /**
+             * @description Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
+             * @enum {string}
+             */
+            rule: "unassessed" | "none" | "art13" | "art14";
+            /** Format: date-time */
+            due_at: string | null;
+            state: components["schemas"]["NoticeCaseReviewState"];
+            /** @description How this duty may be discharged. A case with no route is one the product cannot close by sending anything, and it says so rather than offering a button that fails. */
+            allowed_routes?: string[];
+            /** Format: uuid */
+            owner_user_id?: string | null;
+            /** Format: date-time */
+            assigned_at?: string | null;
+            /** @description How many disclosures have been sent for this duty. */
+            attempts: number;
+            /** @description Why the duty was excused, or where it was provided. Present exactly when the state is provided_elsewhere or exempt_with_reason. */
+            resolution_note?: string | null;
+            /** Format: uuid */
+            resolved_by?: string | null;
+            blocked_reason?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
+         *     assessed `source_obtained_at`; an unknown date requires source review. Older cases may carry
+         *     a historical deadline. Absent or null when no evidence row resolves, which a reader shows as
          *     such rather than presenting a bare deadline. On an attention or worklist item only the
          *     `notice_case` source sends it.
          */
         NoticeAcquisition: {
+            /** @description For a confirmed duty with an unknown acquisition date, the deadline is a latest possible bound, not a confirmed acquisition deadline. */
+            deadline_is_upper_bound?: boolean;
             /** @description How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses. */
             kind: string;
             /**
@@ -47595,6 +47782,18 @@ export interface components {
             /** @description The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves. */
             captured_by_name?: string | null;
         } | null;
+        AssessNoticeSource: {
+            /** @enum {string} */
+            kind: "subject_initiated" | "customer_contract" | "requested_quote_or_meeting" | "in_person_permission" | "crm_migration" | "mailbox_history" | "event_or_form" | "referral" | "public_or_business_source" | "purchased_or_imported";
+            /** Format: date-time */
+            obtained_at?: string | null;
+            /**
+             * @description IANA timezone used for the acquisition calendar and its monthly deadline.
+             * @default UTC
+             */
+            timezone: string;
+            note: string;
+        };
         AssignNoticeCase: {
             /** Format: uuid */
             owner_user_id: string;
@@ -77989,6 +78188,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoticeCase"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listNoticeCaseReviews: {
+        parameters: {
+            query?: {
+                /** @description Repeat to ask for several. Omitted means every unresolved state. */
+                state?: components["schemas"]["NoticeCaseReviewState"][];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's queue time and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of notice cases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["NoticeCaseReview"][];
+                        page: components["schemas"]["PageInfo"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getNoticeCaseReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The case. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeCaseReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assignNoticeCaseReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignNoticeCase"];
+            };
+        };
+        responses: {
+            /** @description The case, with its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeCaseReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assessNoticeSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssessNoticeSource"];
+            };
+        };
+        responses: {
+            /** @description The assessed case. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeCaseReview"];
                 };
             };
             401: components["responses"]["Unauthorized"];

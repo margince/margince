@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/privacy/noticesource.test.tsx",
+    why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
+  },
+  {
     file: "features/analytics/reporting.questioncard.test.tsx",
     why: "A bound card shows the calendar its saved question keeps; that stored basis names a zone, and the note must print it as stored.",
   },

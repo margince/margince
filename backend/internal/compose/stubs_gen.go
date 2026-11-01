@@ -2911,6 +2911,22 @@ func (stubs) SetControllerParticulars(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "SetControllerParticulars")
 }
 
+func (stubs) ListNoticeCaseReviews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCaseReviewsParams) {
+	httperr.NotImplemented(w, r, "ListNoticeCaseReviews")
+}
+
+func (stubs) GetNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetNoticeCaseReview")
+}
+
+func (stubs) AssignNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AssignNoticeCaseReview")
+}
+
+func (stubs) AssessNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AssessNoticeSource")
+}
+
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {
 	httperr.NotImplemented(w, r, "ListNoticeCases")
 }

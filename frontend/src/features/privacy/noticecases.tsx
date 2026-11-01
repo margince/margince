@@ -61,6 +61,7 @@ import {
 } from "./noticecases.queries";
 import { NoticeDuty } from "./noticeduty";
 import { ExcuseModal } from "./noticeexcuse";
+import { SourceReviewDialog } from "./noticesource";
 
 // NoticeCasesCard is the disclosure-duty queue: who we obtained without asking,
 // whether anybody has told them, and by when we must.
@@ -80,6 +81,7 @@ function NoticeQueueCard() {
   const nowMs = useNow(60_000);
   const [facet, setFacet] = useState<NoticeFacet>("owed");
   const [excusing, setExcusing] = useState<NoticeCase | null>(null);
+  const [reviewing, setReviewing] = useState<NoticeCase | null>(null);
   const [sending, setSending] = useState<NoticeCase | null>(null);
   const queryClient = useQueryClient();
 
@@ -108,6 +110,7 @@ function NoticeQueueCard() {
     const labels: Record<NoticeFacet, string> = {
       owed: t("notice.facetOwed"),
       all: t("notice.facetAll"),
+      review: t("notice.source.title"),
     };
     return NOTICE_FACETS.map((value) => ({ value, label: labels[value] }));
   }, [t]);
@@ -139,13 +142,24 @@ function NoticeQueueCard() {
             <FilterPills
               pills={facetPills}
               value={facet}
-              onChange={setFacet}
+              onChange={(value) => {
+                setReviewing(null);
+                setFacet(value);
+              }}
               label={t("notice.facetLabel")}
             />
           </div>
         )}
         {body}
       </PanelBody>
+      {reviewing && (
+        <SourceReviewDialog
+          key={reviewing.id}
+          duty={reviewing}
+          open
+          onClose={() => setReviewing(null)}
+        />
+      )}
       <CardBoundary>
         {body === null && (
           <>
@@ -158,6 +172,7 @@ function NoticeQueueCard() {
               onAssign={(id, owner) => assign.mutate({ id, owner })}
               onExcuse={setExcusing}
               onSend={setSending}
+              onReview={setReviewing}
             />
             {query.hasNextPage && (
               <PanelBody>
@@ -250,6 +265,7 @@ type DutyVerbs = Readonly<{
   onAssign: (id: string, owner: string) => void;
   onExcuse: (row: NoticeCase) => void;
   onSend: (row: NoticeCase) => void;
+  onReview: (row: NoticeCase) => void;
 }>;
 
 function NoticeTable({
@@ -289,7 +305,13 @@ function NoticeTable({
       header: t("notice.duty"),
       render: (row) => (
         <CellStack>
-          <span title={noticeRuleHint(row.rule, t)}>
+          <span
+            title={
+              row.rule === "unassessed"
+                ? undefined
+                : noticeRuleHint(row.rule, t)
+            }
+          >
             {noticeRuleLabel(row.rule, t)}
           </span>
           {!isDefaultNoticeState(row.state) && (
@@ -308,7 +330,15 @@ function NoticeTable({
       header: t("notice.due"),
       render: (row) => (
         <CellStack>
-          <span>{formatDate(row.due_at, locale, tz)}</span>
+          <span>
+            {row.due_at
+              ? row.acquisition?.deadline_is_upper_bound
+                ? t("notice.latestBy", {
+                    date: formatDate(row.due_at, locale, tz),
+                  })
+                : formatDate(row.due_at, locale, tz)
+              : t("notice.source.noDeadline")}
+          </span>
           {isNoticeOverdue(row.due_at, row.state, nowMs) && (
             <Badge tone="danger">{t("notice.overdue")}</Badge>
           )}
@@ -414,6 +444,7 @@ function DutyMenu({
   canSend,
   onExcuse,
   onSend,
+  onReview,
 }: Readonly<{ row: NoticeCase }> & DutyVerbs) {
   const t = useT();
   // A contact this reader cannot see is one the send route would refuse.
@@ -423,11 +454,17 @@ function DutyMenu({
     !isNoticeResolved(row.state) &&
     (row.allowed_routes ?? []).includes("privacy_notice");
   const excusable = canWork && mayExcuse(row.state);
-  if (!sendable && !excusable) {
+  const reviewable = canWork && row.state === "source_review";
+  if (!sendable && !excusable && !reviewable) {
     return null;
   }
   return (
     <OverflowMenu label={t("table.rowActions", { name: dutyName(row, t) })}>
+      {reviewable && (
+        <Button onClick={() => onReview(row)}>
+          {t("notice.source.review")}
+        </Button>
+      )}
       {sendable && (
         <Button aria-haspopup="dialog" onClick={() => onSend(row)}>
           {t("noticeDuty.sendNotice")}

@@ -219,6 +219,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "partner_role", Values: []string{"hosting", "consulting", "strategic"}, Array: false, Explode: true},
 		{Name: "stage_meaning", Values: []string{"candidate", "signed", "ready", "active", "dormant", "ended"}, Array: false, Explode: true},
 	},
+	"GET /v1/privacy/notice-case-reviews": {
+		{Name: "state", Values: []string{"source_review", "open", "assigned", "queued", "delivery_failed", "completed", "provided_elsewhere", "exempt_with_reason", "blocked", "not_required"}, Array: true, Explode: true},
+	},
 	"GET /v1/privacy/notice-cases": {
 		{Name: "state", Values: []string{"open", "assigned", "queued", "delivery_failed", "completed", "provided_elsewhere", "exempt_with_reason", "blocked", "not_required"}, Array: true, Explode: true},
 	},
@@ -458,6 +461,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/partners": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/privacy/notice-case-reviews": {
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/privacy/notice-cases": {

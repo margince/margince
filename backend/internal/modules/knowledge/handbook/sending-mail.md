@@ -2,12 +2,6 @@
 <!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
-[Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
-what Margince checks before a send goes out, and setting a send for later.
-
-Who may then read what you sent is a separate question, answered in
-[Who can see an email](who-can-see-an-email.md).
-
 ### How do I send an email to a contact?
 To send an email to a contact in Margince, open the contact's page and choose **Email** in its header. Fill in the composer and press **Send**.
 1. Open the contact. The button may read **Write**, or **Message on {transport}** when chat is the only channel.
@@ -360,6 +354,12 @@ Mail from the contact does not create an Article 14 task. If a duty is still owe
 
 Before it goes, Margince shows you the notice and lets you pick its language, as it does for the confirmation request. The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
+
+### Why does a contact say “Review source”?
+The record does not say where the contact's details come from, so no notice deadline is set.
+In **Settings → Privacy**, a user with privacy access can check the source and its proof.
+If the details come from the contact, the review ends. Data from someone else may still need a notice.
+**Due no later than** is the last possible date. The duty may already be due.
 
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.

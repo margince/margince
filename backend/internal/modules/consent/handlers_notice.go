@@ -19,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -51,16 +52,7 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 		writeConsentErr(w, r, err)
 		return
 	}
-	names := h.noticeContactNames(r.Context(), cases...)
-	data := make([]crmcontracts.NoticeCase, 0, len(cases))
-	for _, c := range cases {
-		data = append(data, wireNoticeCase(c, names))
-	}
-	info := crmcontracts.PageInfo{HasMore: page.HasMore}
-	if page.NextCursor != "" {
-		info.NextCursor = &page.NextCursor
-	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, keyPage: info})
+	h.writeNoticeCasePage(w, r, cases, page)
 }
 
 // AssignNoticeCase records who is working a disclosure duty.
@@ -114,17 +106,24 @@ func (h Handlers) writeNoticeCase(w http.ResponseWriter, r *http.Request, c Noti
 
 // wireNoticeCase is the one place a case crosses into the contract shape, so a
 // column added to the row cannot reach two readers in two different spellings.
-func wireNoticeCase(c NoticeCase, names map[ids.UUID]string) crmcontracts.NoticeCase {
-	out := crmcontracts.NoticeCase{
-		Id:          openapi_types.UUID(c.ID),
-		ContactId:   openapi_types.UUID(c.ContactID.UUID),
-		ContactName: labelOf(names, c.ContactID.UUID),
-		Acquisition: c.Acquisition.Wire(),
-		Rule:        crmcontracts.NoticeCaseRule(c.Rule),
-		DueAt:       c.DueAt,
-		State:       crmcontracts.NoticeCaseState(c.State),
-		Attempts:    c.Attempts,
-		CreatedAt:   c.CreatedAt,
+func wireNoticeCase(c NoticeCase, names map[ids.UUID]string) crmcontracts.NoticeCaseReview {
+	if c.needsSourceReview() {
+		c.State, c.Rule, c.DueAt = NoticeSourceReview, RuleUnassessed, nil
+		c.AllowedRoutes, c.BlockedReason = []string{}, nil
+	}
+	out := crmcontracts.NoticeCaseReview{
+		Id:               openapi_types.UUID(c.ID),
+		ContactId:        openapi_types.UUID(c.ContactID.UUID),
+		ContactName:      labelOf(names, c.ContactID.UUID),
+		Acquisition:      c.Acquisition.WireDeadline(c.deadlineIsUpperBound()),
+		Rule:             crmcontracts.NoticeCaseReviewRule(c.Rule),
+		DueAt:            c.DueAt,
+		SourceKind:       c.SourceKind,
+		SourceObtainedAt: c.SourceObtainedAt,
+		SourceReviewNote: c.SourceReviewNote,
+		State:            crmcontracts.NoticeCaseReviewState(c.State),
+		Attempts:         c.Attempts,
+		CreatedAt:        c.CreatedAt,
 
 		AssignedAt:     c.AssignedAt,
 		ResolutionNote: c.ResolutionNote,
@@ -262,4 +261,17 @@ func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLoc
 		return nil
 	}
 	return h.locks(surface)
+}
+
+func (h Handlers) writeNoticeCasePage(w http.ResponseWriter, r *http.Request, cases []NoticeCase, page storekit.Page) {
+	names := h.noticeContactNames(r.Context(), cases...)
+	data := make([]crmcontracts.NoticeCaseReview, 0, len(cases))
+	for _, c := range cases {
+		data = append(data, wireNoticeCase(c, names))
+	}
+	info := crmcontracts.PageInfo{HasMore: page.HasMore}
+	if page.NextCursor != "" {
+		info.NextCursor = &page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, keyPage: info})
 }

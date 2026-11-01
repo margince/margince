@@ -9671,8 +9671,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeAppendOnly":
     "Ein Zweck lässt sich nach dem Erstellen weder umbenennen noch entfernen. Der Katalog kann nur ergänzt werden. Wähle den Schlüssel mit Bedacht.",
   "notice.title": "Informationspflichten",
-  "notice.sub":
-    "Kontakte, deren Daten nicht bei ihnen selbst erhoben wurden, und ob sie schon informiert wurden.",
+  "notice.sub": "Pflichten nach Frist; Quellenprüfungen nach Erfassungszeit.",
   "notice.facetLabel": "Pflichten anzeigen",
   "notice.facetOwed": "Noch ausstehend",
   "notice.facetAll": "Alle",
@@ -9703,6 +9702,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notice.acq.crmMigration": "CRM-Migration",
   "notice.acq.mailboxHistory": "Postfachverlauf",
   "notice.acq.unknownLegacy": "Quelle unbekannt",
+  "notice.source.contactExplanation":
+    "Die Herkunft der Daten muss geprüft werden. Den Datenschutzfall öffnen und die Nachweise prüfen.",
+  "notice.source.zoneHint":
+    "Wähle die Zeitzone der Erfassung, auch wenn du dich gerade woanders befindest.",
+  "notice.rule.none": "Keine gesonderte Informationspflicht",
+  "notice.ruleHint.none":
+    "Die Quellenprüfung oder die eigene Nachricht des Kontakts begründet keine gesonderte Informationsaufgabe.",
+  "notice.latestBy": "Spätestens bis {date}",
+  "notice.dueLatest": "Spätestens fällig am",
+  "notice.unknownDateWarning":
+    "Das Erfassungsdatum ist unbekannt; die Pflicht kann bereits fällig sein.",
+  "noticeDuty.observedOn": "Beobachtet am",
+  "notice.source.more": "Für diesen Kontakt sind weitere Quellen zu prüfen.",
+  "notice.source.title": "Quelle prüfen",
+  "notice.source.explanation":
+    "Die Quelle ist unbestätigt. Eine Informationspflicht und eine gesetzliche Frist stehen noch nicht fest. Vor einem Datenschutzhinweis prüfen, wie der Kontakt erfasst wurde.",
+  "notice.source.review": "Quelle prüfen",
+  "notice.source.confirm": "Quelle bestätigen",
+  "notice.source.evidence": "Nachweis der Quelle",
+  "notice.source.dateHint":
+    "Das tatsächliche Erfassungsdatum angeben, falls bekannt. Sonst bleibt eine bestätigte Pflicht mit einer spätestmöglichen Frist bestehen.",
+  "notice.source.noDeadline": "Keine bestätigte Frist",
   "notice.rule.art13": "Information nach Art. 13",
   "notice.rule.art14": "Information nach Art. 14",
   "notice.ruleHint.art13":

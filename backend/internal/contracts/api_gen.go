@@ -1885,6 +1885,48 @@ func (e ApprovalPreviewImportRowOutcome) Valid() bool {
 	}
 }
 
+// Defines values for AssessNoticeSourceKind.
+const (
+	AssessNoticeSourceKindCrmMigration            AssessNoticeSourceKind = "crm_migration"
+	AssessNoticeSourceKindCustomerContract        AssessNoticeSourceKind = "customer_contract"
+	AssessNoticeSourceKindEventOrForm             AssessNoticeSourceKind = "event_or_form"
+	AssessNoticeSourceKindInPersonPermission      AssessNoticeSourceKind = "in_person_permission"
+	AssessNoticeSourceKindMailboxHistory          AssessNoticeSourceKind = "mailbox_history"
+	AssessNoticeSourceKindPublicOrBusinessSource  AssessNoticeSourceKind = "public_or_business_source"
+	AssessNoticeSourceKindPurchasedOrImported     AssessNoticeSourceKind = "purchased_or_imported"
+	AssessNoticeSourceKindReferral                AssessNoticeSourceKind = "referral"
+	AssessNoticeSourceKindRequestedQuoteOrMeeting AssessNoticeSourceKind = "requested_quote_or_meeting"
+	AssessNoticeSourceKindSubjectInitiated        AssessNoticeSourceKind = "subject_initiated"
+)
+
+// Valid indicates whether the value is a known member of the AssessNoticeSourceKind enum.
+func (e AssessNoticeSourceKind) Valid() bool {
+	switch e {
+	case AssessNoticeSourceKindCrmMigration:
+		return true
+	case AssessNoticeSourceKindCustomerContract:
+		return true
+	case AssessNoticeSourceKindEventOrForm:
+		return true
+	case AssessNoticeSourceKindInPersonPermission:
+		return true
+	case AssessNoticeSourceKindMailboxHistory:
+		return true
+	case AssessNoticeSourceKindPublicOrBusinessSource:
+		return true
+	case AssessNoticeSourceKindPurchasedOrImported:
+		return true
+	case AssessNoticeSourceKindReferral:
+		return true
+	case AssessNoticeSourceKindRequestedQuoteOrMeeting:
+		return true
+	case AssessNoticeSourceKindSubjectInitiated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssignLeadOutcomeKind.
 const (
 	AssignLeadOutcomeKindAssigned  AssignLeadOutcomeKind = "assigned"
@@ -15160,6 +15202,72 @@ func (e NoticeCaseRule) Valid() bool {
 	case NoticeCaseRuleArt13:
 		return true
 	case NoticeCaseRuleArt14:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeCaseReviewRule.
+const (
+	NoticeCaseReviewRuleArt13      NoticeCaseReviewRule = "art13"
+	NoticeCaseReviewRuleArt14      NoticeCaseReviewRule = "art14"
+	NoticeCaseReviewRuleNone       NoticeCaseReviewRule = "none"
+	NoticeCaseReviewRuleUnassessed NoticeCaseReviewRule = "unassessed"
+)
+
+// Valid indicates whether the value is a known member of the NoticeCaseReviewRule enum.
+func (e NoticeCaseReviewRule) Valid() bool {
+	switch e {
+	case NoticeCaseReviewRuleArt13:
+		return true
+	case NoticeCaseReviewRuleArt14:
+		return true
+	case NoticeCaseReviewRuleNone:
+		return true
+	case NoticeCaseReviewRuleUnassessed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeCaseReviewState.
+const (
+	NoticeCaseReviewStateAssigned          NoticeCaseReviewState = "assigned"
+	NoticeCaseReviewStateBlocked           NoticeCaseReviewState = "blocked"
+	NoticeCaseReviewStateCompleted         NoticeCaseReviewState = "completed"
+	NoticeCaseReviewStateDeliveryFailed    NoticeCaseReviewState = "delivery_failed"
+	NoticeCaseReviewStateExemptWithReason  NoticeCaseReviewState = "exempt_with_reason"
+	NoticeCaseReviewStateNotRequired       NoticeCaseReviewState = "not_required"
+	NoticeCaseReviewStateOpen              NoticeCaseReviewState = "open"
+	NoticeCaseReviewStateProvidedElsewhere NoticeCaseReviewState = "provided_elsewhere"
+	NoticeCaseReviewStateQueued            NoticeCaseReviewState = "queued"
+	NoticeCaseReviewStateSourceReview      NoticeCaseReviewState = "source_review"
+)
+
+// Valid indicates whether the value is a known member of the NoticeCaseReviewState enum.
+func (e NoticeCaseReviewState) Valid() bool {
+	switch e {
+	case NoticeCaseReviewStateAssigned:
+		return true
+	case NoticeCaseReviewStateBlocked:
+		return true
+	case NoticeCaseReviewStateCompleted:
+		return true
+	case NoticeCaseReviewStateDeliveryFailed:
+		return true
+	case NoticeCaseReviewStateExemptWithReason:
+		return true
+	case NoticeCaseReviewStateNotRequired:
+		return true
+	case NoticeCaseReviewStateOpen:
+		return true
+	case NoticeCaseReviewStateProvidedElsewhere:
+		return true
+	case NoticeCaseReviewStateQueued:
+		return true
+	case NoticeCaseReviewStateSourceReview:
 		return true
 	default:
 		return false
@@ -30134,6 +30242,19 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// AssessNoticeSource defines model for AssessNoticeSource.
+type AssessNoticeSource struct {
+	Kind       AssessNoticeSourceKind `json:"kind"`
+	Note       string                 `json:"note"`
+	ObtainedAt *time.Time             `json:"obtained_at,omitempty"`
+
+	// Timezone IANA timezone used for the acquisition calendar and its monthly deadline.
+	Timezone *string `json:"timezone,omitempty"`
+}
+
+// AssessNoticeSourceKind defines model for AssessNoticeSource.Kind.
+type AssessNoticeSourceKind string
+
 // AssignLeadOutcome What happened to one named lead.
 type AssignLeadOutcome struct {
 	LeadId openapi_types.UUID `json:"lead_id"`
@@ -31004,9 +31125,9 @@ type AttentionDealFacts struct {
 // feed adds no decision authority of its own, exactly as the second approvals door
 // adds none.
 type AttentionItem struct {
-	// Acquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
-	// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
-	// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+	// Acquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
+	// assessed `source_obtained_at`; an unknown date requires source review. Older cases may carry
+	// a historical deadline. Absent or null when no evidence row resolves, which a reader shows as
 	// such rather than presenting a bare deadline. On an attention or worklist item only the
 	// `notice_case` source sends it.
 	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
@@ -37517,6 +37638,9 @@ type Contact360 struct {
 	// PrivacyNoticeDuties Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
 	PrivacyNoticeDuties *[]ContactNoticeDuty `json:"privacy_notice_duties,omitempty"`
 
+	// PrivacySourceReviews Unassessed sources for this contact. No confirmed duty or legal deadline. Withheld with the privacy_notice_duties section.
+	PrivacySourceReviews *[]openapi_types.UUID `json:"privacy_source_reviews,omitempty"`
+
 	// ProfileFields The enrichment evidence sidecar — same rows as `GET /contacts/{id}/profile-fields`.
 	ProfileFields *[]ContactProfileField `json:"profile_fields,omitempty"`
 
@@ -38442,10 +38566,13 @@ type ContactNetworkColleagueStrengthBucket string
 
 // ContactNoticeDuty defines model for ContactNoticeDuty.
 type ContactNoticeDuty struct {
-	Blocked bool                  `json:"blocked"`
-	DueAt   time.Time             `json:"due_at"`
-	Id      openapi_types.UUID    `json:"id"`
-	Rule    ContactNoticeDutyRule `json:"rule"`
+	Blocked bool `json:"blocked"`
+
+	// DeadlineIsUpperBound The acquisition date is unknown; this is the latest possible deadline.
+	DeadlineIsUpperBound *bool                 `json:"deadline_is_upper_bound,omitempty"`
+	DueAt                time.Time             `json:"due_at"`
+	Id                   openapi_types.UUID    `json:"id"`
+	Rule                 ContactNoticeDutyRule `json:"rule"`
 }
 
 // ContactNoticeDutyRule defines model for ContactNoticeDuty.Rule.
@@ -48879,9 +49006,9 @@ type Notice struct {
 	Subject string `json:"subject"`
 }
 
-// NoticeAcquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
-// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
-// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+// NoticeAcquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
+// assessed `source_obtained_at`; an unknown date requires source review. Older cases may carry
+// a historical deadline. Absent or null when no evidence row resolves, which a reader shows as
 // such rather than presenting a bare deadline. On an attention or worklist item only the
 // `notice_case` source sends it.
 type NoticeAcquisition struct {
@@ -48893,6 +49020,9 @@ type NoticeAcquisition struct {
 
 	// CapturedByName The display name of a human `captured_by`. Null for a machine principal and for a member whose user row no longer resolves.
 	CapturedByName *string `json:"captured_by_name,omitempty"`
+
+	// DeadlineIsUpperBound For a confirmed duty with an unknown acquisition date, the deadline is a latest possible bound, not a confirmed acquisition deadline.
+	DeadlineIsUpperBound *bool `json:"deadline_is_upper_bound,omitempty"`
 
 	// Kind How the contact was obtained, in the closed vocabulary `contact_acquisition_evidence.kind` uses.
 	Kind string `json:"kind"`
@@ -48907,9 +49037,9 @@ type NoticeAcquisition struct {
 // is no notice-case screen to route to, so a row naming only the case would prompt a reader
 // with nowhere to go.
 type NoticeCase struct {
-	// Acquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
-	// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
-	// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+	// Acquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
+	// assessed `source_obtained_at`; an unknown date requires source review. Older cases may carry
+	// a historical deadline. Absent or null when no evidence row resolves, which a reader shows as
 	// such rather than presenting a bare deadline. On an attention or worklist item only the
 	// `notice_case` source sends it.
 	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
@@ -48940,6 +49070,15 @@ type NoticeCase struct {
 	// Rule Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
 	Rule NoticeCaseRule `json:"rule"`
 
+	// SourceKind The source confirmed by a privacy officer; the original acquisition evidence is retained.
+	SourceKind *string `json:"source_kind,omitempty"`
+
+	// SourceObtainedAt The actual acquisition date confirmed during source review.
+	SourceObtainedAt *time.Time `json:"source_obtained_at,omitempty"`
+
+	// SourceReviewNote The evidence for the source assessment, in the privacy officer's words.
+	SourceReviewNote *string `json:"source_review_note,omitempty"`
+
 	// State Where a disclosure duty stands.
 	//
 	// `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
@@ -48957,6 +49096,86 @@ type NoticeCase struct {
 
 // NoticeCaseRule Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
 type NoticeCaseRule string
+
+// NoticeCaseReview One acquisition-source review or confirmed disclosure duty. Source reviews have no deadline or sending route; a confirmed indirect source remains owed when its date is unknown.
+//
+// `contact_id` is carried because the duty is discharged on that contact's own screen. There
+// is no notice-case screen to route to, so a row naming only the case would prompt a reader
+// with nowhere to go.
+type NoticeCaseReview struct {
+	// Acquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
+	// assessed `source_obtained_at`; an unknown date requires source review. Older cases may carry
+	// a historical deadline. Absent or null when no evidence row resolves, which a reader shows as
+	// such rather than presenting a bare deadline. On an attention or worklist item only the
+	// `notice_case` source sends it.
+	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
+
+	// AllowedRoutes How this duty may be discharged. A case with no route is one the product cannot close by sending anything, and it says so rather than offering a button that fails.
+	AllowedRoutes *[]string  `json:"allowed_routes,omitempty"`
+	AssignedAt    *time.Time `json:"assigned_at,omitempty"`
+
+	// Attempts How many disclosures have been sent for this duty.
+	Attempts      int                `json:"attempts"`
+	BlockedReason *string            `json:"blocked_reason,omitempty"`
+	CompletedAt   *time.Time         `json:"completed_at,omitempty"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// ContactName The contact's display name. Absent or null when the caller may not read that contact, or
+	// it no longer resolves: the privacy queue reaches duties outside the caller's CRM view, and
+	// the name stays as visible as the record.
+	ContactName *string             `json:"contact_name,omitempty"`
+	CreatedAt   time.Time           `json:"created_at"`
+	DueAt       *time.Time          `json:"due_at"`
+	Id          openapi_types.UUID  `json:"id"`
+	OwnerUserId *openapi_types.UUID `json:"owner_user_id,omitempty"`
+
+	// ResolutionNote Why the duty was excused, or where it was provided. Present exactly when the state is provided_elsewhere or exempt_with_reason.
+	ResolutionNote *string             `json:"resolution_note,omitempty"`
+	ResolvedBy     *openapi_types.UUID `json:"resolved_by,omitempty"`
+
+	// Rule Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
+	Rule NoticeCaseReviewRule `json:"rule"`
+
+	// SourceKind The source confirmed by a privacy officer; the original acquisition evidence is retained.
+	SourceKind *string `json:"source_kind,omitempty"`
+
+	// SourceObtainedAt The actual acquisition date confirmed during source review.
+	SourceObtainedAt *time.Time `json:"source_obtained_at,omitempty"`
+
+	// SourceReviewNote The evidence for the source assessment, in the privacy officer's words.
+	SourceReviewNote *string `json:"source_review_note,omitempty"`
+
+	// State Where a disclosure duty or source assessment stands. `source_review` needs acquisition-source review and has no computed deadline or sending route.
+	//
+	// `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+	// on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+	// `completed` is a disclosure this installation sent and delivered.
+	// `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+	// `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+	// reason attached, kept so nothing already closed is reinterpreted.
+	//
+	// There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+	// fact — a stored one would leave every late case looking on time whenever a sweep failed to
+	// run.
+	State NoticeCaseReviewState `json:"state"`
+}
+
+// NoticeCaseReviewRule Art. 13 is owed when the data came from the subject, Art. 14 when it came from anywhere else — different deadlines and different content.
+type NoticeCaseReviewRule string
+
+// NoticeCaseReviewState Where a disclosure duty or source assessment stands. `source_review` needs acquisition-source review and has no computed deadline or sending route.
+//
+// `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
+// on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+// `completed` is a disclosure this installation sent and delivered.
+// `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
+// `blocked` names an obstacle. `not_required` is the older way of closing a case with no
+// reason attached, kept so nothing already closed is reinterpreted.
+//
+// There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
+// fact — a stored one would leave every late case looking on time whenever a sweep failed to
+// run.
+type NoticeCaseReviewState string
 
 // NoticeCaseState Where a disclosure duty stands.
 //
@@ -58841,6 +59060,15 @@ type WebFormState string
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
 type WebFormConsent struct {
+	// FormId The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+	FormId *openapi_types.UUID `json:"form_id,omitempty"`
+
+	// FormName The form's name when it was sent. Absent on an older record.
+	FormName *string `json:"form_name,omitempty"`
+
+	// PageUrl The page the form was sent from, as `page_url` keeps it. Absent when the form sent none.
+	PageUrl *string `json:"page_url,omitempty"`
+
 	// PolicyVersion The privacy policy version the form named, when it named one.
 	PolicyVersion *string `json:"policy_version,omitempty"`
 	Ticked        bool    `json:"ticked"`
@@ -60478,9 +60706,9 @@ type WorklistItem struct {
 	// Absent on the last row of the page, which has nothing below it to beat.
 	AboveNext *WorklistComparison `json:"above_next,omitempty"`
 
-	// Acquisition The acquisition evidence a disclosure duty's deadline was computed from: `due_at` runs from
-	// `occurred_at`, or from `captured_at` where the door that recorded it did not say when it
-	// happened. Absent or null when the duty rests on no evidence row, which a reader shows as
+	// Acquisition The original acquisition evidence. A confirmed duty runs from `occurred_at` or an officer's
+	// assessed `source_obtained_at`; an unknown date requires source review. Older cases may carry
+	// a historical deadline. Absent or null when no evidence row resolves, which a reader shows as
 	// such rather than presenting a bare deadline. On an attention or worklist item only the
 	// `notice_case` source sends it.
 	Acquisition *NoticeAcquisition `json:"acquisition,omitempty"`
@@ -67046,6 +67274,18 @@ type ReorderStagesParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ListNoticeCaseReviewsParams defines parameters for ListNoticeCaseReviews.
+type ListNoticeCaseReviewsParams struct {
+	// State Repeat to ask for several. Omitted means every unresolved state.
+	State *[]NoticeCaseReviewState `form:"state,omitempty" json:"state,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's queue time and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListNoticeCasesParams defines parameters for ListNoticeCases.
 type ListNoticeCasesParams struct {
 	// State Repeat to ask for several. Omitted means every unresolved state.
@@ -70203,6 +70443,12 @@ type ReorderStagesJSONRequestBody = StageOrderRequest
 
 // SetControllerParticularsJSONRequestBody defines body for SetControllerParticulars for application/json ContentType.
 type SetControllerParticularsJSONRequestBody = ControllerParticulars
+
+// AssignNoticeCaseReviewJSONRequestBody defines body for AssignNoticeCaseReview for application/json ContentType.
+type AssignNoticeCaseReviewJSONRequestBody = AssignNoticeCase
+
+// AssessNoticeSourceJSONRequestBody defines body for AssessNoticeSource for application/json ContentType.
+type AssessNoticeSourceJSONRequestBody = AssessNoticeSource
 
 // AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
 type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
@@ -84125,6 +84371,18 @@ type ServerInterface interface {
 	// (PUT /privacy/controller-particulars)
 	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
 	// Disclosure duties this installation owes, soonest deadline first.
+	// (GET /privacy/notice-case-reviews)
+	ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams)
+	// One disclosure duty.
+	// (GET /privacy/notice-case-reviews/{id})
+	GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Give a disclosure duty an owner.
+	// (POST /privacy/notice-case-reviews/{id}/assign)
+	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Confirm the source of an unassessed contact.
+	// (POST /privacy/notice-case-reviews/{id}/source)
+	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
 	// One disclosure duty.
@@ -89212,6 +89470,30 @@ func (_ Unimplemented) GetControllerParticulars(w http.ResponseWriter, r *http.R
 // State who this installation is.
 // (PUT /privacy/controller-particulars)
 func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disclosure duties this installation owes, soonest deadline first.
+// (GET /privacy/notice-case-reviews)
+func (_ Unimplemented) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request, params ListNoticeCaseReviewsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One disclosure duty.
+// (GET /privacy/notice-case-reviews/{id})
+func (_ Unimplemented) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Give a disclosure duty an owner.
+// (POST /privacy/notice-case-reviews/{id}/assign)
+func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm the source of an unassessed contact.
+// (POST /privacy/notice-case-reviews/{id}/source)
+func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121079,6 +121361,167 @@ func (siw *ServerInterfaceWrapper) SetControllerParticulars(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// ListNoticeCaseReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListNoticeCaseReviews(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListNoticeCaseReviewsParams
+
+	// ------------- Optional query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListNoticeCaseReviews(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetNoticeCaseReview operation middleware
+func (siw *ServerInterfaceWrapper) GetNoticeCaseReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNoticeCaseReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssignNoticeCaseReview operation middleware
+func (siw *ServerInterfaceWrapper) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssignNoticeCaseReview(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssessNoticeSource operation middleware
+func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssessNoticeSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListNoticeCases operation middleware
 func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *http.Request) {
 
@@ -134439,6 +134882,18 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/privacy/controller-particulars", wrapper.SetControllerParticulars)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-case-reviews", wrapper.ListNoticeCaseReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-case-reviews/{id}", wrapper.GetNoticeCaseReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/assign", wrapper.AssignNoticeCaseReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.AssessNoticeSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)

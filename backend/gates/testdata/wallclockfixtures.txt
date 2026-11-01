@@ -178,7 +178,6 @@ internal/compose/integration/meetingbrief_integration_test.go 1
 internal/compose/integration/modelrate_integration_test.go 4
 internal/compose/integration/nextstepagreement_integration_test.go 2
 internal/compose/integration/no_activity_reminder_workqueue_integration_test.go 1
-internal/compose/integration/noticecase_integration_test.go 4
 internal/compose/integration/noticelanguage_integration_test.go 1
 internal/compose/integration/noticesubjectwrote_integration_test.go 1
 internal/compose/integration/perf_tier_bench_test.go 1

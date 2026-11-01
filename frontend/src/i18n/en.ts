@@ -9687,7 +9687,7 @@ export const en = {
     "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
   "notice.title": "Disclosure duties",
   "notice.sub":
-    "Contacts obtained without asking them, and whether they have been told yet.",
+    "Duties sort by deadline; source reviews sort by recorded time.",
   "notice.facetLabel": "Show duties",
   "notice.facetOwed": "Still owed",
   "notice.facetAll": "All",
@@ -9718,6 +9718,28 @@ export const en = {
   "notice.acq.crmMigration": "CRM migration",
   "notice.acq.mailboxHistory": "Mailbox history",
   "notice.acq.unknownLegacy": "Source unknown",
+  "notice.source.contactExplanation":
+    "The acquisition source needs review. Open the privacy case to check the evidence.",
+  "notice.source.zoneHint":
+    "Choose the timezone of the acquisition, which can differ from your location.",
+  "notice.rule.none": "No separate notice duty",
+  "notice.ruleHint.none":
+    "The source assessment or direct-sender evidence establishes no separate disclosure task.",
+  "notice.latestBy": "By {date} at the latest",
+  "notice.dueLatest": "Due no later than",
+  "notice.unknownDateWarning":
+    "The acquisition date is unknown; this duty may already be due.",
+  "noticeDuty.observedOn": "Observed on",
+  "notice.source.more": "More source reviews remain for this contact.",
+  "notice.source.title": "Review source",
+  "notice.source.explanation":
+    "The source is unconfirmed. No privacy notice duty or legal deadline has been established. Review how the contact was obtained before sending a notice.",
+  "notice.source.review": "Review source",
+  "notice.source.confirm": "Confirm source",
+  "notice.source.evidence": "Source evidence",
+  "notice.source.dateHint":
+    "Use the actual acquisition date if known. Otherwise a confirmed duty keeps a latest possible deadline.",
+  "notice.source.noDeadline": "No confirmed deadline",
   "notice.rule.art13": "Art. 13 notice",
   "notice.rule.art14": "Art. 14 notice",
   "notice.ruleHint.art13":
