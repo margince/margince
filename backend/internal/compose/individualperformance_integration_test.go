@@ -420,3 +420,54 @@ func TestIndividualPerformanceOffWithholdsATwoMemberCompanysTarget(t *testing.T)
 		t.Error("with the switch off a company of the reader and one colleague still lists its target")
 	}
 }
+
+// A team of the reader and one colleague shows none of its totals while the
+// switch is off. That holds even for a total made up of the reader's own deal,
+// because the rest of the team is one person. Two more live members lift it.
+func TestIndividualPerformanceOffWithholdsATwoMemberTeamsReadings(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 1, 20, 12, 0, 0, 0, time.UTC)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	reportingTeammate(t, e)
+	e.seedWinIn(t, e.Rep1, "EUR")
+	reader := reportingActor(e)
+	selection := crmcontracts.ReportingSelection{
+		Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, Period: "this_quarter",
+		TargetBasis: "fiscal_quarter", CloseWindow: "all_open",
+		Metrics: []crmcontracts.ReportingMetricID{"bookings_won", "meetings_held"},
+	}
+	won := func() crmcontracts.ReportingMetric {
+		t.Helper()
+		result, err := service.Evaluate(reader, selection)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, metric := range result.Metrics {
+			if metric.Coverage.Withheld && metric.Id != "bookings_won" && metric.Value != nil {
+				t.Errorf("%s is withheld but carries a value", metric.Id)
+			}
+			if metric.Id == "bookings_won" {
+				return metric
+			}
+		}
+		t.Fatal("the evaluation has no bookings_won")
+		return crmcontracts.ReportingMetric{}
+	}
+	if metric := won(); metric.Value == nil || *metric.Value != 1000 {
+		t.Fatalf("with the switch on, the team's sales won = %v, want 1000", metric.Value)
+	}
+
+	e.showIndividualPerformance(t, false)
+	metric := won()
+	if metric.Value != nil || !metric.Coverage.Withheld || metric.Coverage.Status != "unavailable" {
+		t.Errorf("with the switch off, a two-member team's sales won = %v %+v, want withheld with no value", metric.Value, metric.Coverage)
+	}
+	if metric.Coverage.Reason == nil || !strings.Contains(*metric.Coverage.Reason, "fewer than two other members") {
+		t.Errorf("the withheld reading's reason = %v, want the team floor", metric.Coverage.Reason)
+	}
+
+	e.addMembers(t, e.Team1, "floor-a@forecast.test", "floor-b@forecast.test")
+	if metric := won(); metric.Value == nil || *metric.Value != 1000 {
+		t.Errorf("with three other members, the team's sales won = %v, want 1000", metric.Value)
+	}
+}

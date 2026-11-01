@@ -154,6 +154,10 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	}
 
 	selection.Scope = frame.Scope
+	thinTeam, err := teamBelowFloor(ctx, tx, frame.Scope, owners)
+	if err != nil {
+		return reporting.Evaluation{}, err
+	}
 	e.compared = &forecastCapture{}
 	out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame, Selection: selection, Metrics: []crmcontracts.ReportingMetric{}, Charts: []crmcontracts.ReportingChart{}}, Facts: []reporting.Fact{}}
 	for _, spec := range reportingMetrics {
@@ -162,6 +166,11 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		}
 		if err := auth.Require(ctx, spec.object, principal.ActionRead); err != nil {
 			return out, err
+		}
+		// A team too small to hide one colleague's work shows none of its totals.
+		if thinTeam {
+			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, thinTeamCoverage(frame)))
+			continue
 		}
 		facts, coverage, err := e.readIsolated(ctx, tx, spec, frame, framework)
 		if err != nil {
