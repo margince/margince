@@ -6,9 +6,12 @@ whether a start succeeds.
 
 ## The images and their ports
 
-The API image serves on 8080 and runs as a non-root user. The worker image
-exposes no port, because nothing calls it: it takes work from the queue. The
-web front is an unprivileged nginx serving the built app, also on 8080.
+The API image serves on 8080 and runs as a non-root user. The web front is an
+unprivileged nginx serving the built app, also on 8080.
+
+The worker takes work from the queue, so nothing calls it to do its job. It
+does answer on `observe_addr` when that is set, serving `/healthz`, `/readyz`
+and `/metrics`, and nothing at all when it is unset.
 
 Every base is pinned by digest, and the Go and Node stages build for the
 target's architecture, so one build definition produces images for more than
@@ -50,9 +53,16 @@ Mount the secret and point `password_file` at it. In a container the literal in
 an environment variable is readable by anyone who can inspect the container,
 which is a wider audience than the file is.
 
+Seeding also wants `workspace.name`: the API refuses a `bootstrap_admin` that
+has none, so an empty database takes both.
+
 The entrypoint also accepts `MARGINCE_ADMIN_PASSWORD` directly, and reads it
 once: when a company already exists it says so and leaves it alone, so the
 variable can stay set in a deployment without a restart reseeding anything.
+
+Taking that route pins the path. The entrypoint writes the value to
+`/app/secrets/admin-password`, and `password_file` has to name that same one,
+which is `secrets/admin-password` as the API reads it.
 
 ## What this does not cover
 
