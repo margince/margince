@@ -37,23 +37,28 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		order = requestPriorityOrder
 	}
 
-	rows, err := tx.Query(ctx,
-		`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
-			` FROM activity a WHERE `+strings.Join(where, " AND ")+
-			order+sprintf(" LIMIT %d", limit+1),
-		waitingListArgs(in, args)...)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	// Collected rather than streamed: AttachLinks runs a second query on
-	// this same transaction, which needs the cursor already closed.
+	// this same transaction, and the plan mode is restored on it, so both need
+	// the cursor already closed.
 	type pagedRow struct {
 		activity crmcontracts.Activity
 		key      *string
 	}
-	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
-		activity, key, err := scanActivityPage(row, sorted)
-		return pagedRow{activity, key}, err
+	var paged []pagedRow
+	err = perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
+		rows, err := tx.Query(ctx,
+			`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+
+				order+sprintf(" LIMIT %d", limit+1),
+			waitingListArgs(in, args)...)
+		if err != nil {
+			return err
+		}
+		paged, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
+			activity, key, err := scanActivityPage(row, sorted)
+			return pagedRow{activity, key}, err
+		})
+		return err
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err

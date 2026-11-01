@@ -5,21 +5,26 @@
 
 package compose
 
-// The current engine is the ground truth. This reads every member's Worklist
-// in every view and scope at one pinned instant and either records the answers
-// (POC_PARITY_OUT) or compares them with a recording (POC_PARITY_IN), with
-// POC_PLANS=generic switching plan reuse on for the whole read.
+// The current engine is the ground truth. This makes the calls the screens make
+// (frontend/src/lib/worklistday.ts: limit 100, relationships omitted, the
+// view's own filter; the relationships panel's own read) for every member, in
+// every view and scope, the second page of Today, and a named owner, at one
+// pinned instant. It records the answers (POC_PARITY_OUT) or compares them with
+// a recording (POC_PARITY_IN); POC_PLANS=generic reuses plans for the whole read.
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -28,9 +33,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
+type parityCall struct {
+	key                         string
+	view, scope, filter, cursor string
+	owner                       ids.UUID
+	limit                       int
+	relationships               bool
+}
+
 func TestWorklistParityPoC(t *testing.T) {
 	ctx := context.Background()
-	openPool := func(env string) *database.DB {
+	open := func(env string) *database.DB {
 		t.Helper()
 		pool, err := database.NewPool(ctx, os.Getenv(env))
 		if err != nil {
@@ -39,13 +52,14 @@ func TestWorklistParityPoC(t *testing.T) {
 		t.Cleanup(pool.Close)
 		return InstallationDB(pool)
 	}
-	owner, app := openPool("POC_OWNER_DSN").Pool(), openPool("POC_APP_DSN").Pool()
+	owner, app := open("POC_OWNER_DSN").Pool(), open("POC_APP_DSN").Pool()
 	asOf, err := time.Parse(time.RFC3339, os.Getenv("POC_AS_OF"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	generic := os.Getenv("POC_PLANS") == "generic"
-	service := newAttentionService(app, NewApprovalsService(InstallationDB(app)), func() time.Time { return asOf })
+	full := newAttentionService(app, NewApprovalsService(InstallationDB(app)), func() time.Time { return asOf })
+	screen := full.OmittingRelationships()
 
 	var ws ids.UUID
 	var users []ids.UUID
@@ -58,60 +72,105 @@ func TestWorklistParityPoC(t *testing.T) {
 	authority := identity.NewService(app)
 	base := principal.WithWorkspaceID(ctx, ws)
 
+	read := func(member context.Context, service *attention.Service, c parityCall) (crmcontracts.Worklist, time.Duration, error) {
+		reading := principal.WithCorrelationID(member, ids.UUID(uuid.Must(uuid.NewV7())))
+		var out crmcontracts.Worklist
+		start := time.Now()
+		err := database.WithWorkspaceSnapshot(reading, app, func(ctx context.Context) error {
+			page := func(ctx context.Context) error {
+				var err error
+				out, err = service.WorklistView(ctx, c.view, c.scope, c.filter, c.owner, c.limit, c.cursor)
+				return err
+			}
+			if generic {
+				return database.ReuseGenericPlans(ctx, page)
+			}
+			return page(ctx)
+		})
+		return out, time.Since(start), err
+	}
+
 	answers := map[string]json.RawMessage{}
-	var took []time.Duration
-	for _, user := range users {
+	timings := map[string][]time.Duration{}
+	populated, empty, refused := 0, 0, 0
+	for i, user := range users {
 		p, err := authz.MemberPrincipal(base, authority, ws, user)
 		if err != nil {
 			continue
 		}
 		member := principal.WithActor(base, p)
-		for _, scope := range []string{"mine", "team"} {
-			for _, view := range []string{"today", "decisions", "system"} {
-				key := user.String() + "/" + scope + "/" + view
-				var out crmcontracts.Worklist
-				read := func() (time.Duration, error) {
-					reading := principal.WithCorrelationID(member, ids.UUID(uuid.Must(uuid.NewV7())))
-					start := time.Now()
-					err := database.WithWorkspaceSnapshot(reading, app, func(ctx context.Context) error {
-						page := func(ctx context.Context) error {
-							var err error
-							out, err = service.WorklistView(ctx, view, scope, "", ids.Nil, 25, "")
-							return err
-						}
-						if generic {
-							return database.ReuseGenericPlans(ctx, page)
-						}
-						return page(ctx)
-					})
-					return time.Since(start), err
-				}
-				if _, err := read(); err != nil {
-					answers[key] = json.RawMessage(`"refused"`)
-					continue
-				}
-				d, err := read()
+		seat := "rep"
+		if _, _, err := read(member, screen, parityCall{view: "today", scope: "team", filter: "all", limit: 1}); err == nil {
+			seat = "manager"
+		}
+		var calls []parityCall
+		for _, scope := range []string{"mine", "team", "unassigned", "all"} {
+			calls = append(calls,
+				parityCall{view: "today", scope: scope, filter: "all", limit: 100},
+				parityCall{view: "decisions", scope: scope, filter: "decisions", limit: 100},
+				parityCall{view: "system", scope: scope, filter: "system", limit: 100},
+				parityCall{view: "", scope: scope, filter: "all", limit: 1, relationships: true})
+		}
+		calls = append(calls, parityCall{view: "today", scope: "mine", filter: "all", limit: 100,
+			owner: users[(i+1)%len(users)]})
+		for _, c := range calls {
+			c.key = fmt.Sprintf("%s/%s/%s/%s/rel=%v/owner=%v", user, c.scope, c.view, c.filter, c.relationships, !c.owner.IsZero())
+			service := screen
+			if c.relationships {
+				service = full
+			}
+			out, took, err := read(member, service, c)
+			if err != nil {
+				answers[c.key] = json.RawMessage(fmt.Sprintf("%q", "refused: "+strings.SplitN(err.Error(), ":", 2)[0]))
+				refused++
+				continue
+			}
+			label := seat + " " + c.scope + " " + c.view
+			timings[label] = append(timings[label], took)
+			pages := []crmcontracts.Worklist{out}
+			// The second page resumes this read's own walk.
+			if c.view == "today" && c.owner.IsZero() && out.NextCursor != nil && *out.NextCursor != "" {
+				c.cursor = *out.NextCursor
+				next, _, err := read(member, service, c)
 				if err != nil {
-					t.Fatalf("%s: %v", key, err)
+					t.Fatalf("%s page 2: %v", c.key, err)
 				}
-				took = append(took, d)
-				// The walk and its cursor name a snapshot row minted per read.
-				out.Walk, out.NextCursor = nil, nil
-				answer, err := json.Marshal(out)
+				pages = append(pages, next)
+			}
+			for n, page := range pages {
+				if len(page.Queue) == 0 && (page.OptionalRelationships == nil || len(*page.OptionalRelationships) == 0) {
+					empty++
+				} else {
+					populated++
+				}
+				// The walk and cursor name a snapshot row minted per read; the
+				// second page is compared by what it shows instead.
+				page.Walk, page.NextCursor = nil, nil
+				answer, err := json.Marshal(page)
 				if err != nil {
 					t.Fatal(err)
 				}
-				answers[key] = answer
+				answers[fmt.Sprintf("%s/page=%d", c.key, n+1)] = answer
 			}
 		}
 	}
-	slices.Sort(took)
-	var sum time.Duration
-	for _, d := range took {
-		sum += d
+	t.Logf("%d answers: %d with rows, %d empty, %d refused (plans %s)", len(answers), populated, empty, refused,
+		map[bool]string{true: "generic", false: "default"}[generic])
+	labels := make([]string, 0, len(timings))
+	for label := range timings {
+		labels = append(labels, label)
 	}
-	t.Logf("%d reads (plans %s): mean %v, p50 %v, p95 %v", len(took), map[bool]string{true: "generic", false: "default"}[generic],
-		(sum / time.Duration(len(took))).Round(time.Millisecond), took[len(took)/2].Round(time.Millisecond), took[len(took)*95/100].Round(time.Millisecond))
+	slices.Sort(labels)
+	for _, label := range labels {
+		took := timings[label]
+		slices.Sort(took)
+		var sum time.Duration
+		for _, d := range took {
+			sum += d
+		}
+		t.Logf("%-32s n=%2d mean %6v p50 %6v max %6v", label, len(took), (sum / time.Duration(len(took))).Round(time.Millisecond),
+			took[len(took)/2].Round(time.Millisecond), took[len(took)-1].Round(time.Millisecond))
+	}
 
 	if path := os.Getenv("POC_PARITY_OUT"); path != "" {
 		recorded, err := json.Marshal(answers)
@@ -121,7 +180,6 @@ func TestWorklistParityPoC(t *testing.T) {
 		if err := os.WriteFile(path, recorded, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("recorded %d answers", len(answers))
 	}
 	if path := os.Getenv("POC_PARITY_IN"); path != "" {
 		recorded, err := os.ReadFile(path)
@@ -132,14 +190,21 @@ func TestWorklistParityPoC(t *testing.T) {
 		if err := json.Unmarshal(recorded, &truth); err != nil {
 			t.Fatal(err)
 		}
-		same := 0
+		same, sameRows := 0, 0
 		for key, want := range truth {
-			if string(want) == string(answers[key]) {
-				same++
+			if string(want) != string(answers[key]) {
+				t.Errorf("%s differs from the ground truth", key)
 				continue
 			}
-			t.Errorf("%s differs from the ground truth", key)
+			same++
+			var w crmcontracts.Worklist
+			if json.Unmarshal(want, &w) == nil && (len(w.Queue) > 0 || w.OptionalRelationships != nil && len(*w.OptionalRelationships) > 0) {
+				sameRows++
+			}
 		}
-		t.Logf("%d of %d answers identical to the ground truth", same, len(truth))
+		if len(answers) != len(truth) {
+			t.Errorf("%d answers against %d recorded", len(answers), len(truth))
+		}
+		t.Logf("%d of %d answers identical to the ground truth, %d of them with rows", same, len(truth), sameRows)
 	}
 }

@@ -52,14 +52,19 @@ func ListActivitiesByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, 
 		order = requestPriorityOrder
 	}
 	limit := storekit.ClampLimit(in.Limit)
-	rows, err := tx.Query(ctx, `SELECT `+activityColumns(content)+`, d.id AS linked_deal_id
+	var lists map[ids.UUID]DealActivityList
+	err = perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
+		rows, err := tx.Query(ctx, `SELECT `+activityColumns(content)+`, d.id AS linked_deal_id
 		FROM deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a
 		WHERE `+strings.Join(where, " AND ")+order+fmt.Sprintf(" LIMIT %d", limit+1)+`) selected JOIN activity a ON a.id = selected.id
 		WHERE `+deals+` ORDER BY d.id, `+strings.TrimPrefix(order, " ORDER BY "), waitingListArgs(in, args)...)
-	if err != nil {
-		return nil, err
-	}
-	return collectDealActivityLists(ctx, tx, rows, in.Columns, listClock(in), limit)
+		if err != nil {
+			return err
+		}
+		lists, err = collectDealActivityLists(ctx, tx, rows, in.Columns, listClock(in), limit)
+		return err
+	})
+	return lists, err
 }
 
 func readableDealBatchSQL(ctx context.Context, dealIDs []ids.UUID, arg func(any) int) (string, error) {

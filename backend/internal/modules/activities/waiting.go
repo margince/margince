@@ -295,12 +295,14 @@ func (s *Store) queryWaitingQueue(
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	return read(rows)
+	return perBind(ctx, true, func(ctx context.Context) error {
+		rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		return read(rows)
+	})
 }
 
 // OwnDomains reports the email domains this installation's own contacts write

@@ -465,9 +465,11 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// a statement that binds an argument it never mentions is one Postgres
 		// refuses outright ("could not determine data type of parameter"). The
 		// planner reads the wrapper for what it is.
-		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM (SELECT `+activityColumns(content)+
-				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+		return perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
+			return tx.QueryRow(ctx,
+				`SELECT count(*) FROM (SELECT `+activityColumns(content)+
+					` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+		})
 	})
 	return total, err
 }
