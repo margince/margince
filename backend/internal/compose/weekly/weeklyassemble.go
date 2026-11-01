@@ -169,7 +169,7 @@ func (e *Engine) measureWeek(
 	if err != nil {
 		return err
 	}
-	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, start, end)
+	c.MeetingsHeld, c.MeetingsWithNextStep, err = countWeekMeetings(ctx, tx, userID, now, start, end)
 	if err != nil {
 		return err
 	}

@@ -71,18 +71,11 @@ type heldMeeting struct {
 // place in [from, to), as their history stood at at. withheld says a field
 // mask narrowed them.
 func heldMeetingSource(ctx context.Context, b *reportingBindings, at, from, to time.Time) (heldMeeting, bool, error) {
-	legacy := "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)"
+	// The reader Weekly counts its own held meetings through, so the two place
+	// a meeting on the same day.
+	held := storekit.MeetingHeldAsOfSQL("a", b.add(at))
+	legacy, start, precision, unknownDay := held.Legacy, held.Start, held.Precision, held.UnknownDay
 	eligible := "CASE WHEN " + legacy + " THEN " + activities.CustomerMeetingSQL("a") + " ELSE held.customer_eligible_at_change END"
-	// A transition says whether its start was a time or a date, so a day
-	// meeting moved later stays on the day it was held. A row recorded before
-	// it said so reads as the meeting's precision only while it is the
-	// meeting's time; otherwise as an instant.
-	start := "COALESCE(held.scheduled_start,a.occurred_at)"
-	precision := "COALESCE(held.scheduled_precision,CASE WHEN held.scheduled_start IS NULL OR held.scheduled_start = a.occurred_at THEN a.occurred_precision ELSE 'instant' END)"
-	// Only a noon UTC start can be a date's anchor. On a row with no recorded
-	// precision it may be either day. The row is read when either day falls in
-	// the window, and the coverage says so.
-	unknownDay := "(held.scheduled_precision IS NULL AND held.scheduled_start IS NOT NULL AND " + occurredday.IsAnchorSQL("held.scheduled_start") + ")"
 	visible, err := auth.ActivityContentClause(ctx, "a", b.arg)
 	if err != nil {
 		return heldMeeting{}, false, err
@@ -98,9 +91,9 @@ func heldMeetingSource(ctx context.Context, b *reportingBindings, at, from, to t
 	// their own figures; a team counts it once, because it is one row here.
 	// A recorded transition keeps the host it recorded.
 	return heldMeeting{
-		from: `activity a LEFT JOIN LATERAL(SELECT h.* FROM activity_meeting_history h WHERE h.activity_id=a.id AND h.effective_at<=` + b.add(at) + ` ORDER BY h.effective_at DESC,h.id DESC LIMIT 1) held ON true`,
+		from: "activity a " + held.Join,
 		where: `a.kind='meeting' AND a.archived_at IS NULL
- AND (held.id IS NOT NULL OR NOT EXISTS(SELECT 1 FROM activity_meeting_history future WHERE future.activity_id=a.id))
+ AND ` + held.Recorded + `
  AND COALESCE(held.status,a.meeting_status)='held' AND (` + eligible + `)
  AND ` + within + " AND " + orUnnarrowed(visible) + " AND " + fieldScope,
 		seats:      storekit.MeetingCreditedSeatsAtChangeSQL("a", legacy, "held.host_id_at_change"),

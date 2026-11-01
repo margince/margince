@@ -37,7 +37,8 @@ func TestWeeklyCountsManualFollowUpsOncePerMeeting(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := InstallationDB(e.Pool).Tx(ctx, func(tx pgx.Tx) error {
-		count, err := weeklyConfirmedFollowup(ctx, tx, []reporting.Fact{{SourceID: source}}, at.Add(24*time.Hour))
+		count, err := weeklyConfirmedFollowup(ctx, tx, []reporting.Fact{{SourceID: source}},
+			at.Add(24*time.Hour), at.Add(24*time.Hour))
 		if err != nil {
 			return err
 		}
