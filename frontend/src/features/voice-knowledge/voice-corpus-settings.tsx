@@ -18,9 +18,9 @@ import type { IntakeNotice, SpeakerAsk, VoiceIntake } from "./use-voice-intake";
 // Files and pasted text both come in here, as in onboarding. A paste is the
 // way past a file the browser cannot open, such as a locked PDF.
 //
-// Everything the intake has to say back — the unanswered speaker questions and
-// the per-source notices — renders on the card under the zone, where a reader
-// who has just handed over six files can see what happened to each.
+// What the intake has to say back renders on the card under the zone: the
+// unanswered speaker questions and the per-source notices. A reader who has
+// just handed over six files sees there what happened to each.
 
 type VoiceCorpusIntakeProps = Readonly<{
   /** The intake this zone feeds. Its caller owns it, so work in flight

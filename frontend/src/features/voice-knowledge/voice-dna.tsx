@@ -79,8 +79,8 @@ export function VoiceDnaCard() {
   const canCreate = useCanWrite("voice_profile", "create");
   const qc = useQueryClient();
   const profile = useVoiceProfile();
-  // Owned above the empty and profile branches: the first sample mints the
-  // profile and swaps one for the other, and the files still in flight then
+  // Owned above the empty and profile branches. The first sample mints the
+  // profile and swaps one branch for the other. The files still in flight then
   // belong to the card that remains.
   const intake = useVoiceIntake({
     profileId: profile.data?.id ?? null,
