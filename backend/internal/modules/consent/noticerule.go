@@ -104,27 +104,19 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 	case "referral", "public_or_business_source", "purchased_or_imported":
 		return strictNotice(), true
 
-	// The door could not say. Named rather than left to the default so the
-	// census in gates/noticedutycensus_test.go sees it decided — and it returns
-	// the SAME expression, so the two cannot drift.
 	case "unknown_legacy":
-		return strictNotice(), true
+		return sourceReview(), true
 	}
-	// An unrecognised kind takes the strict reading too: this function must not
-	// go quiet when the vocabulary grows past it. A duty wrongly raised costs
-	// somebody a look; one wrongly skipped is invisible.
-	return strictNotice(), true
+	return sourceReview(), true
 }
 
-// strictNotice is the Art. 14 duty owed where the data did not come from the
-// subject, or where nobody can say whether it did.
+func sourceReview() NoticeDuty {
+	return NoticeDuty{Rule: RuleUnassessed, State: NoticeSourceReview}
+}
+
 func strictNotice() NoticeDuty {
 	return NoticeDuty{
 		Rule: RuleArt14, State: NoticeOpen,
-		// BOTH routes, with the notice first. An Art. 14 duty can be
-		// discharged by either mail, and an installation that has stopped
-		// writing to this contact can only use the notice — so listing it
-		// makes the duty dischargeable where it previously was not.
 		Routes: []string{noticeRoutePrivacyNotice, noticeRouteRecordConfirmation},
 		Months: art14Months,
 	}

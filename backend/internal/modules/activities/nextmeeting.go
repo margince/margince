@@ -31,7 +31,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -137,7 +136,7 @@ func bookedMeetingWhere(ctx context.Context, after time.Time, arg func(any) int)
 		return nil, err
 	}
 	where := []string{
-		fmt.Sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindMeeting))),
+		"a.kind = 'meeting'",
 		activityLive,
 		"(a.meeting_status IS NULL OR a.meeting_status = 'booked')",
 		occurredday.AheadSQL("a", fmt.Sprintf("$%d", arg(after))),

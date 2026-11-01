@@ -241,8 +241,13 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			}
 			return where, nil
 		},
-		scan:   scanContactPage,
-		attach: attachContactChildren,
+		scan: scanContactPage,
+		attach: func(ctx context.Context, tx pgx.Tx, contacts []crmcontracts.Contact) error {
+			if err := attachContactChildren(ctx, tx, contacts); err != nil {
+				return err
+			}
+			return attachContactCreators(ctx, tx, contacts)
+		},
 		cursorKey: func(last crmcontracts.Contact) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)
 		},

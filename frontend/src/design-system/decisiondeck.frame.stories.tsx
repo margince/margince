@@ -42,6 +42,10 @@ const CARD_LABELS = {
   expired: "Expired",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: {
+    field: (name: string) => name,
+    more: (count: number) => `${count} more not shown`,
+  },
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
 };

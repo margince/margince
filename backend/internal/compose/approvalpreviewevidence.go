@@ -45,6 +45,7 @@ func (r approvalPreviewReader) lifecycleEvidence(ctx context.Context, approval c
 		preview.State = previewIncompleteState
 		return nil
 	}
+	r.touch(map[string][]ids.UUID{entityActivity: {proposal.Evidence.SourceID}, tableSignal: {proposal.SignalID}})
 	var current lifecyclereview.Finding
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := activities.ReadActivityContentTx(ctx, tx, ids.From[ids.ActivityKind](proposal.Evidence.SourceID), storekit.LiveOnly); err != nil {
@@ -115,8 +116,8 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 		if citation.SourceQuote == nil || source.Body == nil {
 			return nil, apperrors.ErrVersionSkew
 		}
-		proof := values.QuoteProof{Start: citation.SourceQuote.Start, End: citation.SourceQuote.End, SHA256: citation.SourceQuote.Sha256}
-		quote, valid := values.VerifyQuote(textlang.CurrentMessage(*source.Body), proof)
+		proof := lifecyclereview.QuoteProofOf(*citation.SourceQuote)
+		quote, valid := textlang.VerifySenderQuote(*source.Body, proof)
 		if !valid {
 			return nil, apperrors.ErrVersionSkew
 		}

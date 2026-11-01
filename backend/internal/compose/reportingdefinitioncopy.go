@@ -333,9 +333,9 @@ var reportingIncompleteWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		Vi: "Chỉ tính các đối tác bạn được phép xem; đối tác mà công ty chưa có hoạt động nào được tính là không hoạt động, và khi chọn một pipeline thì không có số liệu.",
 	},
 	reportingStageConversion: {
-		En: "Only deals you may see are counted; a deal that left a stage before Margince kept the stage order is counted apart as forward or back unknown, and there is no rate with fewer than 5 deals that left the stage.",
-		De: "Gezählt werden nur Deals, die du sehen darfst; ein Deal, der eine Phase verlassen hat, bevor Margince die Reihenfolge der Phasen gespeichert hat, steht getrennt als Vor oder zurück unbekannt, und bei weniger als 5 Deals, die die Phase verlassen haben, gibt es keine Quote.",
-		Vi: "Chỉ tính các deal bạn được phép xem; deal rời giai đoạn trước khi Margince lưu thứ tự giai đoạn được đếm riêng là không rõ tiến hay lùi, và không có tỷ lệ khi có ít hơn 5 deal đã rời giai đoạn.",
+		En: "Only deals you may see are counted, and moves an import brought in are left out; a deal whose next move was imported, or saved before Margince kept the stage order, is counted apart as next move imported or unknown, and there is no rate with fewer than 5 deals that left the stage.",
+		De: "Gezählt werden nur Deals, die du sehen darfst, und Wechsel, die ein Import mitgebracht hat, bleiben außen vor; ein Deal, dessen nächster Wechsel importiert ist oder gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat, steht getrennt als Nächster Wechsel importiert oder unbekannt, und bei weniger als 5 Deals, die die Phase verlassen haben, gibt es keine Quote.",
+		Vi: "Chỉ tính các deal bạn được phép xem và không tính các lần chuyển do nhập dữ liệu mang vào; deal có lần chuyển tiếp theo được nhập, hoặc được lưu trước khi Margince ghi thứ tự giai đoạn, được đếm riêng là lần chuyển tiếp theo được nhập hoặc không rõ, và không có tỷ lệ khi có ít hơn 5 deal đã rời giai đoạn.",
 	},
 	reportingLeadCohortOutcomes: {
 		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 leads with an outcome, and with a pipeline chosen there is no figure.",

@@ -19,23 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// DealsFunc reads the deals in scope for a period, already row-scoped.
-//
-// Injected rather than imported: the deals live in another module and the row
-// scope is applied where the caller's authority already sits, which is the
-// composition layer. The boolean says whether anything was withheld — and it is
-// a boolean and never a count, because a count of what a caller may not read is
-// itself a statement about how much of it there is.
-//
-// asOf and baseCurrency travel with the request because the conversion needs
-// both: a rate is looked up as of a DAY, and there is no base amount without a
-// currency to convert into.
-// The Scope it returns is the one it RESOLVED, which is not always the one it
-// was handed: an unset scope means the caller named nothing, and what that
-// means depends on their lens. The reading reports the resolved one, so an
-// answer always says which population it is about.
-type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, Scope, bool, error)
-
 // PeriodFunc resolves the installation's window for a day, and the currency its
 // money is counted in. Injected for the same reason: the fiscal settings belong
 // to identity.
@@ -74,6 +57,9 @@ type Baseline struct {
 	// empty while enforcement is off. Read from the setting, so a period with
 	// no deal still records it.
 	QualifiedPolicy string
+	// Assembly is the whole result the readings came from, kept so a snapshot
+	// of the baseline freezes the basis of its chances too.
+	Assembly Assembly
 }
 
 // BaselineFunc reads the population a call is made about the way a capture
@@ -85,14 +71,18 @@ type BaselineFunc func(ctx context.Context, tx pgx.Tx, scope Scope, period Perio
 // Handlers is the forecast's HTTP surface.
 type Handlers struct {
 	store    *Store
-	deals    DealsFunc
+	assemble AssembleFunc
 	period   PeriodFunc
 	resolve  ResolveScopeFunc
 	history  HistoryFunc
 	measure  MeasureFunc
 	holds    HoldsDealsFunc
 	baseline BaselineFunc
-	now      func() time.Time
+	// stageChances serves the stage-chances read; see stagechances.go.
+	stageChances StageChancesFunc
+	// readerRows narrows per-deal rows to what the reader may see one by one.
+	readerRows ReaderRowsFunc
+	now        func() time.Time
 }
 
 // WithCallBaseline keeps a baseline with every call recorded through these
@@ -105,11 +95,11 @@ func (h Handlers) WithCallBaseline(baseline BaselineFunc) Handlers {
 
 // NewHandlers binds the routes to the store and its seams.
 func NewHandlers(
-	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc,
+	store *Store, assemble AssembleFunc, period PeriodFunc, resolve ResolveScopeFunc,
 	history HistoryFunc, measure MeasureFunc, holds HoldsDealsFunc, now func() time.Time,
 ) Handlers {
 	return Handlers{
-		store: store, deals: deals, period: period, resolve: resolve,
+		store: store, assemble: assemble, period: period, resolve: resolve,
 		history: history, measure: measure, holds: holds, now: now,
 	}
 }
@@ -147,21 +137,19 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		deals, resolved, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
+		assembly, err := h.assemble(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
-		scope = resolved
-		// The as-of DAY, not the instant. The slipped rule compares calendar
-		// days, and handing it a clock makes a deal due today read as slipped
-		// from noon onward — which the report engine, comparing dates, would
-		// not agree with.
-		readings, err := Compute(period, period.LocalDay(at), deals)
-		if err != nil {
-			return err
-		}
+		scope, readings := assembly.Scope, assembly.Readings
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
-		out.ScopeLimited = &limited
+		out.ScopeLimited = &assembly.Limited
+		out.SelfCorrecting = &assembly.SelfCorrecting
+		if params.Contributions != nil && *params.Contributions {
+			if err := h.contributionRows(ctx, tx, readings, &out); err != nil {
+				return err
+			}
+		}
 		holds, err := h.holds(ctx, tx, scope)
 		if err != nil {
 			return err
@@ -190,19 +178,14 @@ func (h Handlers) GetForecast(
 			return nil
 		}
 		var called *int64
-		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
-		switch {
-		case !mayAssert:
-			// The call exists for others; this seat is shown none.
-		case err == nil:
+		call, seen, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
+		if err != nil {
+			return err
+		}
+		if seen {
 			wire := callToWire(call)
 			out.CurrentCall = &wire
 			called = &call.AmountMinor
-		case IsNoStandingCall(err):
-			// Nobody has called this period. A real answer, and absent rather
-			// than an error.
-		default:
-			return err
 		}
 		return h.project(ctx, tx, &out, period, scope, readings, called, at, baseCurrency)
 	})
@@ -232,6 +215,21 @@ func MayAssertAbout(ctx context.Context, tx pgx.Tx, resolve ResolveScopeFunc, sc
 	}
 }
 
+// CallSeen is the standing call a seat sees for a resolved population. Its
+// bool is false when the seat may not assert about it, or nobody has called. The
+// forecast endpoint, the forecast_readings tool and the reporting landing all
+// read the call through it, so the three agree on one landing.
+func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, period Period, scope Scope) (Call, bool, error) {
+	if !mayAssert || scope.Kind == ScopeManagedTeams {
+		return Call{}, false, nil
+	}
+	call, err := store.CurrentCallTx(ctx, tx, period, scope)
+	if IsNoStandingCall(err) {
+		return Call{}, false, nil
+	}
+	return call, err == nil, err
+}
+
 // project adds where the period lands and whether the pipeline supports it.
 //
 // Separate from GetForecast because it is a second question over the same
@@ -243,16 +241,11 @@ func (h Handlers) project(
 	period Period, scope Scope, readings Readings, call *int64,
 	asOf time.Time, baseCurrency string,
 ) error {
-	measure, err := h.measure(ctx, tx)
+	landing, err := LandingFor(ctx, tx, h.measure, readings, call)
 	if err != nil {
 		return err
 	}
-	landing, err := ProjectLanding(readings, measure, call)
-	if err != nil {
-		return err
-	}
-	wire := landingToWire(landing)
-	out.Landing = &wire
+	out.Landing = &landing
 
 	// The managed-teams reading covers several populations, so a conversion
 	// rate over it would blend books that are measured separately — and the
@@ -273,11 +266,29 @@ func (h Handlers) project(
 	return nil
 }
 
-// landingToWire maps a projection onto the wire shape.
+// LandingFor answers the landing the forecast read prints, under the measure
+// this installation set. The forecast endpoint and the forecast_readings tool
+// both call it.
+func LandingFor(
+	ctx context.Context, tx pgx.Tx, measure MeasureFunc, readings Readings, call *int64,
+) (crmcontracts.ForecastLanding, error) {
+	set, err := measure(ctx, tx)
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	landing, err := ProjectLanding(readings, set, call)
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	return LandingToWire(landing), nil
+}
+
+// LandingToWire maps a projection onto the wire shape. The reporting metric
+// calls it too, so both state one landing.
 //
 // The caveat is omitted rather than sent empty when there is none: an empty
 // string would render as a warning that says nothing.
-func landingToWire(in Landing) crmcontracts.ForecastLanding {
+func LandingToWire(in Landing) crmcontracts.ForecastLanding {
 	out := crmcontracts.ForecastLanding{
 		AmountMinor:    in.AmountMinor,
 		Measure:        crmcontracts.ForecastLandingMeasure(in.Measure),
@@ -394,12 +405,14 @@ func (h Handlers) recordWithBaseline(ctx context.Context, tx pgx.Tx, in NewCall)
 	if err != nil {
 		return Call{}, err
 	}
-	if _, err := h.store.TakeSnapshot(ctx, tx, NewSnapshot{
+	snapshot := NewSnapshot{
 		Period: in.Period, Scope: baseline.Scope, Trigger: TriggerCall,
 		BaseCurrency: baseline.BaseCurrency, Readings: baseline.Readings, TakenAt: submitted,
 		CallID: &out.ID, PopulationFingerprint: baseline.PopulationFingerprint,
 		ForwardMeasure: baseline.ForwardMeasure, QualifiedPolicyVersion: baseline.QualifiedPolicy,
-	}); err != nil {
+	}
+	snapshot.StampChances(baseline.Assembly)
+	if _, err := h.store.TakeSnapshot(ctx, tx, snapshot); err != nil {
 		return Call{}, err
 	}
 	out.HasBaseline = true

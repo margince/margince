@@ -76,6 +76,7 @@ type groupKey struct {
 	window   string
 	currency string
 	bucket   int
+	evidence string
 }
 
 var windowOrder = []string{WindowTrain, WindowValidation, WindowTest}
@@ -86,11 +87,11 @@ var windowOrder = []string{WindowTrain, WindowValidation, WindowTest}
 func scoreRows(included []scored, plan EvaluationPlan, fits map[fitKey]closureRatio) ([]EvaluationRow, error) {
 	groups := map[groupKey][]EvaluationVintage{}
 	for _, s := range included {
-		key := groupKey{s.window, s.vintage.Currency, s.bucket}
+		key := groupKey{s.window, s.vintage.Currency, s.bucket, s.vintage.Sufficiency}
 		groups[key] = append(groups[key], s.vintage)
 	}
 	var rows []EvaluationRow
-	methods := []string{MethodStageWeighting, MethodCommitEvidence}
+	methods := []string{MethodStageWeighting, MethodSelfCorrecting, MethodCommitEvidence, MethodRange}
 	if plan.ScoreCandidate {
 		methods = append(methods, MethodOpenClosure)
 	}
@@ -106,15 +107,15 @@ func scoreRows(included []scored, plan EvaluationPlan, fits map[fitKey]closureRa
 	slices.SortFunc(rows, func(a, b EvaluationRow) int {
 		return cmp.Or(strings.Compare(a.Label, b.Label), strings.Compare(a.Method, b.Method),
 			slices.Index(windowOrder, a.Window)-slices.Index(windowOrder, b.Window),
-			strings.Compare(a.Currency, b.Currency), a.bucket-b.bucket)
+			strings.Compare(a.Currency, b.Currency), a.bucket-b.bucket, strings.Compare(a.Evidence, b.Evidence))
 	})
 	return rows, nil
 }
 
 func scoreRow(method string, key groupKey, vintages []EvaluationVintage, plan EvaluationPlan, fits map[fitKey]closureRatio) (EvaluationRow, error) {
 	row := EvaluationRow{
-		Label: LabelObserved, Method: method, Window: key.window, Currency: key.currency,
-		Horizon: bucketName(key.bucket, plan.HorizonEdges), Vintages: len(vintages), bucket: key.bucket,
+		Label: methodLabel(method, vintages), Method: method, Window: key.window, Currency: key.currency,
+		Horizon: bucketName(key.bucket, plan.HorizonEdges), Evidence: key.evidence, Vintages: len(vintages), bucket: key.bucket,
 	}
 	outcomes := map[string]bool{}
 	for _, v := range vintages {
@@ -127,9 +128,15 @@ func scoreRow(method string, key groupKey, vintages []EvaluationVintage, plan Ev
 		}
 	}
 	row.Outcomes = len(outcomes)
+	if row.NotScored = unscorable(method, vintages); row.NotScored != "" {
+		return row, nil
+	}
+	if method == MethodRange {
+		row.Interval = scoreIntervals(vintages)
+		return row, nil
+	}
 	predict := configuredPrediction(method)
 	if method == MethodOpenClosure {
-		row.Label = LabelBacktest
 		fit, ok := fits[fitKey{key.currency, key.bucket}]
 		switch {
 		case key.window == WindowTrain:
@@ -150,15 +157,53 @@ func scoreRow(method string, key groupKey, vintages []EvaluationVintage, plan Ev
 	return row, nil
 }
 
+// methodLabel is observed when every vintage showed the method's figure when
+// it was frozen. Typed weighting is what a snapshot showed with self-correction
+// off; with it on, the typed figure is recomputed from frozen chances.
+func methodLabel(method string, vintages []EvaluationVintage) string {
+	switch method {
+	case MethodOpenClosure:
+		return LabelBacktest
+	case MethodStageWeighting:
+		for _, v := range vintages {
+			if v.SelfCorrecting != nil && *v.SelfCorrecting {
+				return LabelBacktest
+			}
+		}
+	}
+	return LabelObserved
+}
+
+// unscorable says why a method cannot score every vintage of a group, so no
+// method is scored on a smaller set than the others.
+func unscorable(method string, vintages []EvaluationVintage) string {
+	for _, v := range vintages {
+		switch {
+		case method == MethodSelfCorrecting && (v.SelfCorrecting == nil || !*v.SelfCorrecting):
+			return "a vintage in this group was frozen with self-correction off, so no chance in use was kept"
+		case method == MethodRange && (v.RangeLowMinor == nil || v.RangeHighMinor == nil):
+			return "a vintage in this group was frozen before ranges were drawn"
+		}
+	}
+	return ""
+}
+
 type prediction func(EvaluationVintage) (int64, error)
 
+// configuredPrediction is won money plus the method's remaining figure. That
+// is the open deals at typed chances, the frozen weighted figure under the
+// chances in use, or committed evidence.
 func configuredPrediction(method string) prediction {
-	measure := MeasureWeighted
-	if method == MethodCommitEvidence {
-		measure = MeasureCommitEvidence
-	}
 	return func(v EvaluationVintage) (int64, error) {
-		landing, err := ProjectLanding(Readings{WonMinor: v.WonMinor, EvidenceMinor: v.Evidence, WeightedMinor: v.Weighted}, measure, nil)
+		readings := Readings{WonMinor: v.WonMinor, EvidenceMinor: v.Evidence, WeightedMinor: v.TypedWeighted}
+		measure := MeasureWeighted
+		switch method {
+		case MethodSelfCorrecting:
+			readings.WeightedMinor = v.Weighted
+		case MethodCommitEvidence:
+			measure = MeasureCommitEvidence
+		}
+		landing, err := ProjectLanding(readings, measure, nil)
 		return landing.AmountMinor, err
 	}
 }

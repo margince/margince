@@ -327,7 +327,7 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 func readCompanyMergeState(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (crmcontracts.Company, *ids.UUID, error) {
 	// A merge-state read feeds the resolution decision, never the wire —
 	// core columns suffice.
-	o, err := readCompany(ctx, tx, id, storekit.IncludeArchived, nil)
+	o, err := readCompanyRow(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
 		return crmcontracts.Company{}, nil, err
 	}

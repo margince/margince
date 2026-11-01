@@ -32,6 +32,7 @@ var planCopySuffix = regexp.MustCompile(`_\d+$`)
 //nolint:tagliatelle // fixed by the server's plan format
 type planNode struct {
 	NodeType     string `json:"Node Type"`
+	SubplanName  string `json:"Subplan Name"`
 	RelationName string `json:"Relation Name"`
 	Alias        string `json:"Alias"`
 	IndexName    string `json:"Index Name"`

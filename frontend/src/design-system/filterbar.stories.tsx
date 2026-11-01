@@ -58,6 +58,20 @@ export const WithActionsAndCaption: Story = {
   ),
 };
 
+// Quiet: the same dials on the page ground, for a view whose figures lead.
+export const Quiet: Story = {
+  render: () => (
+    <FilterBar
+      label="Filters"
+      quiet
+      actions={<Button variant="ghost">More</Button>}
+      caption="1 Oct – 31 Dec · actuals through 31 Oct"
+    >
+      {period}
+    </FilterBar>
+  ),
+};
+
 // Dials alone: no verbs, no caption, and no empty slots left for them.
 export const DialsOnly: Story = {
   render: () => <FilterBar label="Filters">{period}</FilterBar>,

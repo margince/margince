@@ -100,7 +100,7 @@ func (s *Store) updateContactInTx(
 	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
 		return out, err
 	}
-	current, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readContactRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return out, fmt.Errorf("read contact before update: %w", err)
 	}
@@ -145,7 +145,7 @@ func (s *Store) updateContactInTx(
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	if p.Empty() {
-		return current, nil
+		return withContactCreator(ctx, tx, current)
 	}
 
 	if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {

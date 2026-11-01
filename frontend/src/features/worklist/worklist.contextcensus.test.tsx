@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
 import { isValidElement } from "react";
 import { expect, it } from "vitest";
+import { KNOWN_SOURCES, rowHref } from "../../lib/worklistcopy";
 import { row } from "../../testing/worklist.testkit";
-import { KNOWN_SOURCES, rowHref } from "./worklist.copy";
 import { reviewView } from "./worklist.destinations";
 import { rowActivityId, rowSourceUnavailable } from "./worklist.noticesource";
 import type { WorklistItem } from "./worklist.queries";

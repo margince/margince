@@ -585,11 +585,14 @@
     padding: 0;
   }
   /* The actions sit at the foot of the sheet rather than after the content,
-     so a long form does not bury its own confirm button. */
+     so a long form does not bury its own confirm button. A sticky foot stops
+     at the dialog's padding, and the shadow fills that padding below it, so
+     text scrolling under the row cannot show beneath the buttons. */
   .modal .actions {
     position: sticky;
     bottom: 0;
     background: var(--ground);
+    box-shadow: 0 var(--space-6) 0 var(--ground);
     padding-top: var(--space-3);
   }
 }
@@ -2045,6 +2048,12 @@ span.error-line {
    clamp's box lays inline children out on one line. Each fact keeps its own. */
 .stat-card-detail > * {
   display: block;
+}
+/* Two facts get two lines each, so the second is never cut to an ellipsis
+   because the first one wrapped. */
+.stat-card-detail:has(> :nth-child(2)) {
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
 }
 
 /* The label NAMES the reading; it does not announce it. It is sentence-case

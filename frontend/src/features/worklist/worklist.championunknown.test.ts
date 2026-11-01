@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
-import { itemTitle, reasonText } from "./worklist.copy";
+import { itemTitle, reasonText } from "../../lib/worklistcopy";
 import type { WorklistItem, WorklistReason } from "./worklist.queries";
 
 const zone = viewerZone();
