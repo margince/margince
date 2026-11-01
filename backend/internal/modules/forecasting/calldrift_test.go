@@ -153,6 +153,13 @@ func TestTheInputFingerprintIgnoresOrderAndSeesQualification(t *testing.T) {
 	if InputFingerprint([]Contribution{a, b}) == InputFingerprint([]Contribution{excluded, b}) {
 		t.Fatal("a deal leaving the qualified forecast left the fingerprint unchanged")
 	}
+	// The range draws one chance per stage, so a deal changing stage at the same
+	// chance changes what the forecast says.
+	moved := a
+	moved.StageID = "stage-elsewhere"
+	if InputFingerprint([]Contribution{a, b}) == InputFingerprint([]Contribution{moved, b}) {
+		t.Fatal("a deal moving to another stage left the fingerprint unchanged")
+	}
 }
 
 // The policy is the setting's, not the deals': a period whose first deal

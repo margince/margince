@@ -206,6 +206,12 @@ func TestAFormNoteAnswersTheSubmissionFieldByField(t *testing.T) {
 	if c := sent.Consent; c == nil || !c.Ticked || c.Wording != "You may contact me." || deref(c.PolicyVersion) != "2026-10" {
 		t.Errorf("consent = %+v, want the ticked box with its wording and policy version", c)
 	}
+	// The consent proves itself: it names the form and the page it was given on.
+	if c := sent.Consent; c != nil && (c.FormId == nil || c.FormId.String() != form.ID || deref(c.FormName) != "Contact" ||
+		deref(c.PageUrl) != siteOrigin+"/pricing") {
+		t.Errorf("consent names form %v %q and page %q, want %s \"Contact\" and the pricing page",
+			c.FormId, deref(c.FormName), deref(c.PageUrl), form.ID)
+	}
 }
 
 func deref(s *string) string {
@@ -533,5 +539,43 @@ func TestALeadFromAFormWhoseOwnerLeftLandsUnassigned(t *testing.T) {
 	}
 	if got := leadOwnerOf(t, e, "orphan@visitor.example"); got != nil {
 		t.Fatalf("lead owner = %s, want unassigned once the form's owner left", *got)
+	}
+}
+
+type formLastPost struct {
+	Version    int64      `json:"version"`
+	LastPostAt *time.Time `json:"last_post_at"`
+}
+
+func readFormLastPost(t *testing.T, e *apptest.AppEnv, id string) formLastPost {
+	t.Helper()
+	var out formLastPost
+	if status := e.Call(t, "GET", "/v1/web-forms/"+id, nil, nil, &out); status != http.StatusOK {
+		t.Fatalf("read web form → %d", status)
+	}
+	return out
+}
+
+// A form's row says whether its pasted code works. A dropped post is no sign
+// of that, and a landed one leaves the version an admin's edit holds alone.
+func TestAFormKnowsWhenItLastLandedAPost(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	if got := readFormLastPost(t, e, form.ID); got.LastPostAt != nil {
+		t.Fatalf("a new form reads a last post at %s, want none", got.LastPostAt)
+	}
+	browserPost(t, e, form.FormKey, url.Values{"email": {"bot@visitor.example"}, "_mrg_hp": {"x"}}, siteOrigin)
+	if got := readFormLastPost(t, e, form.ID); got.LastPostAt != nil {
+		t.Fatalf("a post the spam checks dropped stamped a last post at %s", got.LastPostAt)
+	}
+	if answer := browserPost(t, e, form.FormKey, url.Values{"email": {"ada@visitor.example"}}, siteOrigin); answer.Status != http.StatusAccepted {
+		t.Fatalf("browser post → %d %s", answer.Status, answer.Body)
+	}
+	got := readFormLastPost(t, e, form.ID)
+	if got.LastPostAt == nil {
+		t.Fatal("a landed post left the form with no last post")
+	}
+	if got.Version != form.Version {
+		t.Fatalf("a landed post moved the form's version from %d to %d, which fails an admin's edit in progress", form.Version, got.Version)
 	}
 }

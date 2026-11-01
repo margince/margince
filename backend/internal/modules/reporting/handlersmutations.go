@@ -65,7 +65,7 @@ func (h Handlers) PublishReportingFramework(w http.ResponseWriter, r *http.Reque
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	version, ok := requiredVersion(w, r)
+	version, ok := frameworkVersion(w, r)
 	if !ok {
 		return
 	}

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,8 +47,11 @@ type StagedApproval struct {
 	Status string `json:"status"`
 	// Summary is the one line the inbox shows a human. Absent on a staging that
 	// never wrote one, rather than filled with a restatement of the kind.
-	Summary    string `json:"summary,omitempty"`
-	ProposedBy string `json:"proposed_by"`
+	Summary string `json:"summary,omitempty"`
+	// SummaryParts is Summary taken apart: the sentence and each field value.
+	// Absent where Summary is absent or withheld, or is a sentence alone.
+	SummaryParts *crmcontracts.ApprovalSummaryParts `json:"summary_parts,omitempty"`
+	ProposedBy   string                             `json:"proposed_by"`
 	// TargetType and TargetID are the record the staged change acts on, absent
 	// together for a proposal that names none.
 	//
@@ -74,10 +78,19 @@ type StagedApproval struct {
 	TargetLabel string `json:"target_label,omitempty"`
 	// OnBehalfOf is the seat the proposer acted for. read_approval names them.
 	OnBehalfOf *RecordOwner `json:"on_behalf_of,omitempty"`
-	// Changes names each field the staged change would set, before and after.
-	// It is the inbox's own preview of the change. read_approval carries it
-	// while the change is pending and can still be shown.
-	Changes []FieldChange `json:"changes,omitempty"`
+	// Changes, Details and Effects are what the inbox card shows approving
+	// does. read_approval carries them while the change is pending and its
+	// preview is ready.
+	Changes []FieldChange   `json:"changes,omitempty"`
+	Details []PreviewDetail `json:"details,omitempty"`
+	Effects []PreviewEffect `json:"effects,omitempty"`
+	// PreviewState is the card preview's state, and PreviewNote the card's
+	// sentence for one that is not ready, such as who must decide it instead.
+	PreviewState string `json:"preview_state,omitempty"`
+	PreviewNote  string `json:"preview_note,omitempty"`
+	// Preview is the card's preview as the engine answered it, which
+	// read_approval puts in words.
+	Preview *crmcontracts.ApprovalPreview `json:"-"`
 }
 
 // StagedEvidence is one thing a proposal was read out of. It travels with the
@@ -252,10 +265,9 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 	if err != nil {
 		return nil, err
 	}
-	lang := summaryIn(ctx, t.language).lang
-	for i := range staged.Changes {
-		staged.Changes[i].Label = FieldLabel(lang, staged.Changes[i].Field)
-	}
+	reading := ReadPreview(summaryIn(ctx, t.language).lang, staged.Preview)
+	staged.Changes, staged.Details, staged.Effects = reading.Changes, reading.Details, reading.Effects
+	staged.PreviewState, staged.PreviewNote = reading.State, reading.Note
 	if staged.OnBehalfOf != nil {
 		staged.OnBehalfOf = t.nameSeat(ctx, staged.OnBehalfOf.ID)
 	}

@@ -264,6 +264,9 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			if err := attachCompanyPartners(ctx, tx, companies); err != nil {
 				return err
 			}
+			if err := attachCompanyCreators(ctx, tx, companies); err != nil {
+				return err
+			}
 			if err := storekit.AttachRowTags(ctx, tx, companyEntity, companies,
 				func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
 				func(o *crmcontracts.Company, tags []storekit.RowTag) { o.Tags = wireRowTags(tags) }); err != nil {

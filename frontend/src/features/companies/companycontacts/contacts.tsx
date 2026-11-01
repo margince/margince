@@ -273,14 +273,14 @@ function LastTouch({ contact }: { readonly contact: CompanyContact }) {
 
 /**
  * The newer of the two direction clocks, read by its own precision. Ordered by
- * the stored times as contacts.EngagementOf orders them, so a tie is theirs to answer.
+ * the stored times as contacts.EngagementOf orders them, so a tie reads as ours.
  */
 function lastWritten(
   contact: CompanyContact,
 ): (ActivityMoment & { theyWrote: boolean }) | undefined {
   const inbound = contact.last_inbound_at;
   const outbound = contact.last_outbound_at;
-  if (inbound && (!outbound || Date.parse(inbound) >= Date.parse(outbound))) {
+  if (inbound && (!outbound || Date.parse(inbound) > Date.parse(outbound))) {
     const precision = contact.last_inbound_precision ?? "instant";
     return { theyWrote: true, at: inbound, precision };
   }

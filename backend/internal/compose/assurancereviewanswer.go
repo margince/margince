@@ -48,7 +48,7 @@ func AssuranceReviewCheck(ctx context.Context, tx pgx.Tx, deal ids.UUID, outcome
 	case status != string(deals.DealOpen):
 		return httperr.Validation("outcome", "deal_closed", "The deal is closed, so there is nothing to revive.")
 	}
-	subjects, err := assuranceSubjects(ctx, tx, now, AssuranceCoverage(ctx, tx, now), &deal)
+	subjects, err := assuranceSubjects(ctx, tx, now, AssuranceCoverage(ctx, tx, now), []ids.UUID{deal})
 	if err != nil {
 		return err
 	}

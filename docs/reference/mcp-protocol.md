@@ -19,7 +19,7 @@ modern version. Anything else is served as **handshake-era**. The framing decide
 back*, never what it may do. Both reach the same registry and the same admission gate.
 
 **Methods both forms answer:** `tools/list`, `tools/call`, `resources/list`, `resources/read`,
-`resources/templates/list`, `prompts/list`. **Methods each era owns:** `initialize` and `ping` in the handshake
+`resources/templates/list`, `prompts/list`, `prompts/get`. **Methods each era owns:** `initialize` and `ping` in the handshake
 framing, `server/discover` in the modern one. Each is `-32601` in the *other* framing. For the two first calls, to
 answer one would tell a client it had reached the era it was looking for.
 
@@ -53,14 +53,40 @@ lets a client write *any* value that way, plain ASCII included. This server read
 Take a server in the middle that filters on the header as sent, and does not read the sentinel form. A client can pass
 it by writing the value that way. Route on these headers only if you read them back the same way.
 
-**Every modern result carries `resultType: "complete"` and `_meta["io.modelcontextprotocol/serverInfo"]`**, and every
+**Every modern result carries `resultType` and `_meta["io.modelcontextprotocol/serverInfo"]`**, and every
 result a client may cache carries `ttlMs` + `cacheScope`. `server/discover` is `public`: its bytes are the same for
 every caller, and a test holds that claim. Every catalog (`tools/list`, `resources/*`, `prompts/list`) is
 **`private`**, because each is filtered per passport. A shared cache entry on a response filtered by scope would show
 data to the wrong caller.
 
 The server could not audit a wrong cached answer, because it never sees one. A TTL is a hint for caches, never a permission. Every call
-signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all.
+signs in again, so an old catalog cannot make a refused call work. A `tools/call` result carries no hint at all. `resultType` is `"complete"`, except for a task handle and a question to the
+user.
+
+**Starter prompts.** `prompts/list` offers the requests in `agents/prompts.go`, which a host shows as commands or a
+menu. A caller sees a prompt only when it is offered every tool the prompt names, so a read-only passport is not offered
+"Log a call". `prompts/get` fills the prompt's arguments into one user message. A missing argument or an unknown name is
+`-32602`. In the modern framing `prompts/get` needs `Mcp-Name`, like `tools/call`.
+
+**What the server says about itself.** `serverInfo` carries a `title` and a `description`. When the public origin is
+set, it also carries `websiteUrl` and `icons`, both on that origin. The server instructions open with what Margince is
+and the tools to start with, before the rules.
+
+**Links and money in a result.** Each `evidence` entry for a deal, contact, company, lead or project carries a
+`web_url`. It opens the record in the app, on the public origin. Every `<name>_minor` beside a `currency`, or beside
+a forecast's `base_currency`, gets a `<name>_display` such as `72000.00 USD`, from `values.MajorUnits`. A model quotes that text, so it never works out the
+amount on its own. A result with no amount keeps its bytes as the handler wrote them.
+
+**Asking the user in the chat.** A modern `tools/call` whose `clientCapabilities` hold a form `elicitation` can get
+`resultType: "input_required"`. Its `inputRequests` hold one `elicitation/create` form, and its `requestState` is
+signed with the deployment's `connector_state_key`. Two questions go this way. One is the yes for
+`bulk_update_records` in `execute` or `undo` mode. The other is which record a `record_name` names when it matches
+more than one.
+
+The client then sends the same call again, with `inputResponses` and the same `requestState`. A state for some other
+caller, tool or set of arguments, or one older than ten minutes, gets the question again. The answer comes back
+through the client, so it only decides what the client could decide by itself. A change a human must approve still
+goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
 
 **`resources/list` and `prompts/list` answer empty, not `-32601`**, when nothing is wired. `claude.ai` calls both
 right after `initialize` no matter what. A feature the server does not list that answers "method not found" reads as a

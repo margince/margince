@@ -346,7 +346,25 @@ it("counts a closed drawer over the reader's own queue from Home's one read", as
   await waitFor(() =>
     expect(toggle.querySelector(".optioncount")?.textContent).toContain("7"),
   );
-  expect(views, "a closed drawer sent a second Worklist read").toEqual([null]);
+  expect(views, "a closed drawer sent a second Worklist read").toEqual([
+    "today",
+  ]);
+});
+
+it("reads the day once when Home opens with the drawer open", async () => {
+  window.location.hash = "#/home?queue=1";
+  const views: (string | null)[] = [];
+  stubApi({
+    "GET /worklist": (_body, query) => {
+      views.push(query.get("view"));
+      return jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")]));
+    },
+  });
+  render(<BriefScreen />);
+
+  await screen.findByRole("dialog", { name: en["brief.queue.title"] });
+  await screen.findAllByText("Call Weber");
+  expect(views, "Home and its drawer each read the day").toEqual(["today"]);
 });
 
 it("keeps a closed drawer's count on Home's live read after the drawer was open", async () => {
@@ -381,7 +399,7 @@ it("keeps a closed drawer's count on Home's live read after the drawer was open"
   await user.click(screen.getByRole("button", { name: /close/i }));
   tasks = 9;
   await client.refetchQueries({
-    queryKey: ["worklist", "mine", "all", ""],
+    queryKey: ["worklist", "mine", "all", "", "today"],
     exact: true,
   });
 
@@ -414,7 +432,7 @@ it.each(["failed", "bounded", "scope"])(
     });
     await waitFor(() =>
       expect(
-        client.getQueryState(["worklist", "mine", "all", ""])?.status,
+        client.getQueryState(["worklist", "mine", "all", "", "today"])?.status,
       ).toBe("success"),
     );
     expect(toggle.querySelector(".optioncount")).toBeNull();

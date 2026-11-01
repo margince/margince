@@ -177,7 +177,7 @@ func TestAMaterialChangeSinceACallRaisesOneFinding(t *testing.T) {
 // unavailable and raises nothing.
 func TestACallWithNoBaselineHasUnavailableHistory(t *testing.T) {
 	e := setupCall(t)
-	legacy := forecasting.NewHandlers(newForecastStoreFor(e.Pool), ForecastDeals, ForecastPeriodAt,
+	legacy := forecasting.NewHandlers(newForecastStoreFor(e.Pool), ForecastAssemble, ForecastPeriodAt,
 		ForecastWritableScope, ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
 		func() time.Time { return e.at })
 	e.handlers = legacy

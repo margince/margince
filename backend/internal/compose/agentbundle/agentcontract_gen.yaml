@@ -3668,6 +3668,20 @@ paths:
           description: |-
             Only older leads that retain this historical contact link. New leads cannot be
             created from contacts.
+        - name: partner_company_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: |-
+            Only the leads this partner company referred. Reads partner and company data, so it
+            needs `partner:read` and `company:read` (403 otherwise). A partner the caller cannot
+            open matches no lead.
+        - name: partner_accepted
+          in: query
+          schema: {type: boolean}
+          description: |-
+            `true` keeps the referred leads a partner manager accepted. `false` keeps the
+            referred leads still waiting for acceptance. Needs `partner:read` and `company:read`
+            (403 otherwise), and counts only partners the caller can open.
       responses:
         '200':
           description: A page of leads.
@@ -3914,7 +3928,14 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422':
-          description: Trigger not allowed (e.g. cold-outbound-no-reply does not promote).
+          description: |-
+            Trigger not allowed (e.g. cold-outbound-no-reply does not promote). A trigger other
+            than `human_qualify` also needs live engagement linked to this lead that shows it: an
+            inbound email the lead sent for `inbound_reply`, a held meeting the lead was on for
+            `meeting_held`, and a booked or held meeting the lead was on for `meeting_booked`. A cited `evidence.activity_id` that is not such an
+            activity answers code `evidence_does_not_show_trigger` naming `evidence.activity_id`.
+            With no activity cited, the promotion records the lead's strongest such activity, and
+            a lead with none answers the same code naming `trigger`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -5717,7 +5738,21 @@ paths:
       - name: report
         in: path
         required: true
-        schema: {type: string}
+        schema:
+          type: string
+          enum:
+            - activities-by-kind
+            - deals-by-stage
+            - forecast
+            - leads-by-status
+            - meeting-conversion
+            - open-deals-per-company
+            - pipeline-current
+            - project-commitments
+            - projects-by-phase
+            - projects-gone-quiet
+            - stage-age
+            - win-loss
         description: A prebuilt report key. Saved reports are not served; a UUID here is refused.
         examples:
           prebuilt: {value: open-deals-per-company}
@@ -6011,8 +6046,10 @@ paths:
       tags: [Search]
       operationId: resolveEntities
       security: [{bearerAuth: []}]
-      summary: Whether the contacts and companies in a payload are already records here.
+      summary: Find out whether a contact or company is already a record here, before creating one.
       description: |-
+        Ask this before creating a contact or company from a name, email, phone or domain,
+        such as one from a conference list or a signature.
         The answer the `resolve_entities` agent tool gives, run by the same tool on both
         doors. Each candidate is matched by its keys (email, phone, domain) and its name;
         only a match on a unique key can be acted on alone. A POST because a batch of
@@ -7721,6 +7758,11 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             Whose forecast, for a team or owner scope. Refused with the workspace scope, which names no subject.
+        - name: contributions
+          in: query
+          schema: {type: boolean, default: false}
+          description: >-
+            Add `contributions`, one row per deal in the won or open reading that the caller may read, with the chance it is weighted by and why.
       responses:
         '200':
           description: The readings for that period.
@@ -7794,11 +7836,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, groups, totals]
                 properties:
                   data:
                     type: array
                     items: {$ref: '#/components/schemas/InputCheck'}
+                  groups:
+                    type: array
+                    description: >-
+                      The same findings grouped by type, in the order each type first appears in `data`. Counted over the whole list this caller may see, never a page of it.
+                    items: {$ref: '#/components/schemas/InputCheckGroup'}
+                  totals: {$ref: '#/components/schemas/InputCheckTotals'}
                 additionalProperties: false
         '400':
           description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
@@ -8978,6 +9026,12 @@ components:
         ticked: {type: boolean}
         wording: {type: string, description: 'The words the box showed, as the admin wrote them when the form was sent.'}
         policy_version: {type: string, description: 'The privacy policy version the form named, when it named one.'}
+        form_id:
+          type: string
+          format: uuid
+          description: The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+        form_name: {type: string, description: 'The form''s name when it was sent. Absent on an older record.'}
+        page_url: {type: string, description: 'The page the form was sent from, as `page_url` keeps it. Absent when the form sent none.'}
     SourceAuthor:
       type: object
       description: |-
@@ -9229,16 +9283,18 @@ components:
           description: Pass back as `thread_cursor` for the next page. Null when this is the last.
     BodyCompleteness:
       type: string
-      enum: [complete, partial, unreadable, forwarded, unassessed]
+      enum: [complete, partial, unreadable, forwarded, unassessed, unverifiable]
       description: |-
         How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
         part was not read in full (it broke while decoding, or it ran past the size limit), so
         the body may lack text. `unreadable`: none of it, so the body holds only the From and To
         lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
         text of the original it forwarded, not the sender's own words. `unassessed`: a mail
-        stored before this was recorded and not yet checked against its stored original, or one
-        with no original to check. Automatic work (promises, requests and their settlement, and
-        the events read from a conversation) is read only from a `complete` mail body.
+        stored before this was recorded and not yet checked against its stored original.
+        `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+        decodes, so its text can never be checked. Automatic work (promises, requests and their
+        settlement, and the events read from a conversation) is read only from a `complete` mail
+        body.
     EmailPresentation:
       type: object
       description: |-
@@ -9400,7 +9456,7 @@ components:
         merge_mode:
           type: string
           enum: [ordinary, delegated, pair, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner. `none`: none of these.'
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the workspace policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -9431,7 +9487,11 @@ components:
         pair_id: {type: string, format: uuid}
         left_id: {type: string, format: uuid}
         right_id: {type: string, format: uuid}
-        confidence: {type: number, minimum: 0, maximum: 1}
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: 'A weight that ranks pairs, not the chance that the two are the same contact. A lane that scores nothing, such as an address variant, files 0; `evidence` says why the pair was raised.'
         status: {type: string, enum: [open, not_a_duplicate], description: '`not_a_duplicate` pairs are shown so a reviewer sees that someone said these two are not duplicates; selecting both refuses the merge.'}
         evidence: {type: array, items: {$ref: '#/components/schemas/DedupeEvidence'}}
         can_dismiss:
@@ -10566,6 +10626,16 @@ components:
         strength: {allOf: [{$ref: '#/components/schemas/RelationshipStrength'}], readOnly: true, description: 'Deterministic relationship-strength. Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who created the contact, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -10904,6 +10974,16 @@ components:
             How many open, live deals belong to this account, counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who created the company, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -12171,6 +12251,15 @@ components:
           type: string
           enum: [email, call, meeting, message]
         activity_id: {type: string, format: uuid}
+    ContactNoticeDuty:
+      type: object
+      required: [id, rule, due_at, blocked]
+      properties:
+        deadline_is_upper_bound: {type: boolean, description: 'The acquisition date is unknown; this is the latest possible deadline.'}
+        id: {type: string, format: uuid}
+        rule: {type: string, enum: [art13, art14]}
+        due_at: {type: string, format: date-time}
+        blocked: {type: boolean}
     Contact360:
       type: object
       description: |-
@@ -12191,7 +12280,8 @@ components:
             Who created the contact, from its earliest create audit row: for an agent, the
             colleague it worked for and the tool it was typed through, each when the row
             records it, which `captured_by` cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         scope:
           $ref: '#/components/schemas/ProjectScope'
           description: The project this was narrowed to, when the request named one.
@@ -12241,7 +12331,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses, billing_roles]
+            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses, billing_roles, privacy_notice_duties]
         strength: {$ref: '#/components/schemas/RelationshipStrength'}
         billing_roles:
           type: array
@@ -12316,6 +12406,14 @@ components:
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Activity'}}
             page: {$ref: '#/components/schemas/PageInfo'}
+        privacy_source_reviews:
+          type: array
+          description: Unassessed sources for this contact. No confirmed duty or legal deadline. Withheld with the privacy_notice_duties section.
+          items: {type: string, format: uuid}
+        privacy_notice_duties:
+          type: array
+          description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
+          items: {$ref: '#/components/schemas/ContactNoticeDuty'}
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -13034,7 +13132,7 @@ components:
         Named in the response so the same evidence cannot render differently across clients.
         Ties break by consequence, then nearest deadline, then most recent evidence, then
         stable id.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [privacy_notice_due, meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, public_signal, missing_next_step, thin_relationship, nothing_needed]
     ContactMomentEvidence:
       type: object
       description: One thing that actually happened, which the reader can open.
@@ -13042,7 +13140,7 @@ components:
       properties:
         type:
           type: string
-          enum: [activity, task, relationship_change]
+          enum: [activity, task, relationship_change, notice_case]
         id:
           type: string
           format: uuid
@@ -13083,8 +13181,8 @@ components:
         surface:
           type: string
           description: >-
-            `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
-          enum: [composer, meeting_brief, research, record, task, activity_log, booking]
+            `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact. `privacy_notice` — open the disclosure case named by entity_id directly.
+          enum: [composer, meeting_brief, research, record, task, activity_log, booking, privacy_notice]
         entity_type:
           type: [string, 'null']
           enum: [contact, company, deal, activity, null]
@@ -13135,6 +13233,7 @@ components:
           maximum: 100
         strength_bucket: {type: string, enum: [none, weak, moderate, strong]}
         interactions_90d: {type: integer, minimum: 0}
+        two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
         outbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where this colleague wrote to them.}
@@ -14654,6 +14753,16 @@ components:
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        created_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          readOnly: true
+          description: |-
+            Who created the deal, from its earliest create audit row, read the way
+            `Contact360.created_by` is: for an agent, the colleague it worked for and the
+            tool it was typed through, each when the row records it, which `captured_by`
+            cannot say. Absent when no create row is known; a reader says "unknown" for an
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -16299,7 +16408,8 @@ components:
             `Contact360.created_by` is: for an agent, the colleague it worked for and the
             tool it was typed through, each when the row records it, which `captured_by`
             cannot say. Absent when no create row is known; a reader says "unknown" for an
-            absent value and never "System".
+            absent value and never "System". Served only to a human session, never to an
+            agent, and never with `passport_id`.
         web_form:
           allOf: [{$ref: '#/components/schemas/WebFormSubmission'}]
           readOnly: true
@@ -17424,6 +17534,14 @@ components:
         industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server maps to one, as it maps a company''s industry. Text that names no code is `422` `not_a_known_value`.'}
         candidate_company_key: {type: [string, 'null']}
         project_id: {type: [string, 'null'], format: uuid}
+        partner_company_id:
+          type: [string, 'null']
+          format: uuid
+          description: |-
+            The partner company that referred the lead. Needs `partner:read` (403 otherwise). A
+            company that does not exist or that the caller cannot read is 422
+            `reference_not_found`; a readable company with no live partner programme is 422
+            `not_a_partner`.
         contact_id:
           type: [string, 'null']
           format: uuid
@@ -17511,6 +17629,8 @@ components:
           description: |-
             The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
             rejected with 422 — promotion is engagement, not import or an outbound touch.
+            Every trigger but human_qualify needs engagement on the lead that
+            `qualification_evidence` would offer; with none, the promotion is refused with 422.
         evidence:
           type: object
           description: Which inbound email/meeting (or human) triggered promotion; recorded in audit.
@@ -17549,9 +17669,13 @@ components:
       readOnly: true
       description: |-
         The strongest genuine-engagement signal captured against this lead, derived from its
-        linked activities at read time: a held meeting over a booked one over an inbound reply.
-        What the qualify dialog shows as the reason and sends back as `trigger`; null when the
-        lead has no such signal yet (a human may still qualify with `human_qualify`).
+        linked activities at read time: a held meeting over a booked one over an inbound reply,
+        by mail or channel message. A meeting with no recorded status counts as booked, and a
+        meeting the lead declined counts as nothing. Only engagement inside the waiting
+        horizon counts (the one that keeps automatic work current, at most 30 days), so older
+        engagement is left out. What the qualify dialog shows as the reason and sends back as
+        `trigger`; null when the lead has no such signal (a human may still qualify with
+        `human_qualify`).
       required: [trigger]
       properties:
         trigger:
@@ -18008,6 +18132,11 @@ components:
         start: {type: integer, minimum: 0}
         end: {type: integer, minimum: 1}
         sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+        cut:
+          type: integer
+          minimum: 0
+          description: >-
+            How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
       additionalProperties: false
     SignalEvidence:
       type: object
@@ -18925,6 +19054,10 @@ components:
           $ref: '#/components/schemas/ReportingWindow'
         target_interval:
           $ref: '#/components/schemas/ReportingWindow'
+        horizon:
+          allOf: [{$ref: '#/components/schemas/ReportingWindow'}]
+          description: >-
+            The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
         close_interval:
           $ref: '#/components/schemas/ReportingWindow'
         timezone:
@@ -19040,8 +19173,9 @@ components:
             instant. Every member is in exactly one outcome, so the counts add
             up to `observations`. `unresolved` members have not reached an
             outcome yet and are never counted as lost; `history_partial`
-            members have a move recorded before Margince kept the stage order,
-            so the direction of that move is unknown.
+            members left by a move an import brought in, which does not show
+            how the team sells, or by a move recorded before Margince kept the
+            stage order, so its direction is unknown.
           items:
             $ref: '#/components/schemas/ReportingCohortCount'
         entries:
@@ -19181,6 +19315,22 @@ components:
           $ref: '#/components/schemas/ReportingEvidenceRef'
         target_comparison:
           $ref: '#/components/schemas/ReportingTargetComparison'
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the low end of the central 80% of finishes under the chances in use, the same figure GET /forecast returns. At most one finish in ten falls below it. It is not a bound on the metric's value. Absent where no range was drawn.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            `forecast_landing` only: the high end of the central 80% of finishes. At most one finish in ten falls above it.
+        forecast_basis:
+          $ref: '#/components/schemas/ReportingForecastBasis'
     ReportingTargetComparison:
       type: object
       additionalProperties: false
@@ -19264,6 +19414,46 @@ components:
           $ref: '#/components/schemas/ReportingQualifiedCoverage'
         operands:
           $ref: '#/components/schemas/ReportingComparisonOperands'
+    ReportingForecastBasis:
+      type: object
+      additionalProperties: false
+      description: |-
+        `forecast_landing` only: what the landing and its range rest on, the same answer
+        GET /forecast gives. Absent where no landing is shown, and on editions captured before
+        the field existed; a reader then says the basis is unknown and never guesses one.
+      required: [landing, period, eligible_count, priced_count, fx_missing_count]
+      properties:
+        landing:
+          $ref: '#/components/schemas/ForecastLanding'
+        period:
+          allOf: [{$ref: '#/components/schemas/ReportingWindow'}]
+          description: The fiscal quarter the landing and the range project, half-open.
+        call_minor:
+          type: integer
+          format: int64
+          description: >-
+            The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
+        eligible_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Deals the forecast considered, priced or not.
+        priced_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: How many of them carried an amount; an unpriced deal adds nothing to the range.
+        fx_missing_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Priced deals with no exchange rate to the base currency, left out of every total.
+        included_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: >-
+            The priced deals the totals count: `priced_count` without the `fx_missing_count` ones. Absent on editions captured before the field existed; a reader then states no included count rather than working one out.
     ReportingQualifiedCoverage:
       type: object
       additionalProperties: false
@@ -20157,6 +20347,102 @@ components:
           description: >-
             The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against.
         qualified: {$ref: '#/components/schemas/ForecastQualifiedReadings'}
+        self_correcting:
+          type: boolean
+          description: >-
+            Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed.
+        range_low_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The low end of the central 80% of finishes: won money plus the open deals, each won or lost by its chance in use, so at most one finish in ten falls below it. It assumes the chances are right and says nothing about whether they are. It is not a bound on `weighted_minor` or the landing. Absent on a stored answer from before ranges were drawn, and present together with `range_high_minor`.
+        range_high_minor:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: >-
+            The high end of the central 80% of finishes: at most one finish in ten falls above it. Present together with `range_low_minor`.
+        contributions_limited:
+          type: boolean
+          description: >-
+            True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
+        contributions:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastContribution'}
+          description: >-
+            Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
+      additionalProperties: false
+    ForecastContribution:
+      type: object
+      description: >-
+        One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
+      required: [deal_id, deal_name, chance_in_use, applied_probability, weighted_minor, in_won, in_open, in_evidence, in_best_case, signals]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_name: {type: string}
+        owner_id: {type: string, format: uuid}
+        stage_id: {type: string, format: uuid}
+        category: {type: string}
+        base_minor:
+          type: integer
+          format: int64
+          description: The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
+        exclusion_reason:
+          type: string
+          enum: [unpriced, fx_missing]
+          description: Why a deal in the reading contributes no money.
+        weighted_minor: {type: integer, format: int64}
+        in_won: {type: boolean}
+        in_open: {type: boolean}
+        in_evidence: {type: boolean}
+        in_best_case: {type: boolean}
+        typed_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The chance typed on the deal's stage, in percent.
+        chance_in_use:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: >-
+            The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
+        evidence_n:
+          type: integer
+          minimum: 0
+          description: >-
+            How many recorded deals that entered this stage in the last two years have closed. Absent while self-correction is off.
+        signals:
+          type: array
+          items: {$ref: '#/components/schemas/ForecastRiskSignal'}
+          description: >-
+            Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off.
+        effect:
+          type: number
+          format: double
+          description: >-
+            The odds ratio the strongest signal applies, learned from settled frozen forecasts and shrunk toward 1. Absent when no signal moves the odds, which is always the case before any frozen forecast with signals has settled.
+        applied_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: The chance in use with `effect` applied to its odds, in percent.
+      additionalProperties: false
+    ForecastRiskSignal:
+      type: object
+      description: >-
+        One risk signal and its facts. `close_pushed`: the close date moved more than twice in 90 days (`count`), and `close_passed` when that date is behind us. `no_next_step`: no open task or booked meeting, with `closes_in_days` when the close is 0 to 7 days away. `quiet`: the customer has said nothing past the viability threshold (`days` of silence). `stuck`: longer in the stage (`stage_id`) than nine in ten won deals stayed (`days` in it).
+      required: [code]
+      properties:
+        code: {type: string, enum: [close_pushed, no_next_step, quiet, stuck]}
+        days: {type: integer, minimum: 0}
+        count: {type: integer, minimum: 0}
+        stage_id: {type: string, format: uuid}
+        close_passed: {type: boolean}
+        closes_in_days: {type: integer, minimum: 0, maximum: 7}
       additionalProperties: false
     ForecastQualifiedReadings:
       type: object
@@ -20327,6 +20613,62 @@ components:
           nullable: true
           description: >-
             True when the record this finding is about, or a stage or forecast call every finding is judged against, changed after the check read it. The finding is out of date until the next run reads the change; a run that could not read all it needs leaves it out of date. Null when no check has run since changes were first tracked, so nothing is known either way.
+        destination:
+          allOf: [{$ref: '#/components/schemas/InputCheckDestination'}]
+          description: >-
+            Where this finding is reviewed, and whether this caller may answer it there. Absent on a list that does not say, such as the team weekly.
+      additionalProperties: false
+    InputCheckDestination:
+      type: object
+      description: >-
+        The screen a finding or a group of findings opens on, decided by the server under the caller's authority so a client never offers an answer the server would refuse.
+      required: [screen, mode]
+      properties:
+        screen:
+          type: string
+          enum: [forecast_review]
+          description: The forecast review list, focused on the finding's `id` or filtered to the group's `type`.
+        mode:
+          type: string
+          enum: [answer, read]
+          description: >-
+            `answer` when this caller may answer the finding now: a human session with forecast update and write authority over its subject. `read` otherwise, which opens the same finding with no answer offered. On a group, `answer` when the caller may answer at least one of its findings.
+      additionalProperties: false
+    InputCheckGroup:
+      type: object
+      description: >-
+        The findings of one type. Findings and the distinct deals they are about are counted apart, because one deal can carry several findings.
+      required: [type, findings, deals, other_findings, exposure, destination]
+      properties:
+        type: {type: string, description: "The finding type, as `InputCheck.type` spells it."}
+        findings: {type: integer, minimum: 0, description: How many findings of this type.}
+        deals: {type: integer, minimum: 0, description: How many distinct deals those findings are about.}
+        other_findings:
+          type: integer
+          minimum: 0
+          description: Findings of this type about something other than a deal, such as a forecast call or a signal.
+        exposure:
+          type: array
+          description: >-
+            The money in question, one entry per currency and never summed across currencies. A deal counts once, at the largest amount any of its findings in this group names. A finding with no amount adds nothing, which is not the same as nothing at stake.
+          items: {$ref: '#/components/schemas/InputCheckExposure'}
+        destination: {$ref: '#/components/schemas/InputCheckDestination'}
+      additionalProperties: false
+    InputCheckExposure:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+      additionalProperties: false
+    InputCheckTotals:
+      type: object
+      description: Every finding in the list, with deals counted once however many findings they carry.
+      required: [findings, deals, other_findings]
+      properties:
+        findings: {type: integer, minimum: 0}
+        deals: {type: integer, minimum: 0}
+        other_findings: {type: integer, minimum: 0}
       additionalProperties: false
     DataCoverage:
       type: object
@@ -20440,7 +20782,9 @@ components:
       properties:
         name:
           type: string
-          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, definition, model]
+          enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, definition, model]
+          description: >-
+            `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
         amount_minor: {type: integer, format: int64}
         deal_count: {type: integer}
       additionalProperties: false
@@ -20468,7 +20812,7 @@ components:
             Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading.
           items:
             type: string
-            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, won, lost, reopened_or_archived, fx, qualification]
+            enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost, reopened_or_archived, fx, qualification]
       additionalProperties: false
     ForecastCall:
       type: object
@@ -21469,7 +21813,7 @@ components:
     ApprovalPreview:
       type: object
       description: >-
-        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
       required: [version, state, changes, reviewer_reason]
       properties:
         import_rows:
@@ -21511,6 +21855,26 @@ components:
           description: >-
             Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them.
           items: {$ref: '#/components/schemas/ApprovalPreviewConflict'}
+    ApprovalSummaryParts:
+      type: object
+      description: >-
+        An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined, cut at 240 bytes, so the parts can hold a value the summary no longer shows.
+      required: [sentence, fields, more_fields]
+      properties:
+        sentence: {type: string, description: 'The act in words, such as "Update deal Acme renewal".'}
+        fields:
+          type: array
+          description: >-
+            The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count.
+          items: {$ref: '#/components/schemas/ApprovalSummaryField'}
+        more_fields: {type: integer, minimum: 0, description: 'How many further fields the list leaves out.'}
+    ApprovalSummaryField:
+      type: object
+      description: One request field a summary lists, and its value as the approver should read it.
+      required: [field, value]
+      properties:
+        field: {type: string, description: 'The request field name, as the call sent it. A nested create lists first the parent record it is made under, named in the installation language ("under" in English).'}
+        value: {type: string, description: 'The value as text. A cleared field reads as "null".'}
     Approval:
       type: object
       description: A staged confirm-first action awaiting human decision.
@@ -21552,6 +21916,10 @@ components:
         target_version: {type: [integer, 'null'], description: 'The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race.'}
         diff_hash: {type: [string, 'null'], description: 'Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.'}
         summary: {type: [string, 'null'], description: One-line description of the proposed change.}
+        summary_parts:
+          allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
+          description: >-
+            The summary's sentence and the field values it lists, apart, so a client can show the values as a list instead of the joined key=value text. Absent on a proposal whose summary is a sentence alone, and on one staged before the parts were kept. Withheld with the summary.
         proposed_change:
           type: object
           additionalProperties: true

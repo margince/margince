@@ -53,8 +53,6 @@ reach features/brief/brief.feed.tsx features/mail/openemaildrawer.tsx
 reach features/brief/brief.feed.tsx features/worklist/worklist.css
 reach features/brief/brief.feed.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.stories.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.focus.tsx features/worklist/worklist.copy.ts
-reach features/brief/brief.focus.tsx features/worklist/worklist.eyebrow.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.focus.tsx features/worklist/worklist.row.captions.tsx
 reach features/brief/brief.focus.tsx features/worklist/worklist.row.tsx
@@ -81,7 +79,6 @@ reach features/brief/brief.readings.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.readings.tsx features/worklist/worklist.tsx
 reach features/brief/brief.schedule.stories.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.schedule.test.tsx features/worklist/worklist.queries.ts
-reach features/brief/brief.schedule.tsx features/worklist/worklist.copy.ts
 reach features/brief/brief.schedule.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.sentence.test.ts features/worklist/worklist.queries.ts
 reach features/brief/brief.sentence.ts features/worklist/worklist.queries.ts
@@ -93,7 +90,6 @@ reach features/brief/brief.tsx features/worklist/worklist.address.ts
 reach features/brief/brief.tsx features/worklist/worklist.pane.tsx
 reach features/brief/brief.tsx features/worklist/worklist.queries.ts
 reach features/brief/brief.tsx features/worklist/worklist.reader.ts
-reach features/brief/briefcoverage.tsx features/worklist/worklist.copy.ts
 reach features/brief/briefcoverage.tsx features/worklist/worklist.queries.ts
 reach features/brief/meetingbrief/header.tsx features/records/record360/index.ts
 reach features/brief/meetingbrief/plan.tsx features/records/record360/index.ts
@@ -182,7 +178,6 @@ reach features/contacts/contactoverview.stories.tsx features/records/movebutton.
 reach features/contacts/contactpage.drawers.stories.tsx features/brief/meetingbrief/index.ts
 reach features/contacts/contactpage.drawers.stories.tsx features/capture/integrations-provider.tsx
 reach features/contacts/contactpage.drawers.tsx features/mail/compose.tsx
-reach features/contacts/contactpage.drawers.tsx features/settings/writetohost.tsx
 reach features/contacts/contactpage.drawers.tsx features/worklist/worklist.return.tsx
 reach features/contacts/contactpage.marks.tsx features/records/recordaccess.tsx
 reach features/contacts/contactpage.reads.test.tsx app/queryclient.ts
@@ -299,7 +294,6 @@ reach features/privacy/legalreviews.stories.tsx features/settings/legalreviewset
 reach features/privacy/legalreviews.test.tsx features/settings/legalreviewsettings.tsx
 reach features/privacy/noticeduty.stories.tsx features/worklist/worklist.queries.ts
 reach features/privacy/noticeduty.tsx features/worklist/worklist.queries.ts
-reach features/privacy/privacy.caselink.test.ts features/worklist/worklist.copy.ts
 reach features/privacy/privacy.corrections.stories.tsx features/settings/settings.privacy.tsx
 reach features/privacy/privacy.deadline.test.tsx features/settings/settings.privacy.tsx
 reach features/privacy/privacy.dsr.test.tsx features/settings/settings.privacy.tsx
@@ -450,7 +444,6 @@ reach features/sign-in/magic.lines.tsx features/automations/approvaldrawer.tsx
 reach features/sign-in/magic.records.tsx features/brief/brief.css
 reach features/sign-in/magic.stories.tsx features/brief/brief.changes.tsx
 reach features/sign-in/magic.tsx features/brief/brief.css
-reach features/sign-in/magic.tsx features/worklist/worklist.copy.ts
 reach features/voice-knowledge/activitydrawer.tsx features/records/activityfiles.tsx
 reach features/voice-knowledge/activitydrawer.tsx features/records/activityfollowups.tsx
 reach features/voice-knowledge/activitydrawer.tsx features/worklist/worklist.queries.ts
@@ -459,7 +452,6 @@ reach features/voice-knowledge/searchpanels.tsx features/mail/openemaildrawer.ts
 reach features/worklist/taskdetailmodal.tsx features/voice-knowledge/activitydrawer.tsx
 reach features/worklist/worklist.briefverbs.tsx features/brief/brief.queries.ts
 reach features/worklist/worklist.bundle.tsx features/brief/brief.decisions.tsx
-reach features/worklist/worklist.copy.ts features/privacy/privacy.caselink.ts
 reach features/worklist/worklist.noticesource.tsx features/mail/openemaildrawer.tsx
 reach features/worklist/worklist.noticesource.tsx features/voice-knowledge/activitydrawer.tsx
 reach features/worklist/worklist.pane.tsx features/contacts/contact360.ts

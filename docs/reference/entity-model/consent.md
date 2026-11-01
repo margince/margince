@@ -710,7 +710,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## privacy_notice_case
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -723,13 +723,16 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `completed_at` | `timestamp with time zone` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `delivery_id` | `uuid` |  | Points at `comms_outbound.id`. |
-| `due_at` | `timestamp with time zone` | yes |  |
+| `due_at` | `timestamp with time zone` |  |  |
 | `last_sent_at` | `timestamp with time zone` |  |  |
 | `owner_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `resolution_note` | `text` |  | At most 500 characters. |
 | `resolved_by` | `uuid` |  | Points at `app_user.id`. |
-| `rule` | `text` | yes | One of `art13`, `art14`. |
-| `state` | `text`, default `'open'::text` | yes | One of `open`, `assigned`, `queued`, `delivery_failed`, `completed`, `provided_elsewhere` and 3 more. |
+| `rule` | `text` | yes | One of `unassessed`, `none`, `art13`, `art14`. |
+| `source_kind` | `text` |  |  |
+| `source_obtained_at` | `timestamp with time zone` |  |  |
+| `source_review_note` | `text` |  |  |
+| `state` | `text`, default `'open'::text` | yes | One of `source_review`, `open`, `assigned`, `queued`, `delivery_failed`, `completed` and 4 more. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
@@ -747,11 +750,15 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `privacy_notice_case_blocked_shape`: `CHECK (((state = 'blocked') = (blocked_reason IS NOT NULL)))`
 - `privacy_notice_case_completion_shape`: `CHECK (((state = ANY (ARRAY['completed', 'not_required', 'exempt_with_reason', 'provided_elsewhere'])) = (completed_at IS NOT NULL)))`
+- `privacy_notice_case_due_shape`: `CHECK (((state <> ALL (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'blocked'])) OR (due_at IS NOT NULL)))`
+- `privacy_notice_case_none_shape`: `CHECK (((rule <> 'none') OR ((due_at IS NULL) AND (completed_at IS NOT NULL) AND (cardinality(allowed_routes) = 0))))`
 - `privacy_notice_case_queued_names_its_delivery`: `CHECK (((state <> 'queued') OR (delivery_id IS NOT NULL)))`
 - `privacy_notice_case_resolution_note_length`: `CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 500)))`
 - `privacy_notice_case_resolution_shape`: `CHECK (((state = ANY (ARRAY['exempt_with_reason', 'provided_elsewhere'])) = (resolution_note IS NOT NULL)))`
-- `privacy_notice_case_rule`: `CHECK ((rule = ANY (ARRAY['art13', 'art14'])))`
-- `privacy_notice_case_state`: `CHECK ((state = ANY (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'completed', 'provided_elsewhere', 'exempt_with_reason', 'blocked', 'not_required'])))`
+- `privacy_notice_case_review_shape`: `CHECK ((((state = 'source_review') = (rule = 'unassessed')) AND ((state <> 'source_review') OR ((source_kind IS NULL) AND (due_at IS NULL) AND (cardinality(allowed_routes) = 0)))))`
+- `privacy_notice_case_rule`: `CHECK ((rule = ANY (ARRAY['unassessed', 'none', 'art13', 'art14'])))`
+- `privacy_notice_case_source_note`: `CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) >= 1) AND (char_length(btrim(source_review_note)) <= 500)))))`
+- `privacy_notice_case_state`: `CHECK ((state = ANY (ARRAY['source_review', 'open', 'assigned', 'queued', 'delivery_failed', 'completed', 'provided_elsewhere', 'exempt_with_reason', 'blocked', 'not_required'])))`
 
 **Indexes**
 
@@ -760,10 +767,11 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `privacy_notice_case_delivery`: `btree (delivery_id) WHERE (delivery_id IS NOT NULL)`
 - `privacy_notice_case_due`: `btree (due_at, id) WHERE (state = ANY (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'blocked']))`
 - `privacy_notice_case_pkey`: `unique, btree (id)`
+- `privacy_notice_case_review_queue`: `btree (COALESCE(due_at, created_at), id)`
 
 **Triggers**
 
-- `privacy_notice_case_owner_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'blocked'])))) EXECUTE FUNCTION refuse_retired_member_work('owner_user_id')`
+- `privacy_notice_case_owner_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open', 'assigned', 'queued', 'delivery_failed', 'blocked', 'source_review'])))) EXECUTE FUNCTION refuse_retired_member_work('owner_user_id')`
 
 ## privacy_request_proof
 

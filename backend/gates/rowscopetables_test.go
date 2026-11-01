@@ -624,5 +624,8 @@ const (
 	// LinkedIn profile a write just set. The lane searches the whole workspace
 	// by design, as the address-variant lane does. The ids become review rows
 	// inside the write, and none is returned to its caller.
-	modulesTierUnscopedCeiling = 150
+	//
+	// 151: deals.StuckAfter returns the won-deal stage pace keyed by stage id.
+	// A stage is configuration every member reads, and the pace is a duration.
+	modulesTierUnscopedCeiling = 151
 )

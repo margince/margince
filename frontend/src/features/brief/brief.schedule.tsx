@@ -17,7 +17,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import { itemTitle, moveHref, rowHref } from "../worklist/worklist.copy";
+import { itemTitle, moveHref, rowHref } from "../../lib/worklistcopy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
   type CalendarDay,

@@ -107,7 +107,9 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	return out, nil
 }
 
-func readCompany(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Company, error) {
+// readCompanyRow is one company row with its children, and what a before-image
+// or an internal check reads.
+func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Company, error) {
 	q := `SELECT ` + companyColumns + storekit.SelectSuffix(active) + ` FROM company WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND archived_at IS NULL`

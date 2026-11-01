@@ -2,12 +2,6 @@
 <!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
 # Writing and sending mail
 
-[Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
-what Margince checks before a send goes out, and setting a send for later.
-
-Who may then read what you sent is a separate question, answered in
-[Who can see an email](who-can-see-an-email.md).
-
 ### How do I send an email to a contact?
 To send an email to a contact in Margince, open the contact's page and choose **Email** in its header. Fill in the composer and press **Send**.
 1. Open the contact. The button may read **Write**, or **Message on {transport}** when chat is the only channel.
@@ -124,9 +118,9 @@ Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
 
-**Draft email** writes an email from what the record holds, in your voice. It
-tells you what it read ("Based on: {inputs}"), and **Why this draft?** shows
-why it wrote what it did.
+**Draft email** writes an email from what the record holds, in your voice.
+**Why this draft**, closed until you open it, shows what it read
+("Based on: {inputs}"), with a link to each record it read.
 
 Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
@@ -283,9 +277,9 @@ To cancel or move a scheduled email in Margince, press the clock beside the bell
 4. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
 
-The **Scheduled messages** page lists your messages that are set for later and
-not sent yet. Only you can see them. It has no sidebar row. The toast after you
-set a send time links there, and so does the command palette (⌘K or Ctrl+K).
+The **Scheduled messages** page lists the messages you set for later. Only you can see them.
+It has no sidebar row. With none and a mailbox connected, **Write a message** opens Contacts.
+The toast after you set a send time links there, and so does the command palette (⌘K or Ctrl+K).
 
 Waiting messages sit on a timeline, one block for each day. A line above them
 counts down to the next one. **All**, **Held** and **Today** narrow the list.
@@ -353,13 +347,19 @@ Margince first shows you the mail as it will go out, and sends nothing until you
 Also called: double opt-in, consent request, GDPR confirmation.
 
 ### How do I send a privacy notice to a contact?
-To send a privacy notice in Margince, open the **Privacy notice owed** item on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
+Mail from the contact does not create an Article 14 task. If a duty is still owed, open **Privacy notice owed** on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
 1. Open the **Privacy notice owed** item.
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
 3. If they already know, or the law lets you skip it, press **End the duty…** and record why.
 
 Before it goes, Margince shows you the notice and lets you pick its language, as it does for the confirmation request. The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
+
+### Why does a contact say “Review source”?
+The record does not say where the contact's details come from, so no notice deadline is set.
+In **Settings → Privacy**, a user with privacy access can check the source and its proof.
+If the details come from the contact, the review ends. Data from someone else may still need a notice.
+**Due no later than** is the last possible date. The duty may already be due.
 
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.

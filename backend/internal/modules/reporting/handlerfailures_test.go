@@ -83,6 +83,28 @@ func TestReportingRevisionHandlersRequireAnObservedVersion(t *testing.T) {
 	}
 }
 
+func TestTheFirstFrameworkPublishNamesTheUnpublishedVersion(t *testing.T) {
+	for _, test := range []struct {
+		ifMatch string
+		want    int64
+		ok      bool
+	}{{"0", 0, true}, {"3", 3, true}, {"-1", 0, false}, {"", 0, false}} {
+		request := httptest.NewRequest(http.MethodPut, "/analytics/framework", nil)
+		if test.ifMatch != "" {
+			request.Header.Set("If-Match", test.ifMatch)
+		}
+		version, ok := frameworkVersion(httptest.NewRecorder(), request)
+		if version != test.want || ok != test.ok {
+			t.Fatalf("If-Match %q: version %d, ok %v", test.ifMatch, version, ok)
+		}
+	}
+	report := httptest.NewRequest(http.MethodPatch, "/analytics/reports", nil)
+	report.Header.Set("If-Match", "0")
+	if _, ok := requiredVersion(httptest.NewRecorder(), report); ok {
+		t.Fatal("a report revision starts at 1, so version 0 stays refused there")
+	}
+}
+
 func TestReportingListHandlersRejectMalformedContinuationTokens(t *testing.T) {
 	handlers := NewHandlers(nil, OpeningSelection{})
 	cursor := "not-an-id"

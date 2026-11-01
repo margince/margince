@@ -41,6 +41,15 @@ func TestReportingForecastEditionRechecksProjectionPermission(t *testing.T) {
 	if err != nil || completed.EditionId == nil {
 		t.Fatalf("forecast publication: %+v %v", completed, err)
 	}
+	// The edition keeps the basis and the frame it was captured under.
+	kept, err := f.service.GetEdition(f.human, ids.UUID(*completed.EditionId))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if basis := kept.Evaluation.Metrics[0].ForecastBasis; basis == nil || kept.Evaluation.Context.Horizon == nil ||
+		!kept.Evaluation.Context.Interval.EndAt.Equal(kept.Evaluation.Context.EvaluatedAt) {
+		t.Fatalf("the edition lost its basis or frame: basis %+v context %+v", basis, kept.Evaluation.Context)
+	}
 	actor, ok := principal.Actor(f.human)
 	if !ok {
 		t.Fatal("missing actor")
@@ -57,7 +66,7 @@ func TestReportingForecastEditionRechecksProjectionPermission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !edition.Withheld || edition.Evaluation.Metrics[0].Value != nil {
+	if !edition.Withheld || edition.Evaluation.Metrics[0].Value != nil || edition.Evaluation.Metrics[0].ForecastBasis != nil {
 		t.Fatalf("revoked forecast total remained visible: %+v", edition.Evaluation.Metrics)
 	}
 	evidence, err := f.service.EditionEvidence(restricted, ids.UUID(*completed.EditionId), "forecast_landing", "forecast_landing", "", nil, nil, 100)

@@ -5,7 +5,7 @@ import { basename, dirname, join } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { isDocsPage, storyCensus } from "../../../scripts/lib/story-files";
-import { KNOWN_SOURCES } from "./worklist.copy";
+import { KNOWN_SOURCES } from "../../lib/worklistcopy";
 
 // Every source the queue can draw has a story that draws it.
 //

@@ -45,6 +45,8 @@ func workPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MailPromisedBy }, "Promised by", "Zugesagt von", "Người hứa")
 	line(func(c *Copy) *string { return &c.MailInTheirWords }, "In their words", "Im Wortlaut", "Nguyên văn")
 	line(func(c *Copy) *string { return &c.MailWhyYou }, "Why you", "Warum du", "Vì sao là bạn")
+	line(func(c *Copy) *string { return &c.MailAlsoChanges }, "Also changes", "Weitere Änderungen", "Thay đổi kèm theo")
+	line(func(c *Copy) *string { return &c.MailPreviewStatus }, "Approval context", "Freigabekontext", "Ngữ cảnh phê duyệt")
 	line(func(c *Copy) *string { return &c.MailTranscriptOf },
 		"a meeting transcript of", "ein Gesprächsprotokoll vom", "biên bản cuộc họp ngày")
 	line(func(c *Copy) *string { return &c.MailReasonRequested },
