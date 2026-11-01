@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -533,5 +535,26 @@ func TestAGreetingRepairDoesNotHideACannedOpenerFromTheVoiceFloor(t *testing.T) 
 	}
 	if version != nil || draft.Body != "Hi Anna,\n\nA plain professional reply." {
 		t.Errorf("served %q (voice version %v), want the plain fallback", draft.Body, version)
+	}
+}
+
+func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
+	t.Parallel()
+	// This boundary is explicit: deriving its policy from the payload would
+	// silently approve a newly added history field.
+	want := []string{"body", "conversation_state", "intent", "now", "occurred_at", "output_language", "recipient", "recipient_last_name", "register", "rewrite_of", "sender_email", "sender_name", "silence_days", "subject", "thread"}
+	var got []string
+	for _, field := range reflect.VisibleFields(reflect.TypeFor[replyActivityData]()) {
+		if field.PkgPath != "" {
+			continue
+		}
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+		if name != "" && name != "-" {
+			got = append(got, name)
+		}
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("reply payload fields = %v, want the reviewed content/steering boundary %v", got, want)
 	}
 }

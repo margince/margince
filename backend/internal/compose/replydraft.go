@@ -71,8 +71,7 @@ type replyActivityData struct {
 	OccurredAt string `json:"occurred_at,omitempty"`
 	Intent     string `json:"intent,omitempty"`
 	// RewriteOf is the draft on the composer's screen; empty is a first draft.
-	RewriteOf    string `json:"rewrite_of,omitempty"`
-	Conversation string `json:"conversation,omitempty"`
+	RewriteOf string `json:"rewrite_of,omitempty"`
 	// Thread identifies inbound evidence for grounding and consent semantics.
 	// Outbound follow-ups get their subject header independently.
 	Thread string `json:"thread,omitempty"`
@@ -144,43 +143,15 @@ func (d replyDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 // profile exists, with the deterministic anti-AI floor on top; without one,
 // the plain model draft is unchanged (clean fallback per drafting.md).
 func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activities.DraftResult, error) {
-	activity, err := d.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
+	activity, written, err := d.languageInputs(ctx, anchor, steering)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
 	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
-	delivery := d.deliveredTo(ctx, ids.From[ids.ActivityKind](anchor))
-	deliveredTo := delivery.ContactID
-	thread, err := d.replyConversation(ctx, activity, delivery)
-	if err != nil {
-		return activities.DraftResult{}, err
-	}
-	turns := thread.prompt
-	topic := stringValue(activity.Subject)
-	body := stringValue(activity.Body)
-	threaded := activities.IsMailThread(activity.Kind, activity.Direction)
-
-	// How old the message being answered is, which is what makes "as discussed"
-	// true or false. A reply to something from this morning and a reply to
-	// something from eight months ago are different messages, and only the
-	// timestamp tells them apart.
+	topic, body := stringValue(activity.Subject), stringValue(activity.Body)
+	threaded := activity.Kind == crmcontracts.ActivityKindEmail && theirTurn(activity)
 	state := d.conversationState(ctx, activity)
-	// The addressee's own text decides first; the stored label comes next,
-	// above a body that may carry a quoted chain in other languages.
-	envelope := d.envelope.Resolve(ctx, draftfloor.Written{
-		Addressee: thread.addresseeEvidence(deliveredTo),
-		Stored:    activityLanguage(activity),
-		// The opening rather than the stored body.
-		//
-		// Capture writes a From:/To: block above what the sender wrote. Those
-		// lines read as English whatever the mail is in, so a raw body here
-		// answers for its own envelope.
-		Body:    textlang.MessageOpening(body, draftcore.LanguageEvidenceRunes),
-		Subject: topic,
-		Thread:  draftcore.LanguageEvidence(thread.evidence, deliveredTo),
-		Rewrite: steering.RewriteOf,
-		Purpose: steering.Intent,
-	}, state)
+	envelope := d.envelope.Resolve(ctx, written, state)
 	recipient, surname := addressee.GreetingNames()
 
 	fallbackSubject, fallbackBody := activities.DeterministicEmailDraft(activities.DraftContext{
@@ -206,7 +177,6 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		OccurredAt:        activitywhen.Text(activity),
 		Intent:            textcut.Runes(steering.Intent, replyActivityMaxRunes),
 		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
-		Conversation:      replyConversationText(turns),
 	}
 
 	voice := d.loadVoice(ctx)
@@ -355,4 +325,25 @@ func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) ac
 func theirTurn(activity crmcontracts.Activity) bool {
 	ours, known := activities.WroteItOurSide(activity)
 	return known && !ours
+}
+
+func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activity crmcontracts.Activity, written draftfloor.Written, err error) {
+	activity, err = d.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
+	if err != nil {
+		return activity, written, err
+	}
+	delivery := d.deliveredTo(ctx, ids.From[ids.ActivityKind](anchor))
+	thread, err := d.replyConversation(ctx, activity, delivery)
+	if err != nil {
+		return activity, written, err
+	}
+	return activity, draftfloor.Written{
+		Addressee: thread.addresseeEvidence(delivery.ContactID),
+		Stored:    activityLanguage(activity),
+		Body:      textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),
+		Subject:   stringValue(activity.Subject),
+		Thread:    draftcore.LanguageEvidence(thread.evidence, delivery.ContactID),
+		Rewrite:   steering.RewriteOf,
+		Purpose:   steering.Intent,
+	}, nil
 }

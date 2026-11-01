@@ -3610,7 +3610,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `draft_reply` / `reply`
 
-`system 10,039 B (~2,509 tok)`: rules 9,766 B · boundary 273 B · after boundary 0 B · **cacheable 97%**
+`system 9,568 B (~2,392 tok)`: rules 9,295 B · boundary 273 B · after boundary 0 B · **cacheable 97%**
 
 <details><summary>system prompt</summary>
 
@@ -3618,12 +3618,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 Draft a professional email reply, for the sender to send under their own name.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
 - The selected activity and stated intent are the authoritative reason for this reply. Answer that exact message.
-- Conversation contains other readable messages in the same thread, with their directions and dates, for context only. Do not switch the reply target. An outbound selected message calls for a follow-up to its recipient, not an answer to ourselves.
+- No other thread message is supplied. Use the selected subject and body, steered by intent and rewrite_of. A selected message written by our side calls for a follow-up to its recipient, not an answer to ourselves.
 - Where the message raises several distinct points, answer at least two by name, a clause each, before the ask.
-- Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.
-Earlier turns from our side (direction outbound, or the "said" field) are what we already said and asked. A follow-up builds on them: it does not repeat them, restart the pitch or switch topic. A logged note or meeting (the "record" field) is context for the draft and never its topic when a turn from our side states an open ask.
 rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.
 
 LANGUAGE

@@ -195,7 +195,7 @@ it("selects the exact message, normalizes the reply subject, and restores each d
     expect(screen.getByDisplayValue("Re: Delivery")).toBeTruthy();
     expect(messageText("Body")).toBe("");
   });
-  expect(screen.getByText(/Following up on your email/)).toBeTruthy();
+  expect(screen.getByText(/Following up on/)).toBeTruthy();
   await user.click(draftButton());
   await waitFor(() => expect(messageText("Body")).toBe("The generated reply."));
   expect(

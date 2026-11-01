@@ -134,6 +134,14 @@ func NewFollowUpReconciler(db *database.DB, stager FollowUpStager, log *slog.Log
 	return &FollowUpReconciler{db: db, stager: stager, log: log, now: time.Now}
 }
 
+// WithClock keeps the pass window and proposed dates on the same clock.
+func (r *FollowUpReconciler) WithClock(now func() time.Time) *FollowUpReconciler {
+	if now != nil {
+		r.now = now
+	}
+	return r
+}
+
 // ReconcileWorkspace is one follow-up reconciliation pass over the workspace
 // already bound in ctx. The fleet fan-out lives in the job layer, so a failed
 // workspace fails its own job row.

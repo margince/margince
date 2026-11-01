@@ -39,8 +39,6 @@ type Turn struct {
 	// resolve one. Conversation leaves it empty; a caller that knows senders
 	// fills it so LanguageEvidence can prefer the addressee's mail.
 	SenderID string
-	// AfterAnchor is true when the turn is newer than the selected message.
-	AfterAnchor bool
 }
 
 // TurnText is the opening of a stored body, bounded the way every turn is.
@@ -99,7 +97,6 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 		if activity.Body != nil && (logged || activity.Kind == crmcontracts.ActivityKindEmail) {
 			turn.Text = TurnText(*activity.Body)
 		}
-		turn.AfterAnchor = anchor != nil && activity.OccurredAt.After(anchor.OccurredAt)
 		turns = append(turns, turn)
 	}
 	return turns

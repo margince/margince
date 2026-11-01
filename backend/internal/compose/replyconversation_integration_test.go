@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -42,11 +43,13 @@ func logReplyMessage(ctx context.Context, t *testing.T, e *integration.Env, thre
 	return row
 }
 
-func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) {
+func TestReplyDraftUsesOnlyTheSelectedMessageForItsTopic(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	anchor := logReplyMessage(ctx, t, e, "pricing", "Re: RE: Pricing", "Selected proposal", 0)
-	logReplyMessage(ctx, t, e, "pricing", "Delivery", "Agreed delivery window", time.Hour)
+	for i := range 7 {
+		logReplyMessage(ctx, t, e, "pricing", "Invoice and dinner", "Later invoice and dinner details", time.Duration(i+1)*time.Hour)
+	}
 	logReplyMessage(ctx, t, e, "unrelated", "Unrelated", "Other customer secret", 2*time.Hour)
 	colleague := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	held := logReplyMessage(colleague, t, e, "pricing", "Private planning", "Hidden colleague note", 2*time.Hour)
@@ -62,6 +65,14 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, written, err := drafter.languageInputs(ctx, ids.UUID(anchor.Id), draftfloor.Steering{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	evidence := strings.Join(append(written.Thread, written.Addressee...), "\n")
+	if !strings.Contains(evidence, "Later invoice and dinner details") || strings.Contains(evidence, "Other customer secret") || strings.Contains(evidence, "Hidden colleague note") {
+		t.Fatalf("language evidence lost its correspondence or audience boundary: %s", evidence)
+	}
 	if result.Subject != "Re: Pricing" {
 		t.Fatalf("reply subject = %q", result.Subject)
 	}
@@ -69,9 +80,9 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 		t.Fatalf("model messages = %d", len(brain.request.Messages))
 	}
 	content := brain.request.Messages[0].Content
-	if !strings.Contains(content, "Selected proposal") || !strings.Contains(content, "Agreed delivery window") ||
+	if !strings.Contains(content, "Selected proposal") || strings.Contains(content, "Later invoice and dinner details") ||
 		strings.Contains(content, "Other customer secret") || strings.Contains(content, "Hidden colleague note") ||
-		!strings.Contains(content, "later than the selected message") {
+		strings.Contains(content, `"conversation":`) {
 		t.Fatalf("selected message and thread isolation lost: %s", content)
 	}
 	if strings.Count(content, "Selected proposal") != 1 || strings.Contains(content, `"thread":"inbound_mail"`) {
@@ -163,7 +174,7 @@ func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundO
 	})
 	thread := e.WsScalar(t, `SELECT thread_key FROM activity WHERE id = $1`, first)
 	var anchor crmcontracts.Activity
-	for i := range replyContextTurns + 4 {
+	for i := range 10 {
 		anchor = logReplyMessage(e.Admin(), t, e, thread, "Angebot", "ok", time.Duration(i+1)*time.Hour)
 	}
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
@@ -210,5 +221,42 @@ func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(
 	}
 	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"de"`) {
 		t.Fatalf("the copied contact's English mail set the language of a reply to someone else: %s", content)
+	}
+}
+
+func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) {
+	o := setupOwed(t)
+	e := o.e
+	o.contact(t, "Alex Buyer", replyCorrespondent)
+	body := "Could you send the product brochure and the approved product images?"
+	selected := o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Product materials", body: body, messageID: "materials-request@customer.test", at: time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), authenticated: true})
+	reader := e.As(o.owner, []ids.UUID{e.Team1}, integration.AdminPerms)
+	activity, err := e.Activities.GetActivity(reader, ids.From[ids.ActivityKind](selected), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if activity.ThreadKey == nil {
+		t.Fatal("captured mail has no thread key")
+	}
+	thread := *activity.ThreadKey
+	for i := range 7 {
+		logReplyMessage(reader, t, e, thread, "Invoice and dinner", "Later invoice and dinner details", time.Duration(i+1)*time.Hour)
+	}
+	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Invoice and dinner", body: "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.", messageID: "newer-inbound@customer.test", inReplyTo: "materials-request@customer.test", at: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), authenticated: true})
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Product materials","body":"Guten Tag,\n\nwelche Version der Produktbroschüre und welche freigegebenen Produktbilder benötigen Sie für Ihre Prüfung?"}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	result, err := drafter.DraftEmailWithProvenance(reader, selected, draftfloor.Steering{Intent: "Answer the materials request"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Subject != "Re: Product materials" {
+		t.Fatalf("subject=%q", result.Subject)
+	}
+	content := brain.request.Messages[0].Content
+	if !strings.Contains(content, `"output_language":"de"`) || !strings.Contains(content, `"register":"Sie"`) {
+		t.Fatalf("newer correspondence did not supply language and register: %s", content)
+	}
+	if !strings.Contains(content, body) || !strings.Contains(content, `"thread":"inbound_mail"`) || strings.Contains(content, "Later invoice and dinner details") || strings.Contains(content, "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.") {
+		t.Fatalf("selected inbound request lost its scope: %s", content)
 	}
 }
