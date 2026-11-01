@@ -34966,6 +34966,8 @@ components:
         consent_required: { type: boolean, description: 'A submission without `consent` ticked is refused with 422.' }
         consent_policy_version: { type: [string, 'null'] }
         consent_wording: { type: [string, 'null'], description: 'The consent wording the form shows, written on each lead''s timeline as evidence.' }
+        privacy_notice: { type: [string, 'null'], description: 'The privacy notice the form shows under it at the point of collection, such as what the details are used for.' }
+        privacy_notice_url: { type: [string, 'null'], description: 'The https address of the privacy policy the notice links to.' }
         redirect_url: { type: [string, 'null'], description: 'Where a plain HTML post is sent after a submission.' }
         success_message: { type: [string, 'null'] }
         state: { type: string, enum: [active, paused] }
@@ -35020,6 +35022,8 @@ components:
         consent_required: { type: boolean, default: false }
         consent_policy_version: { type: [string, 'null'], maxLength: 200 }
         consent_wording: { type: [string, 'null'], maxLength: 2000 }
+        privacy_notice: { type: [string, 'null'], maxLength: 500 }
+        privacy_notice_url: { type: [string, 'null'], maxLength: 2000 }
         redirect_url: { type: [string, 'null'], maxLength: 2000 }
         success_message: { type: [string, 'null'], maxLength: 500 }
 
@@ -35041,6 +35045,8 @@ components:
         consent_required: { type: boolean }
         consent_policy_version: { type: [string, 'null'], maxLength: 200 }
         consent_wording: { type: [string, 'null'], maxLength: 2000 }
+        privacy_notice: { type: [string, 'null'], maxLength: 500 }
+        privacy_notice_url: { type: [string, 'null'], maxLength: 2000 }
         redirect_url: { type: [string, 'null'], maxLength: 2000 }
         success_message: { type: [string, 'null'], maxLength: 500 }
         state: { type: string, enum: [active, paused] }

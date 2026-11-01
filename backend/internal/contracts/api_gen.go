@@ -40324,6 +40324,8 @@ type CreateWebFormRequest struct {
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
 	Name                 string              `json:"name"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
 	RedirectUrl          *string             `json:"redirect_url,omitempty"`
 
 	// Sender Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
@@ -58468,6 +58470,8 @@ type UpdateWebFormRequest struct {
 	LeadOrigin           *string                    `json:"lead_origin,omitempty"`
 	Name                 *string                    `json:"name,omitempty"`
 	OwnerId              *openapi_types.UUID        `json:"owner_id,omitempty"`
+	PrivacyNotice        *string                    `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl     *string                    `json:"privacy_notice_url,omitempty"`
 	RedirectUrl          *string                    `json:"redirect_url,omitempty"`
 	SenderSecret         *string                    `json:"sender_secret,omitempty"`
 	State                *UpdateWebFormRequestState `json:"state,omitempty"`
@@ -59037,6 +59041,12 @@ type WebForm struct {
 	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
+	// PrivacyNotice The privacy notice the form shows under it at the point of collection, such as what the details are used for.
+	PrivacyNotice *string `json:"privacy_notice,omitempty"`
+
+	// PrivacyNoticeUrl The https address of the privacy policy the notice links to.
+	PrivacyNoticeUrl *string `json:"privacy_notice_url,omitempty"`
+
 	// RedirectUrl Where a plain HTML post is sent after a submission.
 	RedirectUrl      *string `json:"redirect_url,omitempty"`
 	SecretConfigured bool    `json:"secret_configured"`
@@ -59107,6 +59117,12 @@ type WebFormCreated struct {
 
 	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// PrivacyNotice The privacy notice the form shows under it at the point of collection, such as what the details are used for.
+	PrivacyNotice *string `json:"privacy_notice,omitempty"`
+
+	// PrivacyNoticeUrl The https address of the privacy policy the notice links to.
+	PrivacyNoticeUrl *string `json:"privacy_notice_url,omitempty"`
 
 	// RedirectUrl Where a plain HTML post is sent after a submission.
 	RedirectUrl      *string `json:"redirect_url,omitempty"`
