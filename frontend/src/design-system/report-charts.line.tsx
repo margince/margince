@@ -31,7 +31,7 @@ function chartX(index: number, count: number, width: number) {
   return 56 + (index / Math.max(1, count - 1)) * (width - 76);
 }
 // The plot's height in viewBox units, mirrored by `.report-chart-line`.
-const LINE_HEIGHT = { default: 238, compact: 160 } as const;
+const LINE_HEIGHT = { default: 238, compact: 130 } as const;
 
 function chartY(value: number, scale: number, height: number) {
   return height - 40 - (value / scale) * (height - 64);

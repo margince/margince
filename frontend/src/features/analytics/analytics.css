@@ -193,29 +193,31 @@
 .analytics-hero-body > :only-child {
   grid-column: 1 / -1;
 }
-/* With no trend to draw, the figure and what it is read against stand side
+/* With no trend to draw but an aside to show, the two stand side
    by side, so the card is not one narrow column beside empty space. */
-.analytics-hero-figure:only-child {
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
   display: grid;
   grid-template-columns: minmax(12rem, auto) minmax(0, 1fr);
   column-gap: var(--space-8);
   align-items: start;
 }
-.analytics-hero-figure:only-child > * {
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) > * {
   grid-column: 1;
   justify-self: start;
 }
-.analytics-hero-figure:only-child > .analytics-hero-aside {
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
+  > .analytics-hero-aside {
   grid-column: 2;
   grid-row: 1 / span 6;
   align-self: center;
 }
 @media (max-width: 900px) {
   .analytics-hero-body,
-  .analytics-hero-figure:only-child {
+  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
     grid-template-columns: minmax(0, 1fr);
   }
-  .analytics-hero-figure:only-child > .analytics-hero-aside {
+  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
+    > .analytics-hero-aside {
     grid-column: 1;
     grid-row: auto;
   }

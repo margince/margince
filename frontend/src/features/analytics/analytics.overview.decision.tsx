@@ -169,7 +169,7 @@ function Composition({
           },
         ]}
         marker={
-          target
+          target != null
             ? {
                 key: "target",
                 label: t("reporting.target"),

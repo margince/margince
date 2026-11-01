@@ -24,6 +24,7 @@
   display: flex;
   align-items: center;
   min-block-size: 8rem;
+  block-size: 100%;
   border-block-end: 1px solid var(--borderSubtle);
 }
 .reporting-panel > .panel-foot {

@@ -19506,7 +19506,7 @@ export const en = {
   "analytics.decision.part.weighted": "Weighted open deals",
   "analytics.decision.range": "Modelled range",
   "analytics.decision.rangeNote":
-    "Expected finish counts only what is won and in confirmed commit. The modelled range also counts each open deal by its chance to close, so it can sit higher.",
+    "The expected finish is the two parts on the bar. The modelled range is a separate model of how every open deal may close, so it can sit apart from them.",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -182,6 +182,7 @@
   .barlist-row .meterbar span,
   .barlist-action .meterbar span {
     animation: none;
+    transition: none;
   }
 }
 .barlist-label {

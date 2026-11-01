@@ -82,12 +82,10 @@ const drawn = (chart: ReportingChart | undefined): chart is ReportingChart =>
   chart.points.length > 0 &&
   chart.coverage.status !== "no_data";
 
-// A running total that never leaves zero, in either period, is a blank box.
-// A target line gives the flat line its meaning: nothing won yet against it.
+// A running total that never leaves zero, in either period, is a blank box:
+// the figure and its explanation say it better alone.
 const moves = (chart: ReportingChart): boolean =>
-  chart.points.some(
-    (point) => !!point.value || !!point.comparison || !!point.target,
-  );
+  chart.points.some((point) => !!point.value || !!point.comparison);
 
 /**
  * Sales won as the page's lead: the figure, the period it covers and the door
@@ -230,7 +228,11 @@ export function StockChart({
       onEvidence={(reference) => onEvidence(reference, read)}
     />
   );
-  if (!gated) return charts.data ? draw(charts.data) : null;
+  // Ungated, a failed or refreshing read draws nothing rather than stale data.
+  if (!gated)
+    return !charts.isPending && !charts.isError && charts.data
+      ? draw(charts.data)
+      : null;
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
       {draw}

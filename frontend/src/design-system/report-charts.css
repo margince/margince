@@ -55,7 +55,7 @@
   height: 238px;
 }
 .report-chart-line[data-size="compact"] {
-  height: 160px;
+  height: 130px;
 }
 .report-chart-line svg {
   position: absolute;
@@ -425,5 +425,9 @@
   .report-chart-bullet-fill,
   .report-chart-column-fill {
     animation: none;
+  }
+  .report-chart-dot,
+  .report-chart-column-fill {
+    transition: none;
   }
 }
