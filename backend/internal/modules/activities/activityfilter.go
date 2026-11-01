@@ -83,7 +83,8 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	// further away is a gate that census cannot see — and a reader it cannot
 	// see reads as one that excludes no held row.
 	gate := auth.ActivityDiscoverClause
-	if filtersOnContent(in) {
+	contentGated := filtersOnContent(in)
+	if contentGated {
 		// A filter over the subject, the body or the thread key is a READ of
 		// them: a withheld row that matched would tell the caller what it says
 		// through has_more and the page boundary. Such a list is content-gated,
@@ -97,9 +98,13 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if scope != "" {
 		where = append(where, scope)
 	}
-	content, err = auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, "", nil, nil, err
+	// The content gate holds the audience arm, so every row it lets through
+	// has its content available. A second copy would only cost planning.
+	content = sqlTrue
+	if !contentGated {
+		if content, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, "", nil, nil, err
+		}
 	}
 	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
 	if err != nil {
