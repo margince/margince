@@ -46,3 +46,16 @@ func AuthenticatedInboundSQL(row string) string {
 func ProvenSQL(row string) string {
 	return `((` + OurOutboundSQL(row) + `) OR ` + AuthenticatedInboundSQL(row) + `)`
 }
+
+// SubjectMailSQL establishes direct collection independently of bulk delivery.
+// Only connector provenance can support closing a capture-origin notice duty.
+func SubjectMailSQL(row string) string {
+	return fmt.Sprintf(`(%[1]s.kind = 'email' AND %[1]s.direction = 'inbound'
+ AND %[1]s.archived_at IS NULL AND starts_with(%[1]s.captured_by, 'connector:')
+ AND (NOT %[1]s.bulk_mail_attested OR %[1]s.inbound_sender_authenticated))`, row)
+}
+
+// CapturedAcquisitionSQL recognizes provenance recorded by the capture pipeline.
+func CapturedAcquisitionSQL(row string) string {
+	return fmt.Sprintf(`(starts_with(%[1]s.captured_by, 'connector:') OR %[1]s.captured_by = 'agent:capture_counterparty_verdict')`, row)
+}

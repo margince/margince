@@ -45,3 +45,11 @@ Focus chooses and orders entries the normal way, with no pin controls and no sto
 The Next bar stays about this contact. With no move, no task and nothing just in, it says whose turn it is. It reads that from `last_exchange` in `GET /activities/latest-inbound`, the contact's newest call, meeting or message. `activities.WhoseMove` decides it, the same function the company page's strip uses, so the two cannot disagree.
 
 A move whose action opens the composer drafts the message on the press and is drawn in the AI indigo. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. A move that only opens a form or a record keeps the accent.
+
+The Next bar shows open privacy notice work before relationship suggestions. It reads the same
+contact-scoped queue as Home, with the same grants and row scope. **Review privacy duty** opens the
+case itself in Settings → Privacy, so the Worklist page limit does not hide it. Closed cases and
+notices already queued for delivery do not ask for another notice.
+
+The Reach figure counts colleagues with recorded messages in both directions during the last
+90 days. Receiving the same message in several mailboxes does not show a reply.

@@ -59,11 +59,22 @@ import {
   useExcuseDuty,
   useNoticeQueue,
 } from "./noticecases.queries";
+import { NoticeDuty } from "./noticeduty";
 import { ExcuseModal } from "./noticeexcuse";
 
 // NoticeCasesCard is the disclosure-duty queue: who we obtained without asking,
 // whether anybody has told them, and by when we must.
-export function NoticeCasesCard() {
+export function NoticeCasesCard({
+  caseId,
+}: Readonly<{ caseId?: string }> = {}) {
+  return caseId ? (
+    <NoticeDuty key={caseId} caseId={caseId} />
+  ) : (
+    <NoticeQueueCard />
+  );
+}
+
+function NoticeQueueCard() {
   const t = useT();
   // The only clock touching rendering, so a test drives a deadline through it.
   const nowMs = useNow(60_000);

@@ -1,9 +1,19 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
 import {
   day,
   jsonResponse,
@@ -11,6 +21,7 @@ import {
   row,
 } from "../../testing/worklist.testkit";
 import { mailPreview } from "./controllermail.fixtures";
+import { NoticeCasesCard } from "./noticecases";
 
 afterEach(() => {
   cleanup();
@@ -83,7 +94,10 @@ function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
         return jsonResponse(
           meFixture({
             seat,
-            allow: { contact: ["read", "update"], privacy_request: ["read"] },
+            allow: {
+              contact: ["read", "update"],
+              privacy_request: ["read", "update"],
+            },
           }),
         );
       }
@@ -112,7 +126,7 @@ describe("a privacy-notice duty on the Focus card", () => {
     expect(
       await screen.findByText("Privacy notice owed (GDPR Art. 14)"),
     ).toBeTruthy();
-    expect(screen.getByText(/did not get them from the contact/)).toBeTruthy();
+    expect(screen.getByText(en["noticeDuty.what"])).toBeTruthy();
     expect(
       await screen.findByRole("button", {
         name: "Ask them to confirm their details",
@@ -210,4 +224,73 @@ describe("a privacy-notice duty on the Focus card", () => {
       screen.queryByRole("button", { name: en["noticeDuty.end"] }),
     ).toBeNull();
   });
+});
+
+it("reads a linked duty directly and invalidates the contact after sending", async () => {
+  stubDuty();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["contact360", CONTACT], { cached: true });
+  const user = userEvent.setup();
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <NoticeCasesCard caseId={OWED.id} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["noticeDuty.sendNotice"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    await within(dialog).findByRole("button", {
+      name: en["notice.sendConfirm"],
+    }),
+  );
+  await screen.findByText(/Sent to steve@kps.test/);
+  expect(client.getQueryState(["contact360", CONTACT])?.isInvalidated).toBe(
+    true,
+  );
+  const calls = vi.mocked(fetch).mock.calls;
+  expect(
+    calls.some(([input]) =>
+      String(input instanceof Request ? input.url : input)
+        .split("?")[0]
+        .endsWith("/worklist"),
+    ),
+  ).toBe(false);
+});
+
+it("shows an unavailable linked case without offering a send", async () => {
+  installFetchStub({
+    "GET /me": meRoute({
+      privacy_request: ["read"],
+      contact: ["read", "update"],
+    }),
+    "GET /privacy/notice-cases/missing": () =>
+      new Response(
+        JSON.stringify({
+          status: 404,
+          type: "not_found",
+          title: "Case unavailable",
+        }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <NoticeCasesCard caseId="missing" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("alert");
+  expect(
+    screen.queryByRole("button", { name: en["noticeDuty.sendNotice"] }),
+  ).toBeNull();
 });

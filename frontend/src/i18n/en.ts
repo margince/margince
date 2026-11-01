@@ -16219,6 +16219,7 @@ export const en = {
   "contact.consent.blockedWord": "Blocked",
   "contact.consent.unknownWord": "Unknown",
 
+  "contact.moment.rule.privacy_notice_due": "Privacy notice owed",
   "contact.moment.rule.meeting_prep": "Meeting soon",
   "contact.moment.rule.re_engaged": "Re-engaged",
   "contact.moment.rule.job_change": "Changed jobs",
@@ -17847,7 +17848,7 @@ export const en = {
   "worklist.untitled.dsr": "Open privacy request",
   "noticeDuty.title": "Privacy notice owed (GDPR Art. 14)",
   "noticeDuty.what":
-    "Margince holds this contact’s details, but did not get them from the contact: you wrote to them, or they were on a Cc, and they never wrote to you. The GDPR requires telling them within one month who holds their data and why.",
+    "Review how this contact’s details were obtained and whether the recorded disclosure duty still applies.",
   "noticeDuty.how":
     "Send the privacy notice, ask them to confirm their details (which tells them too), or end the duty if they already know or an exemption applies.",
   "noticeDuty.sendNotice": "Send privacy notice",

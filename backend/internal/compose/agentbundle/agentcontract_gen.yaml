@@ -12245,6 +12245,14 @@ components:
           type: string
           enum: [email, call, meeting, message]
         activity_id: {type: string, format: uuid}
+    ContactNoticeDuty:
+      type: object
+      required: [id, rule, due_at, blocked]
+      properties:
+        id: {type: string, format: uuid}
+        rule: {type: string, enum: [art13, art14]}
+        due_at: {type: string, format: date-time}
+        blocked: {type: boolean}
     Contact360:
       type: object
       description: |-
@@ -12316,7 +12324,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses, billing_roles]
+            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses, billing_roles, privacy_notice_duties]
         strength: {$ref: '#/components/schemas/RelationshipStrength'}
         billing_roles:
           type: array
@@ -12391,6 +12399,10 @@ components:
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Activity'}}
             page: {$ref: '#/components/schemas/PageInfo'}
+        privacy_notice_duties:
+          type: array
+          description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
+          items: {$ref: '#/components/schemas/ContactNoticeDuty'}
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -13109,7 +13121,7 @@ components:
         Named in the response so the same evidence cannot render differently across clients.
         Ties break by consequence, then nearest deadline, then most recent evidence, then
         stable id.
-      enum: [meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, public_signal, missing_next_step, thin_relationship, nothing_needed]
+      enum: [privacy_notice_due, meeting_prep, re_engaged, job_change, overdue_promise, gone_quiet, open_promise, public_signal, missing_next_step, thin_relationship, nothing_needed]
     ContactMomentEvidence:
       type: object
       description: One thing that actually happened, which the reader can open.
@@ -13117,7 +13129,7 @@ components:
       properties:
         type:
           type: string
-          enum: [activity, task, relationship_change]
+          enum: [activity, task, relationship_change, notice_case]
         id:
           type: string
           format: uuid
@@ -13158,8 +13170,8 @@ components:
         surface:
           type: string
           description: >-
-            `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact.
-          enum: [composer, meeting_brief, research, record, task, activity_log, booking]
+            `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact. `privacy_notice` — open the disclosure case named by entity_id directly.
+          enum: [composer, meeting_brief, research, record, task, activity_log, booking, privacy_notice]
         entity_type:
           type: [string, 'null']
           enum: [contact, company, deal, activity, null]
@@ -13210,6 +13222,7 @@ components:
           maximum: 100
         strength_bucket: {type: string, enum: [none, weak, moderate, strong]}
         interactions_90d: {type: integer, minimum: 0}
+        two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
         outbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where this colleague wrote to them.}

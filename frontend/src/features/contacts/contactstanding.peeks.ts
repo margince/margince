@@ -11,6 +11,7 @@ import { daysPast } from "../../format/lateness";
 import { messageDetail } from "../../lib/standingmarks";
 import { type PeekWords, partialFoot } from "../../lib/standingpeeks";
 import { omitted } from "./contact360";
+import { colleaguesInTouch } from "./contactstanding";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Activity = components["schemas"]["Activity"];
@@ -145,8 +146,7 @@ function reachPeek(
   if (omitted(view, "network")) {
     return undefined;
   }
-  const items = (view.network?.colleagues ?? [])
-    .filter((colleague) => colleague.interactions_90d > 0)
+  const items = (colleaguesInTouch(view) ?? [])
     .sort((a, b) => b.interactions_90d - a.interactions_90d)
     .map((colleague) => ({
       key: colleague.user_id,

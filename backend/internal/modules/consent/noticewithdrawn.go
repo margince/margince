@@ -31,7 +31,7 @@ func SettleWhenCaptureWithdrewTx(ctx context.Context, tx pgx.Tx, contactID ids.U
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM privacy_notice_case
 		 WHERE contact_id = $1 AND state = ANY($2)
-		 ORDER BY id`, contactID, settleableOwedStates)
+		 ORDER BY id`, contactID, SettleableNoticeStates())
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for a withdrawn contact: %w", err)
 	}

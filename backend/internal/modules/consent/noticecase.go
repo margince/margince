@@ -214,7 +214,8 @@ func agendaNoticeStates() []string {
 // NoticeAgendaInput narrows the contact-linked agenda before its page limit.
 // A nil owner reads visible work; a zero owner reads unassigned work.
 type NoticeAgendaInput struct {
-	OwnerID *ids.UUID
+	ContactID *ids.ContactID
+	OwnerID   *ids.UUID
 	// TeamOwners includes unowned duties. Nil leaves team membership unrestricted.
 	TeamOwners []ids.UUID
 	Limit      int
@@ -225,10 +226,18 @@ type NoticeAgendaInput struct {
 // agenda additionally requires a live, readable contact because its action
 // opens one. Archiving a contact does not discharge its compliance case.
 func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaInput) ([]OpenNoticeCase, error) {
+	var out []OpenNoticeCase
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.OpenNoticeCasesDueSoonestTx(ctx, tx, in)
+		return err
+	})
+	return out, err
+}
+
+// OpenNoticeCasesDueSoonestTx shares the agenda's authority and scope with record reads.
+func (s *Store) OpenNoticeCasesDueSoonestTx(ctx context.Context, tx pgx.Tx, in NoticeAgendaInput) ([]OpenNoticeCase, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	if in.Limit <= 0 {
@@ -238,32 +247,11 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		in.Limit = noticeCaseListMax
 	}
 	var out []OpenNoticeCase
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
-		if err != nil {
-			return err
-		}
-		where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(agendaNoticeStates()))
-		if scope != "" {
-			where += " AND " + scope
-		}
-		// An explicit case assignment takes precedence over the contact's owner.
-		owner := "COALESCE(n.owner_user_id, c.owner_id)"
-		if in.OwnerID != nil {
-			if in.OwnerID.IsZero() {
-				where += " AND " + owner + " IS NULL"
-			} else {
-				where += storekit.SQLf(" AND "+owner+" = $%d", arg(*in.OwnerID))
-			}
-		}
-		if in.TeamOwners != nil {
-			where += storekit.SQLf(" AND ("+owner+" IS NULL OR "+owner+" = ANY($%d))", arg(in.TeamOwners))
-		}
-		query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `, n.acquisition_id
-   FROM privacy_notice_case n JOIN contact c ON c.id = n.contact_id
-   WHERE ` + where + storekit.SQLf(" ORDER BY n.due_at, n.id LIMIT $%d", arg(in.Limit))
+	query, args, err := noticeAgendaQuery(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	err = func() error {
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
@@ -293,8 +281,43 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 			}
 		}
 		return nil
-	})
+	}()
 	return out, err
+}
+
+func noticeAgendaQuery(ctx context.Context, in NoticeAgendaInput) (string, []any, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		return "", nil, err
+	}
+	where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(agendaNoticeStates()))
+	if scope != "" {
+		where += " AND " + scope
+	}
+	if in.ContactID != nil {
+		where += storekit.SQLf(" AND c.id = $%d", arg(in.ContactID.UUID))
+	}
+	// An explicit case assignment takes precedence over the contact's owner.
+	owner := "COALESCE(n.owner_user_id, c.owner_id)"
+	if in.OwnerID != nil {
+		if in.OwnerID.IsZero() {
+			where += " AND " + owner + " IS NULL"
+		} else {
+			where += storekit.SQLf(" AND "+owner+" = $%d", arg(*in.OwnerID))
+		}
+	}
+	if in.TeamOwners != nil {
+		where += storekit.SQLf(" AND ("+owner+" IS NULL OR "+owner+" = ANY($%d))", arg(in.TeamOwners))
+	}
+	query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `, n.acquisition_id
+   FROM privacy_notice_case n JOIN contact c ON c.id = n.contact_id
+   WHERE ` + where + storekit.SQLf(" ORDER BY n.due_at, n.id LIMIT $%d", arg(in.Limit))
+	return query, args, nil
 }
 
 // OpenNoticeCaseTx records one duty, in the transaction that created the

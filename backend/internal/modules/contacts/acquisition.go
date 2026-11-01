@@ -19,11 +19,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -114,6 +116,8 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	return nil
 }
 
+const acquisitionActivityEntity = "activity"
+
 // RecordSubjectWroteTx records, once, that an existing contact has written to
 // us — evidence that arrived after the contact was created.
 //
@@ -132,16 +136,24 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 func RecordSubjectWroteTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, mail ids.UUID, sent time.Time, capturedBy string,
 ) error {
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_acquisition_evidence
-		       (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
-		SELECT $1, $2, 'activity', $3, $4, $5
-		 WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence
-		                    WHERE contact_id = $1 AND kind = $2)`,
-		contactID, AcquiredSubjectInitiated, mail, sent, capturedBy); err != nil {
-		return fmt.Errorf("contacts: recording that this contact wrote to us: %w", err)
+	var proof ids.UUID
+	err := tx.QueryRow(ctx, `
+ INSERT INTO contact_acquisition_evidence
+ (contact_id, kind, source_entity_type, source_entity_id, occurred_at, captured_by)
+ SELECT @proof_contact, @kind, @proof_entity, @mail, @sent, @actor
+ WHERE NOT EXISTS (SELECT 1 FROM contact_acquisition_evidence WHERE contact_id = @proof_contact AND kind = @kind)
+ RETURNING id`, pgx.NamedArgs{"proof_contact": contactID, "proof_entity": acquisitionActivityEntity, acquisitionKindField: AcquiredSubjectInitiated, "mail": mail, "sent": sent, "actor": capturedBy}).Scan(&proof)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
 	}
-	return nil
+	if err != nil {
+		return fmt.Errorf("contacts: record direct sender evidence: %w", err)
+	}
+	// The event catalog has no source-proof event, and contact.updated would
+	// describe a contact field that did not change.
+	_, err = storekit.Audit(ctx, tx, "create", "contact_acquisition_evidence", proof, nil,
+		map[string]any{acquisitionKindField: AcquiredSubjectInitiated, "source_entity_type": acquisitionActivityEntity, "source_entity_id": mail, "occurred_at": sent})
+	return err
 }
 
 // acquisitionForCreate is the acquisition a typed create records: what the

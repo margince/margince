@@ -353,7 +353,7 @@ Margince first shows you the mail as it will go out, and sends nothing until you
 Also called: double opt-in, consent request, GDPR confirmation.
 
 ### How do I send a privacy notice to a contact?
-To send a privacy notice in Margince, open the **Privacy notice owed** item on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
+Mail from the contact does not create an Article 14 task. If a duty is still owed, open **Privacy notice owed** on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
 1. Open the **Privacy notice owed** item.
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
 3. If they already know, or the law lets you skip it, press **End the duty…** and record why.

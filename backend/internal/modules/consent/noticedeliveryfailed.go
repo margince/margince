@@ -19,6 +19,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -58,7 +59,7 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 		 WHERE prior.id = c.id
 		   AND c.delivery_id = $1
 		   AND c.state = $2
-		RETURNING c.id, c.rule, prior.state`,
+		RETURNING c.id, c.rule, prior.state, c.updated_at`,
 		deliveryID, string(NoticeQueued), string(NoticeDeliveryFailed))
 	if err != nil {
 		return 0, fmt.Errorf("consent: reopening the duties this message was carrying: %w", err)
@@ -67,6 +68,7 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 		id       ids.UUID
 		rule     string
 		wasState string
+		at       time.Time
 	}
 	// Drained and closed BEFORE the audit writes below: the audit runs further
 	// queries on this same transaction, and a connection cannot carry an open
@@ -74,7 +76,7 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 	var failed []reopened
 	for rows.Next() {
 		var r reopened
-		if err := rows.Scan(&r.id, &r.rule, &r.wasState); err != nil {
+		if err := rows.Scan(&r.id, &r.rule, &r.wasState, &r.at); err != nil {
 			rows.Close()
 			return 0, fmt.Errorf("consent: reading a reopened duty: %w", err)
 		}
@@ -94,6 +96,15 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 				fieldState: string(NoticeDeliveryFailed), fieldRule: r.rule,
 			}); err != nil {
 			return 0, fmt.Errorf("audit the reopened notice case: %w", err)
+		}
+	}
+	if len(failed) > 0 {
+		cases := make([]ids.UUID, 0, len(failed))
+		for _, row := range failed {
+			cases = append(cases, row.id)
+		}
+		if err := settleFailedSenderDutiesTx(ctx, tx, cases, failed[0].at); err != nil {
+			return 0, err
 		}
 	}
 	return len(failed), nil

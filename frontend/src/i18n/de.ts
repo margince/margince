@@ -16342,6 +16342,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.consent.blockedWord": "Blockiert",
   "contact.consent.unknownWord": "Unbekannt",
 
+  "contact.moment.rule.privacy_notice_due": "Datenschutzhinweis ausstehend",
   "contact.moment.rule.meeting_prep": "Termin steht bevor",
   "contact.moment.rule.re_engaged": "Wieder aktiv",
   "contact.moment.rule.job_change": "Stelle gewechselt",
@@ -18009,7 +18010,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.dsr": "Offene Datenschutzanfrage",
   "noticeDuty.title": "Datenschutzhinweis geschuldet (DSGVO Art. 14)",
   "noticeDuty.what":
-    "Margince speichert Daten dieses Kontakts, hat sie aber nicht vom Kontakt selbst: Du hast an diese Adresse geschrieben oder sie stand in Kopie, und von dieser Adresse kam nie eine E-Mail an dich. Die DSGVO verlangt, den Kontakt innerhalb eines Monats zu informieren, wer die Daten hat und wozu.",
+    "Prüfen, woher die Kontaktdaten stammen und ob die erfasste Informationspflicht noch besteht.",
   "noticeDuty.how":
     "Sende den Datenschutzhinweis, frage nach einer Bestätigung der Daten (das informiert ebenfalls) oder beende die Pflicht, wenn der Kontakt schon informiert ist oder eine Ausnahme gilt.",
   "noticeDuty.sendNotice": "Datenschutzhinweis senden",

@@ -603,3 +603,43 @@ describe("the face of the move's verb", () => {
     expect(log.classList.contains("btn-ai")).toBe(false);
   });
 });
+
+it("shows a privacy duty in place of the quiet answer and opens its review action", async () => {
+  const action = vi.fn();
+  const privacy: ContactMoment = {
+    ...QUIET,
+    rule: "privacy_notice_due",
+    headline: "Privacy notice owed",
+    why_now: "An unresolved disclosure duty is recorded for this contact.",
+    recommended_action: {
+      kind: "open_record",
+      label: "Review privacy duty",
+      state: "available",
+      destination: { surface: "privacy_notice", entity_id: "case-1" },
+    },
+  };
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider>
+        <ContactToday view={VIEW} moment={privacy} onAction={action} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Privacy notice owed")).not.toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["standing.next.snooze"] }),
+  ).toBeNull();
+  expect(screen.queryByText(en["standing.next.none"])).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Review privacy duty" }));
+  expect(action).toHaveBeenCalledWith(privacy.recommended_action);
+});
+
+it("keeps a quiet relationship readable when compliance work is outside the reader's role", () => {
+  show({ ...VIEW, sections_omitted: ["privacy_notice_duties"] }, QUIET);
+  expect(screen.getByText(en["standing.next.none"])).not.toBeNull();
+  expect(screen.queryByText(/Not included: privacy duties/)).toBeNull();
+});

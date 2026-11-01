@@ -13,9 +13,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { EntityRef } from "../../components/entityref";
-import { Button } from "../../design-system/atoms";
+import { Button, EmptyState } from "../../design-system/atoms";
 import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -33,7 +34,11 @@ import {
   noticeRuleHint,
   noticeRuleLabel,
 } from "./noticeacquisition";
-import type { NoticeCase } from "./noticecases.logic";
+import {
+  isNoticeResolved,
+  NOTICE_STATE_LABEL,
+  type NoticeCase,
+} from "./noticecases.logic";
 import { ExcuseModal, type ExcuseState } from "./noticeexcuse";
 
 // Every read that could still show the duty: the Home brief, the worklist the
@@ -43,17 +48,21 @@ const DUTY_READS = [
   ["worklist"],
   ["notice-cases"],
   ["contact-consent"],
+  ["contact360"],
 ];
 
-export function NoticeDuty({
-  item,
-  contactId,
-}: Readonly<{ item: WorklistItem; contactId: string }>) {
+export function NoticeDuty(
+  props: Readonly<
+    { item: WorklistItem; contactId: string } | { caseId: string }
+  >,
+) {
   const t = useT();
   const { locale } = useLocale();
-  const caseId = item.id;
+  const item = "item" in props ? props.item : undefined;
+  const caseId = "caseId" in props ? props.caseId : props.item.id;
   const queryClient = useQueryClient();
   const mayWrite = useCanWrite("contact", "update");
+  const mayExcuse = useCanWrite("privacy_request", "update");
   // The worklist row names whose queue it sits in, not who claimed the duty.
   // Only a reader of the privacy queue may ask the case itself.
   const canReadCase = useCan("privacy_request", "read");
@@ -68,6 +77,12 @@ export function NoticeDuty({
       );
     },
   });
+  const contactId =
+    "contactId" in props ? props.contactId : duty.data?.contact_id;
+  const owed = duty.data
+    ? !isNoticeResolved(duty.data.state) && duty.data.state !== "queued"
+    : item !== undefined;
+  const canAct = contactId && duty.data && owed;
   const [excusing, setExcusing] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const settle = (sentence: string) => {
@@ -107,46 +122,48 @@ export function NoticeDuty({
     },
   });
 
+  if (!item && !duty.data) {
+    return (
+      <Panel title={t("notice.title")}>
+        <PanelBody>
+          {canReadCase ? (
+            <QueryStates query={duty} pendingLabel={t("notice.loading")}>
+              {null}
+            </QueryStates>
+          ) : (
+            <EmptyState>{t("notice.readOnlyForPrivacy")}</EmptyState>
+          )}
+        </PanelBody>
+      </Panel>
+    );
+  }
   return (
-    <Panel title={t("noticeDuty.title")}>
+    <Panel title={noticeDutyTitle(duty.data, owed, t)}>
       <PanelBody>
-        <p>{t("noticeDuty.what")}</p>
+        {owed && <p>{t("noticeDuty.what")}</p>}
         <FactList
           className="notice-duty-facts"
           facts={dutyFacts(item, duty.data, t, locale, viewerZone())}
         />
-        <p className="t-caption">{t("noticeDuty.how")}</p>
-        {done ? (
-          <p role="status">{done}</p>
-        ) : (
-          mayWrite && (
-            <div className="notice-duty-actions">
-              <Button
-                variant="primary"
-                aria-haspopup="dialog"
-                onClick={() => preview("privacy_notice")}
-              >
-                {t("noticeDuty.sendNotice")}
-              </Button>
-              <Button
-                aria-haspopup="dialog"
-                onClick={() => preview("record_confirmation")}
-              >
-                {t("noticeDuty.askConfirm")}
-              </Button>
-              <Button onClick={() => setExcusing(true)}>
-                {t("noticeDuty.end")}
-              </Button>
-            </div>
-          )
-        )}
-        <ControllerMailDialog
-          contactId={contactId}
-          kind={mailKind}
-          open={previewing}
-          onClose={() => setPreviewing(false)}
-          onSent={reportSent}
+        {owed && <p className="t-caption">{t("noticeDuty.how")}</p>}
+        <NoticeDutyActions
+          done={done}
+          canAct={Boolean(canAct)}
+          mayWrite={mayWrite}
+          mayExcuse={mayExcuse}
+          t={t}
+          preview={preview}
+          onExcuse={() => setExcusing(true)}
         />
+        {contactId && (
+          <ControllerMailDialog
+            contactId={contactId}
+            kind={mailKind}
+            open={previewing}
+            onClose={() => setPreviewing(false)}
+            onSent={reportSent}
+          />
+        )}
         <ExcuseModal
           open={excusing}
           onClose={() => setExcusing(false)}
@@ -159,17 +176,72 @@ export function NoticeDuty({
   );
 }
 
+function noticeDutyTitle(
+  duty: NoticeCase | undefined,
+  owed: boolean,
+  t: Translator,
+) {
+  return t(
+    duty?.rule === "art13" || (duty && !owed)
+      ? "notice.title"
+      : "noticeDuty.title",
+  );
+}
+
+function NoticeDutyActions({
+  done,
+  canAct,
+  mayWrite,
+  mayExcuse,
+  t,
+  preview,
+  onExcuse,
+}: Readonly<{
+  done: string | null;
+  canAct: boolean;
+  mayWrite: boolean;
+  mayExcuse: boolean;
+  t: Translator;
+  preview: (kind: ControllerMailKind) => void;
+  onExcuse: () => void;
+}>) {
+  if (done) return <p role="status">{done}</p>;
+  if (!canAct) return null;
+  return (
+    <div className="notice-duty-actions">
+      {mayWrite && (
+        <>
+          <Button
+            variant="primary"
+            aria-haspopup="dialog"
+            onClick={() => preview("privacy_notice")}
+          >
+            {t("noticeDuty.sendNotice")}
+          </Button>
+          <Button
+            aria-haspopup="dialog"
+            onClick={() => preview("record_confirmation")}
+          >
+            {t("noticeDuty.askConfirm")}
+          </Button>
+        </>
+      )}
+      {mayExcuse && <Button onClick={onExcuse}>{t("noticeDuty.end")}</Button>}
+    </div>
+  );
+}
+
 // What the deadline rests on, so a precise date with no evidence behind it
 // never reads as authoritative.
 function dutyFacts(
-  item: WorklistItem,
+  item: WorklistItem | undefined,
   duty: NoticeCase | undefined,
   t: Translator,
   locale: Locale,
   tz: string,
 ): Fact[] {
   const date = (iso: string) => formatDate(iso, locale, tz);
-  const acquisition = item.acquisition;
+  const acquisition = item?.acquisition ?? duty?.acquisition;
   const facts: Fact[] = acquisition
     ? [
         {
@@ -200,7 +272,25 @@ function dutyFacts(
           value: t("notice.noAcquisition"),
         },
       ];
+  if (!item && duty?.contact_name) {
+    facts.unshift({
+      key: "contact",
+      term: t("notice.contact"),
+      value: (
+        <EntityRef
+          kind="contact"
+          id={duty.contact_id}
+          name={duty.contact_name}
+        />
+      ),
+    });
+  }
   if (duty) {
+    facts.push({
+      key: "state",
+      term: t("history.field.status"),
+      value: t(NOTICE_STATE_LABEL[duty.state]),
+    });
     facts.push({
       key: "owner",
       term: t("notice.owner"),
@@ -211,17 +301,20 @@ function dutyFacts(
       ),
     });
   }
-  if (item.kind) {
+  const rule = duty?.rule ?? item?.kind;
+  if (rule) {
     facts.push({
       key: "rule",
       term: t("noticeDuty.rule"),
-      value: noticeRuleLabel(item.kind, t),
-      note: noticeRuleHint(item.kind, t),
+      value: noticeRuleLabel(rule, t),
+      note: noticeRuleHint(rule, t),
     });
   }
-  // A notice case's `due_at` is its deadline, never a meeting's start.
-  if (item.source === "notice_case" && item.due_at) {
-    facts.push({ key: "due", term: t("notice.due"), value: date(item.due_at) });
+  const due =
+    duty?.due_at ??
+    (item && item.source === "notice_case" ? item.due_at : undefined);
+  if (due) {
+    facts.push({ key: "due", term: t("notice.due"), value: date(due) });
   }
   return facts;
 }
