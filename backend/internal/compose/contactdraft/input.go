@@ -216,22 +216,24 @@ type ActIn struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
 	At      string `json:"at"`
-	// Inbound says who spoke. A draft that answers what THEY said reads very
-	// differently from one that follows up on what we said, and the direction
-	// is the only thing that tells them apart.
+	// Inbound says the other side wrote it. The turn answers that from the
+	// row's voice where it names a side, and from the transport otherwise.
+	//
+	// A draft answering them reads differently from one following up on us.
+	// Read as the wrong side's word, a row writes the wrong message.
 	Inbound bool `json:"inbound"`
 	// Snippet is the opening of the newest INBOUND message on this contact's
 	// timeline. A subject line says a message happened; the words say what it
 	// was about, and a draft grounded in subjects alone can only gesture at a
 	// conversation it never read.
 	//
-	// It is what the message SAYS, not a claim about who wrote it. An activity
-	// reaches a contact through activity_link, which records what a message
-	// concerns rather than who authored it — a colleague's introduction that
-	// copies a prospect is linked to that prospect — and the 360 does not carry
-	// participants, so authorship is not knowable here. The prompt beside it
-	// says "a message on this thread" rather than "what they wrote", because
-	// the stronger sentence would be one the data cannot support.
+	// Reaching a contact is not authorship. An activity reaches one through
+	// activity_link, which records what a message concerns, so a colleague's
+	// introduction copying a prospect is linked to that prospect.
+	//
+	// The row's voice names the author, so the arm filling this reads the side
+	// rather than the direction. The prompt beside it still says "a message on
+	// this thread", which holds where a voice names no side.
 	//
 	// The opening rather than the whole message: an email says why it was sent
 	// in its first lines and spends the rest on detail, and the detail is what
