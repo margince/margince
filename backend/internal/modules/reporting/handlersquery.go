@@ -37,6 +37,18 @@ func requiredVersion(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return *version, true
 }
 
+// unpublishedFramework is the version GET /analytics/framework answers before
+// the first publish, so that publish must be able to name it.
+const unpublishedFramework = "0"
+
+// frameworkVersion is requiredVersion that also takes the unpublished version.
+func frameworkVersion(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	if r.Header.Get("If-Match") == unpublishedFramework {
+		return 0, true
+	}
+	return requiredVersion(w, r)
+}
+
 //nolint:nilnil // A missing cursor denotes the first page.
 func pageID(cursor *string) (*ids.UUID, error) {
 	if cursor == nil {

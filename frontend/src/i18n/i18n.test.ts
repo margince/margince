@@ -216,6 +216,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
+  "contactCase.field.linkedin",
   "ob.ai.speakerName",
   "auth.title",
 

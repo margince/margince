@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ReviewActionsProvider } from "./App.reviewactions";
-import { sheetLabels } from "./features/analytics/analytics.forecast.review";
+import { sheetLabels } from "./features/analytics/analytics.forecast.checktable";
 import { InputCheckAnswerSheet } from "./features/analytics/inputcheck.answer";
 import { useT } from "./i18n";
 import {

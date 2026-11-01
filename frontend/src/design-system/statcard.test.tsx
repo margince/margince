@@ -127,7 +127,7 @@ describe("a reading that names what it counts", () => {
   });
 });
 
-describe("the door always says Open", () => {
+describe("the door says Open, or View records for records in place", () => {
   it("letters the foot's button with the stat.open message and no other word", () => {
     const { container } = drawReading();
 
@@ -164,6 +164,28 @@ describe("the door always says Open", () => {
     });
     expect(door.getAttribute("href")).toBe("/#/contacts/c-1");
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("says View records, with no arrow, for a door that lists the records in place", () => {
+    const { container } = render(
+      <LocaleProvider initial="en">
+        <StatCard label="Urgent" value="4" opens="records" onOpen={() => {}} />
+      </LocaleProvider>,
+    );
+
+    const door = screen.getByRole("button", { description: "Urgent" });
+    expect(door.textContent?.trim()).toBe(en["stat.records"]);
+    expect(container.querySelector(".stat-card-arrow")).toBeNull();
+  });
+
+  it("keeps Open on a link, which always goes to a page", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Best route" value="Ada" opens="records" href="#/c" />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("link", { name: en["stat.open"] })).not.toBeNull();
   });
 
   it("pins the English word, which is what every door in the product reads", () => {
@@ -393,8 +415,8 @@ describe("a reading's name and figure are never cut", () => {
   });
 });
 
-describe("the foot speaks once", () => {
-  it("writes exactly one message into the card's foot", () => {
+describe("the foot speaks once per action", () => {
+  it("writes one message per action into the card's foot", () => {
     const path = join(here, "statcard.tsx");
     const source = sourceFileAt(path);
 
@@ -403,9 +425,12 @@ describe("the foot speaks once", () => {
     if (foot === undefined) return;
 
     // Every word the foot can draw: a `t(...)` lookup or a literal written
-    // straight in. One lookup, no literals — a second of either is a door
-    // saying something the rest of the product's doors do not.
-    expect(messageLookups(foot)).toEqual(['t("stat.open")']);
+    // straight in. One lookup per action and no literals; a third of either
+    // is a door saying something the rest of the product's doors do not.
+    expect(messageLookups(foot)).toEqual([
+      't("stat.records")',
+      't("stat.open")',
+    ]);
     expect(literalWords(foot)).toEqual([]);
   });
 });

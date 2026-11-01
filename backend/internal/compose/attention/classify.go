@@ -95,6 +95,7 @@ func base(
 		Consequence:       consequence,
 		Kind:              item.Kind,
 		Title:             item.Title,
+		SummaryParts:      item.SummaryParts,
 		Detail:            item.Detail,
 		NoticeOrigin:      item.NoticeOrigin,
 		PromiseRecipients: item.PromiseRecipients,
@@ -204,44 +205,41 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 	}
 }
 
-// dropDealsAlreadyWaiting removes the at-risk row for a deal somebody is
-// already waiting on.
+// dropDealsAlreadyInHand removes the at-risk row for a deal somebody is
+// already waiting on, or that has a task about it due within nearTaskDays.
 //
-// One unanswered message must not become two rows. The waiting row is strictly
-// the more urgent and the more actionable of the two — it names the message to
-// reply to — so it wins, and the drifting row's ground rides along as a reason
-// rather than as a second obligation.
-func dropDealsAlreadyWaiting(rows []ranked) []ranked {
-	waitingDeals := map[string]bool{}
+// One job must not become two rows. The waiting row names the message to reply
+// to, and the near task names the step already planned, so either one wins.
+// The drifting row's ground rides along as a reason rather than as a second
+// obligation. A task due later, or undated, leaves the deal at risk, so a deal
+// cannot hide behind a step nobody means to take soon.
+func dropDealsAlreadyInHand(rows []ranked, asOf time.Time) []ranked {
+	inHand := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
-			row.item.Subject.Type == subjectDeal {
-			waitingDeals[row.item.Subject.Id.String()] = true
+		if absorbsRisk(row, asOf) {
+			inHand[row.item.Subject.Id.String()] = true
 		}
 	}
-	if len(waitingDeals) == 0 {
+	if len(inHand) == 0 {
 		return rows
 	}
-	// The deal's own facts ride onto the waiting row that absorbed it: a reader
-	// told a customer is waiting still wants to know the deal is worth €160k.
 	// Everything the drifting row was going to say, kept: a reader told a
 	// customer is waiting still needs to know the deal is material, has been
 	// quiet a month, and is past the date it was meant to close.
 	facts := map[string]*crmcontracts.WorklistDealFacts{}
 	grounds := map[string][]crmcontracts.WorklistReason{}
 	for _, row := range rows {
-		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+		if row.item.Source == sourceAtRisk && inHand[row.item.Id] {
 			facts[row.item.Id] = row.item.Deal
 			grounds[row.item.Id] = row.item.Because
 		}
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Source == "deal_at_risk" && waitingDeals[row.item.Id] {
+		if row.item.Source == sourceAtRisk && inHand[row.item.Id] {
 			continue
 		}
-		if row.item.Source == sourceWaiting && row.item.Subject != nil &&
-			row.item.Subject.Type == subjectDeal && row.item.Deal == nil {
+		if absorbsRisk(row, asOf) && row.item.Deal == nil {
 			deal := row.item.Subject.Id.String()
 			row.item.Deal = facts[deal]
 			row.item.Because = append(row.item.Because, grounds[deal]...)
@@ -250,6 +248,29 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 	}
 	return kept
 }
+
+// nearTaskDays is how soon a task about a deal must be due to stand in for the
+// deal's at-risk row.
+const nearTaskDays = 7
+
+// absorbsRisk says whether a row stands in for its deal's at-risk row. Two
+// kinds do: a waiting card about the deal, and a task about it due soon.
+func absorbsRisk(row ranked, asOf time.Time) bool {
+	if row.item.Subject == nil || row.item.Subject.Type != subjectDeal {
+		return false
+	}
+	switch row.item.Source {
+	case sourceWaiting:
+		return true
+	case sourceTask:
+		return !row.deadlineAt.IsZero() && row.deadlineAt.Before(nearTaskCutoff(asOf))
+	}
+	return false
+}
+
+// nearTaskCutoff is the instant a task about a deal must be due before to
+// absorb the deal's at-risk row.
+func nearTaskCutoff(asOf time.Time) time.Time { return asOf.AddDate(0, 0, nearTaskDays) }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
 // without a date stays actionable without claiming an invented deadline.

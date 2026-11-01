@@ -207,6 +207,35 @@ func (t attentionTasks) TasksAfter(
 	return out, page.HasMore, nil
 }
 
+// TasksOnDeals reads every open task of the window filed under any of these
+// deals, under the lane's own narrowing (openTasksDueBy). The service judges
+// which of them stand in for their deal.
+func (t attentionTasks) TasksOnDeals(
+	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
+) ([]attention.Task, error) {
+	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
+	if !ok || len(deals) == 0 {
+		return nil, nil
+	}
+	page := reminderPage
+	in.LinkedToDeals, in.Limit = deals, &page
+	reader := reminderReaderFor(ctx, window.Scope)
+	var tasks []attention.Task
+	for {
+		rows, next, err := t.listTaskPage(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			tasks = append(tasks, taskFromActivity(row, reader, window.AsOf))
+		}
+		if !next.HasMore {
+			return tasks, nil
+		}
+		in.Cursor = &next.NextCursor
+	}
+}
+
 // RemindersForViewer reads every due reminder of the reader's through the
 // store's reminder_due filter, the same read GET /v1/activities?reminder_due=true
 // makes, following its cursor. All of them, because the badge counts all.

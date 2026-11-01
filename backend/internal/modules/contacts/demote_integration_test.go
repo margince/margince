@@ -167,7 +167,7 @@ func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
 func TestDemoteRefusesWhenTheContactIsOnALiveDeal(t *testing.T) {
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "buyer@example.test")
-	contact, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "meeting_held"})
+	contact, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote: %v", err)
 	}
@@ -377,7 +377,7 @@ func TestDemoteOfAContactAnotherLeadPromotedIntoIsRefused(t *testing.T) {
 		t.Fatalf("first promote: err=%v merged=%t, want a created contact", err, merged)
 	}
 	second := e.seedLead(t, shared)
-	if _, merged, err := e.store.PromoteLead(e.ctx, second, PromoteLeadInput{Trigger: "inbound_reply"}); err != nil || !merged {
+	if _, merged, err := e.store.PromoteLead(e.ctx, second, PromoteLeadInput{Trigger: "human_qualify"}); err != nil || !merged {
 		t.Fatalf("second promote: err=%v merged=%t, want a merge into the first's contact", err, merged)
 	}
 

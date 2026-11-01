@@ -32,6 +32,8 @@ type attentionNames struct {
 	projects    *projects.Store
 	identity    *identity.Service
 	collections *collections.Store
+	// seen, when set, hears every record a label resolved.
+	seen func(entityType string, id ids.UUID)
 }
 
 var (
@@ -59,18 +61,36 @@ func newAttentionNames(db *database.DB) attentionNames {
 // carries that record's own object grant and row-scope clause, so a label is
 // exactly as visible as the record, and this seam holds no authority of its
 // own.
-//
-// A whole-read refusal — this caller may not read CONTACTS at all — costs the
-// type's labels and nothing else, because the contract's "absent when the
-// caller may not read it" is the same answer for one record or a hundred.
+func (n attentionNames) Labels(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
+	labels, _, err := n.named(ctx, entityType, want)
+	return labels, err
+}
+
+// named answers Labels and whether entityType is in the vocabulary at all.
+// So a sight check can tell a record the caller cannot open from one no label
+// covers.
+func (n attentionNames) named(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, bool, error) {
+	labels, err := n.read(ctx, entityType, want)
+	if errors.Is(err, errUnnamedType) {
+		return map[ids.UUID]string{}, false, nil
+	}
+	labels, err = labelsOrRefusal(labels, err)
+	if n.seen != nil {
+		for id, label := range labels {
+			if label != "" {
+				n.seen(entityType, id)
+			}
+		}
+	}
+	return labels, true, err
+}
+
+// labelsOrRefusal lets a whole-read refusal (this caller may not read CONTACTS
+// at all) cost the type's labels and nothing else. The contract's "absent when
+// the caller may not read it" is the same answer for one record or a hundred.
 // Any other error propagates: a database that will not answer must not read
 // as a page of records the reader lacks grants for.
-//
-// A type outside this vocabulary answers nothing rather than guessing — the
-// subject enum and this switch are held together by the wiring test that
-// labels every lane.
-func (n attentionNames) Labels(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
-	labels, err := n.read(ctx, entityType, want)
+func labelsOrRefusal(labels map[ids.UUID]string, err error) (map[ids.UUID]string, error) {
 	switch {
 	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
 		// No labels, and no error: "the caller may not read it" is the same
@@ -135,7 +155,11 @@ func (n attentionNames) catalogRead(ctx context.Context, entityType string, want
 	case string(recordTypeOfferTemplate):
 		return n.deals.OfferTemplateLabels(ctx, want)
 	default:
-		// A type outside the vocabulary names nothing rather than guessing.
-		return map[ids.UUID]string{}, nil
+		return nil, errUnnamedType
 	}
 }
+
+// errUnnamedType marks a type outside the vocabulary, which names nothing
+// rather than guessing. The subject enum and the switch above are held
+// together by the wiring test that labels every lane.
+var errUnnamedType = errors.New("no label covers this entity type")

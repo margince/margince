@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -73,6 +74,8 @@ type StageRequest struct {
 	CoTargetType string
 	CoTargetID   ids.UUID
 	Summary      string
+	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
+	SummaryParts *crmcontracts.ApprovalSummaryParts
 }
 
 // StageInfo is what a 🟡-capable tool contributes to its own staging: the

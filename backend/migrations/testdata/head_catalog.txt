@@ -3,7 +3,7 @@ public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/marg
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
 public.activity.activity_assignee_id_retirement_guard CREATE TRIGGER activity_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.activity FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task'::text) AND (NOT new.is_done)))) EXECUTE FUNCTION refuse_retired_member_work('assignee_id')
 public.activity.activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text])))
-public.activity.activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text])))
+public.activity.activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text, 'unverifiable'::text])))
 public.activity.activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text])))
 public.activity.activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text]))))
 public.activity.activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))
@@ -1163,6 +1163,7 @@ public.approval.co_target_entity_id uuid gen=- def=-
 public.approval.co_target_entity_type text gen=- def=-
 public.approval.co_target_version bigint gen=- def=-
 public.approval.consumed_at timestamp with time zone gen=- def=-
+public.approval.context_digest text gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.decided_at timestamp with time zone gen=- def=-
 public.approval.decided_by uuid gen=- def=-
@@ -1186,6 +1187,7 @@ public.approval.staged_by_connection uuid gen=- def=-
 public.approval.staged_in_conversation_of uuid gen=- def=-
 public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-
+public.approval.summary_parts jsonb gen=- def=-
 public.approval.target_entity_id uuid gen=- def=-
 public.approval.target_entity_type text gen=- def=-
 public.approval.target_label text gen=- def=-
@@ -3534,6 +3536,7 @@ public.conversation_claim.version bigint NOT NULL gen=- def=1
 public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL)
 public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
+public.conversation_claim_task_ix CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL))
 public.currency_minor_digits acl=margince_owner=arwdDxt/margince_owner,margince_app=r/margince_owner rls=false force=false
 public.currency_minor_digits.currency currency_code NOT NULL gen=- def=-
 public.currency_minor_digits.currency_minor_digits_digits_check CHECK (((digits >= 0) AND (digits <= 4)))
@@ -4112,8 +4115,14 @@ public.deal_stage_history.deal_id uuid NOT NULL gen=- def=-
 public.deal_stage_history.deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_stage_history.deal_stage_history_deal_id_id_key UNIQUE (deal_id, id)
 public.deal_stage_history.deal_stage_history_from_stage_id_fkey FOREIGN KEY (from_stage_id) REFERENCES stage(id) ON DELETE SET NULL (from_stage_id)
+public.deal_stage_history.deal_stage_history_import_run_pairing CHECK (
+CASE provenance
+    WHEN 'imported'::text THEN (import_run_id IS NOT NULL)
+    ELSE (import_run_id IS NULL)
+END)
 public.deal_stage_history.deal_stage_history_lost_reason_code_fkey FOREIGN KEY (lost_reason_code_at_change) REFERENCES deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.deal_stage_history.deal_stage_history_pkey PRIMARY KEY (id)
+public.deal_stage_history.deal_stage_history_provenance_check CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded'::text, 'imported'::text]))))
 public.deal_stage_history.deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES deal_stage_history(id) ON DELETE SET NULL
 public.deal_stage_history.deal_stage_history_semantic_at_change_check CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))))
 public.deal_stage_history.deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES stage(id) ON DELETE RESTRICT
@@ -4123,9 +4132,11 @@ public.deal_stage_history.from_stage_id uuid gen=- def=-
 public.deal_stage_history.fx_date_at_change date gen=- def=-
 public.deal_stage_history.fx_rate_at_change numeric gen=- def=-
 public.deal_stage_history.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_stage_history.import_run_id uuid gen=- def=-
 public.deal_stage_history.lost_reason_code_at_change text gen=- def=-
 public.deal_stage_history.owner_id_at_change uuid gen=- def=-
 public.deal_stage_history.pipeline_id_at_change uuid gen=- def=-
+public.deal_stage_history.provenance text gen=- def=-
 public.deal_stage_history.reversal_of uuid gen=- def=-
 public.deal_stage_history.semantic_at_change text gen=- def=-
 public.deal_stage_history.to_position_at_change integer gen=- def=-
@@ -4577,9 +4588,12 @@ public.forecast_contribution.created_at timestamp with time zone NOT NULL gen=- 
 public.forecast_contribution.currency currency_code gen=- def=-
 public.forecast_contribution.deal_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.effective_close_date date gen=- def=-
+public.forecast_contribution.evidence_n integer gen=- def=-
 public.forecast_contribution.exclusion_reason text gen=- def=-
 public.forecast_contribution.forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.forecast_contribution.forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
+public.forecast_contribution.forecast_contribution_base_minor_js_safe CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))
+public.forecast_contribution.forecast_contribution_evidence_n_is_a_tally CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))
 public.forecast_contribution.forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text]))))
 public.forecast_contribution.forecast_contribution_is_frozen CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()
 public.forecast_contribution.forecast_contribution_pkey PRIMARY KEY (id)
@@ -4587,7 +4601,11 @@ public.forecast_contribution.forecast_contribution_probability_is_a_percent CHEC
 public.forecast_contribution.forecast_contribution_qualification_check CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible'::text, 'excluded'::text, 'unsupported'::text, 'unknown'::text]))))
 public.forecast_contribution.forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL)))
 public.forecast_contribution.forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric)))
+public.forecast_contribution.forecast_contribution_risk_effect_positive CHECK (((risk_effect IS NULL) OR (risk_effect > (0)::numeric)))
+public.forecast_contribution.forecast_contribution_risk_signal_facts_list CHECK (((risk_signal_facts IS NULL) OR (jsonb_typeof(risk_signal_facts) = 'array'::text)))
+public.forecast_contribution.forecast_contribution_risk_signals_known CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed'::text, 'no_next_step'::text, 'quiet'::text, 'stuck'::text])))
 public.forecast_contribution.forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES forecast_snapshot(id) ON DELETE CASCADE
+public.forecast_contribution.forecast_contribution_typed_probability_is_a_percent CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))
 public.forecast_contribution.forecast_contribution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))
 public.forecast_contribution.forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
@@ -4601,9 +4619,13 @@ public.forecast_contribution.in_open boolean NOT NULL gen=- def=false
 public.forecast_contribution.in_won boolean NOT NULL gen=- def=false
 public.forecast_contribution.owner_id uuid gen=- def=-
 public.forecast_contribution.qualification text gen=- def=-
+public.forecast_contribution.risk_effect numeric gen=- def=-
+public.forecast_contribution.risk_signal_facts jsonb gen=- def=-
+public.forecast_contribution.risk_signals text[] gen=- def=-
 public.forecast_contribution.snapshot_id uuid NOT NULL gen=- def=-
 public.forecast_contribution.stage_id uuid gen=- def=-
 public.forecast_contribution.stage_probability integer gen=- def=-
+public.forecast_contribution.typed_probability integer gen=- def=-
 public.forecast_contribution.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_contribution.uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id)
 public.forecast_contribution.version bigint NOT NULL gen=- def=1
@@ -4624,6 +4646,7 @@ public.forecast_snapshot.confirmed_date_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_snapshot.definition_version text NOT NULL gen=- def=-
 public.forecast_snapshot.eligible_count integer NOT NULL gen=- def=-
+public.forecast_snapshot.evidence_cutoff timestamp with time zone gen=- def=-
 public.forecast_snapshot.evidence_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES forecast_call(id) ON DELETE SET NULL
@@ -4631,12 +4654,23 @@ public.forecast_snapshot.forecast_snapshot_counts_are_tallies CHECK (((eligible_
 public.forecast_snapshot.forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.forecast_snapshot.forecast_snapshot_is_frozen CREATE TRIGGER forecast_snapshot_is_frozen BEFORE UPDATE ON public.forecast_snapshot FOR EACH ROW EXECUTE FUNCTION forecast_snapshot_is_frozen()
+public.forecast_snapshot.forecast_snapshot_landing_call_is_the_landing CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'::text))))
+public.forecast_snapshot.forecast_snapshot_landing_call_minor_js_safe CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_landing_measure_known CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence'::text, 'weighted'::text, 'manager_call'::text]))))
 public.forecast_snapshot.forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))
 public.forecast_snapshot.forecast_snapshot_period_ordered CHECK ((period_end >= period_start))
 public.forecast_snapshot.forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)
 public.forecast_snapshot.forecast_snapshot_pkey PRIMARY KEY (id)
 public.forecast_snapshot.forecast_snapshot_qualified_policy_present CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> ''::text)))
+public.forecast_snapshot.forecast_snapshot_range_high_minor_js_safe CHECK (((range_high_minor >= '-9007199254740991'::bigint) AND (range_high_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_range_low_minor_js_safe CHECK (((range_low_minor >= '-9007199254740991'::bigint) AND (range_low_minor <= '9007199254740991'::bigint)))
+public.forecast_snapshot.forecast_snapshot_range_ordered CHECK (((range_low_minor IS NULL) OR ((range_low_minor >= 0) AND (range_low_minor <= range_high_minor))))
+public.forecast_snapshot.forecast_snapshot_range_quantiles_known CHECK (((range_quantiles IS NULL) OR (range_quantiles = 'nearest_rank'::text)))
+public.forecast_snapshot.forecast_snapshot_range_runs_counted CHECK (((range_runs IS NULL) OR (range_runs >= 1)))
+public.forecast_snapshot.forecast_snapshot_range_version_present CHECK (((range_version IS NULL) OR (btrim(range_version) <> ''::text)))
+public.forecast_snapshot.forecast_snapshot_range_whole CHECK ((((range_low_minor IS NULL) = (range_high_minor IS NULL)) AND ((range_low_minor IS NULL) = (range_runs IS NULL)) AND ((range_low_minor IS NULL) = (range_quantiles IS NULL)) AND ((range_low_minor IS NULL) = (range_version IS NULL))))
 public.forecast_snapshot.forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0)))
+public.forecast_snapshot.forecast_snapshot_risk_signals_version_present CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> ''::text)))
 public.forecast_snapshot.forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL)))
 public.forecast_snapshot.forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text])))
 public.forecast_snapshot.forecast_snapshot_trigger_check CHECK ((trigger = ANY (ARRAY['daily'::text, 'call'::text, 'period_close'::text, 'recheck'::text])))
@@ -4647,6 +4681,8 @@ public.forecast_snapshot.forward_measure text gen=- def=-
 public.forecast_snapshot.fx_missing_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.id uuid NOT NULL gen=- def=uuidv7()
 public.forecast_snapshot.input_fingerprint text gen=- def=-
+public.forecast_snapshot.landing_call_minor bigint gen=- def=-
+public.forecast_snapshot.landing_measure text gen=- def=-
 public.forecast_snapshot.local_day date NOT NULL gen=- def=-
 public.forecast_snapshot.open_minor bigint NOT NULL gen=- def=-
 public.forecast_snapshot.period_end date NOT NULL gen=- def=-
@@ -4655,8 +4691,15 @@ public.forecast_snapshot.pipeline_id uuid gen=- def=-
 public.forecast_snapshot.population_fingerprint text NOT NULL gen=- def=''::text
 public.forecast_snapshot.priced_count integer NOT NULL gen=- def=-
 public.forecast_snapshot.qualified_policy_version text gen=- def=-
+public.forecast_snapshot.range_high_minor bigint gen=- def=-
+public.forecast_snapshot.range_low_minor bigint gen=- def=-
+public.forecast_snapshot.range_quantiles text gen=- def=-
+public.forecast_snapshot.range_runs integer gen=- def=-
+public.forecast_snapshot.range_version text gen=- def=-
+public.forecast_snapshot.risk_signals_version text gen=- def=-
 public.forecast_snapshot.scope_id uuid gen=- def=-
 public.forecast_snapshot.scope_kind text NOT NULL gen=- def=-
+public.forecast_snapshot.self_correcting boolean gen=- def=-
 public.forecast_snapshot.taken_at timestamp with time zone NOT NULL gen=- def=now()
 public.forecast_snapshot.trigger text NOT NULL gen=- def=-
 public.forecast_snapshot.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6422,7 +6465,7 @@ public.privacy_notice_case.completed_at timestamp with time zone gen=- def=-
 public.privacy_notice_case.contact_id uuid NOT NULL gen=- def=-
 public.privacy_notice_case.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.privacy_notice_case.delivery_id uuid gen=- def=-
-public.privacy_notice_case.due_at timestamp with time zone NOT NULL gen=- def=-
+public.privacy_notice_case.due_at timestamp with time zone gen=- def=-
 public.privacy_notice_case.id uuid NOT NULL gen=- def=uuidv7()
 public.privacy_notice_case.last_sent_at timestamp with time zone gen=- def=-
 public.privacy_notice_case.owner_user_id uuid gen=- def=-
@@ -6431,24 +6474,32 @@ public.privacy_notice_case.privacy_notice_case_blocked_shape CHECK (((state = 'b
 public.privacy_notice_case.privacy_notice_case_completion_shape CHECK (((state = ANY (ARRAY['completed'::text, 'not_required'::text, 'exempt_with_reason'::text, 'provided_elsewhere'::text])) = (completed_at IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.privacy_notice_case.privacy_notice_case_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
+public.privacy_notice_case.privacy_notice_case_due_shape CHECK (((state <> ALL (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text])) OR (due_at IS NOT NULL)))
+public.privacy_notice_case.privacy_notice_case_none_shape CHECK (((rule <> 'none'::text) OR ((due_at IS NULL) AND (completed_at IS NOT NULL) AND (cardinality(allowed_routes) = 0))))
 public.privacy_notice_case.privacy_notice_case_owner_fkey FOREIGN KEY (owner_user_id) REFERENCES app_user(id) ON DELETE SET NULL
-public.privacy_notice_case.privacy_notice_case_owner_user_id_retirement_guard CREATE TRIGGER privacy_notice_case_owner_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.privacy_notice_case FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text])))) EXECUTE FUNCTION refuse_retired_member_work('owner_user_id')
+public.privacy_notice_case.privacy_notice_case_owner_user_id_retirement_guard CREATE TRIGGER privacy_notice_case_owner_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.privacy_notice_case FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text, 'source_review'::text])))) EXECUTE FUNCTION refuse_retired_member_work('owner_user_id')
 public.privacy_notice_case.privacy_notice_case_pkey PRIMARY KEY (id)
 public.privacy_notice_case.privacy_notice_case_queued_names_its_delivery CHECK (((state <> 'queued'::text) OR (delivery_id IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_resolution_note_length CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 500)))
 public.privacy_notice_case.privacy_notice_case_resolution_shape CHECK (((state = ANY (ARRAY['exempt_with_reason'::text, 'provided_elsewhere'::text])) = (resolution_note IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES app_user(id) ON DELETE SET NULL
-public.privacy_notice_case.privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['art13'::text, 'art14'::text])))
-public.privacy_notice_case.privacy_notice_case_state CHECK ((state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'completed'::text, 'provided_elsewhere'::text, 'exempt_with_reason'::text, 'blocked'::text, 'not_required'::text])))
+public.privacy_notice_case.privacy_notice_case_review_shape CHECK ((((state = 'source_review'::text) = (rule = 'unassessed'::text)) AND ((state <> 'source_review'::text) OR ((source_kind IS NULL) AND (due_at IS NULL) AND (cardinality(allowed_routes) = 0)))))
+public.privacy_notice_case.privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['unassessed'::text, 'none'::text, 'art13'::text, 'art14'::text])))
+public.privacy_notice_case.privacy_notice_case_source_note CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) >= 1) AND (char_length(btrim(source_review_note)) <= 500)))))
+public.privacy_notice_case.privacy_notice_case_state CHECK ((state = ANY (ARRAY['source_review'::text, 'open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'completed'::text, 'provided_elsewhere'::text, 'exempt_with_reason'::text, 'blocked'::text, 'not_required'::text])))
 public.privacy_notice_case.resolution_note text gen=- def=-
 public.privacy_notice_case.resolved_by uuid gen=- def=-
 public.privacy_notice_case.rule text NOT NULL gen=- def=-
+public.privacy_notice_case.source_kind text gen=- def=-
+public.privacy_notice_case.source_obtained_at timestamp with time zone gen=- def=-
+public.privacy_notice_case.source_review_note text gen=- def=-
 public.privacy_notice_case.state text NOT NULL gen=- def='open'::text
 public.privacy_notice_case.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.privacy_notice_case_acquisition CREATE UNIQUE INDEX privacy_notice_case_acquisition ON public.privacy_notice_case USING btree (acquisition_id)
 public.privacy_notice_case_delivery CREATE INDEX privacy_notice_case_delivery ON public.privacy_notice_case USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
 public.privacy_notice_case_due CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text]))
 public.privacy_notice_case_pkey CREATE UNIQUE INDEX privacy_notice_case_pkey ON public.privacy_notice_case USING btree (id)
+public.privacy_notice_case_review_queue CREATE INDEX privacy_notice_case_review_queue ON public.privacy_notice_case USING btree (COALESCE(due_at, created_at), id)
 public.privacy_request_proof acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.privacy_request_proof.answered_at timestamp with time zone NOT NULL gen=- def=-
 public.privacy_request_proof.completed_by_id text gen=- def=-
@@ -8683,6 +8734,8 @@ public.web_form.id uuid NOT NULL gen=- def=uuidv7()
 public.web_form.lead_origin text gen=- def=-
 public.web_form.name text NOT NULL gen=- def=-
 public.web_form.owner_id uuid gen=- def=-
+public.web_form.privacy_notice text gen=- def=-
+public.web_form.privacy_notice_url text gen=- def=-
 public.web_form.redirect_url text gen=- def=-
 public.web_form.secret_ref text gen=- def=-
 public.web_form.sender text NOT NULL gen=- def=-
@@ -8701,12 +8754,20 @@ public.web_form.web_form_name_present CHECK (((length(btrim(name)) > 0) AND (len
 public.web_form.web_form_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.web_form.web_form_owner_id_retirement_guard CREATE TRIGGER web_form_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.web_form FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active'::text)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.web_form.web_form_pkey PRIMARY KEY (id)
+public.web_form.web_form_privacy_notice_bounded CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500)))
+public.web_form.web_form_privacy_notice_url_https CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)'::text) AND (length(privacy_notice_url) <= 2000))))
 public.web_form.web_form_redirect_https CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://'::text)))
 public.web_form.web_form_sender_check CHECK ((sender = ANY (ARRAY['browser'::text, 'server'::text, 'webflow'::text, 'typeform'::text, 'tally'::text])))
 public.web_form.web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
 public.web_form.web_form_success_message_bounded CHECK (((success_message IS NULL) OR (length(success_message) <= 500)))
 public.web_form.web_form_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.web_form_form_key_key CREATE UNIQUE INDEX web_form_form_key_key ON public.web_form USING btree (form_key)
+public.web_form_last_post acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.web_form_last_post.form_id uuid NOT NULL gen=- def=-
+public.web_form_last_post.last_post_at timestamp with time zone NOT NULL gen=- def=-
+public.web_form_last_post.web_form_last_post_form_id_fkey FOREIGN KEY (form_id) REFERENCES web_form(id) ON DELETE CASCADE
+public.web_form_last_post.web_form_last_post_pkey PRIMARY KEY (form_id)
+public.web_form_last_post_pkey CREATE UNIQUE INDEX web_form_last_post_pkey ON public.web_form_last_post USING btree (form_id)
 public.web_form_pkey CREATE UNIQUE INDEX web_form_pkey ON public.web_form USING btree (id)
 public.webhook_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.webhook_delivery.attempts integer NOT NULL gen=- def=0

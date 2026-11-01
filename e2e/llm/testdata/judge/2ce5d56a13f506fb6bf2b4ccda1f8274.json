@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer gives the correct combined value (68,500 EUR) and each deal's correct value (56,000 EUR and 12,500 EUR), with no figures in minor units presented as money and a total provided.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer gives the two deals' combined value as 68,500 EUR (any thousands separator) and each deal's own value, 56,000 EUR for Körber Sensorik Rollout and 12,500 EUR for Rheinufer Netzmodernisierung. Answer no if it gives a different total or a different value for either deal, quotes a figure in minor units as if it were money, or gives no total.",
+  "answer": "Together the two deals are worth 68,500 EUR: Körber Sensorik Rollout is 56,000.00 EUR and Rheinufer Netzmodernisierung is 12,500.00 EUR."
+}
