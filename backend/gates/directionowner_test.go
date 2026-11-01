@@ -149,7 +149,7 @@ func readDirectionRegister(t *testing.T) map[string]bool {
 		t.Fatalf("reading %s: %v", directionRegisterPath, err)
 	}
 	out := map[string]bool{}
-	for _, line := range strings.Split(string(body), "\n") {
+	for line := range strings.SplitSeq(string(body), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
