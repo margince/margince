@@ -182,6 +182,8 @@ var memberReferences = map[string]memberReference{
 	"worklist_done.reader_id":                  {disposition: referenceRetain},
 	"worklist_pin.reader_id":                   {disposition: referenceRetain},
 	"worklist_snapshot.reader_id":              {disposition: referenceRetain},
+	"home_read_cache.reader_id":                {disposition: referenceRetain},
+	"home_read_forgotten.reader_id":            {disposition: referenceRetain},
 }
 
 func memberRetirementBlockers(ctx context.Context, tx pgx.Tx, source ids.UUID) ([]crmcontracts.MemberRetirementBlocker, error) {

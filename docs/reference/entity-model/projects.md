@@ -67,6 +67,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `home_read_fence_project_owner`: `AFTER UPDATE FOR EACH ROW WHEN ((old.owner_id IS DISTINCT FROM new.owner_id)) EXECUTE FUNCTION advance_home_read_fence()`
 - `project_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_project_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 

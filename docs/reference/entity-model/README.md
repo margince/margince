@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 340 |
-| Columns | 4075 |
-| Foreign keys | 561 |
+| Tables | 344 |
+| Columns | 4088 |
+| Foreign keys | 563 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 146 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 148 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 40 |
@@ -103,7 +103,7 @@ erDiagram
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 44 |
+| [compose](compose.md) | 48 |
 | [consent](consent.md) | 20 |
 | [contacts](contacts.md) | 50 |
 | [continuity](continuity.md) | 1 |
@@ -168,7 +168,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 34 | 146 |
+| [`app_user`](identity.md#app_user) | identity | 34 | 148 |
 | [`approval`](approvals.md#approval) | approvals | 37 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -321,6 +321,10 @@ erDiagram
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 6 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
+| [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
+| [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
+| [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 1 | 0 |
+| [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |
 | [`import_run`](migration.md#import_run) | migration | 34 | 1 |

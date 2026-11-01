@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-34 columns · primary key `(id)` · referenced by 146 foreign keys
+34 columns · primary key `(id)` · referenced by 148 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -88,6 +88,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `app_user_forget_weekly_plan_responses`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()`
 - `app_user_service_never_deleted`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION refuse_service_member_delete()`
+- `home_read_fence_identity`: `AFTER UPDATE OF merged_into_user_id, email_domain_folded FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_user_change`: `BEFORE UPDATE OF status, archived_at, seat_type, is_agent FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_user_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_app_user_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
@@ -504,6 +505,10 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_record_grant_subject`: `btree (subject_type, subject_id)`
 - `record_grant_pkey`: `unique, btree (id)`
 - `record_grant_unique`: `unique, btree (record_type, record_id, subject_type, subject_id)`
+
+**Triggers**
+
+- `home_read_fence_record_grant`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## role
 
