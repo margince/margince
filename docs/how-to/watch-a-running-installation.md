@@ -7,14 +7,22 @@ decide who may scrape, and the address the worker answers on, are in
 
 ## Scrape the API and the worker separately
 
-Each program answers for itself. The API serves `/metrics` on the port it
-serves the app on, and the worker serves its own on the address
-`observe_addr` names. A scrape of one says nothing about the other, so both are
-targets.
+Each program answers for itself, and a scrape of one says nothing about the
+other, so both are targets.
 
-`/metrics` is closed by default: it wants a bearer credential until an operator
-opens it. Give the scraper that credential rather than opening the endpoint,
-because the exposition names queue depths and connection counts.
+The API serves `/metrics` on the port it serves the app on. The worker serves
+its own only when `observe_addr` is set, and serves nothing at all when it is
+unset.
+
+The two are guarded differently, which decides what you have to do:
+
+- The API's `/metrics` is closed by default and wants a bearer credential.
+  Give the scraper that credential rather than opening the endpoint, because
+  the exposition names queue depths and connection counts.
+- The worker's listener carries no credential of its own. The address is what
+  guards it, which is why the setting's own example is a loopback one. Bind it
+  where only the scraper can reach it, and read `observe_pprof` before you turn
+  that on: it serves the Go profiles on the same listener with no sign-in.
 
 ## An exposition is sections, and a missing one is a signal
 
