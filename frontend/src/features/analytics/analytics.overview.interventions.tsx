@@ -8,9 +8,11 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
   formatDateAbbrev,
-  formatMoneyOrAbsent,
+  formatMoneyCompact,
   formatNumber,
+  MONEY_ABSENT,
 } from "../../format/format";
+import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan } from "../../lib/capability";
@@ -251,10 +253,12 @@ function findingFacts(
     check.affected_minor == null
       ? undefined
       : t("analytics.attentionAtStake", {
-          amount: formatMoneyOrAbsent(
+          amount: formatMoneyOrWord(
             check.affected_minor,
             check.currency,
             locale,
+            MONEY_ABSENT,
+            formatMoneyCompact,
           ),
         });
   const outOfDate = check.inputs_changed
@@ -311,10 +315,12 @@ function Groups({
                 counted(group),
                 // One amount per currency, never added across them.
                 ...group.exposure.map((money) =>
-                  formatMoneyOrAbsent(
+                  formatMoneyOrWord(
                     money.amount_minor,
                     money.currency,
                     locale,
+                    MONEY_ABSENT,
+                    formatMoneyCompact,
                   ),
                 ),
               ].join(" · ")}

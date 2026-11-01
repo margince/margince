@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Button, EmptyState } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -257,7 +257,13 @@ export function ChartPanel({
             onEvidence={onEvidence}
           />
         ) : (
-          <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
+          // An empty chart keeps its frame: the baseline and the reason where
+          // the marks would be, not a recessed box that reads as a field.
+          <div className="reporting-chart-empty">
+            <p className="t-caption">
+              {chart.coverage.reason ?? t("common.empty")}
+            </p>
+          </div>
         )}
       </PanelBody>
     </Panel>

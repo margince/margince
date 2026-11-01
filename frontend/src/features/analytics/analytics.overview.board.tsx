@@ -202,37 +202,40 @@ export function BoardChart({
 }
 
 /**
- * Today's stock by stage beside the permitted sales by owner, from the chart
- * read. While it is read, or when it failed, it says so in its own place and
- * the figures above it stand.
+ * One chart of the chart read. The gated one says in its place that the read
+ * is pending or failed. The other draws only once there is an answer, so a
+ * failure is said once, and the figures above stand either way.
  */
-export function StockCharts({
+export function StockChart({
   charts,
+  kind,
+  gated,
   onEvidence,
 }: Readonly<{
   charts: UseQueryResult<ReportingEvaluation>;
+  kind: ReportingChart["kind"];
+  gated?: boolean;
   onEvidence: (
     reference: ReportingEvidenceRef,
     from?: ReportingEvaluation,
   ) => void;
 }>) {
   const t = useT();
+  const draw = (read: ReportingEvaluation) => (
+    <BoardChart
+      evaluation={read}
+      kind={kind}
+      onEvidence={(reference) => onEvidence(reference, read)}
+    />
+  );
+  // Ungated, a failed or refreshing read draws nothing rather than stale data.
+  if (!gated)
+    return !charts.isPending && !charts.isError && charts.data
+      ? draw(charts.data)
+      : null;
   return (
     <QueryGate query={charts} pendingLabel={t("analytics.overview.charts")}>
-      {(read) => (
-        <div className="analytics-pair">
-          <BoardChart
-            evaluation={read}
-            kind="stage_distribution"
-            onEvidence={(reference) => onEvidence(reference, read)}
-          />
-          <BoardChart
-            evaluation={read}
-            kind="owner_attainment"
-            onEvidence={(reference) => onEvidence(reference, read)}
-          />
-        </div>
-      )}
+      {draw}
     </QueryGate>
   );
 }

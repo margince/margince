@@ -118,6 +118,37 @@
   }
 }
 
+/* Sales review's board: two columns that each stack their cards, so the short
+   summary has today's stock under it instead of empty space beside the longer
+   action list. */
+.analytics-board {
+  align-items: stretch;
+}
+.analytics-slot-stock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* One column on a narrow screen, in reading order: summary, actions, stock,
+   owners. The columns step aside so their slots are the grid's own items. */
+@media (max-width: 1100px) {
+  .analytics-board > .analytics-column {
+    display: contents;
+  }
+  .analytics-slot-summary {
+    order: 1;
+  }
+  .analytics-slot-actions {
+    order: 2;
+  }
+  .analytics-slot-stock {
+    order: 3;
+  }
+  .analytics-slot-owners {
+    order: 4;
+  }
+}
+
 /* One of a pair standing alone takes the row; a pair with neither drops out of
    the stack rather than leaving a gap. */
 .analytics-pair > :only-child {
@@ -162,9 +193,33 @@
 .analytics-hero-body > :only-child {
   grid-column: 1 / -1;
 }
+/* With no trend to draw but an aside to show, the two stand side
+   by side, so the card is not one narrow column beside empty space. */
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
+  display: grid;
+  grid-template-columns: minmax(12rem, auto) minmax(0, 1fr);
+  column-gap: var(--space-8);
+  align-items: start;
+}
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) > * {
+  grid-column: 1;
+  justify-self: start;
+}
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
+  > .analytics-hero-aside {
+  grid-column: 2;
+  grid-row: 1 / span 6;
+  align-self: center;
+}
 @media (max-width: 900px) {
-  .analytics-hero-body {
+  .analytics-hero-body,
+  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
+    > .analytics-hero-aside {
+    grid-column: 1;
+    grid-row: auto;
   }
 }
 

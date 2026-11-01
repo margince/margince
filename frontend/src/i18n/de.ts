@@ -19705,5 +19705,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
   "analytics.decision.part.commit_evidence": "Bestätigter Commit",
+  "analytics.decision.range": "Modellierte Spanne",
+  "analytics.decision.rangeNote":
+    "Das erwartete Ergebnis sind die beiden Teile auf dem Balken. Die modellierte Spanne ist ein eigenes Modell dafür, wie alle offenen Deals abschließen können, und kann daher davon abweichen.",
   "analytics.decision.part.weighted": "Gewichtete offene Deals",
 };

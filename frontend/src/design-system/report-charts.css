@@ -26,6 +26,17 @@
 .report-chart-key-target::before {
   border-top: 2px dotted var(--textPrimary);
 }
+/* Columns are keyed by a swatch of their own fill, not a line. */
+.report-chart-key-bar::before {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: var(--accent);
+}
+.report-chart-key-bar-secondary::before {
+  background: color-mix(in srgb, var(--accent) 38%, var(--ground));
+}
 .report-chart-key-dot::before {
   width: 0.5rem;
   height: 0.5rem;
@@ -103,11 +114,81 @@
   corner-shape: round;
   background: var(--accent);
   border: 2px solid var(--bgElevated);
+  opacity: 0;
+  transition:
+    opacity var(--dur-state) var(--ease-out),
+    transform var(--dur-state) var(--ease-out);
 }
-.report-chart-point:hover .report-chart-dot,
+/* Only the latest reading and the one under the pointer carry a dot, so the
+   line reads as one shape rather than a row of beads. */
+.report-chart-point[data-last] .report-chart-dot,
+.report-chart-point[data-active] .report-chart-dot,
 .report-chart-point:focus-visible .report-chart-dot {
-  width: 13px;
-  height: 13px;
+  opacity: 1;
+}
+.report-chart-point[data-active] .report-chart-dot,
+.report-chart-point:focus-visible .report-chart-dot {
+  transform: scale(1.3);
+}
+/* The wash under the line is the accent at a tenth, flat: the area says
+   "this much so far" and a gradient would add a second meaning. */
+.report-chart-area {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+  stroke: none;
+}
+.report-chart-series {
+  animation: report-chart-rise var(--dur-enter) var(--ease-out) both;
+}
+.report-chart-crosshair {
+  stroke: var(--borderStrong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.report-chart-end {
+  fill: var(--textPrimary);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+}
+.report-chart-tip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-pop);
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(var(--space-3), -50%);
+}
+.report-chart-tip[data-side="start"] {
+  transform: translate(calc(-100% - var(--space-3)), -50%);
+}
+.report-chart-tip-label {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.report-chart-tip-value {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+}
+@keyframes report-chart-rise {
+  from {
+    opacity: 0.35;
+    transform: translateY(8px);
+  }
+}
+@keyframes report-chart-grow {
+  from {
+    transform: scaleX(0.3);
+  }
+}
+@keyframes report-chart-grow-up {
+  from {
+    transform: scaleY(0.3);
+  }
 }
 .report-chart-focus {
   min-height: 1.5em;
@@ -173,6 +254,8 @@
   background: var(--bgInset);
 }
 .report-chart-bullet-fill {
+  animation: report-chart-grow var(--dur-enter) var(--ease-out) both;
+  transform-origin: left center;
   position: absolute;
   inset-block: var(--space-1);
   height: calc(100% - 2 * var(--space-1));
@@ -274,6 +357,11 @@
   color: var(--textPrimary);
 }
 .report-chart-column-fill {
+  max-inline-size: 2.5rem;
+  margin-inline: auto;
+  animation: report-chart-grow-up var(--dur-enter) var(--ease-out) both;
+  transform-origin: bottom center;
+  transition: opacity var(--dur-state) var(--ease-out);
   height: 100%;
   position: absolute;
   bottom: 0;
@@ -282,6 +370,11 @@
   border-radius: var(--r-sm) var(--r-sm) 0 0;
 }
 .report-chart-column-secondary .report-chart-column-fill {
+  max-inline-size: 2.5rem;
+  margin-inline: auto;
+  animation: report-chart-grow-up var(--dur-enter) var(--ease-out) both;
+  transform-origin: bottom center;
+  transition: opacity var(--dur-state) var(--ease-out);
   height: 100%;
   background: color-mix(in srgb, var(--accent) 38%, var(--bgElevated));
   border: 1px solid var(--accent);
@@ -312,5 +405,29 @@
   }
   .report-chart-row-amount {
     grid-column: -2;
+  }
+}
+
+/* A hovered column keeps its ink and its neighbours step back, so the one
+   being read stands out without a second colour. */
+.report-chart-columns:has(.report-chart-column:hover)
+  .report-chart-column:not(:hover)
+  .report-chart-column-fill {
+  opacity: 0.55;
+}
+.report-chart .btn.report-chart-row:hover .report-chart-bullet-fill {
+  background: var(--accentText);
+}
+
+/* Last in the file, so it outranks every rule that starts a motion. */
+@media (prefers-reduced-motion: reduce) {
+  .report-chart-series,
+  .report-chart-bullet-fill,
+  .report-chart-column-fill {
+    animation: none;
+  }
+  .report-chart-dot,
+  .report-chart-column-fill {
+    transition: none;
   }
 }

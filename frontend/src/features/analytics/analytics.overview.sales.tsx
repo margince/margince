@@ -19,7 +19,7 @@ import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import {
   SalesHero,
-  StockCharts,
+  StockChart,
   useSalesCharts,
 } from "./analytics.overview.board";
 import {
@@ -55,6 +55,7 @@ import {
 } from "./reporting.overview";
 import { useReportingEvaluation } from "./reporting.queries";
 import { viewRequest } from "./reporting.views";
+import type { ChecksReading } from "./reporting.written";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 type Pipeline = components["schemas"]["Pipeline"];
@@ -222,37 +223,30 @@ function SalesReviewBody({
           )}
         </QueryGate>
       )}
-      {/* One place for the action list, so it never moves while the figures
-          load; its sources are its own, so a failed evaluation leaves it. */}
-      <div className="analytics-pair">
-        {answered && (
-          <DecisionSummary
-            evaluation={answered}
-            checks={{
-              state: checks.state,
-              findings: checks.list?.totals?.findings,
-              deals: checks.list?.totals?.deals,
-            }}
-            forecastHref={forecastHref}
-            onEvidence={openEvidence}
+      <SalesBoard
+        answered={answered}
+        charts={charts}
+        checks={{
+          state: checks.state,
+          findings: checks.list?.totals?.findings,
+          deals: checks.list?.totals?.deals,
+        }}
+        forecastHref={forecastHref}
+        onEvidence={openEvidence}
+        actions={
+          <InterventionPanel
+            interventions={checks}
+            dials={findingDials(doors)}
+            emptyLabel={t("analytics.overview.salesNothing")}
           />
-        )}
-        <InterventionPanel
-          interventions={checks}
-          dials={findingDials(doors)}
-          emptyLabel={t("analytics.overview.salesNothing")}
-        />
-      </div>
-      {/* Below the decision and the actions: today's stock by stage, and the
-          permitted chart of sales by owner, in name order. */}
-      {answered && (
-        <SalesStock
-          answered={answered}
-          charts={charts}
-          evidence={evidence}
-          evidenceFrom={evidenceFrom}
-          onEvidence={openEvidence}
-          onCloseEvidence={closeEvidence}
+        }
+      />
+      {answered && evidence && (
+        <ReportingEvidenceDrawer
+          key={JSON.stringify(evidence)}
+          evaluation={evidenceFrom ?? answered}
+          reference={evidence}
+          onClose={closeEvidence}
         />
       )}
       <SinceLastReview
@@ -273,40 +267,69 @@ function SalesReviewBody({
   );
 }
 
-// Under the decision and the actions: all open pipeline, today's stock by
-// stage and the permitted sales by owner. The evidence drawer for every figure
-// and chart on the page is here too, under the read each came from.
-function SalesStock({
+// Two columns that fill to a like height: the summary over today's stock,
+// the actions over sales by owner. The action list has one place, so it never
+// moves while the figures load. Its sources are its own, so a failed
+// evaluation leaves it. On a narrow screen the slots fall into one column,
+// actions second.
+function SalesBoard({
   answered,
   charts,
-  evidence,
-  evidenceFrom,
+  checks,
+  forecastHref,
   onEvidence,
-  onCloseEvidence,
+  actions,
 }: Readonly<{
-  answered: ReportingEvaluation;
+  answered: ReportingEvaluation | undefined;
   charts: UseQueryResult<ReportingEvaluation> | undefined;
-  evidence: ReportingEvidenceRef | null;
-  evidenceFrom: ReportingEvaluation | undefined;
+  checks: ChecksReading;
+  forecastHref: string;
   onEvidence: (
     reference: ReportingEvidenceRef,
     from?: ReportingEvaluation,
   ) => void;
-  onCloseEvidence: () => void;
+  actions: ReactNode;
 }>) {
   return (
-    <>
-      <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
-      {charts && <StockCharts charts={charts} onEvidence={onEvidence} />}
-      {evidence && (
-        <ReportingEvidenceDrawer
-          key={JSON.stringify(evidence)}
-          evaluation={evidenceFrom ?? answered}
-          reference={evidence}
-          onClose={onCloseEvidence}
-        />
-      )}
-    </>
+    <div className="analytics-pair analytics-board">
+      <div className="analytics-column">
+        {answered && (
+          <div className="analytics-slot-summary">
+            <DecisionSummary
+              evaluation={answered}
+              checks={checks}
+              forecastHref={forecastHref}
+              onEvidence={onEvidence}
+            />
+          </div>
+        )}
+        {answered && (
+          <div className="analytics-slot-stock">
+            <OpenPipelineLine evaluation={answered} onEvidence={onEvidence} />
+            {charts && (
+              <StockChart
+                charts={charts}
+                kind="stage_distribution"
+                gated
+                onEvidence={onEvidence}
+              />
+            )}
+          </div>
+        )}
+      </div>
+      <div className="analytics-column">
+        <div className="analytics-slot-actions">{actions}</div>
+        {answered && charts && (
+          <div className="analytics-slot-owners">
+            <StockChart
+              charts={charts}
+              kind="owner_attainment"
+              onEvidence={onEvidence}
+            />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
