@@ -165,37 +165,40 @@ cannot put real work on the list at all: it can only send a plain notice.
 
 ---
 
-## Part 2. Our approach
+## Part 2. How the new system works
 
-### 2.1 The idea in one picture
+### 2.1 The system in one picture
 
 ```
- Keep the engine. Fix what every kind shares. Prove each fix against today.
+ Keep the engine. Make what every kind shares cheaper. Prove each change against today.
 
-                     ┌─────────────────────────────────────────────┐
-  L2  KIND CATALOG   │ worklist-kinds.yaml: what each kind is      │ ← easier to grow
-                     └──────────────────────┬──────────────────────┘
-                                            ▼
-                     ┌─────────────────────────────────────────────┐
-  GET /worklist ───► │ the same engine, the same rules             │
-                     │  L1.1 plan reuse for the whole read         │ ← cheaper to run
-                     │  L1.2 identity computed once per statement  │
-                     │  L1.3 scroll tail continues (next)          │
-                     └──────────────────────┬──────────────────────┘
-                                            ▼
-                                 the same answer, faster
-                                            ▲
-  L0  GROUND-TRUTH CHECK ── today's answers vs the change's, field by field ── safe to change
+                      ┌──────────────────────────────────────────────┐
+  worklist-kinds.yaml │ KIND CATALOG                                 │
+  + extension parts ─►│ what each kind of work is                    │
+                      └───────────────────────┬──────────────────────┘
+                                              ▼ generated table
+                      ┌──────────────────────────────────────────────┐
+  GET /worklist ─────►│ THE ENGINE (same rules as today)             │
+                      │   one database snapshot                      │
+                      │   ├─ plan reuse for every statement          │
+                      │   ├─ lanes, one per kind, read live          │
+                      │   │    identity checked once per statement   │
+                      │   ├─ rank → views → page                     │
+                      │   └─ scroll tail continues where lanes stop  │
+                      └───────────────────────┬──────────────────────┘
+                                              ▼
+                                   the same answer, faster
+
+  every change ──► GROUND-TRUTH CHECK: today's answers vs the change's, field by field
 ```
 
-| Part | What | Status |
+| Piece | What it does | Built on the branch? |
 |---|---|---|
-| L0 | Ground-truth check | built (PoC test) |
-| L1.1 | Plan reuse for the whole read | built (helper + guard); hooking it into the snapshot is the production step |
-| L1.2 | Identity once per statement | built |
-| L1.3 | Scroll tail continues | next |
-| L2 | Kind catalog | YAML, loader and census built; generator next |
-| L3 | Push / precompute | parked |
+| Kind catalog | One YAML file says what each kind of work is; extensions add to it | YAML, loader and checks: yes. Generator: next |
+| Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | Yes (switched on by the test; the production hook is next) |
+| Identity check once | The "who am I" list is computed once per statement, not once per row | Yes |
+| Scroll tail continues | Scrolling starts where each lane stopped instead of from the beginning | Next |
+| Ground-truth check | Proves a change gives exactly today's answers | Yes |
 
 ### 2.2 Principles
 
@@ -206,28 +209,7 @@ cannot put real work on the list at all: it can only send a plain notice.
 3. **Prove every change.** A change is accepted only if every answer matches
    today's.
 
-### 2.3 L0: the ground-truth check
-
-```
-            ┌──────────── same data, clock pinned to one instant ────────────┐
- main   ──► every member × view × scope × named owner × page 2    ──►  recording
- change ──► the same calls                                         ──►  compare, field by field
-                                                                         every answer must match
-```
-
-- It makes the screens' own calls (`frontend/src/lib/worklistday.ts`: page of
-  100, relationships left out, each view's own filter; the relationships
-  panel's own read).
-- It acts as each member, with their real grants, teams and seat.
-- It compares the whole JSON answer. The walk id and the cursor are left out
-  because they are new on every read; page 2 is compared by what it shows.
-- Replaying `main` against itself matches every answer, so the check is
-  deterministic.
-- File: `backend/internal/compose/worklistparity_poc_test.go`. In production it
-  becomes an integration test that takes its views, scopes and filters from the
-  API contract, so it fails if coverage shrinks.
-
-### 2.4 L1.1: plan reuse for the whole read
+### 2.3 Plan reuse for the whole read
 
 The concept:
 
@@ -266,7 +248,7 @@ The mechanism: one setting, local to the read's transaction.
 - The known risk: on much larger data, a statement that was fast with a custom
   plan may be slower with a generic one. The full-scale bench must check this.
 
-### 2.5 L1.2: identity computed once per statement
+### 2.4 The identity check, once per statement
 
 The concept:
 
@@ -294,7 +276,7 @@ a.captured_by LIKE ANY (ARRAY(SELECT $2 || author_identity.id::text
 - One function builds this clause for every query that checks activity access,
   so every lane gets the change.
 
-### 2.6 L1.3: the scroll tail continues (next)
+### 2.5 The scroll tail continues (next)
 
 ```
  today:  when a lane was cut short, the tail starts each source from the
@@ -307,7 +289,7 @@ Expected to remove most of the 108 statements in the `rank` stage. Not built
 yet. When it is, the ground-truth check must compare the cursor's decoded
 position instead of leaving the cursor out.
 
-### 2.7 L2: the kind catalog
+### 2.6 The kind catalog
 
 One YAML file says what each kind is, the way `api/jobs.yaml` and
 `api/ai-tasks.yaml` already declare jobs and AI tasks:
@@ -348,7 +330,7 @@ How it flows:
 - What stays in Go: how each kind is ranked (classifiers, levels, limits,
   actions, reasons).
 
-### 2.8 What happens when a record changes
+### 2.7 What happens when a record changes
 
 Because every lane reads live inside the snapshot, a change shows on the next
 read with no extra code:
@@ -365,12 +347,34 @@ This is why the approach keeps the engine. A design that copies work items
 into a separate store needs extra code for every line above, for every kind
 (see 3.3).
 
+### 2.8 How we keep it safe: the ground-truth check
+
+```
+            ┌──────────── same data, clock pinned to one instant ────────────┐
+ main   ──► every member × view × scope × named owner × page 2    ──►  recording
+ change ──► the same calls                                         ──►  compare, field by field
+                                                                         every answer must match
+```
+
+- It makes the screens' own calls (`frontend/src/lib/worklistday.ts`: page of
+  100, relationships left out, each view's own filter; the relationships
+  panel's own read).
+- It acts as each member, with their real grants, teams and seat.
+- It compares the whole JSON answer. The walk id and the cursor are left out
+  because they are new on every read; page 2 is compared by what it shows.
+- Replaying `main` against itself matches every answer, so the check is
+  deterministic.
+- File: `backend/internal/compose/worklistparity_poc_test.go`. In production it
+  becomes an integration test that takes its views, scopes and filters from the
+  API contract, so it fails if coverage shrinks.
+
 ### 2.9 What we are not doing now
 
 - **Running lanes in parallel.** It would turn "sum of all lanes" into
   "slowest lane", but it needs several database connections per request
-  against a pool of 16, and splits the snapshot. Only if L1 is not enough.
-- **Pushing work into a precomputed list (L3).** Fast for expensive kinds, but
+  against a pool of 16, and splits the snapshot. Only if the changes above are
+  not enough.
+- **Pushing work into a precomputed list.** Fast for expensive kinds, but
   it needs its own access, routing and freshness code per kind. Parked.
 
 ---
@@ -383,7 +387,8 @@ The ground-truth check made 269 calls: 60 answers with rows, 93 empty, 116
 refused (a scope that member may not use). Times are means.
 
 ```
-                                today (main)   + L1.2     + L1.1 and L1.2   change
+                                today (main)   + identity   + identity       change
+                                               check once   + plan reuse
  rep, Home / Worklist call        1.33 s       1.29 s       1.01 s          −24%
  rep, relationships panel         1.04 s       0.99 s       0.68 s          −35%
  rep, Decisions / System         ~0.93 s                   ~0.58 s          −38%
@@ -395,9 +400,9 @@ refused (a scope that member may not use). Times are means.
  plan modes checked: whole read generic → waiting scan custom → generic again
 ```
 
-PERF-8 asks for under 1 s. After L1.1 and L1.2 the rep's Home call is at the
-line, not under it. L1.3 is the next step for that call, and the bench must
-run at full scale before anyone claims PERF-8.
+PERF-8 asks for under 1 s. With plan reuse and the identity change, the rep's
+Home call is at the line, not under it. The scroll tail is the next step for
+that call, and the bench must run at full scale before anyone claims PERF-8.
 
 ### 3.2 Other measurements
 
@@ -450,7 +455,7 @@ with wording fixes, which are applied.
 - The check's coverage: filters beyond each view's own; the small writes a read
   makes (snoozes returning, brief marked as opened, walk freeze); more hard
   cases in the bench data.
-- L1.3 and the catalog generator are not built.
+- The scroll tail change and the catalog generator are not built.
 
 ### 3.6 The PoC branch: `poc/worklist-feed`
 
@@ -458,7 +463,7 @@ with wording fixes, which are applied.
  fe238892  push two kinds into a per-member store (the experiment in 3.3)
  c05efee2  the kind catalog (worklist-kinds.yaml) and its check against today
  e9751633  push experiment: full rebuilds, ordering, change cases
- 9d0c8e3b  the ground-truth check; L1.1 and L1.2 measured against main
+ 9d0c8e3b  the ground-truth check; plan reuse and identity change measured
  0c4126c3  PlanEachBind: the waiting scan keeps its own plans
  later     this proposal
 ```
@@ -467,12 +472,12 @@ Files that matter:
 
 | File | What |
 |---|---|
-| `backend/api/worklist-kinds.yaml` | The kind catalog (L2) |
+| `backend/api/worklist-kinds.yaml` | The kind catalog |
 | `backend/internal/modules/worklist/kinds.go` | Loads and checks the catalog |
-| `backend/internal/platform/database/planreuse.go` | `ReuseGenericPlans` and `PlanEachBind` (L1.1) |
-| `backend/internal/platform/auth/memberidentity.go` | Identity once per statement (L1.2) |
+| `backend/internal/platform/database/planreuse.go` | `ReuseGenericPlans` and `PlanEachBind` (plan reuse) |
+| `backend/internal/platform/auth/memberidentity.go` | The identity check, once per statement |
 | `backend/internal/modules/activities/waitingsql.go` | `perBind`, used by the five waiting call sites |
-| `backend/internal/compose/worklistparity_poc_test.go` | The ground-truth check (L0) |
+| `backend/internal/compose/worklistparity_poc_test.go` | The ground-truth check |
 | `backend/internal/compose/worklist*_poc_test.go` | The other measurements |
 | `backend/internal/modules/worklist/store.go` | The push experiment's store (3.3) |
 
@@ -492,9 +497,10 @@ The `poc` build tag keeps every PoC test out of `make check` and CI.
 
 ### 3.7 Questions for the table
 
-1. Do we agree to keep the engine and fix the shared machinery first (L0 + L1),
-   then the catalog (L2), with push parked?
-2. L1 overlaps the open Worklist speed issue (#4912), which has an owner. How
+1. Do we agree to keep the engine and make the shared machinery cheaper first
+   (ground-truth check, plan reuse, identity check, scroll tail), then the kind
+   catalog, with push parked?
+2. The speed changes overlap the open Worklist speed issue (#4912), which has an owner. How
    do we hand over the check and the two proven changes?
 3. Is the additive `source: extension` contract change acceptable?
 4. Who runs the full-scale bench, and what number do we accept?
