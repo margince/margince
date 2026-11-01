@@ -196,5 +196,8 @@ func RequestSettlementRevalidationTx(ctx context.Context, tx pgx.Tx, expected Se
 	if err != nil {
 		return false, err
 	}
-	return true, emitSettlementChanged(ctx, tx, auditID, expected.RequestID)
+	if err := emitSettlementChanged(ctx, tx, auditID, expected.RequestID); err != nil {
+		return false, err
+	}
+	return true, nil
 }

@@ -353,12 +353,15 @@ func TestEverySettlementWriteLeavesOneEventPerAuditRow(t *testing.T) {
 }
 
 // settlementAudits counts the request's audit rows that wrote column, and those
-// of them with no outbox row beside them.
+// of them with no activity.updated beside them that names a settlement change.
 func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string) (audits, unannounced int) {
 	t.Helper()
 	if err := e.owner.QueryRow(e.as(), `
 		SELECT count(*), count(*) FILTER (WHERE NOT EXISTS (
-		         SELECT 1 FROM event_outbox o WHERE o.envelope->'trace'->>'audit_log_id' = a.id::text))
+		         SELECT 1 FROM event_outbox o
+		          WHERE o.envelope->'trace'->>'audit_log_id' = a.id::text
+		            AND o.envelope->>'type' = 'activity.updated'
+		            AND o.envelope->'payload'->'changed_fields'->>'request_settlement_changed' = 'true'))
 		  FROM audit_log a
 		 WHERE a.entity_type = 'activity' AND a.entity_id = $1 AND a.after ? $2`,
 		request, column).Scan(&audits, &unannounced); err != nil {
