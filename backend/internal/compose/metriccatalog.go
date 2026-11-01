@@ -204,7 +204,9 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		return out, err
 	}
 	for index, chart := range out.Result.Charts {
-		if chart.Kind != reportingPipelineMovement || chart.Coverage.Status == reportingFailed {
+		// A chart whose metric is withheld whole keeps that coverage, and its
+		// movement and the facts behind it are never read.
+		if chart.Kind != reportingPipelineMovement || chart.Coverage.Status == reportingFailed || chart.Coverage.Withheld {
 			continue
 		}
 		var projected crmcontracts.ReportingChart

@@ -13,6 +13,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -469,5 +471,79 @@ func TestIndividualPerformanceOffWithholdsATwoMemberTeamsReadings(t *testing.T) 
 	e.addMembers(t, e.Team1, "floor-a@forecast.test", "floor-b@forecast.test")
 	if metric := won(); metric.Value == nil || *metric.Value != 1000 {
 		t.Errorf("with three other members, the team's sales won = %v, want 1000", metric.Value)
+	}
+}
+
+// A thin team's movement chart is withheld with its metric: the evaluation
+// reads no captured movement for it and keeps none of its facts. The same two
+// captures show movement while the switch is on.
+func TestIndividualPerformanceOffWithholdsATwoMemberTeamsMovement(t *testing.T) {
+	e := setupForecast(t)
+	at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	now := func() time.Time { return at }
+	service := newReportingService(e.Pool, now)
+	reader := reportingActor(e)
+	reportingTeammate(t, e)
+	capture := crmcontracts.ReportingCaptureContext{Scope: crmcontracts.ReportingScope{Kind: "team", Id: ptrUUID(e.Team1)}, PipelineId: ptrUUID(e.pipeline)}
+	framework, err := service.PublishFramework(reader, 0, crmcontracts.ReportingFrameworkInput{Template: "sales", Reason: "Capture the team", Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{capture}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := principal.WithCorrelationID(principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:movement-fixture"), ids.NewV7())
+	store := deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(now)
+	owner := ids.From[ids.UserKind](e.Rep1)
+	closeDate := time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)
+	amount, currency := int64(10000), "EUR"
+	deal, err := store.CreateDeal(writer, deals.CreateDealInput{Name: "Movement source", AmountMinor: &amount, Currency: &currency, ExpectedClose: &closeDate, PipelineID: ids.From[ids.PipelineKind](e.pipeline), StageID: ids.From[ids.StageKind](e.stages[20]), OwnerID: &owner, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker := &forecastSnapshotSweepWorker{pool: e.Pool, now: now, log: slog.New(slog.DiscardHandler)}
+	if err := worker.snapshotWorkspace(context.Background(), e.WS); err != nil {
+		t.Fatal(err)
+	}
+	at = at.AddDate(0, 0, 7)
+	amount = 13000
+	if _, err := store.UpdateDeal(writer, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.UpdateDealInput{AmountMinor: &amount}); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.snapshotWorkspace(context.Background(), e.WS); err != nil {
+		t.Fatal(err)
+	}
+	selection := crmcontracts.ReportingSelection{Scope: capture.Scope, PipelineId: capture.PipelineId, Period: "this_month", TargetBasis: "month", CloseWindow: "fiscal_quarter", Metrics: []crmcontracts.ReportingMetricID{"open_pipeline"}, Blocks: []crmcontracts.ReportingBlockKind{"pipeline_movement"}}
+	evaluate := func() (crmcontracts.ReportingChart, int) {
+		t.Helper()
+		var out reporting.Evaluation
+		db := InstallationDB(e.Pool)
+		if err := db.Tx(reader, func(tx pgx.Tx) error {
+			var err error
+			out, err = metricEvaluator{forecast: newForecastStore(db)}.Evaluate(reader, tx, selection, framework, at)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		movement := 0
+		for _, fact := range out.Facts {
+			if strings.HasPrefix(fact.ContextID, "movement") {
+				movement++
+			}
+		}
+		for _, chart := range out.Result.Charts {
+			if chart.Kind == "pipeline_movement" {
+				return chart, movement
+			}
+		}
+		t.Fatal("the evaluation has no movement chart")
+		return crmcontracts.ReportingChart{}, 0
+	}
+	if chart, facts := evaluate(); len(chart.Points) == 0 || facts == 0 {
+		t.Fatalf("with the switch on, the team's movement = %d points and %d facts, want both", len(chart.Points), facts)
+	}
+
+	e.showIndividualPerformance(t, false)
+	chart, facts := evaluate()
+	if !chart.Coverage.Withheld || len(chart.Points) != 0 || chart.CaptureStatus != nil || facts != 0 {
+		t.Errorf("a thin team's movement = %d points, %d facts, capture %v, withheld %v; want nothing read and withheld",
+			len(chart.Points), facts, chart.CaptureStatus, chart.Coverage.Withheld)
 	}
 }
