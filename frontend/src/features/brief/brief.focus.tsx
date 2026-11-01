@@ -73,12 +73,13 @@ export function Triage({
   const isTask = lead.source === "task";
   const taskRead = useActivity(lead.id, isTask);
   const task = taskRead.data;
+  const taskPending = isTask && taskRead.isPending;
   const cardVerbs =
-    onContext || task ? (
+    onContext || task || taskPending ? (
       <>
         {/* The drafted mail stands beside Done, ahead of the way to read
             more: it is the task's next step, the details are about it. */}
-        {isTask && taskRead.isPending && <TaskNextStepsPending />}
+        {taskPending && <TaskNextStepsPending />}
         {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (

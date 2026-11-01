@@ -143,7 +143,7 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
     </StoryProviders>,
   );
   const article = await screen.findByRole("article");
-  expect(article.querySelector(".skeleton")).not.toBeNull();
+  expect(article.querySelector(".task-next-pending")).not.toBeNull();
 
   landTask(
     jsonResponse({
@@ -156,7 +156,7 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
     }),
   );
   await vi.waitFor(() => expect(landContact).toBeDefined());
-  expect(article.querySelector(".skeleton")).not.toBeNull();
+  expect(article.querySelector(".task-next-pending")).not.toBeNull();
 
   landContact?.(
     jsonResponse({
@@ -169,5 +169,5 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
   expect(
     await card.findByRole("link", { name: en["record.verb.email"] }),
   ).toBeTruthy();
-  expect(article.querySelector(".skeleton")).toBeNull();
+  expect(article.querySelector(".task-next-pending")).toBeNull();
 });

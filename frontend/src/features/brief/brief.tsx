@@ -4,7 +4,7 @@
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
-import { Modal, PendingBody } from "../../design-system/atoms";
+import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
@@ -47,7 +47,7 @@ import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { BriefReadingsStrip } from "./brief.readings";
+import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
@@ -298,12 +298,14 @@ function PersonalMorning({
             )}
             {/* The figures stand above the meetings, so their wait holds
                 their place rather than letting the meetings rise and fall. */}
+            {/* Hidden from a screen reader: the meetings below already
+                announce the wait. */}
             {state === "loading" && (
-              <div className="brief-overview">
+              <div className="brief-overview" aria-hidden="true">
                 <Eyebrow as="h2" className="brief-section-label">
                   {t("brief.rail.numbers")}
                 </Eyebrow>
-                <PendingBody label={t("state.loading")} lines={8} />
+                <BriefReadingsPending />
               </div>
             )}
             <SchedulePanel day={day} state={state} />

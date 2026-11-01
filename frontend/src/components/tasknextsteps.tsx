@@ -24,7 +24,11 @@ type Contact = components["schemas"]["Contact"];
 /** The room the next steps take while the reads behind them are out, so the
  *  verbs arrive without pushing the row they sit in. One Email verb wide. */
 export function TaskNextStepsPending() {
-  return <Skeleton width="6rem" height="var(--controlHeight)" />;
+  return (
+    <div className="task-next-pending">
+      <Skeleton width="6rem" height="var(--controlHeight)" />
+    </div>
+  );
 }
 
 /** Call, for a task read out of a call to a contact with a number to dial. */
@@ -50,7 +54,15 @@ export function TaskNextSteps({
   const reasonId = useId();
   const { contact, fromCall, pending } = useTaskContact(task);
   if (!contact) {
-    return pending ? <TaskNextStepsPending /> : null;
+    if (!pending) return null;
+    // In the row the verbs will stand in, so they land where it stood.
+    return className ? (
+      <div className={className}>
+        <TaskNextStepsPending />
+      </div>
+    ) : (
+      <TaskNextStepsPending />
+    );
   }
   const refusal = emailRefusal(contact, t);
   const steps = (
