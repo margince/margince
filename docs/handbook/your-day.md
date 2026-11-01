@@ -150,7 +150,7 @@ Each item names its record and shows the facts that call for action. A badge say
   could not finish and what needs restoring.
 - Beside them: **Numbers**, **Upcoming meetings**, **Check applied changes**.
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
-in Today, how many of them are urgent and how many meetings you have. Press any key or click to go on.
+in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Today?

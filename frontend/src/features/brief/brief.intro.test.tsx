@@ -7,10 +7,10 @@ import { en } from "../../i18n/en";
 import { readStored, removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { digest, readingsDay } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
-import { BriefIntro, FIGURES_STAND_MS, LEAVE_MS, SHOW_MS } from "./brief.intro";
+import { BriefIntro, GREETING_MS, LEAVE_MS, SHOW_MS } from "./brief.intro";
 
 // The morning's greeting plays once a local day, from the page's first render.
-// Its figures come only from today's read, and join it when that read lands.
+// Its figures come only from today's read, and it lifts once the page is ready.
 // It never plays under reduced motion, and any key or press ends it.
 
 // Eight in the morning on the viewer's own clock, which the greeting reads.
@@ -47,11 +47,13 @@ describe("BriefIntro", () => {
     expect(readStored(STORAGE_KEYS.briefIntroShown)).toBe(TODAY);
   });
 
-  it("lifts away on its own, then leaves the page", () => {
+  it("lifts once its words have arrived over a ready page", () => {
     vi.useFakeTimers();
     try {
       intro();
-      act(() => vi.advanceTimersByTime(SHOW_MS));
+      act(() => vi.advanceTimersByTime(GREETING_MS - 1));
+      expect(screen.getByRole("button", curtain).dataset.state).toBeUndefined();
+      act(() => vi.advanceTimersByTime(1));
       expect(screen.getByRole("button", curtain).dataset.state).toBe("leaving");
       act(() => vi.advanceTimersByTime(LEAVE_MS));
       expect(screen.queryByRole("button", curtain)).toBeNull();
@@ -94,19 +96,30 @@ describe("BriefIntro", () => {
     expect(figures?.textContent).toContain("7");
   });
 
-  it("holds late figures long enough to read, then lifts", () => {
+  it("lifts as soon as a late read makes the page ready", () => {
     vi.useFakeTimers();
     try {
       const view = render(
         <BriefIntro firstName="Ada" day={undefined} now={NOW} />,
       );
-      act(() => vi.advanceTimersByTime(SHOW_MS - 500));
+      act(() => vi.advanceTimersByTime(GREETING_MS + 500));
+      expect(screen.getByRole("button", curtain).dataset.state).toBeUndefined();
       view.rerender(
         <BriefIntro firstName="Ada" day={todaysRead()} now={NOW} />,
       );
-      act(() => vi.advanceTimersByTime(FIGURES_STAND_MS - 1));
-      expect(screen.getByRole("button", curtain).dataset.state).toBeUndefined();
-      act(() => vi.advanceTimersByTime(1));
+      act(() => vi.advanceTimersByTime(0));
+      expect(screen.getByRole("button", curtain).dataset.state).toBe("leaving");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lifts over a ready page whose read is from an earlier day", () => {
+    vi.useFakeTimers();
+    try {
+      const yesterday = new Date(NOW.getTime() - 24 * 60 * 60 * 1000);
+      intro({ ...readingsDay(), as_of: yesterday.toISOString() });
+      act(() => vi.advanceTimersByTime(GREETING_MS));
       expect(screen.getByRole("button", curtain).dataset.state).toBe("leaving");
     } finally {
       vi.useRealTimers();
@@ -117,7 +130,9 @@ describe("BriefIntro", () => {
     vi.useFakeTimers();
     try {
       render(<BriefIntro firstName="Ada" day={undefined} now={NOW} />);
-      act(() => vi.advanceTimersByTime(SHOW_MS));
+      act(() => vi.advanceTimersByTime(SHOW_MS - 1));
+      expect(screen.getByRole("button", curtain).dataset.state).toBeUndefined();
+      act(() => vi.advanceTimersByTime(1));
       act(() => vi.advanceTimersByTime(LEAVE_MS));
       expect(screen.queryByRole("button", curtain)).toBeNull();
     } finally {
