@@ -64,6 +64,9 @@ func taskClaimsStatement(ctx context.Context, named []ids.UUID, identity string)
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return "", nil, err
 	}
+	if len(named) == 0 {
+		return "", nil, nil
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	taskPos := arg(named)

@@ -41,10 +41,10 @@ func (n claimPlanNode) walk(visit func(claimPlanNode)) {
 func TestTaskRecipientsAreFoundByTheirTask(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	// Claims spread over many people, as a workspace holds them: with one
+	// Claims spread over many contacts, as a workspace holds them: with one
 	// contact the planner rightly starts from that contact instead.
 	e.execAs(ctx, t, `
-		WITH people AS (
+		WITH customers AS (
 		  INSERT INTO contact (full_name, source, captured_by)
 		  SELECT 'Customer ' || g, 'manual', 'human:test' FROM generate_series(1, 400) g RETURNING id),
 		said AS (
@@ -57,10 +57,10 @@ func TestTaskRecipientsAreFoundByTheirTask(t *testing.T) {
 		    FROM generate_series(1, 4000) g RETURNING id)
 		INSERT INTO conversation_claim
 		  (contact_id, kind, body, source_activity_id, source_quote, evidence_fingerprint, source, captured_by, task_activity_id)
-		SELECT people.id, 'commitment_ours', 'send it', said.id, 'we will send it', said.id::text, 'manual', 'human:test', todo.id
+		SELECT customers.id, 'commitment_ours', 'send it', said.id, 'we will send it', said.id::text, 'manual', 'human:test', todo.id
 		  FROM (SELECT id, row_number() OVER () AS n FROM said) said
 		  JOIN (SELECT id, row_number() OVER () AS n FROM todo) todo USING (n)
-		  JOIN (SELECT id, row_number() OVER () - 1 AS n FROM people) people ON people.n = said.n % 400`, e.rep)
+		  JOIN (SELECT id, row_number() OVER () - 1 AS n FROM customers) customers ON customers.n = said.n % 400`, e.rep)
 	analyzeAsOwner(t, "contact", "activity", "conversation_claim")
 	var named []ids.UUID
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
