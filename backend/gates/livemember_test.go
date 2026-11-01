@@ -107,7 +107,6 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // with what, so it is issue margince/margince#2596 rather than a change made
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
-	"internal/modules/identity/former.go":           "import lineage follows removed and archived identities but returns only a live survivor; former members deliberately need not be active",
 	"internal/modules/approvals/redeem.go":          "pins the administrator editor revision for an invited or deactivated member; it is a named approval subject, not an assignment or sign-in destination",
 	"internal/modules/identity/memberedit.go":       "the editor addresses active, invited and deactivated accounts; removed and archived accounts are excluded",
 	"internal/platform/auth/consolidatedmember.go":  "follows the retained identity of an old writer through retired accounts to their survivor, including deactivated import accounts",
