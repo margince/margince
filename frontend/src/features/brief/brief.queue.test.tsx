@@ -432,8 +432,7 @@ it.each(["failed", "bounded", "scope"])(
     });
     await waitFor(() =>
       expect(
-        client.getQueryState(["worklist", "mine", "all", "", "today"])
-          ?.status,
+        client.getQueryState(["worklist", "mine", "all", "", "today"])?.status,
       ).toBe("success"),
     );
     expect(toggle.querySelector(".optioncount")).toBeNull();

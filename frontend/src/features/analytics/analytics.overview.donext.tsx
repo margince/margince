@@ -19,8 +19,8 @@ import {
   whenText,
 } from "../../lib/worklistcopyreasons";
 import { worklistDayOptions } from "../../lib/worklistday";
-import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import type { WorklistItem } from "../../lib/worklisttypes";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 
 // How many of the day's ranked items stand here, in the Worklist's own order.
 const NAMED_WORK = 3;
