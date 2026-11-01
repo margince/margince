@@ -139,7 +139,7 @@ var memberReferences = map[string]memberReference{
 	"onboarding_wizard_state.user_id":          {disposition: referenceRetain},
 	"passport.granted_by":                      {disposition: referenceRetain},
 	"passport.on_behalf_of":                    {disposition: referenceRetain},
-	"privacy_notice_case.owner_user_id":        {disposition: referenceResolve, live: `state IN ('open','assigned','queued','delivery_failed','blocked')`, remedy: "privacy_notices"},
+	"privacy_notice_case.owner_user_id":        {disposition: referenceResolve, live: `state IN ('open','assigned','queued','delivery_failed','blocked','source_review')`, remedy: "privacy_notices"},
 	"privacy_notice_case.resolved_by":          {disposition: referenceRetain},
 	"project.owner_id":                         {disposition: referenceHandover, live: memberLiveRows},
 	"project.source_author_id":                 {disposition: referenceRetain},

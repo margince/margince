@@ -66,7 +66,7 @@ function stubDuty(duty = OWED, seat: "full" | "read" = "full") {
       if (path.endsWith("/worklist")) {
         return jsonResponse(dutyDay(duty));
       }
-      if (path.endsWith(`/privacy/notice-cases/${OWED.id}`)) {
+      if (path.endsWith(`/privacy/notice-case-reviews/${OWED.id}`)) {
         return jsonResponse({
           id: OWED.id,
           contact_id: CONTACT,
@@ -269,7 +269,7 @@ it("shows an unavailable linked case without offering a send", async () => {
       privacy_request: ["read"],
       contact: ["read", "update"],
     }),
-    "GET /privacy/notice-cases/missing": () =>
+    "GET /privacy/notice-case-reviews/missing": () =>
       new Response(
         JSON.stringify({
           status: 404,

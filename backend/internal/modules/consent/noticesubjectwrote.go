@@ -21,18 +21,15 @@ const subjectWroteNote = "They wrote to us: a captured mail from their own addre
 
 // SettleableNoticeStates leaves deliveries in flight and completed outcomes intact.
 func SettleableNoticeStates() []string {
-	return []string{string(NoticeOpen), string(NoticeAssigned), string(NoticeBlocked), string(NoticeDeliveryFailed)}
+	return []string{string(NoticeOpen), string(NoticeAssigned), string(NoticeBlocked), string(NoticeDeliveryFailed), string(NoticeSourceReview)}
 }
 
 // SettleWhenSubjectWroteTx ends the open duties recorded for these acquisitions,
 // because the contact they belong to has since written to us.
 //
-// A mailbox backfill does not read a mailbox oldest first. When it reads our
-// reply before their first mail, it creates the contact from our side of the
-// conversation, cannot say where the address came from, and an Art. 14 case is
-// opened (DutyFor, "unknown_legacy"). Their own mail, captured minutes later,
-// is the evidence that settles it: the data came from them, the case that
-// DutyFor opens for nobody (subject_initiated).
+// A backfill may capture our reply before the subject's own mail. The unknown
+// source needs review until their authenticated mail answers it. Confirmed
+// indirect sources and human assessments remain separate obligations.
 //
 // The caller names the acquisitions, so this reads nothing of the contact: it
 // is the acquisitions' OWN cases it closes, and only the ones still owed. The
@@ -52,7 +49,7 @@ func settleAcquisitionCasesTx(ctx context.Context, tx pgx.Tx, acquisitions []ids
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM privacy_notice_case
-		 WHERE acquisition_id = ANY($1) AND state = ANY($2)
+		 WHERE acquisition_id = ANY($1) AND state = ANY($2) AND source_kind IS NULL
 		 ORDER BY id`, acquisitions, SettleableNoticeStates())
 	if err != nil {
 		return 0, fmt.Errorf("read the duties owed for these acquisitions: %w", err)
@@ -78,12 +75,22 @@ func closeOwedCasesTx(ctx context.Context, tx pgx.Tx, caseIDs []ids.UUID, note s
 		if err != nil {
 			return closed, err
 		}
-		if terminalNoticeStates()[current.State] || current.State == NoticeQueued {
+		if terminalNoticeStates()[current.State] || current.State == NoticeQueued || current.SourceKind != nil {
+			continue
+		}
+		if err := attachOneAcquisition(ctx, tx, &current); err != nil {
+			return closed, err
+		}
+		if current.Acquisition == nil {
+			continue
+		}
+		duty, needsCase := DutyFor(current.Acquisition.Kind)
+		if needsCase && duty.State != NoticeSourceReview {
 			continue
 		}
 		out, err := scanNoticeCase(tx.QueryRow(ctx, `
 			UPDATE privacy_notice_case
-			   SET state = $2, resolution_note = $3, completed_at = $4,
+			   SET state = $2, rule = 'none', due_at = NULL, allowed_routes = '{}', resolution_note = $3, completed_at = $4,
 			       blocked_reason = NULL, updated_at = now()
 			 WHERE id = $1
 			RETURNING`+noticeCaseColumns,

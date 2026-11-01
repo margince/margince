@@ -120,8 +120,8 @@ func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
 	contact := capturedUnknown(t, e, "Late Writer")
 	withAddress(t, e, contact, "late.writer@customer.test")
 	driveNoticeCase(t, e, contact)
-	if _, state, _, found := noticeCaseFor(t, e, contact); !found || state != "open" {
-		t.Fatalf("setup: case found=%v state=%q, want an open case for an unknown source", found, state)
+	if _, state, _, found := noticeCaseFor(t, e, contact); !found || state != "source_review" {
+		t.Fatalf("setup: case found=%v state=%q, want a source review for an unknown source", found, state)
 	}
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "late.writer@customer.test", false))
@@ -201,14 +201,13 @@ func TestAHandLoggedMailSettlesNothing(t *testing.T) {
 
 	driveCapturedMail(t, e, mailFrom(t, e, "typed@customer.test", false, "human:seed"))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
-		t.Errorf("a hand-logged mail moved the case to %q, want it still open", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
+		t.Errorf("a hand-logged mail moved the case to %q, want source review", state)
 	}
 }
 
-// An unknown source a seat stated is a claim about somewhere else, and the
-// contact writing later does not answer it. Only capture's own unknown is.
-func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
+// Captured mail resolves capture's own uncertainty; a manually recorded source still needs review.
+func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Seat Unknown", "unknown_legacy")
@@ -217,8 +216,8 @@ func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "seat.unknown@customer.test", false))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
-		t.Errorf("a seat-stated unknown moved to %q after they wrote, want it still open", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
+		t.Errorf("a seat-stated unknown moved to %q after they wrote, want source review", state)
 	}
 }
 
@@ -284,7 +283,7 @@ func TestUnverifiedBulkCannotSettleACaptureDuty(t *testing.T) {
 		t.Fatal(err)
 	}
 	driveCapturedMail(t, e, mail)
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
 		t.Fatalf("unverified bulk settled the duty: %s", state)
 	}
 }

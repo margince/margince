@@ -315,8 +315,8 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// acquisition_id is withheld for the reason source_entity_id above is:
 		// it points at a row exported in its own section, and a bare id would
 		// invite a reader to join across sections rather than read either.
-		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes,
-		          attempts, completed_at, blocked_reason, created_at
+		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes, source_kind,
+		          attempts, completed_at, blocked_reason, created_at, source_obtained_at, source_review_note
 		   FROM privacy_notice_case
 		   WHERE contact_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's

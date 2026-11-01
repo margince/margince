@@ -20,8 +20,8 @@ import (
 
 func subjectMailDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
-		ID: "core/1793502625_direct_sender_notice_duties", Version: 1,
-		Title: "Closing notice duties for direct senders", Requires: []string{"core/1792474140"},
+		ID: "core/1793502625_direct_sender_notice_duties", Version: 2,
+		Title: "Closing notice duties for direct senders", Requires: []string{"core/1792474140", "core/1793514621"},
 		Steps: []datatask.Step{{
 			Name: "restore_bulk_sender_proof", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same derived sender authentication on new mail without a separate audit"},
@@ -52,7 +52,7 @@ func estimateSubjectMailDuties(ctx context.Context, q datatask.Querier, maximum 
 		return 0, false, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT c.id `+subjectMailScopeSQL()+` LIMIT @subject_limit) candidates`, pgx.NamedArgs{"subject_limit": maximum + 1, "states": consent.SettleableNoticeStates()}).Scan(&count)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT c.id `+subjectMailScopeSQL()+` LIMIT @subject_limit) candidates`, pgx.NamedArgs{"subject_limit": maximum + 1, dataTaskStatesArg: consent.SettleableNoticeStates()}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }
 
@@ -64,7 +64,7 @@ func settleSubjectMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT c.id `+subjectMailScopeSQL()+` AND c.id > @subject_after ORDER BY c.id LIMIT @subject_limit`, pgx.NamedArgs{"subject_after": after, "subject_limit": in.Limit, "states": consent.SettleableNoticeStates()})
+	rows, err := tx.Query(ctx, `SELECT c.id `+subjectMailScopeSQL()+` AND c.id > @subject_after ORDER BY c.id LIMIT @subject_limit`, pgx.NamedArgs{"subject_after": after, "subject_limit": in.Limit, dataTaskStatesArg: consent.SettleableNoticeStates()})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}

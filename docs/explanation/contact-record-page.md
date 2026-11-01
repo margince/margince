@@ -53,3 +53,7 @@ notices already queued for delivery do not ask for another notice.
 
 The Reach figure counts colleagues with recorded messages in both directions during the last
 90 days. Receiving the same message in several mailboxes does not show a reply.
+
+An unknown source appears as **Review source**, with no duty or legal deadline claimed. Only
+readers with privacy access see it. The review opens the case in Settings → Privacy, where the
+source and any known date can be confirmed.
