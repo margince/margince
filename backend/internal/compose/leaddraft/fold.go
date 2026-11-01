@@ -90,6 +90,12 @@ func greetingNames(full string) (first, last string) {
 //
 // A machine and an unresolved sender name no side, so those read the transport.
 func wroteItOurSide(activity crmcontracts.Activity) (ours, known bool) {
+	// Direction first, because having one is what makes a row correspondence. A
+	// note or a task is written down rather than sent, whoever authored it, so
+	// no side spoke and neither stamp moves.
+	if activity.Direction == nil {
+		return false, false
+	}
 	if voice := activity.Voice; voice != nil && voice.Author != nil {
 		switch voice.Author.Kind {
 		case crmcontracts.ActivityAuthorKindColleague:
@@ -97,9 +103,6 @@ func wroteItOurSide(activity crmcontracts.Activity) (ours, known bool) {
 		case crmcontracts.ActivityAuthorKindContactRecord:
 			return false, true
 		}
-	}
-	if activity.Direction == nil {
-		return false, false
 	}
 	switch *activity.Direction {
 	case crmcontracts.ActivityDirectionOutbound:
