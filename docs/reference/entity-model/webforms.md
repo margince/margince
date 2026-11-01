@@ -49,7 +49,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 - `web_form_key_shape`: `CHECK ((form_key ~ '^[A-Za-z0-9_-]{16,64}$'))`
 - `web_form_name_present`: `CHECK (((length(btrim(name)) > 0) AND (length(name) <= 200)))`
 - `web_form_privacy_notice_bounded`: `CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500)))`
-- `web_form_privacy_notice_url_https`: `CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@]') AND (length(privacy_notice_url) <= 2000))))`
+- `web_form_privacy_notice_url_https`: `CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)') AND (length(privacy_notice_url) <= 2000))))`
 - `web_form_redirect_https`: `CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://')))`
 - `web_form_sender_check`: `CHECK ((sender = ANY (ARRAY['browser', 'server', 'webflow', 'typeform', 'tally'])))`
 - `web_form_state_check`: `CHECK ((state = ANY (ARRAY['active', 'paused'])))`

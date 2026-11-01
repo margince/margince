@@ -35023,7 +35023,7 @@ components:
         consent_policy_version: { type: [string, 'null'], maxLength: 200 }
         consent_wording: { type: [string, 'null'], maxLength: 2000 }
         privacy_notice: { type: [string, 'null'], maxLength: 500 }
-        privacy_notice_url: { type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@]', maxLength: 2000 }
+        privacy_notice_url: { type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@][^/?#@]*([/?#]|$)', maxLength: 2000 }
         redirect_url: { type: [string, 'null'], maxLength: 2000 }
         success_message: { type: [string, 'null'], maxLength: 500 }
 
@@ -35046,7 +35046,7 @@ components:
         consent_policy_version: { type: [string, 'null'], maxLength: 200 }
         consent_wording: { type: [string, 'null'], maxLength: 2000 }
         privacy_notice: { type: [string, 'null'], maxLength: 500 }
-        privacy_notice_url: { type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@]', maxLength: 2000 }
+        privacy_notice_url: { type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@][^/?#@]*([/?#]|$)', maxLength: 2000 }
         redirect_url: { type: [string, 'null'], maxLength: 2000 }
         success_message: { type: [string, 'null'], maxLength: 500 }
         state: { type: string, enum: [active, paused] }
