@@ -40918,6 +40918,12 @@ components:
             type: { type: string, description: "The record's class, as its own endpoint spells it." }
             id: { type: string, format: uuid }
         origin: { $ref: '#/components/schemas/NoticeOrigin' }
+        summary_parts:
+          allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
+          description: >-
+            On an approval notice, its subject taken apart into the sentence and the field values,
+            so a client can show the values as a list. Absent on any other notice, and on one
+            written before the parts were kept.
     NotificationPage:
       type: object
       description: One window of the calling contact's notification centre.

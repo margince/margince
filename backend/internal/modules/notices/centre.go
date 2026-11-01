@@ -115,8 +115,7 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 			return err
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, read_at,
-			       coalesce(dedupe_key, '')
+			SELECT `+centreColumns+`
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND `+notTheReadersOwnStageMove+keyset+`
 			 ORDER BY created_at DESC, id DESC
@@ -238,6 +237,11 @@ func boundedPageSize(limit int) int {
 }
 
 // scanCentreItems reads the window, including the one row past the page.
+// centreColumns is what scanCentreItems reads, in its order. Every read of
+// centre lines selects it, so a column added here reaches each of them.
+const centreColumns = `id, kind, subject, subject_parts, body, target_type, target_id, created_at, origin,
+	read_at, coalesce(dedupe_key, '')`
+
 func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
 	items := []CentreItem{}
 	for rows.Next() {
@@ -247,7 +251,7 @@ func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
 		var targetType *string
 		var targetID *ids.UUID
 		var dedupeKey string
-		if err := rows.Scan(&item.ID, &item.Kind, &item.Subject, &item.Body,
+		if err := rows.Scan(&item.ID, &item.Kind, &item.Subject, &item.SubjectParts, &item.Body,
 			&targetType, &targetID, &item.CreatedAt, &item.Origin, &item.ReadAt, &dedupeKey); err != nil {
 			return nil, err
 		}
