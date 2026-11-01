@@ -507,12 +507,12 @@ it("shows how many priced deals make each stage's value", () => {
   );
   expect(
     screen.getByRole("button", {
-      name: /Discovery: .+ · 1 priced deal, \d+%$/,
+      name: /Discovery: .+ · 1 priced deal, 27%$/,
     }),
   ).toBeInTheDocument();
   expect(
     screen.getByRole("button", {
-      name: /Proposal: .+ · 7 priced deals, \d+%$/,
+      name: /Proposal: .+ · 7 priced deals, 41%$/,
     }),
   ).toBeInTheDocument();
 });
