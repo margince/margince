@@ -128,9 +128,10 @@ func TestLanguageEvidenceSkipsAColleaguesOwnInboundMail(t *testing.T) {
 	}
 }
 
-// One answer for whose word a turn is, so two readers cannot disagree. A
-// colleague writing from one of our own domains arrives inbound, and that is
-// the case direction alone gets wrong.
+// The turn answers whose word it is, and its readers ask that rather than
+// combining the voice and the transport themselves. A colleague writing from
+// one of our own domains arrives inbound, which is the case direction alone
+// reads wrong.
 func TestATurnSaysWhoseWordItIs(t *testing.T) {
 	t.Parallel()
 	in := string(crmcontracts.ActivityDirectionInbound)
