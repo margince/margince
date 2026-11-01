@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -198,9 +199,10 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 	staged := approvalsServiceWithEffects(pool)
-	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.homeCache = homecache.New(pool, magic.MachineActors())
+	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
-	s.magicHandlers = magic.NewHandlers(s.magicService)
+	s.magicHandlers = magic.NewHandlers(s.magicService).WithHomeCache(s.homeCache)
 }
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture

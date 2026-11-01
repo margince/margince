@@ -77,6 +77,8 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// never recorded as "the" response for a key (the approved retry is
 	// the same request under the same key).
 	return contractRouter(srv,
+		// Innermost, so it sees the handler's own status.
+		forgetHomeOnWrite(srv.homeCache, srv.log),
 		agentGate(registry, staging, provider, provider, importsFor(&srv), tagSeam(pool), gate),
 		idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()), dealrooms.NewStore(InstallationDB(pool)), deals.NewStore(InstallationDB(pool), DealsInstallation()), InstallationDB(pool)), schedulingReplayRestore(sendStore(pool, srv.send))),
 		// Outermost, so the measurement covers the admission gate and the

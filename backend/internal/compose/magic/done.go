@@ -224,7 +224,7 @@ func doneForType(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sinceAt := arg(since)
-	actors := arg(machineActors())
+	actors := arg(MachineActors())
 	actionsAt := arg(actions)
 	typeAt := arg(entityType)
 	scope, err := auth.ScopeClauseFor(ctx, table, "e", arg)
@@ -291,7 +291,7 @@ func doneForActivities(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sinceAt := arg(since)
-	actors := arg(machineActors())
+	actors := arg(MachineActors())
 	actionsAt := arg(actions)
 	content, err := auth.ActivityContentClause(ctx, "e", arg)
 	if err != nil {
@@ -387,7 +387,7 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 		   AND a.action = ANY($%d)
 		   AND NOT (a.entity_type = ANY($%d))
 		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(auditentity.MaintenanceTypes()), arg(placed))
+		arg(since), arg(MachineActors()), arg(admittedActions(false)), arg(auditentity.MaintenanceTypes()), arg(placed))
 	var count int
 	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)

@@ -80,6 +80,7 @@ public.activity.duration_seconds integer gen=- def=-
 public.activity.foreign_link boolean gen=- def=-
 public.activity.guests_left_out integer NOT NULL gen=- def=0
 public.activity.has_calendar_part boolean NOT NULL gen=- def=false
+public.activity.home_read_fence_activity_reach CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON public.activity FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR (old.restricted_at IS DISTINCT FROM new.restricted_at) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()
 public.activity.host_user_id uuid gen=- def=-
 public.activity.id uuid NOT NULL gen=- def=uuidv7()
 public.activity.inbound_sender_authenticated boolean NOT NULL gen=- def=false
@@ -131,6 +132,7 @@ public.activity_audience_member.activity_audience_member_subject_type_check CHEC
 public.activity_audience_member.activity_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_audience_member.created_by text NOT NULL gen=- def=-
+public.activity_audience_member.home_read_fence_audience_member CREATE TRIGGER home_read_fence_audience_member AFTER INSERT OR DELETE OR UPDATE ON public.activity_audience_member FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.activity_audience_member.subject_id uuid NOT NULL gen=- def=-
 public.activity_audience_member.subject_type text NOT NULL gen=- def=-
 public.activity_audience_member_pkey CREATE UNIQUE INDEX activity_audience_member_pkey ON public.activity_audience_member USING btree (activity_id, subject_type, subject_id)
@@ -177,6 +179,7 @@ public.activity_commitment_admission.captured_by text NOT NULL gen=- def=-
 public.activity_commitment_admission.current_work boolean NOT NULL gen=- def=-
 public.activity_commitment_admission.evaluated_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_commitment_admission.evidence_ids uuid[] NOT NULL gen=- def=-
+public.activity_commitment_admission.home_read_fence_commitment_admission CREATE TRIGGER home_read_fence_commitment_admission AFTER DELETE OR UPDATE ON public.activity_commitment_admission FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.activity_commitment_admission.locator text NOT NULL gen=- def=-
 public.activity_commitment_admission.meaning jsonb gen=- def=-
 public.activity_commitment_admission.outcome text NOT NULL gen=- def=-
@@ -222,6 +225,8 @@ public.activity_link.contact_id uuid gen=- def=-
 public.activity_link.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_link.deal_id uuid gen=- def=-
 public.activity_link.entity_type text NOT NULL gen=- def=-
+public.activity_link.home_read_fence_first_link CREATE TRIGGER home_read_fence_first_link AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added_links FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence_on_first_link()
+public.activity_link.home_read_fence_link_change CREATE TRIGGER home_read_fence_link_change AFTER DELETE OR UPDATE ON public.activity_link FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.activity_link.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_link.lead_id uuid gen=- def=-
 public.activity_link.project_id uuid gen=- def=-
@@ -372,6 +377,7 @@ public.activity_participant.channel_user_id text gen=- def=-
 public.activity_participant.contact_id uuid gen=- def=-
 public.activity_participant.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_participant.display_name text gen=- def=-
+public.activity_participant.home_read_fence_participant CREATE TRIGGER home_read_fence_participant AFTER DELETE OR UPDATE ON public.activity_participant FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.activity_participant.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_participant.past_party_cap boolean NOT NULL gen=- def=false
 public.activity_participant.response text gen=- def=-
@@ -758,6 +764,34 @@ public.activity_waiting_horizon.horizon_days integer NOT NULL gen=- def=-
 public.activity_waiting_horizon.measured_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_waiting_horizon.singleton boolean NOT NULL gen=- def=true
 public.activity_waiting_horizon_pkey CREATE UNIQUE INDEX activity_waiting_horizon_pkey ON public.activity_waiting_horizon USING btree (singleton)
+public.advance_home_read_fence() secdef=false cfg=- acl=- 
+BEGIN
+  PERFORM advance_home_read_fence_now();
+  RETURN NULL;
+END;
+
+public.advance_home_read_fence_now() secdef=false cfg=- acl=- 
+BEGIN
+  IF current_setting('margince.home_read_fence_advanced', true) IS DISTINCT FROM 'on' THEN
+    UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+    PERFORM set_config('margince.home_read_fence_advanced', 'on', true);
+  END IF;
+END;
+
+public.advance_home_read_fence_on_first_link() secdef=false cfg=- acl=- 
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM (SELECT DISTINCT activity_id FROM added_links) n
+      JOIN activity a ON a.id = n.activity_id AND a.created_at < now()
+     WHERE (SELECT count(*) FROM activity_link l WHERE l.activity_id = n.activity_id)
+         = (SELECT count(*) FROM added_links al WHERE al.activity_id = n.activity_id)
+  ) THEN
+    PERFORM advance_home_read_fence_now();
+  END IF;
+  RETURN NULL;
+END;
+
 public.advance_report_projection_authority() secdef=false cfg=- acl=- 
 BEGIN
  UPDATE report_projection_fence SET generation=generation+1 WHERE singleton;
@@ -1113,6 +1147,7 @@ public.app_user.email_domain_folded text gen=- def=-
 public.app_user.failed_login_count integer NOT NULL gen=- def=0
 public.app_user.greeting_name text gen=- def=-
 public.app_user.greeting_name_chosen_at timestamp with time zone gen=- def=-
+public.app_user.home_read_fence_identity CREATE TRIGGER home_read_fence_identity AFTER UPDATE OF merged_into_user_id, email_domain_folded ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.app_user.id uuid NOT NULL gen=- def=uuidv7()
 public.app_user.is_agent boolean NOT NULL gen=- def=false
 public.app_user.last_active_at timestamp with time zone gen=- def=-
@@ -1530,6 +1565,7 @@ public.audit_log.before jsonb gen=- def=-
 public.audit_log.entity_id uuid NOT NULL gen=- def=-
 public.audit_log.entity_type text NOT NULL gen=- def=-
 public.audit_log.evidence jsonb gen=- def=-
+public.audit_log.home_read_fence_scrub CREATE TRIGGER home_read_fence_scrub AFTER INSERT ON public.audit_log FOR EACH ROW WHEN ((new.action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))) EXECUTE FUNCTION advance_home_read_fence()
 public.audit_log.id uuid NOT NULL gen=- def=uuidv7()
 public.audit_log.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.audit_log.on_behalf_of uuid gen=- def=-
@@ -1879,6 +1915,7 @@ public.capture_import.capture_import_posture_check CHECK (((posture_at_import IS
 public.capture_import.capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.capture_import.capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
 public.capture_import.delivered_by text[] NOT NULL gen=- def='{}'::text[]
+public.capture_import.home_read_fence_capture_import CREATE TRIGGER home_read_fence_capture_import AFTER DELETE OR UPDATE ON public.capture_import FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.capture_import.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_import.posture_at_import text gen=- def=-
@@ -2525,6 +2562,7 @@ public.company.geocode_lon double precision gen=- def=-
 public.company.geocode_provider text gen=- def=-
 public.company.geocode_status text gen=- def=-
 public.company.geocoded_at timestamp with time zone gen=- def=-
+public.company.home_read_fence_company_reach CREATE TRIGGER home_read_fence_company_reach AFTER UPDATE ON public.company FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor))) EXECUTE FUNCTION advance_home_read_fence()
 public.company.id uuid NOT NULL gen=- def=uuidv7()
 public.company.industry text gen=- def=-
 public.company.is_anchor boolean NOT NULL gen=- def=false
@@ -2597,6 +2635,7 @@ public.company_domain.company_id uuid NOT NULL gen=- def=-
 public.company_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_domain.domain text NOT NULL gen=- def=-
 public.company_domain.domain_folded text gen=- def=-
+public.company_domain.home_read_fence_company_domain CREATE TRIGGER home_read_fence_company_domain AFTER DELETE OR UPDATE ON public.company_domain FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.company_domain.id uuid NOT NULL gen=- def=uuidv7()
 public.company_domain.is_primary boolean NOT NULL gen=- def=false
 public.company_domain.source text NOT NULL gen=- def=-
@@ -3185,6 +3224,7 @@ public.contact.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact.first_name text gen=- def=-
 public.contact.full_name text NOT NULL gen=- def=-
+public.contact.home_read_fence_contact_reach CREATE TRIGGER home_read_fence_contact_reach AFTER UPDATE ON public.contact FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility))) EXECUTE FUNCTION advance_home_read_fence()
 public.contact.id uuid NOT NULL gen=- def=uuidv7()
 public.contact.last_activity_at timestamp with time zone gen=- def=-
 public.contact.last_name text gen=- def=-
@@ -3714,6 +3754,7 @@ public.deal.expected_close_date date gen=- def=-
 public.deal.forecast_category text gen=- def=-
 public.deal.fx_rate_date date gen=- def=-
 public.deal.fx_rate_to_base numeric(20,10) gen=- def=-
+public.deal.home_read_fence_deal_owner CREATE TRIGGER home_read_fence_deal_owner AFTER UPDATE ON public.deal FOR EACH ROW WHEN ((old.owner_id IS DISTINCT FROM new.owner_id)) EXECUTE FUNCTION advance_home_read_fence()
 public.deal.id uuid NOT NULL gen=- def=uuidv7()
 public.deal.last_activity_at timestamp with time zone gen=- def=-
 public.deal.legal_hold boolean NOT NULL gen=- def=false
@@ -4771,6 +4812,31 @@ public.graph_interaction_edge.last_outbound_at timestamp with time zone gen=- de
 public.graph_interaction_edge.out_count_90d integer NOT NULL gen=- def=0
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, contact_id)
+public.home_read_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_cache.computed_at timestamp with time zone NOT NULL gen=- def=-
+public.home_read_cache.fence bigint NOT NULL gen=- def=-
+public.home_read_cache.home_read_cache_pkey PRIMARY KEY (reader_id, read, request_key)
+public.home_read_cache.home_read_cache_read_check CHECK ((read = ANY (ARRAY['worklist'::text, 'magic'::text])))
+public.home_read_cache.home_read_cache_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.home_read_cache.payload jsonb NOT NULL gen=- def=-
+public.home_read_cache.read text NOT NULL gen=- def=-
+public.home_read_cache.reader_id uuid NOT NULL gen=- def=-
+public.home_read_cache.request_key text NOT NULL gen=- def=-
+public.home_read_cache.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.home_read_cache.walk_id uuid gen=- def=-
+public.home_read_cache_pkey CREATE UNIQUE INDEX home_read_cache_pkey ON public.home_read_cache USING btree (reader_id, read, request_key)
+public.home_read_fence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_fence.generation bigint NOT NULL gen=- def=0
+public.home_read_fence.home_read_fence_pkey PRIMARY KEY (singleton)
+public.home_read_fence.home_read_fence_singleton_check CHECK (singleton)
+public.home_read_fence.singleton boolean NOT NULL gen=- def=true
+public.home_read_fence_pkey CREATE UNIQUE INDEX home_read_fence_pkey ON public.home_read_fence USING btree (singleton)
+public.home_read_forgotten acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_forgotten.at timestamp with time zone NOT NULL gen=- def=-
+public.home_read_forgotten.home_read_forgotten_pkey PRIMARY KEY (reader_id)
+public.home_read_forgotten.home_read_forgotten_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.home_read_forgotten.reader_id uuid NOT NULL gen=- def=-
+public.home_read_forgotten_pkey CREATE UNIQUE INDEX home_read_forgotten_pkey ON public.home_read_forgotten USING btree (reader_id)
 public.idempotency_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.idempotency_key.attempt_id uuid NOT NULL gen=- def=uuidv7()
 public.idempotency_key.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5479,6 +5545,7 @@ public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
+public.lead.home_read_fence_lead_owner CREATE TRIGGER home_read_fence_lead_owner AFTER UPDATE ON public.lead FOR EACH ROW WHEN ((old.owner_id IS DISTINCT FROM new.owner_id)) EXECUTE FUNCTION advance_home_read_fence()
 public.lead.id uuid NOT NULL gen=- def=uuidv7()
 public.lead.industry text gen=- def=-
 public.lead.lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
@@ -6568,6 +6635,7 @@ public.project.company_id uuid gen=- def=-
 public.project.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.project.description text gen=- def=-
 public.project.ended_at date gen=- def=-
+public.project.home_read_fence_project_owner CREATE TRIGGER home_read_fence_project_owner AFTER UPDATE ON public.project FOR EACH ROW WHEN ((old.owner_id IS DISTINCT FROM new.owner_id)) EXECUTE FUNCTION advance_home_read_fence()
 public.project.id uuid NOT NULL gen=- def=uuidv7()
 public.project.key text gen=- def=-
 public.project.last_activity_at timestamp with time zone gen=- def=-
@@ -6880,6 +6948,7 @@ CASE
 END
 public.record_grant.expires_at timestamp with time zone gen=- def=-
 public.record_grant.granted_by uuid NOT NULL gen=- def=-
+public.record_grant.home_read_fence_record_grant CREATE TRIGGER home_read_fence_record_grant AFTER INSERT OR DELETE OR UPDATE ON public.record_grant FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.record_grant.id uuid NOT NULL gen=- def=uuidv7()
 public.record_grant.lead_id uuid gen=s def=
 CASE
@@ -7166,6 +7235,7 @@ public.report_execution_pkey CREATE UNIQUE INDEX report_execution_pkey ON public
 public.report_execution_report_history CREATE INDEX report_execution_report_history ON public.report_execution USING btree (report_id, id DESC)
 public.report_projection_fence acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.report_projection_fence.generation bigint NOT NULL gen=- def=0
+public.report_projection_fence.home_read_fence_authority CREATE TRIGGER home_read_fence_authority AFTER UPDATE ON public.report_projection_fence FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.report_projection_fence.report_projection_fence_pkey PRIMARY KEY (singleton)
 public.report_projection_fence.report_projection_fence_singleton_check CHECK (singleton)
 public.report_projection_fence.singleton boolean NOT NULL gen=- def=true
@@ -9205,6 +9275,7 @@ public.workspace.workspace_pkey PRIMARY KEY (id)
 public.workspace_email_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace_email_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace_email_domain.domain text NOT NULL gen=- def=-
+public.workspace_email_domain.home_read_fence_workspace_domain CREATE TRIGGER home_read_fence_workspace_domain AFTER INSERT OR DELETE OR UPDATE ON public.workspace_email_domain FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()
 public.workspace_email_domain.source text NOT NULL gen=- def='mailbox'::text
 public.workspace_email_domain.verified boolean NOT NULL gen=- def=false
 public.workspace_email_domain.workspace_email_domain_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))

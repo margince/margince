@@ -54,6 +54,7 @@ DECLARE
     'embed_store_binding',
     'consent_text_version',
     'event_outbox',
+    'home_read_fence',
     'lead_disqualify_reason',
     'lead_origin',
     'lead_source',

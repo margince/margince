@@ -168,6 +168,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision))) EXECUTE FUNCTION trg_activity_project_last_activity()`
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
+- `home_read_fence_activity_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR (old.restricted_at IS DISTINCT FROM new.restricted_at) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_activity()`
 - `trg_activity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -197,6 +198,10 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `activity_audience_member_pkey`: `unique, btree (activity_id, subject_type, subject_id)`
 - `idx_aam_subject`: `btree (subject_type, subject_id)`
+
+**Triggers**
+
+- `home_read_fence_audience_member`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## activity_calendar_method_backfill
 
@@ -279,6 +284,10 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `activity_commitment_admission_pkey`: `unique, btree (source_activity_id, locator)`
 
+**Triggers**
+
+- `home_read_fence_commitment_admission`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+
 ## activity_identity
 
 5 columns · primary key `(identity_kind, identity_key)` · referenced by 0 foreign keys
@@ -355,6 +364,8 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_link_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()`
 - `activity_link_no_company_meeting`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()`
 - `activity_link_project_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()`
+- `home_read_fence_first_link`: `AFTER INSERT REFERENCING NEW TABLE AS added_links FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence_on_first_link()`
+- `home_read_fence_link_change`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_link()`
 
 ## activity_mail_reference
@@ -464,6 +475,7 @@ The 30 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `home_read_fence_participant`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()`
 
 ## activity_reader_state

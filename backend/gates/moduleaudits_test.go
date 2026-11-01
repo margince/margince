@@ -93,6 +93,7 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/compose/contactbrief":   "contact_brief, the same",
 	"internal/compose/dealstatus":     "deal_status_card, the same per-reader shape — a card written from the facts one contact may see, never served to another — and deal_move_dismissal, one reader's set-aside of that card's move",
 	"internal/compose/worklistsnap":   "worklist_snapshot, the same per-reader shape — one contact's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
+	"internal/compose/homecache":      "home_read_cache, the same per-reader shape — one reader's last answer to a Home read, never served to another — with home_read_fence and home_read_forgotten, the two counters that end it",
 	"internal/compose/companydossier": "company_dossier and company_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 
 	// The installation's ciphertext store. vault_secret is a ref -> ciphertext

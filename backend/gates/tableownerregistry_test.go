@@ -74,7 +74,12 @@ var tableOwners = map[string]string{
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
-	"worklist_snapshot":      "internal/compose/worklistsnap",
+	"worklist_snapshot": "internal/compose/worklistsnap",
+	// One reader's cached Home answers, the fence that ends them and the
+	// reader's last write, owned by the compose package that serves them.
+	"home_read_cache":        "internal/compose/homecache",
+	"home_read_fence":        "internal/compose/homecache",
+	"home_read_forgotten":    "internal/compose/homecache",
 	"relationship":           "internal/modules/contacts",
 	"partner":                "internal/modules/contacts",
 	"lead":                   "internal/modules/contacts",
