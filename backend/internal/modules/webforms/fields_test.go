@@ -94,7 +94,7 @@ func TestANulByteNeverReachesTheEnquiry(t *testing.T) {
 	}
 }
 
-// A query parameter can carry an email or a token, so a page address and a
+// A query parameter can carry an email or a token. A page address and a
 // referrer keep only where the visitor was and the campaign that sent them.
 func TestAPageAddressAndReferrerKeepOnlyWhereTheVisitorWas(t *testing.T) {
 	for _, tc := range []struct{ name, raw, want string }{

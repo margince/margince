@@ -187,6 +187,12 @@ func (e *Enquiry) set(target, value string) {
 	}
 }
 
+// The web schemes a form's addresses may use.
+const (
+	schemeHTTP  = "http"
+	schemeHTTPS = "https"
+)
+
 // isCampaignTag says whether a name is a utm_* campaign parameter, as a form
 // field or in an address's query.
 func isCampaignTag(name string) bool {
@@ -199,7 +205,7 @@ func isCampaignTag(name string) bool {
 // they are not stored. A value that is not a web address is not stored either.
 func minimisedAddress(raw string) string {
 	address, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || (address.Scheme != "http" && address.Scheme != "https") || address.Host == "" {
+	if err != nil || (address.Scheme != schemeHTTP && address.Scheme != schemeHTTPS) || address.Host == "" {
 		return ""
 	}
 	kept := url.Values{}
