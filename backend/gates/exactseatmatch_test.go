@@ -59,13 +59,8 @@ var (
 //
 // gatekit:fixture the file, and why its match cannot read the folded login yet.
 var rawSeatMatchDebt = map[string]string{
-	"internal/modules/activities/waitingsql.go":      "compares a seat's login to a contact_email row, which stores no folded domain",
-	"internal/modules/contacts/membernumbers.go":     "compares a seat's login to a contact_email row, which stores no folded domain",
-	"internal/modules/identity/federatedidentity.go": "a sign-in compares the typed address to the login as registered",
-	"internal/modules/identity/former.go":            "a sign-in compares the typed address to the login as registered",
-	"internal/modules/identity/lockout.go":           "a sign-in compares the typed address to the login as registered",
-	"internal/modules/identity/maillanguage.go":      "a sign-in compares the typed address to the login as registered",
-	"internal/modules/identity/membereligibility.go": "a sign-in compares the typed address to the login as registered",
+	"internal/modules/activities/waitingsql.go":  "compares a seat's login to a contact_email row, which stores no folded domain",
+	"internal/modules/contacts/membernumbers.go": "compares a seat's login to a contact_email row, which stores no folded domain",
 }
 
 type seatMatchSite struct {
@@ -119,10 +114,11 @@ func rawSeatMatches(t *testing.T) []seatMatchSite {
 			sites = append(sites, seatMatchSite{file: path, alias: label, line: strings.Count(source[:at[0]], "\n") + 1})
 		}
 	}
-	// The tree held 50 compared email operands when this landed. Far fewer
-	// means the pattern stopped reading them, and every one would pass.
-	if operands < 40 {
-		t.Fatalf("this census judged %d compared email operand(s) and expects at least 40: "+
+	// A comparison that moves to storekit.SeatLoginIsSQL leaves this census. So
+	// the floor falls as the debt is paid, and it is not a tree-wide count.
+	// It catches the pattern recognising nothing, which reads as zero.
+	if operands < 30 {
+		t.Fatalf("this census judged %d compared email operand(s) and expects at least 30: "+
 			"it has stopped recognising them", operands)
 	}
 	return sites
