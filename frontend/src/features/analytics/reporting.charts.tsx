@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Button } from "../../design-system/atoms";
+import { Button, EmptyState } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -209,22 +209,18 @@ export function ChartPanel({
   evaluation,
   editionId,
   onEvidence,
-  flatHead,
 }: Readonly<{
   chart: ReportingChart;
   wide: boolean;
   evaluation: ReportingEvaluation;
   editionId?: string;
   onEvidence: EvidenceAction;
-  // The one-line head of a panel among the Overview's cards.
-  flatHead?: boolean;
 }>) {
   const t = useT();
   const metricName = useMetricNames();
   const drawn = chart.points.length > 0 && chart.coverage.status !== "no_data";
   return (
     <Panel
-      flatHead={flatHead}
       className={
         wide ? "reporting-panel reporting-panel-wide" : "reporting-panel"
       }
@@ -261,13 +257,7 @@ export function ChartPanel({
             onEvidence={onEvidence}
           />
         ) : (
-          // An empty chart keeps its frame: the baseline and the reason where
-          // the marks would be, not a recessed box that reads as a field.
-          <div className="reporting-chart-empty">
-            <p className="t-caption">
-              {chart.coverage.reason ?? t("common.empty")}
-            </p>
-          </div>
+          <EmptyState>{chart.coverage.reason ?? t("common.empty")}</EmptyState>
         )}
       </PanelBody>
     </Panel>

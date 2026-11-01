@@ -373,7 +373,6 @@ export type BarListRow = Readonly<{
 export function SegmentBar({
   parts,
   marker,
-  band,
   label,
   onSelect,
 }: Readonly<{
@@ -382,16 +381,13 @@ export function SegmentBar({
   // A figure the parts are read against rather than one of them: a line across
   // the track, drawn in ink so it never reads as a fourth part.
   marker?: SegmentBarPart;
-  // A span of another measure on the same scale, such as a modelled range. It
-  // is a bracket under the track, so it never reads as a part.
-  band?: SegmentBarBand;
   // What the legend is, for a reader who meets it as a list.
   label: string;
 }>) {
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is whichever is larger, the parts, the mark or the band: a call
-  // beyond what the parts reach leaves recessed track between them.
-  const scale = Math.max(total, marker?.value ?? 0, band?.high ?? 0);
+  // The scale is whichever is larger, the parts or the mark: a call beyond what
+  // the parts reach leaves recessed track between them, which is the gap.
+  const scale = Math.max(total, marker?.value ?? 0);
   return (
     <div className="segbar">
       <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
@@ -420,17 +416,6 @@ export function SegmentBar({
           />
         )}
       </div>
-      {band && (
-        <div className="segbar-band" aria-hidden="true">
-          <span
-            className="segbar-band-span"
-            style={{
-              left: `${percentOf(band.low, scale)}%`,
-              width: `${percentOf(band.high - band.low, scale)}%`,
-            }}
-          />
-        </div>
-      )}
       <ul className="segbar-legend" aria-label={label}>
         {parts.map((part, step) => (
           <li key={part.key} className="segbar-key">
@@ -449,15 +434,6 @@ export function SegmentBar({
             <span className="segbar-amount t-num">{marker.amount}</span>
           </li>
         )}
-        {band && (
-          <li className="segbar-key">
-            <span className="segbar-swatch-band" aria-hidden="true" />
-            {band.label}
-            {band.amount && (
-              <span className="segbar-amount t-num">{band.amount}</span>
-            )}
-          </li>
-        )}
       </ul>
     </div>
   );
@@ -468,14 +444,6 @@ export type SegmentBarPart = Readonly<{
   label: string;
   value: number;
   amount: string;
-}>;
-
-export type SegmentBarBand = Readonly<{
-  label: string;
-  low: number;
-  high: number;
-  // Left out where the same range is stated in full beside the bar.
-  amount?: string;
 }>;
 
 // One to three parts, as a type: a fourth step of one hue is not told apart,
