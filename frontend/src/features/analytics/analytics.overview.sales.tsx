@@ -293,16 +293,17 @@ function SalesBoard({
   return (
     <>
       <div className="analytics-pair analytics-board">
-        {answered && (
-          <div>
+        {/* Always present, so the actions keep their column while it loads. */}
+        <div>
+          {answered && (
             <DecisionSummary
               evaluation={answered}
               checks={checks}
               forecastHref={forecastHref}
               onEvidence={onEvidence}
             />
-          </div>
-        )}
+          )}
+        </div>
         <div>{actions}</div>
       </div>
       {answered && (

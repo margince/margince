@@ -287,6 +287,8 @@
 
 /* The lead's readings share one card that stands as tall as the lead. */
 .analytics-readings {
+  display: flex;
+  flex-direction: column;
   justify-content: center;
 }
 .analytics-readings > .stat-strip-wrap {

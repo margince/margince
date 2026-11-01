@@ -33,9 +33,16 @@ function draw(onSelect?: (key: string) => void) {
 it("draws an arc and a legend row for each part above zero, with its share", () => {
   const { container } = draw();
   expect(container.querySelectorAll(".report-donut-arc")).toHaveLength(3);
+  for (const [label, share] of [
+    ["Discovery", "34%"],
+    ["Proposal", "58%"],
+    ["Negotiation", "8%"],
+  ]) {
+    expect(screen.getByText(label)).toBeTruthy();
+    expect(screen.getByText(share)).toBeTruthy();
+  }
   expect(screen.queryByText("Lost interest")).toBeNull();
   expect(screen.getByText("€1m")).toBeTruthy();
-  expect(screen.getByText("58%")).toBeTruthy();
 });
 
 it("opens a part from its legend row", () => {
@@ -51,4 +58,10 @@ it("steps the other parts back while one is focused", () => {
   expect(
     container.querySelector(".report-donut")?.getAttribute("data-active"),
   ).toBe("discovery");
+  expect(
+    container.querySelectorAll(".report-donut-arc:not([data-on])"),
+  ).toHaveLength(2);
+  expect(
+    container.querySelectorAll(".report-donut-legend > li:not([data-on])"),
+  ).toHaveLength(2);
 });

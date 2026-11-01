@@ -202,17 +202,15 @@ function GroupedBars({
   );
 }
 
-// Parts small enough in number to tell apart round a ring, none below zero,
+// Every part read, few enough to tell apart round a ring, none below zero,
 // and something to divide: past that a ranked list reads better.
 const RING_PARTS = 6;
 function asWhole(chart: ReportingChart): boolean {
-  const values = chart.points.flatMap((point) =>
-    point.value == null ? [] : [point.value],
-  );
+  const { points } = chart;
   return (
-    values.length > 1 &&
-    values.length <= RING_PARTS &&
-    values.every((value) => value >= 0) &&
-    values.some((value) => value > 0)
+    points.length > 1 &&
+    points.length <= RING_PARTS &&
+    points.every((point) => point.value != null && point.value >= 0) &&
+    points.some((point) => (point.value ?? 0) > 0)
   );
 }

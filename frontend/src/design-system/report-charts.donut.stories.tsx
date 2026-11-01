@@ -80,3 +80,10 @@ export const DonutOfOutcomes: Story = {
     />
   ),
 };
+
+export const DonutDark: Story = { ...Donut, globals: { theme: "dark" } };
+
+export const DonutOfOutcomesDark: Story = {
+  ...DonutOfOutcomes,
+  globals: { theme: "dark" },
+};

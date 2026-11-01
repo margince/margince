@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import type { ReadingTone } from "../../design-system/readingtone";
 import { ScoreRing } from "../../design-system/standingring";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -77,18 +78,23 @@ export function TargetRing({
     comparison.landing == null
       ? undefined
       : (comparison.landing / comparison.target) * 100;
-  const gap = comparison.gap;
   return (
     <ScoreRing
       size="compact"
       score={share}
       reach={reach}
       display={`${formatNumber(Math.round(reading.percent ?? share), locale)}%`}
-      tone={gap != null && gap > 0 ? "warning" : "success"}
+      tone={gapTone(comparison.gap)}
       label={`${t("analytics.hero.attainment")}: ${reading.attained}`}
       caption={t("reporting.target")}
     />
   );
+}
+
+// Without its gap the ring claims neither side of the target.
+function gapTone(gap: number | null | undefined): ReadingTone {
+  if (gap == null) return "neutral";
+  return gap > 0 ? "warning" : "success";
 }
 
 function compared(evaluation: ReportingEvaluation): Comparison | undefined {

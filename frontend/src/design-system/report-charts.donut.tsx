@@ -25,7 +25,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // Track between two arcs, so neighbours of one hue still read as two.
 const GAP = 3;
 // The palest step still clears the track it sits on.
-const PALEST = 32;
+const PALEST = 40;
 
 type ToneVars = CSSProperties & Record<`--${string}`, string>;
 
@@ -85,6 +85,7 @@ export function DonutChart({
       </div>
       <ul className="report-donut-legend">
         {drawn.map((part, index) => {
+          const share = formatPercent(part.value / sum, locale);
           const row = (
             <>
               <span
@@ -95,7 +96,7 @@ export function DonutChart({
               <span className="report-donut-name">{part.label}</span>
               <span className="report-donut-amount t-num">{part.amount}</span>
               <span className="report-donut-share t-num t-caption">
-                {formatPercent(part.value / sum, locale)}
+                {share}
               </span>
             </>
           );
@@ -111,7 +112,7 @@ export function DonutChart({
                 <Button
                   variant="link"
                   className="report-donut-row"
-                  aria-label={`${part.label}: ${part.amount}`}
+                  aria-label={`${part.label}: ${part.amount}, ${share}`}
                   onClick={() => onSelect(part.key)}
                   {...hover}
                 >
