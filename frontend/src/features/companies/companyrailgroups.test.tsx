@@ -136,3 +136,34 @@ describe("a record imported from somewhere else", () => {
     expect(screen.queryByText(/Typed by/)).toBeNull();
   });
 });
+
+// captured_by names only the agent's passport. The create audit row behind
+// `created_by` is what knows the colleague and the tool.
+describe("a record an agent created", () => {
+  const AGENT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+  it("names the colleague the agent worked for and the tool", async () => {
+    stub([]);
+    renderRail({
+      ...COMPANY,
+      captured_by: AGENT,
+      created_by: {
+        actor_type: "agent",
+        actor_id: AGENT,
+        on_behalf_of_name: "Anna Weber",
+        agent_client: "Claude",
+      },
+    });
+
+    await waitFor(() =>
+      expect(sourceText()).toBe("Made by Claude for Anna Weber"),
+    );
+  });
+
+  it("says only that an agent made it when the create row is not known", async () => {
+    stub([]);
+    renderRail({ ...COMPANY, captured_by: AGENT });
+
+    await waitFor(() => expect(sourceText()).toBe("Automated by an agent"));
+  });
+});

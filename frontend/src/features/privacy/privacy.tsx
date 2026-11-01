@@ -48,6 +48,7 @@ import {
   isIllegalTransition,
   isLegalHold,
 } from "../../lib/privacy.logic";
+import { useLinkedCase } from "../../lib/privacycaselink";
 import {
   ProblemError,
   problemFieldErrorsOf,
@@ -55,7 +56,6 @@ import {
   unwrap,
 } from "../../lib/problem";
 import { useMe } from "../../lib/session";
-import { useLinkedCase } from "./privacy.caselink";
 import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
   type DeadlineDraft,

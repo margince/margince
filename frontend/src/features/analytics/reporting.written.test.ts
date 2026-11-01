@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { translate, translatePlural, type Words } from "../../i18n";
 import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import {
+  type ChecksReading,
   prospectingSummary,
   salesReviewSummary,
   writtenSummary,
@@ -15,6 +16,13 @@ const english: Words = {
   plural: (base, count, params) => translatePlural("en", base, count, params),
   locale: "en",
 };
+
+// The sentences alone, for the tests that read the words.
+const salesText = (
+  evaluation: Evaluation,
+  words: Words,
+  checks?: ChecksReading,
+) => salesReviewSummary(evaluation, words, checks).map(({ text }) => text);
 
 type Evaluation = typeof reportingStoryEvaluation;
 type Metric = Evaluation["metrics"][number];
@@ -168,7 +176,7 @@ const shortOfTarget: NonNullable<Metric["target_comparison"]> = {
 };
 
 it("states the sales review's position from the server's comparison", () => {
-  const sentences = salesReviewSummary(
+  const sentences = salesText(
     withMetrics([landing(shortOfTarget), open]),
     english,
   );
@@ -181,12 +189,12 @@ it("states the sales review's position from the server's comparison", () => {
 });
 
 it("says above, on and reached in the target's own words", () => {
-  const ahead = salesReviewSummary(
+  const ahead = salesText(
     withMetrics([landing({ ...shortOfTarget, gap: -2_000_000 })]),
     english,
   );
   expect(ahead[0]).toMatch(/€20k above the €800k target\.$/);
-  const reached = salesReviewSummary(
+  const reached = salesText(
     withMetrics([
       landing({
         status: "target_reached",
@@ -203,7 +211,7 @@ it("says above, on and reached in the target's own words", () => {
 
 it("says there is no gap without a target, and concludes nothing from a failed figure", () => {
   expect(
-    salesReviewSummary(
+    salesText(
       withMetrics([
         landing({ status: "no_target", target_metric: "bookings_won" }),
       ]),
@@ -214,7 +222,7 @@ it("says there is no gap without a target, and concludes nothing from a failed f
       /^No sales target is set for .+, so there is no gap to show\.$/,
     ),
   ]);
-  const failed = salesReviewSummary(
+  const failed = salesText(
     withMetrics([
       { ...won, value: null, coverage: { status: "failed", withheld: false } },
       {
@@ -228,6 +236,49 @@ it("says there is no gap without a target, and concludes nothing from a failed f
   expect(failed).toEqual([
     "Some figures could not be read just now, so this summary leaves them out.",
   ]);
+});
+
+it("gives no on-target verdict while a figure or the checks failed", () => {
+  const ahead = landing({ ...shortOfTarget, gap: -2_000_000 });
+  const failedWon = {
+    ...won,
+    value: null,
+    coverage: { status: "failed" as const, withheld: false },
+  };
+  const withFailedFigure = salesText(withMetrics([failedWon, ahead]), english);
+  expect(withFailedFigure.join(" ")).not.toMatch(/above the/);
+  const withFailedChecks = salesText(withMetrics([ahead]), english, {
+    state: "failed",
+  });
+  expect(withFailedChecks.join(" ")).not.toMatch(/above the/);
+  expect(withFailedChecks).toContain(
+    "The open checks could not be read, so nothing is said here about what needs attention.",
+  );
+  // Short of target is no healthy verdict, so a failed input leaves it standing.
+  expect(
+    salesText(withMetrics([failedWon, landing(shortOfTarget)]), english)[1],
+  ).toMatch(/€40k short of the €800k target\.$/);
+});
+
+it("links each sentence to what it rests on, the checks to the action list", () => {
+  const sentences = salesReviewSummary(
+    withMetrics([won, landing(shortOfTarget), open]),
+    english,
+    { state: "ready", findings: 24, deals: 7 },
+  );
+  expect(sentences.map(({ link }) => link?.kind)).toEqual([
+    "forecast",
+    "evidence",
+    "evidence",
+    "interventions",
+  ]);
+  expect(sentences[1]?.link).toEqual({
+    kind: "evidence",
+    reference: won.evidence,
+  });
+  expect(sentences.at(-1)?.text).toBe(
+    "24 open checks on 7 deals need an answer.",
+  );
 });
 
 const count = (

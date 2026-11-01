@@ -644,6 +644,11 @@
   --fontDisplayMedium:
     var(--fontWeightBold) clamp(2.125rem, 4vw, 3.25rem) / 1.05
     var(--fontFamilyHeading);
+  /* The one figure an Analytics view leads with. Smaller than the greeting's
+     figure, so the readings and the first action still fit the first screen. */
+  --fontDisplayFigure:
+    var(--fontWeightBold) clamp(2rem, 2.8vw, 2.75rem) / 1.05
+    var(--fontFamilyHeading);
   /* The one sentence a page opens on. The line is tall enough for a record
      chip to sit in it without pushing the next line down. */
   --fontLead: var(--fontWeightRegular) 1.3125rem / 2.5rem var(--fontFamilyBody);

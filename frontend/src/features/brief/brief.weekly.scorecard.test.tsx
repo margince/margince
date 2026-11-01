@@ -77,6 +77,29 @@ describe("the weekly scorecard", () => {
     ).toBeTruthy();
   });
 
+  it("draws no meeting row when the review withholds the meetings", () => {
+    render(
+      <ScorecardPanel
+        scorecard={{
+          lead: {
+            ...leadBlock,
+            meetings_booked: 0,
+            meetings_held: 0,
+            meetings_no_show: 0,
+          },
+        }}
+        weekStart="2026-06-01"
+        meetingsWithheld
+      />,
+    );
+    expect(
+      screen.queryByText(en["brief.weekly.scorecard.meetingsHeld"]),
+    ).toBeNull();
+    expect(
+      screen.getByText(en["brief.weekly.scorecard.advanced"]),
+    ).toBeTruthy();
+  });
+
   it("omits the deal block on its own terms too", () => {
     render(
       <ScorecardPanel scorecard={{ lead: leadBlock }} weekStart="2026-06-01" />,

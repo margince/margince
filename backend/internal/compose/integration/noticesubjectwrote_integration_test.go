@@ -70,9 +70,9 @@ func mailFrom(t *testing.T, e *apptest.AppEnv, from string, bulk bool, capturedB
 	ctx := context.Background()
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id,
-		                      source, captured_by, bulk_mail_attested)
+		                      source, captured_by, bulk_mail_attested, inbound_sender_authenticated)
 		VALUES ($1, 'email', 'hello', 'inbound', now() - interval '1 day', 'gmail', $2,
-		        'gmail:seed', $4, $3)`, id, id.String(), bulk, capturedBy); err != nil {
+		        'gmail:seed', $4, $3, true)`, id, id.String(), bulk, capturedBy); err != nil {
 		t.Fatalf("capturing a mail: %v", err)
 	}
 	if _, err := e.Owner.Exec(ctx, `
@@ -120,8 +120,8 @@ func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
 	contact := capturedUnknown(t, e, "Late Writer")
 	withAddress(t, e, contact, "late.writer@customer.test")
 	driveNoticeCase(t, e, contact)
-	if _, state, _, found := noticeCaseFor(t, e, contact); !found || state != "open" {
-		t.Fatalf("setup: case found=%v state=%q, want an open case for an unknown source", found, state)
+	if _, state, _, found := noticeCaseFor(t, e, contact); !found || state != "source_review" {
+		t.Fatalf("setup: case found=%v state=%q, want a source review for an unknown source", found, state)
 	}
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "late.writer@customer.test", false))
@@ -158,8 +158,8 @@ func TestTheirEarlierMailOpensNoCase(t *testing.T) {
 	}
 }
 
-// A newsletter is a list writing to everyone, not the contact writing to us.
-func TestABulkMailSettlesNothing(t *testing.T) {
+// Bulk delivery still supplies the sender address directly.
+func TestABulkMailSettlesTheCaptureUnknownDuty(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "List Sender")
@@ -168,8 +168,8 @@ func TestABulkMailSettlesNothing(t *testing.T) {
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "news@list.test", true))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
-		t.Errorf("a bulk mail moved the case to %q, want it still open", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "exempt_with_reason" {
+		t.Errorf("a bulk mail left the case at %q, want it settled", state)
 	}
 }
 
@@ -201,14 +201,13 @@ func TestAHandLoggedMailSettlesNothing(t *testing.T) {
 
 	driveCapturedMail(t, e, mailFrom(t, e, "typed@customer.test", false, "human:seed"))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
-		t.Errorf("a hand-logged mail moved the case to %q, want it still open", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
+		t.Errorf("a hand-logged mail moved the case to %q, want source review", state)
 	}
 }
 
-// An unknown source a seat stated is a claim about somewhere else, and the
-// contact writing later does not answer it. Only capture's own unknown is.
-func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
+// Captured mail resolves capture's own uncertainty; a manually recorded source still needs review.
+func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Seat Unknown", "unknown_legacy")
@@ -217,8 +216,8 @@ func TestAnUnknownASeatStatedStaysOwed(t *testing.T) {
 
 	driveCapturedMail(t, e, capturedMailFrom(t, e, "seat.unknown@customer.test", false))
 
-	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "open" {
-		t.Errorf("a seat-stated unknown moved to %q after they wrote, want it still open", state)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
+		t.Errorf("a seat-stated unknown moved to %q after they wrote, want source review", state)
 	}
 }
 
@@ -270,5 +269,21 @@ func TestALateContactCreatedOpensNoCaseForAWithdrawnContact(t *testing.T) {
 
 	if _, _, _, found := noticeCaseFor(t, e, contact); found {
 		t.Error("a contact archived before contact.created was handled was given a notice case")
+	}
+}
+
+func TestUnverifiedBulkCannotSettleACaptureDuty(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	contact := capturedUnknown(t, e, "Unverified Sender")
+	withAddress(t, e, contact, "unverified@sender.test")
+	driveNoticeCase(t, e, contact)
+	mail := capturedMailFrom(t, e, "unverified@sender.test", true)
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE activity SET inbound_sender_authenticated = false WHERE id = $1`, mail); err != nil {
+		t.Fatal(err)
+	}
+	driveCapturedMail(t, e, mail)
+	if _, state, _, _ := noticeCaseFor(t, e, contact); state != "source_review" {
+		t.Fatalf("unverified bulk settled the duty: %s", state)
 	}
 }

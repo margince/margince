@@ -44,3 +44,8 @@
 1793390425_a_company_can_be_onboarding_or_live.down.sql | company | runs only on a rollback and moves only accounts set to onboarding or live since the upgrade, which a colleague sets per account as a contract is signed
 1793397376_a_partner_stage_comes_from_a_list.up.sql | *, partner | the trigger is the version bump on the new partner_stage table, which nothing later in the file updates; the UPDATE touches the partner table once, one row per partner company, and a partner programme is a short list beside the company table
 1793397376_a_partner_stage_comes_from_a_list.down.sql | partner | runs only on a rollback and rewrites the partner table once, one row per partner company
+1793445932_a_mail_without_its_original_says_so.down.sql | activity | runs only on a rollback and moves back only mail the upgrade marked unverifiable: legacy captured mail stored before completeness was recorded whose original is gone, a fixed set no new capture adds to
+1793445933_a_mail_without_its_original_says_so_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793514621_notice_source_assessment.down.sql | * | the procedural block only checks whether source evidence exists and refuses before DDL; it rewrites no rows
+1793531111_notice_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793536357_a_website_forms_privacy_notice_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

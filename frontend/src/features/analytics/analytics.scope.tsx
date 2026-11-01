@@ -1,3 +1,4 @@
+import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { AnalyticsScope } from "./analytics.context";
@@ -33,23 +34,29 @@ export function AnalyticsScopePicker({
     );
   }
 
+  // Labelled like every other dial in the bars it sits in, so the row of
+  // controls lines up on one baseline.
   return (
-    <Select
-      aria-label={t("analytics.scopeLabel")}
-      options={scopes.map((scope) => ({
-        value: scopeKey(scope),
-        label: scope.label,
-      }))}
-      value={scopeKey(selected)}
-      onChange={(next) => {
-        const picked = scopes.find((scope) => scopeKey(scope) === next);
-        // A value that matches no option cannot come from this list, so it is
-        // ignored rather than guessed at: guessing would measure a population
-        // the reader did not choose and label it with one they did.
-        if (picked) {
-          onSelect(picked);
-        }
-      }}
-    />
+    <Field label={t("analytics.scopeLabel")}>
+      {(field) => (
+        <Select
+          {...field}
+          options={scopes.map((scope) => ({
+            value: scopeKey(scope),
+            label: scope.label,
+          }))}
+          value={scopeKey(selected)}
+          onChange={(next) => {
+            const picked = scopes.find((scope) => scopeKey(scope) === next);
+            // A value that matches no option cannot come from this list, so it
+            // is ignored. A guess would measure a population the reader did
+            // not choose, under a label they did.
+            if (picked) {
+              onSelect(picked);
+            }
+          }}
+        />
+      )}
+    </Field>
   );
 }

@@ -62,7 +62,11 @@ const trend: readonly ChartReading[] = [
 ];
 function Readings({
   rows = trend,
-}: Readonly<{ rows?: readonly ChartReading[] }>) {
+  size,
+}: Readonly<{
+  rows?: readonly ChartReading[];
+  size?: "default" | "compact";
+}>) {
   const [selected, select] = useState("");
   return (
     <>
@@ -79,12 +83,17 @@ function Readings({
           label: "Monthly target",
         }}
         onSelect={select}
+        size={size}
       />
       <p aria-live="polite">{selected && `Evidence for ${selected}`}</p>
     </>
   );
 }
 export const Cumulative: Story = { render: () => <Readings /> };
+// Shorter, for a chart beside a lead figure.
+export const CumulativeCompact: Story = {
+  render: () => <Readings size="compact" />,
+};
 export const MissingObservations: Story = {
   render: () => (
     <Readings
@@ -220,4 +229,22 @@ export const NoComparisonHistory: Story = {
 export const OwnerTargetsDark: Story = {
   ...OwnerTargets,
   globals: { theme: "dark" },
+};
+
+// Weeks beside a lead figure: the same columns at half the height.
+export const CompactWeeks: Story = {
+  render: () => (
+    <GroupedBars
+      size="compact"
+      label="Accepted opportunities per week"
+      valueLabel="Accepted opportunities"
+      dataLabel="Show readings"
+      readings={[
+        { key: "1", label: "5–11 Oct", value: 2, amount: "2" },
+        { key: "2", label: "12–18 Oct", value: 0, amount: "0" },
+        { key: "3", label: "19–25 Oct", value: 3, amount: "3" },
+        { key: "4", label: "26 Oct–1 Nov (partial)", value: 1, amount: "1" },
+      ]}
+    />
+  ),
 };

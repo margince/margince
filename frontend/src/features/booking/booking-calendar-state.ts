@@ -4,7 +4,10 @@ import type { components } from "../../api/schema";
 import { providerName, VENDOR_SERVICES } from "../../format/connectorprovider";
 import type { Translator } from "../../i18n";
 import { useConnectAccount } from "../../lib/connect-account";
-import { missingCalendarWriteGrant } from "../../lib/connector-status";
+import {
+  isConnectedAtAll,
+  missingCalendarWriteGrant,
+} from "../../lib/connector-status";
 import { useConnectors } from "../../lib/connectors";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -19,7 +22,7 @@ export function useBookingCalendar(provider: string, loadCalendars = true) {
   );
   const ready =
     !!connection &&
-    (connection.status === "connected" || connection.status === "error") &&
+    isConnectedAtAll(connection) &&
     !missingCalendarWriteGrant(connection);
   const calendars = useQuery({
     queryKey: ["scheduling-calendars", provider],

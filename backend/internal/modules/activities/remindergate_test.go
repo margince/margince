@@ -66,3 +66,24 @@ func TestTheRemindersArmOfADiscoverGatedReadAddsTheAudienceAlone(t *testing.T) {
 		t.Fatalf("the reminders arm repeated the discover gate %d time(s) the outer read already applies", got-want)
 	}
 }
+
+// A content-gated read lets through only rows whose content the reader may
+// read, so its projection selects true rather than a second audience arm.
+func TestAContentGatedReadCarriesOneGateAcrossFilterAndProjection(t *testing.T) {
+	until := clocktest.Now(t)
+	for name, in := range map[string]ListActivitiesInput{
+		"content-gated":  {OpenAndDueBy: &until, WorklistAsOf: &until, ReadableOnly: true},
+		"discover-gated": {OpenAndDueBy: &until, WorklistAsOf: &until},
+	} {
+		where, content, _, _, err := listActivitiesFilter(teamScopedCtx(), in)
+		if err != nil {
+			t.Fatalf("%s: rendering the filter: %v", name, err)
+		}
+		if got := gateCopies(append(where, content)); got != 1 {
+			t.Fatalf("%s: filter and projection carry %d content gates, want 1", name, got)
+		}
+		if gated := in.ReadableOnly; gated != (content == sqlTrue) {
+			t.Fatalf("%s: projection %.40q, want true only under the content gate", name, content)
+		}
+	}
+}

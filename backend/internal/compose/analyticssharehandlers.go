@@ -17,6 +17,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -117,7 +118,7 @@ func (h analyticsShareHandlers) OpenForecastShare(
 ) {
 	var out crmcontracts.SharedForecastView
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
-		share, _, err := h.resolveForReader(ctx, tx, token)
+		share, frozen, err := h.resolveForReader(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -125,7 +126,7 @@ func (h analyticsShareHandlers) OpenForecastShare(
 		out.Target = share.Target
 
 		if share.Kind == shareKindSnapshot {
-			return h.serveSnapshot(ctx, tx, share, &out)
+			return h.serveSnapshot(ctx, tx, share, frozen, &out)
 		}
 		return h.serveLive(ctx, tx, share, &out)
 	}); err != nil {
@@ -135,30 +136,41 @@ func (h analyticsShareHandlers) OpenForecastShare(
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// frozenForReader is what one reader may take from a frozen share: the rows
+// listed to them, and the range over every row the headline sums. Limited says
+// the rows are the reader's own while the headline covers the whole team.
+type frozenForReader struct {
+	Rows    []SharedContribution
+	Range   *forecasting.Range
+	Limited bool
+}
+
 // resolveForReader resolves a share for the signed-in reader. Both the frozen
 // reading and its export pass it. A frozen share answers to the switch like a
 // live read: its population, the owners behind its figures, and no colleague
-// named on its rows.
+// named on its rows. The range, like the totals, still counts colleagues' deals.
 func (h analyticsShareHandlers) resolveForReader(
 	ctx context.Context, tx pgx.Tx, token string,
-) (Share, []SharedContribution, error) {
+) (Share, frozenForReader, error) {
 	share, err := h.shares.Resolve(ctx, tx, token)
 	if err != nil || share.Kind != shareKindSnapshot || share.SnapshotID == nil {
-		return share, nil, err
+		return share, frozenForReader{}, err
 	}
 	rows, err := SharedSnapshotRows(ctx, tx, *share.SnapshotID)
 	if err != nil {
-		return Share{}, nil, err
+		return Share{}, frozenForReader{}, err
 	}
-	if err := requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
-		return Share{}, nil, err
+	out := frozenForReader{Range: sharedRange(rows)}
+	if out.Rows, out.Limited, err = requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
+		return Share{}, frozenForReader{}, err
 	}
-	return share, rows, nil
+	return share, out, nil
 }
 
 // serveSnapshot re-sums a frozen state over the rows this caller may read.
+// frozen carries the range over those same rows and whether the export holds fewer.
 func (h analyticsShareHandlers) serveSnapshot(
-	ctx context.Context, tx pgx.Tx, share Share, out *crmcontracts.SharedForecastView,
+	ctx context.Context, tx pgx.Tx, share Share, frozen frozenForReader, out *crmcontracts.SharedForecastView,
 ) error {
 	if share.SnapshotID == nil {
 		// The CHECK constraint and checkShareKind both hold this, so reaching
@@ -180,10 +192,19 @@ func (h analyticsShareHandlers) serveSnapshot(
 	// — which is exactly what happens the first time an installation changes
 	// its base currency or its fiscal year.
 	out.AsOf = &frame.TakenAt
+	shared.Readings.Range = frozen.Range
 	out.Readings = forecasting.ReadingsToWire(
 		frame.Period, share.Scope, shared.Readings, frame.BaseCurrency, frame.TakenAt)
+	out.Readings.SelfCorrecting = frame.SelfCorrecting
+	out.Readings.ContributionsLimited = &frozen.Limited
 	out.Withheld = shared.Withheld
-	return nil
+	// A snapshot frozen before the landing was kept states none.
+	if frame.LandingMeasure == nil {
+		return nil
+	}
+	landing, err := frozenShareLanding(ctx, tx, share.Scope, shared.Readings, frame)
+	out.Readings.Landing = &landing
+	return err
 }
 
 // serveLive re-runs the reading under this caller's grants.
@@ -199,58 +220,26 @@ func (h analyticsShareHandlers) serveLive(
 	// the resolver hands it straight back. Taking the returned one anyway keeps
 	// one answer to "which population" rather than two spellings that could
 	// drift.
-	deals, resolved, limited, err := ForecastDeals(ctx, tx, period, share.Scope, at, baseCurrency)
+	assembly, err := ForecastAssemble(ctx, tx, period, share.Scope, at, baseCurrency)
 	if err != nil {
 		return err
 	}
-	share.Scope = resolved
-	readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
+	share.Scope = assembly.Scope
+	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
+	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
+	out.Withheld = assembly.Limited
+	// The landing GET /forecast gives this reader, with the call only where
+	// the reader may see it.
+	call, seen, err := forecastCallSeen(ctx, tx, h.forecast, period, share.Scope, false)
 	if err != nil {
 		return err
 	}
-	out.Readings = forecasting.ReadingsToWire(period, share.Scope, readings, baseCurrency, at)
-	out.Withheld = limited
+	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, seenCall(call, seen))
+	if err != nil {
+		return err
+	}
+	out.Readings.Landing = &landing
 	return nil
-}
-
-// snapshotFrame reads the period, zone and currency a frozen state was computed
-// under, and the instant it describes.
-//
-// Read from the snapshot rather than carried on the share row: they are the
-// snapshot's own facts, and copying them onto the share at issue time would be
-// a second place for each of them to be wrong.
-type shareFrame struct {
-	Period       forecasting.Period
-	BaseCurrency string
-	TakenAt      time.Time
-}
-
-// The timezone is JOINed from the setting row rather than read through
-// platform/settings, whose gate is this un-RLS'd table's only control: a share
-// link carries no seat at all, so there is no principal to gate against, and
-// the frame is one row that a second statement would turn into a round trip
-// inside the share's transaction. Ratified in
-// backend/gates/settingreaders_test.go.
-func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, error) {
-	var out shareFrame
-	var zoneName string
-	if err := tx.QueryRow(ctx, `
-		SELECT s.period_start, s.period_end, s.base_currency, s.taken_at,
-		       COALESCE(st.value #>> '{}', 'UTC')
-		FROM forecast_snapshot s
-		LEFT JOIN setting st ON st.key = 'installation.timezone'
-		WHERE s.id = $1`, id).Scan(
-		&out.Period.StartDate, &out.Period.EndDate, &out.BaseCurrency, &out.TakenAt,
-		&zoneName); err != nil {
-		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
-	}
-	zone, err := time.LoadLocation(zoneName)
-	if err != nil {
-		return shareFrame{}, fmt.Errorf(
-			"compose: the installation zone %q is not a zone: %w", zoneName, err)
-	}
-	out.Period.Zone = zone
-	return out, nil
 }
 
 // shareFromBody turns the request into what the store takes, refusing what the
@@ -333,9 +322,10 @@ func issuedShareToWire(in Share, token string) crmcontracts.IssuedForecastShare 
 func (h analyticsShareHandlers) ExportForecastShare(
 	w http.ResponseWriter, r *http.Request, token string,
 ) {
-	var rows []SharedContribution
+	var frozen frozenForReader
+	var frame shareFrame
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
-		share, frozen, err := h.resolveForReader(ctx, tx, token)
+		share, read, err := h.resolveForReader(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -345,14 +335,15 @@ func (h analyticsShareHandlers) ExportForecastShare(
 			// Refusing beats exporting a set assembled a second way here.
 			return apperrors.ErrNotFound
 		}
-		rows = frozen
-		return nil
+		frozen = read
+		frame, err = snapshotFrame(ctx, tx, *share.SnapshotID)
+		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 
-	body, err := shareRowsCSV(rows)
+	body, err := shareRowsCSV(frozen, frame.SelfCorrecting)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -384,26 +375,45 @@ var shareExportColumns = []string{
 	"deal_id", "deal_name", "owner_id", "amount_minor", "currency",
 	"base_minor", "effective_close_date", "category",
 	"in_won", "in_open", "exclusion_reason",
+	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
+	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
+	"contributions_limited",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
 // csvCell every other export in this package uses.
-func shareRowsCSV(rows []SharedContribution) ([]byte, error) {
+// selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
+// to some rows still says which definition they were frozen under. The range and
+// the contributions_limited flag are the shared headline's, repeated the same way.
+func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) {
+	var low, high *int64
+	if frozen.Range != nil {
+		low, high = &frozen.Range.LowMinor, &frozen.Range.HighMinor
+	}
 	var buf bytes.Buffer
 	out := csv.NewWriter(&buf)
 	if err := out.Write(shareExportColumns); err != nil {
 		return nil, fmt.Errorf("compose: writing the export header: %w", err)
 	}
-	for _, row := range rows {
+	for _, row := range frozen.Rows {
 		record := []string{
 			csvCell(row.DealID), csvCell(row.DealName), csvCellPtr(row.Owner),
 			csvCellPtr(row.AmountMinor), csvCell(row.Currency),
 			csvCellPtr(row.BaseMinor), csvCellPtr(row.EffectiveClose),
 			csvCell(row.Category), csvCell(row.InWon), csvCell(row.InOpen),
 			csvCell(row.ExclusionReason),
+			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
+			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
+			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
+			csvCell(frozen.Limited),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
+		}
+	}
+	if frozen.Limited && len(frozen.Rows) == 0 {
+		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high)); err != nil {
+			return nil, fmt.Errorf("compose: writing the export's summary row: %w", err)
 		}
 	}
 	out.Flush()
@@ -411,6 +421,26 @@ func shareRowsCSV(rows []SharedContribution) ([]byte, error) {
 		return nil, fmt.Errorf("compose: finishing the export: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// shareSummaryRecord is the one row a file gets when every row was withheld
+// from its reader. A header alone would not say the headline counts deals.
+// Its deal cells are empty, and only the headline's own cells are filled.
+func shareSummaryRecord(selfCorrecting *bool, low, high *int64) []string {
+	record := make([]string, len(shareExportColumns))
+	for index, column := range shareExportColumns {
+		switch column {
+		case "self_correcting":
+			record[index] = csvCellPtr(selfCorrecting)
+		case "range_low_minor":
+			record[index] = csvCellPtr(low)
+		case "range_high_minor":
+			record[index] = csvCellPtr(high)
+		case "contributions_limited":
+			record[index] = csvCell(true)
+		}
+	}
+	return record
 }
 
 // csvCellPtr renders an optional value, with nil as an EMPTY cell rather than

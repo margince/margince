@@ -125,10 +125,11 @@ func (h Handlers) ListForecastCalls(
 		if err != nil {
 			return err
 		}
-		_, resolved, _, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
+		assembly, err := h.assemble(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
+		resolved := assembly.Scope
 		// The managed-teams reading covers several populations at once, and a
 		// call is an assertion about ONE. There is no chain to read for it —
 		// the same reason GetForecast looks up no standing call under it.

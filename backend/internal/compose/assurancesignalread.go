@@ -37,15 +37,9 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 		return nil, err
 	}
 	found = append(found, calls...)
-	sort.SliceStable(found, func(i, j int) bool {
-		if found[i].Severity != found[j].Severity {
-			return assuranceSeverity(found[i].Severity) < assuranceSeverity(found[j].Severity)
-		}
-		if !found[i].LastSeenAt.Equal(found[j].LastSeenAt) {
-			return found[i].LastSeenAt.After(found[j].LastSeenAt)
-		}
-		return found[i].ID.String() < found[j].ID.String()
-	})
+	if err := rankFindings(ctx, tx, found); err != nil {
+		return nil, err
+	}
 	if limit > 0 && len(found) > limit {
 		found = found[:limit]
 	}
@@ -53,6 +47,77 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 		return nil, err
 	}
 	return found, nil
+}
+
+// rankFindings orders the merged list as findingRank orders one statement.
+// Severity comes first, then the money at stake in the base currency at
+// today's rate, then the most recently seen. A finding with no amount, a
+// masked one or one with no rate sorts after every priced one of its severity.
+func rankFindings(ctx context.Context, tx pgx.Tx, found []assurance.Exception) error {
+	worth, err := findingBaseValues(ctx, tx, found)
+	if err != nil {
+		return err
+	}
+	sort.SliceStable(found, func(i, j int) bool {
+		a, b := found[i], found[j]
+		if a.Severity != b.Severity {
+			return assuranceSeverity(a.Severity) < assuranceSeverity(b.Severity)
+		}
+		wa, pricedA := worth[a.ID]
+		wb, pricedB := worth[b.ID]
+		if pricedA != pricedB {
+			return pricedA
+		}
+		if pricedA && wa != wb {
+			return wa > wb
+		}
+		if !a.LastSeenAt.Equal(b.LastSeenAt) {
+			return a.LastSeenAt.After(b.LastSeenAt)
+		}
+		return a.ID.String() < b.ID.String()
+	})
+	return nil
+}
+
+// findingBaseValues prices each finding's amount in the base currency through
+// the one conversion every deal figure uses. A finding absent from the map has
+// no base value.
+func findingBaseValues(ctx context.Context, tx pgx.Tx, found []assurance.Exception) (map[ids.UUID]int64, error) {
+	out := map[ids.UUID]int64{}
+	var keys []ids.UUID
+	var amounts []int64
+	var currencies []string
+	for _, e := range found {
+		if e.AffectedMinor == nil {
+			continue
+		}
+		keys = append(keys, e.ID)
+		amounts = append(amounts, *e.AffectedMinor)
+		currencies = append(currencies, e.Currency)
+	}
+	if len(keys) == 0 {
+		return out, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT fa.id, `+deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "fa")+`
+		FROM (SELECT f.id, f.amount_minor, NULLIF(f.currency, '') AS currency, NULL::bigint AS amount_minor_base
+		      FROM unnest($1::uuid[], $2::bigint[], $3::text[]) AS f(id, amount_minor, currency)) fa`,
+		keys, amounts, currencies)
+	if err != nil {
+		return nil, fmt.Errorf("compose: pricing the findings: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var base *int64
+		if err := rows.Scan(&id, &base); err != nil {
+			return nil, err
+		}
+		if base != nil {
+			out[id] = *base
+		}
+	}
+	return out, rows.Err()
 }
 
 func assuranceSeverity(severity string) int {

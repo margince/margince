@@ -57,6 +57,40 @@ func TestTheFormListShowsArchivedFormsOnlyWhenAskedTo(t *testing.T) {
 	}
 }
 
+// A form keeps the privacy notice it shows under it and the policy it links to,
+// and an explicit null takes both away again.
+func TestAFormKeepsItsPrivacyNoticeUntilItIsCleared(t *testing.T) {
+	e := setupFormsApp(t)
+	notice, policy := "We use your details to answer your request.", siteOrigin+"/privacy"
+	form := createForm(t, e, integration.AnyMap{
+		"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin},
+		"privacy_notice": notice, "privacy_notice_url": policy,
+	})
+	read := func() (got struct {
+		Version          int64   `json:"version"`
+		PrivacyNotice    *string `json:"privacy_notice"`
+		PrivacyNoticeURL *string `json:"privacy_notice_url"`
+	},
+	) {
+		if status := e.Call(t, "GET", "/v1/web-forms/"+form.ID, nil, nil, &got); status != http.StatusOK {
+			t.Fatalf("GET the form → %d", status)
+		}
+		return got
+	}
+	saved := read()
+	if saved.PrivacyNotice == nil || *saved.PrivacyNotice != notice || saved.PrivacyNoticeURL == nil || *saved.PrivacyNoticeURL != policy {
+		t.Fatalf("the form reads notice %v and policy %v", saved.PrivacyNotice, saved.PrivacyNoticeURL)
+	}
+	headers := map[string]string{"If-Match": strconv.FormatInt(saved.Version, 10)}
+	cleared := integration.AnyMap{"privacy_notice": nil, "privacy_notice_url": nil}
+	if status := e.Call(t, "PATCH", "/v1/web-forms/"+form.ID, cleared, headers, nil); status != http.StatusOK {
+		t.Fatalf("clear the notice → %d", status)
+	}
+	if after := read(); after.PrivacyNotice != nil || after.PrivacyNoticeURL != nil {
+		t.Fatalf("after the clear the form reads notice %v and policy %v", after.PrivacyNotice, after.PrivacyNoticeURL)
+	}
+}
+
 func tallyHeaders(secret string, body []byte) map[string]string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)

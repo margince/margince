@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { SummaryFields, summarySentence } from "./approvalsummary";
 import { Badge, Disclosure } from "./atoms";
 import { type DecisionApproval, DecisionCard } from "./decisioncard";
 import type {
@@ -89,7 +90,13 @@ export function DeckItemCard({
                 have to reach a reader who is hearing this page. */}
               <ul className="ddeck-bundle-members">
                 {members.map((member) => (
-                  <li key={member.id}>{member.summary ?? member.kind}</li>
+                  <li key={member.id}>
+                    {summarySentence(member) ?? member.kind}
+                    <SummaryFields
+                      parts={member.summary_parts}
+                      words={labels.card.summaryWords}
+                    />
+                  </li>
                 ))}
               </ul>
             </Disclosure>

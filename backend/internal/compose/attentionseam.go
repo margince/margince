@@ -321,7 +321,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// Reads the card's cache and never assembles one — a page holds thirty
 		// rows and assembling costs a timeline, seats and possibly a model call
 		// each. A deal nobody has opened simply carries no step.
-		WithDealMoves(cards).
+		WithDealMoves(attentionDealMoves{cards: cards}).
 		// And the standing above that step, from the SAME card, the same cache
 		// and the same service value. Two seams because they are read at
 		// different moments and a caller wanting one should not pay for the
