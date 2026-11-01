@@ -82,6 +82,22 @@ export const WeekDark: StoryObj<typeof MeetingWeek> = {
   ...Week,
   globals: { theme: "dark" },
 };
+// A time that would overlap the chosen one cannot be pressed.
+export const WeekBlocked: StoryObj<typeof MeetingWeek> = {
+  render: () => (
+    <MeetingWeek
+      days={WEEK_DAYS}
+      selected={["2026-10-05T07:00:00Z"]}
+      blocked={["2026-10-05T08:30:00Z"]}
+      emptyDay="No free time"
+      onSelect={() => undefined}
+    />
+  ),
+};
+export const WeekBlockedDark: StoryObj<typeof MeetingWeek> = {
+  ...WeekBlocked,
+  globals: { theme: "dark" },
+};
 // Without `onSelect`: the times a guest will choose from, shown to the host
 // who sends them the link.
 export const WeekPreview: StoryObj<typeof MeetingWeek> = {
