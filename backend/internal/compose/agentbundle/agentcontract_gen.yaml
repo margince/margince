@@ -21840,7 +21840,8 @@ components:
         sentence: {type: string, description: 'The act in words, such as "Update deal Acme renewal".'}
         fields:
           type: array
-          description: The fields in name order, at most eight. A value is bounded text; a list reads as its count.
+          description: >-
+            The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count.
           items: {$ref: '#/components/schemas/ApprovalSummaryField'}
         more_fields: {type: integer, minimum: 0, description: 'How many further fields the list leaves out.'}
     ApprovalSummaryField:

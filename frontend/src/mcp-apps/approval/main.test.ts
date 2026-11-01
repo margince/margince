@@ -88,6 +88,26 @@ describe("the approval card", () => {
     expect(root.textContent).not.toContain("name=");
   });
 
+  it("lists only the summary fields the preview does not name, as sent", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary_parts: {
+        sentence: "Move Acme renewal",
+        fields: [
+          { field: "stage_id", value: "Negotiation" },
+          { field: "scheduled_at", value: "2026-11-01T12:00:00Z" },
+        ],
+        more_fields: 0,
+      },
+    });
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual([
+      "StageProposal → Negotiation",
+      "Scheduled at2026-11-01T12:00:00Z",
+    ]);
+  });
+
   it("shows a structured value as words rather than as its document", () => {
     const root = mount({
       ...(approvalFixture.data as object),

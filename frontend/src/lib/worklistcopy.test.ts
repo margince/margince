@@ -638,14 +638,14 @@ describe("itemTitle — an approval row", () => {
     ...over,
   });
 
-  it("heads with the sentence, leaving the values to the supporting line", () => {
+  it("keeps the whole title on a surface with no supporting line", () => {
     const parts = {
       sentence: "Update record deal",
       fields: [{ field: "name", value: "Acme, Inc." }],
       more_fields: 0,
     };
     expect(itemTitle(approval({ summary_parts: parts }), t, "en")).toBe(
-      "Update record deal",
+      "Update record deal: name=Acme, Inc.",
     );
   });
 

@@ -5,6 +5,7 @@ import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
   SummaryFields,
+  summaryPartsWithout,
   summarySentence,
 } from "../../design-system/approvalsummary";
 import {
@@ -208,7 +209,13 @@ function ApprovalDetailBody({
   return (
     <div className="form-stack">
       {sentence && <p className="t-body">{sentence}</p>}
-      <SummaryFields parts={approval.summary_parts} words={summaryWords(t)} />
+      <SummaryFields
+        parts={summaryPartsWithout(
+          approval.summary_parts,
+          new Set(named.map((entry) => entry.field)),
+        )}
+        words={summaryWords(t)}
+      />
       <ApprovalTarget approval={approval} />
       <ApprovalDecider approval={approval} />
       {named.length > 0

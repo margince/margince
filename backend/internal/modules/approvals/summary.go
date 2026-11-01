@@ -48,8 +48,8 @@ func SanitizeSummary(s string) string {
 	return boundRunes(strings.TrimSpace(b.String()), maxSummaryLen)
 }
 
-// SanitizeSummaryParts applies SanitizeSummary to every piece, and drops a
-// field whose name is left empty. Nil stays nil.
+// SanitizeSummaryParts applies SanitizeSummary to every piece. A field whose
+// name is left empty is dropped and counted among the fields left out.
 func SanitizeSummaryParts(parts *crmcontracts.ApprovalSummaryParts) *crmcontracts.ApprovalSummaryParts {
 	if parts == nil {
 		return nil
@@ -60,9 +60,12 @@ func SanitizeSummaryParts(parts *crmcontracts.ApprovalSummaryParts) *crmcontract
 		MoreFields: max(parts.MoreFields, 0),
 	}
 	for _, field := range parts.Fields {
-		if name := SanitizeSummary(field.Field); name != "" {
-			clean.Fields = append(clean.Fields, crmcontracts.ApprovalSummaryField{Field: name, Value: SanitizeSummary(field.Value)})
+		name := SanitizeSummary(field.Field)
+		if name == "" {
+			clean.MoreFields++
+			continue
 		}
+		clean.Fields = append(clean.Fields, crmcontracts.ApprovalSummaryField{Field: name, Value: SanitizeSummary(field.Value)})
 	}
 	return &clean
 }

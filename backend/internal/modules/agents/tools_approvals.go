@@ -49,7 +49,7 @@ type StagedApproval struct {
 	// never wrote one, rather than filled with a restatement of the kind.
 	Summary string `json:"summary,omitempty"`
 	// SummaryParts is Summary taken apart: the sentence and each field value.
-	// Absent with Summary, and on a summary that is a sentence alone.
+	// Absent where Summary is absent or withheld, or is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts `json:"summary_parts,omitempty"`
 	ProposedBy   string                             `json:"proposed_by"`
 	// TargetType and TargetID are the record the staged change acts on, absent

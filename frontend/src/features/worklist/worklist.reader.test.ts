@@ -5,6 +5,7 @@ import { taskRow } from "../../testing/brief.fixtures";
 import {
   noticeDetail,
   readerTask,
+  sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
 
@@ -209,4 +210,25 @@ it("gives an approval row its proposed values as the supporting line", () => {
   expect(
     noticeDetail({ ...approval, summary_parts: undefined }, viewer, t),
   ).toBe(undefined);
+});
+
+it("titles an approval row by its sentence, falling back to the whole title", () => {
+  const approval = {
+    ...taskRow("approval", "Update record deal: name=Acme, Inc."),
+    source: "approval" as const,
+    summary_parts: {
+      sentence: "Update record deal",
+      fields: [],
+      more_fields: 0,
+    },
+  };
+  expect(sentenceTitled(approval).title).toBe("Update record deal");
+  const blank = {
+    ...approval,
+    summary_parts: { ...approval.summary_parts, sentence: "" },
+  };
+  expect(sentenceTitled(blank).title).toBe(
+    "Update record deal: name=Acme, Inc.",
+  );
+  expect(sentenceTitled(task)).toBe(task);
 });

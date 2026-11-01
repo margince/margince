@@ -308,12 +308,6 @@ export function briefContextTitle(item: WorklistItem): string | undefined {
     : undefined;
 }
 
-// An approval's title is its sentence; its values are the row's supporting
-// line (noticeDetail).
-function ownTitle(item: WorklistItem): string | undefined {
-  return item.summary_parts?.sentence ?? item.title;
-}
-
 export function itemTitle(
   item: WorklistItem,
   t: T,
@@ -348,7 +342,7 @@ export function itemTitle(
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   const named = subjectNamed ? undefined : item.subject?.label;
-  const own = ownTitle(item);
+  const own = item.title;
   if (own) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot

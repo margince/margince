@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { summaryFieldsLine } from "../../design-system/approvalsummary";
+import {
+  summaryFieldsLine,
+  summarySentence,
+} from "../../design-system/approvalsummary";
 import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import { summaryWords } from "../../lib/approvalpreviewfields";
@@ -36,6 +39,18 @@ export function readerTask(
     ...item,
     title: t("home.task.yours", { action: item.title.slice(prefix.length) }),
   };
+}
+
+/**
+ * The row's own reading of an approval: the sentence as the title, because
+ * noticeDetail draws the values under it. Other surfaces keep the whole title.
+ */
+export function sentenceTitled(item: WorklistItem): WorklistItem {
+  const sentence = summarySentence({
+    summary: item.title,
+    summary_parts: item.summary_parts,
+  });
+  return item.summary_parts && sentence ? { ...item, title: sentence } : item;
 }
 
 export function noticeDetail(

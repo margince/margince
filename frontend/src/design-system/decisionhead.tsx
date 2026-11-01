@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   SummaryFields,
+  type SummaryParts,
   type SummaryWords,
   summarySentence,
 } from "./approvalsummary";
@@ -190,6 +191,7 @@ export function DecisionHead({
   provenance,
   confidence,
   compact,
+  listed,
 }: Readonly<{
   approval: DecisionApproval;
   draft: DecisionDraft;
@@ -201,6 +203,8 @@ export function DecisionHead({
   confidence?: ConfidenceLevel;
   /** One line: the question first, its qualifiers after it. */
   compact?: boolean;
+  /** The summary's fields the card's body does not draw already. */
+  listed?: SummaryParts;
 }>) {
   const named = cardName(approval, draft);
   const sentence = summarySentence(approval);
@@ -247,10 +251,7 @@ export function DecisionHead({
         </p>
       )}
       {named && sentence && <p className="approval-why">{sentence}</p>}
-      <SummaryFields
-        parts={approval.summary_parts}
-        words={labels.summaryWords}
-      />
+      <SummaryFields parts={listed} words={labels.summaryWords} />
     </>
   );
 }

@@ -80,8 +80,10 @@ func withApprovalWords(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, current crmcontracts.Approval, expires time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
-	if sentence := approvalSentence(current); sentence != "" {
-		attempt.Notice.Subject = sentence
+	// A digest line is all its reader gets, so it keeps the values; the single
+	// email lists them under the sentence.
+	if line := digestOrSubjectLine(current, use); line != "" {
+		attempt.Notice.Subject = line
 	}
 	if current.TargetLabel != nil {
 		attempt.Notice.Body = mailcopy.OneLine(*current.TargetLabel)
@@ -117,4 +119,16 @@ func mailNow(clock func() time.Time) time.Time {
 		return clock()
 	}
 	return time.Now()
+}
+
+// digestOrSubjectLine is the joined summary for a digest line and the sentence
+// alone for the single email's subject.
+func digestOrSubjectLine(approval crmcontracts.Approval, use approvalNoticeUse) string {
+	if use == forSingleEmail {
+		return approvalSentence(approval)
+	}
+	if approval.Summary != nil {
+		return *approval.Summary
+	}
+	return ""
 }

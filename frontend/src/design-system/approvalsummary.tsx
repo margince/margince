@@ -24,7 +24,22 @@ type Summarized = Readonly<{
  * whole.
  */
 export function summarySentence(summarized: Summarized): string | null {
-  return summarized.summary_parts?.sentence ?? summarized.summary ?? null;
+  return summarized.summary_parts?.sentence || summarized.summary || null;
+}
+
+/**
+ * The parts without the fields a surface already shows by name, so a value is
+ * not drawn twice. Undefined when nothing is left to list.
+ */
+export function summaryPartsWithout(
+  parts: SummaryParts | undefined,
+  shown: ReadonlySet<string>,
+): SummaryParts | undefined {
+  if (!parts) return undefined;
+  const fields = parts.fields.filter((entry) => !shown.has(entry.field));
+  return fields.length > 0 || parts.more_fields > 0
+    ? { ...parts, fields }
+    : undefined;
 }
 
 function summaryFacts(parts: SummaryParts, words: SummaryWords): Fact[] {

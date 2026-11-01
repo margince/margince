@@ -228,10 +228,12 @@ function proposalBody(p: Proposal): HTMLElement | null {
   ]) {
     if (table !== null) body.appendChild(table);
   }
-  // The summary's own values, where the preview shows none, so nothing is
-  // listed twice.
-  if (body.childElementCount === 0 && p.parts !== null) {
-    const table = changeTable(p.parts.fields, { before: false });
+  // The summary's own values the preview does not name, so none is listed
+  // twice and none the preview leaves out goes missing.
+  if (p.parts !== null) {
+    const named = new Set([...p.changes, ...p.details].map((c) => c.field));
+    const rest = p.parts.fields.filter((f) => !named.has(f.field));
+    const table = changeTable(rest, { before: false });
     if (table !== null) body.appendChild(table);
     if (p.parts.more > 0)
       body.appendChild(el("p", "meta", `${p.parts.more} more not shown`));

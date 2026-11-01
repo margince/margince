@@ -23,7 +23,10 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time.",
   draftSubject: "Subject",
   draftBody: "Message",
-  summaryWords: PLAIN_SUMMARY_WORDS,
+  summaryWords: {
+    field: (name) => (name === "name" ? "Deal name" : name),
+    more: PLAIN_SUMMARY_WORDS.more,
+  },
   noContent: "This proposal carries nothing to read.",
   loading: "Reading the proposal",
 };
@@ -39,8 +42,11 @@ const staged: DecisionApproval = {
   summary: "Update record deal: name=Acme, Inc. renewal",
   summary_parts: {
     sentence: "Update record deal",
-    fields: [{ field: "name", value: "Acme, Inc. renewal" }],
-    more_fields: 0,
+    fields: [
+      { field: "name", value: "Acme, Inc. renewal" },
+      { field: "stage_id", value: "Negotiation" },
+    ],
+    more_fields: 2,
   },
 };
 
@@ -58,7 +64,14 @@ describe("DecisionCard — a summary staged with its parts", () => {
     expect(
       screen.getByRole("article", { name: "Update record deal" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Acme, Inc. renewal")).toBeInTheDocument();
+    const rows = [...document.querySelectorAll(".factlist-row")].map((row) =>
+      [...row.children].map((cell) => cell.textContent),
+    );
+    expect(rows).toEqual([
+      ["Deal name", "Acme, Inc. renewal"],
+      ["stage_id", "Negotiation"],
+      ["", "2 more not shown"],
+    ]);
     expect(screen.queryByText(/name=/)).toBeNull();
   });
 

@@ -117,6 +117,6 @@ func TestAnEditedDecisionDropsTheSummaryValuesItReplaced(t *testing.T) {
 		t.Fatalf("reading the decided row: %v", err)
 	}
 	if after.Summary == nil || *after.Summary != "Rename the company" || after.SummaryParts != nil {
-		t.Errorf("the edited row reads summary %v and parts %s, want the sentence alone", after.Summary, after.SummaryParts)
+		t.Errorf("the edited row reads summary %v and parts %s, want the sentence alone", after.Summary, string(after.SummaryParts))
 	}
 }

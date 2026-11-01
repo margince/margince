@@ -46302,7 +46302,7 @@ export interface components {
         ApprovalSummaryParts: {
             /** @description The act in words, such as "Update deal Acme renewal". */
             sentence: string;
-            /** @description The fields in name order, at most eight. A value is bounded text; a list reads as its count. */
+            /** @description The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count. */
             fields: components["schemas"]["ApprovalSummaryField"][];
             /** @description How many further fields the list leaves out. */
             more_fields: number;

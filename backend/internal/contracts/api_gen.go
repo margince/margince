@@ -30074,7 +30074,7 @@ type ApprovalSummaryField struct {
 
 // ApprovalSummaryParts An approval summary taken apart: the sentence that names the act, then each request field it does not already say, with the value as the approver should read it. `summary` is these joined.
 type ApprovalSummaryParts struct {
-	// Fields The fields in name order, at most eight. A value is bounded text; a list reads as its count.
+	// Fields The fields in name order, at most eight, after the parent record of a nested create when there is one. A value is bounded text; a list reads as its count.
 	Fields []ApprovalSummaryField `json:"fields"`
 
 	// MoreFields How many further fields the list leaves out.

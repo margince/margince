@@ -182,11 +182,36 @@ func TestAChangeEmailShowsTheSummaryFieldsApartFromItsSentence(t *testing.T) {
 		}
 	}
 
+	// The preview names `name`, so the summary does not list it again; a field
+	// the preview leaves out is still listed.
 	ready := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{
 		{Field: "name", Before: previewText(previewValueText, "Acme"), After: previewText(previewValueText, "Acme, Inc.")},
 	}}
-	got = factsText(changeMailFacts(crmcontracts.Approval{Summary: &summary, SummaryParts: parts, Preview: ready}, words))
-	if strings.Contains(got, "name: Acme, Inc.") || strings.Contains(got, "+1 more") || strings.Contains(got, "name=") {
-		t.Errorf("email with preview changes repeats the summary's fields:\n%s", got)
+	both := &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal", Fields: []crmcontracts.ApprovalSummaryField{
+		{Field: "name", Value: "Acme, Inc."}, {Field: "close_reason", Value: ""},
+	}}
+	got = factsText(changeMailFacts(crmcontracts.Approval{Summary: &summary, SummaryParts: both, Preview: ready}, words))
+	if strings.Contains(got, "Name: Acme, Inc.\n") {
+		t.Errorf("email repeats a field its preview already shows:\n%s", got)
+	}
+	if !strings.Contains(got, "Name: Acme → Acme, Inc.") || !strings.Contains(got, ": —") {
+		t.Errorf("email misses the preview change or the field the preview leaves out:\n%s", got)
+	}
+}
+
+// A digest line is all its reader sees of the approval, so it keeps the values.
+// The single email's subject is the sentence, with the values below it.
+func TestADigestLineKeepsTheSummaryValuesTheSubjectLeavesBelow(t *testing.T) {
+	summary := "Update record deal: name=Acme, Inc."
+	approval := crmcontracts.Approval{Summary: &summary, SummaryParts: &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal"}}
+	if got := digestOrSubjectLine(approval, forDigestLine); got != summary {
+		t.Errorf("digest line = %q, want the whole summary %q", got, summary)
+	}
+	if got := digestOrSubjectLine(approval, forSingleEmail); got != "Update record deal" {
+		t.Errorf("email subject = %q, want the sentence", got)
+	}
+	approval.SummaryParts.Sentence = ""
+	if got := digestOrSubjectLine(approval, forSingleEmail); got != summary {
+		t.Errorf("email subject with an empty sentence = %q, want the whole summary", got)
 	}
 }

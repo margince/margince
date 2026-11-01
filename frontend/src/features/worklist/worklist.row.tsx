@@ -38,6 +38,7 @@ import type { WorklistItem } from "./worklist.queries";
 import {
   noticeDetail,
   readerTask,
+  sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
@@ -151,7 +152,12 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const name = framedName(readerTask(item, viewer, t), t, locale, framed);
+  const name = framedName(
+    readerTask(sentenceTitled(item), viewer, t),
+    t,
+    locale,
+    framed,
+  );
   const title = name.title;
   const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);

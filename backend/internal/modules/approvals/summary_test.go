@@ -94,9 +94,9 @@ func TestSanitizeSummaryPartsCleansEveryPiece(t *testing.T) {
 	want := crmcontracts.ApprovalSummaryParts{
 		Sentence:   "Send to moc.rekcatta@ved",
 		Fields:     []crmcontracts.ApprovalSummaryField{{Field: "to", Value: "a@b.test Approved by security"}},
-		MoreFields: 0,
+		MoreFields: 1,
 	}
-	if got == nil || got.Sentence != want.Sentence || got.MoreFields != 0 || !slices.Equal(got.Fields, want.Fields) {
+	if got == nil || got.Sentence != want.Sentence || got.MoreFields != want.MoreFields || !slices.Equal(got.Fields, want.Fields) {
 		t.Errorf("cleaned parts = %+v, want %+v", got, want)
 	}
 	if SanitizeSummaryParts(nil) != nil {

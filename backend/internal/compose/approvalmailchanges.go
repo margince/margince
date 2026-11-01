@@ -45,7 +45,7 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 	reading := agents.ReadPreview(lang, approval.Preview)
 	if reading.Note != "" {
 		facts.add(words.MailPreviewStatus, reading.Note)
-		addSummaryFields(&facts, approval.SummaryParts, lang)
+		addSummaryFields(&facts, approval.SummaryParts, lang, nil)
 		return facts
 	}
 	var shown []approvalMailLine
@@ -61,9 +61,6 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 			shown = append(shown, approvalMailLine{Label: detail.Label, Value: value})
 		}
 	}
-	if len(shown) == 0 {
-		addSummaryFields(&facts, approval.SummaryParts, lang)
-	}
 	for i, line := range shown {
 		if i == mailChangeLimit {
 			facts.add("", fmt.Sprintf(agents.MoreFields(lang), len(shown)-i))
@@ -71,6 +68,7 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 		}
 		facts.add(line.Label, line.Value)
 	}
+	addSummaryFields(&facts, approval.SummaryParts, lang, previewFieldNames(approval.Preview))
 	for _, effect := range reading.Effects {
 		facts.add(words.MailAlsoChanges, effect.Label)
 	}
@@ -82,7 +80,7 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 // the joined summary lists after it. An approval staged without parts reads
 // as its whole summary.
 func approvalSentence(approval crmcontracts.Approval) string {
-	if approval.SummaryParts != nil {
+	if approval.SummaryParts != nil && approval.SummaryParts.Sentence != "" {
 		return approval.SummaryParts.Sentence
 	}
 	if approval.Summary != nil {
@@ -91,18 +89,43 @@ func approvalSentence(approval crmcontracts.Approval) string {
 	return ""
 }
 
-// addSummaryFields lists the summary's own field values, for an email whose
-// preview shows no change of its own; without them the sentence alone is left.
-func addSummaryFields(facts *approvalMailFacts, parts *crmcontracts.ApprovalSummaryParts, lang textlang.Lang) {
+// addSummaryFields lists the summary's own field values that the preview does
+// not name. A preview may leave a proposed field out, and the sentence alone
+// would then lose it.
+func addSummaryFields(facts *approvalMailFacts, parts *crmcontracts.ApprovalSummaryParts, lang textlang.Lang, named map[string]bool) {
 	if parts == nil {
 		return
 	}
 	for _, field := range parts.Fields {
-		facts.add(agents.FieldLabel(lang, field.Field), field.Value)
+		if named[field.Field] {
+			continue
+		}
+		value := field.Value
+		if value == "" {
+			value = "—"
+		}
+		facts.add(agents.FieldLabel(lang, field.Field), value)
 	}
 	if parts.MoreFields > 0 {
 		facts.add("", fmt.Sprintf(agents.MoreFields(lang), parts.MoreFields))
 	}
+}
+
+// previewFieldNames collects the field names the preview carries, changed or operand.
+func previewFieldNames(preview *crmcontracts.ApprovalPreview) map[string]bool {
+	named := map[string]bool{}
+	if preview == nil {
+		return named
+	}
+	for _, change := range preview.Changes {
+		named[change.Field] = true
+	}
+	if preview.Details != nil {
+		for _, detail := range *preview.Details {
+			named[detail.Field] = true
+		}
+	}
+	return named
 }
 
 // mailPreviewValue is one preview value as plain text. A value the reader may
