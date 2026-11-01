@@ -15212,7 +15212,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.privacyNoticeUrlHint":
     "Die https-Adresse deiner Datenschutzerklärung. Der Hinweis verlinkt sie.",
   "webForms.field.privacyNoticeUrlPlaceholder":
-    "https://www.example.com/privacy",
+    "https://www.example.com/datenschutz",
   "webForms.field.owner": "Verantwortlich für neue Leads",
   "webForms.field.ownerHint":
     "Jeder neue Lead aus diesem Formular geht an dieses Teammitglied. Ohne Zuweisung kann ihn jedes Teammitglied übernehmen.",
