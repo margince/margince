@@ -71,7 +71,7 @@ If the page says AI tools "cannot connect to Margince yet", an administrator or 
 Also called: MCP client, MCP server, command line, AI assistant integration.
 
 ### What do Read and draft and Full assistant mean when I connect my AI tool?
-On the authorize screen, **Authorize access**, the **Read and draft** choice under **Assistant permissions** limits your AI tool. With it, the tool sees what you can see and prepares messages for your review. It cannot change records or send anything. **Full assistant** ticks every permission, and **Pick your own** lets you tick or clear each box. Choose **Authorize** when you are done.
+On the authorize screen, **Authorize access**, the **Read and draft** choice under **Assistant permissions** limits your AI tool. With it, the tool sees what you can see and prepares messages for your review. It cannot change record fields or send anything, but it can save a draft. **Full assistant** ticks every permission, and **Pick your own** lets you tick or clear each box. Choose **Authorize** when you are done.
 Also called: limit what my AI tool may do, read-only assistant, restrict Claude, permission levels, least access.
 
 ### Which ready-made requests does my AI tool offer?
@@ -83,7 +83,7 @@ Yes, your AI tool or assistant can give you a link that opens a deal, contact, c
 Also called: open a deal from Claude, record link, amounts in euros or cents, how deal values show.
 
 ### Will my AI tool ask me before it changes many records?
-Yes. Before a change to many records, or an undo of one, your AI tool asks you to confirm in the chat. It shows a **Go ahead** form when it can, and asks in words when it cannot. To undo a bulk change, ask the tool to undo it; records changed since then stay as they are. It also asks before it archives, merges or sends, which you cannot undo from the chat, unless you asked for that exact change.
+Yes. Before a change to many records, or an undo of one, your AI tool asks you to confirm in the chat. It shows a **Go ahead** form when it can, and asks in words when it cannot. To undo a bulk change, ask the tool to undo it; records changed since then stay as they are. It is also told to ask first before a merge or a send, which you cannot undo from the chat, unless you asked for it.
 Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
 
 ### What happens when I name a record and several match?

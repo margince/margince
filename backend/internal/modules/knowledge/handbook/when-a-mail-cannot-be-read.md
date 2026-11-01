@@ -20,7 +20,7 @@ act on the mail by itself.
   the notice says that Margince cannot find requests or commitments in it.
   Read the text and add a task if you need to follow up.
 - **This mail's text can no longer be checked.** The stored original of the
-  mail is gone, so Margince cannot tell whether it read all of the text. It
+  mail is missing or cannot be read, so Margince cannot tell whether it read all of the text. It
   cannot find requests or commitments in this mail. Read the original in your
   mail program and add any task by hand.
 

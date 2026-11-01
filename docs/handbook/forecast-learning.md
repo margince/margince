@@ -94,8 +94,8 @@ landing used and the manager's call it used. The call shows only to someone
 allowed to see it; for anyone else the card shows the deals' own projection. A
 snapshot taken before Margince kept its landing says **Basis not recorded**.
 
-### How do I switch off the forecast correcting itself?
-To switch off the forecast correcting itself, an admin opens **Settings → Company profile →
+## How do I switch off the forecast correcting itself?
+To switch off the forecast correcting itself, an Admin or Ops user opens **Settings → Company profile →
 Forecast** and turns off **Let the forecast correct itself**. Off, every deal counts at
 the probability typed on its stage, as it did before. The forecast still shows a
 range, built from the typed probabilities.

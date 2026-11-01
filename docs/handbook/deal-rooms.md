@@ -42,7 +42,7 @@ If the file is not on the deal yet, click **Upload a file** first. Margince file
 Also called: share a file with the buyer, upload a PDF to the room.
 
 ### Why does a document in my deal room say "Buyers do not see this"?
-A document in a deal room says **Buyers do not see this** when its file is no longer in the deal's Files area. The file was deleted, hidden, or its email was unlinked. The tile loses its **Read** button, and threads about the file lose their reply button. To clear the badge, remove the file from the room.
+A document in a deal room says **Buyers do not see this** when its file is no longer in the deal's Files area. The file was archived, deleted, hidden, or its email was unlinked. To clear the badge, remove the file from the room. A closed, expired or archived room cannot be changed.
 Also called: missing room file, deleted document in a room, buyer cannot open a file, stale document.
 
 ### How do I pause, close or set an end date on a deal room?
