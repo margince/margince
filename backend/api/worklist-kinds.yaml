@@ -27,8 +27,18 @@
 #   done_in_place  true when the row itself offers Done.
 #   delivery       pull (read live per request) or push (built in the
 #                  background into work_item, served under a live gate).
-#   producer       for push: the events that rebuild the holder's items, and
-#                  the stored times the read judges against the clock.
+#   producer       for push only:
+#                    subject     the table an item points at
+#                    holders     how the holders of one record are found
+#                    verify      module: the owning module re-applies its own
+#                                list rule to the candidate ids at read, so
+#                                access, open/done and windows are judged live
+#                                by the code that owns them; gate: one access
+#                                clause (gate: discover | content) and nothing else
+#                    rebuild_on  the outbox events that rebuild items, and what
+#                                they rebuild: the record, its thread, or a holder's
+#                                records; checked against events/catalog.go
+#                    clock       the stored times the read compares with now
 #   max_level      extensions only: the highest level a row may claim.
 
 kinds:
@@ -40,7 +50,20 @@ kinds:
     personal: false
     done_in_place: false
     delivery: push
-    producer: {events: [activity.created, activity.updated, activity.audience_changed], clock: [asked_at]}
+    producer:
+      subject: activity
+      holders: mailbox_seat
+      # The lane reads rows under the discover gate, which keeps a wait whose
+      # summary the reader may not read; the pushed read applies the same gate.
+      verify: gate
+      gate: discover
+      rebuild_on:
+        - {event: activity.captured, by: thread}
+        - {event: activity.updated, by: thread}
+        - {event: activity.archived, by: thread}
+        - {event: activity.marked_handled, by: thread}
+        - {event: activity.disposition_recorded, by: thread}
+      clock: [occurred_at]
   lead_response:
     category: leads
     destination: today
@@ -82,8 +105,9 @@ kinds:
     owner: [named, nobody]
     personal: false
     done_in_place: false
-    delivery: push
-    producer: {events: [activity.created, activity.updated, activity.completed], clock: [due_at, remind_at]}
+    # Pulled: the task lane reads partial indexes and measured as fast as the
+    # pushed read (verify: module), so pushing it buys nothing.
+    delivery: pull
   weekly_commitment:
     category: tasks
     destination: today

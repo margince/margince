@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -28,12 +29,24 @@ type Kind struct {
 	ExtensionKey bool      `yaml:"-"`
 }
 
-// Producer is what rebuilds a pushed kind and which stored times its read
-// judges against the clock.
+// Producer says how a pushed kind is kept: what its items point at, how the
+// holders of one record are found, how a read re-checks them, and which events
+// rebuild which records.
 type Producer struct {
-	Events []string `yaml:"events"`
-	Sweep  string   `yaml:"sweep"`
-	Clock  []string `yaml:"clock"`
+	Subject   string    `yaml:"subject"`
+	Holders   string    `yaml:"holders"`
+	Verify    string    `yaml:"verify"`
+	Gate      string    `yaml:"gate"`
+	RebuildOn []Trigger `yaml:"rebuild_on"`
+	Sweep     string    `yaml:"sweep"`
+	Clock     []string  `yaml:"clock"`
+}
+
+// Trigger is one event and the records it rebuilds: the record it names, the
+// conversation that record belongs to, or every record of the holder it names.
+type Trigger struct {
+	Event string `yaml:"event"`
+	By    string `yaml:"by"`
 }
 
 // Catalog is every declared kind, by name.
@@ -44,17 +57,27 @@ var (
 	destinations = []string{"today", "review", "system_health", "none"}
 	owners       = []string{"named", "nobody", "the_reader", "from_the_deal", "unreadable"}
 	deliveries   = []string{"pull", "push"}
+	subjects     = []string{"activity", "deal", "contact", "company", "approval"}
+	holderRules  = []string{"assignee", "mailbox_seat", "deal_owner", "requested_decider"}
+	// module: the owning module re-applies its own list rule to the candidate
+	// ids. gate: the read applies one access clause and nothing else.
+	verifications = []string{"module", "gate"}
+	gates         = []string{"discover", "content"}
+	triggerScopes = []string{"record", "thread", "holder"}
 	// An extension row may wait on a decision or be agreed work, never claim
 	// that a customer is waiting or that it is pinned.
 	extensionLevels = []string{"agreed", "blocking", "routine"}
 	coreName        = regexp.MustCompile(`^[a-z][a-z_]*$`)
-	extensionName   = regexp.MustCompile(`^ext\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`)
+	extensionName   = regexp.MustCompile(`^ext_[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`)
 )
 
 // LoadCatalog parses and checks a kinds document. It refuses unknown fields,
 // a missing field, a value outside its closed set and an extension kind that
 // claims more than an extension may.
-func LoadCatalog(doc []byte) (Catalog, error) {
+//
+// events is the closed list of event types the outbox can carry; a trigger
+// naming any other type would never fire, so it is refused.
+func LoadCatalog(doc []byte, events []string) (Catalog, error) {
 	var parsed struct {
 		Kinds map[string]Kind `yaml:"kinds"`
 	}
@@ -76,7 +99,7 @@ func LoadCatalog(doc []byte) (Catalog, error) {
 		kind := parsed.Kinds[name]
 		kind.Name = name
 		kind.ExtensionKey = extensionName.MatchString(name)
-		if err := kind.check(); err != nil {
+		if err := kind.check(events); err != nil {
 			return nil, fmt.Errorf("worklist kind %q: %w", name, err)
 		}
 		catalog[name] = kind
@@ -84,9 +107,9 @@ func LoadCatalog(doc []byte) (Catalog, error) {
 	return catalog, nil
 }
 
-func (k Kind) check() error {
-	if !k.ExtensionKey && !coreName.MatchString(k.Name) {
-		return fmt.Errorf("a name is a core word or ext.<unit>.<kind>")
+func (k Kind) check(events []string) error {
+	if !k.ExtensionKey && (!coreName.MatchString(k.Name) || strings.HasPrefix(k.Name, "ext_")) {
+		return fmt.Errorf("a name is a core word or ext_<unit>.<kind>")
 	}
 	if err := oneOf("category", k.Category, categories); err != nil {
 		return err
@@ -108,11 +131,12 @@ func (k Kind) check() error {
 	if err := oneOf("delivery", k.Delivery, deliveries); err != nil {
 		return err
 	}
-	if k.Delivery == "push" && (k.Producer == nil || len(k.Producer.Events) == 0 && k.Producer.Sweep == "") {
-		return fmt.Errorf("a pushed kind names its producer: the events or the sweep that rebuild it")
-	}
-	if k.Delivery == "pull" && k.Producer != nil {
-		return fmt.Errorf("a pulled kind has no producer")
+	if k.Delivery == "pull" {
+		if k.Producer != nil {
+			return fmt.Errorf("a pulled kind has no producer")
+		}
+	} else if err := k.Producer.check(events); err != nil {
+		return err
 	}
 	if !k.ExtensionKey {
 		if k.MaxLevel != "" {
@@ -132,6 +156,42 @@ func (k Kind) check() error {
 func oneOf(field, value string, allowed []string) error {
 	if !slices.Contains(allowed, value) {
 		return fmt.Errorf("%s %q is not one of %v", field, value, allowed)
+	}
+	return nil
+}
+
+func (p *Producer) check(events []string) error {
+	if p == nil {
+		return fmt.Errorf("a pushed kind names its producer")
+	}
+	for field, check := range map[string]struct {
+		value   string
+		allowed []string
+	}{
+		"subject": {p.Subject, subjects}, "holders": {p.Holders, holderRules}, "verify": {p.Verify, verifications},
+	} {
+		if err := oneOf("producer."+field, check.value, check.allowed); err != nil {
+			return err
+		}
+	}
+	switch {
+	case p.Verify == "gate":
+		if err := oneOf("producer.gate", p.Gate, gates); err != nil {
+			return fmt.Errorf("a kind verified by one access clause names it: %w", err)
+		}
+	case p.Gate != "":
+		return fmt.Errorf("a kind its module verifies takes the module's gate, not producer.gate")
+	}
+	if len(p.RebuildOn) == 0 && p.Sweep == "" {
+		return fmt.Errorf("a pushed kind's producer names the events or the sweep that rebuild it")
+	}
+	for _, trigger := range p.RebuildOn {
+		if !slices.Contains(events, trigger.Event) {
+			return fmt.Errorf("producer.rebuild_on: event %q is not one the outbox carries", trigger.Event)
+		}
+		if err := oneOf("producer.rebuild_on.by", trigger.By, triggerScopes); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/worklist"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // The kind catalog states what today's hand-kept maps state, kind by kind and
@@ -22,7 +23,7 @@ func TestTheKindCatalogMatchesTodaysEngine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	catalog, err := worklist.LoadCatalog(doc)
+	catalog, err := worklist.LoadCatalog(doc, events.Types())
 	if err != nil {
 		t.Fatal(err)
 	}

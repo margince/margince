@@ -77,6 +77,10 @@ type ListActivitiesInput struct {
 	// transaction read filtered by assignee must set it.
 	AsOf *time.Time
 
+	// AmongIDs narrows the read to these activities, every other rule still
+	// applied: a caller that already knows its candidates asks the owning rule
+	// which of them qualify now.
+	AmongIDs []ids.UUID
 	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
 	// what the task screen filters by; this one is the day's queue and carries
