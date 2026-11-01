@@ -17,7 +17,8 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
-5. Fill any custom fields, then choose **Create**.
+5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner, and only to a role that may see companies and partners.
+6. Fill any custom fields, then choose **Create**.
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
 
@@ -40,7 +41,7 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Captured activity sets Contacted and Engaged automatically. You can also set them by hand; the record tells you which.
+Captured activity sets Contacted and Engaged automatically. An imported reply already older than 30 days, or a meeting the lead declined, does not set Engaged. You can also set them by hand; the record tells you which.
 
 You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.
@@ -54,7 +55,7 @@ To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also
 **Qualify** is turned off until the lead has an email address and an open status.
 Also called: convert a lead, promote a lead, turn a lead into a contact or opportunity.
 
-Qualifying a lead records what started it: a reply that came in, a meeting booked, a meeting held, or your own call. The **Why** line in the dialog is filled from the captured activity when there is one. If not, it reads "Reason: qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when they engage with you; importing it or writing to it is not enough.
+Qualifying a lead records what started it: a reply that came in, a meeting booked, a meeting held, or your own call. A synced meeting nobody marked counts as booked. A reply or meeting counts only within the last 30 days, or the shorter time your team's reply speed sets. The **Why** line in the dialog is filled from that activity, or reads "Reason: qualified by you." when there is none. Mail you sent that had no reply **does not count**. A lead qualifies when they engage with you; importing it or writing to it is not enough.
 
 Then one of two things happens, in a single step:
 
@@ -122,10 +123,7 @@ To disqualify several at once, tick them on the **Leads** list and choose **Disq
 Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
-Disqualifying archives the lead. It records a reason, from a list that
-administrators manage, and a note if you add one. You can still open the lead,
-but it becomes read-only:
-"This lead is closed and cannot be changed."
+Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "This lead is closed and cannot be changed."
 
 ### How do I reopen a disqualified lead?
 To reopen a disqualified lead in Margince, open the lead and choose **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
@@ -140,7 +138,7 @@ To edit a lead in Margince, open it from **Leads** and click the value to change
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
-**Referred by partner** shows once a company is a partner. A role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean).
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead and choose **Assign** beside **Owner** at its top. Then pick a colleague under **Choose a colleague**.

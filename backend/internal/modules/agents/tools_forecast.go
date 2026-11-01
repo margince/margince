@@ -12,7 +12,6 @@ package agents
 // never the SQL.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 
@@ -33,6 +32,8 @@ type ForecastRequest struct {
 	AsOf      string   `json:"as_of"`
 	ScopeKind string   `json:"scope_kind"`
 	ScopeID   ids.UUID `json:"scope_id"`
+	// Contributions asks for the per-deal rows behind the readings.
+	Contributions bool `json:"contributions"`
 }
 
 // ForecastReader answers the readings for one period and scope, shaped as the
@@ -60,7 +61,8 @@ func (t forecastReadings) Spec() mcp.ToolSpec {
 			"period":{"type":"string","enum":["quarter","month","week"],"description":"The window length. Quarters and months follow the installation's own financial year, which may not start in January; a week runs Monday to Sunday."},
 			"as_of":{"type":"string","format":"date","description":"Which period to read, by naming a day inside it. Omit for the current one."},
 			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Whose forecast. Omit for this caller's own default population; a wider one is refused."},
-			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject."}},
+			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject."},
+			"contributions":{"type":"boolean","description":"Add one row per won or open deal you may read: its typed chance, chance in use, evidence count, risk signals, effect and weighted amount."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastReadingsResult](),
 	}
@@ -128,6 +130,65 @@ type ForecastReadingsResult struct {
 	// reviews, which means no qualified reading exists, not that it equals the
 	// figures above.
 	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
+
+	// Landing is where the period finishes, the answer GET /forecast gives. The
+	// range below sits beside it. Absent for managed teams, as on the endpoint.
+	Landing *ForecastLandingResult `json:"landing,omitempty"`
+
+	// SelfCorrecting says whether chances moved with recorded outcomes.
+	SelfCorrecting *bool `json:"self_correcting,omitempty"`
+	// RangeLowMinor and RangeHighMinor bound the central 80% of finishes under
+	// the chances in use. Neither bounds the weighted figure or the landing.
+	RangeLowMinor  *int64 `json:"range_low_minor,omitempty"`
+	RangeHighMinor *int64 `json:"range_high_minor,omitempty"`
+	// Contributions are the per-deal rows, present only when asked for.
+	// ContributionsLimited says they hold only the caller's own deals, while
+	// the installation switched off individual performance.
+	Contributions        []ForecastContributionResult `json:"contributions,omitempty"`
+	ContributionsLimited *bool                        `json:"contributions_limited,omitempty"`
+}
+
+// ForecastLandingResult mirrors ForecastLanding on GET /forecast. A manager's
+// call has no split, so RemainingMinor is zero there and SystemMinor is set.
+type ForecastLandingResult struct {
+	AmountMinor    int64   `json:"amount_minor"`
+	Measure        string  `json:"measure"`
+	WonMinor       int64   `json:"won_minor"`
+	RemainingMinor int64   `json:"remaining_minor"`
+	SystemMinor    *int64  `json:"system_minor,omitempty"`
+	Caveat         *string `json:"caveat,omitempty"`
+}
+
+// ForecastSignalResult mirrors one ForecastRiskSignal on GET /forecast.
+type ForecastSignalResult struct {
+	Code         string  `json:"code"`
+	Days         *int    `json:"days,omitempty"`
+	Count        *int    `json:"count,omitempty"`
+	StageID      *string `json:"stage_id,omitempty"`
+	ClosePassed  *bool   `json:"close_passed,omitempty"`
+	ClosesInDays *int    `json:"closes_in_days,omitempty"`
+}
+
+// ForecastContributionResult mirrors one ForecastContribution on GET /forecast.
+type ForecastContributionResult struct {
+	DealID             string                 `json:"deal_id"`
+	DealName           string                 `json:"deal_name"`
+	OwnerID            *string                `json:"owner_id,omitempty"`
+	StageID            *string                `json:"stage_id,omitempty"`
+	Category           *string                `json:"category,omitempty"`
+	BaseMinor          *int64                 `json:"base_minor,omitempty"`
+	ExclusionReason    *string                `json:"exclusion_reason,omitempty"`
+	WeightedMinor      int64                  `json:"weighted_minor"`
+	InWon              bool                   `json:"in_won"`
+	InOpen             bool                   `json:"in_open"`
+	InEvidence         bool                   `json:"in_evidence"`
+	InBestCase         bool                   `json:"in_best_case"`
+	TypedProbability   *int                   `json:"typed_probability,omitempty"`
+	ChanceInUse        int                    `json:"chance_in_use"`
+	EvidenceN          *int                   `json:"evidence_n,omitempty"`
+	Signals            []ForecastSignalResult `json:"signals"`
+	Effect             *float64               `json:"effect,omitempty"`
+	AppliedProbability int                    `json:"applied_probability"`
 }
 
 // ForecastQualifiedResult mirrors the qualified readings on GET /forecast.
@@ -303,87 +364,6 @@ type ForecastAssuranceSourceResult struct {
 	// CheckedThrough is present only for a `checked` source: a date on an
 	// unread one would claim coverage that did not happen.
 	CheckedThrough string `json:"checked_through,omitempty"`
-}
-
-// InputChecksReader answers the open findings this caller may see, for one
-// population when the arguments name one.
-type InputChecksReader func(ctx context.Context, args InputChecksArgs) (json.RawMessage, error)
-
-// InputChecksArgs narrows list_input_checks the way its route's query does.
-type InputChecksArgs struct {
-	ScopeKind string `json:"scope_kind,omitempty"`
-	ScopeID   string `json:"scope_id,omitempty"`
-}
-
-// RegisterInputChecksTool joins list_input_checks to the surface.
-func RegisterInputChecksTool(r *Registry, read InputChecksReader) {
-	r.Register(listInputChecks{read: read})
-}
-
-type listInputChecks struct {
-	read InputChecksReader
-}
-
-func (t listInputChecks) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "list_input_checks", Title: "What the forecast's inputs still need",
-		Version:       toolVersionV1,
-		Description:   listInputChecksCopy.render(),
-		Instead:       listInputChecksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp: "listInputChecks",
-		InputSchema: schema(`{"type":"object","properties":{
-			"scope_kind":{"type":"string","enum":["workspace","team","owner"],"description":"Only the findings on the deals of this population. Omit for every finding you can see."},
-			"scope_id":{"type":"string","format":"uuid","description":"The team or owner, for a team or owner scope_kind"}},
-			"additionalProperties":false}`),
-		OutputSchema: schemaFor[InputChecksResult](),
-	}
-}
-
-func (t listInputChecks) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args InputChecksArgs
-	if len(bytes.TrimSpace(in)) > 0 {
-		if err := decodeArgs(in, &args); err != nil {
-			return nil, err
-		}
-	}
-	noteDerivedContent(ctx)
-	return t.read(ctx, args)
-}
-
-// InputChecksResult is what list_input_checks answers with.
-type InputChecksResult struct {
-	// Data are the open findings this caller can see, most material first.
-	Data []InputCheckResult `json:"data"`
-}
-
-// InputCheckResult is one finding.
-type InputCheckResult struct {
-	ID          string `json:"id"`
-	Type        string `json:"type"`
-	SubjectKind string `json:"subject_kind"`
-	SubjectID   string `json:"subject_id"`
-	Severity    string `json:"severity"`
-	// AffectedMinor is the money in question. Absent means it cannot be said,
-	// which is not the same as nothing being at stake.
-	AffectedMinor *int64 `json:"affected_minor,omitempty"`
-	Currency      string `json:"currency,omitempty"`
-	// Claim and Observed hold structured values whose keys depend on Type.
-	//
-	// Raw rather than a map: the key set is the exception TYPE's, not this
-	// struct's, and a schema generator has nothing to describe a free-form
-	// object with. Passing the stored bytes through also keeps this from
-	// becoming a second place that knows what each type stores.
-	Claim       json.RawMessage `json:"claim"`
-	Observed    json.RawMessage `json:"observed"`
-	FirstSeenAt string          `json:"first_seen_at"`
-	// LastSeenAt is the most recent run that still found it. Something seen for
-	// weeks is a different problem from something that appeared last night.
-	LastSeenAt string `json:"last_seen_at"`
-	// InputsChanged is true when the subject, or a stage or forecast call,
-	// changed after the run that found this. Quote such a finding as out of
-	// date. Null when that is not known.
-	InputsChanged *bool `json:"inputs_changed"`
 }
 
 // SourceCoverageReader answers how current the sources behind the numbers are.

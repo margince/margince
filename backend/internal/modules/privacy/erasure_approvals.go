@@ -72,9 +72,9 @@ const subjectApprovalMatch = `
 	OR proposed_change::text ~* ANY($3::text[])
 	OR summary               ~* ANY($3::text[])`
 
-// blankStagedProposal is what emptying a staged proposal IS: the payload, the
-// summary a human reads, the name of the record it was about, and the material
-// it was read out of.
+// blankStagedProposal is what emptying a staged proposal means. It clears the
+// payload, the summary in both forms, and the name of the record it was about.
+// It clears the material the proposal was read out of as well.
 //
 // One spelling because three statements in this package perform it, and a
 // content column added to one of them is a content column the other two leave
@@ -87,6 +87,7 @@ const subjectApprovalMatch = `
 // where a name used to be.
 const blankStagedProposal = `proposed_change = '{}'::jsonb,
 	       summary         = '',
+	       summary_parts   = NULL,
 	       target_label    = NULL,
 	       evidence        = NULL`
 

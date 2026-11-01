@@ -13,18 +13,18 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // machineCreatedSQL is when Margince itself created the record: the earliest
-// create row by the system or an agent with no passport. An agent a colleague
-// runs carries a passport, and its work is that colleague's own. min() makes a
-// replayed create count once.
+// create row, when the system or an agent with no passport wrote it. An agent a
+// colleague runs carries a passport, and its work is that colleague's own.
 func machineCreatedSQL(entityType, rowAlias string) string {
-	return fmt.Sprintf(`SELECT min(c.occurred_at) AS at FROM audit_log c
- WHERE c.entity_type = '%s' AND c.entity_id = %s.id AND c.action = 'create'
-   AND c.actor_type IN ('system', 'agent') AND c.passport_id IS NULL`, entityType, rowAlias)
+	return fmt.Sprintf(`SELECT creator.occurred_at AS at FROM (%s) creator
+ WHERE creator.actor_type IN ('system', 'agent') AND creator.passport_id IS NULL`,
+		auditattribution.FirstCreateSQL("'"+entityType+"'", rowAlias+".id"))
 }
 
 // byAColleagueSQL is whether an audit row was a colleague's own act: their session,

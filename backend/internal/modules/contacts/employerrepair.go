@@ -81,7 +81,7 @@ func (s *Store) reconcileContactEmployerTx(ctx context.Context, tx pgx.Tx, id id
 	if err != nil || held {
 		return false, err
 	}
-	contact, err := readContact(ctx, tx, id, storekit.LiveOnly, nil)
+	contact, err := readContactRow(ctx, tx, id, storekit.LiveOnly, nil)
 	if err != nil {
 		return false, err
 	}
@@ -96,7 +96,7 @@ func (s *Store) reconcileContactEmployerTx(ctx context.Context, tx pgx.Tx, id id
 			return false, err
 		}
 		// A shipped repair keeps the rule it was released with: typed text creates.
-		if spec.Employer, _, err = s.promotionEmployer(ctx, tx, lead, true); err != nil {
+		if spec.Employer, _, _, err = s.promotionEmployer(ctx, tx, lead, true); err != nil {
 			return false, err
 		}
 	}

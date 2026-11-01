@@ -203,3 +203,27 @@ func TestSeveralTeamsAtOnceAreOfferedOneOfTheReadersTeams(t *testing.T) {
 		t.Fatal("a forecast that read nothing for one population still drew a comparison")
 	}
 }
+
+// 100 won and a target of 200, landed three ways: 140 by commit, 170 weighted
+// and 190 by the call. What is left to win stays 100 whatever the measure; the
+// shortfall follows the landing. Without a target each still names its basis.
+func TestTheShortfallFollowsTheLandingAndWhatIsLeftToWinDoesNot(t *testing.T) {
+	for _, tc := range []struct {
+		measure crmcontracts.ReportingTargetComparisonBasis
+		landing int64
+	}{{"commit_evidence", 140}, {"weighted", 170}, {"manager_call", 190}} {
+		evaluation, ops, held := sampleQuarter()
+		ops.Measure, ops.WonMinor, ops.LandingMinor, ops.OpenMinor = tc.measure, 100, tc.landing, 110
+		held[keyFor(evaluation.Context.Scope, comparedMetric)] = crmcontracts.ReportingTarget{Unit: "EUR", Definition: crmcontracts.ReportingTargetInput{Metric: comparedMetric, Value: 200}}
+		got := compareForecast(context.Background(), evaluation, ops, held)
+		if got.Status != "compared" || *got.Basis != tc.measure || *got.Landing != float64(tc.landing) ||
+			*got.Remaining != 100 || *got.Gap != float64(200-tc.landing) || *got.Coverage != 1.1 {
+			t.Fatalf("%s: comparison %+v, want landing %d, 100 left to win, %d short, 1.1 coverage", tc.measure, got, tc.landing, 200-tc.landing)
+		}
+		delete(held, keyFor(evaluation.Context.Scope, comparedMetric))
+		got = compareForecast(context.Background(), evaluation, ops, held)
+		if got.Status != "no_target" || got.Basis == nil || *got.Basis != tc.measure || got.Gap != nil {
+			t.Fatalf("%s without a target: %+v, want no_target that still names its basis", tc.measure, got)
+		}
+	}
+}

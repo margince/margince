@@ -54,16 +54,16 @@ type approvalPreviewReader struct {
 	labels     map[string]map[ids.UUID]string
 	signals    *signals.Store
 	activities *activities.Store
+	// touched collects the records a build read but names only as text.
+	touched *previewTouched
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {
 	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()).WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(db)}), signals: signals.NewStore(db, nil), activities: activities.NewStore(db).WithChannelReachability(channelReachability{}).WithDisclosures(newDisclosureAdapter(db))}
 }
 
-func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
-	if approval.Status != crmcontracts.ApprovalStatusPending {
-		return nil, nil //nolint:nilnil // Terminal decisions retain their recorded context.
-	}
+// buildPreview dispatches to each kind's preview, reading as whichever principal ctx carries.
+func (r approvalPreviewReader) buildPreview(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
 	if approval.Kind == "merge_members" {
 		return r.memberMergePreview(ctx, approval)
 	}
@@ -72,33 +72,37 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	}
 	out := &crmcontracts.ApprovalPreview{Version: 1, State: previewUnavailableState, Changes: []crmcontracts.ApprovalPreviewChange{}, ReviewerReason: previewReviewer(ctx, approval)}
 	out.Evidence = &[]crmcontracts.ApprovalEvidence{}
-	if approval.Kind == heldScheduledSendKind {
-		return r.scheduledApprovalPreview(ctx, approval, out)
-	}
-	if approval.Kind == "coldstart" {
-		return r.coldStartPreview(ctx, approval, out)
-	}
 	if directCompanyRead(approval) {
 		return r.companyReadPreview(ctx, approval, out)
 	}
-	if approval.Kind == toolMergeRecords {
-		if approval.TargetEntityType != nil && *approval.TargetEntityType == captureCollisionTarget {
-			return r.capturedLeadPreview(ctx, approval, out)
-		}
-		return r.recordMergePreview(ctx, approval, out)
-	}
-	if approval.Kind == operationMergeTags {
-		return r.tagMergePreview(ctx, approval, out)
-	}
-	if approval.Kind == operationSetUpPartner {
-		return r.partnerSetUpPreview(ctx, approval, out)
-	}
-	if approval.Kind == operationCommitImport {
-		return r.importPreview(ctx, approval, out)
+	if build, own := previewBuilders[approval.Kind]; own {
+		return build(r, ctx, approval, out)
 	}
 	if kind, registered := approvals.RegisteredExtensionKind(approval.Kind); registered {
 		return extensionPreview(approval, kind, out)
 	}
+	return r.commercialPreview(ctx, approval, out)
+}
+
+// previewBuilders are the kinds whose preview reads its own proposal shape
+// rather than a commercial field change.
+var previewBuilders = map[string]func(approvalPreviewReader, context.Context, crmcontracts.Approval, *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error){
+	heldScheduledSendKind: approvalPreviewReader.scheduledApprovalPreview,
+	"coldstart":           approvalPreviewReader.coldStartPreview,
+	toolMergeRecords:      approvalPreviewReader.mergePreview,
+	operationMergeTags:    approvalPreviewReader.tagMergePreview,
+	operationSetUpPartner: approvalPreviewReader.partnerSetUpPreview,
+	operationCommitImport: approvalPreviewReader.importPreview,
+}
+
+func (r approvalPreviewReader) mergePreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
+	if approval.TargetEntityType != nil && *approval.TargetEntityType == captureCollisionTarget {
+		return r.capturedLeadPreview(ctx, approval, out)
+	}
+	return r.recordMergePreview(ctx, approval, out)
+}
+
+func (r approvalPreviewReader) commercialPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	changes, covered, err := commercialChanges(approval)
 	if !covered {
 		if hasTypedProposalDisplay(approval.Kind) {
@@ -125,6 +129,10 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	if approval.Kind == operationDemoteLead {
 		return r.demotionPreview(ctx, approval, out)
 	}
+	return r.targetPreview(ctx, approval, changes, out)
+}
+
+func (r approvalPreviewReader) targetPreview(ctx context.Context, approval crmcontracts.Approval, changes map[string]json.RawMessage, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	record, err := r.records.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(*approval.TargetEntityType), ID: ids.UUID(*approval.TargetEntityId)})
 	if previewUnavailable(err) {
 		return out, nil

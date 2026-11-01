@@ -7,6 +7,14 @@
   gap: var(--gapActions);
 }
 
+/* Reports and Setup at the tab row's far end: two verbs of one weight, a
+   control's gap apart. */
+.analytics-tab-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
 /* A section's body as ONE stack. The shell spaces the panels that stand
    directly in `.wrap`, but a section also stacks a period control, a readings
    row and a toolbar between its panels, and those met the panels with nothing
@@ -15,12 +23,20 @@
    same way, so it is spaced alike wherever it is drawn. */
 .analytics-body,
 .analytics-stack {
+  /* Every two-column row of the Overview shares this split, so the column
+     edges run straight down the page. */
+  --analytics-split: minmax(0, 5fr) minmax(0, 3fr);
   display: flex;
   flex-direction: column;
   gap: var(--gapCards);
 }
 .analytics-body {
   margin-top: var(--space-4);
+}
+/* Holds the Overview's way back to the control a reader left through, and
+   adds no box: its children keep the body's column and gap. */
+.analytics-overview {
+  display: contents;
 }
 
 /* The aside over a readings strip says how to read it, so it sits on the
@@ -42,9 +58,18 @@
    enough for both to keep their lines, one under the other below that. */
 .analytics-pair {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  align-items: start;
+  grid-template-columns: var(--analytics-split);
+  align-items: stretch;
   gap: var(--gapCards);
+}
+/* A card wrapped in its own box still reaches the foot of the row. */
+.analytics-pair > :not(.panel) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.analytics-pair > :not(.panel) > .panel:last-child {
+  flex: 1;
 }
 @media (max-width: 1100px) {
   .analytics-pair {
@@ -72,17 +97,232 @@
 
 /* One thing that needs the reader: what it is on the left, the door to where
    it is answered on the right, and the door drops under the words on a phone. */
+/* A row's title shares its line with the door; the lines under it take the
+   row's whole width, so they wrap less. */
 .analytics-attention-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  column-gap: var(--space-3);
 }
 .analytics-attention-text {
-  flex: 1 1 16rem;
-  min-width: 0;
+  display: contents;
+}
+.analytics-attention-text > :not(:first-child) {
+  grid-column: 1 / -1;
+}
+.analytics-attention-row > :last-child {
+  grid-row: 1;
+  grid-column: 2;
 }
 .analytics-attention-title {
   font-weight: var(--fontWeightMedium);
+}
+
+/* A summary beside the table it summarises: the table takes the wider
+   column, since its figures need the room. */
+.analytics-pair-table {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+}
+@media (max-width: 1100px) {
+  .analytics-pair-table {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Sales review's board: rows of two cards that stretch to one height, so
+   every row ends on one line. A slot stacks its cards and its last one grows. */
+.analytics-board {
+  align-items: stretch;
+}
+.analytics-board > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+.analytics-board > div > :last-child {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.analytics-board > div > :last-child > .panel {
+  flex: 1;
+}
+
+/* One of a pair standing alone takes the row; a pair with neither drops out of
+   the stack rather than leaving a gap. */
+.analytics-pair > :only-child {
+  grid-column: 1 / -1;
+}
+.analytics-pair:empty {
+  display: none;
+}
+
+/* Sales won leads the opening page: the figure in display type, and the
+   running total that reached it in the room beside it. */
+.analytics-hero-body {
+  display: grid;
+  grid-template-columns: minmax(15rem, 2fr) minmax(0, 3fr);
+  align-items: start;
+  gap: var(--space-6);
+}
+.analytics-hero-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.analytics-hero-value {
+  font: var(--fontDisplayFigure);
+}
+/* The figure and its link beside the ring of its target share. */
+.analytics-hero-headline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-self: stretch;
+}
+.analytics-hero-lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+/* Under the figure: the target it is read against, and the period before. */
+.analytics-hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: stretch;
+}
+/* Short facts, one per line: the gap spaces them, not the prose rhythm. */
+.analytics-hero-aside > p {
+  margin: 0;
+}
+/* A grid track never shrinks below its content, so the chart is let shrink. */
+.analytics-hero-chart {
+  min-width: 0;
+}
+.analytics-hero-body > :only-child {
+  grid-column: 1 / -1;
+}
+/* With no trend to draw but an aside to show, the two stand side
+   by side, so the card is not one narrow column beside empty space. */
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
+  display: grid;
+  grid-template-columns: minmax(12rem, auto) minmax(0, 1fr);
+  column-gap: var(--space-8);
+  align-items: start;
+}
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) > * {
+  grid-column: 1;
+  justify-self: start;
+}
+.analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
+  > .analytics-hero-aside {
+  grid-column: 2;
+  grid-row: 1 / span 6;
+  align-self: center;
+}
+@media (max-width: 900px) {
+  .analytics-hero-body,
+  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .analytics-hero-figure:only-child:has(> .analytics-hero-aside > *)
+    > .analytics-hero-aside {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* Reports and Setup are doors off the tab row, so they read as controls with
+   an edge rather than as words in the row. */
+.analytics-tab-verbs .btn-ghost {
+  --ghostEdge: var(--borderControl);
+  box-shadow: var(--shadow-rest);
+}
+/* While its page is open, Reports holds the strong edge. */
+.analytics-tab-verbs .btn-ghost[aria-current="page"] {
+  --ghostEdge: var(--borderStrong);
+}
+
+/* The active filters, always in view beside the control that changes them. */
+.analytics-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The summary's sentences, one per line, each opening what it rests on. */
+.analytics-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.analytics-decision-link {
+  text-align: start;
+  white-space: normal;
+}
+.analytics-composition {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-4);
+}
+
+/* All open pipeline, the secondary reading over the stock charts, on its own
+   slim card so it sits on the grid like every other block. */
+.analytics-open-line {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+}
+
+/* The lead's readings share one card that stands as tall as the lead. */
+.analytics-readings {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.analytics-readings > .stat-strip-wrap {
+  padding: var(--space-2) var(--space-5);
+}
+
+/* Sales review's lead row: the outcome and its trend, and the three readings
+   stacked beside them. Under 1100px the readings go under the lead. */
+.analytics-lead {
+  display: grid;
+  grid-template-columns: var(--analytics-split);
+  align-items: stretch;
+  gap: var(--gapCards);
+}
+/* One column of the lead row: its cards stacked at the gap between cards. */
+.analytics-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+/* The lead's two columns end on one line: the last card of each grows, and a
+   readings row stretches its cards with it. */
+.analytics-lead > .analytics-column > :last-child {
+  flex: 1;
+}
+.analytics-lead > .analytics-column > .stat-strip-wrap {
+  display: flex;
+}
+.analytics-lead > .analytics-column > .stat-strip-wrap > .stat-strip {
+  flex: 1;
+}
+@media (max-width: 1100px) {
+  .analytics-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

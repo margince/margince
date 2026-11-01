@@ -15,7 +15,7 @@ that can remove or merge a source's rows.
 | Step | Function | What it does |
 |---|---|---|
 | A | `admitBySource` (`admission.go`) | Drops a row whose owner kind its source does not allow |
-| B | `dropDealsAlreadyWaiting` (`classify.go`) | Drops a `deal_at_risk` row when a `customer_waiting` row names the same deal |
+| B | `dropDealsAlreadyInHand` (`classify.go`) | Drops a `deal_at_risk` row when a `customer_waiting` row names the same deal, or a task row about it is due within `nearTaskDays` = 7 days |
 | C | `narrowToScope` (`scope.go`) | Owner admission: keeps the reader's, a named owner's, the unowned or the roster's rows. `team` filters by roster here, after the lane caps; the task, waiting and at-risk reads already narrowed to it in SQL |
 | D | `relationshipChoices` (`relationshipchoices.go`) | Moves `relationship_decay` rows out of the queue unless pinned; drops one whose contact is already on another row |
 | E | `foldBriefIntoRisk` (`briefdedupe.go`) | Merges a `brief_item` onto the row about the same deal |
@@ -138,7 +138,12 @@ The `deal_at_risk` source is read on below the ranked rows to its end, in every 
   lies past it is still shown as at risk, and the card comes later in the tail. Asking `DealsWaiting` for the ranked
   deals closes that gap, but made the first page 10% slower at p50 on a team page and 3% on a seat's own page.
 - Step E: a tail row carries no brief item. A deal that a brief row or a waiting card above already names is left
-  out of the tail (`dealsReported` in `attention/backlogrisk.go`). A task about the deal does not leave it out.
+  out of the tail (`dealsReported` in `attention/backlogrisk.go`).
+- Step B for tasks: `TasksOnDeals` (`compose/attentiontaskseam.go`) reads the open tasks filed under the batch's
+  deals and due within `nearTaskDays`, under the task lane's narrowing (`openTasksDueBy`). `dealsWithNearTask`
+  draws each as the lane does and asks the ranked rows' own rule, `absorbsRisk`. The ranked rows apply that rule to
+  the task lane's own rows. When that lane was cut, a ranked deal whose near task lies past the cap is still shown
+  as at risk, and the task comes later in the tail.
 - Step F: the tail reads the reader's Done marks for its rows, and `dropDone` applies the came-back rule to each
   row's own dates. `MarkRowsDone` finds a tail deal through `riskInTail`.
 

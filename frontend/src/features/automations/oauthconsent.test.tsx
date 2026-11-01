@@ -267,6 +267,37 @@ describe("OAuthConsent", () => {
     );
   });
 
+  it("narrows the grant to reading and drafting in one press, and back", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    const full = await screen.findByRole("button", { name: "Full assistant" });
+    expect(full).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Read and draft" }));
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft",
+    );
+    expect(
+      screen.getByRole("checkbox", { name: /Change records/ }),
+    ).not.toBeChecked();
+
+    await user.click(full);
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft write send enrich",
+    );
+  });
+
+  it("calls a grant that matches neither preset its own", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Buy contact data/ }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Pick your own" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("refuses to approve nothing", async () => {
     renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
     const user = userEvent.setup();

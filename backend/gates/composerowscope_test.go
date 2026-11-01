@@ -58,13 +58,11 @@ import (
 )
 
 const (
-	// composeTier is the subtree this gate judged first, and still the only one
-	// covered whole.
+	// composeTier is the subtree this gate judged first, still the only one whole.
 	composeTier = "internal/compose"
 
-	// rowScopeVocabularyPkg holds ownerScopedTables — the closed set of tables
-	// the row-scope primitives will interpolate, and therefore the closed set of
-	// references this gate is about.
+	// rowScopeVocabularyPkg holds ownerScopedTables: the closed set of tables the
+	// row-scope primitives interpolate, and so the references this gate is about.
 	rowScopeVocabularyPkg = "internal/platform/auth"
 
 	// wantMinimumScopedSites guards against the way this gate fails silently: an
@@ -75,8 +73,7 @@ const (
 	wantMinimumScopedSites = 10
 )
 
-// unscopedReferenceReads ratifies a compose read that hands back a row-scoped record's id without
-// applying that record's row scope. Keyed "package-dir:FuncName", each entry stating what stands in.
+// unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
@@ -87,6 +84,8 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose/momentaction:DoneSetAsidesTx": "reads only the reader's own Not yet answers, keyed by question, to match them against questions the caller already built from rows it may read; the contact ids are compared, never served",
 	"internal/compose:tagScoutSQL":                  "the tag scout's one read of captured activities that mention a suggestible tag's phrases, under the tag-scout sweep's system principal: every contact and company it names is one a suggestion is filed against, handed to collections.RecordTagSuggestionTx and never to a reader",
 	"internal/compose:raiseFromAnswers":             "the tag scout's model path replays the stored model answers into the contacts and companies the answered activities are filed under, under the tag-scout sweep's system principal, on tagScoutSQL's terms: each record goes to collections.RecordTagSuggestionTx and never to a reader",
+	"internal/compose:forecastStageEvidence":        "the recorded stage entries behind a stage's chance, read installation-wide as the system; the deal ids are grouped by stage inside the read and only per-stage counts and won shares are returned",
+	"internal/compose:forecastRiskEffects":          "the settled frozen forecast rows behind each risk signal's effect, read installation-wide as the system; only one odds ratio per signal is returned",
 	"internal/compose/weekly:StageEntriesSQL":       "a fragment whose narrowing argument carries the row scope: both callers, measureTeamFunnel and readReportingStageConversion, render auth.ScopeClauseFor for deal on its alias d into it",
 	"internal/modules/projects:LinkPhaseHistoryTx":  "the data task that links phase-history rows to their audit rows runs as the system principal and returns only the ids of the history rows it inspected, to page the next batch; it reads no project and serves nothing to a caller",
 	// --- The module tier, one package at a time (censusedModules). ---
@@ -174,6 +173,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// decision not to write.
 	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
+	"internal/compose:subjectMailScopeSQL":    "the direct-sender data task uses these contact ids only inside settleSubjectMailBatch, which requires the system principal before paging and settling cases; its other caller returns only a bounded count to a data-task reader, never contact references",
 	"internal/compose:settleWhenSubjectWrote": "the notice consumer's settle pass, under the system principal HandleEvent binds (compose/noticecaseopen.go): it resolves which contacts a connector-captured mail came FROM, and each id is spent inside the same transaction recording that the contact wrote to us and closing their capture-unknown notice cases — a caller never sees it",
 	"internal/compose:employerOf":             "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 

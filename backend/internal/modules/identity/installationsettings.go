@@ -38,8 +38,8 @@ type InstallationSettings struct {
 	CallWhatsApp bool
 	CallTelegram bool
 	CallZalo     bool
-	// IndividualPerformance is settingsindividualperformance.go's switch.
-	IndividualPerformance bool
+	// The switches of settingsindividualperformance.go and its forecast sibling.
+	IndividualPerformance, ForecastSelfCorrecting bool
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -110,6 +110,7 @@ type InstallationPatch struct {
 	CallTelegram              *bool
 	CallZalo                  *bool
 	IndividualPerformance     *bool
+	ForecastSelfCorrecting    *bool
 	// Country selects the jurisdiction pack. "" selects none. A change runs
 	// the store's country-change hook in the same transaction.
 	Country *string
@@ -284,11 +285,12 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		Operations:           operations,
 		AgentAllowances:      allowances,
 	}
-	if err := s.readCallMessengers(ctx, &out); err != nil {
-		return InstallationSettings{}, err
-	}
-	if err := s.readIndividualPerformance(ctx, &out); err != nil {
-		return InstallationSettings{}, err
+	for _, read := range []func(context.Context, *InstallationSettings) error{
+		s.readCallMessengers, s.readIndividualPerformance, s.readForecastSelfCorrecting,
+	} {
+		if err := read(ctx, &out); err != nil {
+			return InstallationSettings{}, err
+		}
 	}
 	return out, nil
 }
@@ -397,7 +399,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 		return nil, err
 	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites} {
+	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites, in.forecastSelfCorrectingWrites} {
 		writes, err := group()
 		if err != nil {
 			return nil, err

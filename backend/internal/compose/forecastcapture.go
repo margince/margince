@@ -97,6 +97,7 @@ func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture
 			Trigger: forecasting.TriggerDaily, BaseCurrency: currency, Readings: captured.Readings, TakenAt: at,
 			PipelineID: (*ids.UUID)(capture.PipelineId), PopulationFingerprint: captured.PopulationFingerprint,
 		}
+		snapshot.StampChances(captured.Assembly)
 		if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
 			return err
 		}
@@ -115,14 +116,11 @@ func captureReadings(
 ) (forecasting.Baseline, error) {
 	out := forecasting.Baseline{BaseCurrency: currency}
 	requested := forecasting.Scope{Kind: string(scope.Kind), ID: (*ids.UUID)(scope.Id)}
-	deals, resolved, _, err := forecastDealsForPipeline(ctx, tx, period, requested, at, currency, pipeline)
+	assembly, err := assembleForecast(ctx, tx, period, requested, at, currency, pipeline)
 	if err != nil {
 		return out, err
 	}
-	out.Scope = resolved
-	if out.Readings, err = forecasting.Compute(period, period.LocalDay(at), deals); err != nil {
-		return out, err
-	}
+	out.Scope, out.Readings, out.Assembly = assembly.Scope, assembly.Readings, assembly
 	if out.ForwardMeasure, out.QualifiedPolicy, err = forecastBasis(ctx, tx); err != nil {
 		return out, err
 	}

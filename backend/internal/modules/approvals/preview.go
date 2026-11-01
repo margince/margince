@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalplan"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,9 +31,20 @@ func (e *PreviewContextError) MessageFault() (code, message string) {
 		return "approval_preview_incomplete", "The full change cannot be shown. Resolve the missing context before approving."
 	case "conflict":
 		return "approval_preview_conflict", "Resolve the conflicting context before approving this change."
+	case PreviewNeedsWiderSight:
+		return "approval_needs_wider_sight", "This change touches records you cannot open. A colleague who can see them must decide it."
 	default:
 		return "approval_preview_unavailable", "The context needed to review this change is unavailable. Check access and the source before approving."
 	}
+}
+
+// Unwrap makes a refusal for want of sight a 403: who decides is the problem,
+// not the context.
+func (e *PreviewContextError) Unwrap() error {
+	if e.State == PreviewNeedsWiderSight {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
 }
 
 // WithPreview connects decision context to the authorized readers of its records.
@@ -53,7 +65,7 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 		}
 		proposal.ProposedChange = &change
 	}
-	preview, err := s.proposalPreview(ctx, a, proposal)
+	preview, _, err := s.proposalPreview(ctx, a, proposal)
 	if err != nil {
 		return err
 	}
@@ -90,20 +102,27 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 		return nil
 	}
 	for i := range rows {
-		preview, err := s.proposalPreview(ctx, subjects[i], rows[i])
+		preview, heldBack, err := s.proposalPreview(ctx, subjects[i], rows[i])
 		if err != nil {
 			return err
 		}
 		rows[i].Preview = preview
+		if (approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(stagedByRow(subjects[i])), HeldBack: heldBack}).PayloadWithheld() {
+			// The staged call and its summary say what the preview held back.
+			withholdPayload(&rows[i])
+		}
 	}
 	return nil
 }
 
-func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
-	preview, err := s.preview(ctx, proposal)
+// proposalPreview also answers whether the build masked a value for the reader.
+func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crmcontracts.Approval) (preview *crmcontracts.ApprovalPreview, heldBack bool, err error) {
+	recording, masked := withMaskRecorder(s.withPreviewEffect(ctx, subject))
+	preview, err = s.preview(recording, proposal)
 	if err != nil || preview == nil {
-		return preview, err
+		return preview, false, err
 	}
+	heldBack = masked.Load()
 	defer func() {
 		if preview.State != "ready" {
 			preview.Changes = []crmcontracts.ApprovalPreviewChange{}
@@ -114,19 +133,22 @@ func (s *Service) proposalPreview(ctx context.Context, subject row, proposal crm
 	}()
 	if !previewCoTargetPinned(subject, proposal) {
 		preview.State = previewIncomplete
-		return preview, nil
+		return preview, heldBack, nil
 	}
-	if subject.CoTargetVersion == nil {
-		return preview, nil
+	if _, contextPinned := s.contextPins[subject.Kind]; subject.CoTargetVersion == nil && !contextPinned {
+		return preview, heldBack, nil
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return checkPin(ctx, tx, subject.CoTargetType, subject.CoTargetID, subject.CoTargetVersion, "second record")
+		if err := checkPin(ctx, tx, subject.CoTargetType, subject.CoTargetID, subject.CoTargetVersion, "second record"); err != nil {
+			return err
+		}
+		return s.previewContextPin(ctx, tx, subject)
 	})
 	if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 		preview.State = "stale"
-		return preview, nil
+		return preview, heldBack, nil
 	}
-	return preview, err
+	return preview, heldBack, err
 }
 
 func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
@@ -170,6 +192,10 @@ func proposalDestination(proposal crmcontracts.Approval, field string) ids.UUID 
 	}
 	return destination
 }
+
+// PreviewNeedsWiderSight is the state of a preview whose effect touches a
+// record the viewer cannot open. It shows nothing of the plan.
+const PreviewNeedsWiderSight = approvalplan.NeedsWiderSight
 
 const (
 	previewIncomplete       = "incomplete"

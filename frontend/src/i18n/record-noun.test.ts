@@ -621,7 +621,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "heldThreads.heldByOthers_other",
     "lead.bulkOwnerPick",
     "log.transcriptHint",
-    "noticeDuty.what",
     "ob.manual.buying_centerHint",
     "contact.intro.answerSuggest",
     "consent.askToConfirmWhat",

@@ -9,7 +9,7 @@ import type { components } from "../../../api/schema";
 import { EntityRef } from "../../../components/entityref";
 import { FieldRow } from "../../../design-system/fieldgrid";
 import { Popover } from "../../../design-system/popover";
-import { provenanceOf } from "../../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../../design-system/provenanceof";
 import { FieldGuard } from "../../../design-system/rbac";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
@@ -69,6 +69,7 @@ export type DealIdentity = Partial<
     | "source"
     | "imported_from"
     | "captured_by"
+    | "created_by"
     | "author"
     | "status"
     | "lost_reason"
@@ -155,12 +156,15 @@ export function DealRecordRows({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(
-                deal.captured_by,
-                viewerId,
-                deal.author,
-                deal.source,
-                deal.imported_from,
+              provenance={withCreator(
+                provenanceOf(
+                  deal.captured_by,
+                  viewerId,
+                  deal.author,
+                  deal.source,
+                  deal.imported_from,
+                ),
+                deal.created_by,
               )}
             />
           }

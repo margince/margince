@@ -4,7 +4,7 @@
 import { AppLink } from "../../design-system/applink";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { briefSubjectLabel, subjectHref } from "./worklist.copy";
+import { briefSubjectLabel, subjectHref } from "../../lib/worklistcopy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";

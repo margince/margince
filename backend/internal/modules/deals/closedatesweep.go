@@ -275,16 +275,9 @@ func (c *CloseDateCorrector) stageVelocityDays(ctx context.Context, pipelineID i
 	var medianSeconds *float64
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			WITH stints AS (
-				SELECT d.id AS deal_id,
-				       extract(epoch FROM lead(h.changed_at) OVER (PARTITION BY h.deal_id ORDER BY h.changed_at, h.id) - h.changed_at) AS secs
-				FROM deal_stage_history h
-				JOIN deal d ON d.id = h.deal_id
-				WHERE d.pipeline_id = $1 AND d.status = 'won' AND d.archived_at IS NULL
-			)
-			SELECT count(DISTINCT deal_id),
-			       percentile_cont(0.5) WITHIN GROUP (ORDER BY secs)
-			FROM stints WHERE secs IS NOT NULL`, pipelineID).Scan(&wonDeals, &medianSeconds)
+			WITH stints AS (`+wonStintsSQL+`)
+			SELECT count(DISTINCT deal_id), percentile_cont(0.5) WITHIN GROUP (ORDER BY secs)
+			FROM stints`, pipelineID).Scan(&wonDeals, &medianSeconds)
 	})
 	if err != nil {
 		return closeDatePace{}, err

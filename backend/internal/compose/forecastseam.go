@@ -94,7 +94,7 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 		SELECT d.id, d.owner_id, %[5]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
 		       d.status = 'won', d.status = 'lost', d.forecast_category,
-		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s
+		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s, d.name
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE %[2]s
@@ -209,7 +209,7 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	var qualification string
 	err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
 		&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
-		&d.Won, &d.Lost, &category, &d.StageProbability, &stage, &qualification)
+		&d.Won, &d.Lost, &category, &d.StageProbability, &stage, &qualification, &d.Name)
 	d.Qualification = viability.Qualification(qualification)
 	if stage != nil {
 		d.StageID = stage.String()
