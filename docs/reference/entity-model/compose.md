@@ -159,6 +159,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `agent_task_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `agent_task_served_records`: `CHECK (((served_records IS NULL) OR (result IS NOT NULL)))`
 - `agent_task_status_check`: `CHECK ((status = ANY (ARRAY['working', 'completed', 'failed', 'cancelled'])))`
 - `agent_task_terminal_payload`: `CHECK ((((status = 'completed') AND (result IS NOT NULL) AND (error IS NULL)) OR ((status = 'failed') AND (error IS NOT NULL) AND (result IS NULL)) OR ((status = ANY (ARRAY['working', 'cancelled'])) AND (result IS NULL) AND (error IS NULL))))`

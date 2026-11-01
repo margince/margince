@@ -131,7 +131,8 @@ func (w *accessWorld) seedPrivateContact(t *testing.T, ownerID *ids.UUID) ids.UU
 			t.Fatalf("sharing the private contact with %s %s: %v", share.SubjectType, share.SubjectID, err)
 		}
 	}
-	e.WsExec(t, `UPDATE record_grant SET expires_at = now() - interval '1 minute'
+	e.WsExec(t, `UPDATE record_grant SET created_at = now() - interval '2 minutes',
+		                        expires_at = now() - interval '1 minute'
 		WHERE record_id = $1 AND subject_id = $2`, id, e.Rep2)
 	return id
 }
