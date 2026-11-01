@@ -277,6 +277,10 @@ export default defineConfig({
     // seconds without a single wait failing, and the longest chain here is six —
     // so a five-second ceiling failed tests whose every assertion passed.
     testTimeout: TEST_TIMEOUT_MS,
+    // A hook pays for a screen's chunk, which keeps that cost out of a waiter.
+    // The 10s default sits under it: one screen import on a loaded suite ran
+    // past it. A hook doing a test's work earns a test's ceiling.
+    hookTimeout: TEST_TIMEOUT_MS,
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs
