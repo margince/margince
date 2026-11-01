@@ -79,15 +79,21 @@ export function MetricReading({
   const { locale } = useLocale();
   const metricName = useMetricNames();
   const metric = metricOf(evaluation, id);
+  // A figure hidden whole says so; one with a value hides only a part.
+  const hidden = metric?.coverage.withheld && metric.value == null;
   return (
     <StatCard
       narrow="row"
       label={label ?? metricName(id)}
-      value={readingValue(metric, evaluation, t, locale)}
+      value={
+        hidden
+          ? t("analytics.prospect.withheld")
+          : readingValue(metric, evaluation, t, locale)
+      }
       detail={
         <>
           {detail}
-          {metric?.coverage.withheld && (
+          {metric?.coverage.withheld && !hidden && (
             <span>{t("analytics.overview.partlyHidden")}</span>
           )}
           {/* What a partial figure leaves out is said beside it, not behind

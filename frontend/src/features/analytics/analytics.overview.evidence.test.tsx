@@ -255,6 +255,17 @@ describe("headline, actions and charts are ready on their own", () => {
   });
 });
 
+describe("a reading hidden whole", () => {
+  it("says it is hidden, never that only a part of it is", async () => {
+    openScenario("readingsWithheld", "team");
+    const strip = await readings();
+    expect(strip.getAllByText("Hidden from you").length).toBeGreaterThan(0);
+    expect(
+      strip.queryByText("Part of this figure is hidden from you"),
+    ).toBeNull();
+  });
+});
+
 describe("a drawer belongs to the selection it was opened in", () => {
   it("stays closed when the reader changes the selection and comes back", async () => {
     const user = userEvent.setup({ delay: null });
