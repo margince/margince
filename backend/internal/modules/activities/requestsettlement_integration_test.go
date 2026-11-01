@@ -353,7 +353,7 @@ func TestEverySettlementWriteLeavesOneEventPerAuditRow(t *testing.T) {
 }
 
 // settlementAudits counts the request's audit rows that wrote column, and those
-// of them without exactly one activity.updated beside them naming a settlement change.
+// of them without one, and only one, activity.updated naming a settlement change.
 func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string) (audits, misannounced int) {
 	t.Helper()
 	if err := e.owner.QueryRow(e.as(), `
