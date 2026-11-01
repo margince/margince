@@ -111,3 +111,35 @@ func TestACachedFirstPageKeepsTheWalkItsDefaultSpellingStarted(t *testing.T) {
 		t.Errorf("the cached page's cursor → %d, want the walk to continue", status)
 	}
 }
+
+func receiptComputedAt(t *testing.T, e *apptest.AppEnv) string {
+	t.Helper()
+	var raw json.RawMessage
+	if status := e.Call(t, "GET", "/v1/magic?limit=100", nil, nil, &raw); status != http.StatusOK {
+		t.Fatalf("GET magic → %d", status)
+	}
+	var at string
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT computed_at::text FROM home_read_cache WHERE read = 'magic'`).Scan(&at); err != nil {
+		t.Fatalf("reading the kept receipt: %v", err)
+	}
+	return at
+}
+
+func TestHomesReceiptIsServedFromCacheUntilAMachineWrites(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Home Receipt", "admin@homereceipt.test", "Admin")
+
+	first := receiptComputedAt(t, e)
+	if again := receiptComputedAt(t, e); again != first {
+		t.Fatalf("the second receipt was computed again (%s → %s), not served from cache", first, again)
+	}
+	if _, err := e.Owner.Exec(context.Background(), `
+		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
+		VALUES ('agent', 'agent:enrich', 'update', 'deal', gen_random_uuid())`); err != nil {
+		t.Fatal(err)
+	}
+	if after := receiptComputedAt(t, e); after == first {
+		t.Error("a machine write left the receipt on its cached answer")
+	}
+}
