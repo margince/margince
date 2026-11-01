@@ -263,7 +263,7 @@ export function StatCard({
           competed with the label for the first glance. */}
       {(href || onOpen) && (
         <span className="stat-card-foot">
-          {/* THE DOOR SAYS "Open", or "View records" for the records in place.
+          {/* The door says "Open", or "View records" for the records in place.
               One word per action: a caller naming its own destination gave the
               product several spellings of the same door, and the reading a door
               belongs to is already said beside it. Which reading it opens reaches a screen reader as this

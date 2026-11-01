@@ -274,8 +274,8 @@ function SalesReviewBody({
 }
 
 // Under the decision and the actions: all open pipeline, today's stock by
-// stage and the permitted sales by owner, and the evidence drawer for every
-// figure and chart on the page, under the read each came from.
+// stage and the permitted sales by owner. The evidence drawer for every figure
+// and chart on the page is here too, under the read each came from.
 function SalesStock({
   answered,
   charts,

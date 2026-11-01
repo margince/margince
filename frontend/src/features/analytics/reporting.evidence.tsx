@@ -118,8 +118,8 @@ export function ReportingEvidenceDrawer({
 }
 
 // Whether the records behind a figure can be listed. A failed, unsupported or
-// unconfigured figure has none to list, and neither has one hidden from the
-// reader: listing them, or counting them, would rebuild what is hidden.
+// unconfigured figure has none to list. Neither has one hidden from the reader,
+// because listing or counting its records would rebuild what is hidden.
 type FigureState = "records" | "zero" | "unavailable";
 const UNLISTABLE: ReadonlySet<string> = new Set([
   "failed",

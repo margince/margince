@@ -98,9 +98,9 @@ export function SinceLastReview({
   );
 }
 
-// Why the movement has nothing to draw, in one line rather than an empty
-// panel: the reader cannot have it, the two captures agree, or history is
-// still starting, with the dates of the captures it waits for.
+// Why the movement has nothing to draw, in one line rather than an empty panel.
+// The reader cannot have it, or the two captures agree, or history is still
+// starting; then the line dates the captures it waits for.
 function movementState(
   chart: ReportingEvaluation["charts"][number],
   zone: string,

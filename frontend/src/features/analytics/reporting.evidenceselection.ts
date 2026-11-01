@@ -9,7 +9,7 @@ import type {
 
 /**
  * What a reader opened from a view, for as long as the question it was read
- * from stands. A changed selection closes it for good, so a drawer never lists
+ * from stands. A changed selection closes it for good. So a drawer never lists
  * one question's records under another's figures, and going back to the first
  * question does not reopen it.
  */

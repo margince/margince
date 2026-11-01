@@ -425,7 +425,7 @@ describe("the foot speaks once per action", () => {
     if (foot === undefined) return;
 
     // Every word the foot can draw: a `t(...)` lookup or a literal written
-    // straight in. One lookup per action and no literals — a third of either
+    // straight in. One lookup per action and no literals; a third of either
     // is a door saying something the rest of the product's doors do not.
     expect(messageLookups(foot)).toEqual([
       't("stat.records")',

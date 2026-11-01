@@ -58,9 +58,9 @@ export function readingValue(
 }
 
 /**
- * One headline metric as a reading. The card opens the shared evidence for
- * it: the records behind a figure, the empty population behind a measured
- * zero, or why a failed or hidden figure has none.
+ * One headline metric as a reading. The card opens the shared evidence for it.
+ * That is the records behind a figure, or the empty population behind a
+ * measured zero, or why a failed or hidden figure has none.
  */
 export function MetricReading({
   evaluation,

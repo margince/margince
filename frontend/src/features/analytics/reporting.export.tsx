@@ -10,8 +10,8 @@ import { reloadReportingFigures } from "./reporting.queries";
 
 /**
  * Downloads the server's CSV of an evaluation. `charts` is a second read of
- * the same question that carries its charts; its chart rows follow the
- * figures, each row under the receipt it was read with.
+ * the same question that carries its charts. Its chart rows follow the
+ * figures, and each row keeps the receipt it was read with.
  */
 export function ReportingExportButton({
   evaluation,

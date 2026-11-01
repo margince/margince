@@ -126,8 +126,8 @@ func readerWithheldFigures(ctx context.Context, workflow crmcontracts.SdrTeamRev
 }
 
 // leadReadingsMasked says whether a field mask withholds any column the
-// qualified and the unanswered readings read, on some leads or on all, as
-// each reading's coverage would say.
+// qualified and the unanswered readings read. It covers a mask on some leads
+// or on all, as each reading's coverage would say.
 func leadReadingsMasked(ctx context.Context) (qualified, unanswered bool, err error) {
 	var b reportingBindings
 	if _, qualified, err = reportingFieldScope(ctx, string(recordTypeLead), "l", reportingLeadFields(reportingLeadsPromoted), &b); err != nil {

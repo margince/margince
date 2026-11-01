@@ -37,8 +37,8 @@ export function salesBoardBlocks(
 }
 
 /**
- * The chart read: the board's charts and only the metrics they belong to, so
- * the figures answer without waiting for a chart, and no figure-only metric is
+ * The chart read: the board's charts and only the metrics they belong to. The
+ * figures answer without waiting for a chart, and no figure-only metric is
  * evaluated twice. A preset with no board chart asks nothing.
  */
 export function useSalesCharts(
