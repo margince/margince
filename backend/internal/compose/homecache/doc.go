@@ -7,7 +7,7 @@
 // Home's day reads assemble the reader's whole day on the server. Each request
 // paid that again, however little had changed. An answer here is served while:
 //   - it is younger than Life, which is how far behind Home may be for changes
-//     made by other people and by background work;
+//     made by colleagues and by background work;
 //   - the access fence has not moved since its own read began. Every write that
 //     can take a record out of somebody's reach advances home_read_fence through
 //     a trigger, so no writer can forget it (migration 1793559778);

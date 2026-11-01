@@ -20,7 +20,7 @@ import (
 )
 
 // Life is how long an answer is served at most: how far behind Home may be
-// for what other people and background work changed.
+// for what colleagues and background work changed.
 const Life = 5 * time.Minute
 
 // Read names one of Home's cached reads.

@@ -40,6 +40,7 @@ import (
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
 	"report_projection_fence": true,
+	"home_read_fence":         true,
 	"data_task_run":           true,
 	"data_task_run_history":   true,
 	// Seeded by its migration; mail captured after a reset is past it anyway.

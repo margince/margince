@@ -1,3 +1,4 @@
+SET LOCAL lock_timeout = '3s';
 DROP TRIGGER home_read_fence_scrub ON audit_log;
 DROP TRIGGER home_read_fence_workspace_domain ON workspace_email_domain;
 DROP TRIGGER home_read_fence_company_domain ON company_domain;
