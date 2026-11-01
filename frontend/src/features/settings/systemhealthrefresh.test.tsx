@@ -141,7 +141,7 @@ it("rejects an all-clear payload that omits its available source observation", a
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(
     screen.queryByRole("heading", {
-      name: "No issues detected in checked services",
+      name: "No action needed",
     }),
   ).toBeNull();
 });
@@ -159,6 +159,7 @@ it("keeps finding order during a poll and applies priorities on explicit refresh
   serve(async () =>
     jsonResponse({
       ...attentionReport,
+      action_count: 2,
       findings: next ? [other, first] : [first, other],
     }),
   );
@@ -327,4 +328,14 @@ it.each([
   await settle(4_000);
   expect(screen.getByRole("alert")).toHaveTextContent("History unreadable");
   expect(screen.queryByText("History loaded")).toBeNull();
+});
+
+it("rejects an action count that hides a required finding", async () => {
+  serve(async () => jsonResponse({ ...attentionReport, action_count: 0 }));
+  render(<SystemHealthPage />);
+  await settle(4_000);
+  expect(screen.getByRole("alert")).toBeInTheDocument();
+  expect(
+    screen.queryByRole("heading", { name: "No action needed" }),
+  ).toBeNull();
 });

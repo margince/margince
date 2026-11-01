@@ -171,3 +171,19 @@ func TestOriginSnapshotDoesNotTakeTheProbeLock(t *testing.T) {
 		t.Fatalf("unexpected cached status: %+v", status)
 	}
 }
+
+func TestCancelledOriginProbeDoesNotCacheAConnectionFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+	defer server.Close()
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	probe := newPublicOriginProbe(server.URL, newOriginProbeClient(), func() time.Time { return at })
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	probe.Status(ctx)
+	if cached := probe.Snapshot(); cached.CheckedAt != nil {
+		t.Fatalf("cancelled caller poisoned cache: %+v", cached)
+	}
+	if result := probe.Status(t.Context()); result.Reachable == nil || !*result.Reachable {
+		t.Fatalf("next caller did not probe again: %+v", result)
+	}
+}

@@ -23,6 +23,11 @@ func TestRestoreVerificationRequiresTheDrillsOwnOutcomeAndWindows(t *testing.T) 
 		t.Fatal("over-target recovery was verified")
 	}
 	finished = at.Add(RecoveryTarget)
+	drill.RestoredTo = at.Add(-DataLossTarget - time.Second)
+	if AssessDrill(&drill).Code != "recovery_unverified" {
+		t.Fatal("over-target data loss was verified")
+	}
+	drill.RestoredTo = at.Add(-DataLossTarget)
 	drill.Outcome = OutcomeFailed
 	if AssessDrill(&drill).Code != "recovery_unverified" {
 		t.Fatal("failed drill was verified")

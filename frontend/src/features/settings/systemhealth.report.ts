@@ -10,9 +10,9 @@ type Finding = components["schemas"]["HealthFinding"];
 export async function readJobReport(finding: Finding, signal: AbortSignal) {
   const kind =
     finding.job_kinds?.length === 1 ? finding.job_kinds[0] : undefined;
-  const health = unwrap(await api.GET("/admin/job-health", { signal }));
-  const history = unwrap(
-    await api.GET("/admin/job-health/history", {
+  const [healthResponse, historyResponse] = await Promise.all([
+    api.GET("/admin/job-health", { signal }),
+    api.GET("/admin/job-health/history", {
       signal,
       params: {
         query: {
@@ -22,7 +22,9 @@ export async function readJobReport(finding: Finding, signal: AbortSignal) {
         },
       },
     }),
-  );
+  ]);
+  const health = unwrap(healthResponse);
+  const history = unwrap(historyResponse);
   return JSON.stringify(
     {
       source: "jobs",

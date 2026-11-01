@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import {
   installFetchStub,
@@ -35,3 +36,19 @@ export const Schedules: Story = {
   },
 };
 export const Dark: Story = { ...Schedules, globals: { theme: "dark" } };
+
+export const Withheld: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <Configuration />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByText(/Your role cannot view these settings/),
+    ).resolves.toBeVisible();
+  },
+};

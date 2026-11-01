@@ -109,6 +109,8 @@ func historyGroups(ctx context.Context, tx pgx.Tx, where string, args []any) ([]
 		if err := rows.Scan(&row.Kind, &row.State, &row.FleetWide, &row.Count, &row.FirstAt, &row.LatestAt); err != nil {
 			return nil, err
 		}
+		row.FirstAt = row.FirstAt.UTC()
+		row.LatestAt = row.LatestAt.UTC()
 		out = append(out, row)
 	}
 	return out, rows.Err()
@@ -123,6 +125,7 @@ func scanHistory(ctx context.Context, rows pgx.Rows) ([]Failure, error) {
 		if err := rows.Scan(&f.ID, &f.Kind, &f.WorkspaceID, &f.State, &f.Attempt, &f.MaxAttempts, &f.FailedAt, &first, &reason); err != nil {
 			return nil, fmt.Errorf("jobs: scanning history: %w", err)
 		}
+		f.FailedAt = f.FailedAt.UTC()
 		f.FirstFailedAt = parseFirstFailedAt(ctx, f.Kind, first)
 		if reason != nil {
 			f.StoredReason = *reason

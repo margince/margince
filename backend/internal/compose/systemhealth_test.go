@@ -41,7 +41,7 @@ func TestHealthCompositionNeverReadsAWithheldSource(t *testing.T) {
 	if report.Sources[0].Availability != "withheld" || report.Sources[0].ObservedAt != nil || report.Sources[0].Count != nil {
 		t.Fatalf("withheld source leaked evidence: %+v", report.Sources[0])
 	}
-	if report.Sources[1].Condition != "clear" || !report.Complete {
+	if report.Sources[1].Condition != "clear" || !report.Complete || report.ActionCount != 0 || len(report.Findings) != 0 {
 		t.Fatalf("permitted search was not returned: %+v", report)
 	}
 }

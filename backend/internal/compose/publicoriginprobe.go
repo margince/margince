@@ -89,6 +89,9 @@ func (p *publicOriginProbe) Status(ctx context.Context) PublicOriginStatus {
 		return last
 	}
 	last = p.probe(ctx)
+	if ctx.Err() != nil {
+		return last
+	}
 	p.cacheMu.Lock()
 	p.last = last
 	p.cacheMu.Unlock()

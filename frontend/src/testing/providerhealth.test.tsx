@@ -268,10 +268,16 @@ describe("Providers list", () => {
     const { client } = render(<AiProviderKeysCard />);
     expect(await screen.findByText("Key rejected")).toBeInTheDocument();
 
+    const previous = client.getQueriesData({
+      queryKey: ["ai-provider-health"],
+    });
+    expect(previous.some(([, data]) => data !== undefined)).toBe(true);
     allow.ai_diagnostics = [];
     await act(() => client.invalidateQueries({ queryKey: ["me"] }));
 
     await waitFor(() => expect(screen.queryByText("Key rejected")).toBeNull());
+    for (const [key] of previous)
+      expect(client.getQueryData(key)).toBeUndefined();
   });
 
   it("draws no health without the diagnostics grant, and does not ask", async () => {

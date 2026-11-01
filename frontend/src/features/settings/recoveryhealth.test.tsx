@@ -167,3 +167,19 @@ it.each([
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
 });
+
+it.each(["recovery_within_target", "data_loss_within_target"])(
+  "refuses a non-boolean %s assessment",
+  async (field) => {
+    stubRoutes({
+      "GET /admin/recovery-health": () =>
+        jsonResponse({
+          ...HEALTH,
+          last_drill: { ...HEALTH.last_drill, [field]: "yes" },
+        }),
+    });
+    render(<RecoveryHealthCard />);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText("within the 4 h target")).toBeNull();
+  },
+);

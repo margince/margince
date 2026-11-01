@@ -72,7 +72,7 @@ it("loads only the compact overview and leaves detail reads lazy", async () => {
   render(<SystemHealthPage />);
   expect(
     await screen.findByRole("heading", {
-      name: "No action needed",
+      name: "Health could not be fully checked",
     }),
   ).toBeInTheDocument();
   const paths = fetcher.mock.calls.map(([request]) =>
@@ -168,7 +168,9 @@ it("withholds source conditions and counts without permission", async () => {
     ],
   });
   render(<SystemHealthPage />);
-  await screen.findByRole("heading", { name: "No action needed" });
+  await screen.findByRole("heading", {
+    name: "Health could not be fully checked",
+  });
   await user.click(screen.getByText("All checks"));
   expect(screen.queryByText(/Permission required/)).toBeNull();
   expect(screen.queryByText(/Background jobs/)).toBeNull();
@@ -189,7 +191,9 @@ it("leaves automatic retries out of the action list", async () => {
     ],
   });
   render(<SystemHealthPage />);
-  await screen.findByRole("heading", { name: "No action needed" });
+  await screen.findByRole("heading", {
+    name: "Health could not be fully checked",
+  });
   expect(
     screen.queryByRole("heading", {
       name: "Failed work is waiting for another attempt",

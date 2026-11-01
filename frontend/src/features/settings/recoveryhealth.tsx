@@ -155,7 +155,11 @@ function isDrill(drill: Drill): boolean {
     isText(drill.operator) &&
     orNull(isText)(drill.notes) &&
     orNull(isSeconds)(drill.recovery_seconds) &&
-    isSeconds(drill.data_loss_seconds)
+    isSeconds(drill.data_loss_seconds) &&
+    (drill.recovery_within_target === undefined ||
+      typeof drill.recovery_within_target === "boolean") &&
+    (drill.data_loss_within_target === undefined ||
+      typeof drill.data_loss_within_target === "boolean")
   );
 }
 

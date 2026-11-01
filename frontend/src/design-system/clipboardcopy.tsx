@@ -67,6 +67,7 @@ export function useClipboardCopy(
   function copy() {
     const mine = ++attempt.current;
     setFailed(null);
+    setPrepared(null);
     setPending(identity);
     async function write() {
       const value = typeof text === "string" ? text : await text.read();
@@ -78,14 +79,19 @@ export function useClipboardCopy(
       if (mine !== attempt.current) return;
       setWritten(identity);
       setPending(null);
-      onCopied?.();
+      return true;
     }
-    write().catch(() => {
-      if (mine !== attempt.current) return;
-      setWritten(null);
-      setPending(null);
-      setFailed({ identity, lazy: typeof text !== "string" });
-    });
+    write().then(
+      (landed) => {
+        if (landed && mine === attempt.current) onCopied?.();
+      },
+      () => {
+        if (mine !== attempt.current) return;
+        setWritten(null);
+        setPending(null);
+        setFailed({ identity, lazy: typeof text !== "string" });
+      },
+    );
   }
 
   return {

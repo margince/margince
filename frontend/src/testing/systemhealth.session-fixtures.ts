@@ -37,7 +37,8 @@ export function healthSessionRoutes(access: HealthSessionAccess): RouteMap {
         ...stoppedMailReport,
         findings: jobs ? stoppedMailReport.findings : [],
         action_count: jobs ? stoppedMailReport.action_count : 0,
-        assessment: jobs ? stoppedMailReport.assessment : "checked",
+        assessment: jobs ? stoppedMailReport.assessment : "incomplete",
+        complete: jobs && stoppedMailReport.complete,
         sources: stoppedMailReport.sources.map((source) =>
           admin || (jobs && source.permission === "job_health:read")
             ? source

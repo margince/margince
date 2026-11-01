@@ -46216,6 +46216,7 @@ type JobHealthHistoryCoverage string
 
 // JobKindHealth defines model for JobKindHealth.
 type JobKindHealth struct {
+	// Cancelled Retained cancelled runs across all dates; not limited by dead_window_hours.
 	Cancelled     *int                        `json:"cancelled,omitempty"`
 	Condition     *JobKindHealthCondition     `json:"condition,omitempty"`
 	ConditionCode *JobKindHealthConditionCode `json:"condition_code,omitempty"`
@@ -46224,7 +46225,9 @@ type JobKindHealth struct {
 	Dead int `json:"dead"`
 
 	// DeadRecent The same legacy aggregate inside `dead_window_hours`. Use condition and condition_code for the server assessment; a cancellation does not establish a fault.
-	DeadRecent         int  `json:"dead_recent"`
+	DeadRecent int `json:"dead_recent"`
+
+	// Discarded Retained discarded runs across all dates; not limited by dead_window_hours.
 	Discarded          *int `json:"discarded,omitempty"`
 	ExpectationSeconds *int `json:"expectation_seconds,omitempty"`
 

@@ -34,8 +34,8 @@ records, so a row changes only when a maintainer merges it.
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 3100 ms | over budget (#4912) | 2026-10-07 |
 | `PERF-9` | Analytics screen | < 300 ms |  | no data | 2026-10-07 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 420 ms | within budget | 2026-10-07 |
-| `PERF-11` | System health compact overview | <= 750 ms |  | **not measured** |  |
-| `PERF-12` | System health diagnostic reads | <= 1 s |  | **not measured** |  |
+| `PERF-11` | System health compact overview | < 750 ms |  | **not measured** |  |
+| `PERF-12` | System health diagnostic reads | < 1 s |  | **not measured** |  |
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 240 ms | over budget (#7068) | 2026-10-07 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 |  | **not measured** |  |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived |  | **not measured** |  |

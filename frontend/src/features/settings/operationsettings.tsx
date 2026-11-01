@@ -193,6 +193,7 @@ function OperationsCard({
   );
   const focused = useRef<string | undefined>(undefined);
   useEffect(() => {
+    if (!requested) focused.current = undefined;
     if (!visible || !query.data || !requested || focused.current === section)
       return;
     const control = document.querySelector<HTMLInputElement>(

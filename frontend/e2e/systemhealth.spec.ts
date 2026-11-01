@@ -92,7 +92,7 @@ test("Overview loads only summary evidence, then opens retained history and a sa
     }),
   ).toBeVisible();
   console.log(
-    `Production cold Overview: ${performance.now() - start} ms; Chromium desktop 1280x800; unthrottled local network; synthetic API boundary`,
+    `Mocked cold Overview (single local sample): ${performance.now() - start} ms; Chromium desktop 1280x800; unthrottled local network; synthetic API boundary`,
   );
   expect(reads).toContain("/v1/admin/system-health");
   expect(reads).not.toContain("/v1/admin/job-health");

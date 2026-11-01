@@ -19,7 +19,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const RetainedRuns: Story = {
   args: { report: attentionReport },
-  render: () => {
+  render: (args) => {
     installFetchStub({
       "GET /me": meRoute({ job_health: ["read"] }),
       "GET /admin/job-health": () =>
@@ -63,7 +63,7 @@ export const RetainedRuns: Story = {
     });
     return (
       <StoryProviders>
-        <Diagnostics report={attentionReport} />
+        <Diagnostics {...args} />
       </StoryProviders>
     );
   },

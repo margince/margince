@@ -19310,7 +19310,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kết quả hoặc dữ liệu lưu có thể đã thay đổi từ lúc bắt đầu duyệt. Làm mới để đối chiếu tổng.",
   "health.groups": "Các lần chạy theo nhóm",
   "health.all": "Tất cả",
-  "health.oneDay": "Ngày qua",
+  "health.oneDay": "Một ngày qua",
   "health.sevenDays": "Bảy ngày qua",
   "health.nextPage": "Trang tiếp",
   "health.sharedScope": "Xử lý chung",

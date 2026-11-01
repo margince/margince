@@ -2,8 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useSyncExternalStore } from "react";
-import type { components } from "../api/schema";
+import { healthScope } from "./healthscopekey";
+
 import { useMe } from "./session";
+
+export { healthScope } from "./healthscopekey";
 
 function subscribeVisibility(changed: () => void) {
   document.addEventListener("visibilitychange", changed);
@@ -20,12 +23,4 @@ export function useHealthVisible() {
 
 export function useHealthScope() {
   return healthScope(useMe().data);
-}
-
-export function healthScope(
-  me: components["schemas"]["MeResponse"] | undefined,
-) {
-  return me
-    ? JSON.stringify([me.user.id, me.workspace_name, me.authorization])
-    : undefined;
 }

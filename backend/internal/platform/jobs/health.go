@@ -167,7 +167,7 @@ func WorkspaceHealth(
 	return Health{Kinds: kinds, Failures: failures}, nil
 }
 
-// WorkspaceKindHealth shares the scoped queue population without reading the failure sample.
+// WorkspaceKindHealth omits the failure sample and the windowed DeadRecent count.
 func WorkspaceKindHealth(ctx context.Context, pool *pgxpool.Pool, workspaceID string, dispatcherKinds []string) ([]KindHealth, error) {
 	return healthByKind(ctx, pool, workspaceID, dispatcherKinds, 0)
 }
@@ -228,6 +228,10 @@ func healthByKind(
 			&k.Waiting, &k.Running, &k.Retrying, &k.Dead, &k.DeadRecent,
 			&k.Runnable, &k.FutureRetries, &k.Discarded, &k.Cancelled, &k.NextAttemptAt, &k.OldestWaitingAgeSeconds); err != nil {
 			return nil, fmt.Errorf("jobs: scanning job health by kind: %w", err)
+		}
+		if k.NextAttemptAt != nil {
+			at := k.NextAttemptAt.UTC()
+			k.NextAttemptAt = &at
 		}
 		out = append(out, k)
 	}

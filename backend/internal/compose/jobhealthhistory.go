@@ -5,12 +5,11 @@ package compose
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -71,12 +70,11 @@ func (h jobHealthHandlers) GetJobHealthHistory(w http.ResponseWriter, r *http.Re
 	}
 	if result.More {
 		cursor.Before = result.Runs[len(result.Runs)-1].ID
-		raw, err := json.Marshal(cursor)
+		next, err := storekit.EncodeOpaque(cursor)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
 		}
-		next := base64.RawURLEncoding.EncodeToString(raw)
 		out.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -100,12 +98,8 @@ func decodeJobHistoryCursor(encoded string, current jobHistoryCursor, now time.T
 	if len(encoded) > 2048 {
 		return jobHistoryCursor{}, invalid
 	}
-	raw, err := base64.RawURLEncoding.DecodeString(encoded)
+	previous, err := storekit.DecodeOpaque[jobHistoryCursor](encoded)
 	if err != nil {
-		return jobHistoryCursor{}, invalid
-	}
-	var previous jobHistoryCursor
-	if err := json.Unmarshal(raw, &previous); err != nil {
 		return jobHistoryCursor{}, invalid
 	}
 	if !previous.sameFilters(current) || previous.Cutoff.After(now) || previous.Cutoff.Before(now.AddDate(0, 0, -7)) || previous.Before <= 0 {

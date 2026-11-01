@@ -93,7 +93,9 @@ async function healthNames(Story: (typeof pageStories)[number]) {
   const user = userEvent.setup();
   const view = render(<Story />);
   const names = new Set<string>();
-  await user.click(await screen.findByRole("button", { name: "Diagnostics" }));
+  await user.click(
+    await screen.findByRole("button", { name: t("health.diagnostics") }),
+  );
   for (const source of healthReport.sources) {
     const key = healthSectionForSource(source.id);
     if (!key) throw new Error(`Missing health section for ${source.id}`);
@@ -108,7 +110,9 @@ async function healthNames(Story: (typeof pageStories)[number]) {
     });
     for (const name of drawnNames(view.container)) names.add(name);
   }
-  await user.click(screen.getByRole("button", { name: "Configuration" }));
+  await user.click(
+    screen.getByRole("button", { name: t("health.configuration") }),
+  );
   await waitFor(() => {
     expect(
       drawnNames(view.container).has(t("operations.schedules.title")),

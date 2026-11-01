@@ -609,8 +609,8 @@ export const PipelinesAdminDark: Story = {
   render: pipelinesCard({ pipeline: ["read", "create", "update"] }),
 };
 
-// Every catalog page whole, for an admin holding every grant, over an unused
-// installation. `settingssections.test.tsx` pins search's sections to these.
+// Every catalog page whole, for an admin holding every grant. System health
+// includes diagnostic fixtures so the search census reaches every check.
 const everyGrantMe = () =>
   jsonResponse({
     ...meFixture({ roles: ["admin"], allow: EVERY_GRANT }),
@@ -624,8 +624,8 @@ function catalogPage(page: SettingsPageId): Story {
       page === "system-health"
         ? () => {
             installFetchStub({
-              ...UNUSED_INSTALLATION_ROUTES,
               ...healthSessionRoutes("configure"),
+              ...UNUSED_INSTALLATION_ROUTES,
               "GET /me": everyGrantMe,
               "GET /admin/system-health": () => jsonResponse(healthReport),
             });

@@ -73,6 +73,9 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 	if s.originProbe != nil && auth.Require(ctx, healthReadObject, principal.ActionRead) == nil {
 		origin := s.originProbe.Snapshot()
 		out.PublicOrigin = &crmcontracts.PublicOriginStatus{Origin: origin.Origin, Reachable: origin.Reachable, CheckedAt: origin.CheckedAt}
+		if origin.Detail != "" {
+			out.PublicOrigin.Detail = &origin.Detail
+		}
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }

@@ -37,19 +37,25 @@ func TestAQueueWithoutAnExpectationCannotBeCalledOnTime(t *testing.T) {
 }
 
 func TestRunnableWaitIsOverdueOnlyPastItsDeclaredTick(t *testing.T) {
+	tested := 0
 	for kind, spec := range Declared() {
 		if spec.Cadence.Fixed <= 0 {
 			continue
 		}
-		age := spec.Cadence.Fixed.Seconds()
-		row := KindHealth{Kind: kind, Waiting: 1, OldestWaitingAgeSeconds: &age}
-		if AssessHealth(row).Code == "queue_overdue" {
-			t.Fatal("boundary is not overdue")
-		}
-		age++
-		if AssessHealth(row).Code != "queue_overdue" {
-			t.Fatal("missed tick must be overdue")
-		}
+		tested++
+		t.Run(kind, func(t *testing.T) {
+			age := spec.Cadence.Fixed.Seconds()
+			row := KindHealth{Kind: kind, Waiting: 1, OldestWaitingAgeSeconds: &age}
+			if AssessHealth(row).Code == "queue_overdue" {
+				t.Fatal("boundary is not overdue")
+			}
+			age++
+			if AssessHealth(row).Code != "queue_overdue" {
+				t.Fatal("missed tick must be overdue")
+			}
+		})
+	}
+	if tested > 0 {
 		return
 	}
 	t.Fatal("no declared periodic kind tested")

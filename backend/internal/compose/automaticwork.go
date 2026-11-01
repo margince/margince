@@ -129,7 +129,7 @@ func automaticWorkWindow(ctx context.Context, tx pgx.Tx, now time.Time, days int
 	if err != nil {
 		return "", time.Time{}, time.Time{}, err
 	}
-	loc, err := time.LoadLocation(zone)
+	loc, err := storekit.LoadZone(zone)
 	if err != nil {
 		return "", time.Time{}, time.Time{}, fmt.Errorf("automatic work: loading zone: %w", err)
 	}

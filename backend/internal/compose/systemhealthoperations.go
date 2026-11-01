@@ -5,11 +5,13 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func (s Server) searchSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
@@ -106,6 +108,9 @@ func (s Server) providersSummary(ctx context.Context) (crmcontracts.HealthSource
 		source.Availability, source.Code = healthNotConfigured, "providers_not_configured"
 		return source, nil, nil
 	}
+	report.Providers = slices.DeleteFunc(report.Providers, func(entry crmcontracts.AiProviderHealthEntry) bool {
+		return !model.ProviderHealth(entry.Health).Blocking()
+	})
 	if len(report.Providers) == 0 {
 		return source, nil, nil
 	}

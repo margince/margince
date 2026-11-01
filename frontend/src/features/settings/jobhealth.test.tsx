@@ -160,7 +160,7 @@ describe("JobHealthCard", () => {
     expect(kind.Discarded).toHaveTextContent("0");
     expect(kind.Queue).toHaveTextContent("default");
     expect(kind.State).toHaveTextContent("Needs technical attention");
-    expect(kind["Declared wait limit"]).toHaveTextContent("1 minute");
+    expect(kind["Declared wait limit"]).toHaveTextContent(/^1 minute$/);
     // The kind is River's identifier, verbatim, in both the count row and the
     // failure below it, which is how an operator ties the two together.
     expect(screen.getAllByText("capture_classify").length).toBe(2);
@@ -311,7 +311,7 @@ describe("JobHealthCard", () => {
     expect(failure["Failed at"].textContent).toMatch(/failing since .*2026/);
   });
 
-  it("gives a dead job the danger treatment and says what it means", async () => {
+  it("gives discarded work a danger badge without a page alert", async () => {
     stubRoutes({
       "GET /admin/job-health": () =>
         jsonResponse({

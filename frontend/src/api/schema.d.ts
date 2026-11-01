@@ -44436,7 +44436,9 @@ export interface components {
             condition?: "unknown" | "processing" | "retrying" | "technical" | "unverified";
             /** @enum {string} */
             condition_code?: "queue_checked" | "queue_processing" | "queue_overdue" | "queue_unverified" | "queue_retrying" | "queue_expectation_unknown";
+            /** @description Retained discarded runs across all dates; not limited by dead_window_hours. */
             discarded?: number;
+            /** @description Retained cancelled runs across all dates; not limited by dead_window_hours. */
             cancelled?: number;
             expectation_seconds?: number;
             /** @description How long the oldest runnable-and-unclaimed job of this kind has waited. Null when nothing of this kind is runnable now; a job scheduled for the future is not late. */

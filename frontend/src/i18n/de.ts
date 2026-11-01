@@ -19776,7 +19776,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.condition.clear": "Bei dieser Prüfung kein Problem erkannt",
   "health.condition.processing": "In Bearbeitung",
   "health.condition.retrying": "Erneuter Versuch",
-  "health.condition.waiting_human": "Menschliche Entscheidung ausstehend",
+  "health.condition.waiting_human": "Menschliche Prüfung ausstehend",
   "health.condition.technical": "Technische Prüfung erforderlich",
   "health.condition.unverified": "Behebung nicht nachgewiesen",
   "health.condition.recovered": "Wiederhergestellt",
@@ -19906,7 +19906,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
   "health.code.capture_thread_uncertain":
-    "Einige Unterhaltungen brauchen eine Prüfung durch den Postfachverantwortliche",
+    "Einige Unterhaltungen brauchen eine Prüfung durch den Postfachverantwortlichen",
   "health.queueCoverage":
     "Der Warteschlangenverlauf wird nur begrenzt aufbewahrt. Sein Fehlen belegt nicht, dass zuvor fehlgeschlagene Arbeit erledigt wurde.",
 

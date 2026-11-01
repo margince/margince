@@ -120,7 +120,10 @@ function Overview({
     report.findings.filter((f) => f.requires_action).map((f) => f.id),
   );
   const actionable = report.findings.filter((f) => f.requires_action);
-  const changed = actionable.some((f, i) => order[i] !== f.id);
+  const remainingOrder = order.filter((id) =>
+    actionable.some((f) => f.id === id),
+  );
+  const changed = actionable.some((f, i) => remainingOrder[i] !== f.id);
   const shown = [...actionable].sort((a, b) => {
     const ai = order.indexOf(a.id),
       bi = order.indexOf(b.id);
@@ -130,7 +133,9 @@ function Overview({
     ? t("health.incomplete")
     : actionable.length
       ? t("health.attention")
-      : t("health.checked");
+      : report.complete
+        ? t("health.checked")
+        : t("health.incomplete");
   return (
     <>
       <ActionRow>

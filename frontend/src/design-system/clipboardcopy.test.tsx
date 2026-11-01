@@ -312,3 +312,39 @@ it("does not carry a lazy-report failure into a string copy control", async () =
   );
   expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
 });
+
+it("clears the old report when another read of the same report fails", async () => {
+  const user = userEvent.setup();
+  stubClipboard("refuses");
+  const read = vi
+    .fn()
+    .mockResolvedValueOnce("old evidence")
+    .mockRejectedValueOnce(new Error("read failed"));
+  function Probe() {
+    const copy = useClipboardCopy({ key: "same report", read }, LABELS);
+    return (
+      <>
+        <button type="button" onClick={copy.copy}>
+          {copy.label}
+        </button>
+        {copy.preparedText && (
+          <CopyableText text={copy.preparedText} label="Prepared report" />
+        )}
+        {copy.notice}
+      </>
+    );
+  }
+  render(
+    <LocaleProvider initial="en">
+      <Probe />
+    </LocaleProvider>,
+  );
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  expect(
+    (await screen.findByRole("textbox", { name: "Prepared report" }))
+      .textContent,
+  ).toBe("old evidence");
+  await user.click(screen.getByRole("button", { name: "Copy link" }));
+  await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
+  expect(screen.queryByRole("textbox", { name: "Prepared report" })).toBeNull();
+});

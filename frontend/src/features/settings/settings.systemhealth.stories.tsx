@@ -53,6 +53,11 @@ export const Attention: Story = { render: story(attentionReport) };
 export const AttentionDark: Story = {
   render: story(attentionReport),
   globals: { theme: "dark" },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByRole("heading", { name: "Attention needed" }),
+    ).resolves.toBeVisible();
+  },
 };
 export const Narrow: Story = {
   render: story(attentionReport),

@@ -36,16 +36,7 @@ export function useSystemHealth(enabled: boolean) {
   const scope = useHealthScope();
   const visible = useHealthVisible();
   const client = useQueryClient();
-  const previousScope = useRef(scope);
   const reconciledDenial = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    const previous = previousScope.current;
-    if (previous !== scope && previous !== undefined)
-      client.removeQueries({
-        predicate: (query) => query.queryKey.includes(previous),
-      });
-    previousScope.current = scope;
-  }, [client, scope]);
   useEffect(() => {
     if (!visible && scope)
       client.cancelQueries({
@@ -69,6 +60,8 @@ export function useSystemHealth(enabled: boolean) {
         !validHealthEvidence(report) ||
         !Number.isSafeInteger(report.action_count) ||
         report.action_count < 0 ||
+        report.action_count !==
+          report.findings.filter((finding) => finding.requires_action).length ||
         typeof report.complete !== "boolean" ||
         !["checked", "attention", "incomplete"].includes(report.assessment)
       ) {

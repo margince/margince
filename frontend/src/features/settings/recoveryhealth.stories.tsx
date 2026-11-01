@@ -91,6 +91,7 @@ export const Running: Story = {
       outcome: "running",
       finished_at: null,
       recovery_seconds: null,
+      recovery_within_target: undefined,
       notes: null,
     },
   }),

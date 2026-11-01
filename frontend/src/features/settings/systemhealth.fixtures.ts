@@ -126,6 +126,7 @@ export const stoppedMailReport: Report = {
       ...overdueFinding,
       id: "jobs:queue_unverified",
       code: "queue_unverified",
+      urgency: 2,
       condition: "unverified",
       scope: "shared",
     },

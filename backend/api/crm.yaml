@@ -61264,8 +61264,8 @@ components:
             for the server assessment; a cancellation does not establish a fault.
         condition: {type: string, enum: [unknown, processing, retrying, technical, unverified]}
         condition_code: {type: string, enum: [queue_checked, queue_processing, queue_overdue, queue_unverified, queue_retrying, queue_expectation_unknown]}
-        discarded: {type: integer}
-        cancelled: {type: integer}
+        discarded: {type: integer, description: Retained discarded runs across all dates; not limited by dead_window_hours.}
+        cancelled: {type: integer, description: Retained cancelled runs across all dates; not limited by dead_window_hours.}
         expectation_seconds: {type: integer}
         oldest_waiting_age_seconds:
           type: [integer, 'null']

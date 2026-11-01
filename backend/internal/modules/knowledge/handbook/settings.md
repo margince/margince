@@ -314,11 +314,11 @@ System health and Reset data sit in the **Governance** group, and Data import in
 **System health** opens on **Overview**: what needs work, who can act and the next step.
 Only work that needs a person appears here, with its effect until fixed. **All checks** holds service status; **Diagnostics** shows the technical details.
 
-**Diagnostics** shows each source. Filter background runs or open the next page; totals include all runs still kept in that window.
+**Diagnostics** shows each source. Mail capture shows counts only; held meetings are counted across the whole installation. Filter background runs or open the next page; totals include all runs still kept in that window.
 A canceled run is not a failed run. Deleted runs do not prove the work is done. **Copy technical report** copies recorded errors, attempts and run IDs; it sends no message.
 
 **System health > Configuration** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
-Moving to another view asks you to save a draft first. Settings search opens the view with the control you asked for.
+Moving to another view asks you to save a draft first. **Search settings** opens the view with the control you asked for.
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
   prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
