@@ -229,6 +229,14 @@ export function whenText(
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
   }
+  if (
+    item.source === "notice_case" &&
+    item.acquisition?.deadline_is_upper_bound
+  ) {
+    return t("notice.latestBy", {
+      date: formatDate(item.due_at, locale, viewer),
+    });
+  }
   if (item.source === "weekly_commitment")
     return t("worklist.when.due", {
       when: formatDate(item.due_at, locale, record),

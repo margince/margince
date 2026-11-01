@@ -80,21 +80,8 @@ type Acquisition struct {
 	// Kind is one of the constants above. Empty means the door did not say,
 	// and recordAcquisition writes unknown_legacy rather than nothing.
 	Kind string
-	// OccurredAt is when the ACT happened, which is not when this row was
-	// written. A message captured on Tuesday may have arrived on Friday, and a
-	// contact created when a human finally answers a triage question was
-	// acquired when the message came in, not when somebody got round to it.
-	//
-	// This is not bookkeeping. The Art. 14 disclosure deadline runs one month
-	// from the ACQUISITION, and compose/noticecaseopen.go dates the duty from
-	// `coalesce(occurred_at, captured_at)` — so a door that leaves this empty
-	// gives every contact it makes a deadline starting the day the row was
-	// written. For anything captured in arrears that deadline is late, and the
-	// lateness is invisible: the case looks perfectly on time.
-	//
-	// Nil means the door genuinely does not know, and captured_at then stands
-	// in. That is the honest fallback rather than a guess, and it is what every
-	// door did before this field existed.
+	// OccurredAt records the acquisition or captured activity time when known.
+	// An unknown source needs review; capture time only bounds a confirmed indirect duty.
 	OccurredAt *time.Time
 }
 

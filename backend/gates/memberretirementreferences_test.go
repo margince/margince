@@ -65,6 +65,7 @@ func TestEveryMemberForeignKeyHasARetirementPolicy(t *testing.T) {
 		}
 	}
 	assertMemberWorkGuards(t, string(catalog), policies)
+	assertNoticeWorkStates(t, string(catalog), policies["privacy_notice_case.owner_user_id"].live)
 }
 
 func memberPolicyConstants(t *testing.T) map[string]string {
@@ -193,4 +194,34 @@ func normalizeMemberPredicate(predicate string) string {
 		}
 		return r
 	}, predicate)
+}
+
+func assertNoticeWorkStates(t *testing.T, catalog, predicate string) {
+	t.Helper()
+	states := map[string]map[string]bool{}
+	checks := regexp.MustCompile(`(?m)^public\.privacy_notice_case\.privacy_notice_case_(state|completion_shape) CHECK (.+)$`)
+	quoted := regexp.MustCompile(`'([a-z_]+)'`)
+	for _, check := range checks.FindAllStringSubmatch(catalog, -1) {
+		values := map[string]bool{}
+		for _, value := range quoted.FindAllStringSubmatch(check[2], -1) {
+			values[value[1]] = true
+		}
+		states[check[1]] = values
+	}
+	if len(states) != 2 || len(states["state"]) == 0 || len(states["completion_shape"]) == 0 {
+		t.Fatal("notice lifecycle checks were not fully read")
+	}
+	live := map[string]bool{}
+	for _, value := range quoted.FindAllStringSubmatch(predicate, -1) {
+		live[value[1]] = true
+	}
+	for state := range states["state"] {
+		if live[state] == states["completion_shape"][state] {
+			t.Errorf("notice state %s has the wrong retirement disposition", state)
+		}
+		delete(live, state)
+	}
+	if len(live) != 0 {
+		t.Errorf("retirement predicate names unknown notice states: %v", live)
+	}
 }

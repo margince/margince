@@ -9405,7 +9405,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể đổi tên hay gỡ mục đích sau khi tạo; danh mục chỉ cho phép thêm mới. Chọn khóa cẩn thận.",
   "notice.title": "Nghĩa vụ thông báo",
   "notice.sub":
-    "Liên hệ thu thập được mà không hỏi chính họ, và họ đã được thông báo hay chưa.",
+    "Nghĩa vụ xếp theo hạn; nguồn cần xem xét xếp theo thời điểm ghi nhận.",
   "notice.facetLabel": "Hiển thị nghĩa vụ",
   "notice.facetOwed": "Chưa hoàn tất",
   "notice.facetAll": "Tất cả",
@@ -9436,6 +9436,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notice.acq.crmMigration": "Chuyển từ CRM khác",
   "notice.acq.mailboxHistory": "Lịch sử hộp thư",
   "notice.acq.unknownLegacy": "Không rõ nguồn",
+  "notice.source.contactExplanation":
+    "Cần xác minh nguồn thông tin. Mở hồ sơ quyền riêng tư để xem bằng chứng.",
+  "notice.source.zoneHint":
+    "Chọn múi giờ nơi nhận thông tin. Múi giờ đó có thể khác nơi bạn đang ở.",
+  "notice.rule.none": "Không có nghĩa vụ thông báo riêng",
+  "notice.ruleHint.none":
+    "Kết quả xác minh nguồn hoặc bằng chứng thư do liên hệ gửi không tạo nhiệm vụ thông báo riêng.",
+  "notice.latestBy": "Chậm nhất vào {date}",
+  "notice.dueLatest": "Đến hạn chậm nhất",
+  "notice.unknownDateWarning":
+    "Chưa rõ ngày nhận thông tin; nghĩa vụ có thể đã đến hạn.",
+  "noticeDuty.observedOn": "Ghi nhận vào",
+  "notice.source.more": "Liên hệ này còn nguồn khác cần xác minh.",
+  "notice.source.title": "Xem nguồn",
+  "notice.source.explanation":
+    "Nguồn chưa được xác nhận. Chưa xác định nghĩa vụ thông báo quyền riêng tư hay thời hạn pháp lý. Xác minh nguồn liên hệ trước khi gửi thông báo.",
+  "notice.source.review": "Xem nguồn",
+  "notice.source.confirm": "Xác nhận nguồn",
+  "notice.source.evidence": "Bằng chứng về nguồn",
+  "notice.source.dateHint":
+    "Nhập ngày thực tế nhận thông tin nếu biết. Nếu chưa rõ, nghĩa vụ đã xác nhận vẫn có thời hạn muộn nhất.",
+  "notice.source.noDeadline": "Chưa có thời hạn được xác nhận",
   "notice.rule.art13": "Thông báo theo Điều 13",
   "notice.rule.art14": "Thông báo theo Điều 14",
   "notice.ruleHint.art13":

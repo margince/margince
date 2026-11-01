@@ -58,7 +58,7 @@ function duty(item: WorklistItem) {
   return () => {
     stubWithSession(
       {
-        [`GET /privacy/notice-cases/${item.id}`]: () =>
+        [`GET /privacy/notice-case-reviews/${item.id}`]: () =>
           jsonResponse({
             id: item.id,
             contact_id: CONTACT,
@@ -136,7 +136,7 @@ export const DirectCase: Story = {
   render: () => {
     stubWithSession(
       {
-        [`GET /privacy/notice-cases/${IMPORTED.id}`]: () =>
+        [`GET /privacy/notice-case-reviews/${IMPORTED.id}`]: () =>
           jsonResponse({
             id: IMPORTED.id,
             contact_id: CONTACT,

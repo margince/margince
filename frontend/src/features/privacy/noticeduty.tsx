@@ -40,6 +40,7 @@ import {
   type NoticeCase,
 } from "./noticecases.logic";
 import { ExcuseModal, type ExcuseState } from "./noticeexcuse";
+import { NoticeSourceReview } from "./noticesource";
 
 // Every read that could still show the duty: the Home brief, the worklist the
 // Focus list draws from, the settings queue and the contact's consent panel.
@@ -71,7 +72,7 @@ export function NoticeDuty(
     enabled: canReadCase,
     queryFn: async () => {
       return unwrap(
-        await api.GET("/privacy/notice-cases/{id}", {
+        await api.GET("/privacy/notice-case-reviews/{id}", {
           params: { path: { id: caseId } },
         }),
       );
@@ -80,7 +81,9 @@ export function NoticeDuty(
   const contactId =
     "contactId" in props ? props.contactId : duty.data?.contact_id;
   const owed = duty.data
-    ? !isNoticeResolved(duty.data.state) && duty.data.state !== "queued"
+    ? !isNoticeResolved(duty.data.state) &&
+      duty.data.state !== "queued" &&
+      duty.data.state !== "source_review"
     : item !== undefined;
   const canAct = contactId && duty.data && owed;
   const [excusing, setExcusing] = useState(false);
@@ -137,6 +140,8 @@ export function NoticeDuty(
       </Panel>
     );
   }
+  if (duty.data?.state === "source_review")
+    return <NoticeSourceReview key={duty.data.id} duty={duty.data} />;
   return (
     <Panel title={noticeDutyTitle(duty.data, owed, t)}>
       <PanelBody>
@@ -241,37 +246,8 @@ function dutyFacts(
   tz: string,
 ): Fact[] {
   const date = (iso: string) => formatDate(iso, locale, tz);
-  const acquisition = item?.acquisition ?? duty?.acquisition;
-  const facts: Fact[] = acquisition
-    ? [
-        {
-          key: "kind",
-          term: t("noticeDuty.obtainedAs"),
-          value: acquisitionKindLabel(acquisition.kind, t),
-        },
-        {
-          key: "when",
-          term: t("noticeDuty.obtainedOn"),
-          value: acquisition.occurred_at
-            ? date(acquisition.occurred_at)
-            : t("noticeDuty.dateUnknown"),
-        },
-        {
-          key: "recorded",
-          term: t("noticeDuty.recorded"),
-          value: [
-            date(acquisition.captured_at),
-            acquisitionRecorder(acquisition, t),
-          ].join(" · "),
-        },
-      ]
-    : [
-        {
-          key: "kind",
-          term: t("noticeDuty.obtainedAs"),
-          value: t("notice.noAcquisition"),
-        },
-      ];
+  const acquisition = duty?.acquisition ?? item?.acquisition;
+  const facts = acquisitionFacts(acquisition, t, date);
   if (!item && duty?.contact_name) {
     facts.unshift({
       key: "contact",
@@ -301,6 +277,7 @@ function dutyFacts(
       ),
     });
   }
+  facts.push(...sourceAssessmentFacts(duty, t, date));
   const rule = duty?.rule ?? item?.kind;
   if (rule) {
     facts.push({
@@ -310,11 +287,104 @@ function dutyFacts(
       note: noticeRuleHint(rule, t),
     });
   }
-  const due =
-    duty?.due_at ??
-    (item && item.source === "notice_case" ? item.due_at : undefined);
+  return [...facts, ...deadlineFacts(item, duty, acquisition, t, date)];
+}
+
+function deadlineFacts(
+  item: WorklistItem | undefined,
+  duty: NoticeCase | undefined,
+  acquisition: NoticeCase["acquisition"],
+  t: Translator,
+  date: (iso: string) => string,
+): Fact[] {
+  const facts: Fact[] = [];
+  const due = duty
+    ? duty.due_at
+    : item && item.source === "notice_case"
+      ? item.due_at
+      : undefined;
   if (due) {
-    facts.push({ key: "due", term: t("notice.due"), value: date(due) });
+    facts.push({
+      key: "due",
+      term: t(
+        acquisition?.deadline_is_upper_bound
+          ? "notice.dueLatest"
+          : "notice.due",
+      ),
+      value: date(due),
+      note: acquisition?.deadline_is_upper_bound
+        ? t("notice.unknownDateWarning")
+        : undefined,
+    });
   }
   return facts;
+}
+
+function sourceAssessmentFacts(
+  duty: NoticeCase | undefined,
+  t: Translator,
+  date: (iso: string) => string,
+): Fact[] {
+  if (!duty?.source_kind) return [];
+  const facts: Fact[] = [
+    {
+      key: "confirmed-source",
+      term: t("notice.source.confirm"),
+      value: acquisitionKindLabel(duty.source_kind, t),
+    },
+  ];
+  if (duty.source_obtained_at)
+    facts.push({
+      key: "confirmed-date",
+      term: t("noticeDuty.obtainedOn"),
+      value: date(duty.source_obtained_at),
+    });
+  if (duty.source_review_note)
+    facts.push({
+      key: "source-evidence",
+      term: t("notice.source.evidence"),
+      value: duty.source_review_note,
+    });
+  return facts;
+}
+
+function acquisitionFacts(
+  acquisition: NoticeCase["acquisition"],
+  t: Translator,
+  date: (iso: string) => string,
+): Fact[] {
+  return acquisition
+    ? [
+        {
+          key: "kind",
+          term: t("noticeDuty.obtainedAs"),
+          value: acquisitionKindLabel(acquisition.kind, t),
+        },
+        {
+          key: "when",
+          term: t(
+            acquisition.kind === "unknown_legacy"
+              ? "noticeDuty.observedOn"
+              : "noticeDuty.obtainedOn",
+          ),
+          value: acquisition.occurred_at
+            ? date(acquisition.occurred_at)
+            : t("noticeDuty.dateUnknown"),
+        },
+        {
+          key: "recorded",
+          term: t("noticeDuty.recorded"),
+          value: [
+            date(acquisition.captured_at),
+            acquisitionRecorder(acquisition, t),
+          ].join(" · "),
+        },
+      ]
+    : [
+        {
+          key: "kind",
+          term: t("noticeDuty.obtainedAs"),
+          value: t("notice.noAcquisition"),
+        },
+      ];
 }
