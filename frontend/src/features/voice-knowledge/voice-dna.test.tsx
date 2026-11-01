@@ -235,9 +235,10 @@ describe("the Settings Voice DNA card with no profile yet", () => {
       }
       return server(request);
     });
+    const user = userEvent.setup();
     render(<VoiceDnaCard />);
     await screen.findByLabelText("First writing sample");
-    await userEvent.upload(fileInput(), [
+    await user.upload(fileInput(), [
       new File(["First sample, plain sentences."], "first.txt", {
         type: "text/plain",
       }),
