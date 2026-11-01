@@ -49822,6 +49822,9 @@ type NotificationItem struct {
 	// Subject The headline the recipient reads, derived from the kind rather than supplied.
 	Subject string `json:"subject"`
 
+	// SummaryParts On an approval notice, its subject taken apart into the sentence and the field values, so a client can show the values as a list. Absent on any other notice, and on one written before the parts were kept.
+	SummaryParts *ApprovalSummaryParts `json:"summary_parts,omitempty"`
+
 	// Target The record the notice is about, when it is about one. Both halves or neither — a type
 	// with no id names a KIND of thing and cannot be opened. Absent is the common case: a
 	// capture backlog and a colleague's word are about no single record.

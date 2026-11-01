@@ -28731,6 +28731,8 @@ export interface components {
                 id: string;
             };
             origin?: components["schemas"]["NoticeOrigin"];
+            /** @description On an approval notice, its subject taken apart into the sentence and the field values, so a client can show the values as a list. Absent on any other notice, and on one written before the parts were kept. */
+            summary_parts?: components["schemas"]["ApprovalSummaryParts"];
         };
         /** @description One window of the calling contact's notification centre. */
         NotificationPage: {
