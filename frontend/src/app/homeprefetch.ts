@@ -8,6 +8,7 @@ import { handledForYouOptions } from "../lib/handled";
 import { magicOptions } from "../lib/magic.queries";
 import type { UrlParams } from "../lib/urlstate";
 import { worklistDayOptions } from "../lib/worklistday";
+import { DEFAULT_VIEW } from "../lib/worklistviews";
 import { notePrefetched } from "./queryclient";
 
 // Home's morning reads, started as soon as the shell may draw (App.tsx). The
@@ -31,7 +32,7 @@ export function prefetchHome(client: QueryClient, params: UrlParams): void {
       }
     });
   };
-  const day = worklistDayOptions("mine", "all");
+  const day = worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW);
   prefetched(day.queryKey, () => client.prefetchInfiniteQuery(day));
   prefetched(morningBriefOptions.queryKey, () =>
     client.prefetchQuery(morningBriefOptions),
