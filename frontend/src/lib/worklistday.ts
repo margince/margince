@@ -9,7 +9,7 @@ import { infiniteQueryOptions } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
-import { isLiveWorkRead, worklistKey } from "./workkeys";
+import { HOME_DAY_FRESH_MS, isLiveWorkRead, worklistKey } from "./workkeys";
 import { categoryInView, type WorklistView } from "./worklistviews";
 
 type Worklist = components["schemas"]["Worklist"];
@@ -38,7 +38,7 @@ export function worklistDayOptions(
       : {
           refetchInterval: (query: {
             state: { data?: { pages: Worklist[] } };
-          }) => untilNextDue(query.state.data?.pages ?? [], Date.now()),
+          }) => homeDayWait(query.state.data?.pages ?? [], Date.now()),
         }),
     initialPageParam: undefined as string | undefined,
     // React Query aborts the signal once no screen still observes this key, and
@@ -126,6 +126,12 @@ const DUE_SLACK_MS = 1_000;
 // A browser fires a timer longer than 2^31 ms (24.8 days) at once. A row due
 // next month would then read the day again the moment each read ends.
 const LONGEST_WAIT_MS = 60 * 60_000;
+
+/** When Home's day is read again: its next due row, or once it is stale. */
+export function homeDayWait(pages: Worklist[], now: number): number {
+  const due = untilNextDue(pages, now);
+  return due === false ? HOME_DAY_FRESH_MS : Math.min(due, HOME_DAY_FRESH_MS);
+}
 
 /** How long until a loaded row comes due, or false when none still will. */
 export function untilNextDue(pages: Worklist[], now: number): number | false {
