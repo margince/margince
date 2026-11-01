@@ -352,6 +352,34 @@ func TestDedupeCompanyExactTierFindsAClaimedDomain(t *testing.T) {
 	}
 }
 
+// A bought employer's domain resolves to the company holding its other
+// spelling. A provider claim carries whatever the vendor spelled, and the
+// company was filed under whatever its own site was read as.
+func TestABoughtEmployersDomainResolvesAcrossSpellings(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "B\u00fccher GmbH", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "xn--bcher-kva.example", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var resolved ids.CompanyID
+	var found bool
+	if err := e.store.tx(ctx, func(tx pgx.Tx) (err error) {
+		resolved, found, err = companyByDomain(ctx, tx, "b\u00fccher.example")
+		return err
+	}); err != nil {
+		t.Fatalf("resolving the unicode spelling: %v", err)
+	}
+	if !found || ids.UUID(company.Id) != resolved.UUID {
+		t.Fatalf("resolved %s found=%t, want the company holding the punycode %s",
+			resolved, found, company.Id)
+	}
+}
+
 // Capture's employer inference arrives with whatever the mail header spelled,
 // and a company is filed under whatever its site was read as. The two spellings
 // of one internationalized domain are one domain, so the exact tier must route
