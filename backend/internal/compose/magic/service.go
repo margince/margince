@@ -116,57 +116,61 @@ func (s *Service) Read(
 		NotShown:           []crmcontracts.MagicNotShown{},
 		SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{},
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, capped, err := doneSince(ctx, tx, from, limit)
-		if err != nil {
-			return err
-		}
-		notShown, countWithheld, err := notShownSince(ctx, tx, from)
-		if err != nil {
-			return err
-		}
-		mask, err := newImageMask(ctx)
-		if err != nil {
-			return err
-		}
-		lines, housekeeping := linesOf(mask, entries, capped, limit)
-		if err := showDeferredImages(ctx, tx, mask, lines, entries); err != nil {
-			return err
-		}
-		// Asked after the lines are drawn and inside the page's own
-		// transaction: the judge reads the record each line names, and a
-		// second connection inside this one can deadlock against a lock it
-		// holds.
-		if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
-			return err
-		}
-		// A line standing for many records has no single way back: the judge
-		// read one of its rows, and its answer about that row is not an answer
-		// about the rest. The line says nothing rather than something untrue.
-		for i := range lines {
-			if lines[i].Count != nil && *lines[i].Count > 1 {
-				lines[i].Undo = nil
-				continue
+	// One snapshot: the images loaded after the arms see the access the arms
+	// were gated by, so no revocation can land between the two.
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			entries, capped, err := doneSince(ctx, tx, from, limit)
+			if err != nil {
+				return err
 			}
-			if lines[i].Entity != nil {
-				if err := attachVersion(ctx, tx, lines[i].Undo, lines[i].Entity.Type, ids.UUID(lines[i].Entity.Id)); err != nil {
-					return err
+			notShown, countWithheld, err := notShownSince(ctx, tx, from)
+			if err != nil {
+				return err
+			}
+			mask, err := newImageMask(ctx)
+			if err != nil {
+				return err
+			}
+			lines, housekeeping := linesOf(mask, entries, capped, limit)
+			if err := showDeferredImages(ctx, tx, mask, lines, entries); err != nil {
+				return err
+			}
+			// Asked after the lines are drawn and inside the page's own
+			// transaction: the judge reads the record each line names, and a
+			// second connection inside this one can deadlock against a lock it
+			// holds.
+			if err := s.judgeUndoOn(ctx, tx, lines); err != nil {
+				return err
+			}
+			// A line standing for many records has no single way back: the judge
+			// read one of its rows, and its answer about that row is not an answer
+			// about the rest. The line says nothing rather than something untrue.
+			for i := range lines {
+				if lines[i].Count != nil && *lines[i].Count > 1 {
+					lines[i].Undo = nil
+					continue
+				}
+				if lines[i].Entity != nil {
+					if err := attachVersion(ctx, tx, lines[i].Undo, lines[i].Entity.Type, ids.UUID(lines[i].Entity.Id)); err != nil {
+						return err
+					}
 				}
 			}
-		}
-		// Retention, as counts beside the records' own lines; it names no
-		// record, so it has nothing for the undo judge to read.
-		retention, err := retentionSince(ctx, tx, from)
-		if err != nil {
-			return err
-		}
-		receipt.Done = mergeNewestFirst(retention, lines, limit)
-		if housekeeping > 0 {
-			notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
-		}
-		receipt.NotShown = notShownOf(notShown)
-		receipt.NotShownCountWithheld = &countWithheld
-		return nil
+			// Retention, as counts beside the records' own lines; it names no
+			// record, so it has nothing for the undo judge to read.
+			retention, err := retentionSince(ctx, tx, from)
+			if err != nil {
+				return err
+			}
+			receipt.Done = mergeNewestFirst(retention, lines, limit)
+			if housekeeping > 0 {
+				notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnadmittedAction)] += housekeeping
+			}
+			receipt.NotShown = notShownOf(notShown)
+			receipt.NotShownCountWithheld = &countWithheld
+			return nil
+		})
 	})
 	if err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)

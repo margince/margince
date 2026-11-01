@@ -18,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/magic"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -137,10 +136,16 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 // other action still shows its images, and so does its record.
 func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 	e := Setup(t)
-	since := clocktest.Now(t).Add(-time.Hour)
 	seedDealActions(t, e, e.Rep1, 1, "advance_stage", `{"next_step": "Qualify"}`, `{"next_step": "Propose"}`)
+	// Both instants from the database's clock, which dated the entry.
+	micros, err := strconv.ParseInt(e.WsScalar(t, `SELECT (extract(epoch FROM now()) * 1e6)::bigint::text`), 10, 64)
+	if err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	database := time.UnixMicro(micros)
+	since := database.Add(-time.Hour)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	svc := magic.NewService(e.Pool, nil, func() time.Time { return clocktest.Now(t) })
+	svc := magic.NewService(e.Pool, nil, func() time.Time { return database })
 
 	receipt, err := svc.Read(ctx, &since, 20)
 	if err != nil {
