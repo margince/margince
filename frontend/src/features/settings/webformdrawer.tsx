@@ -37,6 +37,7 @@ import {
 } from "./webformkinds";
 import "./webforms.css";
 import { OwnerField } from "./webformowner";
+import { PrivacyNoticeFields } from "./webformprivacy";
 import { SenderField } from "./webformsender";
 
 export type WebFormDraft = Readonly<{
@@ -393,7 +394,8 @@ export function WebFormDrawer({
           )}
         </div>
         <PrivacyNoticeFields
-          draft={draft}
+          notice={draft.privacyNotice}
+          policy={draft.privacyNoticeUrl}
           errors={fieldErrors}
           onChange={set}
         />
@@ -452,56 +454,5 @@ export function WebFormDrawer({
         </Button>
       </DrawerFoot>
     </Modal>
-  );
-}
-
-// The notice the form shows under it at the point of collection, and the
-// policy it links to. Both are optional: an enquiry needs a notice, not consent.
-function PrivacyNoticeFields({
-  draft,
-  errors,
-  onChange,
-}: Readonly<{
-  draft: WebFormDraft;
-  errors: ReadonlyMap<string, string>;
-  onChange: (patch: Partial<WebFormDraft>) => void;
-}>) {
-  const t = useT();
-  return (
-    <div className="form-stack webform-part">
-      <Field
-        label={t("webForms.field.privacyNotice")}
-        hint={t("webForms.field.privacyNoticeHint")}
-        error={errors.get("privacy_notice")}
-      >
-        {(field) => (
-          <Textarea
-            {...field}
-            rows={2}
-            value={draft.privacyNotice}
-            onChange={(event) =>
-              onChange({ privacyNotice: event.target.value })
-            }
-          />
-        )}
-      </Field>
-      <Field
-        label={t("webForms.field.privacyNoticeUrl")}
-        hint={t("webForms.field.privacyNoticeUrlHint")}
-        error={errors.get("privacy_notice_url")}
-      >
-        {(field) => (
-          <TextInput
-            {...field}
-            type="url"
-            value={draft.privacyNoticeUrl}
-            placeholder={t("webForms.field.privacyNoticeUrlPlaceholder")}
-            onChange={(event) =>
-              onChange({ privacyNoticeUrl: event.target.value })
-            }
-          />
-        )}
-      </Field>
-    </div>
   );
 }
