@@ -420,6 +420,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
 | `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
+| `scorecolumnbounds_test.go` | H2 | Every column holding a bounded quantity states the bound in the schema. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `seatemploymentwriters_test.go` | H2 | Every function in a module that inserts an employment edge asks whether the contact is a workspace seat first. |
