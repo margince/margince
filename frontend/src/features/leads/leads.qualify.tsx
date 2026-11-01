@@ -21,6 +21,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { useLeadCompanyName } from "./leadcompany";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -172,9 +173,13 @@ export function QualifyDialog({
     pipelines.data?.find((p) => p.id === pipelineId) ?? defaultPipeline;
   const stages = openStagesOf(chosenPipeline);
   const chosenStage = stages.find((s) => s.id === stageId) ?? stages[0];
+  // The linked company's own name, which a rename there may have moved away
+  // from what the lead typed. The deal this dialog offers to open carries the
+  // name into a record of its own, so the stale one would outlive the lead.
+  const companyName = useLeadCompanyName(lead) ?? leadIdentityName(lead);
   const suggestedName = chosenStage
-    ? `${lead.company_name ?? leadIdentityName(lead)} — ${chosenStage.name}`
-    : (lead.company_name ?? leadIdentityName(lead));
+    ? `${companyName} — ${chosenStage.name}`
+    : companyName;
 
   const qualify = useMutation({
     mutationFn: async (body: PromoteLeadRequest) => {

@@ -179,6 +179,38 @@ func projectSnippet(ctx context.Context, fallback string, arg func(any) int) (st
 			WHERE o.id = t.company_id AND o.archived_at IS NULL%s), %s)`, scope, fallback), nil
 }
 
+// leadSnippet is the lead's company, named from the linked company where there
+// is one.
+//
+// A rename there moves the lead's own typed spelling out of date, and the hit
+// then shows a name nobody uses any more.
+//
+// Gated the way projectSnippet gates its account, and for the same reason:
+// naming the company behind a lead is a read of the company row.
+//
+// A caller without the grant, or outside the row's scope, gets the typed name.
+// That is the lead's own field and theirs to read.
+func leadSnippet(ctx context.Context, fallback string, arg func(any) int) (string, error) {
+	if denied := auth.Require(ctx, "company", principal.ActionRead); denied != nil {
+		if !errors.Is(denied, apperrors.ErrPermissionDenied) {
+			return "", denied
+		}
+		return fallback, nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope != "" {
+		scope = " AND " + scope
+	}
+	// Only where the lead carries a full name, as the typed fallback does. A
+	// lead that is only a company is titled by that company already.
+	return fmt.Sprintf(`CASE WHEN t.full_name IS NOT NULL THEN
+		coalesce((SELECT o.display_name FROM company o
+			WHERE o.id = t.company_id AND o.archived_at IS NULL%s), t.company_name) END`, scope), nil
+}
+
 // excerpt renders the branch's snippet expression for this caller.
 func (b searchBranch) excerpt(ctx context.Context, arg func(any) int) (string, error) {
 	if b.snippetFor == nil {
@@ -250,7 +282,7 @@ var searchBranches = []searchBranch{
 	// A lead with no full name is already titled by that company.
 	{
 		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
-		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true, identifier: storekit.LeadEmails,
+		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetFor: leadSnippet, snippetIsContext: true, identifier: storekit.LeadEmails,
 		nearName: "f_fold_apostrophes(lower(coalesce(%[1]s.full_name, '') || ' ' || coalesce(%[1]s.company_name, '')))",
 	},
 	// A project's name alone does not say which account's work it is, and two
