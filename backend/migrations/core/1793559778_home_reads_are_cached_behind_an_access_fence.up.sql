@@ -30,12 +30,18 @@ CREATE TABLE home_read_fence (
 );
 INSERT INTO home_read_fence DEFAULT VALUES;
 
--- Once per transaction: the row lock is held to commit, and a batch of a
--- thousand changed rows is one change of reach.
+-- A transaction that moved reach records itself here, and the counter advances
+-- as it commits. Taking the counter's lock mid-transaction would order it
+-- before locks the writer takes later, and two writers could deadlock on it;
+-- taken last, at commit, it waits on nothing.
+CREATE TABLE home_read_fence_pending (
+  xact xid8 PRIMARY KEY
+);
+
 CREATE FUNCTION advance_home_read_fence_now() RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   IF current_setting('margince.home_read_fence_advanced', true) IS DISTINCT FROM 'on' THEN
-    UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+    INSERT INTO home_read_fence_pending (xact) VALUES (pg_current_xact_id()) ON CONFLICT DO NOTHING;
     PERFORM set_config('margince.home_read_fence_advanced', 'on', true);
   END IF;
 END;
@@ -47,6 +53,17 @@ BEGIN
   RETURN NULL;
 END;
 $$;
+
+CREATE FUNCTION commit_home_read_fence() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+  DELETE FROM home_read_fence_pending WHERE xact = NEW.xact;
+  RETURN NULL;
+END;
+$$;
+
+CREATE CONSTRAINT TRIGGER home_read_fence_at_commit AFTER INSERT ON home_read_fence_pending
+  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION commit_home_read_fence();
 
 -- An activity with no link is discoverable by everyone, so its first link
 -- narrows it. Links added beside existing ones, or to an activity created in

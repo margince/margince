@@ -773,7 +773,7 @@ END;
 public.advance_home_read_fence_now() secdef=false cfg=- acl=- 
 BEGIN
   IF current_setting('margince.home_read_fence_advanced', true) IS DISTINCT FROM 'on' THEN
-    UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+    INSERT INTO home_read_fence_pending (xact) VALUES (pg_current_xact_id()) ON CONFLICT DO NOTHING;
     PERFORM set_config('margince.home_read_fence_advanced', 'on', true);
   END IF;
 END;
@@ -2218,6 +2218,13 @@ public.commission_entry.updated_at timestamp with time zone NOT NULL gen=- def=n
 public.commission_entry.version bigint NOT NULL gen=- def=1
 public.commission_entry.void_reason text gen=- def=-
 public.commission_entry_pkey CREATE UNIQUE INDEX commission_entry_pkey ON public.commission_entry USING btree (id)
+public.commit_home_read_fence() secdef=false cfg=- acl=- 
+BEGIN
+  UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+  DELETE FROM home_read_fence_pending WHERE xact = NEW.xact;
+  RETURN NULL;
+END;
+
 public.comms_outbound acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.comms_outbound.activity_id uuid NOT NULL gen=- def=-
 public.comms_outbound.attachments jsonb NOT NULL gen=- def='[]'::jsonb
@@ -4830,6 +4837,12 @@ public.home_read_fence.generation bigint NOT NULL gen=- def=0
 public.home_read_fence.home_read_fence_pkey PRIMARY KEY (singleton)
 public.home_read_fence.home_read_fence_singleton_check CHECK (singleton)
 public.home_read_fence.singleton boolean NOT NULL gen=- def=true
+public.home_read_fence_pending acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.home_read_fence_pending.home_read_fence_at_commit CREATE CONSTRAINT TRIGGER home_read_fence_at_commit AFTER INSERT ON public.home_read_fence_pending DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION commit_home_read_fence()
+public.home_read_fence_pending.home_read_fence_at_commit TRIGGER DEFERRABLE INITIALLY DEFERRED
+public.home_read_fence_pending.home_read_fence_pending_pkey PRIMARY KEY (xact)
+public.home_read_fence_pending.xact xid8 NOT NULL gen=- def=-
+public.home_read_fence_pending_pkey CREATE UNIQUE INDEX home_read_fence_pending_pkey ON public.home_read_fence_pending USING btree (xact)
 public.home_read_fence_pkey CREATE UNIQUE INDEX home_read_fence_pkey ON public.home_read_fence USING btree (singleton)
 public.home_read_forgotten acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.home_read_forgotten.at timestamp with time zone NOT NULL gen=- def=-

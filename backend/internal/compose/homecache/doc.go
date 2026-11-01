@@ -24,6 +24,7 @@
 // that survived one would disclose what the revocation withdrew.
 //
 // Tables owned: docs/reference/entity-model/compose.md. It owns
-// `home_read_cache`, `home_read_fence` and `home_read_forgotten`, and writes no
-// audit row and no event: per-reader derived state, like worklist_snapshot.
+// `home_read_cache`, `home_read_fence`, `home_read_fence_pending` and
+// `home_read_forgotten`, and writes no audit row and no event: per-reader
+// derived state, like worklist_snapshot.
 package homecache
