@@ -332,7 +332,7 @@ func TestForecastReceiptUsesOnlyRecordedNumericBasis(t *testing.T) {
 	}
 }
 
-// The arms read a row's images only when it is an update, so no other admitted
+// The arms read a row's images only when it is an update. No other admitted
 // action may need them to say what it did or to fold with its job's rows.
 func TestOnlyAnUpdateNeedsItsImagesToBeDescribedAndGrouped(t *testing.T) {
 	types := []string{typeDeal, typeCompany, typeContact, typeLead, typeProject, typeActivity}

@@ -132,8 +132,8 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 	}
 }
 
-// The arms read a row's images only where an update's sentence needs them; a
-// line about any other action still shows its images, and so does its record.
+// The arms read a row's images only for an update's sentence. A line about any
+// other action still shows its images, and so does its record.
 func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)

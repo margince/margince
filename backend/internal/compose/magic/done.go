@@ -318,10 +318,10 @@ func doneForActivities(
 	return scanEntries(ctx, tx, query, args)
 }
 
-// groupingImages reads an arm row's before and after images only where
-// describe needs them to group the row: an update's sentence names the fields
-// it moved. An arm reads up to readCap rows, and every other row's images are
-// shown on at most one line, so they wait for loadDeferredImages.
+// groupingImages reads an arm row's images only where describe needs them to
+// group the row. An update's sentence names the fields it moved. An arm reads
+// up to readCap rows, and every other row's images are shown on at most one
+// line, so they wait for loadDeferredImages.
 var groupingImages = fmt.Sprintf(
 	`CASE WHEN a.action = '%[1]s' THEN a.before END, CASE WHEN a.action = '%[1]s' THEN a.after END`, actionUpdate)
 
