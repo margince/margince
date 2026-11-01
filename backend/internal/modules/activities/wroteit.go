@@ -13,6 +13,12 @@ import crmcontracts "github.com/margince/margince/backend/internal/contracts"
 // A machine and an unresolved sender name no side, so those read the transport.
 // known is false when neither can answer.
 func WroteItOurSide(activity crmcontracts.Activity) (ours, known bool) {
+	// Direction first, because having one is what makes a row correspondence. A
+	// note or a task is written down rather than sent, whoever authored it, so
+	// no side spoke.
+	if activity.Direction == nil {
+		return false, false
+	}
 	if voice := activity.Voice; voice != nil && voice.Author != nil {
 		switch voice.Author.Kind {
 		case crmcontracts.ActivityAuthorKindColleague:
@@ -20,9 +26,6 @@ func WroteItOurSide(activity crmcontracts.Activity) (ours, known bool) {
 		case crmcontracts.ActivityAuthorKindContactRecord:
 			return false, true
 		}
-	}
-	if activity.Direction == nil {
-		return false, false
 	}
 	switch *activity.Direction {
 	case crmcontracts.ActivityDirectionOutbound:
