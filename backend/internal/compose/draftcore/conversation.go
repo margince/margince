@@ -21,7 +21,11 @@ type Turn struct {
 	ID        string
 	Kind      crmcontracts.ActivityKind
 	Direction string
-	At        time.Time
+	// ByColleague says a seat in this workspace wrote this turn, from the row's
+	// own voice rather than from which way it travelled. A colleague's mail can
+	// arrive inbound, and direction alone calls that the counterparty's.
+	ByColleague bool
+	At          time.Time
 	// DateOnly says At is a day entry's anchor, so only its date is known.
 	DateOnly bool
 	Subject  string
@@ -42,6 +46,14 @@ type Turn struct {
 // TurnText is the opening of a stored body, bounded the way every turn is.
 func TurnText(body string) string {
 	return textlang.MessageOpening(body, TurnTextRunes)
+}
+
+// TheirWord says the other side wrote this turn.
+//
+// One answer, so a reader never recombines the voice and the transport and
+// reaches a different verdict from its neighbour.
+func (t Turn) TheirWord() bool {
+	return !t.ByColleague && t.Direction == string(crmcontracts.ActivityDirectionInbound)
 }
 
 // Conversation folds newest-first activities into at most limit turns. It
@@ -77,6 +89,9 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 		}
 		if activity.Direction != nil {
 			turn.Direction = string(*activity.Direction)
+		}
+		if voice := activity.Voice; voice != nil && voice.Author != nil {
+			turn.ByColleague = voice.Author.Kind == crmcontracts.ActivityAuthorKindColleague
 		}
 		if activity.Subject != nil {
 			turn.Subject = *activity.Subject
