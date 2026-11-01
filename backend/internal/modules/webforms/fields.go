@@ -140,6 +140,13 @@ func readEnquiry(fields []Field, fieldMap map[string]string) Enquiry {
 			continue
 		}
 		key := fold(f.Name)
+		// A field named as an address is minimised wherever the map sends it. A
+		// value that is no web address is someone's text, and is kept.
+		if alias := fieldAliases[key]; alias == fieldPageURL || alias == fieldReferrer {
+			if address := minimisedAddress(value); address != "" {
+				value = address
+			}
+		}
 		target, ok := mapped[key]
 		if !ok {
 			target, ok = fieldAliases[key]
@@ -205,7 +212,7 @@ func isCampaignTag(name string) bool {
 // they are not stored. A value that is not a web address is not stored either.
 func minimisedAddress(raw string) string {
 	address, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || (address.Scheme != schemeHTTP && address.Scheme != schemeHTTPS) || address.Host == "" {
+	if err != nil || (address.Scheme != schemeHTTP && address.Scheme != schemeHTTPS) || address.Hostname() == "" {
 		return ""
 	}
 	kept := url.Values{}
@@ -214,7 +221,11 @@ func minimisedAddress(raw string) string {
 			kept[name] = values
 		}
 	}
-	minimal := url.URL{Scheme: address.Scheme, Host: address.Host, Path: address.Path, RawQuery: kept.Encode()}
+	// The parsed address keeps its escaped path, so /a%2Fb stays a different
+	// page from /a/b.
+	minimal := *address
+	minimal.User, minimal.Fragment, minimal.RawFragment = nil, "", ""
+	minimal.RawQuery, minimal.ForceQuery = kept.Encode(), false
 	return minimal.String()
 }
 

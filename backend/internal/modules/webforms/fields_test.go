@@ -104,6 +104,8 @@ func TestAPageAddressAndReferrerKeepOnlyWhereTheVisitorWas(t *testing.T) {
 		{"fragment and login dropped", "https://user:secret@example.com/a#reset=abc", "https://example.com/a"},
 		{"not a web address", "javascript:alert(1)", ""},
 		{"no host", "/pricing?email=a%40b.example", ""},
+		{"a port but no host", "https://:443/pricing", ""},
+		{"an escaped slash kept", "https://example.com/a%2Fb?email=a%40b.example", "https://example.com/a%2Fb"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := minimisedAddress(tc.raw); got != tc.want {
@@ -120,6 +122,11 @@ func TestAPageAddressAndReferrerKeepOnlyWhereTheVisitorWas(t *testing.T) {
 	e := readEnquiry(fields, nil)
 	if e.PageURL != "https://example.com/p" || e.Referrer != "https://search.example/?utm_source=ads" {
 		t.Errorf("the enquiry kept page %q and referrer %q", e.PageURL, e.Referrer)
+	}
+	// A map that sends the page field elsewhere still keeps only the address.
+	mappedAway := readEnquiry(fields, map[string]string{"page_url": fieldMessage})
+	if mappedAway.Message != "https://example.com/p" {
+		t.Errorf("a page field mapped to the message kept %q", mappedAway.Message)
 	}
 }
 
