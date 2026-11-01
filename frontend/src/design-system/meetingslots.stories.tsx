@@ -82,13 +82,33 @@ export const WeekDark: StoryObj<typeof MeetingWeek> = {
   ...Week,
   globals: { theme: "dark" },
 };
-// A time that would overlap the chosen one cannot be pressed.
+// A 30-minute choice at 09:00 blocks 09:15, which shares its minutes. 09:30
+// starts where it ends, so it can still be pressed.
+const mondaySlot = (start: string, end: string, time: string) => ({
+  start: `2026-10-05T${start}:00Z`,
+  end: `2026-10-05T${end}:00Z`,
+  label: `Monday, 5 October · ${time}`,
+  time,
+});
+const BLOCKED_DAY: MeetingDay[] = [
+  {
+    key: "2026-10-05",
+    weekday: "Mon",
+    date: "5 Oct",
+    slots: [
+      mondaySlot("07:00", "07:30", "09:00"),
+      mondaySlot("07:15", "07:45", "09:15"),
+      mondaySlot("07:30", "08:00", "09:30"),
+    ],
+  },
+];
+
 export const WeekBlocked: StoryObj<typeof MeetingWeek> = {
   render: () => (
     <MeetingWeek
-      days={WEEK_DAYS}
+      days={BLOCKED_DAY}
       selected={["2026-10-05T07:00:00Z"]}
-      blocked={["2026-10-05T08:30:00Z"]}
+      blocked={["2026-10-05T07:15:00Z"]}
       emptyDay="No free time"
       onSelect={() => undefined}
     />
