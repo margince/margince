@@ -12,6 +12,16 @@ const RECORD_PATH = new RegExp(
   `^/r/(deals|companies|contacts)/(${IDENTIFIER})$`,
 );
 
+/**
+ * Whether a pathname is the record address this module publishes.
+ *
+ * Exported so the served-path check reads this notion rather than keeping a
+ * second copy. Two copies disagree the first time one gains a record kind.
+ */
+export function namesARecordAddress(pathname: string): boolean {
+  return RECORD_PATH.test(pathname);
+}
+
 export function appHref(href: string): string;
 export function appHref(href: string | undefined): string | undefined;
 export function appHref(href: string | undefined): string | undefined {
