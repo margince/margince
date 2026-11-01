@@ -2079,8 +2079,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.week.lost_one": "{count} Deal verloren.",
   "brief.week.lost_other": "{count} Deals verloren.",
   "brief.row.details": "Details",
-  "worklist.lead.noTarget": "ohne Zielzeit",
-  "worklist.lead.lastTouch": "letzte Aktivität {date}",
   "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "prognostizierter Abschluss {date} (unbestätigt)",

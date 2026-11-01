@@ -2020,8 +2020,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.lost_one": "Thua {count} deal.",
   "brief.week.lost_other": "Thua {count} deal.",
   "brief.row.details": "Chi tiết",
-  "worklist.lead.noTarget": "chưa đặt mục tiêu phản hồi",
-  "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
   "worklist.deal.omitted": "không tính vào dự báo",
   "worklist.deal.provisional": "dự kiến chốt {date} (chưa xác nhận)",
   "brief.readings.riskBasis":

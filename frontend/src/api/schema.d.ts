@@ -52645,7 +52645,6 @@ export interface components {
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
             acquisition?: components["schemas"]["NoticeAcquisition"];
-            lead?: components["schemas"]["WorklistLeadFacts"];
             /** @description The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             deal?: components["schemas"]["WorklistDealFacts"];
@@ -53411,18 +53410,6 @@ export interface components {
             last_inbound_precision?: components["schemas"]["OccurredPrecision"];
             /** @description How to read `last_outbound_at`, from the row it names. Absent when that is null. */
             last_outbound_precision?: components["schemas"]["OccurredPrecision"];
-        };
-        /** @description The lead's contact context, without inventing an inbound request or response deadline. */
-        WorklistLeadFacts: {
-            company_name?: string | null;
-            status?: string;
-            /** @description The administered source label, absent for an unlabelled import or connector key. */
-            source?: string | null;
-            /** Format: date-time */
-            last_activity_at?: string | null;
-            /** @description How to read `last_activity_at`, from the activity it names. Absent when that is null. */
-            last_activity_precision?: components["schemas"]["OccurredPrecision"];
-            response_target_tracked?: boolean;
         };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
