@@ -10,7 +10,9 @@ Sales won follows the close time span you picked and the deal owner of today. If
 
 Above the figures, a few sentences sum up the position. They say what was won against the target, where the quarter should end, and what is still open. They are written from the figures below them, and a figure that was not measured is left out.
 
-The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click sales won or open pipeline to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
+The row of figures at the top shows sales won, the closed win rate, qualified pipeline created and open pipeline. Open pipeline also gives the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click a figure to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
+
+The line under **Forecast landing** names what it counts, such as **Won + weighted open deals**. A report saved before this line existed says **Basis not recorded**.
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
@@ -22,7 +24,7 @@ The dates next to the numbers name the time span measured. A custom time span ca
 
 Targets use the month or fiscal quarter that holds the real cutoff, even when the custom end date you asked for is later. A saved edition keeps its own cutoff.
 
-Every chart can also be read as numbers. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
+Every chart can also be read as numbers. The round **i** button beside a chart's title opens its reporting details. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
 
 ## How far is this quarter from its target?
 
@@ -30,7 +32,7 @@ With the time span set to this quarter, **This quarter against its target** sits
 
 - **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
 - **Left to win** is the target minus sales won so far, and never below zero.
-- **Coverage, all open deals** is the open value expected to close this quarter, over what is left to win.
+- **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
 - **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
 
 When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
@@ -91,7 +93,9 @@ Open **Analytics → Stage conversion** and choose one pipeline. Each row is a s
 
 **Still open** deals have not left the stage yet. They never count as lost, and the rate leaves them out. **Moved on** is the share of deals that went to a later stage or were won, out of those that left the stage. A stage shows no rate until 5 deals have left it.
 
-Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Forward or back unknown**, and the rate leaves them out too.
+Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Next move imported or unknown**, and the rate leaves them out too.
+
+Moves that an import brought in are left out. Such a move shows what happened in the system the deal came from, not how your team sells. So an imported move never starts an entry, and a deal whose next move was imported shows as **Next move imported or unknown**. Margince did not always keep whether an import brought a move in. Moves saved before then still count, and the figure is marked as partial, because some of them may be imports.
 
 Each deal counts for the team member who owned it when it entered the stage, also after it gets a new owner. The days next to an outcome are the middle time a deal spent in the stage before it. The days next to **Still open** are the middle time in the stage so far.
 

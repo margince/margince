@@ -1,0 +1,8 @@
+SET LOCAL lock_timeout = '3s';
+
+ALTER TABLE privacy_notice_case VALIDATE CONSTRAINT privacy_notice_case_state;
+ALTER TABLE privacy_notice_case VALIDATE CONSTRAINT privacy_notice_case_rule;
+ALTER TABLE privacy_notice_case VALIDATE CONSTRAINT privacy_notice_case_review_shape;
+ALTER TABLE privacy_notice_case VALIDATE CONSTRAINT privacy_notice_case_none_shape;
+ALTER TABLE privacy_notice_case VALIDATE CONSTRAINT privacy_notice_case_due_shape;
+ALTER TABLE privacy_notice_case VALIDATE CONSTRAINT privacy_notice_case_source_note;

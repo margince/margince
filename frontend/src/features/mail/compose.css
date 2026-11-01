@@ -227,19 +227,32 @@
   background: var(--dangerBg);
 }
 
-/* What the draft was written from, above the body it explains. The reasons
-   are the same answer read twice — a line for scanning before the draft, and
-   chips for checking one input after — so they share a block rather than
-   sitting in two places the reader has to connect. */
-.compose-reasons {
+/* What the draft was written from: a quiet hint under the band's line, and
+   the card only once opened. The chevron sits beside the words, so the hint
+   reads as one small control rather than a section header. */
+.compose-reasons.disclosure {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.compose-reasons > .disclosure-summary {
+  inline-size: fit-content;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+}
+.compose-reasons > .disclosure-summary > .disclosure-label {
+  flex: none;
+}
+.compose-reasons-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--padCard);
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
-.compose-reasons .chips {
+.compose-reasons-card .chips {
   margin: 0;
 }
 

@@ -5,7 +5,6 @@
 // read and tested on its own.
 
 import type { components } from "../../api/schema";
-import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 
 type Catalog = Pick<components["schemas"]["ReportingCatalog"], "presets">;
 type PresetID = components["schemas"]["ReportingPreset"]["id"];
@@ -93,12 +92,4 @@ export function openingView(
       return candidate;
   }
   return recommended;
-}
-
-export function rememberedView(): string | null {
-  return readStored(STORAGE_KEYS.analyticsOverviewView);
-}
-
-export function rememberView(view: OverviewView): void {
-  writeStored(STORAGE_KEYS.analyticsOverviewView, view);
 }

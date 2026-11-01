@@ -1,4 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
+import { reportingStoryEvaluation } from "../src/testing/reporting.fixtures";
 import { brandt } from "./mockapi/fixtures";
 import { page as companyPage } from "./mockapi/server";
 import { mockApi } from "./seed";
@@ -177,6 +179,64 @@ test("a section is an address, and Back steps between sections", async ({
 
   await page.goBack();
   await expect(page).toHaveURL(/#\/analytics$/);
+});
+
+// The nearest box that scrolls the element, which is the content column: the
+// document itself is one viewport tall and never moves.
+function scrolledBy(element: Locator): Promise<number> {
+  return element.evaluate((node) => {
+    let box = node.parentElement;
+    while (box && box.scrollHeight <= box.clientHeight) box = box.parentElement;
+    return box?.scrollTop ?? 0;
+  });
+}
+
+test("Back from Forecast returns to Sales review's question, place and focused card", async ({
+  page,
+}) => {
+  // Short enough that the readings sit below the fold, so a place to return
+  // to exists at all.
+  await page.setViewportSize({ width: 1280, height: 520 });
+  await page.route(/\/v1\/analytics\/evaluate/, (route) =>
+    route.fulfill({
+      json: {
+        ...reportingStoryEvaluation,
+        metrics: [
+          ...reportingStoryEvaluation.metrics,
+          {
+            id: "forecast_landing",
+            version: "1",
+            unit: "EUR",
+            value: 76_000_000,
+            coverage: { status: "ok", withheld: false },
+            evidence: { metric: "forecast_landing", context_id: "interval" },
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/#/analytics/overview?overview=sales", {
+    waitUntil: "networkidle",
+  });
+  const door = page
+    .locator("section.stat-card", {
+      hasText: de["analytics.overview.expectedFinish"],
+    })
+    .locator("a.stat-card-open");
+  await door.scrollIntoViewIfNeeded();
+  const before = await scrolledBy(door);
+  const overview = page.url();
+
+  await door.click();
+  await expect(page).toHaveURL(/#\/analytics\/forecast\?/);
+  await page.goBack();
+
+  await expect(page).toHaveURL(overview);
+  await expect(door).toBeFocused();
+  expect(Math.abs((await scrolledBy(door)) - before)).toBeLessThanOrEqual(50);
+
+  await page.goForward();
+  await expect(page).toHaveURL(/#\/analytics\/forecast\?.*pipeline=/);
 });
 
 test("the deals board remembers its pipeline and its view in the address", async ({

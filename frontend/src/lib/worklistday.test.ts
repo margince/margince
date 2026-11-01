@@ -32,6 +32,11 @@ describe("the Home day's refresh", () => {
     expect(untilNextDue(pages, now)).toBe(30 * 60_000 + 1_000);
   });
 
+  it("comes within the hour when the soonest row is due next month", () => {
+    const pages = [page(["2026-12-30T09:00:00Z"])];
+    expect(untilNextDue(pages, now)).toBe(60 * 60_000);
+  });
+
   it("does not come at all when no loaded row is still to come due", () => {
     expect(untilNextDue([page(["2026-10-31T08:00:00Z"])], now)).toBe(false);
     expect(untilNextDue([], now)).toBe(false);

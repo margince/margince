@@ -515,6 +515,29 @@ has. Staging, the check before a decision and the accept step all ask
 stops calling the notice step. It also fails when the reviewed version is not the
 version the build sends.
 
+## Mail from the contact
+
+Mail from a contact shows that they gave their own details. For `bulk_mail_attested`,
+`inbound_sender_authenticated` must also be true.
+
+Before closing old cases, the data task reads the stored mail with capture's parser and checks
+the same proof. Mail with no proof keeps its unknown source.
+
+An unknown source needs review. It has no legal deadline and no send route. A missing mail,
+a reply from our team, or a capture date cannot prove where the details came from.
+
+A source with a notice duty keeps that duty when its date is unknown. The capture date
+gives the latest possible deadline; the notice may already be due.
+
+In **Settings → Privacy**, a user with privacy access records the source and its proof. The
+contact page shows the review under the same access check. If the contact gave the details,
+no separate notice is needed. A date is optional: a known past date is used as given, and a
+missing date uses the original capture date as a bound. The clock never starts again at review.
+
+A data task moves live cases with an unknown source to review. It keeps their audit history,
+finished decisions and mail already on its way. If a send fails, the source is checked again.
+Later mail capture and data tasks keep a user's confirmed source decision.
+
 ## Where the code lives
 
 | | |

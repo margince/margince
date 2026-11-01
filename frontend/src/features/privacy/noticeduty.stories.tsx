@@ -58,6 +58,18 @@ function duty(item: WorklistItem) {
   return () => {
     stubWithSession(
       {
+        [`GET /privacy/notice-case-reviews/${item.id}`]: () =>
+          jsonResponse({
+            id: item.id,
+            contact_id: CONTACT,
+            contact_name: "Steve Leichsenring",
+            rule: item.kind,
+            due_at: item.due_at,
+            state: "open",
+            attempts: 0,
+            created_at: "2026-01-04T09:00:00Z",
+            acquisition: item.acquisition,
+          }),
         [`GET /contacts/${CONTACT}/consent/mail-preview`]: () =>
           jsonResponse(
             mailPreview("privacy_notice", "de", {
@@ -65,7 +77,7 @@ function duty(item: WorklistItem) {
             }),
           ),
       },
-      { contact: ["read", "update"] },
+      { contact: ["read", "update"], privacy_request: ["read", "update"] },
     );
     return (
       <StoryProviders>
@@ -118,4 +130,31 @@ export const NoticePreviewPhone: Story = {
   ...NoticePreview,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+export const DirectCase: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        [`GET /privacy/notice-case-reviews/${IMPORTED.id}`]: () =>
+          jsonResponse({
+            id: IMPORTED.id,
+            contact_id: CONTACT,
+            contact_name: "Steve Leichsenring",
+            rule: "art14",
+            due_at: IMPORTED.due_at,
+            state: "open",
+            attempts: 0,
+            created_at: "2026-01-04T09:00:00Z",
+            acquisition: IMPORTED.acquisition,
+          }),
+      },
+      { privacy_request: ["read", "update"], contact: ["read", "update"] },
+    );
+    return (
+      <StoryProviders>
+        <NoticeDuty caseId={IMPORTED.id} />
+      </StoryProviders>
+    );
+  },
 };

@@ -12,6 +12,7 @@ import {
 } from "../../../format/connectorprovider";
 import { useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
+import { isConnectedAtAll } from "../../../lib/connector-status";
 import { useConnectors } from "../../../lib/connectors";
 import { type AdminWait, waitsOnAdmin } from "../../../lib/setup-checklist";
 import { AlsoWorthDoing, type AlsoWorthDoingProps } from "./connect-also";
@@ -84,7 +85,7 @@ type Waiting = Readonly<{ vendor: AccountVendor; wait: AdminWait }>;
  */
 function useConnectedMailProviders(): ConnectedMailRoster {
   const roster = useConnectors();
-  const connected = roster.data?.data.filter((c) => c.status === "connected");
+  const connected = roster.data?.data.filter(isConnectedAtAll);
   const blockers = new Map<string, ConnectBlocker>();
   for (const entry of roster.data?.providers ?? []) {
     if (entry.reason !== "ready") {

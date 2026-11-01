@@ -85,7 +85,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `closed_at` | `timestamp with time zone` |  |  |
 | `commercial_motion` | `text` |  | Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). |
 | `company_id` | `uuid` |  | Primary company; never a raw lead. |
-| `currency` | `character(3)` |  |  |
+| `currency` | `currency_code` |  |  |
 | `description` | `text` |  | The human-authored statement of what the customer needs, what is in scope and what outcome is intended. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `expected_arr_minor` | `bigint` |  | Expected annual recurring revenue in minor units of `currency`. |
@@ -144,7 +144,6 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_closed_at`: `CHECK (((status = 'open') OR (closed_at IS NOT NULL)))`
 - `deal_closed_fx`: `CHECK (((status = 'open') OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL)))`
 - `deal_commercial_motion_check`: `CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business', 'renewal', 'upsell', 'cross_sell', 'expansion', 'existing_business']))))`
-- `deal_currency_check`: `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
 - `deal_description_bounded`: `CHECK (((description IS NULL) OR (length(description) <= 20000)))`
 - `deal_expected_arr_minor_js_safe`: `CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))`
 - `deal_expected_arr_nonnegative`: `CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))`
@@ -475,26 +474,28 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_stage_history
 
-23 columns · primary key `(id)` · referenced by 2 foreign keys
+25 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `amount_minor_at_change` | `bigint` |  |  |
 | `approval_id` | `uuid` |  |  |
-| `base_currency_at_change` | `text` |  |  |
+| `base_currency_at_change` | `currency_code` |  |  |
 | `base_minor_at_change` | `bigint` |  |  |
 | `changed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `changed_by` | `text` | yes |  |
-| `currency_at_change` | `character(3)` |  |  |
+| `currency_at_change` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `from_position_at_change` | `integer` |  |  |
 | `from_stage_id` | `uuid` |  | Points at `stage.id`. |
 | `fx_date_at_change` | `date` |  |  |
 | `fx_rate_at_change` | `numeric` |  |  |
+| `import_run_id` | `uuid` |  |  |
 | `lost_reason_code_at_change` | `text` |  | Points at `deal_loss_reason.key`. |
 | `owner_id_at_change` | `uuid` |  |  |
 | `pipeline_id_at_change` | `uuid` |  |  |
+| `provenance` | `text` |  | One of `recorded`, `imported`. |
 | `reversal_of` | `uuid` |  | Points at `deal_stage_history.id`. |
 | `semantic_at_change` | `text` |  | One of `open`, `won`, `lost`. |
 | `to_position_at_change` | `integer` |  |  |
@@ -516,6 +517,8 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Rules**
 
 - `deal_stage_history_deal_id_id_key`: `UNIQUE (deal_id, id)`
+- `deal_stage_history_import_run_pairing`: `CHECK ( CASE provenance WHEN 'imported' THEN (import_run_id IS NOT NULL) ELSE (import_run_id IS NULL) END)`
+- `deal_stage_history_provenance_check`: `CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded', 'imported']))))`
 - `deal_stage_history_semantic_at_change_check`: `CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open', 'won', 'lost']))))`
 - `deal_stage_history_win_probability_at_change_check`: `CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))`
 
@@ -537,7 +540,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `accepted_deal_id` | `uuid` |  | Points at `deal.id`. |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `confidence` | `numeric(4,3)` | yes |  |
-| `currency` | `text` |  | Present when amount_minor is, and only then. |
+| `currency` | `currency_code` |  | Present when amount_minor is, and only then. |
 | `decided_at` | `timestamp with time zone` |  |  |
 | `decided_by` | `uuid` |  | Points at `app_user.id`. |
 | `evidence_count` | `integer` | yes |  |
@@ -638,10 +641,10 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `from_currency` | `character(3)` | yes |  |
+| `from_currency` | `currency_code` | yes |  |
 | `rate` | `numeric(20,10)` | yes | Decimal rate (from -> base), always positive. |
 | `rate_date` | `date` | yes |  |
-| `to_currency` | `character(3)` | yes | The workspace base currency. |
+| `to_currency` | `currency_code` | yes | The workspace base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
@@ -670,7 +673,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `previous_review_id` | `uuid` |  | Points at `legal_review.id`. |
 | `requested_by` | `uuid` |  | Points at `app_user.id`. |
 | `status` | `text`, default `'requested'::text` | yes | One of `requested`, `approved`, `changes_needed`, `withdrawn`. |
-| `value_currency` | `character(3)` |  |  |
+| `value_currency` | `currency_code` |  |  |
 | `value_minor` | `bigint` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -721,7 +724,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `accepted_at` | `timestamp with time zone` |  |  |
 | `buyer_company_id` | `uuid` |  | Points at `company.id`. |
 | `buyer_snapshot` | `jsonb` |  | Buyer legal block captured at send time. |
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `fx_rate_date` | `date` |  |  |
 | `fx_rate_to_base` | `numeric(20,10)` |  | Native→base, frozen at send (RT-PR-C2). |
@@ -755,7 +758,6 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Rules**
 
 - `offer_accepted_at`: `CHECK (((status <> 'accepted') OR (accepted_at IS NOT NULL)))`
-- `offer_currency_check`: `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `offer_deal_id_id_key`: `UNIQUE (deal_id, id)`
 - `offer_gross_is_net_plus_tax`: `CHECK ((gross_minor = (net_minor + tax_minor)))`
 - `offer_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
@@ -910,7 +912,7 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `active` | `boolean`, default `true` | yes |  |
 | `billing_interval_months` | `integer` |  | How many months one billing period spans. |
 | `billing_model` | `text` |  | Whether this price repeats. |
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `default_tax_rate` | `numeric(5,2)`, default `0` | yes | Percent, e.g. 19.00 (DE USt.); per-line override allowed. |
 | `description` | `text` |  |  |
 | `name` | `text` | yes |  |
@@ -930,7 +932,6 @@ The 25 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `product_billing_interval_check`: `CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12]))))`
 - `product_billing_model_check`: `CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time', 'recurring']))))`
 - `product_billing_shape`: `CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time')) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring')) AND (billing_interval_months IS NOT NULL))))`
-- `product_currency_check`: `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `product_default_tax_rate_check`: `CHECK ((default_tax_rate >= (0)::numeric))`
 - `product_unit_price_minor_check`: `CHECK ((unit_price_minor >= 0))`
 - `product_unit_price_minor_js_safe`: `CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint)))`

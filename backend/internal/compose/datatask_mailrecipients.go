@@ -44,7 +44,7 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, rc.payload `+mailRecipientOriginalScope+` AND a.id > @after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{"after": after, "batch_limit": in.Limit})
+	rows, err := tx.Query(ctx, `SELECT a.id, rc.payload `+mailRecipientOriginalScope+` AND a.id > @after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{dataTaskAfterArg: after, "batch_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -96,6 +96,6 @@ func estimateMailRecipientOriginals(ctx context.Context, q datatask.Querier, max
 		return 0, false, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id "+mailRecipientOriginalScope+" LIMIT @cap) candidates", pgx.NamedArgs{"cap": maximum + 1}).Scan(&count)
+	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id "+mailRecipientOriginalScope+" LIMIT @cap) candidates", pgx.NamedArgs{dataTaskCapArg: maximum + 1}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }

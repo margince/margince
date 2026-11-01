@@ -191,6 +191,9 @@ describe("contactDims", () => {
               display_name: "Lena Fischer",
               strength_bucket: "strong",
               interactions_90d: 3,
+              inbound_90d: 1,
+              outbound_90d: 2,
+              two_way: true,
             },
             {
               user_id: "u-2",
@@ -210,6 +213,42 @@ describe("contactDims", () => {
       // One colleague in touch is a single thread, not coverage.
       ["reach", "1 colleague in touch", "Lena Fischer", "warning"],
     ]);
+  });
+
+  it("does not count recipients of an inbound message as colleagues in touch", () => {
+    const dims = contactDims(
+      {
+        ...VIEW,
+        network: {
+          colleagues: [
+            {
+              user_id: "u-1",
+              display_name: "Lena Fischer",
+              strength_bucket: "weak",
+              interactions_90d: 1,
+              inbound_90d: 1,
+              outbound_90d: 0,
+              two_way: false,
+            },
+            {
+              user_id: "u-2",
+              display_name: "Tom Berger",
+              strength_bucket: "weak",
+              interactions_90d: 1,
+              inbound_90d: 1,
+              outbound_90d: 0,
+              two_way: false,
+            },
+          ],
+        },
+      },
+      t,
+      "en",
+    );
+    expect(dims.find((dim) => dim.key === "reach")).toMatchObject({
+      value: "No colleague in touch",
+      tone: "neutral",
+    });
   });
 
   it("says none open and no colleague in touch rather than zero", () => {
@@ -383,4 +422,27 @@ describe("bucketLabel", () => {
       expect(verdict?.word).toBe(bucketLabel(bucket, t));
     }
   });
+});
+
+it("does not turn an older server's missing exchange proof into zero coverage", () => {
+  const dims = contactDims(
+    {
+      ...VIEW,
+      network: {
+        colleagues: [
+          {
+            user_id: "u-1",
+            display_name: "Demo Colleague",
+            strength_bucket: "weak",
+            interactions_90d: 2,
+          },
+        ],
+      },
+    },
+    t,
+    "en",
+  );
+  expect(dims.find((dim) => dim.key === "reach")?.value).toBe(
+    t("record.notShown"),
+  );
 });

@@ -55,6 +55,7 @@ import {
 } from "./leads.companydials";
 import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
+import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
 import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
 
 export { mapLeadBody, UNASSIGNED_OWNER } from "./leads.list.queries";
@@ -216,6 +217,7 @@ function LeadsWorkbench({
   const setView = (next: "table" | "board") =>
     replaceDial(LEAD_VIEW_PARAM, next === "board" ? next : undefined);
   const origins = useLeadOrigins();
+  const partners = useLeadPartnerOptions();
   const ownerOptions = [
     { value: viewerId, label: t("lead.assignToMe") },
     { value: UNASSIGNED_OWNER, label: t("lead.unassigned") },
@@ -313,11 +315,12 @@ function LeadsWorkbench({
                 ],
               },
               { key: "origin_detail", label: "lead.originDetail" },
+              ...leadPartnerCreateFields(partners, t),
               ...cf.formFields,
             ]}
           />
         }
-        columns={leadColumns(t, locale, recordZone, origins.data)}
+        columns={leadColumns(t, locale, recordZone, origins.data, partners)}
         rowKey={(lead) => lead.id}
         selection={{
           selected: liveSelection,

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -129,7 +130,7 @@ func readForecastDealMoves(
 		               h.base_minor_at_change, h.base_currency_at_change
 		          FROM deal_stage_history h
 		         WHERE h.deal_id = d.id AND h.changed_at < x.at
-		         ORDER BY `+stageMoveOrder("h")+` DESC
+		         ORDER BY `+weekly.StageMoveOrder("h")+` DESC
 		         LIMIT 1) m ON true`, dealIDs, at.asOf, at.trainAt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("compose: reading the stage history the evaluation's outcomes come from: %w", err)

@@ -43,7 +43,7 @@ export function OptionalRelationships({
     </Button>
   );
   const note = !open
-    ? "worklist.relationships.optionalDetail"
+    ? null
     : asked.isError
       ? "worklist.relationships.failed"
       : asked.isPending
@@ -58,9 +58,11 @@ export function OptionalRelationships({
   }
   return (
     <Panel title={t("worklist.relationships.optional")} titleAction={opener}>
-      <PanelBody>
-        <p className="t-caption">{t(note)}</p>
-      </PanelBody>
+      {note && (
+        <PanelBody>
+          <p className="t-caption">{t(note)}</p>
+        </PanelBody>
+      )}
     </Panel>
   );
 }
@@ -82,11 +84,6 @@ function RelationshipChoices({
         <QuietDismissAll rows={choices.optional_relationships ?? []} />
       }
     >
-      <PanelBody>
-        <p className="t-caption">
-          {t("worklist.relationships.optionalDetail")}
-        </p>
-      </PanelBody>
       {choices.optional_relationships?.map((item) => (
         <WorklistRow
           key={rowIdentity(item)}
