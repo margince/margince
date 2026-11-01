@@ -149,8 +149,8 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
 - Beside them: **Numbers**, **Upcoming meetings**, **Check applied changes**.
-A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date, the emails synced overnight, and how many items wait, how many are
-urgent and how many meetings you have. Press any key or click to go on.
+A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date, the emails synced overnight and your meetings. It also shows how
+many items wait on Today and how many of them are urgent. Press any key or click to go on.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Today?

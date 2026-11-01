@@ -19,6 +19,7 @@ import {
   whenText,
 } from "../../lib/worklistcopyreasons";
 import { worklistDayOptions } from "../../lib/worklistday";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import type { WorklistItem } from "../../lib/worklisttypes";
 
 // How many of the day's ranked items stand here, in the Worklist's own order.
@@ -34,7 +35,9 @@ export function DoNext() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const day = useInfiniteQuery(worklistDayOptions("mine", "all"));
+  const day = useInfiniteQuery(
+    worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW),
+  );
   const page = day.data?.pages[0];
   const items = page?.queue?.slice(0, NAMED_WORK) ?? [];
   // A failed or withheld source means the list may be short, so an empty

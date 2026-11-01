@@ -23,7 +23,7 @@ export function worklistDayOptions(
   owner?: string,
   view?: WorklistView,
 ) {
-  // A view joins the key only when named, so Home's read keeps its own key.
+  // A view joins the key only when named, so a view-less read keeps its own key.
   const queryKey = [
     ...worklistKey,
     scope,
