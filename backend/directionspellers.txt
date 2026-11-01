@@ -11,7 +11,13 @@
 # can see ALL of them while the debt is paid down, rather than seeing only the
 # files that happen to call a renderer.
 #
-# THE NUMBER IS THE POINT, AND IT OTHERWISE ONLY GOES DOWN. To remove a line:
+# THE COUNT IS EXACT, so paying one debt means lowering the ceiling beside it,
+# and taking one on means raising it where a reader sees the number change.
+#
+# A file waived as a message-state reader does not belong here: it has answered
+# the question, and holding it in both places counts it twice.
+#
+# To remove a line:
 # move that file onto the rule, or, if it asks about one message rather than a
 # relationship, move it to messageStateReaders with a sentence saying so.
 #
@@ -28,10 +34,8 @@ internal/compose/dealscoutsql.go
 internal/compose/introadvance.go
 internal/compose/network/intronote.go
 internal/compose/ownsentmailrepair.go
-internal/compose/signalscan.go
 internal/compose/vcardingest.go
 internal/modules/activities/answered.go
-internal/modules/activities/awaitingreply.go
 internal/modules/activities/capturelabel.go
 internal/modules/activities/citedthread.go
 internal/modules/activities/colleaguesender.go
@@ -39,7 +43,6 @@ internal/modules/activities/deliveryreportrepair.go
 internal/modules/activities/emailparties.go
 internal/modules/activities/latestinbound.go
 internal/modules/activities/machinesender.go
-internal/modules/activities/meetingfollowup.go
 internal/modules/activities/messageidentity.go
 internal/modules/activities/owedreview.go
 internal/modules/activities/owedverdict.go

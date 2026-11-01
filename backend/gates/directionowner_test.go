@@ -83,12 +83,19 @@ func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {
 	// A register entry whose file no longer spells the column is paid debt.
 	// Left there, it lets the count stand still while the tree improves.
 	for path := range registered {
+		if messageStateReaders.Waived(t, path) {
+			t.Errorf("%s is waived as a message-state reader and also in %s — one answer, one place",
+				path, directionRegisterPath)
+		}
 		if !spelling[path] {
 			t.Errorf("%s is in %s and no longer spells the column — delete that line", path, directionRegisterPath)
 		}
 	}
-	if len(registered) > directionDebtCeiling {
-		t.Errorf("%s holds %d entries against a ceiling of %d; the debt may only go down",
+	// Exact, not a bound. Under a bound, a paid entry can be swapped for a new
+	// reader with the number unmoved. The debt then stands still while the
+	// file reads as though it shrank.
+	if len(registered) != directionDebtCeiling {
+		t.Errorf("%s holds %d entries and the ceiling says %d; move the ceiling with the register",
 			directionRegisterPath, len(registered), directionDebtCeiling)
 	}
 	if readers < 10 || withRule < 4 {
@@ -139,7 +146,7 @@ func TestTheDirectionCensusSeesAPlantedReader(t *testing.T) {
 // per-entry reasons.
 const (
 	directionRegisterPath = "directionspellers.txt"
-	directionDebtCeiling  = 60
+	directionDebtCeiling  = 57
 )
 
 func readDirectionRegister(t *testing.T) map[string]bool {
