@@ -255,3 +255,41 @@ func TestAColleaguesInboundMailIsOurSideSpeaking(t *testing.T) {
 		t.Errorf("last outbound = %q, want our colleague's at %q", in.Recipient.LastOutbound, want)
 	}
 }
+
+// The voice names a side when it can, and the transport answers when it
+// cannot. Each arm decides which stamp a row lands on, so each is read here.
+func TestWhichSideAStampLandsOnFollowsTheVoiceThenTheTransport(t *testing.T) {
+	t.Parallel()
+	voiced := func(kind crmcontracts.ActivityAuthorKind, at time.Time, dir crmcontracts.ActivityDirection,
+		id string) crmcontracts.Activity {
+		row := act(id, at, dir, "Re: Pricing", "A line.")
+		row.Voice = &crmcontracts.ActivityVoice{
+			Author: &crmcontracts.ActivityAuthor{Kind: kind},
+		}
+		return row
+	}
+	noSide := act("019fe7ae-0000-7000-8000-000000000011", when.Add(-4*time.Hour),
+		crmcontracts.ActivityDirectionInbound, "Unsigned", "A line.")
+	noSide.Direction = nil
+	// Their word by voice though it left here, and ours by voice though it
+	// arrived. A machine names no side, so its transport decides.
+	rows := []crmcontracts.Activity{
+		voiced(crmcontracts.ActivityAuthorKindContactRecord, when.Add(-1*time.Hour),
+			crmcontracts.ActivityDirectionOutbound, "019fe7ae-0000-7000-8000-00000000000e"),
+		voiced(crmcontracts.ActivityAuthorKindColleague, when.Add(-2*time.Hour),
+			crmcontracts.ActivityDirectionInbound, "019fe7ae-0000-7000-8000-00000000000f"),
+		voiced(crmcontracts.ActivityAuthorKindMachine, when.Add(-3*time.Hour),
+			crmcontracts.ActivityDirectionInbound, "019fe7ae-0000-7000-8000-000000000010"),
+		// Neither the voice nor the transport names a side, so this row lands
+		// on no stamp at all.
+		noSide,
+	}
+	in := leaddraft.FromLead(lead(nil), rows, leaddraft.Request{}, draftfloor.Envelope{})
+
+	if want := when.Add(-1 * time.Hour).Format(time.RFC3339); in.Recipient.LastInbound != want {
+		t.Errorf("last inbound = %q, want the contact-authored row at %q", in.Recipient.LastInbound, want)
+	}
+	if want := when.Add(-2 * time.Hour).Format(time.RFC3339); in.Recipient.LastOutbound != want {
+		t.Errorf("last outbound = %q, want the colleague-authored row at %q", in.Recipient.LastOutbound, want)
+	}
+}
