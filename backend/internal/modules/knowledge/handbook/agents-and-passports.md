@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/features/automations/connect-ai-tool.tsx frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant -->
+<!-- describes: frontend/src/features/settings/settings-passports.tsx frontend/src/features/settings/settings.aiaccess.tsx frontend/src/features/automations/connect-ai-tool.tsx frontend/src/features/automations/agentallowances.tsx backend/internal/modules/identity/passport.go backend/internal/modules/identity/passportscope.go backend/internal/modules/agents/tierfloor.go backend/internal/platform/agentgrant frontend/src/features/automations/oauthconsent.tsx backend/internal/modules/agents/prompts.go backend/internal/modules/agents/recordlinks.go backend/internal/modules/agents/bulkconfirm.go backend/internal/modules/agents/anchorpick.go -->
 # Agents, passports and what they may do
 
 Margince is made to be worked in by AI agents as much as by humans. Here you
@@ -27,7 +27,7 @@ To connect your AI tool to Margince, open **Settings → AI access** and answer 
 7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
 To refuse, choose **Deny access**.
 Authorizing creates the connection, listed under **Your connections**, so you need no passport.
-Also called: connect Claude, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
+Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
 
 ### What is an agent passport?
 An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
@@ -69,6 +69,26 @@ For Claude Code, Codex or Antigravity, open **Settings → AI access**, then **F
 Do what the tab shows for your tool: run the command, or for Antigravity add the block to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
+
+### What do Read and draft and Full assistant mean when I connect my AI tool?
+On the authorize screen, **Authorize access**, the **Read and draft** choice under **Assistant permissions** limits your AI tool. With it, the tool sees what you can see and prepares messages for your review. It cannot change records or send anything. **Full assistant** ticks every permission, and **Pick your own** lets you tick or clear each box. Choose **Authorize** when you are done.
+Also called: limit what my AI tool may do, read-only assistant, restrict Claude, permission levels, least access.
+
+### Which ready-made requests does my AI tool offer?
+Your AI tool lists ready-made requests from Margince, as commands or a menu. They include **Brief me for today**, **What is slipping this week**, **Explain my forecast** and **Log a call**. The tool offers only those your permissions allow. A connection that cannot change records does not offer **Log a call**, so the tool does not list it.
+Also called: starter requests, commands, quick actions, suggested questions, shortcuts, what can I ask Claude to do, log a call missing.
+
+### Does my AI tool give me links to records?
+Yes, your AI tool or assistant can give you a link that opens a deal, contact, company, lead or project in Margince. The link opens on your Margince address, so an administrator must have set that address. Without it the tool gives no links. Amounts come in the deal's currency, such as 72000.00 EUR, never in cents.
+Also called: open a deal from Claude, record link, amounts in euros or cents, how deal values show.
+
+### Will my AI tool ask me before it changes many records?
+Yes. Before a change to many records, or an undo of one, your AI tool asks you to confirm in the chat. It shows a **Go ahead** form when it can, and asks in words when it cannot. To undo a bulk change, ask the tool to undo it; records changed since then stay as they are. It also asks before it archives, merges or sends, which you cannot undo from the chat, unless you asked for that exact change.
+Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
+
+### What happens when I name a record and several match?
+When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one.
+Also called: two contacts with the same name, name that matches twice, pick the right record.
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI access**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."

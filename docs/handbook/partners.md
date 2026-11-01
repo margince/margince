@@ -82,6 +82,10 @@ Help on a deal that was already running (**Influenced**) never activates a partn
 The **Partner** tab shows the date and the lead or deal behind it. Partners that were on **Active**, **Active, referring** or **Dormant** when the stage list arrived count as activated. Their tab says "Active before the stage list was introduced", because nobody recorded a date.
 Also called: activated partner, first partner lead, first partner win.
 
+### How do I see the leads a partner sent?
+To see the leads a partner sent, open **Leads** in the sidebar and read the **Referred by partner** column. It shows the partner's name, or **No partner**. A lead whose partner has not been accepted yet carries the badge **Awaiting acceptance**; that is the first lead still waiting for **Accept for partner**. The column shows once a company is a partner, to a role that may see companies and partners.
+Also called: partner leads, partner leads list, who sent this lead, leads waiting to be accepted.
+
 ### How do I change the partner stages?
 To change the partner stages in Margince, open **Settings** → **Partners**. An admin can rename, reorder, add and retire stages there, and pick each stage's meaning.
 - **New stage** adds a stage at the end of the list, meaning **Candidate**. Change its meaning in its row.

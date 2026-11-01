@@ -67,8 +67,8 @@ The weekly review counts recorded work, and says plainly where the record is sho
 
 The **Weekly scorecard** is one table. Each row has a count and what the count rests on.
 
-For leads and meetings it shows leads moved on, how many replies missed the target, and meetings
-held (with booked and missed meetings beside them).
+For leads and meetings it shows leads moved on and replies past the target time.
+It also shows meetings marked held, with booked and no-show meetings beside them. A seat that cannot read activities sees no meeting figures in the review.
 
 For deals it shows stage moves on and back, and the middle value of the days a deal spent in the stage
 it left. It shows how many open deals have a next step, and how many have more than one contact. It
