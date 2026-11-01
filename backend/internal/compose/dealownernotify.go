@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -68,8 +69,9 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 	for _, request := range moved {
 		key := approvalNoticeDedupeKey(request.ID.UUID)
 		decidable := false
+		var parts *crmcontracts.ApprovalSummaryParts
 		if live {
-			if decidable, err = approvals.PendingAskedOfAtTx(seatCtx, tx, request.ID, now); err != nil {
+			if decidable, parts, err = approvals.PendingAskOfAtTx(seatCtx, tx, request.ID, now); err != nil {
 				return err
 			}
 		}
@@ -83,7 +85,7 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 		if request.TargetID != nil {
 			target = notices.Target{Type: request.TargetType, ID: *request.TargetID}
 		}
-		line := approvalNoticeFor(decider, request.ID, request.Summary, target)
+		line := approvalNoticeFor(decider, request.ID, request.Summary, parts, target)
 		if err := recordApprovalNotice(ctx, tx, store.HandOverTx, mail, wsID, line); err != nil {
 			return err
 		}

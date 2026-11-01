@@ -30,6 +30,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "captureConcern.title",
   "companyReach.functionCount",
   "deal.committee.seatSub",
   "lead.card.askedQuote",

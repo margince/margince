@@ -26,6 +26,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -303,6 +304,42 @@ func TestApprovalNotifyReachesTheSeatsThatCouldDecideAndNobodyElse(t *testing.T)
 	replayed := a.delivered(t)
 	if len(replayed) != 1 || replayed[0].id != got.id {
 		t.Fatalf("a replayed envelope wrote a second notice: %+v", replayed)
+	}
+}
+
+// The bell lists an approval's values as the card does, from the summary's own
+// parts rather than a pattern over the joined subject. A value with a comma in
+// it stays one value.
+func TestAnApprovalNoticeCarriesItsSummaryPartsToTheBell(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	a.grantRole(t, a.e.AdminUser)
+	proposal, err := json.Marshal(deals.CloseDateCorrection{
+		DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: "2026-12-01", Basis: "the date has passed",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parts := &crmcontracts.ApprovalSummaryParts{
+		Sentence: "Correct the close date",
+		Fields:   []crmcontracts.ApprovalSummaryField{{Field: "basis", Value: "late, and still open"}},
+	}
+	_, env := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
+		Kind: deals.CloseDateCorrectionKind, ProposedChange: proposal, DiffHash: "h-" + a.deal.String(),
+		TargetType: "deal", TargetID: a.deal, Summary: "Correct the close date: basis=late, and still open",
+		SummaryParts: parts,
+	})
+	a.deliver(t, env)
+
+	page, err := notices.NewStore(a.db).ListFor(a.e.Admin(), 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 {
+		t.Fatalf("the admin's centre holds %d line(s), want the one approval notice", len(page.Items))
+	}
+	got := page.Items[0].SubjectParts
+	if got == nil || got.Sentence != parts.Sentence || len(got.Fields) != 1 || got.Fields[0].Value != "late, and still open" {
+		t.Fatalf("the bell's line carries parts %+v, want %+v", got, parts)
 	}
 }
 

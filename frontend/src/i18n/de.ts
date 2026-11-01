@@ -18794,6 +18794,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "captureConcern.reauth": "Erneute Verbindung erforderlich",
+  "captureConcern.error": "Verbindungsfehler",
+  "captureConcern.failing": "Synchronisierung schlägt fehl",
+  "captureConcern.backfill": "Verlaufsimport fehlgeschlagen",
+  "captureConcern.stalled": "Synchronisierung angehalten",
+  "captureConcern.silent": "Keine neue E-Mail eingegangen",
+  "captureConcern.title": "{mailbox}: {concern}",
+  "captureConcern.since": "Seit {since}",
+  "captureConcern.more_one":
+    "{count} weitere Verbindung benötigt Aufmerksamkeit",
+  "captureConcern.more_other":
+    "{count} weitere Verbindungen benötigen Aufmerksamkeit",
+  "captureConcern.reconnect": "Neu verbinden",
+  "captureConcern.open": "Verbindung öffnen",
+  "captureConcern.dismiss": "Stillewarnung ausblenden",
+  "captureConcern.changed":
+    "Diese Warnung hat sich geändert. Aktualisieren und erneut versuchen.",
+  "captureConcern.connections": "Verbindungen mit Handlungsbedarf",
+  "captureConcern.sinceLabel": "Seit",
+  "captureConcern.member": "Mitglied",
+  "captureConcern.provider": "Anbieter",
+  "captureConcern.mailbox": "Postfach",
+  "captureConcern.condition": "Zustand",
+  "captureConcern.lastSuccess": "Letzte erfolgreiche Synchronisierung",
+  "magic.action.capture_sync_stalled": "{provider} synchronisiert nicht mehr",
+  "magic.action.capture_silent": "{provider} hat keine neue E-Mail geliefert",
   "magic.action.capture_sync_failing": "{provider} kommt nicht hinterher",
   "magic.action.capture_backfill_failed":
     "{provider} konnte den bisherigen Verlauf nicht vollständig lesen",
@@ -19703,9 +19729,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
   "analytics.decision.part.commit_evidence": "Bestätigter Commit",
-  "analytics.decision.range": "Modellierte Spanne",
-  "analytics.decision.rangeNote":
-    "Das erwartete Ergebnis sind die beiden Teile auf dem Balken. Die modellierte Spanne ist ein eigenes Modell dafür, wie alle offenen Deals abschließen können, und kann daher davon abweichen.",
   "analytics.decision.part.weighted": "Gewichtete offene Deals",
   "health.views": "Ansichten des Systemzustands",
   "health.overview": "Übersicht",

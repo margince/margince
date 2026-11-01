@@ -36,6 +36,11 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		HistoryBaseline:        historyBaselineOnWire(v.HistoryBaseline),
 		CanBackfill:            v.CanBackfill,
 	}
+	if v.Concern != "" {
+		kind := crmcontracts.CaptureConcernKind(v.Concern)
+		c.Concern = &kind
+		c.ConcernSince = v.ConcernSince
+	}
 	if c.Scopes == nil {
 		c.Scopes = []string{}
 	}

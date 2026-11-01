@@ -18585,6 +18585,37 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /connectors/{provider}/silence/dismiss:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    post:
+      tags: [Connectors]
+      operationId: dismissConnectorSilence
+      summary: Dismiss the owner's current mailbox silence warning.
+      description: |
+        Only the authenticated human owner's mailbox is changed. Dismissal lasts until
+        another mail delivery followed by three days of silence. Errors and stalled syncs
+        cannot be dismissed. Repeating a dismissal of the same episode is harmless.
+        The connection lifecycle audit records this setting without correspondence.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissCaptureSilenceRequest' }
+      responses:
+        '200':
+          description: The owner's updated connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /connectors/{provider}/mail-posture:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -37476,6 +37507,34 @@ components:
         total: { type: integer, description: The size of the whole shipped baseline. }
 
     # ---- capture connectors (per-user OAuth mail/calendar; RC-8, CAP-WIRE-1) ----
+    CaptureConcernKind:
+      type: string
+      enum: [reauth_required, connection_error, sync_failing, backfill_failed, sync_stalled, capture_silent]
+
+    DismissCaptureSilenceRequest:
+      type: object
+      additionalProperties: false
+      required: [since]
+      properties:
+        since:
+          type: string
+          format: date-time
+          description: The concern_since of the silence episode being dismissed. A changed episode returns 409.
+
+    CaptureConnectionConcern:
+      type: object
+      additionalProperties: false
+      required: [user_id, display_name, connection_id, provider, account_label, concern, since, last_success_at]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: [string, 'null'] }
+        connection_id: { type: string, format: uuid }
+        provider: { type: string }
+        account_label: { type: [string, 'null'] }
+        concern: { $ref: '#/components/schemas/CaptureConcernKind' }
+        since: { type: [string, 'null'], format: date-time }
+        last_success_at: { type: [string, 'null'], format: date-time }
+
     CaptureConnection:
       type: object
       description: |
@@ -37497,6 +37556,10 @@ components:
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.' }
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
         scopes: { type: array, items: { type: string }, description: The granted provider scopes. }
+        concern:
+          $ref: '#/components/schemas/CaptureConcernKind'
+          description: The same effective concern the attention card and System health read. Absent when healthy or silence is dismissed.
+        concern_since: { type: [string, 'null'], format: date-time, description: When the current concern began. }
         last_synced_at: { type: [string, 'null'], format: date-time, description: 'Last sync attempt (CAP-DDL-5); null before the first.' }
         last_success_at: { type: [string, 'null'], format: date-time, description: 'Last successful sync for this mailbox; null before one succeeds.' }
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
@@ -40966,6 +41029,12 @@ components:
             type: { type: string, description: "The record's class, as its own endpoint spells it." }
             id: { type: string, format: uuid }
         origin: { $ref: '#/components/schemas/NoticeOrigin' }
+        summary_parts:
+          allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
+          description: >-
+            On an approval notice, its subject taken apart into the sentence and the field values,
+            so a client can show the values as a list. Absent on any other notice, and on one
+            written before the parts were kept.
     NotificationPage:
       type: object
       description: One window of the calling contact's notification centre.
@@ -60608,10 +60677,14 @@ components:
         exists to protect, and an operational page is not an exemption from it. A mailbox
         is named because an administrator cannot act on "somewhere in the installation";
         what is waiting inside it is not named at all.
-      required: [generated_at, mailboxes, classifier, held_meetings, sweeps]
+      required: [generated_at, mailboxes, classifier, held_meetings, sweeps, connection_concerns]
       properties:
         categories:
           $ref: '#/components/schemas/CaptureHealthCategories'
+        connection_concerns:
+          type: array
+          description: Active connection concerns for live members. Names account state, never correspondence.
+          items: { $ref: '#/components/schemas/CaptureConnectionConcern' }
         generated_at: { type: string, format: date-time }
         mailboxes:
           type: array

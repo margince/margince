@@ -18,15 +18,6 @@
 }
 /* The foot is one line: what the chart covers gives way, and the door to its
    records keeps its words whole at the line's end. */
-/* A chart with nothing to draw: its plot's height, its baseline and the
-   reason, so the card still reads as a chart that is waiting. */
-.reporting-chart-empty {
-  display: flex;
-  align-items: center;
-  min-block-size: 8rem;
-  block-size: 100%;
-  border-block-end: 1px solid var(--borderSubtle);
-}
 .reporting-panel > .panel-foot {
   flex-wrap: nowrap;
 }

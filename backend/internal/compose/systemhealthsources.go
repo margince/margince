@@ -131,11 +131,16 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	source := healthSource("capture", healthReadObject)
 	now := utcNow()
 	var categories capture.OperationalCategories
+	var concerns map[string]int
 	var classifier crmcontracts.CaptureClassifierHealth
 	var held crmcontracts.CaptureHeldMeetings
 	var sweeps []crmcontracts.CaptureSweepHealth
 	_, err := healthTx(ctx, s.captureHealthHandlers.pool, func(ctx context.Context, tx pgx.Tx) (bool, error) {
 		var err error
+		concerns, err = captureConcernCounts(ctx, tx, now)
+		if err != nil {
+			return false, err
+		}
 		categories, err = capture.ReadOperationalCategoriesTx(ctx, tx)
 		if err != nil {
 			return false, err
@@ -154,8 +159,7 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	if err != nil {
 		return source, nil, err
 	}
-	source.ObservedAt = &now
-	source.Condition, source.Code = healthClear, "capture_checked"
+	source.ObservedAt, source.Condition, source.Code = &now, healthClear, "capture_checked"
 	findings := []crmcontracts.HealthFinding{}
 	add := func(code string, condition crmcontracts.HealthSourceCondition, n int, unit, responsible string) {
 		if n == 0 {
@@ -195,6 +199,10 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	}
 	if repairUnverified {
 		add("capture_repair_unverified", healthUnverified, 1, "runs", "operator")
+	}
+	for _, kind := range capture.ConcernKinds {
+		condition := captureConcernCondition(kind)
+		add("capture_connection_"+kind, condition, concerns[kind], "items", "mailbox_owner")
 	}
 	if classifier.Exhausted > 0 {
 		source.Condition, source.Code = healthTechnical, "capture_exhausted"

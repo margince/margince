@@ -1367,6 +1367,10 @@ func (stubs) SetConnectorSignatureEnrichment(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "SetConnectorSignatureEnrichment")
 }
 
+func (stubs) DismissConnectorSilence(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "DismissConnectorSilence")
+}
+
 func (stubs) ListConsentPurposes(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListConsentPurposes")
 }

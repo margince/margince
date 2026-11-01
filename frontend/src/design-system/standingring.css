@@ -20,27 +20,6 @@
 .standing-ring-fill {
   stroke-linecap: round;
 }
-/* Where the reading is expected to land, behind what it has reached. */
-.standing-ring-reach {
-  stroke-linecap: round;
-  opacity: 0.3;
-}
-/* A ring beside a lead figure rather than heading a record. */
-.standing-ring[data-size="compact"] {
-  inline-size: 84px;
-  block-size: 84px;
-}
-.standing-ring[data-size="compact"] .standing-ring-centre {
-  gap: 0;
-  padding-inline: var(--space-2);
-}
-.standing-ring[data-size="compact"] .standing-ring-score {
-  font: var(--fontHeadingSmall);
-  font-variant-numeric: tabular-nums;
-}
-.standing-ring[data-size="compact"] .standing-ring-caption {
-  font: var(--fontBodySmall);
-}
 /* Butt ends, so the gap between two arcs is the gap ringarc.ts measured. */
 .standing-ring-segment {
   stroke-linecap: butt;

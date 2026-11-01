@@ -143,48 +143,6 @@
   align-items: center;
   gap: var(--space-3);
 }
-/* In a ranked list the bar is the reading, so it is a step heavier than a
-   label's own bar, with 4px ends, and it grows in from its start. */
-.barlist-row .meterbar,
-.barlist-action .meterbar {
-  height: 10px;
-  border-radius: var(--r-xs);
-}
-.barlist-row .meterbar span,
-.barlist-action .meterbar span {
-  border-radius: var(--r-xs);
-  transform-origin: left center;
-  animation: barlist-grow var(--dur-enter) var(--ease-out) both;
-}
-.btn.btn-link.barlist-action:hover .meterbar-flat span {
-  background: var(--accentText);
-}
-/* On a phone the label takes its own line over the bar, so a stage name is
-   never broken inside a word to fit a third of the row. */
-@media (max-width: 520px) {
-  .barlist-row,
-  .btn.btn-link.barlist-action {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: var(--space-1);
-  }
-  .barlist-row .meterbar,
-  .barlist-action .meterbar {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-}
-@keyframes barlist-grow {
-  from {
-    transform: scaleX(0.3);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .barlist-row .meterbar span,
-  .barlist-action .meterbar span {
-    animation: none;
-    transition: none;
-  }
-}
 .barlist-label {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -267,31 +225,6 @@
   border-inline: 2px solid var(--bgElevated);
   background: var(--textPrimary);
   background-clip: padding-box;
-}
-/* The band is a bracket on its own lane: ink ends and a hairline between,
-   with no fill, so it reads as "somewhere in here" and never as a part. */
-.segbar-band {
-  position: relative;
-  height: 10px;
-  margin-top: var(--space-2);
-}
-.segbar-band-span {
-  position: absolute;
-  top: 0;
-  box-sizing: border-box;
-  height: 100%;
-  min-width: 4px;
-  border: 2px solid var(--textSecondary);
-  border-top: 0;
-  border-radius: 0 0 var(--r-xs) var(--r-xs);
-}
-.segbar-swatch-band {
-  box-sizing: border-box;
-  width: 14px;
-  height: 8px;
-  border: 2px solid var(--textSecondary);
-  border-top: 0;
-  border-radius: 0 0 var(--r-xs) var(--r-xs);
 }
 .segbar-legend {
   display: flex;
