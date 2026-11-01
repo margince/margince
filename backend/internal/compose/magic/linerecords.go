@@ -72,6 +72,9 @@ func (s *Service) LineRecords(
 		}
 		end := min(offset+limit, len(members))
 		if offset < end {
+			if err := loadDeferredImages(ctx, tx, members[offset:end]); err != nil {
+				return err
+			}
 			out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
 			if err != nil {
 				return err

@@ -130,6 +130,9 @@ func (s *Service) Read(
 			return err
 		}
 		lines, housekeeping := linesOf(mask, entries, capped, limit)
+		if err := showDeferredImages(ctx, tx, mask, lines, entries); err != nil {
+			return err
+		}
 		// Asked after the lines are drawn and inside the page's own
 		// transaction: the judge reads the record each line names, and a
 		// second connection inside this one can deadlock against a lock it

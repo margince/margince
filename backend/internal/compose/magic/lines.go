@@ -6,11 +6,13 @@ package magic
 // Dressing an admitted audit row as a line a reader can act on.
 
 import (
+	"context"
 	"encoding/json"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -129,10 +131,39 @@ func lineOf(mask imageMask, e entry) (crmcontracts.MagicLine, string, bool) {
 	// A create's image is the whole new record and an archive's is empty;
 	// neither says more than the line's sentence and the record's name.
 	if !bulkActions[e.Action] {
-		line.Before = mask.withheldFrom(e.EntityType, fieldsOf(e.Before))
-		line.After = mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+		line.Before, line.After = imagesOf(mask, e)
 	}
 	return line, groupKey(e, d), true
+}
+
+// imagesOf is what a line shows of its row's before and after images.
+func imagesOf(mask imageMask, e entry) (before, after *map[string]any) {
+	return mask.withheldFrom(e.EntityType, fieldsOf(e.Before)), mask.withheldFrom(e.EntityType, fieldsOf(e.After))
+}
+
+// showDeferredImages fills the images of the drawn lines whose rows the arms
+// read without them. A line is named by its newest row, whose images it shows.
+func showDeferredImages(ctx context.Context, tx pgx.Tx, mask imageMask, lines []crmcontracts.MagicLine, entries []entry) error {
+	byID := make(map[ids.UUID]entry, len(entries))
+	for _, e := range entries {
+		byID[e.ID] = e
+	}
+	shown := make([]entry, 0, len(lines))
+	lineAt := map[ids.UUID]int{}
+	for i, line := range lines {
+		if e, ok := byID[ids.UUID(line.Id)]; ok && imagesDeferred(e.Action) {
+			lineAt[e.ID] = i
+			shown = append(shown, e)
+		}
+	}
+	if err := loadDeferredImages(ctx, tx, shown); err != nil {
+		return err
+	}
+	for _, e := range shown {
+		at := lineAt[e.ID]
+		lines[at].Before, lines[at].After = imagesOf(mask, e)
+	}
+	return nil
 }
 
 // groupKeyOf answers what lineOf would group this row under, without dressing

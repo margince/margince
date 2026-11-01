@@ -254,13 +254,13 @@ func doneForType(
 	// off a request — the one form of identifier interpolation this tree allows.
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
-		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
+		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
 		       NULLIF(%s, ''), a.evidence, a.batch_id
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, recordLabels[entityType], table, where, arg(readCap))
+		 LIMIT $%d`, groupingImages, recordLabels[entityType], table, where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
 }
 
@@ -308,14 +308,68 @@ func doneForActivities(
 	}
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
-		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
+		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
 		       NULLIF(%s, ''), a.evidence, a.batch_id
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, recordLabels[typeActivity], where, arg(readCap))
+		 LIMIT $%d`, groupingImages, recordLabels[typeActivity], where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
+}
+
+// groupingImages reads an arm row's before and after images only where
+// describe needs them to group the row: an update's sentence names the fields
+// it moved. An arm reads up to readCap rows, and every other row's images are
+// shown on at most one line, so they wait for loadDeferredImages.
+var groupingImages = fmt.Sprintf(
+	`CASE WHEN a.action = '%[1]s' THEN a.before END, CASE WHEN a.action = '%[1]s' THEN a.after END`, actionUpdate)
+
+// imagesDeferred reports a row whose images groupingImages left unread and a
+// line still shows. A bulk verb's images are never shown.
+func imagesDeferred(action string) bool {
+	return action != actionUpdate && !bulkActions[action]
+}
+
+// loadDeferredImages reads the images the arms left unread, for the entries a
+// page shows, in one statement. The ids come from the scoped arms; the erasure
+// boundary is asked again, so a scrub certified since the arm read is not
+// republished. A row it no longer serves keeps no images.
+func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
+	at := map[ids.UUID]int{}
+	for i, e := range entries {
+		if imagesDeferred(e.Action) {
+			at[e.ID] = i
+		}
+	}
+	if len(at) == 0 {
+		return nil
+	}
+	auditIDs := make([]ids.UUID, 0, len(at))
+	for id := range at {
+		auditIDs = append(auditIDs, id)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := fmt.Sprintf(`
+		SELECT a.id, a.before, a.after
+		  FROM audit_log a
+		 WHERE a.id = ANY($%d) AND %s`,
+		arg(auditIDs), privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))))
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("read the shown machine actions' images: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var before, after []byte
+		if err := rows.Scan(&id, &before, &after); err != nil {
+			return fmt.Errorf("read a shown machine action's images: %w", err)
+		}
+		entries[at[id]].Before, entries[at[id]].After = before, after
+	}
+	return rows.Err()
 }
 
 // scanEntries reads the rows one arm returned.
