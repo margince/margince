@@ -5170,6 +5170,8 @@ export const en = {
   "lead.scoreLoading": "Loading score factors…",
   "lead.scoreNoFactors": "No factors counted toward this score yet.",
   "lead.scoreSources": "{count} activities",
+  "lead.scoreSourcesHead": "Activities behind this factor",
+  "lead.scoreSourceNoSubject": "No subject",
   "lead.factor.decision_maker_title": "Decision-maker title",
   "lead.factor.reply": "Lead replied",
   "lead.factor.meeting_held": "Meeting held",

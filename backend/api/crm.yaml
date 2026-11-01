@@ -54817,6 +54817,15 @@ components:
           type: array
           items: { type: string, format: uuid }
           description: 'The activities behind a behavioral factor, re-read through the CALLER''s scope (ADR-0105 §3).'
+        source_activities:
+          type: array
+          readOnly: true
+          description: >-
+            The same receipts, named. In the order they were counted, and omitting an id this
+            reader cannot discover at all — so the list can be SHORTER than
+            `source_activity_ids`, which stays the count. A number that shrank to what one
+            reader may open would tell two readers different things about one score.
+          items: { $ref: '#/components/schemas/ActivityReference' }
         set_by: { type: [string, 'null'], format: uuid, description: 'The human who supplied a manual factor. Null for machine factors.' }
         # Optional rather than nullable: a machine factor OMITS it. A null
         # would claim the field applies here and happens to be empty, which
