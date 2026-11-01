@@ -443,6 +443,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/system-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Scoped capability readings and evidence coverage for System health.
+         * @description Human sessions admitted by any existing System health page grant. Each source is checked against its own grant before reading. Failed sources remain explicit beside successful sources. Observations are independent, not a database snapshot. Reads stored evidence only; never starts a probe, model call or repair.
+         */
+        get: operations["getSystemHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/job-health": {
         parameters: {
             query?: never;
@@ -455,6 +475,26 @@ export interface paths {
          * @description Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller's own workspace's background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every workspace. Another workspace's jobs are never included: river_job carries no workspace column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer's own vetted sentence, never a worker's raw cause (that column is fleet-visible and has no redaction path). Human session only (x-agent-access: human-only).
          */
         get: operations["getJobHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/job-health/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Grouped totals and a bounded page of retained job failures.
+         * @description Requires job_health:read. Totals cover all retained matching runs at observation time, not only the returned page. Traversal uses a fixed creation cutoff and descending row ID. Outcomes and retention may change between pages; continuation explicitly reports that possibility. Groups describe kind and state, never a shared root cause.
+         */
+        get: operations["getJobHealthHistory"];
         put?: never;
         post?: never;
         delete?: never;
@@ -28691,6 +28731,8 @@ export interface components {
                 id: string;
             };
             origin?: components["schemas"]["NoticeOrigin"];
+            /** @description On an approval notice, its subject taken apart into the sentence and the field values, so a client can show the values as a list. Absent on any other notice, and on one written before the parts were kept. */
+            summary_parts?: components["schemas"]["ApprovalSummaryParts"];
         };
         /** @description One window of the calling contact's notification centre. */
         NotificationPage: {
@@ -43876,6 +43918,7 @@ export interface components {
          *     what is waiting inside it is not named at all.
          */
         CaptureHealth: {
+            categories?: components["schemas"]["CaptureHealthCategories"];
             /** Format: date-time */
             generated_at: string;
             /** @description One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent. */
@@ -43887,6 +43930,12 @@ export interface components {
              *     never run is listed with no `last_run`, not left out.
              */
             sweeps: components["schemas"]["CaptureSweepHealth"][];
+        };
+        CaptureHealthCategories: {
+            machine_threads: number;
+            uncertain_threads: number;
+            owner_review_mailboxes: number;
+            unread_mailboxes: number;
         };
         /**
          * @description Captured records already filed under a contact that are still held to their
@@ -44120,6 +44169,8 @@ export interface components {
         };
         /** @description One rehearsal of the restore procedure, as the drill ledger holds it. */
         RestoreDrill: {
+            recovery_within_target?: boolean;
+            data_loss_within_target?: boolean;
             /** Format: date-time */
             started_at: string;
             /**
@@ -44274,6 +44325,113 @@ export interface components {
             blocked_by?: string;
             missing_prerequisites: string[];
         };
+        SystemHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            public_origin?: components["schemas"]["PublicOriginStatus"];
+            /** @enum {string} */
+            assessment: "attention" | "checked" | "incomplete";
+            sources: components["schemas"]["HealthSource"][];
+            findings: components["schemas"]["HealthFinding"][];
+            /** @description Whether all authorized sources have sufficient evidence. */
+            complete: boolean;
+            /** @description Number of findings requiring a human action. */
+            action_count: number;
+        };
+        HealthSource: {
+            id: string;
+            /** @enum {string} */
+            availability: "available" | "unknown" | "stale" | "failed" | "withheld" | "not_configured" | "not_monitored";
+            /** @enum {string} */
+            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown";
+            /** @description Safe presentation code, never raw failure text. */
+            code: string;
+            permission: string;
+            /** @enum {string} */
+            scope: "workspace" | "installation" | "shared";
+            /** Format: date-time */
+            observed_at?: string;
+            oldest_wait_seconds?: number;
+            automatic_work?: components["schemas"]["AutomaticWorkCounts"];
+            expectation_seconds?: number;
+            count?: number;
+            /** @enum {string} */
+            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads";
+            /** Format: date-time */
+            window_start?: string;
+            /** Format: date-time */
+            window_end?: string;
+        };
+        HealthFinding: {
+            /** @description Stable identity of the source condition and affected scope. */
+            id: string;
+            source: string;
+            code: string;
+            /** @enum {string} */
+            condition: "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "unknown";
+            /** @description The owner requires a human action rather than normal processing or automatic retry. */
+            requires_action: boolean;
+            job_kinds?: string[];
+            job_kinds_truncated?: boolean;
+            urgency: number;
+            /** @enum {string} */
+            scope: "workspace" | "installation" | "shared";
+            /** @enum {string} */
+            impact: "measured" | "possible" | "unknown";
+            /** @enum {string} */
+            responsible: "you" | "mailbox_owner" | "administrator" | "operator";
+            /** @description Safe recovery criterion code. */
+            recovery: string;
+            /** Format: date-time */
+            observed_at?: string;
+            /** Format: date-time */
+            first_observed_at?: string;
+            /** Format: date-time */
+            next_attempt_at?: string;
+            count?: number;
+            /** @enum {string} */
+            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads";
+            /** Format: date-time */
+            window_start?: string;
+            /** Format: date-time */
+            window_end?: string;
+            action: components["schemas"]["HealthAction"];
+        };
+        HealthAction: {
+            /** @enum {string} */
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration";
+            available: boolean;
+            reason?: string;
+        };
+        JobHealthHistory: {
+            /** Format: date-time */
+            observed_at: string;
+            /** Format: date-time */
+            cutoff: string;
+            /**
+             * Format: date-time
+             * @description Lower bound for finished runs. Current retryable runs are included at every age.
+             */
+            window_start: string;
+            groups: components["schemas"]["JobHealthGroup"][];
+            runs: components["schemas"]["JobFailure"][];
+            next_cursor?: string;
+            has_more: boolean;
+            population_may_have_changed: boolean;
+            /** @enum {string} */
+            coverage: "retained_only";
+        };
+        JobHealthGroup: {
+            kind: string;
+            /** @enum {string} */
+            state: "retryable" | "discarded" | "cancelled";
+            fleet_wide: boolean;
+            count: number;
+            /** Format: date-time */
+            first_at: string;
+            /** Format: date-time */
+            latest_at: string;
+        };
         JobHealth: {
             /** Format: date-time */
             generated_at: string;
@@ -44294,10 +44452,19 @@ export interface components {
             running: number;
             /** @description Failed at least once and backing off toward another attempt. */
             retrying: number;
-            /** @description Discarded or cancelled: this work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. UNBOUNDED IN AGE — River retains a discarded row for seven days and a cancelled one for a day, so this is up to a week's history and a report figure, not a call to action. */
+            /** @description Legacy sum of retained discarded and cancelled runs. A discarded job spent every attempt; a cancelled job was stopped intentionally. Retention bounds this history. This total alone does not establish a current fault or a need to intervene. */
             dead: number;
-            /** @description The same count inside `dead_window_hours`. This is the one to alarm on: an outage that ended an hour ago and one still running are indistinguishable in `dead`, and that is the distinction a maintenance banner exists to draw. */
+            /** @description The same legacy aggregate inside `dead_window_hours`. Use condition and condition_code for the server assessment; a cancellation does not establish a fault. */
             dead_recent: number;
+            /** @enum {string} */
+            condition?: "unknown" | "processing" | "retrying" | "technical" | "unverified";
+            /** @enum {string} */
+            condition_code?: "queue_checked" | "queue_processing" | "queue_overdue" | "queue_unverified" | "queue_retrying" | "queue_expectation_unknown";
+            /** @description Retained discarded runs across all dates; not limited by dead_window_hours. */
+            discarded?: number;
+            /** @description Retained cancelled runs across all dates; not limited by dead_window_hours. */
+            cancelled?: number;
+            expectation_seconds?: number;
             /** @description How long the oldest runnable-and-unclaimed job of this kind has waited. Null when nothing of this kind is runnable now; a job scheduled for the future is not late. */
             oldest_waiting_age_seconds: number | null;
         };
@@ -55113,6 +55280,28 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getSystemHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Capability readings, findings and monitoring limits. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getJobHealth: {
         parameters: {
             query?: never;
@@ -55141,6 +55330,34 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getJobHealthHistory: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                kind?: string;
+                state?: "retryable" | "discarded" | "cancelled";
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All group totals and up to fifty matching retained runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobHealthHistory"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCaptureHealth: {

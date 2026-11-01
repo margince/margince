@@ -63,7 +63,6 @@ import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppsCard } from "./oauth-apps-card";
 import { PartnerStagesCard } from "./partnerstages";
-import { PublicOriginCard } from "./public-origin";
 import { FxRatesCard } from "./rates";
 import { RolesSettings } from "./roles-settings";
 import { AiAccessTab } from "./settings.aiaccess";
@@ -293,12 +292,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
     case "system-health":
-      return (
-        <>
-          <SystemHealthPage />
-          <PublicOriginCard />
-        </>
-      );
+      return <SystemHealthPage view={route?.id2} />;
     case "configuration":
       return <InstallationConfigurationPage />;
     case "extensions":

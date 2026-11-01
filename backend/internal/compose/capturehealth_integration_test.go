@@ -317,3 +317,29 @@ func TestTheCaptureHealthSeamTellsACalendarFromAMailbox(t *testing.T) {
 		t.Errorf("calendar flag by provider = %v, want %v", calendars, want)
 	}
 }
+
+func TestCaptureSummaryKeepsUnobservedSweepsAfterAFailedSweep(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := capture.NewSweepLedger(InstallationDB(e.Pool)).RecordSweep(ctx,
+		sweepReceiptFor(capture.Sweeps()[0], at, at, sweepTally{}, errors.New("synthetic failure"))); err != nil {
+		t.Fatal(err)
+	}
+	source, findings, err := (Server{captureHealthHandlers: captureHealthHandlers{pool: e.Pool}}).captureSummary(e.Admin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source.Availability != healthUnobserved {
+		t.Fatalf("unchecked sweep became observed: %+v", source)
+	}
+	count := 0
+	for _, finding := range findings {
+		if finding.Code == "capture_repair_unverified" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("repair finding count %d, want 1", count)
+	}
+}

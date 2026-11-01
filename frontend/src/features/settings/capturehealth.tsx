@@ -27,6 +27,7 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
 
@@ -378,11 +379,13 @@ function isCaptureHealth(data: Health | undefined): data is Health {
 // `job_health:read`, what the endpoint asks for (compose/capturehealth.go).
 export function useCaptureHealth() {
   const canSee = useCan("job_health", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey: ["capture-health"],
-    enabled: canSee,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/admin/capture-health"));
+    queryKey: ["capture-health", scope],
+    enabled: canSee && visible && scope !== undefined,
+    queryFn: async ({ signal }) => {
+      const data = unwrap(await api.GET("/admin/capture-health", { signal }));
       if (!isCaptureHealth(data)) {
         throw new Error("malformed capture-health response");
       }

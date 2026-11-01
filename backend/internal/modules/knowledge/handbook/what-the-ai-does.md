@@ -38,7 +38,7 @@ Mail questions and company enrichment wait, and try again at the next check, wit
 That holds for the call that first finds the credit gone, the key refused or the host out of reach too.
 
 Requests you make yourself fail at once, with a message to contact your system administrator.
-Your administrator sees why under **Settings**, **System health**, in **AI provider status**.
+Your administrator sees why under **Settings**, **System health**, **Diagnostics**, then **AI availability**.
 Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
 
 ## What the AI does for you

@@ -20,6 +20,7 @@ import {
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { providerName } from "../../lib/ai-provider-names";
 import { aiTaskLabel } from "../../lib/ai-task-label";
 import { unwrap } from "../../lib/problem";
 import {
@@ -28,7 +29,6 @@ import {
   callCodeTone,
   tierLabel,
 } from "./ai-decision-labels";
-import { providerName } from "./ai-provider-names";
 import {
   type AiCallSummary,
   costLabel,

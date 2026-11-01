@@ -8,6 +8,7 @@ import { SettingsScreen as SettingsRoute } from "./App.screens";
 import { SettingsScreen } from "./App.settings";
 import { runningDataTask } from "./features/settings/datataskshealth.fixtures";
 import { settingsAddress } from "./features/settings/settings";
+import { healthReport } from "./features/settings/systemhealth.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -28,6 +29,20 @@ function installReview() {
       data_task: ["read", "update"],
       activity: ["read", "update", "delete"],
     }),
+    "GET /admin/system-health": () =>
+      jsonResponse({
+        ...healthReport,
+        sources: healthReport.sources.map((source) =>
+          source.id === "updates"
+            ? source
+            : {
+                ...source,
+                availability: "withheld",
+                condition: "unknown",
+                code: "withheld",
+              },
+        ),
+      }),
     "GET /admin/data-tasks": () =>
       jsonResponse({
         data: [
@@ -49,7 +64,9 @@ export const ReviewedWork: Story = {
     return (
       <StoryProviders>
         <Suspense fallback={null}>
-          <SettingsScreen route={settingsAddress("system-health")} />
+          <SettingsScreen
+            route={{ ...settingsAddress("system-health"), id2: "diagnostics" }}
+          />
         </Suspense>
       </StoryProviders>
     );
@@ -69,7 +86,9 @@ export const LazyRoute: Story = {
     return (
       <StoryProviders>
         <Suspense fallback={null}>
-          <SettingsRoute route={settingsAddress("system-health")} />
+          <SettingsRoute
+            route={{ ...settingsAddress("system-health"), id2: "diagnostics" }}
+          />
         </Suspense>
       </StoryProviders>
     );

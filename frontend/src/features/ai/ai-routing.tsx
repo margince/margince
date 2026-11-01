@@ -18,6 +18,7 @@ import {
   withBorrowedRows,
 } from "../../lib/ai-models";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
+import { providerName } from "../../lib/ai-provider-names";
 import {
   ROUTING_KEY,
   type RoutingRead,
@@ -32,7 +33,6 @@ import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
-import { providerName } from "./ai-provider-names";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";

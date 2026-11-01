@@ -131,6 +131,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
+  holds, and how to compose one.
 - [run-from-container-images.md](how-to/run-from-container-images.md): what each image holds, and
   which part starts first.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
