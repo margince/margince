@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -30,7 +31,7 @@ export default meta;
 type Story = StoryObj;
 
 type Summary = components["schemas"]["SdrSummary"];
-const ZONE = "Europe/Berlin";
+const ZONE = REPORTING_FIXTURE_ZONE;
 const review = teamReview();
 
 function summary(): Readonly<{ data: Summary; isError: boolean }> {

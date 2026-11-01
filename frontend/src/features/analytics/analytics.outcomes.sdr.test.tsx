@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -78,7 +79,7 @@ const secondPage: Page = {
 const WINDOW = {
   start_at: AS_OF,
   end_at: "2026-10-04T22:00:00Z",
-  timezone: "Europe/Berlin",
+  timezone: REPORTING_FIXTURE_ZONE,
 };
 
 const returnedPage: Page = {

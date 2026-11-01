@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { forReader } from "../../format/collate";
 import { formatDuration, formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { reportingPeriodLabel } from "./reporting.model";
@@ -220,7 +221,7 @@ export function MemberTable({
       ? qualificationColumns(review, t, locale)
       : handoffColumns;
   const rows = [...review.members].sort((a, b) =>
-    a.label.localeCompare(b.label, locale),
+    forReader(a.label, b.label, locale),
   );
   return (
     <Panel title={t("analytics.team.members")}>

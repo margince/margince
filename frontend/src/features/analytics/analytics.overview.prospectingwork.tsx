@@ -10,7 +10,8 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { formatDate, formatDateTime, formatNumber } from "../../format/format";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
@@ -137,10 +138,12 @@ function MeetingRow({
 }>) {
   const t = useT();
   // A meeting known only by its day names the day, never a made-up noon.
-  const when =
-    meeting.starts_precision === "day"
-      ? formatDate(meeting.starts_at, locale, "UTC")
-      : formatDateTime(meeting.starts_at, locale, viewerZone());
+  const when = formatActivityWhen(
+    meeting.starts_at,
+    meeting.starts_precision,
+    locale,
+    viewerZone(),
+  );
   return (
     <PanelRow className="analytics-attention-row">
       <div className="analytics-attention-text">

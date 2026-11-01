@@ -16,6 +16,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import type { HandoffScope } from "./analytics.outcomes.sdr";
@@ -220,7 +221,9 @@ function TeamBody({
   const { locale } = useLocale();
   const scope = handoffScope(team);
   const summary = useTeamSummary(scope, true);
-  const zone = query.data?.context.timezone ?? "UTC";
+  // The company's clock until the evaluation names the reporting zone.
+  const recordZone = useRecordZone();
+  const zone = query.data?.context.timezone ?? recordZone;
   const readings = handoffWorkflow ? HANDOFF_READINGS : QUALIFICATION_READINGS;
   return (
     <>

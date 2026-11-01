@@ -6,6 +6,7 @@
 // module so the tests and the stories describe one server.
 
 import type { components } from "../../api/schema";
+import { dayInZone, startOfDayInZone } from "../../format/timezone";
 import {
   interval,
   REPORTING_FIXTURE_ZONE,
@@ -501,10 +502,13 @@ export const twoPipelines = () =>
 
 /** The fourteen days the summary counts booked meetings in, from `asOf`. */
 export function upcomingWindow(asOf: string) {
-  const day = asOf.slice(0, 10);
-  const end = new Date(`${day}T00:00:00Z`);
-  end.setUTCDate(end.getUTCDate() + 14);
-  return { start_at: asOf, end_at: end.toISOString(), timezone: "UTC" };
+  // Fourteen days from the reporting zone's day, ending at its midnight.
+  const day = dayInZone(Date.parse(asOf), REPORTING_FIXTURE_ZONE);
+  return {
+    start_at: asOf,
+    end_at: startOfDayInZone(day, REPORTING_FIXTURE_ZONE, 14),
+    timezone: REPORTING_FIXTURE_ZONE,
+  };
 }
 
 export function overviewRoutes(
