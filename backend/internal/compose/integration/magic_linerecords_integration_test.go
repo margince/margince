@@ -34,6 +34,13 @@ func seedEnrichedDeals(t *testing.T, e *Env, owner ids.UUID, n int) {
 // seedDealUpdates is seedEnrichedDeals with the update's after-image named.
 func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) {
 	t.Helper()
+	seedDealActions(t, e, owner, n, "update", `{"next_step": null}`, after)
+}
+
+// seedDealActions writes `n` deals the rep owns, each with one machine action
+// carrying the images named.
+func seedDealActions(t *testing.T, e *Env, owner ids.UUID, n int, action, before, after string) {
+	t.Helper()
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	deals := make([]ids.UUID, n)
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -55,9 +62,9 @@ func seedDealUpdates(t *testing.T, e *Env, owner ids.UUID, n int, after string) 
 			}
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
-				VALUES ('agent', 'agent:enrich', 'update', 'deal', $1,
-				        '{"next_step": null}', $3::jsonb, now() - make_interval(secs => $2))`,
-				deals[i], i, after); err != nil {
+				VALUES ('agent', 'agent:enrich', $4, 'deal', $1,
+				        $5::jsonb, $3::jsonb, now() - make_interval(secs => $2))`,
+				deals[i], i, after, action, before); err != nil {
 				return err
 			}
 		}
@@ -122,6 +129,47 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 	// An id no line in the window carries is not found, rather than an empty list.
 	if _, err := svc.LineRecords(ctx, ids.NewV7(), since, nil, 0); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("opening an unknown line: %v, want ErrNotFound", err)
+	}
+}
+
+// The arms read a row's images only for an update's sentence. A line about any
+// other action still shows its images, and so does its record.
+func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
+	e := Setup(t)
+	seedDealActions(t, e, e.Rep1, 1, "advance_stage", `{"next_step": "Qualify"}`, `{"next_step": "Propose"}`)
+	// Both instants from the database's clock, which dated the entry.
+	micros, err := strconv.ParseInt(e.WsScalar(t, `SELECT (extract(epoch FROM now()) * 1e6)::bigint::text`), 10, 64)
+	if err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	database := time.UnixMicro(micros)
+	since := database.Add(-time.Hour)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	svc := magic.NewService(e.Pool, nil, func() time.Time { return database })
+
+	receipt, err := svc.Read(ctx, &since, 20)
+	if err != nil {
+		t.Fatalf("reading the receipt: %v", err)
+	}
+	if len(receipt.Done) != 1 {
+		t.Fatalf("done = %+v, want the one stage move", receipt.Done)
+	}
+	line := receipt.Done[0]
+	if line.Before == nil || (*line.Before)["next_step"] != "Qualify" ||
+		line.After == nil || (*line.After)["next_step"] != "Propose" {
+		t.Errorf("line images before=%v after=%v, want next_step from Qualify to Propose", line.Before, line.After)
+	}
+
+	opened, err := svc.LineRecords(ctx, ids.UUID(line.Id), since, nil, 0)
+	if err != nil {
+		t.Fatalf("opening the line: %v", err)
+	}
+	if len(opened.Data) != 1 {
+		t.Fatalf("opened %d records, want 1", len(opened.Data))
+	}
+	if changes := opened.Data[0].Changes; len(changes) != 1 || changes[0].Field != "next_step" ||
+		changes[0].Before != "Qualify" || changes[0].After != "Propose" {
+		t.Errorf("changes %+v, want next_step from Qualify to Propose", changes)
 	}
 }
 

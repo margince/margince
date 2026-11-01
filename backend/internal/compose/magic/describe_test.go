@@ -5,6 +5,7 @@ package magic
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -327,6 +328,36 @@ func TestForecastReceiptUsesOnlyRecordedNumericBasis(t *testing.T) {
 		reason := forecastDateReason(objectOf([]byte(basis)))
 		if reason.Key != "magic.why.forecast_date" || reason.Values != nil {
 			t.Fatalf("unrecorded basis invented from %s: %+v", basis, reason)
+		}
+	}
+}
+
+// The arms read a row's images only when it is an update. No other admitted
+// action may need them to say what it did or to fold with its job's rows.
+func TestOnlyAnUpdateNeedsItsImagesToBeDescribedAndGrouped(t *testing.T) {
+	types := []string{typeDeal, typeCompany, typeContact, typeLead, typeProject, typeActivity}
+	for action := range admitted {
+		if action == actionUpdate {
+			continue
+		}
+		for _, entityType := range types {
+			read := entry{
+				Action: action, EntityType: entityType, ActorID: "agent:enrich",
+				Before: []byte(`{"next_step": "Qualify"}`), After: []byte(`{"next_step": "Propose"}`),
+			}
+			unread := read
+			unread.Before, unread.After = nil, nil
+			withImages, describedWith := describeEntry(read)
+			without, describedWithout := describeEntry(unread)
+			if describedWith != describedWithout || !reflect.DeepEqual(withImages, without) {
+				t.Errorf("%s on %s: described %v %+v with images, %v %+v without",
+					action, entityType, describedWith, withImages, describedWithout, without)
+			}
+			keyWith, _ := groupKeyOf(read)
+			keyWithout, _ := groupKeyOf(unread)
+			if keyWith != keyWithout {
+				t.Errorf("%s on %s groups as %q with images and %q without", action, entityType, keyWith, keyWithout)
+			}
 		}
 	}
 }
