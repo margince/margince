@@ -53,11 +53,15 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 	if err != nil {
 		return out, err
 	}
-	walk, err := walkStartedBy(out, q)
+	walk, started, err := walkStartedBy(out, q)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	if err := homecache.Store(ctx, h.home, reader, homecache.Worklist, key, stamp, walk, out); err != nil {
+	var walkID *ids.UUID
+	if started {
+		walkID = &walk
+	}
+	if err := homecache.Store(ctx, h.home, reader, homecache.Worklist, key, stamp, walkID, out); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	return out, nil
@@ -65,17 +69,14 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 
 // walkStartedBy is the walk a first page's cursor resumes, so a cached page is
 // never served once its walk can no longer be continued.
-func walkStartedBy(out crmcontracts.Worklist, q worklistQuestion) (*ids.UUID, error) {
+func walkStartedBy(out crmcontracts.Worklist, q worklistQuestion) (ids.UUID, bool, error) {
 	if out.NextCursor == nil {
-		return nil, nil
+		return ids.UUID{}, false, nil
 	}
 	cursor, err := decodeCursor(*out.NextCursor, q.scope, q.filter, q.owner)
 	if err != nil {
-		return nil, fmt.Errorf("attention: reading the walk a page started: %w", err)
+		return ids.UUID{}, false, fmt.Errorf("attention: reading the walk a page started: %w", err)
 	}
 	id, started := snapshotOf(cursor)
-	if !started {
-		return nil, nil
-	}
-	return &id, nil
+	return id, started, nil
 }

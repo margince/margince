@@ -18,7 +18,7 @@ import (
 )
 
 // keep stores answer as reader's, stamped now.
-func keep(t *testing.T, ctx context.Context, c *homecache.Cache, reader ids.UUID, read homecache.Read, walk *ids.UUID, view string) {
+func keep(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UUID, read homecache.Read, walk *ids.UUID, view string) {
 	t.Helper()
 	stamp, err := c.Stamp(ctx)
 	if err != nil {
@@ -29,7 +29,7 @@ func keep(t *testing.T, ctx context.Context, c *homecache.Cache, reader ids.UUID
 	}
 }
 
-func served(t *testing.T, ctx context.Context, c *homecache.Cache, reader ids.UUID, read homecache.Read) bool {
+func served(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UUID, read homecache.Read) bool {
 	t.Helper()
 	_, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, reader, read, "home")
 	if err != nil {
@@ -44,16 +44,16 @@ func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	contact := e.SeedContact(t, "Fenced", &e.Rep1)
 
-	keep(t, ctx, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
 	if got, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || got.View == nil || *got.View != "decisions" {
 		t.Fatalf("lookup = %v %+v (err %v), want the kept answer", hit, got, err)
 	}
-	if served(t, e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms), c, e.Rep2, homecache.Worklist) {
+	if served(e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms), t, c, e.Rep2, homecache.Worklist) {
 		t.Error("another reader was served the answer")
 	}
 
 	e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.Rep2, contact)
-	if served(t, ctx, c, e.Rep1, homecache.Worklist) {
+	if served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("an answer kept before an owner change was served after it")
 	}
 }
@@ -75,12 +75,12 @@ func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
 	if err := homecache.Store(ctx, c, e.Rep1, homecache.Worklist, "home", stamp, nil, crmcontracts.Worklist{}); err != nil {
 		t.Fatal(err)
 	}
-	if served(t, ctx, c, e.Rep1, homecache.Worklist) {
+	if served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("an answer stamped before the reader's write was served")
 	}
 
-	keep(t, ctx, c, e.Rep1, homecache.Worklist, nil, "today")
-	if !served(t, ctx, c, e.Rep1, homecache.Worklist) {
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")
+	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("an answer stamped after the write was not served")
 	}
 }
@@ -95,7 +95,7 @@ func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 		(record_type, record_id, subject_type, subject_id, access, granted_by, expires_at)
 		VALUES ('contact', $1, 'user', $2, 'read', $3, now() + interval '90 seconds')`, contact, e.Rep1, e.AdminUser)
 
-	keep(t, ctx, c, e.Rep1, homecache.Worklist, nil, "today")
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")
 	if n := e.WsCount(t, `SELECT count(*) FROM home_read_cache c, record_grant g
 		WHERE c.reader_id = $1 AND g.record_id = $2 AND c.valid_until <= g.expires_at`, e.Rep1, contact); n != 1 {
 		t.Errorf("the kept answer outlives the grant it was assembled under (%d rows bounded)", n)
@@ -115,12 +115,12 @@ func TestACachedFirstPageEndsWithTheWalkItStarted(t *testing.T) {
 	e.WsExec(t, `INSERT INTO worklist_snapshot (id, reader_id, params_fingerprint, as_of, created_at, expires_at, buckets, rows)
 		VALUES ($1, $2, 'home', now(), now(), now() + interval '4 hours', '{}', '[]')`, walk, e.Rep1)
 
-	keep(t, ctx, c, e.Rep1, homecache.Worklist, &walk, "today")
-	if !served(t, ctx, c, e.Rep1, homecache.Worklist) {
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, &walk, "today")
+	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Fatal("a page whose walk stands was not served")
 	}
 	e.WsExec(t, `DELETE FROM worklist_snapshot WHERE id = $1`, walk)
-	if served(t, ctx, c, e.Rep1, homecache.Worklist) {
+	if served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("a page was served after the walk its cursor resumes was gone")
 	}
 }
@@ -129,15 +129,15 @@ func TestAMachineWriteEndsTheCachedReceiptButNotTheWorklist(t *testing.T) {
 	e := Setup(t)
 	c := homecache.New(e.Pool, magic.MachineActors())
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	keep(t, ctx, c, e.Rep1, homecache.Magic, nil, "today")
-	keep(t, ctx, c, e.Rep1, homecache.Worklist, nil, "today")
+	keep(ctx, t, c, e.Rep1, homecache.Magic, nil, "today")
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")
 
 	e.WsExec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
 		VALUES ('agent', 'agent:enrich', 'update', 'deal', $1)`, ids.NewV7())
-	if served(t, ctx, c, e.Rep1, homecache.Magic) {
+	if served(ctx, t, c, e.Rep1, homecache.Magic) {
 		t.Error("the receipt was served after a machine wrote")
 	}
-	if !served(t, ctx, c, e.Rep1, homecache.Worklist) {
+	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("a machine write ended the worklist's answer, which it is not bound by")
 	}
 }

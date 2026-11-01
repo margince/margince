@@ -25,6 +25,7 @@ func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.Mi
 				next.ServeHTTP(w, r)
 				return
 			}
+			//nolint:contextcheck // WriteHeader has net/http's signature, and the request's context is the one this write ran under.
 			next.ServeHTTP(&forgettingWriter{ResponseWriter: w, forget: func() {
 				// The write has committed and its answer is the caller's; a
 				// failure here leaves their Home behind by at most homecache.Life.

@@ -106,8 +106,10 @@ func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T)
 			return []fenceStatement{{`DELETE FROM activity_link WHERE activity_id = $1`, []any{f.linked}}}
 		},
 		"an unlinked message gains its first link": func(f fenceFixture) []fenceStatement {
-			return []fenceStatement{{`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
-				[]any{f.unlinked, f.contact}}}
+			return []fenceStatement{{
+				`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+				[]any{f.unlinked, f.contact},
+			}}
 		},
 		"a participant is removed": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`DELETE FROM activity_participant WHERE activity_id = $1`, []any{f.linked}}}
@@ -154,17 +156,23 @@ func TestAWriteThatOnlyWidensReachLeavesTheHomeFence(t *testing.T) {
 			return []fenceStatement{
 				{`INSERT INTO activity (id, kind, subject, source, captured_by)
 					VALUES ($1, 'email', 'Arrived', 'manual', 'human:fence')`, []any{fresh}},
-				{`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
-					[]any{fresh, f.contact}},
+				{
+					`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+					[]any{fresh, f.contact},
+				},
 			}
 		},
 		"a linked message gains a second link": func(f fenceFixture) []fenceStatement {
-			return []fenceStatement{{`INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`,
-				[]any{f.linked, f.company}}}
+			return []fenceStatement{{
+				`INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`,
+				[]any{f.linked, f.company},
+			}}
 		},
 		"a participant is added": func(f fenceFixture) []fenceStatement {
-			return []fenceStatement{{`INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'cc', 'more@example.test')`,
-				[]any{f.linked}}}
+			return []fenceStatement{{
+				`INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'cc', 'more@example.test')`,
+				[]any{f.linked},
+			}}
 		},
 		"a contact's name is edited": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE contact SET full_name = 'Renamed' WHERE id = $1`, []any{f.contact}}}
