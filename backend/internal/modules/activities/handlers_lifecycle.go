@@ -324,3 +324,18 @@ func (h Handlers) snoozeFromRequest(
 	}
 	return h.store.SnoozeMessage(r.Context(), id, on, req.SnoozedUntil, ref)
 }
+
+// ClaimTaskReminderDelivery answers whether this tab shows a due reminder's
+// notification, so a member on two browsers sees it once.
+func (h Handlers) ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.TaskReminderClaimRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	claimed, err := h.store.ClaimReminderDelivery(r.Context(), pathID[ids.ActivityKind](id), req.RemindAt)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TaskReminderClaim{Claimed: claimed})
+}

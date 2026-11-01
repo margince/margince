@@ -52,15 +52,29 @@ class FakeNotification {
 const NOW = Date.parse("2026-10-25T09:00:00Z");
 
 let reads: URL[] = [];
+// The reminder instants the server has granted a claim for, across browsers.
+let granted = new Set<string>();
 
-// serve answers the reminder list in pages of pageSize, by the cursor asked.
+// serve answers the reminder list in pages of pageSize, by the cursor asked,
+// and grants each reminder's notification claim once, as the server does.
 function serve(rows: unknown[], pageSize = rows.length || 1) {
   reads = [];
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const request = input instanceof Request ? input : null;
     const url = new URL(
-      input instanceof Request ? input.url : String(input),
+      request ? request.url : String(input),
       "https://app.local",
     );
+    const claim = /\/activities\/([^/]+)\/reminder-delivery$/.exec(
+      url.pathname,
+    );
+    if (claim && request) {
+      const { remind_at } = (await request.json()) as { remind_at: string };
+      const key = `${claim[1]}:${remind_at}`;
+      const claimed = !granted.has(key);
+      granted.add(key);
+      return Response.json({ claimed });
+    }
     if (url.pathname.endsWith("/activities")) reads.push(url);
     const from = Number(url.searchParams.get("cursor") ?? "0");
     const more = from + pageSize < rows.length;
@@ -97,6 +111,7 @@ beforeEach(() => {
   FakeNotification.shown = [];
   vi.stubGlobal("Notification", FakeNotification);
   writeStored(STORAGE_KEYS.taskRemindersShown, "[]");
+  granted = new Set();
 });
 
 afterEach(() => {
@@ -113,6 +128,43 @@ test("a newly due reminder shows one notification naming the task", async () => 
   expect(FakeNotification.shown[0]?.title).toBe(REMINDER.subject);
   expect(FakeNotification.shown[0]?.options?.tag).toBe(reminderKey(REMINDER));
   expect(reads[0]?.searchParams.get("reminder_due")).toBe("true");
+});
+
+// A member signed in on two browsers sees one notification. The second has its
+// own storage, so only the server's claim can tell it the first showed it.
+test("a reminder another browser already showed is not shown again", async () => {
+  serve([REMINDER]);
+  const first = mount();
+  await waitFor(() => expect(FakeNotification.shown).toHaveLength(1));
+  first.unmount();
+
+  writeStored(STORAGE_KEYS.taskRemindersShown, "[]");
+  const second = mount();
+  await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(4));
+  expect(FakeNotification.shown).toHaveLength(1);
+  second.unmount();
+});
+
+test("a claim that fails shows the reminder, and one for a task now gone does not", async () => {
+  serve([REMINDER]);
+  const answering = globalThis.fetch;
+  const failWith = (status: number) =>
+    vi.fn(async (input: RequestInfo | URL) =>
+      input instanceof Request && input.url.endsWith("/reminder-delivery")
+        ? new Response("{}", { status })
+        : answering(input),
+    ) as typeof fetch;
+
+  globalThis.fetch = failWith(404);
+  const gone = mount();
+  await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+  expect(FakeNotification.shown).toHaveLength(0);
+  gone.unmount();
+
+  writeStored(STORAGE_KEYS.taskRemindersShown, "[]");
+  globalThis.fetch = failWith(500);
+  mount();
+  await waitFor(() => expect(FakeNotification.shown).toHaveLength(1));
 });
 
 test("a reminder already shown in this browser is not shown again", async () => {

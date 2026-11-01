@@ -537,6 +537,12 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_reminder_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_reminder_delivery.activity_id uuid NOT NULL gen=- def=-
+public.activity_reminder_delivery.activity_reminder_delivery_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_reminder_delivery.activity_reminder_delivery_pkey PRIMARY KEY (activity_id)
+public.activity_reminder_delivery.delivered_for timestamp with time zone NOT NULL gen=- def=-
+public.activity_reminder_delivery_pkey CREATE UNIQUE INDEX activity_reminder_delivery_pkey ON public.activity_reminder_delivery USING btree (activity_id)
 public.activity_reply_verdict_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_reply_verdict_history.activity_id uuid NOT NULL gen=- def=-
 public.activity_reply_verdict_history.activity_reply_verdict_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
