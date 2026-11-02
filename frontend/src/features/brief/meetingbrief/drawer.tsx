@@ -104,9 +104,10 @@ export function ContactMeetingBrief({
   let state: BriefViewState;
   if (brief.isSuccess && brief.data) {
     state = { kind: "ready", brief: brief.data };
-  } else if (brief.isError && [403, 404].includes(problemStatus(brief.error))) {
-    // A refusal and a meeting outside the reader's rows read alike, and a
-    // retry cannot change either answer.
+  } else if (
+    brief.isError &&
+    isWithheld(problemStatus(brief.error), projectId)
+  ) {
     state = { kind: "withheld" };
   } else if (brief.isError) {
     state = {
@@ -154,4 +155,11 @@ export function ContactMeetingBrief({
       />
     </Modal>
   );
+}
+
+// A refusal, or a 404 for no named project: a meeting outside the reader's rows,
+// which must read like a refusal. A 404 for a named project means the meeting is
+// filed under another one, and the server's sentence and the picker say so.
+function isWithheld(status: number, projectId: string): boolean {
+  return status === 403 || (status === 404 && projectId === "");
 }

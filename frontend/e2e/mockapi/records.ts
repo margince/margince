@@ -218,12 +218,11 @@ export const meetingBrief: Handler = ({ json }, { options }) => {
       return json(
         {
           type: "about:blank",
-          title: "Not found",
-          status: 404,
-          code: "not_found",
-          detail: "That meeting is filed under a different engagement.",
+          title: "Gateway timeout",
+          status: 504,
+          code: "gateway_unavailable",
         },
-        404,
+        504,
       );
     case "plan":
       return json(briefWithPlan);

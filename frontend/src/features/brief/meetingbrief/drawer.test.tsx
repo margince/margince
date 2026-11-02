@@ -126,24 +126,73 @@ describe("the meeting brief drawer", () => {
     expect(await screen.findByText("Goal for this meeting")).toBeTruthy();
   });
 
+  it("keeps the server's reason when a named project is not the meeting's", async () => {
+    let reads = 0;
+    seen({
+      "GET /activities/a-1/meeting-brief": () => {
+        reads += 1;
+        return reads === 1
+          ? jsonResponse(briefReady)
+          : jsonResponse(
+              {
+                status: 404,
+                code: "not_found",
+                detail: "That meeting is filed under a different engagement.",
+              },
+              404,
+            );
+      },
+    });
+    const projects = [
+      {
+        project_id: "p-erp",
+        name: "ERP rollout",
+        key: "ERP-27",
+        phase: "delivering" as const,
+      },
+    ];
+    render(
+      <StoryProviders>
+        <ContactMeetingBrief
+          activityId="a-1"
+          open
+          onClose={() => {}}
+          projects={projects}
+        />
+      </StoryProviders>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("combobox", { name: "Project" }));
+    await user.click(screen.getByRole("option", { name: /ERP-27/ }));
+    expect(
+      await screen.findByText(
+        "That meeting is filed under a different engagement.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText("Hidden for your role")).toBeNull();
+  });
+
   it.each([
     [403, "permission_denied"],
     [404, "not_found"],
-  ])("says a %i is withheld, and offers no retry", async (status, code) => {
-    let attempts = 0;
-    seen({
-      "GET /activities/a-1/meeting-brief": () => {
-        attempts += 1;
-        return jsonResponse({ status, code }, status);
-      },
-    });
-    render(
-      <StoryProviders>
-        <ContactMeetingBrief activityId="a-1" open onClose={() => {}} />
-      </StoryProviders>,
-    );
-    expect(await screen.findByText("Hidden for your role")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-    expect(attempts).toBe(1);
-  });
+  ])(
+    "says a %i for no named project is withheld, and offers no retry",
+    async (status, code) => {
+      let attempts = 0;
+      seen({
+        "GET /activities/a-1/meeting-brief": () => {
+          attempts += 1;
+          return jsonResponse({ status, code }, status);
+        },
+      });
+      render(
+        <StoryProviders>
+          <ContactMeetingBrief activityId="a-1" open onClose={() => {}} />
+        </StoryProviders>,
+      );
+      expect(await screen.findByText("Hidden for your role")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      expect(attempts).toBe(1);
+    },
+  );
 });

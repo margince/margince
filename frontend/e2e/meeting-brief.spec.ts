@@ -213,9 +213,7 @@ test("AC-meeting-brief-8: a failed read offers the reason and a retry", async ({
   page,
 }) => {
   await openBrief(page, { meetingBrief: "failed" });
-  await expect(
-    page.getByText("That meeting is filed under a different engagement."),
-  ).toBeVisible();
+  await expect(page.getByText(copy("common.gatewayUnavailable"))).toBeVisible();
   await expect(
     page.getByRole("button", { name: copy("state.retry") }),
   ).toBeVisible();
