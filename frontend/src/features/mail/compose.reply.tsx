@@ -9,6 +9,7 @@ import type { RelinkKind } from "./composerelink";
 import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
+type EmailTarget = components["schemas"]["ActivityEmailTarget"];
 
 // The reply affordance for ONE captured conversation, on its own so the two
 // surfaces that offer it cannot come to offer different things.
@@ -26,7 +27,7 @@ type Activity = components["schemas"]["Activity"];
 export function ChannelReplyAction({
   activityId,
   kind,
-  offersEmail = false,
+  emailTarget,
   channelProvider,
   entityType,
   entityId,
@@ -37,8 +38,8 @@ export function ChannelReplyAction({
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
-  /** The server can fill To for a new email about this row (`offers_email`). */
-  offersEmail?: boolean;
+  /** Where a new email about this row goes (`email_target`). */
+  emailTarget?: EmailTarget;
   channelProvider?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -80,11 +81,15 @@ export function ChannelReplyAction({
     channelProvider,
   );
   const answer = rowAnswer(kind);
-  // A written-about row is withheld through `offers_email`, which the server
-  // answers false for it, so only mail reaches the withheld branch below.
-  if (!reachable || (answer === "about" && !offersEmail)) {
+  // A written-about row is withheld through `email_target`, which the server
+  // leaves out for it, so only mail reaches the withheld branch below.
+  const target = answer === "about" ? emailTarget : undefined;
+  if (!reachable || (answer === "about" && (!target || target.refusal))) {
     return null;
   }
+  // A company has no one address, so its own composer asks which of its
+  // contacts the mail is for. Every other target answers on the row.
+  const toCompany = target?.entity_type === "company";
   const withheld = answer === "reply" && contentWithheld;
   // WITHHELD CONTENT IS NOT A PREPARED REPLY. `Write email` is an
   // account-started send with no prior message to answer, so a mark claiming a
@@ -123,10 +128,10 @@ export function ChannelReplyAction({
           // CONVERSATION` re-rendered the row the reader had just been told
           // was not theirs, above a To field useReplyRecipient could resolve
           // nobody into.
-          activityId={withheld ? undefined : activityId}
-          entityType={entityType}
-          entityId={entityId}
-          contactId={contactId}
+          activityId={withheld || toCompany ? undefined : activityId}
+          entityType={toCompany ? "company" : entityType}
+          entityId={toCompany && target ? target.entity_id : entityId}
+          contactId={toCompany ? undefined : contactId}
           // `email`, not the withheld row's own kind. ComposeModal reads
           // `message` as a CHANNEL reply and posts to send-message, which
           // needs the conversation it answers — and the anchor is exactly
@@ -137,7 +142,7 @@ export function ChannelReplyAction({
           // Email is not a fallback, it is what the button says. `Write
           // email` is an account-started send, the same shape the composer
           // uses when there is no prior message at all.
-          kind={withheld ? "email" : kind}
+          kind={withheld || toCompany ? "email" : kind}
           // WHY THIS ONE IS BEING ANSWERED, where the caller knows. The drawer
           // reads the thread for itself; what it cannot read is the judgement
           // that put this message in front of a rep, and that judgement is what

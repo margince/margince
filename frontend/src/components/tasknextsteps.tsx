@@ -7,16 +7,12 @@ import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
 import { CallAction, linkVerb } from "../design-system/callaction";
 import { ContactLink } from "../design-system/contactlink";
-import { mailbox, primaryPhone } from "../format/contacturi";
+import { primaryPhone } from "../format/contacturi";
 import { type Translator, useT } from "../i18n";
 import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
-import {
-  type TaskDraftTarget,
-  useTaskContact,
-  useTaskDraftTarget,
-} from "../lib/taskcontact";
+import { useTaskContact } from "../lib/taskcontact";
 import { useWriteTo } from "../lib/writeto";
 import "./tasknextsteps.css";
 
@@ -25,6 +21,7 @@ import "./tasknextsteps.css";
 
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
+type EmailTarget = components["schemas"]["ActivityEmailTarget"];
 
 /** The room the next steps take while the reads behind them are out, so the
  *  verbs arrive without pushing the row they sit in. One Email verb wide. */
@@ -48,9 +45,9 @@ export function TaskCallAction({
 /**
  * Call, Draft email and Open contact. A task owed to a contact is work for that
  * contact, so mail to them is drafted from the task rather than offered blank.
- * A task with no single contact drafts to its live lead, else its company.
- * `className` wraps the verbs in a row of their own, which is left out when
- * there is nothing to act on.
+ * Who the mail goes to is the server's answer (`email_target`): one contact,
+ * else one live lead, else one company. `className` wraps the verbs in a row
+ * of their own, which is left out when there is nothing to act on.
  */
 export function TaskNextSteps({
   task,
@@ -59,23 +56,26 @@ export function TaskNextSteps({
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
   const t = useT();
   const { contact, fromCall, pending } = useTaskContact(task);
-  const draft = useTaskDraftTarget(task, !contact && !pending);
+  const target = task.email_target;
   const intent = intentAbout(t("task.next.draftIntent"), task.subject);
   let steps: ReactNode;
-  if (contact) {
+  if (pending) {
+    // In the row the verbs will stand in, so they land where it stood.
+    steps = <TaskNextStepsPending />;
+  } else if (target?.entity_type === "contact") {
+    // A contact the reader can no longer read takes its verbs with it.
+    if (!contact) return null;
     steps = (
       <ContactSteps
         contact={contact}
         fromCall={fromCall}
         intent={intent}
         offerOpen={offerOpen}
+        refusal={refusalOf(target, t)}
       />
     );
-  } else if (pending || draft.pending) {
-    // In the row the verbs will stand in, so they land where it stood.
-    steps = <TaskNextStepsPending />;
-  } else if (draft.target) {
-    steps = <RecordDraftStep target={draft.target} intent={intent} />;
+  } else if (target) {
+    steps = <RecordDraftStep target={target} intent={intent} />;
   } else {
     return null;
   }
@@ -87,15 +87,16 @@ function ContactSteps({
   fromCall,
   intent,
   offerOpen,
+  refusal,
 }: Readonly<{
   contact: Contact;
   fromCall: boolean;
   intent: string;
   offerOpen: boolean;
+  refusal: string | undefined;
 }>) {
   const t = useT();
   const reasonId = useId();
-  const refusal = emailRefusal(contact, t);
   return (
     <>
       <CallVerb contact={contact} fromCall={fromCall} />
@@ -122,36 +123,19 @@ function ContactSteps({
 }
 
 /**
- * Draft email to a lead or a company. The lead is written to at its own
+ * Draft email to a lead or a company. The lead's draft fills To with the lead's
  * address. The company's composer asks which of its contacts the mail is for.
+ * Neither has an address to hand a mail client, so with no composer to open
+ * there is no verb.
  */
 function RecordDraftStep({
   target,
   intent,
-}: Readonly<{ target: TaskDraftTarget; intent: string }>) {
+}: Readonly<{ target: EmailTarget; intent: string }>) {
   const t = useT();
   const reasonId = useId();
   const writeTo = useWriteTo();
-  if (target.entityType === "company") {
-    // No composer to open, and no address a mail client could take instead.
-    if (!writeTo) return null;
-    return (
-      <Button
-        variant="ai"
-        onClick={() =>
-          writeTo({
-            entityType: "company",
-            entityId: target.entityId,
-            draftIntent: intent,
-          })
-        }
-      >
-        <Sparkles aria-hidden="true" />
-        {t("task.next.draftEmail")}
-      </Button>
-    );
-  }
-  const refusal = leadRefusal(target, t);
+  const refusal = refusalOf(target, t);
   if (refusal !== undefined) {
     return (
       <>
@@ -165,38 +149,39 @@ function RecordDraftStep({
       </>
     );
   }
-  if (target.entityType !== "lead") return null;
+  if (!writeTo || target.entity_type === "contact") return null;
   return (
-    <ContactLink
-      kind="email"
-      appearance="button"
-      label={t("record.verb.email")}
-      draft={{ label: t("task.next.draftEmail"), intent }}
-      address={target.lead.email ?? undefined}
-      record={{ entityType: "lead", entityId: target.entityId }}
-    />
+    <Button
+      variant="ai"
+      onClick={() =>
+        writeTo({
+          entityType: target.entity_type,
+          entityId: target.entity_id,
+          draftIntent: intent,
+        })
+      }
+    >
+      <Sparkles aria-hidden="true" />
+      {t("task.next.draftEmail")}
+    </Button>
   );
 }
 
-/** Why a lead takes no draft: it is closed, or it has no address. */
-function leadRefusal(
-  target: TaskDraftTarget,
-  t: Translator,
-): string | undefined {
-  if (target.entityType === "closedLead") return t("lead.terminalReadOnly");
-  if (target.entityType === "lead" && !mailbox(target.lead.email ?? "")) {
-    return t("task.next.noLeadAddress");
+/** Why the server refuses the email, in the reader's words. */
+function refusalOf(target: EmailTarget, t: Translator): string | undefined {
+  switch (target.refusal) {
+    case "archived":
+      return t("contact.rail.archivedReadOnly");
+    case "lead_closed":
+      return t("lead.terminalReadOnly");
+    case "no_address":
+      return target.entity_type === "lead"
+        ? t("task.next.noLeadAddress")
+        : t("task.next.noAddress");
+    default:
+      return undefined;
   }
-  return undefined;
 }
-
-/** Why Email is refused. `mailbox` is the test ContactLink applies. */
-function emailRefusal(contact: Contact, t: Translator): string | undefined {
-  if (contact.archived_at) return t("contact.rail.archivedReadOnly");
-  if (!mailbox(contact.primary_email ?? "")) return t("task.next.noAddress");
-  return undefined;
-}
-
 function CallVerb({
   contact,
   fromCall,

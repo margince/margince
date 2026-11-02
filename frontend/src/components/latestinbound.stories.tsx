@@ -32,6 +32,7 @@ function activity(id: string, fields: Partial<Activity>): Activity {
     created_at: at,
     updated_at: at,
     offers_email: true,
+    email_target: { entity_type: "contact", entity_id: "p-1" },
     is_done: false,
     ...fields,
   };
