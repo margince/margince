@@ -16,7 +16,7 @@ import {
 // its outcome. A calendar meeting adds why its notes become a note.
 
 const meta: Meta = {
-  title: "Patterns/Log activity/Record of meeting",
+  title: "Patterns/Record of meeting question",
   parameters: { layout: "padded" },
 };
 export default meta;
