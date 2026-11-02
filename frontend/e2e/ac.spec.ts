@@ -405,22 +405,27 @@ test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
+test("AC-shell-7: the top bar's search opens the palette, and Enter on a row closes it for good", async ({
+  page,
+}) => {
   await page.goto("/#/home");
+  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
   // input taking one here is exactly what this criterion forbids.
   await expect(topbar.locator("input")).toHaveCount(0);
   await topbar.locator(".topbar-search").click();
-  await expect(
-    page.getByRole("searchbox", { name: "Befehlspalette" }),
-  ).toBeVisible();
+  await expect(input).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
   await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
     primaryDestinations.length,
   );
+  await input.fill("Pipeline");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#\/deals$/);
+  await expect(input).toHaveCount(0);
 });
 
 // The account menu carries what belongs to the CONTACT rather than to the page:
