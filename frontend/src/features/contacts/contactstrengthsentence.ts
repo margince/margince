@@ -6,6 +6,8 @@ type Strength = components["schemas"]["RelationshipStrength"];
 
 // Recency halves every 30 days, so a third is roughly seven weeks of silence.
 const STALE_BELOW = 1 / 3;
+// Below a half, one side sent more than five times what the other did.
+const LOPSIDED_BELOW = 0.5;
 
 /**
  * One sentence on where the relationship stands. A weak band names the factor
@@ -33,7 +35,7 @@ export function strengthSentence(
 }
 
 function weakSentence(strength: Strength) {
-  const { recency, frequency, reciprocity } = strength.factors;
+  const { recency, reciprocity } = strength.factors;
   if (recency < STALE_BELOW) {
     return "contact.strength.sentence.weakStale";
   }
@@ -52,7 +54,7 @@ function weakSentence(strength: Strength) {
       return "contact.strength.sentence.weakOnlyThem";
     }
   }
-  return reciprocity < frequency
+  return reciprocity < LOPSIDED_BELOW
     ? "contact.strength.sentence.weakLopsided"
     : "contact.strength.sentence.weakFew";
 }

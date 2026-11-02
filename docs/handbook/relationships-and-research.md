@@ -20,7 +20,7 @@ A contact's **Network** tab shows which colleagues have written with them, best 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
 ### How strength is worked out
-Relationship strength in Margince comes from one rule, worked out from captured mail **each time you look**:
+Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
@@ -29,7 +29,7 @@ Relationship strength in Margince comes from one rule, worked out from captured 
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
-**You cannot change it by hand.** It shows what happened in captured mail.
+**You cannot change it by hand.** It shows what happened in captured interactions.
 
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
 

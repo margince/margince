@@ -16095,7 +16095,7 @@ export const en = {
   "contact.strength.sentence.weakNoReply":
     "Weak: recent contact, with limited evidence of a two-way exchange. Last contact was on {last}. The score uses shared interactions only, and no qualifying replies from this contact were counted.",
   "contact.strength.sentence.weakOnlyThem":
-    "Weak: recent contact, but only from their side. Last contact was on {last}. The score uses shared interactions only, and no qualifying messages from your team were counted.",
+    "Weak: recent contact, with limited evidence of a two-way exchange. Last contact was on {last}. The score uses shared interactions only, and no qualifying messages from your team were counted.",
   "contact.strength.sentence.weakUndirected":
     "Weak: recent contact, but the shared interactions, such as meetings, do not record who reached out. So they cannot show a two-way exchange. Last contact was on {last}.",
   "contact.strength.sentence.moderate":

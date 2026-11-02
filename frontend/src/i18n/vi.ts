@@ -15787,9 +15787,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strength.sentence.weakLopsided":
     "Yếu: có liên hệ gần đây, nhưng trao đổi được chia sẻ chủ yếu đi một chiều. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.weakNoReply":
-    "Yếu: có liên hệ gần đây, nhưng ít bằng chứng về trao đổi hai chiều. Lần liên hệ gần nhất là {last}. Điểm số chỉ tính các tương tác được chia sẻ, và chưa có phản hồi nào từ liên hệ này được tính.",
+    "Yếu: có liên hệ gần đây, nhưng ít bằng chứng về trao đổi hai chiều. Lần liên hệ gần nhất là {last}. Điểm số chỉ tính các tương tác được chia sẻ, và không có phản hồi nào từ liên hệ này được tính.",
   "contact.strength.sentence.weakOnlyThem":
-    "Yếu: có liên hệ gần đây, nhưng chỉ từ phía họ. Lần liên hệ gần nhất là {last}. Điểm số chỉ tính các tương tác được chia sẻ, và chưa có tin nhắn nào từ nhóm của bạn được tính.",
+    "Yếu: có liên hệ gần đây, nhưng ít bằng chứng về trao đổi hai chiều. Lần liên hệ gần nhất là {last}. Điểm số chỉ tính các tương tác được chia sẻ, và không có tin nhắn nào từ nhóm của bạn được tính.",
   "contact.strength.sentence.weakUndirected":
     "Yếu: có liên hệ gần đây, nhưng các tương tác được chia sẻ, như cuộc họp, không ghi lại ai chủ động liên hệ. Vì vậy chúng không thể cho thấy trao đổi hai chiều. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.moderate":

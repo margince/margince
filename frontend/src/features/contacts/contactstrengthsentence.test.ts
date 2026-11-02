@@ -66,7 +66,10 @@ describe("strengthSentence", () => {
     );
   });
 
-  it("names a lopsided exchange when reciprocity is the lower factor", () => {
+  it("calls an exchange one way only when one side far outweighs the other", () => {
+    expect(sentence(weak({ all: 4, inbound: 1, outbound: 3 }))).toContain(
+      "few shared interactions",
+    );
     expect(sentence(weak({ all: 18, inbound: 1, outbound: 17 }))).toBe(
       "Weak: recent contact, but the shared exchange runs mostly one way. Last contact was on 11 Aug.",
     );
@@ -78,7 +81,7 @@ describe("strengthSentence", () => {
     );
   });
 
-  it("says contact only from their side when nothing of ours counted", () => {
+  it("says nothing of ours was counted when only they wrote", () => {
     expect(sentence(weak({ all: 2, inbound: 2, outbound: 0 }))).toContain(
       "no qualifying messages from your team were counted",
     );
@@ -114,7 +117,7 @@ describe("strengthSentence", () => {
   });
 
   it("falls back to the factors when the counts are not on the wire", () => {
-    expect(sentence(weak({ all: 8 }, { inbound_90d: undefined }))).toBe(
+    expect(sentence(weak({ all: 2 }, { inbound_90d: undefined }))).toBe(
       "Weak: recent contact, but the shared exchange runs mostly one way. Last contact was on 11 Aug.",
     );
   });
