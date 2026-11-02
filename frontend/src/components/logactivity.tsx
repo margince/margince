@@ -48,7 +48,7 @@ import "./logactivity.css";
 import { FollowUpTaskFields } from "./followuptaskfields";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
-  type OpenMeeting,
+  type MeetingRecord,
   openMeetingKey,
   recordOnMeeting,
   useRecordOfMeeting,
@@ -70,7 +70,7 @@ function staleAfterLog(
     draft: ActivityDraft;
     attendees: MeetingAttendees;
     files: readonly File[];
-    meeting: OpenMeeting | undefined;
+    record: MeetingRecord | undefined;
   }>,
   entityType: EntityKind | undefined,
   entityId: string | undefined,
@@ -90,7 +90,7 @@ function staleAfterLog(
       : [TASK_QUEUE_KEY];
   if (draft.sourceActivityId)
     keys.push(activityFollowUpsKey(draft.sourceActivityId));
-  if (input.meeting) keys.push(["activity", input.meeting.id]);
+  if (input.record) keys.push(["activity", input.record.meeting.id]);
   if (input.files.length > 0) keys.push(...activityFileStaleKeys(loggedId));
   keys.push(worklistKey);
   return keys;
@@ -153,7 +153,13 @@ export function LogActivityForm({
   // The same test activityRequestBody sends source_system on.
   const transcript = draft.kind === "meeting" && draft.asTranscript;
   const banded = frame !== undefined;
-  const recordOf = useRecordOfMeeting(entityType, entityId, draft, recordZone);
+  const recordOf = useRecordOfMeeting(
+    entityType,
+    entityId,
+    draft,
+    recordZone,
+    attendees.contacts.map((contact) => contact.id),
+  );
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
@@ -167,11 +173,11 @@ export function LogActivityForm({
       attendees: MeetingAttendees;
       idempotencyKey: string;
       files: readonly File[];
-      meeting: OpenMeeting | undefined;
+      record: MeetingRecord | undefined;
     }) => {
-      if (input.meeting) {
+      if (input.record) {
         const id = await recordOnMeeting(
-          { ...input, meeting: input.meeting, entityType, entityId },
+          { ...input, record: input.record, entityType, entityId },
           t,
         );
         return { id, unattached: await attachLoggedFiles(id, input.files) };
@@ -193,9 +199,11 @@ export function LogActivityForm({
       const unattached = await attachLoggedFiles(created.id, input.files);
       return { id: created.id, unattached };
     },
-    // A refused version re-reads the meeting: answered meanwhile, the question
-    // goes and Save logs a separate meeting.
-    onError: () => {
+    // A save that wrote the outcome and then failed is kept, so the retry
+    // sends only the missing steps. A refused version re-reads the meeting:
+    // answered meanwhile, the question goes and Save logs a separate meeting.
+    onError: (_error, input) => {
+      recordOf.keep(input.record);
       if (entityType && entityId) {
         queryClient.invalidateQueries({
           queryKey: openMeetingKey(entityType, entityId),
@@ -204,6 +212,7 @@ export function LogActivityForm({
     },
     onSuccess: (logged, input) => {
       reportUnattached(logged.unattached);
+      recordOf.clear();
       for (const queryKey of staleAfterLog(
         logged.id,
         input,
@@ -266,7 +275,7 @@ export function LogActivityForm({
           attendees,
           idempotencyKey,
           files: files.map((held) => held.file),
-          meeting: recordOf.meeting,
+          record: recordOf.start(),
         });
       })}
     >

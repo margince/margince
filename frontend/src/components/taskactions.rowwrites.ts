@@ -4,6 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useT } from "../i18n";
 import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
@@ -68,7 +69,7 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
  * of activity. Widening it would let a caller send `is_done` for a meeting. The
  * server refuses that with `field_not_valid_for_kind`, and the types prevent it.
  */
-/** One answer to a meeting: its outcome, and its notes when the writer has some. */
+/** One answer to a meeting: its outcome, and the fields the writer changes. */
 export type MeetingOutcomeWrite = {
   id: string;
   // The version the answer was decided against, as the task verb carries.
@@ -76,11 +77,19 @@ export type MeetingOutcomeWrite = {
   // later one wins with no warning.
   version: number | undefined;
   status: "held" | "no_show" | "canceled";
-  // Sent only when given, so an answer alone never touches the notes.
+  // Each sent only when given, so an answer alone never touches the notes.
+  subject?: string;
   body?: string | null;
+  start?: Readonly<{
+    occurred_at: string;
+    occurred_precision: components["schemas"]["OccurredPrecision"];
+  }>;
 };
 
-/** The one write of a meeting's outcome, for the hook below and the Log form. */
+/**
+ * The one write of a meeting's outcome, for the outcome hook, the outcome
+ * dialog and the Log form.
+ */
 export async function writeMeetingOutcome(
   input: MeetingOutcomeWrite,
   t: ReturnType<typeof useT>,
@@ -93,7 +102,9 @@ export async function writeMeetingOutcome(
       },
       body: {
         meeting_status: input.status,
+        ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),
+        ...input.start,
       },
     }),
     t,

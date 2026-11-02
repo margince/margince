@@ -5,11 +5,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isISODate } from "../design-system/dateinput";
 import { dayStartIso } from "../design-system/recordtimeline";
@@ -22,7 +25,11 @@ import { en } from "../i18n/en";
 import { RecordZoneProvider } from "../lib/recordzone";
 import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
-import { appendedNotes } from "./logactivity.openmeeting";
+import {
+  appendedNotes,
+  closestMeeting,
+  useOpenMeetingOnDay,
+} from "./logactivity.openmeeting";
 
 // A meeting logged on a record where a booked meeting owes its outcome is
 // asked about. Yes writes the notes and the outcome on that meeting. No logs a
@@ -40,7 +47,12 @@ type Captured = {
   body: unknown;
   query: URLSearchParams;
   ifMatch: string | null;
+  idempotencyKey: string | null;
+  form: FormData | null;
 };
+
+// The reader meFixture signs in.
+const ME = meFixture({}).user.id;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -62,6 +74,9 @@ function booked(over: Record<string, unknown> = {}) {
     writable: true,
     calendar_managed: false,
     version: 4,
+    host_user_id: ME,
+    colleague_ids: [],
+    links: [{ entity_type: "contact", entity_id: "p1" }],
     offers_email: false,
     source: "manual",
     captured_by: "human:u1",
@@ -76,6 +91,7 @@ function stubApi(
   captured: Captured[],
   patch: () => Response = () =>
     jsonResponse(booked({ meeting_status: "held" })),
+  post: (body: { kind: string }) => Response | undefined = () => undefined,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -87,16 +103,32 @@ function stubApi(
       );
       const method = request?.method ?? init?.method ?? "GET";
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
+      const form = init?.body instanceof FormData ? init.body : null;
       let body: unknown = null;
-      if (method !== "GET") {
+      if (method !== "GET" && !form) {
         body = request ? await request.json() : JSON.parse(String(init?.body));
       }
-      const ifMatch = request?.headers.get("If-Match") ?? null;
-      captured.push({ key, body, query: url.searchParams, ifMatch });
+      const headers = request?.headers;
+      captured.push({
+        key,
+        body,
+        query: url.searchParams,
+        ifMatch: headers?.get("If-Match") ?? null,
+        idempotencyKey: headers?.get("Idempotency-Key") ?? null,
+        form,
+      });
       if (key === "GET /me") {
         return jsonResponse(
-          meFixture({ allow: { activity: ["create"], contact: ["read"] } }),
+          meFixture({
+            allow: { activity: ["create", "update"], contact: ["read"] },
+          }),
         );
+      }
+      if (key === "GET /installation/settings") {
+        return jsonResponse({ max_upload_bytes: 10_000_000 });
+      }
+      if (key === "POST /attachments") {
+        return jsonResponse({ id: "att-1" }, 201);
       }
       if (
         key === "GET /activities" &&
@@ -106,9 +138,10 @@ function stubApi(
       }
       if (key === "PATCH /activities/m-1") return patch();
       if (key === "POST /activities") {
-        return jsonResponse(
-          { ...booked(), id: "a-new", kind: (body as { kind: string }).kind },
-          201,
+        const kind = (body as { kind: string }).kind;
+        return (
+          post(body as { kind: string }) ??
+          jsonResponse({ ...booked(), id: `a-${kind}`, kind }, 201)
         );
       }
       return jsonResponse({ data: [], page: { next_cursor: null } });
@@ -116,14 +149,27 @@ function stubApi(
   );
 }
 
-function render() {
+// A refusal the step cannot take back, answered once and then granted.
+function failOnce(kind: string) {
+  let failed = false;
+  return (body: { kind: string }) => {
+    if (body.kind !== kind || failed) return undefined;
+    failed = true;
+    return jsonResponse(
+      { title: "Unavailable", status: 503, code: "service_unavailable" },
+      503,
+    );
+  };
+}
+
+function render(zone = ZONE) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={ZONE}>
+        <RecordZoneProvider zone={zone}>
           <LogActivity entityType="contact" entityId="p1" />
         </RecordZoneProvider>
       </LocaleProvider>
@@ -132,6 +178,16 @@ function render() {
 }
 
 const QUESTION = /Is this the record of Quarterly review/;
+
+async function addFollowUp() {
+  const user = userEvent.setup();
+  await user.click(
+    screen.getByRole("checkbox", { name: "Add a follow-up task" }),
+  );
+  fireEvent.change(screen.getByRole("textbox", { name: "Next step" }), {
+    target: { value: "Send revised quote" },
+  });
+}
 
 async function logMeeting(answerNo = false) {
   const user = userEvent.setup();
@@ -204,7 +260,7 @@ describe("logging a meeting where one owes its outcome", () => {
     );
   });
 
-  it("A calendar-managed meeting gets a linked note and only its status", async () => {
+  it("A calendar-managed meeting gets its status first, then a linked note", async () => {
     const captured: Captured[] = [];
     stubApi([booked({ calendar_managed: true })], captured);
     render();
@@ -215,16 +271,167 @@ describe("logging a meeting where one owes its outcome", () => {
     await user.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
-      expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1),
+      expect(sent(captured, "POST /activities")).toHaveLength(1),
     );
-    expect(sent(captured, "POST /activities")[0]?.body).toMatchObject({
+    const writes = captured.filter(
+      (entry) => entry.key !== "GET /me" && !entry.key.startsWith("GET"),
+    );
+    expect(writes.map((entry) => entry.key)).toEqual([
+      "PATCH /activities/m-1",
+      "POST /activities",
+    ]);
+    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toEqual({
+      meeting_status: "held",
+    });
+    const [note] = sent(captured, "POST /activities");
+    expect(note?.body).toMatchObject({
       kind: "note",
       body: "They agreed to the renewal.",
       links: [{ entity_type: "contact", entity_id: "p1" }],
     });
-    expect(sent(captured, "PATCH /activities/m-1")[0]?.body).toEqual({
-      meeting_status: "held",
+    expect(note?.idempotencyKey).toMatch(/:note$/);
+  });
+
+  it("A calendar-managed follow-up is a task whose source is the meeting", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked({ calendar_managed: true })], captured);
+    render();
+    const user = await logMeeting();
+    await screen.findByText(QUESTION);
+    await addFollowUp();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "POST /activities")).toHaveLength(2),
+    );
+    const [note, task] = sent(captured, "POST /activities");
+    expect(note?.body).not.toHaveProperty("follow_up_task");
+    expect(task?.body).toMatchObject({
+      kind: "task",
+      subject: "Send revised quote",
+      source_activity_id: "m-1",
     });
+    expect(task?.idempotencyKey).toMatch(/:follow-up$/);
+    expect(task?.idempotencyKey).not.toBe(note?.idempotencyKey);
+  });
+
+  it("A calendar-managed meeting takes the picked files, not the note", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked({ calendar_managed: true })], captured);
+    render();
+    const user = await logMeeting();
+    await screen.findByText(QUESTION);
+    await user.upload(
+      await screen.findByLabelText("Attach files"),
+      new File(["%PDF-1.4"], "agenda.pdf", { type: "application/pdf" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(sent(captured, "POST /attachments")).toHaveLength(1),
+    );
+    const [upload] = sent(captured, "POST /attachments");
+    expect(upload?.form?.get("entity_type")).toBe("activity");
+    expect(upload?.form?.get("entity_id")).toBe("m-1");
+  });
+
+  it("A note that fails after the status is written is the only thing a retry sends", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      [booked({ calendar_managed: true })],
+      captured,
+      undefined,
+      failOnce("note"),
+    );
+    render();
+    const user = await logMeeting();
+    await screen.findByText(QUESTION);
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    expect(
+      await screen.findByText(/Quarterly review is already recorded as held/),
+    ).toBeTruthy();
+    expect(screen.queryByText(QUESTION)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLInputElement>("Subject *").value).toBe(
+        "",
+      ),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1);
+    const [first, retry] = sent(captured, "POST /activities");
+    expect(retry?.idempotencyKey).toBe(first?.idempotencyKey);
+    expect(retry?.body).toEqual(first?.body);
+    expect(retry?.body).toMatchObject({ kind: "note" });
+  });
+
+  it("A follow-up that fails after the outcome is the only thing a retry sends", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked()], captured, undefined, failOnce("task"));
+    render();
+    const user = await logMeeting();
+    await screen.findByText(QUESTION);
+    await addFollowUp();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    expect(
+      await screen.findByText(/Quarterly review is already recorded as held/),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(sent(captured, "POST /activities")).toHaveLength(2),
+    );
+    expect(sent(captured, "PATCH /activities/m-1")).toHaveLength(1);
+    const [first, retry] = sent(captured, "POST /activities");
+    expect(retry?.body).toMatchObject({
+      kind: "task",
+      source_activity_id: "m-1",
+    });
+    expect(retry?.body).toEqual(first?.body);
+    expect(retry?.idempotencyKey).toBe(first?.idempotencyKey);
+  });
+
+  it("A colleague's meeting is not offered", async () => {
+    const captured: Captured[] = [];
+    stubApi([booked({ host_user_id: "u-colleague" })], captured);
+    render();
+    await logMeeting();
+    await waitFor(() =>
+      expect(
+        captured.some((entry) => entry.query.get("kind") === "meeting"),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(sent(captured, "GET /me").length).toBeGreaterThan(0),
+    );
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it("A meeting the reader attends as a colleague is offered", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      [booked({ host_user_id: "u-colleague", colleague_ids: [ME] })],
+      captured,
+    );
+    render();
+    await logMeeting();
+    expect(await screen.findByText(QUESTION)).toBeTruthy();
+  });
+
+  it("A meeting not with this contact is not offered", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      [booked({ links: [{ entity_type: "contact", entity_id: "p-other" }] })],
+      captured,
+    );
+    render();
+    await logMeeting();
+    await waitFor(() =>
+      expect(
+        captured.some((entry) => entry.query.get("kind") === "meeting"),
+      ).toBe(true),
+    );
+    expect(screen.queryByText(QUESTION)).toBeNull();
   });
 
   it("The lookup asks a three-day window around the chosen day", async () => {
@@ -273,6 +480,95 @@ describe("logging a meeting where one owes its outcome", () => {
       ),
     );
     expect(sent(captured, "POST /activities")).toHaveLength(0);
+  });
+});
+
+describe("the open meeting on a company", () => {
+  function wrapper({ children }: Readonly<{ children: ReactNode }>) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+  }
+  const alice = booked({
+    id: "m-alice",
+    links: [{ entity_type: "contact", entity_id: "alice" }],
+  });
+  const bob = booked({
+    id: "m-bob",
+    occurred_at: new Date(Date.now() - 3_600_000).toISOString(),
+    links: [{ entity_type: "contact", entity_id: "bob" }],
+  });
+  const today = calendarDay(new Date(), ZONE);
+  if (!isISODate(today)) throw new Error(`today is not a day: ${today}`);
+
+  it("offers only the meeting with the attendee the entry is about", async () => {
+    stubApi([alice, bob], []);
+    const { result } = renderHook(
+      () =>
+        useOpenMeetingOnDay("company", "c1", today, ZONE, true, {
+          attendeeIds: ["alice"],
+          viewerId: ME,
+        }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current?.id).toBe("m-alice"));
+  });
+
+  it("offers nothing on a company before an attendee is picked", async () => {
+    const captured: Captured[] = [];
+    stubApi([alice, bob], captured);
+    const { result } = renderHook(
+      () =>
+        useOpenMeetingOnDay("company", "c1", today, ZONE, true, {
+          attendeeIds: [],
+          viewerId: ME,
+        }),
+      { wrapper },
+    );
+    await waitFor(() =>
+      expect(
+        captured.some((entry) => entry.query.get("kind") === "meeting"),
+      ).toBe(true),
+    );
+    expect(result.current).toBeUndefined();
+  });
+});
+
+describe("closestMeeting", () => {
+  it("compares a date-only meeting by its day in the reader's zone", () => {
+    const zone = "Asia/Ho_Chi_Minh";
+    const onTheDay = {
+      id: "date-only",
+      occurred_at: "2026-07-06T12:00:00Z",
+      occurred_precision: "day" as const,
+    };
+    // 22:00 the evening before, in Ho Chi Minh City: two hours before the
+    // day starts, where the date-only meeting's noon UTC is nineteen after.
+    const eveningBefore = {
+      id: "evening-before",
+      occurred_at: "2026-07-05T15:00:00Z",
+      occurred_precision: "instant" as const,
+    };
+    expect(
+      closestMeeting([eveningBefore, onTheDay], "2026-07-06", zone)?.id,
+    ).toBe("date-only");
+  });
+
+  it("breaks a tie on the same day by the instant", () => {
+    const early = {
+      id: "early",
+      occurred_at: "2026-07-06T08:00:00Z",
+      occurred_precision: "instant" as const,
+    };
+    const late = {
+      id: "late",
+      occurred_at: "2026-07-06T20:00:00Z",
+      occurred_precision: "instant" as const,
+    };
+    expect(closestMeeting([late, early], "2026-07-06", ZONE)?.id).toBe("early");
   });
 });
 

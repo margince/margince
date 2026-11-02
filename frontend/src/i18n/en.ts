@@ -6774,6 +6774,8 @@ export const en = {
   "log.recordOfMeetingUntitled": "the meeting",
   "log.recordOfMeetingYes": "Yes, save it on that meeting as held",
   "log.recordOfMeetingNo": "No, log a separate meeting",
+  "log.recordOfMeetingRecorded":
+    "{subject} is already recorded as held. Saving again adds only what did not save.",
   "log.recordOfMeetingManaged":
     "The calendar invitation keeps the subject and notes of that meeting. Your notes are saved as a note here, and the meeting is marked held.",
   "log.asTranscript": "This text is a transcript",

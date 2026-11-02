@@ -237,6 +237,9 @@ function openMeeting(calendarManaged: boolean) {
           writable: true,
           calendar_managed: calendarManaged,
           version: 4,
+          // Hosted by the story's reader, with the contact the form is on.
+          host_user_id: "u1",
+          links: [{ entity_type: "contact", entity_id: "p1" }],
           offers_email: false,
           source: "manual",
           captured_by: "human:u1",
