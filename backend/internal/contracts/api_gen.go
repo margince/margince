@@ -24184,6 +24184,33 @@ func (e WorkspaceEmailDomainSource) Valid() bool {
 	}
 }
 
+// Defines values for WriteRefusal.
+const (
+	WriteRefusalArchived     WriteRefusal = "archived"
+	WriteRefusalNotYours     WriteRefusal = "not_yours"
+	WriteRefusalRole         WriteRefusal = "role"
+	WriteRefusalSeatReadOnly WriteRefusal = "seat_read_only"
+	WriteRefusalUnowned      WriteRefusal = "unowned"
+)
+
+// Valid indicates whether the value is a known member of the WriteRefusal enum.
+func (e WriteRefusal) Valid() bool {
+	switch e {
+	case WriteRefusalArchived:
+		return true
+	case WriteRefusalNotYours:
+		return true
+	case WriteRefusalRole:
+		return true
+	case WriteRefusalSeatReadOnly:
+		return true
+	case WriteRefusalUnowned:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WrittenBy.
 const (
 	WrittenByDeterministic WrittenBy = "deterministic"
@@ -34814,7 +34841,10 @@ type Company struct {
 	WebsiteUrl *string `json:"website_url,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
-	Writable             *bool                  `json:"writable,omitempty"`
+	Writable *bool `json:"writable,omitempty"`
+
+	// WriteRefusal Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
+	WriteRefusal         *WriteRefusal          `json:"write_refusal,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -37991,7 +38021,10 @@ type Contact struct {
 	Visibility *ContactVisibility `json:"visibility,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
-	Writable             *bool                  `json:"writable,omitempty"`
+	Writable *bool `json:"writable,omitempty"`
+
+	// WriteRefusal Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
+	WriteRefusal         *WriteRefusal          `json:"write_refusal,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -41177,7 +41210,10 @@ type Deal struct {
 	WonWithoutContractReason *DealWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
-	Writable             *bool                  `json:"writable,omitempty"`
+	Writable *bool `json:"writable,omitempty"`
+
+	// WriteRefusal Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
+	WriteRefusal         *WriteRefusal          `json:"write_refusal,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -46852,7 +46888,10 @@ type Lead struct {
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
-	Writable             *bool                  `json:"writable,omitempty"`
+	Writable *bool `json:"writable,omitempty"`
+
+	// WriteRefusal Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
+	WriteRefusal         *WriteRefusal          `json:"write_refusal,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -51265,7 +51304,10 @@ type Project struct {
 	Version *RowVersion `json:"version,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
-	Writable             *bool                  `json:"writable,omitempty"`
+	Writable *bool `json:"writable,omitempty"`
+
+	// WriteRefusal Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
+	WriteRefusal         *WriteRefusal          `json:"write_refusal,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -62427,6 +62469,9 @@ type WorkspaceQueryResult struct {
 	} `json:"rows"`
 }
 
+// WriteRefusal Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only. `role`: the caller's role may not change this kind of record. `archived`: the record is archived, and restoring it is the fix. `unowned`: the record has no owner and is claimed before anyone changes it. `not_yours`: someone else owns it; its owner, a share or an admin is the way in.
+type WriteRefusal string
+
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
 // lane. `deterministic` — the structured fallback, used when no lane is configured
 // or the workspace's AI budget is exhausted. Never silently interchangeable: a
@@ -72797,6 +72842,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "writable")
 	}
 
+	if raw, found := object["write_refusal"]; found {
+		err = json.Unmarshal(raw, &a.WriteRefusal)
+		if err != nil {
+			return fmt.Errorf("error reading 'write_refusal': %w", err)
+		}
+		delete(object, "write_refusal")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -73088,6 +73141,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["writable"], err = json.Marshal(a.Writable)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	if a.WriteRefusal != nil {
+		object["write_refusal"], err = json.Marshal(a.WriteRefusal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'write_refusal': %w", err)
 		}
 	}
 
@@ -73405,6 +73465,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "writable")
 	}
 
+	if raw, found := object["write_refusal"]; found {
+		err = json.Unmarshal(raw, &a.WriteRefusal)
+		if err != nil {
+			return fmt.Errorf("error reading 'write_refusal': %w", err)
+		}
+		delete(object, "write_refusal")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -73654,6 +73722,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["writable"], err = json.Marshal(a.Writable)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	if a.WriteRefusal != nil {
+		object["write_refusal"], err = json.Marshal(a.WriteRefusal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'write_refusal': %w", err)
 		}
 	}
 
@@ -76887,6 +76962,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "writable")
 	}
 
+	if raw, found := object["write_refusal"]; found {
+		err = json.Unmarshal(raw, &a.WriteRefusal)
+		if err != nil {
+			return fmt.Errorf("error reading 'write_refusal': %w", err)
+		}
+		delete(object, "write_refusal")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -77228,6 +77311,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["writable"], err = json.Marshal(a.Writable)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	if a.WriteRefusal != nil {
+		object["write_refusal"], err = json.Marshal(a.WriteRefusal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'write_refusal': %w", err)
 		}
 	}
 
@@ -78571,6 +78661,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "writable")
 	}
 
+	if raw, found := object["write_refusal"]; found {
+		err = json.Unmarshal(raw, &a.WriteRefusal)
+		if err != nil {
+			return fmt.Errorf("error reading 'write_refusal': %w", err)
+		}
+		delete(object, "write_refusal")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -78986,6 +79084,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["writable"], err = json.Marshal(a.Writable)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	if a.WriteRefusal != nil {
+		object["write_refusal"], err = json.Marshal(a.WriteRefusal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'write_refusal': %w", err)
 		}
 	}
 
@@ -80008,6 +80113,14 @@ func (a *Project) UnmarshalJSON(b []byte) error {
 		delete(object, "writable")
 	}
 
+	if raw, found := object["write_refusal"]; found {
+		err = json.Unmarshal(raw, &a.WriteRefusal)
+		if err != nil {
+			return fmt.Errorf("error reading 'write_refusal': %w", err)
+		}
+		delete(object, "write_refusal")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -80178,6 +80291,13 @@ func (a Project) MarshalJSON() ([]byte, error) {
 		object["writable"], err = json.Marshal(a.Writable)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	if a.WriteRefusal != nil {
+		object["write_refusal"], err = json.Marshal(a.WriteRefusal)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'write_refusal': %w", err)
 		}
 	}
 

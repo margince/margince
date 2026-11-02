@@ -163,7 +163,7 @@ func TestAnArchivedRowLosesItsEditAffordanceAndKeepsItsValue(t *testing.T) {
 	tx := &writableRowsTx{writable: []ids.UUID{mine}, archived: []ids.UUID{mine}}
 
 	writable, err := auth.StampWritable(ctx, tx, "deal", page, rowID,
-		func(r *pricedRow, may bool) { r.writable = may })
+		func(r *pricedRow, w auth.RowWrite) { r.writable = w.May })
 	if err != nil {
 		t.Fatalf("StampWritable: %v", err)
 	}
@@ -242,6 +242,31 @@ func TestANameTheModuleCollectedWithholdsItsGroupToo(t *testing.T) {
 	}
 }
 
+// Each refused row names the arm that refused it, and a row the caller may
+// change names none: the refusal is what a client turns into the reason.
+func TestARefusedRowSaysWhichArmRefusedIt(t *testing.T) {
+	t.Parallel()
+	ctx := maskedActor()
+	mine, archived, ownerless, theirs := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	page := pricedPage(mine, archived, ownerless, theirs)
+	tx := &writableRowsTx{
+		writable: []ids.UUID{mine, archived}, archived: []ids.UUID{archived}, unowned: []ids.UUID{ownerless},
+	}
+	refusals := map[ids.UUID]auth.WriteRefusal{}
+	if _, err := auth.StampWritable(ctx, tx, "deal", page, rowID,
+		func(r *pricedRow, w auth.RowWrite) { r.writable, refusals[r.id] = w.May, w.Refusal }); err != nil {
+		t.Fatalf("StampWritable: %v", err)
+	}
+	want := map[ids.UUID]auth.WriteRefusal{
+		mine: "", archived: auth.RefusalArchived, ownerless: auth.RefusalUnowned, theirs: auth.RefusalNotYours,
+	}
+	for _, row := range page {
+		if refusals[row.id] != want[row.id] || row.writable != (want[row.id] == "") {
+			t.Errorf("row %v: writable=%v refusal=%q, want refusal %q", row.id, row.writable, refusals[row.id], want[row.id])
+		}
+	}
+}
+
 // writableRowsTx is the database boundary of these passes: it answers the
 // write-authority statement with the ids the caller could change and the
 // liveness statement with the ids that are archived, and counts the asking so a
@@ -249,6 +274,7 @@ func TestANameTheModuleCollectedWithholdsItsGroupToo(t *testing.T) {
 type writableRowsTx struct {
 	writable []ids.UUID
 	archived []ids.UUID
+	unowned  []ids.UUID
 	queries  int
 }
 
@@ -256,6 +282,9 @@ func (t *writableRowsTx) Query(_ context.Context, sql string, _ ...any) (pgx.Row
 	t.queries++
 	if strings.Contains(sql, "archived_at IS NOT NULL") {
 		return &uuidRows{remaining: t.archived}, nil
+	}
+	if strings.HasSuffix(sql, "AND owner_id IS NULL") {
+		return &uuidRows{remaining: t.unowned}, nil
 	}
 	return &uuidRows{remaining: t.writable}, nil
 }

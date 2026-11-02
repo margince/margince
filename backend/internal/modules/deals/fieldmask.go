@@ -95,7 +95,7 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	// from, and the masks conditioned on write authority. Asking twice would be
 	// two round trips for one question, and two answers that can disagree.
 	writable, err := auth.StampWritable(ctx, tx, dealTable, deals, dealID,
-		func(d *crmcontracts.Deal, may bool) { d.Writable = &may })
+		func(d *crmcontracts.Deal, w auth.RowWrite) { d.Writable, d.WriteRefusal = &w.May, w.Contract() })
 	if err != nil {
 		return err
 	}

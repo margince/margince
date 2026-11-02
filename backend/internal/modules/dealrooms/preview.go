@@ -166,7 +166,7 @@ func StampPreviewAvailable(ctx context.Context, tx pgx.Tx, rooms []crmcontracts.
 	// nobody's to present.
 	if _, err := auth.StampWritable(ctx, tx, dealTable, deals,
 		func(d dealOfRoom) ids.UUID { return d.DealID },
-		func(d *dealOfRoom, may bool) { d.Writable = may }); err != nil {
+		func(d *dealOfRoom, w auth.RowWrite) { d.Writable = w.May }); err != nil {
 		return err
 	}
 	for i := range rooms {

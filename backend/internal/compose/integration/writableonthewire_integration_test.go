@@ -18,6 +18,7 @@ package integration
 // nothing here would change if a client ignored the flag entirely.
 
 import (
+	"context"
 	"maps"
 	"testing"
 
@@ -215,4 +216,69 @@ func companyWriterPermsFor(t *testing.T) principal.Permissions {
 	maps.Copy(perms.Objects, AccountRepPerms.Objects)
 	perms.Objects["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	return perms
+}
+
+// A refused row says which arm refused it, because each arm has its own fix:
+// a colleague's record needs its owner, an archived one needs a restore, and a
+// read seat needs a full seat. A writable row carries no refusal at all.
+func TestARefusedRecordSaysWhy(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedContact(t, "Mine, then archived", &e.Rep1)
+	theirs := e.SeedContact(t, "A colleague's", &e.Rep3)
+	open := e.SeedContact(t, "Mine and live", &e.Rep1)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	if _, err := e.Contacts.ArchiveContact(e.Admin(), ids.From[ids.ContactKind](mine), nil); err != nil {
+		t.Fatalf("archiving the contact: %v", err)
+	}
+	readSeat := onReadSeat(t, rep)
+	viewOnlyRole := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutUpdate(AccountRepPerms, "contact"))
+
+	for _, row := range []struct {
+		name string
+		ctx  context.Context
+		id   ids.UUID
+		want string
+	}{
+		{"their own live contact", rep, open, ""},
+		{"their own archived contact", rep, mine, "archived"},
+		{"a colleague's contact", rep, theirs, "not_yours"},
+		{"their own contact on a read seat", readSeat, open, "seat_read_only"},
+		{"their own contact under a role with no update", viewOnlyRole, open, "role"},
+	} {
+		got, err := e.Contacts.GetContact(row.ctx, ids.From[ids.ContactKind](row.id), storekit.IncludeArchived)
+		if err != nil {
+			t.Fatalf("reading %s: %v", row.name, err)
+		}
+		refusal := ""
+		if got.WriteRefusal != nil {
+			refusal = string(*got.WriteRefusal)
+		}
+		if refusal != row.want {
+			t.Errorf("%s says write_refusal=%q, want %q", row.name, refusal, row.want)
+		}
+		if writable := got.Writable != nil && *got.Writable; writable != (row.want == "") {
+			t.Errorf("%s says writable=%v beside write_refusal=%q; the two must agree", row.name, writable, refusal)
+		}
+	}
+}
+
+// withoutUpdate is perms with the update verb taken off one object.
+func withoutUpdate(perms principal.Permissions, object string) principal.Permissions {
+	objects := maps.Clone(perms.Objects)
+	grant := objects[object]
+	grant.Update = false
+	objects[object] = grant
+	perms.Objects = objects
+	return perms
+}
+
+// onReadSeat is ctx's own principal moved to a read-only seat.
+func onReadSeat(t *testing.T, ctx context.Context) context.Context {
+	t.Helper()
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("the context carries no principal to move to a read seat")
+	}
+	p.SeatType = principal.SeatRead
+	return principal.WithActor(ctx, p)
 }

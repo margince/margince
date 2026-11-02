@@ -158,13 +158,12 @@ func rowWriteSubset(ctx context.Context, tx pgx.Tx, p principal.Principal, table
 }
 
 // StampWritable answers, for a page of rows of one shareable table, which of
-// them the caller may CHANGE — the boolean the contract's `writable` carries —
-// in ONE statement for the whole page.
+// them the caller may CHANGE and why not — the contract's `writable` and
+// `write_refusal` — with a fixed number of statements for the whole page.
 //
 // It is WritableSubset plus the id-collection and write-back loop that five
-// record types would otherwise each spell, and it exists for that reason alone.
-// The authority question is WritableSubset's and must never grow a second
-// answer here: this walks a page, it does not decide anything.
+// record types would otherwise each spell. The authority question is
+// WritableSubset's; the refusal only names which arm said no.
 //
 // What it produces is what a CLIENT is told, never what the server enforces.
 // EnsureWritable is the authority and stays the only gate a mutation passes; a
@@ -178,7 +177,7 @@ func rowWriteSubset(ctx context.Context, tx pgx.Tx, p principal.Principal, table
 // mutation refuses, reading the flag for a mask hides an owner's own figure the
 // moment they archive the record.
 func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
-	rows []T, id func(T) ids.UUID, set func(*T, bool),
+	rows []T, id func(T) ids.UUID, set func(*T, RowWrite),
 ) (map[ids.UUID]bool, error) {
 	if len(rows) == 0 {
 		return map[ids.UUID]bool{}, nil
@@ -191,17 +190,26 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	if err != nil {
 		return nil, err
 	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// A read seat may own rows, and the authority answer keeps them for the
+	// masks; the flag says no, because the seat ceiling refuses every write.
+	if refusal := callerRefusal(p, table); refusal != "" {
+		for i := range rows {
+			set(&rows[i], RowWrite{Refusal: refusal})
+		}
+		return writable, nil
+	}
 	// An ARCHIVED row is nobody's to change, whatever their authority over it,
-	// so the flag says no. The answer this returns keeps it: a mask applies to
-	// a record the caller may still READ, and archiving is not a withdrawal of
-	// authority over the row.
-	archived, err := archivedAmong(ctx, tx, table, writable)
+	// so the flag says no while the returned authority answer keeps it.
+	answers, err := rowRefusals(ctx, tx, table, rowIDs, writable)
 	if err != nil {
 		return nil, err
 	}
 	for i := range rows {
-		rowID := id(rows[i])
-		set(&rows[i], writable[rowID] && !archived[rowID])
+		set(&rows[i], answers[id(rows[i])])
 	}
 	return writable, nil
 }

@@ -129,7 +129,7 @@ func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived s
 	// the owner who just saved.
 	if _, err := auth.StampWritable(ctx, tx, "company", companies,
 		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
-		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
+		func(o *crmcontracts.Company, w auth.RowWrite) { o.Writable, o.WriteRefusal = &w.May, w.Contract() }); err != nil {
 		return crmcontracts.Company{}, err
 	}
 	if err := attachCompanyDomains(ctx, tx, companies); err != nil {

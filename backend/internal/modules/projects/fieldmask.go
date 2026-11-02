@@ -92,7 +92,7 @@ func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Projec
 	// affordances from without guessing.
 	if _, err := auth.StampWritable(ctx, tx, "project", projects,
 		func(p crmcontracts.Project) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Project, may bool) { p.Writable = &may }); err != nil {
+		func(p *crmcontracts.Project, w auth.RowWrite) { p.Writable, p.WriteRefusal = &w.May, w.Contract() }); err != nil {
 		return err
 	}
 	companyIDs := make([]ids.UUID, 0, len(projects))

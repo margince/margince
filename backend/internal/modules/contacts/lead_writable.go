@@ -27,7 +27,7 @@ import (
 func stampLeadsWritable(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
 	_, err := auth.StampWritable(ctx, tx, "lead", leads,
 		func(l crmcontracts.Lead) ids.UUID { return ids.UUID(l.Id) },
-		func(l *crmcontracts.Lead, may bool) { l.Writable = &may })
+		func(l *crmcontracts.Lead, w auth.RowWrite) { l.Writable, l.WriteRefusal = &w.May, w.Contract() })
 	return err
 }
 

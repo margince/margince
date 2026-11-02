@@ -45,7 +45,7 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	// page, stamped at the seam the list and the single read already share.
 	if _, err := auth.StampWritable(ctx, tx, "company", companies,
 		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
-		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
+		func(o *crmcontracts.Company, w auth.RowWrite) { o.Writable, o.WriteRefusal = &w.May, w.Contract() }); err != nil {
 		return err
 	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Company, len(companies))

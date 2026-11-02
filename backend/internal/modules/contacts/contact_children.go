@@ -359,7 +359,7 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 	// object grant alone, which says nothing about who owns the row.
 	if _, err := auth.StampWritable(ctx, tx, "contact", contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, may bool) { p.Writable = &may }); err != nil {
+		func(p *crmcontracts.Contact, w auth.RowWrite) { p.Writable, p.WriteRefusal = &w.May, w.Contract() }); err != nil {
 		return err
 	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Contact, len(contacts))

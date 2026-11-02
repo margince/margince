@@ -41899,6 +41899,15 @@ components:
         kind: { type: string, enum: [location, department, seniority] }
         value: { type: string }
         retrieved_at: { type: string, format: date-time, description: When the run that last reported this value retrieved it. }
+    WriteRefusal:
+      type: string
+      enum: [seat_read_only, role, archived, unowned, not_yours]
+      description: >-
+        Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only.
+        `role`: the caller's role may not change this kind of record. `archived`: the record is
+        archived, and restoring it is the fix. `unowned`: the record has no owner and is claimed
+        before anyone changes it. `not_yours`: someone else owns it; its owner, a share or an
+        admin is the way in.
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
@@ -41970,6 +41979,12 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        write_refusal:
+          allOf: [{ $ref: '#/components/schemas/WriteRefusal' }]
+          readOnly: true
+          description: >-
+            Why `writable` is false for THIS caller, so a client can say why and name the fix.
+            Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
         social:
           type: object
           additionalProperties: true
@@ -42700,6 +42715,12 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        write_refusal:
+          allOf: [{ $ref: '#/components/schemas/WriteRefusal' }]
+          readOnly: true
+          description: >-
+            Why `writable` is false for THIS caller, so a client can say why and name the fix.
+            Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
         parent_company_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
         assess_against_entity_id:
           type: [string, 'null']
@@ -49095,6 +49116,12 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        write_refusal:
+          allOf: [{ $ref: '#/components/schemas/WriteRefusal' }]
+          readOnly: true
+          description: >-
+            Why `writable` is false for THIS caller, so a client can say why and name the fix.
+            Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
         archivable:
           type: boolean
           readOnly: true
@@ -49773,6 +49800,12 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        write_refusal:
+          allOf: [{ $ref: '#/components/schemas/WriteRefusal' }]
+          readOnly: true
+          description: >-
+            Why `writable` is false for THIS caller, so a client can say why and name the fix.
+            Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
         phase:
           type: string
           enum: [initiative, pursuing, delivering, closed]
@@ -53845,6 +53878,12 @@ components:
             server refuses an unauthorized write with 403 whatever this said. Absent means
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
+        write_refusal:
+          allOf: [{ $ref: '#/components/schemas/WriteRefusal' }]
+          readOnly: true
+          description: >-
+            Why `writable` is false for THIS caller, so a client can say why and name the fix.
+            Absent when `writable` is true. A UX signal like `writable`, never the enforcement.
         source_system: { type: [string, 'null'] }
         source_id: { type: [string, 'null'] }
         promoted_contact_id: { type: [string, 'null'], format: uuid, description: Set on promotion (convenience mirror). }

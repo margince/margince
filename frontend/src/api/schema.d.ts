@@ -29484,6 +29484,11 @@ export interface components {
              */
             retrieved_at: string;
         };
+        /**
+         * @description Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only. `role`: the caller's role may not change this kind of record. `archived`: the record is archived, and restoring it is the fix. `unowned`: the record has no owner and is claimed before anyone changes it. `not_yours`: someone else owns it; its owner, a share or an admin is the way in.
+         * @enum {string}
+         */
+        WriteRefusal: "seat_read_only" | "role" | "archived" | "unowned" | "not_yours";
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
             /**
@@ -29513,6 +29518,8 @@ export interface components {
             readonly visibility?: "workspace" | "owner";
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement. */
+            readonly write_refusal?: components["schemas"]["WriteRefusal"];
             /** @description { linkedin, twitter, github, ... } */
             social?: {
                 [key: string]: unknown;
@@ -30050,6 +30057,8 @@ export interface components {
             readonly visibility?: "workspace" | "owner";
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement. */
+            readonly write_refusal?: components["schemas"]["WriteRefusal"];
             /**
              * Format: uuid
              * @description Single-level hierarchy FK; no cycles.
@@ -35054,6 +35063,8 @@ export interface components {
             owner_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement. */
+            readonly write_refusal?: components["schemas"]["WriteRefusal"];
             /** @description Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
             /**
@@ -35685,6 +35696,8 @@ export interface components {
             owner_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement. */
+            readonly write_refusal?: components["schemas"]["WriteRefusal"];
             /**
              * @description Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
              * @default initiative
@@ -39119,6 +39132,8 @@ export interface components {
             owner_id?: string | null;
             /** @description Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
+            /** @description Why `writable` is false for THIS caller, so a client can say why and name the fix. Absent when `writable` is true. A UX signal like `writable`, never the enforcement. */
+            readonly write_refusal?: components["schemas"]["WriteRefusal"];
             source_system?: string | null;
             source_id?: string | null;
             /**
