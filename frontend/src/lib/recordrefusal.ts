@@ -43,18 +43,12 @@ const KIND_SENTENCES = {
     not_yours: "project.notYoursToChange",
     unowned: "writeRefusal.unownedProject",
   },
-} as const satisfies Record<
-  RefusingKind,
-  Record<KindCode, MessageKey>
->;
+} as const satisfies Record<RefusingKind, Record<KindCode, MessageKey>>;
 
 const SHARED_SENTENCES = {
   seat_read_only: "writeRefusal.seatReadOnly",
   role: "writeRefusal.role",
-} as const satisfies Record<
-  Exclude<WriteRefusal, KindCode>,
-  MessageKey
->;
+} as const satisfies Record<Exclude<WriteRefusal, KindCode>, MessageKey>;
 
 export type RecordRefusal = Readonly<{ code: WriteRefusal; text: string }>;
 
