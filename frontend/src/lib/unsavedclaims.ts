@@ -119,8 +119,8 @@ export function useUnsavedGuard(
   const token = useId();
 
   // Layout effects, so a claim changes before the browser paints the render
-  // that changed it. A passive effect leaves a frame in which the control that
-  // saved the draft is gone and the claim still asks the reader to discard it.
+  // that changed it. A passive effect leaves a frame with the saving control
+  // gone and the claim still held, and Escape then asks to discard.
   useLayoutEffect(() => {
     claim?.(token, dirty, scope, save);
   }, [claim, token, dirty, scope, save]);

@@ -10,12 +10,17 @@ import {
 
 afterEach(cleanup);
 
+// The claim's owner, mounted for as long as the reader is editing.
+function Claimant() {
+  useUnsavedGuard(true);
+  return <button type="button">Save</button>;
+}
+
 // An editor whose save finishes outside any event, as a mutation's does.
 function Editor({ finish }: Readonly<{ finish: { current: () => void } }>) {
   const [editing, setEditing] = useState(true);
-  useUnsavedGuard(editing);
   finish.current = () => setEditing(false);
-  return editing ? <button type="button">Save</button> : null;
+  return editing ? <Claimant /> : null;
 }
 
 function Host({
@@ -35,8 +40,8 @@ function Host({
   );
 }
 
-describe("a claim released by the render that removes its control", () => {
-  it("is already released when the control is no longer on screen", async () => {
+describe("a claim released when its owner unmounts", () => {
+  it("is released before the control is gone from the screen", async () => {
     const finish = { current: () => {} };
     const seen: { dirty: boolean | null } = { dirty: null };
     render(<Host finish={finish} seen={seen} />);
