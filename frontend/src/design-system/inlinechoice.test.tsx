@@ -63,7 +63,8 @@ describe("editing a value where it is read", () => {
       canEdit: false,
       readOnlyReason: "Only an admin sets this.",
     });
-    await userEvent.click(
+    const user = userEvent.setup();
+    await user.click(
       screen.getByRole("button", { name: "Why Account lifecycle is locked" }),
     );
     expect(screen.getByText("Only an admin sets this.")).toBeTruthy();

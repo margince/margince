@@ -194,7 +194,7 @@ export function InlineEditVerb({
     <Button
       ref={ref}
       variant="link"
-      className="inline-editable"
+      className="inline-editable inline-edit-verb"
       disabled={disabled}
       onClick={onClick}
     >

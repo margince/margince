@@ -17,7 +17,7 @@ export const RecordRefusalContext = createContext<string | undefined>(
 
 /**
  * A value the reader may not change. When the reason is the field's own, a
- * lock sits beside the value. Press, hover or focus opens the reason.
+ * lock sits beside the value. A press or a settled pointer opens the reason.
  */
 export function LockedValue({
   label,

@@ -8,6 +8,7 @@ import { mapCompanyUpdate } from "../../components/companyform";
 import { Callout } from "../../design-system/callout";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
+import { RecordRefusalContext } from "../../design-system/lockedvalue";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/recordrefusal";
@@ -99,88 +100,91 @@ export function CompanyProfileForm({
   const fields = profileQuery.data ?? [];
   const save = useCompanyFieldSave(company);
 
+  // The Callout says the reason once, so the fields below draw no lock of their own.
   return (
-    <div className="co-tab-stack">
-      {/* The account in prose, leading the tab the same way it leads the
+    <RecordRefusalContext.Provider value={reason}>
+      <div className="co-tab-stack">
+        {/* The account in prose, leading the tab the same way it leads the
           overview: what the account IS, before its fields and facts. The
           overview keeps its own copy so a reader who never opens this tab
           still meets it. */}
-      <DossierPanel
-        companyId={company.id}
-        nameOf={nameOf}
-        onOpenRecord={onOpenRecord}
-        onOpenReceipt={onOpenReceipt}
-        onOpenEmail={onOpenEmail}
-      />
-      {reason && (
-        <Callout
-          tone="info"
-          kind="standing"
-          // The sentence carries the id every refused control below points at,
-          // so the heading IS the description rather than a copy of it.
-          title={<span id={reasonId}>{reason}</span>}
+        <DossierPanel
+          companyId={company.id}
+          nameOf={nameOf}
+          onOpenRecord={onOpenRecord}
+          onOpenReceipt={onOpenReceipt}
+          onOpenEmail={onOpenEmail}
         />
-      )}
-      <CompanyProfileDetails
-        company={company}
-        edit={{ canEdit, reason }}
-        fields={fields}
-        fieldsLoaded={profileQuery.isSuccess}
-      />
-      <Panel title={t("co.narrative.title")}>
-        <PanelBody>
-          <FieldGrid>
-            {/* The account's own description: prose, so it reads here with
+        {reason && (
+          <Callout
+            tone="info"
+            kind="standing"
+            // The sentence carries the id every refused control below points at,
+            // so the heading IS the description rather than a copy of it.
+            title={<span id={reasonId}>{reason}</span>}
+          />
+        )}
+        <CompanyProfileDetails
+          company={company}
+          edit={{ canEdit, reason }}
+          fields={fields}
+          fieldsLoaded={profileQuery.isSuccess}
+        />
+        <Panel title={t("co.narrative.title")}>
+          <PanelBody>
+            <FieldGrid>
+              {/* The account's own description: prose, so it reads here with
                 the account's story rather than in the details column. */}
-            <FieldRow label={t("co.description.label")}>
-              <InlineText
-                label={t("co.description.label")}
-                value={company.description ?? ""}
-                placeholder={t("co.narrative.add")}
-                multiline
-                maxLength={500}
-                canEdit={canEdit}
-                readOnlyReason={reason}
-                onSave={(next) =>
-                  save(mapCompanyUpdate({ description: next }, {}))
-                }
-              />
-            </FieldRow>
-            {NARRATIVE_FIELDS.map((field) => (
-              <SidecarFieldRow
-                key={field}
-                companyId={company.id}
-                anchor={company.is_anchor === true}
-                fields={fields}
-                // A pending or failed read is not the same claim as "this
-                // field has no row": editing on that guess sends no If-Match
-                // and overwrites a value the reader never saw.
-                fieldsLoaded={profileQuery.isSuccess}
-                field={field}
-                // The label comes from the ONE vocabulary map
-                // (PROFILE_FIELD_LABELS), not a second list here: a field
-                // renamed there must not keep its old name on this tab.
-                label={profileFieldLabel(field, t)}
-                placeholderKey="co.narrative.add"
-                canEdit={canEdit}
-                readOnlyReason={reason}
-                multiline
-              />
-            ))}
-          </FieldGrid>
-        </PanelBody>
-      </Panel>
-      {/* Facts are their own panel: many-valued, correctable one row at a
+              <FieldRow label={t("co.description.label")}>
+                <InlineText
+                  label={t("co.description.label")}
+                  value={company.description ?? ""}
+                  placeholder={t("co.narrative.add")}
+                  multiline
+                  maxLength={500}
+                  canEdit={canEdit}
+                  readOnlyReason={reason}
+                  onSave={(next) =>
+                    save(mapCompanyUpdate({ description: next }, {}))
+                  }
+                />
+              </FieldRow>
+              {NARRATIVE_FIELDS.map((field) => (
+                <SidecarFieldRow
+                  key={field}
+                  companyId={company.id}
+                  anchor={company.is_anchor === true}
+                  fields={fields}
+                  // A pending or failed read is not the same claim as "this
+                  // field has no row": editing on that guess sends no If-Match
+                  // and overwrites a value the reader never saw.
+                  fieldsLoaded={profileQuery.isSuccess}
+                  field={field}
+                  // The label comes from the ONE vocabulary map
+                  // (PROFILE_FIELD_LABELS), not a second list here: a field
+                  // renamed there must not keep its old name on this tab.
+                  label={profileFieldLabel(field, t)}
+                  placeholderKey="co.narrative.add"
+                  canEdit={canEdit}
+                  readOnlyReason={reason}
+                  multiline
+                />
+              ))}
+            </FieldGrid>
+          </PanelBody>
+        </Panel>
+        {/* Facts are their own panel: many-valued, correctable one row at a
           time, and now addable and removable — which is a different act from
           stating a field, and needs the same write state this form derived. */}
-      <CompanyFactsPanel
-        companyId={company.id}
-        anchor={company.is_anchor === true}
-        canEdit={canEdit}
-        reasonId={reason ? reasonId : undefined}
-        onOpenHistory={onOpenHistory}
-      />
-      {tools}
-    </div>
+        <CompanyFactsPanel
+          companyId={company.id}
+          anchor={company.is_anchor === true}
+          canEdit={canEdit}
+          reasonId={reason ? reasonId : undefined}
+          onOpenHistory={onOpenHistory}
+        />
+        {tools}
+      </div>
+    </RecordRefusalContext.Provider>
   );
 }

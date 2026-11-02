@@ -112,8 +112,9 @@
 
 /* At rest an editable value sits in a soft field box with its verb mark: a
    pencil to type, a chevron to choose. Read-only values keep no box, so a
-   glance down the column tells the two apart on every device. */
-:is(.factlist-value, .fieldgrid-value) .inline-editable {
+   glance down the column tells the two apart on every device. A "Change"
+   verb beside a rendered link stays a link: the link is the value. */
+:is(.factlist-value, .fieldgrid-value) .inline-editable:not(.inline-edit-verb) {
   display: flex;
   box-sizing: border-box;
   width: 100%;
@@ -127,14 +128,16 @@
   color: var(--textPrimary);
   font-weight: inherit;
 }
-:is(.factlist-value, .fieldgrid-value) .inline-editable:hover {
+:is(.factlist-value, .fieldgrid-value)
+  .inline-editable:not(.inline-edit-verb):hover {
   border-color: var(--borderControl);
 }
-:is(.factlist-value, .fieldgrid-value) .inline-editable[data-empty="true"] {
+:is(.factlist-value, .fieldgrid-value)
+  .inline-editable:not(.inline-edit-verb)[data-empty="true"] {
   color: var(--accentText);
 }
 :is(.factlist-value, .fieldgrid-value)
-  .inline-editable:not(.inline-editable-choice)::after {
+  .inline-editable:not(.inline-editable-choice, .inline-edit-verb)::after {
   content: "";
   flex: none;
   margin-inline-start: auto;

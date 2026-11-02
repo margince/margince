@@ -159,10 +159,8 @@ function renderGrid(company: Company) {
   );
 }
 
-// Settles the grid on the grant read: until /me lands every row is read-only,
-// which is a different rendering of the same record and not the one under test.
-// The industry row is the anchor because it sits outside the disclosure and
-// carries a value in every fixture here.
+// Settles the grid on its slowest read: a sidecar row stays read-only until
+// the profile fields land, a different rendering and not the one under test.
 async function renderSettledGrid(
   company: Company,
   profileFields: readonly ProfileField[] = [],
@@ -170,7 +168,7 @@ async function renderSettledGrid(
 ) {
   const calls = stub(profileFields, answers);
   renderGrid(company);
-  await screen.findByRole("button", { name: "Change Industry" });
+  await screen.findByRole("button", { name: "Change VAT ID" });
   return calls;
 }
 

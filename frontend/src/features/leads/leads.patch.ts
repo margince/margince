@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useT } from "../../i18n";
+import { useRecordWriteRefusalCode } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordWriteRefusal } from "../../lib/recordrefusal";
@@ -22,6 +23,15 @@ type LeadWrite = {
   /** Whether the record was already closed when the reader pressed. */
   archived: boolean;
 };
+
+/**
+ * Whether no lead could ever be qualified by this seat or role. Every Qualify
+ * entry point hides on it; a colleague's lead keeps Qualify, with its reason.
+ */
+export function useNeverQualifies(lead: Lead): boolean {
+  const code = useRecordWriteRefusalCode("lead", lead);
+  return code === "seat_read_only" || code === "role";
+}
 
 export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   const t = useT();

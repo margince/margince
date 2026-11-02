@@ -78,6 +78,7 @@ function stubLeadScreenFetch(
     method: string,
     request: Request,
   ) => Promise<Response> | Response,
+  seat: "full" | "read" = "full",
 ) {
   vi.stubGlobal(
     "fetch",
@@ -88,7 +89,7 @@ function stubLeadScreenFetch(
           user: { id: "u-9", display_name: "Me" },
           roles: ["rep"],
           teams: [],
-          authorization: meFixture({ allow: LEAD_GRANTS }).authorization,
+          authorization: meFixture({ allow: LEAD_GRANTS, seat }).authorization,
         });
       }
       if (url.endsWith("/v1/connectors")) {
@@ -246,6 +247,30 @@ describe("LeadScreen: the Deals tab's deal and project verbs", () => {
     expect(
       await screen.findByText(en["lead.qualify.reasonHuman"]),
     ).toBeTruthy();
+  });
+
+  it("offers a read seat no Qualify verb, in the header or the deal panel", async () => {
+    const user = userEvent.setup();
+    stubLeadScreenFetch(
+      async (url) =>
+        url.includes("/leads/l-1")
+          ? jsonResponse(lead)
+          : jsonResponse({ data: [] }),
+      "read",
+    );
+
+    render(
+      <RecordShell>
+        <LeadScreen id="l-1" />
+      </RecordShell>,
+    );
+
+    const tab = await openDealsTab(user);
+    await screen.findByText(en["writeRefusal.seatReadOnly"]);
+    expect(screen.queryByTestId("lead-qualify")).toBeNull();
+    expect(
+      within(tab).queryByRole("button", { name: en["lead.promote"] }),
+    ).toBeNull();
   });
 
   it("carries no Qualify verb once the lead already named a deal", async () => {

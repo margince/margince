@@ -24,6 +24,7 @@ import { PhaseBadge } from "../projects/projects";
 import type { Project } from "../projects/projects.form";
 import { searchProjectReferences } from "../records/recordreferences";
 import type { LeadWriter } from "./leads";
+import { useNeverQualifies } from "./leads.patch";
 
 // The lead's Deals tab: the deal it opened once qualified, and the project
 // its details name.
@@ -203,12 +204,13 @@ export function LeadDealsTab({
   reasonId?: string;
 }>) {
   const t = useT();
+  const neverQualifies = useNeverQualifies(lead);
   return (
     <div className="record-stack">
       <Panel title={t("tab.deals")}>
         <PanelBody>
           <LeadDealBody lead={lead} />
-          {!lead.qualified_deal_id && !lead.archived_at && (
+          {!lead.qualified_deal_id && !lead.archived_at && !neverQualifies && (
             <LeadQualifyButton onQualify={onQualify} reasonId={reasonId} />
           )}
         </PanelBody>

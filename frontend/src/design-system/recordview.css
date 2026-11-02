@@ -405,7 +405,8 @@
     gap: var(--space-6) var(--space-8);
   }
   .record-split-details .recorddetails > .recorddetails-toggle,
-  .record-split-details .recorddetails > .recorddetails-note {
+  .record-split-details .recorddetails > .recorddetails-note,
+  .record-split-details .recorddetails > .recorddetails-locked {
     grid-column: 1 / -1;
   }
   .record-split-details .recorddetails > .recorddetails-toggle {

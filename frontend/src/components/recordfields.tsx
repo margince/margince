@@ -9,6 +9,7 @@ import { Button } from "../design-system/atoms";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
+import { LockedValue } from "../design-system/lockedvalue";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
@@ -270,7 +271,12 @@ function GroupReading({
       props.maskedFields,
       props.readOnlyFields,
     );
-  if (!canEdit) return <span title={reason}>{value || t("field.unset")}</span>;
+  if (!canEdit)
+    return (
+      <LockedValue label={label} reason={reason}>
+        {value || t("field.unset")}
+      </LockedValue>
+    );
   return (
     <Button
       variant="link"

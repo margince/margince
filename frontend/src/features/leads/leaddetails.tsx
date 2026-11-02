@@ -422,9 +422,8 @@ function LeadDetailsBody({
   return (
     <RecordDetails
       sections={sections}
-      refusal={
-        writer.readOnlyReason ? { text: writer.readOnlyReason } : undefined
-      }
+      // The page band or How it stands already says why; the rail repeats nothing.
+      lockedBy={writer.readOnlyReason}
       footnote={t("lead.aside.footnote")}
     />
   );

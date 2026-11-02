@@ -7,6 +7,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { type PeekTask, tasksPeek } from "../../lib/standingpeeks";
 import type { Lead } from "./leads";
+import { useNeverQualifies } from "./leads.patch";
 import { leadNext } from "./leadstandingparts";
 
 type Activity = components["schemas"]["Activity"];
@@ -37,6 +38,7 @@ export function LeadNextBar({
   const zone = viewerZone();
   const record = useRecordZone();
   const next = leadNext(lead, { t, locale, zone, record, asOf });
+  const neverQualifies = useNeverQualifies(lead);
   return (
     <RecordNextBar
       // A lead ready to qualify outranks what just came in.
@@ -45,7 +47,7 @@ export function LeadNextBar({
       late={next.late}
       sub={next.sub}
       action={
-        next.qualify ? (
+        next.qualify && !neverQualifies ? (
           <Button
             variant="ghost"
             reasonId={refusedReasonId}
