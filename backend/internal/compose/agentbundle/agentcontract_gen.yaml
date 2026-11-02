@@ -10315,6 +10315,11 @@ components:
           items: {$ref: '#/components/schemas/ActivityReference'}
         computed_at: {type: string, format: date-time, description: When this value was last recomputed (fixed-clock reproducible).}
         last_interaction: {type: [string, 'null'], format: date-time, description: Timestamp of the most recent qualifying interaction; null when there are none.}
+        last_engaged:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
         inbound_90d: {type: integer, minimum: 0, description: Count of qualifying inbound interactions in the trailing 90-day window.}
         outbound_90d: {type: integer, minimum: 0, description: Count of qualifying outbound interactions in the trailing 90-day window.}
     ActivityReference:

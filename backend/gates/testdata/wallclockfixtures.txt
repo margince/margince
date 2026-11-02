@@ -65,6 +65,7 @@ internal/compose/dealscoutsql_test.go 2
 internal/compose/dealsuggestiontotals_integration_test.go 1
 internal/compose/deferral_test.go 3
 internal/compose/edgeerasureboundary_integration_test.go 4
+internal/compose/edgelastmet_integration_test.go 1
 internal/compose/emailrequestcapture_integration_test.go 1
 internal/compose/erasurebriefcache_integration_test.go 3
 internal/compose/erasurecollateral_integration_test.go 2

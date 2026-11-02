@@ -16156,7 +16156,7 @@ export const en = {
   "contact.band.strong": "strong",
   "contact.strength.detail": "Last contact {last}",
   "contact.strength.sentence.weakStale":
-    "Weak: it has been a while. You last were in touch on {last}.",
+    "Weak: it has been a while. They last wrote to you or met you on {last}.",
   "contact.strength.sentence.weakFew":
     "Weak: recent contact, but few shared interactions in the last 90 days.",
   "contact.strength.sentence.weakLopsided":
