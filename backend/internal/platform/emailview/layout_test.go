@@ -39,7 +39,7 @@ func TestAnItemTakesOnlyItsOwnLinkAndTheMessageKeepsItsButton(t *testing.T) {
 func TestNoElementCarriesTwoClassAttributes(t *testing.T) {
 	var body Content
 	body.Lead("Your week.")
-	body.Stats(Stat{Label: "Won", Value: "€1", Tone: Success})
+	body.Stats(Stat{Label: "Won", Value: "€1"})
 	body.Facts(Fact{Label: "New deals", Value: "5"})
 	body.Note("Expires Friday.", Info)
 	body.Append(weekWithItems())

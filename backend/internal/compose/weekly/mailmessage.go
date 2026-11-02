@@ -5,6 +5,7 @@ package weekly
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -80,13 +81,13 @@ func mailFacts(review Review, words mailcopy.Copy) []emailview.Fact {
 // mailHeadline lifts the week's short figures for won deals, revenue and
 // delivered tasks into the stat strip; every other fact stays in the list.
 func mailHeadline(facts []emailview.Fact, words mailcopy.Copy) ([]emailview.Stat, []emailview.Fact) {
-	tones := map[string]emailview.Tone{words.WeeklyWonRevenue: emailview.Success, words.WeeklyDealsWon: emailview.Success, words.WeeklyTasksDelivered: emailview.Neutral}
+	headlined := []string{words.WeeklyWonRevenue, words.WeeklyDealsWon, words.WeeklyTasksDelivered}
 	var headline []emailview.Stat
 	var rest []emailview.Fact
 	for _, fact := range facts {
-		tone, lifted := tones[fact.Label]
+		lifted := slices.Contains(headlined, fact.Label)
 		if lifted && len(headline) < 3 && isHeadlineFigure(fact.Value) {
-			headline = append(headline, emailview.Stat{Label: fact.Label, Value: fact.Value, Tone: tone})
+			headline = append(headline, emailview.Stat{Label: fact.Label, Value: fact.Value})
 			continue
 		}
 		rest = append(rest, fact)

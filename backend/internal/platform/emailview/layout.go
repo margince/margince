@@ -96,7 +96,7 @@ func itemRow(item Item, target, label string, first bool) string {
 	}
 	link := ""
 	if target != "" {
-		link = `<a href="` + html.EscapeString(target) + `"` + look{ink: accentText}.attrs("font:"+body.medium()+";text-decoration:none;white-space:nowrap") + `>` + html.EscapeString(verb) + ` →</a>`
+		link = `<a href="` + html.EscapeString(target) + `"` + look{ink: textPrimary}.attrs("font:"+body.medium()+";text-decoration:none;white-space:nowrap") + `>` + html.EscapeString(verb) + ` →</a>`
 	} else if verb != "" {
 		meta = append(meta, html.EscapeString(verb))
 	}

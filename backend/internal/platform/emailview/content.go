@@ -42,10 +42,7 @@ type Item struct {
 
 // Stat is one headline figure. Its plain text is the same "Label: Value" a
 // Fact reads as.
-type Stat struct {
-	Label, Value string
-	Tone         Tone
-}
+type Stat struct{ Label, Value string }
 
 // Block states presentation intent separately from customer-authored words.
 type Block struct {

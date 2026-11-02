@@ -101,7 +101,7 @@ func footerRow(footer string) string {
 // monogram is the design system's Avatar at its smallest rung.
 func monogram(name string) string {
 	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr><td width="28" height="28" align="center" valign="middle"` +
-		look{ink: accentText, fill: accentMed}.attrs("width:28px;height:28px;border-radius:9999px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(name)) + `</td></tr></table>`
+		look{ink: textSecondary, fill: bgWell, edge: paneEdge}.attrs("width:26px;height:26px;border:1px solid;border-radius:9999px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(name)) + `</td></tr></table>`
 }
 
 func initials(name string) string {

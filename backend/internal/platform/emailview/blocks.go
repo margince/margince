@@ -102,17 +102,14 @@ func renderStats(stats []Stat) string {
 		if i > 0 {
 			side = "border-left:1px solid;"
 		}
-		ink := textPrimary
-		if stat.Tone != Neutral {
-			ink = toneInk(stat.Tone)
-		}
 		cells.WriteString(`<td valign="top"` + look{edge: borderSubtle}.attrs(side+"padding:14px 16px") + `>` +
-			`<div` + look{ink: ink}.attrs("font:"+headingXLarge.font()) + `>` + html.EscapeString(stat.Value) + `</div>` +
+			`<div` + look{ink: textPrimary}.attrs("font:"+headingXLarge.font()) + `>` + html.EscapeString(stat.Value) + `</div>` +
 			`<div` + look{ink: textSecondary}.attrs("margin-top:2px;font:"+bodySmall.font()) + `>` + html.EscapeString(stat.Label) + `</div></td>`)
 	}
 	return panel(`<tr>`+cells.String()+`</tr>`, "stats", false)
 }
 
+// toneInk is the one place a status colour shows: the dot beside a label.
 func toneInk(tone Tone) token {
 	switch tone {
 	case Warning:
@@ -124,32 +121,28 @@ func toneInk(tone Tone) token {
 	case Danger:
 		return dangerText
 	default:
-		return textPrimary
+		return noToken
 	}
 }
 
-func toneLook(tone Tone) look {
-	switch tone {
-	case Warning:
-		return look{ink: warningText, fill: warningSurface, edge: warningBorder}
-	case Info:
-		return look{ink: infoText, fill: infoSurface, edge: infoBorder}
-	case Success:
-		return look{ink: successText, fill: successSurface, edge: successBorder}
-	case Danger:
-		return look{ink: dangerText, fill: dangerSurface, edge: dangerBorder}
-	default:
-		return look{ink: textPrimary, fill: bgWell, edge: paneEdge}
-	}
-}
-
-// badge is the design system's Badge in one of its tones.
+// badge is a status as a small coloured dot and a grey label, so a row of
+// them stays calm; a neutral line has no dot.
 func badge(line Line) string {
-	return `<span` + toneLook(line.Tone).attrs("display:inline-block;margin:0 4px 4px 0;padding:1px 8px;border:1px solid;border-radius:9999px;font:"+bodySmall.font()+";white-space:nowrap") + `>` + html.EscapeString(line.Text) + `</span>`
+	dot := ""
+	if ink := toneInk(line.Tone); ink != noToken {
+		dot = `<span` + look{fill: ink}.attrs("display:inline-block;width:6px;height:6px;margin:0 6px 1px 0;border-radius:9999px;vertical-align:middle") + `></span>`
+	}
+	return `<span` + look{ink: textSecondary}.attrs("display:inline-block;margin:0 12px 2px 0;font:"+bodySmall.font()+";white-space:nowrap") + `>` + dot + html.EscapeString(line.Text) + `</span>`
 }
 
+// note sets words apart in a quiet well. Its tone shows only as the dot,
+// as a badge does.
 func note(text string, tone Tone) string {
+	dot := ""
+	if ink := toneInk(tone); ink != noToken {
+		dot = `<span` + look{fill: ink}.attrs("display:inline-block;width:6px;height:6px;margin:0 8px 2px 0;border-radius:9999px;vertical-align:middle") + `></span>`
+	}
 	return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 16px"><tr><td` +
-		toneLook(tone).attrs("padding:10px 12px;border:1px solid;border-radius:"+rControl.light()+";font:"+body.font()) + `>` +
-		strings.ReplaceAll(html.EscapeString(text), "\n", "<br>") + `</td></tr></table>`
+		look{ink: textPrimary, fill: bgWell, edge: paneEdge}.attrs("padding:10px 12px;border:1px solid;border-radius:"+rControl.light()+";font:"+body.font()) + `>` +
+		dot + strings.ReplaceAll(html.EscapeString(text), "\n", "<br>") + `</td></tr></table>`
 }

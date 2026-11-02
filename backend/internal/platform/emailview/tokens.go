@@ -28,23 +28,10 @@ const (
 	textPrimary
 	textSecondary
 	accent
-	accentText
-	accentMed
 	textOnAccentControl
-	ai
-	aiText
-	aiLight
-	warningSurface
-	warningBorder
 	warningText
-	infoSurface
-	infoBorder
 	infoText
-	successSurface
-	successBorder
 	successText
-	dangerSurface
-	dangerBorder
 	dangerText
 	rControl
 	rMd
@@ -64,23 +51,10 @@ var tokens = [tokenCount]Token{
 	textPrimary:         {"textPrimary", "#182c28", "#edf6f4"},
 	textSecondary:       {"textSecondary", "#55645f", "#9aa8a3"},
 	accent:              {"accent", "#045647", "#3aae94"},
-	accentText:          {"accentText", "#045647", "#66d5ba"},
-	accentMed:           {"accentMed", "rgba(4, 86, 71, 0.17)", "rgba(58, 174, 148, 0.28)"},
 	textOnAccentControl: {"textOnAccentControl", "#f4faf7", "#07221d"},
-	ai:                  {"ai", "#5b61d6", "#5b61d6"},
-	aiText:              {"aiText", "#3f45b0", "#9ba0f0"},
-	aiLight:             {"aiLight", "rgba(91, 97, 214, 0.08)", "rgba(91, 97, 214, 0.08)"},
-	warningSurface:      {"warningSurface", "#faeed9", "#3a3623"},
-	warningBorder:       {"warningBorder", "rgba(245, 165, 36, 0.45)", "rgba(247, 183, 80, 0.45)"},
 	warningText:         {"warningText", "#885700", "#f7b750"},
-	infoSurface:         {"infoSurface", "#ddeefb", "#142935"},
-	infoBorder:          {"infoBorder", "rgba(4, 133, 247, 0.45)", "rgba(4, 133, 247, 0.45)"},
 	infoText:            {"infoText", "#005eb5", "#3d99ff"},
-	successSurface:      {"successSurface", "#e0f6e9", "#163223"},
-	successBorder:       {"successBorder", "rgba(23, 201, 100, 0.45)", "rgba(23, 201, 100, 0.45)"},
 	successText:         {"successText", "#007132", "#17c964"},
-	dangerSurface:       {"dangerSurface", "#fbe8e8", "#362220"},
-	dangerBorder:        {"dangerBorder", "rgba(255, 56, 60, 0.45)", "rgba(219, 59, 62, 0.45)"},
 	dangerText:          {"dangerText", "#c2001a", "#ff615e"},
 	rControl:            {"r-control", "12px", "12px"},
 	rMd:                 {"r-md", "16px", "16px"},

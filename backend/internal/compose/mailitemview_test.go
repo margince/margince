@@ -88,7 +88,7 @@ func mailWorkText(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *tim
 	return content.String()
 }
 
-func TestAWorkItemShowsItsCauseAndDeadlineAsBadges(t *testing.T) {
+func TestAWorkItemMarksItsCauseAndDeadlineWithStatusDots(t *testing.T) {
 	title, cause := "Reply to Ana Sommer", "Customer waiting"
 	due := time.Date(2026, 11, 4, 10, 0, 0, 0, time.UTC)
 	row, ok := mailWorkItem(crmcontracts.WorklistItem{Title: &title, CauseLabel: &cause, DueAt: &due}, mailcopy.For("en"), time.UTC)
@@ -98,7 +98,7 @@ func TestAWorkItemShowsItsCauseAndDeadlineAsBadges(t *testing.T) {
 	var content emailview.Content
 	content.Item(row)
 	markup := emailview.Render(content.Message("Your priorities", "en", ""))
-	for _, want := range []string{`class="c-warningText bg-warningSurface bd-warningBorder"`, ">" + cause + "</span>", `class="c-infoText bg-infoSurface bd-infoBorder"`} {
+	for _, want := range []string{`class="bg-warningText"`, "</span>" + cause + "</span>", `class="bg-infoText"`} {
 		if !strings.Contains(markup, want) {
 			t.Errorf("the row lost %q", want)
 		}
