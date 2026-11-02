@@ -89,19 +89,11 @@ func (h Handlers) receipt(ctx context.Context, since *time.Time, limit int) (crm
 		return crmcontracts.MagicReceipt{}, err
 	}
 	key := fmt.Sprintf("limit=%d&window=%s", limit, window)
-	if out, hit, err := homecache.Lookup[crmcontracts.MagicReceipt](ctx, h.home, reader, homecache.Magic, key); err != nil || hit {
-		return out, err
-	}
-	stamp, err := h.home.Stamp(ctx)
-	if err != nil {
-		return crmcontracts.MagicReceipt{}, err
-	}
-	out, err := h.svc.Read(ctx, nil, limit)
-	if err != nil {
-		return out, err
-	}
-	if err := homecache.Store(ctx, h.home, reader, homecache.Magic, key, stamp, nil, out); err != nil {
-		return crmcontracts.MagicReceipt{}, err
-	}
-	return out, nil
+	fresh := func(ctx context.Context) (crmcontracts.MagicReceipt, error) { return h.svc.Read(ctx, nil, limit) }
+	return homecache.Serve(ctx, h.home, reader, homecache.Magic, key, fresh, startsNoWalk)
+}
+
+// startsNoWalk is a receipt's walk: it starts none.
+func startsNoWalk(crmcontracts.MagicReceipt) (*ids.UUID, error) {
+	return nil, nil //nolint:nilnil // a receipt has no walk, which Store reads as nil
 }

@@ -30,78 +30,66 @@ type worklistQuestion struct {
 	omitRelationships   bool
 }
 
-// worklistAnswer is the page q asks for. A reader's own first page is served
-// from the cache while it holds. A later page resumes a walk, and another
-// contact's queue is not this reader's answer, so both are read fresh.
+// worklistAnswer is the page q asks for. Home's own first page is served from
+// the cache while it holds, and every other question is read fresh. A later
+// page resumes a walk. Another contact's queue is not this reader's answer.
 func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQuestion) (crmcontracts.Worklist, error) {
+	fresh := func(ctx context.Context) (crmcontracts.Worklist, error) {
+		return svc.WorklistView(ctx, q.view, q.scope, q.filter, q.owner, q.limit, q.token)
+	}
 	reader, cacheable := homecache.ReaderOf(ctx)
 	if h.home == nil || !cacheable || q.token != "" || (!q.owner.IsZero() && q.owner != reader) {
-		return svc.WorklistView(ctx, q.view, q.scope, q.filter, q.owner, q.limit, q.token)
+		return fresh(ctx)
 	}
 	// The read's own entry gate, asked before a cached answer is served.
 	if err := auth.RequireMember(ctx); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	key, err := svc.homeKey(ctx, q)
-	if err != nil {
-		return crmcontracts.Worklist{}, err
+	key, home, err := svc.homeKey(ctx, q)
+	if err != nil || !home {
+		return fresh(ctx)
 	}
-	if out, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, h.home, reader, homecache.Worklist, key); err != nil || hit {
-		return out, err
-	}
-	stamp, err := h.home.Stamp(ctx)
-	if err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	out, err := svc.WorklistView(ctx, q.view, q.scope, q.filter, q.owner, q.limit, q.token)
-	if err != nil {
-		return out, err
-	}
-	walk, started, err := walkStartedBy(out)
-	if err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	var walkID *ids.UUID
-	if started {
-		walkID = &walk
-	}
-	if err := homecache.Store(ctx, h.home, reader, homecache.Worklist, key, stamp, walkID, out); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	return out, nil
+	return homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, walkStartedBy)
 }
 
-// homeKey names q as the service answers it, so two spellings of one question
-// share one answer. It names the installation's day too, which no answer outlives.
-func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, error) {
+// homeKey names Home's own question as the service answers it, so the spellings
+// of it share one answer, and reports whether q is that question. The key also
+// names the installation's zone and day, which no answer outlives.
+func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, bool, error) {
 	view, err := resolveView(q.view, q.filter)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	scope := q.scope
 	if scope == "" {
 		scope = scopeMine
 	}
-	day, err := s.startOfDay(ctx, s.now())
-	if err != nil {
-		return "", err
+	if view != viewToday || scope != scopeMine || (q.filter != "" && q.filter != string(crmcontracts.WorklistFilterAll)) || !q.omitRelationships {
+		return "", false, nil
 	}
-	return fmt.Sprintf("day=%s&view=%s&scope=%s&filter=%s&own_owner=%t&limit=%d&omit_relationships=%t",
-		day.Format(time.DateOnly), view, scope, q.filter, !q.owner.IsZero(), pageLimit(q.limit), q.omitRelationships), nil
+	loc, err := s.location(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	day := storekit.StartOfDay(s.now(), loc)
+	return fmt.Sprintf("zone=%s&day=%s&own_owner=%t&limit=%d",
+		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit)), true, nil
 }
 
 // walkStartedBy is the walk a first page's cursor resumes, so a cached page is
 // never served once its walk can no longer be continued.
-func walkStartedBy(out crmcontracts.Worklist) (ids.UUID, bool, error) {
+func walkStartedBy(out crmcontracts.Worklist) (*ids.UUID, error) {
 	if out.NextCursor == nil {
-		return ids.UUID{}, false, nil
+		return nil, nil //nolint:nilnil // no cursor is a page that started no walk, which Store reads as nil
 	}
 	// Read as minted, not as decodeCursor asks: the page was minted under the
 	// question the service resolved, which the request may spell differently.
 	cursor, err := storekit.DecodeOpaque[worklistCursor](*out.NextCursor)
 	if err != nil {
-		return ids.UUID{}, false, fmt.Errorf("attention: reading the walk a page started: %w", err)
+		return nil, fmt.Errorf("attention: reading the walk a page started: %w", err)
 	}
-	id, started := snapshotOf(cursor)
-	return id, started, nil
+	if id, started := snapshotOf(cursor); started {
+		return &id, nil
+	}
+	return nil, nil //nolint:nilnil // a cursor with no walk is an offset page, which Store reads as nil
 }

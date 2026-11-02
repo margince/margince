@@ -140,3 +140,26 @@ func TestAMachineWriteEndsTheCachedReceiptButNotTheWorklist(t *testing.T) {
 		t.Error("a machine write ended the worklist's answer, which it is not bound by")
 	}
 }
+
+// The cache only saves work. A kept answer this build cannot read, written by an
+// older one, is passed over for the fresh read, which is kept in its place.
+func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")
+	e.WsExec(t, `UPDATE home_read_cache SET payload = '"an older shape"' WHERE reader_id = $1`, e.Rep1)
+
+	reads := 0
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		reads++
+		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil }
+	if _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || reads != 1 {
+		t.Fatalf("serve over an unreadable answer: err %v after %d fresh reads, want the fresh read", err, reads)
+	}
+	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
+		t.Error("the fresh answer was not kept in place of the unreadable one")
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -99,6 +100,40 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 		return out, false, fmt.Errorf("homecache: decoding a cached %s: %w", read, err)
 	}
 	return out, true, nil
+}
+
+// Serve answers read from the reader's kept answer while it holds, and from
+// fresh otherwise, keeping what fresh answered. The cache only saves work: one
+// that cannot be read or written is logged and passed over, and the answer is
+// the fresh read's. walkOf names the walk an answer's first page started.
+func Serve[A Answer](
+	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
+	fresh func(context.Context) (A, error), walkOf func(A) (*ids.UUID, error),
+) (A, error) {
+	kept, hit, err := Lookup[A](ctx, c, reader, read, key)
+	if err != nil {
+		slog.ErrorContext(ctx, "a kept Home answer could not be read; reading it fresh", "read", read, "error", err)
+	}
+	if hit {
+		return kept, nil
+	}
+	stamp, stampErr := c.Stamp(ctx)
+	out, err := fresh(ctx)
+	if err != nil {
+		return out, err
+	}
+	if stampErr != nil {
+		slog.ErrorContext(ctx, "the Home fences could not be read; the answer is not kept", "read", read, "error", stampErr)
+		return out, nil
+	}
+	walk, err := walkOf(out)
+	if err == nil {
+		err = Store(ctx, c, reader, read, key, stamp, walk, out)
+	}
+	if err != nil {
+		slog.ErrorContext(ctx, "a Home answer could not be kept", "read", read, "error", err)
+	}
+	return out, nil
 }
 
 // Stamp reads the fences before the answer is assembled. A revocation that
