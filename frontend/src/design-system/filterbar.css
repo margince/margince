@@ -45,3 +45,12 @@
 .filter-bar-caption {
   margin: 0;
 }
+
+/* Quiet: the dials without the card, so the figures under them lead. */
+.filter-bar[data-quiet] {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: none;
+}

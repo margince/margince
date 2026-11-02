@@ -117,6 +117,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_delete_clears_deal_partner`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()`
 - `company_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `company_refuse_anchor_retirement`: `BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor FOR EACH ROW EXECUTE FUNCTION company_refuse_anchor_retirement()`
+- `home_read_fence_company_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_company_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()`
 - `trg_company_geocode_state_stale`: `AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_state_goes_stale()`
 - `trg_company_no_cycle`: `BEFORE INSERT OR UPDATE OF parent_company_id FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()`
@@ -186,6 +187,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_company_domain`: `AFTER UPDATE FOR EACH ROW WHEN (((old.domain_folded IS DISTINCT FROM new.domain_folded) OR (old.company_id IS DISTINCT FROM new.company_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_company_domain_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_company_domain_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## company_domain_disposition
@@ -643,6 +646,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `contact_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
 - `trg_contact_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -1032,6 +1036,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `conversation_claim_contact_ix`: `btree (contact_id, kind) WHERE (archived_at IS NULL)`
 - `conversation_claim_evidence_ux`: `unique, btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)`
 - `conversation_claim_pkey`: `unique, btree (id)`
+- `conversation_claim_task_ix`: `btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL))`
 - `idx_conversation_claim_contact`: `btree (contact_id)`
 - `idx_conversation_claim_source_activity`: `btree (source_activity_id)`
 
@@ -1123,12 +1128,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## email_signature
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `body` | `text` | yes | The sign-off appended below every message this member sends, plain text. |
+| `body` | `text` | yes | Plain-text fallback after personal HTML and the company template. |
+| `html` | `text`, default `''::text` | yes | Saved personal HTML, trimmed at both ends. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
 | `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |
@@ -1224,7 +1230,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
-| `qualified_deal_id` | `uuid` |  | The deal opened by the qualify call that promoted this lead, when one was asked for. |
+| `qualified_deal_id` | `uuid` |  | The deal joined or opened by the qualify call that promoted this lead, when one was asked for. |
 | `routed_at` | `timestamp with time zone` |  | When routing assigned an owner. |
 | `score` | `smallint`, default `0` | yes | Lead-local scoring; never reads the contact graph. |
 | `score_computed` | `smallint` |  | Server-derived. |
@@ -1306,6 +1312,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_lead_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `lead_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 - `trg_lead_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 

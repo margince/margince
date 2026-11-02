@@ -19,6 +19,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -39,10 +40,7 @@ import (
 // message: the state moved on for a reason, and a bounce is evidence about one
 // delivery rather than about the duty's whole history.
 //
-// It answers how many cases it moved. The bounce path drops the count — there
-// is nothing to do differently for zero, which is the ordinary answer because
-// most bounced mail carries no disclosure — and the tests assert on it, which
-// is what makes "this bounce reopened exactly one duty" checkable.
+// The count records applied delivery outcomes, including cases returned to source review.
 func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (int, error) {
 	if deliveryID.IsZero() {
 		return 0, nil
@@ -53,20 +51,22 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 	// reopening from a restatement of one.
 	rows, err := tx.Query(ctx, `
 		UPDATE privacy_notice_case c
-		   SET state = $3, updated_at = now()
+		   SET state = @state, owner_user_id = `+noticeLiveOwnerSQL("c")+`, updated_at = now()
 		  FROM privacy_notice_case prior
 		 WHERE prior.id = c.id
-		   AND c.delivery_id = $1
-		   AND c.state = $2
-		RETURNING c.id, c.rule, prior.state`,
-		deliveryID, string(NoticeQueued), string(NoticeDeliveryFailed))
+		   AND c.delivery_id = @delivery
+		   AND c.state = @prior_state
+		RETURNING c.id, c.rule, prior.state, c.updated_at, prior.owner_user_id, c.owner_user_id`,
+		pgx.NamedArgs{"delivery": deliveryID, "prior_state": string(NoticeQueued), fieldState: string(NoticeDeliveryFailed)})
 	if err != nil {
 		return 0, fmt.Errorf("consent: reopening the duties this message was carrying: %w", err)
 	}
 	type reopened struct {
-		id       ids.UUID
-		rule     string
-		wasState string
+		id              ids.UUID
+		rule            string
+		wasState        string
+		at              time.Time
+		wasOwner, owner *ids.UUID
 	}
 	// Drained and closed BEFORE the audit writes below: the audit runs further
 	// queries on this same transaction, and a connection cannot carry an open
@@ -74,7 +74,7 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 	var failed []reopened
 	for rows.Next() {
 		var r reopened
-		if err := rows.Scan(&r.id, &r.rule, &r.wasState); err != nil {
+		if err := rows.Scan(&r.id, &r.rule, &r.wasState, &r.at, &r.wasOwner, &r.owner); err != nil {
 			rows.Close()
 			return 0, fmt.Errorf("consent: reading a reopened duty: %w", err)
 		}
@@ -88,12 +88,26 @@ func MarkNoticeDeliveryFailedTx(ctx context.Context, tx pgx.Tx, deliveryID ids.U
 		// Audited per case, not once for the batch: each is its own compliance
 		// record, and "was this duty ever met, and what became of the attempt"
 		// is asked of one case at a time.
-		before := map[string]any{fieldState: r.wasState}
+		before := map[string]any{fieldState: r.wasState, fieldOwner: r.wasOwner}
 		if _, err := storekit.Audit(ctx, tx, "update", "privacy_notice_case", r.id, before,
 			map[string]any{
-				fieldState: string(NoticeDeliveryFailed), fieldRule: r.rule,
+				fieldState: string(NoticeDeliveryFailed), fieldRule: r.rule, fieldOwner: r.owner,
 			}); err != nil {
 			return 0, fmt.Errorf("audit the reopened notice case: %w", err)
+		}
+	}
+	if len(failed) > 0 {
+		cases := make([]ids.UUID, 0, len(failed))
+		for _, row := range failed {
+			cases = append(cases, row.id)
+		}
+		for _, id := range cases {
+			if _, err := ReviewUnverifiedNoticeTx(ctx, tx, id, failed[0].at); err != nil {
+				return 0, err
+			}
+		}
+		if err := settleFailedSenderDutiesTx(ctx, tx, cases, failed[0].at); err != nil {
+			return 0, err
 		}
 	}
 	return len(failed), nil

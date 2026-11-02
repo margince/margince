@@ -9,8 +9,6 @@ import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
-import { askKey } from "./worklist.ask";
-import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -21,12 +19,17 @@ import {
   rowHref,
   subjectHref,
   whenText,
-} from "./worklist.copy";
+} from "../../lib/worklistcopy";
+import {
+  conditionOf,
+  eyebrowKeyFor,
+  kindClass,
+} from "../../lib/worklisteyebrow";
+import { askKey } from "./worklist.ask";
+import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
-import { leadFactsText } from "./worklist.leadfacts";
 import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
@@ -35,6 +38,7 @@ import type { WorklistItem } from "./worklist.queries";
 import {
   noticeDetail,
   readerTask,
+  sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
@@ -148,11 +152,14 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const name = framedName(readerTask(item, viewer, t), t, locale, framed);
+  const name = framedName(
+    readerTask(sentenceTitled(item), viewer, t),
+    t,
+    locale,
+    framed,
+  );
   const title = name.title;
-  const facts =
-    dealFactsText(item, t, locale, zone) ??
-    leadFactsText(item, t, locale, zone);
+  const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying

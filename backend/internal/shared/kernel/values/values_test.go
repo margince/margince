@@ -59,6 +59,13 @@ func TestParsePhone(t *testing.T) {
 		{in: "+49 (30) 1234-5678", want: "+493012345678"},
 		{in: "0049 30 12345678", want: "+493012345678"},
 		{in: "+1 415.555.0123", want: "+14155550123"},
+		// The bracketed trunk zero is never dialled from abroad. A bare zero after
+		// the code stays: Italian numbers keep theirs.
+		{in: "+49 (0) 30 1234567", want: "+49301234567"},
+		{in: "0084(0)912 345 678", want: "+84912345678"},
+		{in: "+39 06 1234567", want: "+39061234567"},
+		{in: "+49 30 1234(0)567", want: "+493012340567"},
+		{in: "(0)30 1234567", code: "phone_needs_country_code"},
 		{in: "030 12345678", code: "phone_needs_country_code"},
 		{in: "+0 123456789", code: "phone_malformed"},
 		{in: "+49 12", code: "phone_malformed"},

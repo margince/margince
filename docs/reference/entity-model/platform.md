@@ -49,6 +49,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_scrub`: `AFTER INSERT FOR EACH ROW WHEN ((new.action = ANY (ARRAY['erase', 'anonymize', 'restrict']))) EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_audit_no_mutate`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION audit_log_immutable()`
 
 ## currency_minor_digits
@@ -240,6 +241,10 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `report_projection_fence_pkey`: `unique, btree (singleton)`
+
+**Triggers**
+
+- `home_read_fence_authority`: `AFTER UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## setting
 

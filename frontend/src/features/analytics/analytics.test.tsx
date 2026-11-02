@@ -276,18 +276,21 @@ describe("the my-outcomes section", () => {
       // TWO doors, and every door in the product carries the same word — so
       // what tells them apart for a screen reader is each one's own reading.
       // The meetings cards below read from a different report and offer none.
-      const doors = screen.getAllByRole("button", { name: "Open" });
+      const doors = screen.getAllByRole("link", { name: "Open" });
       expect(doors).toHaveLength(2);
       expect([
-        screen.getByRole("button", { name: "Open", description: "Open deals" }),
-        screen.getByRole("button", {
+        screen.getByRole("link", { name: "Open", description: "Open deals" }),
+        screen.getByRole("link", {
           name: "Open",
           description: "Deal value · EUR",
         }),
       ]).toEqual(doors);
 
       await user.click(doors[0]);
-      expect(window.location.hash).toBe("#/analytics/pipeline");
+      // The section opens on the same own records the readings count.
+      expect(window.location.hash).toMatch(
+        /^#\/analytics\/pipeline\?scope=owner%3A/,
+      );
     } finally {
       window.location.hash = "";
     }

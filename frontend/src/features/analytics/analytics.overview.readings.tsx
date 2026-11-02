@@ -3,14 +3,17 @@
 
 import { type ReactNode, useState } from "react";
 import { ActionRow } from "../../design-system/actionrow";
+import { AppLink } from "../../design-system/applink";
 import { Button, StatCard } from "../../design-system/atoms";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import {
-  openAnalyticsSection,
+  analyticsSectionHref,
   type Section,
 } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
+import type { UrlParams } from "../../lib/urlstate";
+import { scopeDials } from "./analytics.overview.context";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -55,8 +58,9 @@ export function readingValue(
 }
 
 /**
- * One headline metric as a reading. The card opens the records behind it; a
- * figure with no records, or one that failed, has no door.
+ * One headline metric as a reading. The card opens the shared evidence for it.
+ * That is the records behind a figure, or the empty population behind a
+ * measured zero, or why a failed or hidden figure has none.
  */
 export function MetricReading({
   evaluation,
@@ -75,21 +79,21 @@ export function MetricReading({
   const { locale } = useLocale();
   const metricName = useMetricNames();
   const metric = metricOf(evaluation, id);
-  const status = metric?.coverage.status;
-  const opens =
-    metric &&
-    status !== "no_data" &&
-    status !== "failed" &&
-    metric.value != null;
+  // A figure hidden whole says so; one with a value hides only a part.
+  const hidden = metric?.coverage.withheld && metric.value == null;
   return (
     <StatCard
       narrow="row"
       label={label ?? metricName(id)}
-      value={readingValue(metric, evaluation, t, locale)}
+      value={
+        hidden
+          ? t("analytics.prospect.withheld")
+          : readingValue(metric, evaluation, t, locale)
+      }
       detail={
         <>
           {detail}
-          {metric?.coverage.withheld && (
+          {metric?.coverage.withheld && !hidden && (
             <span>{t("analytics.overview.partlyHidden")}</span>
           )}
           {/* What a partial figure leaves out is said beside it, not behind
@@ -99,39 +103,48 @@ export function MetricReading({
           )}
         </>
       }
-      onOpen={opens ? () => onEvidence(metric.evidence) : undefined}
+      opens="records"
+      onOpen={metric ? () => onEvidence(metric.evidence) : undefined}
     />
   );
 }
 
-/** The deeper pages a view leads to, after its own readings and lists. */
+/**
+ * The deeper pages a view leads to, after its own readings and lists. Each
+ * is a link carrying the view's question, so the page it opens answers it.
+ * A modified click opens it in a new tab.
+ */
 export function OverviewLinks({
   sections,
+  dials,
 }: Readonly<{
   sections: readonly Readonly<{ section: Section; label: string }>[];
+  dials: UrlParams;
 }>) {
   return (
     <ActionRow>
       {sections.map(({ section, label }) => (
-        <Button
+        <AppLink
           key={section}
-          variant="ghost"
-          onClick={() => openAnalyticsSection(section)}
+          className="btn btn-ghost"
+          href={analyticsSectionHref(section, dials)}
         >
           {label}
-        </Button>
+        </AppLink>
       ))}
     </ActionRow>
   );
 }
 
 /**
- * Save view and Report templates, the same pair on both views. Saving keeps
+ * Save view and Report templates, the same pair on every view. Saving keeps
  * the view's selection, charts included, as a report the editor can revise.
+ * The templates open for the view's own `scope`.
  */
 export function OverviewSaveActions({
   selection,
-}: Readonly<{ selection: ReportingSelection | undefined }>) {
+  scope,
+}: Readonly<{ selection: ReportingSelection | undefined; scope: string }>) {
   const t = useT();
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
@@ -142,12 +155,16 @@ export function OverviewSaveActions({
           {t("analytics.overview.saveView")}
         </Button>
       )}
-      <Button variant="ghost" onClick={() => openAnalyticsSection("reports")}>
+      <AppLink
+        className="btn btn-ghost"
+        href={analyticsSectionHref("reports", scopeDials(scope))}
+      >
         {t("analytics.overview.templates")}
-      </Button>
+      </AppLink>
       {saving && selection && (
         <SaveReportingDialog
           selection={selection}
+          note={t("analytics.overview.saveViewNote")}
           onClose={() => setSaving(false)}
           onSaved={(report) => {
             setSaving(false);

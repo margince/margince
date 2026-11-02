@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
+<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/promoteexistingdeal.go backend/internal/compose/leadqualifydeal.go backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -17,7 +17,8 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
-5. Fill any custom fields, then choose **Create**.
+5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner, and only to a role that may see companies and partners.
+6. Fill any custom fields, then choose **Create**.
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
 
@@ -46,11 +47,11 @@ You may move an open lead to any open step, forward or back, on its **Lead
 status** ladder. Margince itself only ever moves it forward.
 
 ### How do I qualify a lead or convert it into a deal?
-To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also open a deal** to create a deal in the same step.
+To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
 1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead.
-2. For a deal, tick **Also open a deal** and set **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
+2. Pick **Add to an existing deal** to join an open deal at the employer. Pick **Open a new deal** for a new one. A new deal asks for **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
 3. Read **Why** and add an **Evidence note (optional)**.
-4. Choose **Qualify**, or **Qualify and open deal**.
+4. Choose **Qualify**, **Qualify and add to deal**, or **Qualify and open deal**.
 **Qualify** is turned off until the lead has an email address and an open status.
 Also called: convert a lead, promote a lead, turn a lead into a contact or opportunity.
 
@@ -83,8 +84,9 @@ to see. The preview then says "Qualifying merges into an existing contact you
 cannot see." and does not show you the contact. **No contact shown does not mean
 no match.**
 
-A deal opened in the same step takes the lead's owner and is left with no
-company. The amount is a whole number in the base currency of your
+The only open deal you can change at the employer starts selected. Choose **Qualify without a deal** to create no deal. When you pick one, the contact joins its team and the lead links to it. A deal that closes or moves to another company before you confirm is refused.
+
+A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your
 installation.
 
 ### How do I reverse a qualification?
@@ -122,10 +124,7 @@ To disqualify several at once, tick them on the **Leads** list and choose **Disq
 Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
-Disqualifying archives the lead. It records a reason, from a list that
-administrators manage, and a note if you add one. You can still open the lead,
-but it becomes read-only:
-"This lead is closed and cannot be changed."
+Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "This lead is closed and cannot be changed."
 
 ### How do I reopen a disqualified lead?
 To reopen a disqualified lead in Margince, open the lead and choose **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
@@ -140,7 +139,7 @@ To edit a lead in Margince, open it from **Leads** and click the value to change
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
-**Referred by partner** shows once a company is a partner. A role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean).
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
 
 ### How do I change a lead's owner?
 To change or set the owner of a lead in Margince, open the lead and choose **Assign** beside **Owner** at its top. Then pick a colleague under **Choose a colleague**.

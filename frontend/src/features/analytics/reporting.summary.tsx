@@ -2,7 +2,8 @@ import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
+import { scopeKey } from "./analytics.context";
 import {
   type ReportingEvaluation,
   type ReportingEvidenceRef,
@@ -140,6 +141,12 @@ export function ResultsSummary({
               </>
             }
             onOpen={headlineOpen(metric, onEvidence)}
+            href={
+              metric.id === "forecast_landing" &&
+              metric.coverage.status !== "no_data"
+                ? forecastHref(evaluation.selection)
+                : undefined
+            }
             meter={comparable ? { filled: actual, total: target } : undefined}
           />
         );
@@ -180,7 +187,7 @@ function OutcomePeriod({
 
 // What a headline figure is about. Sales won covers the chosen period. Open
 // pipeline is the state now, so it names a moment and a count. The forecast
-// landing is always this fiscal quarter's.
+// landing is always this fiscal quarter's, on the basis it was projected with.
 function headlineBasis(
   evaluation: ReportingEvaluation,
   metric: ReportingEvaluation["metrics"][number],
@@ -199,8 +206,13 @@ function headlineBasis(
           at,
         });
   }
+  // An edition stored before the basis was kept says the basis is unknown.
   if (metric.id === "forecast_landing") {
-    return t("reporting.forecastLandingBasis");
+    const landing = metric.forecast_basis?.landing;
+    const basis = landing
+      ? t(`forecast.basis.${landing.measure}`)
+      : t("forecast.basis.unknown");
+    return `${t("reporting.forecastLandingBasis")} · ${basis}`;
   }
   // A figure read as things stand names the moment, not a period.
   if (metric.evidence.context_id === "state") {
@@ -212,7 +224,19 @@ function headlineBasis(
 }
 
 // The forecast landing is a projection, not a sum of records. Its evidence is
-// the Forecast section, where each part opens its own deals.
+// the Forecast section, where each part opens its own deals: a link that
+// carries this selection's scope, pipeline and period.
+function forecastHref(selection: ReportingEvaluation["selection"]): string {
+  return analyticsSectionHref(
+    "forecast",
+    new Map([
+      ["scope", scopeKey(selection.scope)],
+      ["pipeline", selection.pipeline_id ?? "all"],
+      ["period", selection.period],
+    ]),
+  );
+}
+
 function headlineOpen(
   metric: ReportingEvaluation["metrics"][number],
   onEvidence: (reference: ReportingEvidenceRef) => void,
@@ -220,8 +244,6 @@ function headlineOpen(
   if (metric.coverage.status === "no_data") {
     return undefined;
   }
-  if (metric.id === "forecast_landing") {
-    return () => openAnalyticsSection("forecast");
-  }
+  if (metric.id === "forecast_landing") return undefined;
   return () => onEvidence(metric.evidence);
 }

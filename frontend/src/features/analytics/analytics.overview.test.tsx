@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { removeStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
+import { forgetSeat, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
 import {
@@ -16,14 +16,13 @@ import {
   isMovement,
   metric,
   openOverview as open,
-  prospectingEvaluation,
   readings,
   salesEvaluation,
   startingMovement,
 } from "./analytics.overview.testkit";
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
@@ -102,12 +101,22 @@ describe("Sales review", () => {
   it("leads with sales won and states the quarter's position in readings and words", async () => {
     open("#/analytics", bySeat("leader"));
     const strip = await readings();
-    expect(screen.getByRole("heading", { name: "Sales won" })).toBeVisible();
-    expect(screen.getByText("€420k")).toBeVisible();
+    const hero = within(screen.getByRole("region", { name: "Sales won" }));
+    expect(hero.getByText("€420k")).toBeVisible();
     expect(strip.queryByText("€420k")).toBeNull();
     expect(strip.getByText("€760k")).toBeVisible();
-    expect(strip.getByText("€40k")).toBeVisible();
-    expect(strip.getByText("Covers 3.6× of €380k left to win")).toBeVisible();
+    // The shortfall stands beside target progress, not as a reading.
+    expect(
+      hero.getByText(
+        "Projected shortfall €40k, from an expected finish of €760k",
+      ),
+    ).toBeVisible();
+    expect(strip.getByText("3.6×")).toBeVisible();
+    expect(
+      strip.getByText(
+        "€1.3m eligible to close this quarter / €380k still to win",
+      ),
+    ).toBeVisible();
     expect(
       screen.getByText(
         /Expected finish for .+: €760k, €40k short of the €800k target\./,
@@ -115,7 +124,7 @@ describe("Sales review", () => {
     ).toBeVisible();
   });
 
-  it("asks the preset's trend, stage and team charts, and draws them", async () => {
+  it("asks the preset's trend, stage and team charts apart from the figures, and draws them", async () => {
     const asked = open("#/analytics", (url) =>
       isMovement(url)
         ? startingMovement()
@@ -127,15 +136,25 @@ describe("Sales review", () => {
     expect(
       screen.getByRole("heading", { name: "Sales won by team member" }),
     ).toBeVisible();
-    const sales = asked.find(
+    const reads = asked.filter(
       ({ url }) =>
         url.pathname.endsWith("/analytics/evaluate") && !isMovement(url),
     );
-    expect(sales?.url.searchParams.getAll("blocks")).toEqual([
+    // The figures are one read with no chart; the charts another, with only
+    // the metrics they belong to.
+    const charts = reads.find(({ url }) => url.searchParams.has("blocks"));
+    expect(charts?.url.searchParams.getAll("blocks")).toEqual([
       "bookings_trend",
       "stage_distribution",
       "owner_attainment",
     ]);
+    expect(charts?.url.searchParams.getAll("metrics")).toEqual([
+      "bookings_won",
+      "open_pipeline",
+    ]);
+    expect(
+      reads.filter(({ url }) => !url.searchParams.has("blocks")),
+    ).toHaveLength(1);
   });
 
   it("shows the win rate and no gap without a target, and tells a reader who sets targets", async () => {
@@ -155,7 +174,7 @@ describe("Sales review", () => {
     const strip = await readings();
     expect(strip.getByText("Closed win rate")).toBeVisible();
     expect(strip.queryByText("Gap to target")).toBeNull();
-    expect(screen.getByRole("button", { name: "Set targets" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Set targets" })).toBeVisible();
     expect(screen.getByText(/No sales target is set for/)).toBeVisible();
   });
 
@@ -263,18 +282,26 @@ describe("Sales review", () => {
     );
     const deal = await screen.findByRole("link", { name: "Northstar rollout" });
     expect(deal.getAttribute("href")).toBe("/#/deals/deal-x1");
+    expect(deal.closest("p")?.textContent).toBe("Review Northstar rollout");
+    // The row opens its own finding in the review, never the deal's company.
+    const door = screen.getByRole("link", { name: "Answer" });
+    expect(door.getAttribute("href")).toMatch(
+      /^\/#\/analytics\/forecast\?.*finding=x1/,
+    );
     // Back returns to this address, and the address holds the whole review.
     expect(window.location.hash).toContain("overview=sales");
     expect(window.location.hash).toContain("pipeline=all");
   });
 
-  it("says when comparison with an earlier capture starts", async () => {
+  it("says in one line when movement history starts, with no empty panel", async () => {
     open("#/analytics", bySeat("leader"));
+    const line = await screen.findByText(
+      /^History starts with the next capture, .+\. Movement shows once a second one follows\.$/,
+    );
+    expect(line).toBeVisible();
     expect(
-      await screen.findByText(
-        "Comparison starts after a second compatible capture.",
-      ),
-    ).toBeVisible();
+      screen.queryByRole("region", { name: "Since the last capture" }),
+    ).toBeNull();
   });
 
   it("names a part of a figure the reader may not see and a history the import lacks", async () => {
@@ -303,7 +330,7 @@ describe("Sales review", () => {
     // The withheld figure is never stated as the whole in words.
     expect(screen.queryByText(/Won in/)).toBeNull();
     expect(
-      screen.getByText("Imported deals have no stage history before March."),
+      screen.getByText(/Imported deals have no stage history before March\./),
     ).toBeInTheDocument();
   });
 
@@ -327,150 +354,6 @@ describe("Sales review", () => {
   });
 });
 
-describe("My prospecting", () => {
-  it("states the week's outcomes and the month's targets apart", async () => {
-    open("#/analytics", bySeat("sdr"), { seat: "sdr" });
-    const strip = await readings();
-    expect(strip.getByText("Meetings held")).toBeVisible();
-    expect(strip.getByText("Accepted handoffs")).toBeVisible();
-    expect(strip.getByText("3 leads still waiting for a reply")).toBeVisible();
-    const month = await screen.findByRole("heading", {
-      name: /^Monthly targets, /,
-    });
-    const panel = within(month.closest("section") ?? document.body);
-    expect(panel.getByText("18 of 24")).toBeVisible();
-    // The share reached is the server's attainment, never worked out here.
-    expect(panel.getByText(/75% of target/)).toBeVisible();
-    expect(
-      screen.getByText(/2 handoffs are waiting for a decision/),
-    ).toBeVisible();
-  });
-
-  it("says a measured zero as one", async () => {
-    open(
-      "#/analytics",
-      () =>
-        prospectingEvaluation([
-          metric("meetings_held", null, {
-            coverage: { status: "no_data", withheld: false },
-          }),
-          metric("accepted_opportunities", 0, {
-            coverage: { status: "no_data", withheld: false },
-          }),
-        ]),
-      { seat: "sdr" },
-    );
-    const strip = await readings();
-    expect(strip.getAllByText("0")).toHaveLength(2);
-    expect(screen.getByText(/No handoffs accepted in/)).toBeVisible();
-    expect(screen.getByText(/No meetings held in/)).toBeVisible();
-  });
-
-  it("counts qualified leads and meetings ahead without SDR handoffs", async () => {
-    open("#/analytics", bySeat("sdr"), { seat: "sdr", template: "sales" });
-    // A reader whose own lens is theirs in a sales framework still chose it.
-    const user = userEvent.setup({ delay: null });
-    await user.click(
-      await screen.findByRole("button", { name: "My prospecting" }),
-    );
-    const strip = await readings();
-    expect(strip.getByText("Meetings coming up")).toBeVisible();
-    expect(strip.queryByText("Accepted handoffs")).toBeNull();
-    expect(
-      screen.queryByRole("heading", { name: "Handoffs waiting on others" }),
-    ).toBeNull();
-    expect(screen.getByText(/does not use SDR handoffs/)).toBeVisible();
-    expect(
-      screen.getByText(/An admin can set this up in Setup\./),
-    ).toBeVisible();
-  });
-
-  it("says a failed handoff read failed rather than none waiting", async () => {
-    open("#/analytics", bySeat("sdr"), {
-      seat: "sdr",
-      summary: () => jsonResponse({ title: "Unavailable", status: 503 }, 503),
-    });
-    const heading = await screen.findByRole("heading", {
-      name: "Handoffs waiting on others",
-    });
-    expect(
-      within(heading.closest("section") ?? document.body).getByRole("button", {
-        name: /retry/i,
-      }),
-    ).toBeVisible();
-  });
-
-  it("tells the SDR who sets a missing monthly target", async () => {
-    open(
-      "#/analytics",
-      () => prospectingEvaluation([metric("meetings_held", 4)]),
-      { seat: "sdr" },
-    );
-    expect(await screen.findByText("No monthly target set")).toBeVisible();
-    expect(screen.getByText(/A colleague who manages targets/)).toBeVisible();
-  });
-
-  it("says a monthly figure failed instead of counting it as zero", async () => {
-    open(
-      "#/analytics",
-      () =>
-        prospectingEvaluation([
-          metric("meetings_held", null, {
-            target: 24,
-            coverage: { status: "failed", withheld: false },
-          }),
-        ]),
-      { seat: "sdr" },
-    );
-    const month = await screen.findByRole("heading", {
-      name: /^Monthly targets, /,
-    });
-    const panel = within(month.closest("section") ?? document.body);
-    expect(panel.getByText("Could not be calculated")).toBeVisible();
-    expect(panel.queryByText(/^0 of/)).toBeNull();
-  });
-
-  it("names no workflow's outcome until one is known", async () => {
-    open("#/analytics/overview?overview=prospecting", bySeat("sdr"), {
-      seat: "sdr",
-      framework: () => new Promise<Response>(() => {}),
-      summary: () => new Promise<Response>(() => {}),
-    });
-    const strip = await readings();
-    expect(strip.getByText("Main outcome")).toBeVisible();
-    expect(strip.queryByText("Accepted handoffs")).toBeNull();
-    expect(strip.queryByText("Meetings coming up")).toBeNull();
-    expect(screen.queryByText(/handoffs? accepted/)).toBeNull();
-    expect(screen.queryByText(/does not use SDR handoffs/)).toBeNull();
-  });
-
-  it("says the workflow could not be read when neither source answers", async () => {
-    const failed = () =>
-      jsonResponse({ title: "Unavailable", status: 503 }, 503);
-    open("#/analytics/overview?overview=prospecting", bySeat("sdr"), {
-      seat: "sdr",
-      framework: failed,
-      summary: failed,
-    });
-    expect(
-      await screen.findByText(
-        "Could not read whether this company uses SDR handoffs.",
-      ),
-    ).toBeVisible();
-    const strip = await readings();
-    expect(strip.queryByText("Accepted handoffs")).toBeNull();
-    expect(
-      screen.queryByRole("heading", { name: "Handoffs waiting on others" }),
-    ).toBeNull();
-    const panel = await screen.findByRole("heading", { name: "SDR handoffs" });
-    expect(
-      within(panel.closest("section") ?? document.body).getByRole("button", {
-        name: /retry/i,
-      }),
-    ).toBeVisible();
-  });
-});
-
 describe("Sales review gap", () => {
   it("shows no gap when the comparison carries none", async () => {
     const { gap: _gap, ...withoutGap } = compared;
@@ -480,67 +363,11 @@ describe("Sales review gap", () => {
         : salesEvaluation({ comparison: withoutGap }),
     );
     const strip = await readings();
-    expect(strip.getByText("Not compared")).toBeVisible();
+    const hero = within(screen.getByRole("region", { name: "Sales won" }));
     expect(
-      strip.getByText("The comparison came back without a gap."),
+      hero.getByText("The comparison came back without a gap."),
     ).toBeVisible();
+    expect(hero.queryByText(/Projected/)).toBeNull();
     expect(strip.queryByText("€0")).toBeNull();
-  });
-});
-
-describe("Sales review range", () => {
-  function withRange(over: Record<string, number>) {
-    return (url: URL) =>
-      isMovement(url)
-        ? startingMovement()
-        : salesEvaluation({
-            metrics: [
-              metric("bookings_won", 42_000_000),
-              metric("open_pipeline", 136_000_000),
-              metric("forecast_landing", 76_000_000, {
-                target_comparison: compared,
-                ...over,
-              }),
-            ],
-          });
-  }
-
-  it("states the central 80% of outcomes under the expected finish", async () => {
-    open(
-      "#/analytics",
-      withRange({ range_low_minor: 61_000_000, range_high_minor: 88_000_000 }),
-    );
-    const strip = await readings();
-    expect(
-      strip.getByText("8 in 10 outcomes between €610k and €880k"),
-    ).toBeVisible();
-    expect(strip.getByText("€760k")).toBeVisible();
-  });
-
-  it("gives the range the whole two-line detail and moves the basis into the receipt", async () => {
-    const user = userEvent.setup({ delay: null });
-    open(
-      "#/analytics",
-      withRange({ range_low_minor: 61_000_000, range_high_minor: 88_000_000 }),
-    );
-    const strip = await readings();
-    const card = strip.getByText("Expected finish").closest("section");
-    if (!card) throw new Error("the expected finish is not drawn as a card");
-    expect(card.querySelector(".stat-card-detail")?.textContent).toBe(
-      "8 in 10 outcomes between €610k and €880k",
-    );
-
-    await user.click(within(card).getByRole("button", { name: "Evidence" }));
-
-    expect(
-      await screen.findByText(/^End of this fiscal quarter, from /),
-    ).toBeTruthy();
-  });
-
-  it("draws no range from one end alone", async () => {
-    open("#/analytics", withRange({ range_low_minor: 61_000_000 }));
-    const strip = await readings();
-    expect(strip.getByText("€760k")).toBeVisible();
-    expect(strip.queryByText(/8 in 10 outcomes/)).toBeNull();
   });
 });

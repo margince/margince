@@ -166,6 +166,7 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 	withheld := approvalplan.Withheld(a.Preview)
 	if a.Summary != nil && !withheld {
 		out.Summary = *a.Summary
+		out.SummaryParts = a.SummaryParts
 	}
 	if a.DiffHash != nil {
 		out.DiffHash = *a.DiffHash

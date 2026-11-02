@@ -24,6 +24,7 @@ import {
 import { SIGN_OFF_QUERY } from "../mail/composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import { AuditLogCard } from "./settings-audit";
+import { healthReport } from "./systemhealth.fixtures";
 
 // What a principal is SERVED once an entry opens: the identity and locale
 // surfaces on Account, the rows that read as WITHHELD rather than absent, and
@@ -617,6 +618,23 @@ function mergedEntryBackend(opts: {
         page: { next_cursor: null, has_more: false },
       });
     }
+    if (url.includes("/admin/system-health")) {
+      return jsonResponse({
+        ...healthReport,
+        sources: healthReport.sources.map((source) =>
+          source.id === "search"
+            ? source
+            : {
+                id: source.id,
+                permission: source.permission,
+                scope: source.scope,
+                availability: "withheld",
+                condition: "unknown",
+                code: "withheld",
+              },
+        ),
+      });
+    }
     if (url.includes("/admin/job-health")) {
       return jsonResponse(IDLE_JOB_HEALTH);
     }
@@ -824,7 +842,7 @@ describe("SettingsScreen restructured pages", () => {
   // The job health inside System health, from a seat that reaches the page on
   // the reindex read alone. The page's own gate is not the card's, so this
   // proves opening the page did not also hand over what `job_health` guards.
-  it("renders the reindex on System health for an operator holding only that grant, and withholds job health", async () => {
+  it("opens search diagnostics on the reindex grant without reading job health", async () => {
     vi.stubGlobal(
       "fetch",
       mergedEntryBackend({
@@ -832,7 +850,7 @@ describe("SettingsScreen restructured pages", () => {
         allow: { embedding_reindex: ["read", "update"] },
       }),
     );
-    renderSettings("system-health");
+    renderSettings("system-health", "diagnostics");
     await waitFor(() =>
       expect(
         screen
@@ -844,14 +862,19 @@ describe("SettingsScreen restructured pages", () => {
     expect(
       await screen.findByRole("heading", { name: "Search index" }),
     ).toBeTruthy();
-    // The job report keeps its place and withholds its content. The endpoint is
-    // gated by `job_health`, and an absent card would read as "nothing is queued".
+    // Unauthorized sources are hidden; their absence makes no claim about queue state.
     expect(
-      screen.getByRole("heading", { name: "Background jobs" }),
-    ).toBeTruthy();
+      screen.queryByRole("heading", { name: "Background jobs" }),
+    ).toBeNull();
     expect(
-      screen.getByText(/background job health covers the whole installation/i),
-    ).toBeTruthy();
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([input]) =>
+          String(input instanceof Request ? input.url : input).includes(
+            "/admin/job-health",
+          ),
+        ),
+    ).toBe(false);
   });
 
   // The danger zone moved OFF this page onto an address of its own, and the
@@ -870,7 +893,7 @@ describe("SettingsScreen restructured pages", () => {
         dataResetAvailable: true,
       }),
     );
-    renderSettings("system-health");
+    renderSettings("system-health", "diagnostics");
     expect(
       await screen.findByRole("heading", { name: "Search index" }),
     ).toBeTruthy();

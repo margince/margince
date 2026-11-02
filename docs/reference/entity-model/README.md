@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 340 |
-| Columns | 4063 |
-| Foreign keys | 561 |
+| Tables | 348 |
+| Columns | 4112 |
+| Foreign keys | 569 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -39,10 +39,10 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 146 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 150 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 40 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 43 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 46 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 47 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -91,7 +91,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 30 |
+| [activities](activities.md) | 31 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -99,11 +99,11 @@ erDiagram
 | [assignments](assignments.md) | 2 |
 | [assurance](assurance.md) | 9 |
 | [automation](automation.md) | 3 |
-| [capture](capture.md) | 25 |
+| [capture](capture.md) | 28 |
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
-| [compose](compose.md) | 44 |
+| [compose](compose.md) | 48 |
 | [consent](consent.md) | 20 |
 | [contacts](contacts.md) | 50 |
 | [continuity](continuity.md) | 1 |
@@ -133,7 +133,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 69 | 40 |
+| [`activity`](activities.md#activity) | activities | 69 | 43 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -150,6 +150,7 @@ erDiagram
 | [`activity_participant`](activities.md#activity_participant) | activities | 13 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 8 | 0 |
+| [`activity_reminder_delivery`](activities.md#activity_reminder_delivery) | activities | 3 | 0 |
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
 | [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
@@ -168,8 +169,8 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 34 | 146 |
-| [`approval`](approvals.md#approval) | approvals | 36 | 4 |
+| [`app_user`](identity.md#app_user) | identity | 34 | 150 |
+| [`approval`](approvals.md#approval) | approvals | 37 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
@@ -199,7 +200,7 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 2 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 28 | 2 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 30 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |
@@ -207,10 +208,13 @@ erDiagram
 | [`capture_import`](capture.md#capture_import) | capture | 12 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
+| [`capture_party_admission_cursor`](capture.md#capture_party_admission_cursor) | capture | 4 | 0 |
+| [`capture_party_source`](capture.md#capture_party_source) | capture | 12 | 0 |
+| [`capture_party_source_replay`](capture.md#capture_party_source_replay) | capture | 2 | 0 |
 | [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 22 | 0 |
 | [`capture_sender_override`](capture.md#capture_sender_override) | capture | 7 | 0 |
 | [`capture_sweep_run`](capture.md#capture_sweep_run) | capture | 8 | 0 |
-| [`capture_sync_state`](capture.md#capture_sync_state) | capture | 10 | 0 |
+| [`capture_sync_state`](capture.md#capture_sync_state) | capture | 11 | 0 |
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
 | [`capture_trace`](capture.md#capture_trace) | capture | 12 | 0 |
@@ -219,7 +223,7 @@ erDiagram
 | [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
-| [`comms_outbound`](comms.md#comms_outbound) | comms | 43 | 4 |
+| [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
@@ -296,7 +300,7 @@ erDiagram
 | [`deal_suggestion_evidence`](deals.md#deal_suggestion_evidence) | deals | 7 | 0 |
 | [`dedupe_candidate`](contacts.md#dedupe_candidate) | contacts | 19 | 0 |
 | [`dedupe_scan_state`](contacts.md#dedupe_scan_state) | contacts | 3 | 0 |
-| [`email_signature`](contacts.md#email_signature) | contacts | 9 | 0 |
+| [`email_signature`](contacts.md#email_signature) | contacts | 10 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |
 | [`embedding`](search.md#embedding) | search | 7 | 0 |
 | [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 3 | 0 |
@@ -315,12 +319,16 @@ erDiagram
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
 | [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 33 | 0 |
-| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 37 | 2 |
+| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 39 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 6 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 6 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
+| [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
+| [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
+| [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |
+| [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |
 | [`import_run`](migration.md#import_run) | migration | 34 | 1 |
@@ -354,7 +362,7 @@ erDiagram
 | [`meeting_readiness`](activities.md#meeting_readiness) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
 | [`mfa_recovery_code`](identity.md#mfa_recovery_code) | identity | 5 | 0 |
-| [`notice`](notices.md#notice) | notices | 15 | 0 |
+| [`notice`](notices.md#notice) | notices | 16 | 0 |
 | [`notification_digest_run`](notices.md#notification_digest_run) | notices | 4 | 0 |
 | [`notification_preference`](notices.md#notification_preference) | notices | 5 | 0 |
 | [`oauth_authorization_code`](identity.md#oauth_authorization_code) | identity | 12 | 0 |
@@ -370,7 +378,7 @@ erDiagram
 | [`passport`](identity.md#passport) | identity | 11 | 8 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
-| [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 18 | 0 |
+| [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 21 | 0 |
 | [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
 | [`product`](deals.md#product) | deals | 18 | 1 |
 | [`project`](projects.md#project) | projects | 24 | 12 |
@@ -383,7 +391,7 @@ erDiagram
 | [`provider_run`](integrations.md#provider_run) | integrations | 25 | 5 |
 | [`provider_run_category`](integrations.md#provider_run_category) | integrations | 4 | 0 |
 | [`provider_run_reservation`](integrations.md#provider_run_reservation) | integrations | 6 | 0 |
-| [`raw_capture`](capture.md#raw_capture) | capture | 7 | 1 |
+| [`raw_capture`](capture.md#raw_capture) | capture | 7 | 2 |
 | [`record_assignment`](assignments.md#record_assignment) | assignments | 13 | 0 |
 | [`record_grant`](identity.md#record_grant) | identity | 16 | 0 |
 | [`record_role`](assignments.md#record_role) | assignments | 14 | 1 |
@@ -452,7 +460,7 @@ erDiagram
 | [`voice_profile`](ai.md#voice_profile) | ai | 18 | 5 |
 | [`voice_profile_delta`](ai.md#voice_profile_delta) | ai | 10 | 0 |
 | [`voice_profile_version`](ai.md#voice_profile_version) | ai | 24 | 5 |
-| [`web_form`](webforms.md#web_form) | webforms | 20 | 1 |
+| [`web_form`](webforms.md#web_form) | webforms | 22 | 1 |
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 18 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |

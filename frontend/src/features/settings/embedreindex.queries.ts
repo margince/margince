@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { available } from "../../lib/settingscapability";
@@ -15,11 +16,18 @@ import { holds } from "../../lib/settingscatalog";
 export type ReindexStatus = components["schemas"]["EmbedReindexStatus"];
 export type ReindexIdentities = components["schemas"]["EmbedReindexIdentities"];
 
-// The settings card's status read. A successful confirm's setQueryData (below)
-// seeds it and the banner's identities from the one write.
+// Prefixes keep mutation invalidation independent of the current reader.
 export const embedReindexStatusQueryKey = ["embed-reindex-status"];
 // The app-shell banner's read: the two identities alone, with no backlog scan.
 export const embedReindexIdentitiesQueryKey = ["embed-reindex-identities"];
+export const embedReindexStatusKey = (scope: string | undefined) => [
+  ...embedReindexStatusQueryKey,
+  scope,
+];
+export const embedReindexIdentitiesKey = (scope: string | undefined) => [
+  ...embedReindexIdentitiesQueryKey,
+  scope,
+];
 
 // Whether this installation has an embed lane bound. The status read answers
 // 501 without one, so both surfaces ask this before issuing it.
@@ -28,12 +36,16 @@ export function useEmbedReindexAvailable(): boolean {
 }
 
 export function useEmbedReindexStatus(enabled: boolean, staleTime?: number) {
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   return useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled,
+    queryKey: embedReindexStatusKey(scope),
+    enabled: enabled && visible && scope !== undefined,
     staleTime,
-    queryFn: async (): Promise<ReindexStatus> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
+    queryFn: async ({ signal }): Promise<ReindexStatus> => {
+      const data = unwrap(
+        await api.GET("/embeddings/reindex/status", { signal }),
+      );
       if (!data) {
         throw new Error("malformed reindex status response");
       }
@@ -46,12 +58,16 @@ export function useEmbedReindexIdentities(
   enabled: boolean,
   staleTime?: number,
 ) {
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   return useQuery({
-    queryKey: embedReindexIdentitiesQueryKey,
-    enabled,
+    queryKey: embedReindexIdentitiesKey(scope),
+    enabled: enabled && visible && scope !== undefined,
     staleTime,
-    queryFn: async (): Promise<ReindexIdentities> => {
-      const data = unwrap(await api.GET("/embeddings/reindex/identities"));
+    queryFn: async ({ signal }): Promise<ReindexIdentities> => {
+      const data = unwrap(
+        await api.GET("/embeddings/reindex/identities", { signal }),
+      );
       if (!data) {
         throw new Error("malformed reindex identities response");
       }

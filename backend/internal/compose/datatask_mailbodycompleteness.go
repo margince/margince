@@ -134,6 +134,6 @@ func estimateUnassessedMailBodies(ctx context.Context, q datatask.Querier, maxim
 		return 0, false, err
 	}
 	var count int64
-	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id "+unassessedMailBodyScope+" LIMIT @cap) candidates", pgx.NamedArgs{"cap": maximum + 1}).Scan(&count)
+	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id "+unassessedMailBodyScope+" LIMIT @cap) candidates", pgx.NamedArgs{dataTaskCapArg: maximum + 1}).Scan(&count)
 	return min(count, maximum), count > maximum, err
 }

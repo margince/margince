@@ -21,6 +21,7 @@ import {
   liveOnReturn,
   notePrefetched,
   retryQuery,
+  staleFor,
 } from "./queryclient";
 
 // The data-layer parameters are invisible until they are wrong: a retried 4xx
@@ -107,8 +108,34 @@ describe("the query retry policy", () => {
 describe("the query client defaults", () => {
   it("serves cached data for the pinned staleness window", () => {
     expect(createQueryClient().getDefaultOptions().queries?.staleTime).toBe(
+      staleFor,
+    );
+    expect(staleFor({ queryKey: ["contact360", "p-1"] })).toBe(30_000);
+    expect(staleFor({ queryKey: ["worklist", "handled"] })).toBe(30_000);
+  });
+
+  it("reads Home's day on change and once it is five minutes old", () => {
+    for (const queryKey of [
+      ["worklist", "mine", "all", ""],
+      ["magic"],
+      ["brief"],
+    ]) {
+      expect(liveInterval({ queryKey })).toBe(5 * 60_000);
+      expect(liveOnReturn({ queryKey })).toBe(true);
+      expect(staleFor({ queryKey })).toBe(5 * 60_000);
+      expect(
+        liveOnMount(
+          { queryKey, queryHash: "h", state: { dataUpdatedAt: 0 } },
+          1,
+        ),
+      ).toBe(true);
+    }
+    // Another owner's day or a filtered one is not Home's day.
+    expect(staleFor({ queryKey: ["worklist", "mine", "all", "u-2"] })).toBe(
       30_000,
     );
+    // The reader's own handled list stays live: it is one cheap read.
+    expect(liveInterval({ queryKey: ["worklist", "handled"] })).toBe(60_000);
   });
 
   // FE-PARAM-3 and FE-PARAM-5 are one predicate each rather than a flag, and
@@ -156,7 +183,7 @@ describe("the query client defaults", () => {
   });
 
   it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
-    const day = { queryKey: ["worklist", "mine", "all", ""], queryHash: "day" };
+    const day = { queryKey: ["worklist", "handled"], queryHash: "day" };
     const at = (dataUpdatedAt: number) => ({
       ...day,
       state: { dataUpdatedAt },
@@ -178,29 +205,26 @@ describe("the query client defaults", () => {
     ).toBe(true);
   });
 
-  it("shares Home's day with the queue drawer, and nothing else with a second view", () => {
-    const day = {
-      queryKey: ["worklist", "mine", "all", ""],
-      queryHash: "shared-day",
-      state: { dataUpdatedAt: 10_000 },
-    };
+  it("re-reads a live work read for a second view, unless it is Home's day", () => {
     const handled = {
-      ...day,
       queryKey: ["worklist", "handled"],
       queryHash: "handled",
+      state: { dataUpdatedAt: 10_000 },
     };
-    expect(liveOnMount({ ...day, getObserversCount: () => 1 }, 20_000)).toBe(
-      "always",
-    );
-    expect(liveOnMount({ ...day, getObserversCount: () => 2 }, 20_000)).toBe(
-      true,
-    );
+    expect(liveOnMount(handled, 20_000)).toBe("always");
     expect(
-      liveOnMount({ ...handled, getObserversCount: () => 2 }, 20_000),
-    ).toBe("always");
+      liveOnMount(
+        {
+          ...handled,
+          queryKey: ["worklist", "mine", "all", ""],
+          queryHash: "d",
+        },
+        20_000,
+      ),
+    ).toBe(true);
   });
 
-  it("fetches a live work read once for two views on screen, and again for a later mount", async () => {
+  it("fetches Home's day once for two views on screen, and serves it to a later mount", async () => {
     const client = createQueryClient();
     let fetched = 0;
     const options = {
@@ -221,7 +245,8 @@ describe("the query client defaults", () => {
     stopHome();
     const back = new QueryObserver(client, options);
     const stopBack = back.subscribe(() => {});
-    await vi.waitFor(() => expect(fetched).toBe(2));
+    expect(back.getCurrentResult().fetchStatus).toBe("idle");
+    expect(fetched).toBe(1);
     stopBack();
     client.clear();
   });

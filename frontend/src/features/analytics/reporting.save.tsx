@@ -35,11 +35,14 @@ import { reportRevisionsKey } from "./reporting.versions";
 export function SaveReportingDialog({
   selection: initialSelection,
   report,
+  note,
   onClose,
   onSaved,
 }: Readonly<{
   selection: ReportingSelection;
   report?: ReportingReport;
+  // What saving does not change, said where the reader decides to save.
+  note?: string;
   onClose: () => void;
   onSaved: (report: ReportingReport) => void;
 }>) {
@@ -150,6 +153,7 @@ export function SaveReportingDialog({
         {t(report ? "reporting.edit" : "reporting.save")}
       </Heading>
       {draftOpen && <p className="t-caption">{t("reporting.draftEditNote")}</p>}
+      {note && <p className="t-caption">{note}</p>}
       <form
         id={formId}
         className="form-stack"

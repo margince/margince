@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { rowHref } from "../../lib/worklistcopy";
 import {
   installFetchStub,
   jsonResponse,
@@ -9,7 +10,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { row } from "../../testing/worklist.testkit";
-import { rowHref } from "./worklist.copy";
 import { rowActivityId } from "./worklist.noticesource";
 import { WorklistRow } from "./worklist.row";
 

@@ -95,6 +95,7 @@ func base(
 		Consequence:       consequence,
 		Kind:              item.Kind,
 		Title:             item.Title,
+		SummaryParts:      item.SummaryParts,
 		Detail:            item.Detail,
 		NoticeOrigin:      item.NoticeOrigin,
 		PromiseRecipients: item.PromiseRecipients,

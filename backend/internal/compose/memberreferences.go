@@ -41,6 +41,7 @@ var memberReferences = map[string]memberReference{
 	"activity.host_user_id":                    {disposition: referenceRetain},
 	"activity.invitation_sender":               {disposition: referenceRetain},
 	"activity.sent_by_colleague":               {disposition: referenceRetain},
+	"activity_reminder_delivery.delivered_to":  {disposition: referenceRetain},
 	"activity.source_author_id":                {disposition: referenceRetain},
 	"activity_participant.roster_seat":         {disposition: referenceRetain},
 	"activity_participant.user_id":             {disposition: referenceRetain},
@@ -69,6 +70,7 @@ var memberReferences = map[string]memberReference{
 	"capture_digest.user_id":                   {disposition: referenceRetain},
 	"capture_exclusion.user_id":                {disposition: referenceRetain},
 	"capture_freemail_domain.created_by":       {disposition: referenceRetain},
+	"capture_party_source.user_id":             {disposition: referenceRetain},
 	"capture_import.user_id":                   {disposition: referenceRetain},
 	"capture_owner_identity.user_id":           {disposition: referenceRetain},
 	"capture_owner_identity_withdrawn.user_id": {disposition: referenceRetain},
@@ -139,7 +141,7 @@ var memberReferences = map[string]memberReference{
 	"onboarding_wizard_state.user_id":          {disposition: referenceRetain},
 	"passport.granted_by":                      {disposition: referenceRetain},
 	"passport.on_behalf_of":                    {disposition: referenceRetain},
-	"privacy_notice_case.owner_user_id":        {disposition: referenceResolve, live: `state IN ('open','assigned','queued','delivery_failed','blocked')`, remedy: "privacy_notices"},
+	"privacy_notice_case.owner_user_id":        {disposition: referenceResolve, live: `state IN ('open','assigned','queued','delivery_failed','blocked','source_review')`, remedy: "privacy_notices"},
 	"privacy_notice_case.resolved_by":          {disposition: referenceRetain},
 	"project.owner_id":                         {disposition: referenceHandover, live: memberLiveRows},
 	"project.source_author_id":                 {disposition: referenceRetain},
@@ -182,6 +184,8 @@ var memberReferences = map[string]memberReference{
 	"worklist_done.reader_id":                  {disposition: referenceRetain},
 	"worklist_pin.reader_id":                   {disposition: referenceRetain},
 	"worklist_snapshot.reader_id":              {disposition: referenceRetain},
+	"home_read_cache.reader_id":                {disposition: referenceRetain},
+	"home_read_forgotten.reader_id":            {disposition: referenceRetain},
 }
 
 func memberRetirementBlockers(ctx context.Context, tx pgx.Tx, source ids.UUID) ([]crmcontracts.MemberRetirementBlocker, error) {

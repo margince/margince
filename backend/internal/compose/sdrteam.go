@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -53,7 +55,7 @@ func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Requ
 	// Every figure is read from one snapshot, so they agree with one as_of.
 	err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
-		out, err = readSdrTeamReview(ctx, tx, requested, period, h.now().UTC())
+		out, err = readSdrTeamReview(ctx, tx, h.targets, requested, period, h.now().UTC())
 		return err
 	})
 	if err != nil {
@@ -66,14 +68,15 @@ func (h sdrSummaryHandlers) GetSdrTeamReview(w http.ResponseWriter, r *http.Requ
 // sdrTeamWindow is the half-open span a review counts events in.
 type sdrTeamWindow struct{ from, to time.Time }
 
-func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time) (crmcontracts.SdrTeamReview, error) {
+func readSdrTeamReview(ctx context.Context, tx pgx.Tx, targets sdrTeamTargets, requested RequestedScope, period crmcontracts.ReportingSelectionPeriod, at time.Time) (crmcontracts.SdrTeamReview, error) {
 	// No history of team membership is kept, so a team's figures follow its
 	// members today, and the answer says so.
 	out := crmcontracts.SdrTeamReview{
 		AsOf: at, Workflow: crmcontracts.SdrTeamReviewWorkflowQualification, SmallSampleBelow: sdrTeamSmallSample,
 		MembershipBasis: crmcontracts.SdrTeamReviewMembershipBasisCurrent, Members: []crmcontracts.SdrTeamMember{},
+		WithheldFigures: []crmcontracts.SdrTeamReviewWithheldFigures{},
 	}
-	if err := auth.Require(ctx, contacts.HandoffObject, principal.ActionRead); err != nil {
+	if err := ownReviewOnly(ctx, requested); err != nil {
 		return out, err
 	}
 	resolved, err := ResolveAnalyticsScope(ctx, tx, requested)
@@ -102,6 +105,10 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	if err != nil {
 		return out, err
 	}
+	out.Workflow = figures.workflow
+	if out.WithheldFigures, err = readerWithheldFigures(ctx, figures.workflow); err != nil {
+		return out, err
+	}
 	if owners.IndividualOff {
 		out.MembersWithheld = true
 		// One figure a lone colleague makes up withholds the whole review.
@@ -114,12 +121,34 @@ func readSdrTeamReview(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 			return out, err
 		}
 	}
-	out.Workflow, out.Meetings, out.Handoffs = figures.workflow, figures.meetings, figures.handoffs
+	out.Meetings, out.Handoffs = figures.meetings, figures.handoffs
 	if owners.IndividualOff {
 		return out, nil
 	}
-	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at)
-	return out, err
+	out.Members, out.MembersTruncated, err = readSdrTeamMembers(ctx, tx, requested, owners, window, at, mayReadHandoffs(ctx))
+	if err != nil {
+		return out, err
+	}
+	memberFigures := sdrTeamMemberFigures{
+		targets: targets, workflow: out.Workflow, calendar: calendar,
+		scope: crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(out.Scope.Kind), Id: out.Scope.Id},
+	}
+	return out, memberFigures.apply(ctx, tx, &out, window)
+}
+
+// ownReviewOnly admits an owner review only of the requesting seat itself.
+// The review names each handoff round of the one seat, so a manager or an
+// unbounded seat naming another owner would read one colleague's work. The
+// refusal is a 404, as every analytics scope refusal is.
+func ownReviewOnly(ctx context.Context, requested RequestedScope) error {
+	if requested.Kind != ScopeKindOwner {
+		return nil
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || requested.ID == nil || *requested.ID != actor.UserID {
+		return fmt.Errorf("an owner review reads only your own work: %w", apperrors.ErrNotFound)
+	}
+	return nil
 }
 
 // sdrTeamFigures are a review's team figures, with the seats behind each one
@@ -145,6 +174,9 @@ func readSdrTeamFigures(ctx context.Context, tx pgx.Tx, requested RequestedScope
 		return out, err
 	}
 	out.workflow = crmcontracts.SdrTeamReviewWorkflowHandoff
+	if !mayReadHandoffs(ctx) {
+		return out, nil
+	}
 	handoffs, seats, err := readSdrTeamHandoffs(ctx, tx, requested, window, at)
 	if err != nil {
 		return out, err
@@ -327,15 +359,16 @@ func readWaitingSubmitters(ctx context.Context, tx pgx.Tx, requested RequestedSc
 }
 
 // readHandoffReasons groups the window's rejections and returns by the reason
-// given, most often first.
+// given, most often first. A decision with no reason is a group of its own, so
+// one outcome's groups add up to its count.
 func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope, window sdrTeamWindow) ([]crmcontracts.SdrHandoffReasonCount, [][]ids.UUID, error) {
 	var b reportingBindings
 	_, population, err := analyticsPopulationExpression(ctx, tx, requested, "e.submitter_id_at_change", b.arg, unownedIsExcluded)
 	if err != nil {
 		return nil, nil, err
 	}
-	query := `SELECT e.to_status,r.label,count(*),COALESCE(array_remove(array_agg(DISTINCT e.submitter_id_at_change),NULL),'{}')
- FROM sdr_handoff_event e JOIN sdr_handoff_reason r ON r.id=e.reason_id
+	query := `SELECT e.to_status,COALESCE(r.label,''),r.id IS NOT NULL,count(*),COALESCE(array_remove(array_agg(DISTINCT e.submitter_id_at_change),NULL),'{}')
+ FROM sdr_handoff_event e LEFT JOIN sdr_handoff_reason r ON r.id=e.reason_id
  WHERE e.to_status IN (` + b.add(contacts.HandoffRejected) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + orUnnarrowed(population) + ` AND ` + eventWindowSQL(&b, "e.occurred_at", window) + `
  GROUP BY e.to_status,r.id,r.label ORDER BY count(*) DESC,r.label,r.id LIMIT 50`
 	rows, err := tx.Query(ctx, query, b.values...)
@@ -348,7 +381,7 @@ func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope
 	for rows.Next() {
 		var reason crmcontracts.SdrHandoffReasonCount
 		var behind []ids.UUID
-		if err := rows.Scan(&reason.Outcome, &reason.Label, &reason.Count, &behind); err != nil {
+		if err := rows.Scan(&reason.Outcome, &reason.Label, &reason.Given, &reason.Count, &behind); err != nil {
 			return nil, nil, err
 		}
 		out, seats = append(out, reason), append(seats, behind)
@@ -359,7 +392,9 @@ func readHandoffReasons(ctx context.Context, tx pgx.Tx, requested RequestedScope
 // readSdrTeamMembers reads one row per member the reader may measure, in one
 // statement for the whole team. A member's meetings count every meeting they
 // are credited with, so the rows can add up to more than the team.
-func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, window sdrTeamWindow, at time.Time) ([]crmcontracts.SdrTeamMember, bool, error) {
+// Without handoff read no handoff statement runs, and the handoff counts are
+// absent.
+func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope, owners reporting.MeasurableOwners, window sdrTeamWindow, at time.Time, handoffs bool) ([]crmcontracts.SdrTeamMember, bool, error) {
 	members, truncated, err := sdrTeamMemberPage(ctx, tx, requested, owners)
 	out := []crmcontracts.SdrTeamMember{}
 	if err != nil || len(members) == 0 {
@@ -380,18 +415,16 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
  `
 		meetings, joinMet = "COALESCE(met.n,0)", " LEFT JOIN met ON met.seat=u.id"
 	}
-	submitted, rejected, recycled := b.add(contacts.HandoffSubmitted), b.add(contacts.HandoffRejected), b.add(contacts.HandoffRecycled)
-	query := `WITH ` + met + `ev AS (SELECT e.submitter_id_at_change seat,count(*) FILTER (WHERE e.to_status=` + submitted + `) submitted,
- count(*) FILTER (WHERE e.to_status=` + rejected + `) rejected,count(*) FILTER (WHERE e.to_status=` + recycled + `) recycled
- FROM sdr_handoff_event e WHERE e.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(&b, "e.occurred_at", window) + ` GROUP BY 1),
- won AS (SELECT credit.submitter_id_at_change seat,count(*) n FROM ` + acceptedCreditSQL + `
- WHERE credit.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(&b, "credit.occurred_at", window) + ` GROUP BY 1),
- waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL + `
- WHERE h.status=` + submitted + ` AND ` + cycleByAsOf(&b, at) + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1)
- SELECT u.id,COALESCE(u.display_name,''),` + meetings + `,COALESCE(ev.submitted,0),COALESCE(won.n,0),COALESCE(ev.rejected,0),
- COALESCE(ev.recycled,0),COALESCE(waits.n,0),waits.since
- FROM app_user u` + joinMet + ` LEFT JOIN ev ON ev.seat=u.id LEFT JOIN won ON won.seat=u.id LEFT JOIN waits ON waits.seat=u.id
- WHERE u.id=ANY(` + seats + `) ORDER BY lower(COALESCE(u.display_name,'')),u.id`
+	with, columns, joins := met, "NULL::bigint,NULL::bigint,NULL::bigint,NULL::bigint,NULL::bigint,NULL::timestamptz", ""
+	if handoffs {
+		with += sdrTeamMemberHandoffsSQL(&b, seats, window, at)
+		columns = "COALESCE(ev.submitted,0),COALESCE(won.n,0),COALESCE(ev.rejected,0),COALESCE(ev.recycled,0),COALESCE(waits.n,0),waits.since"
+		joins = " LEFT JOIN ev ON ev.seat=u.id LEFT JOIN won ON won.seat=u.id LEFT JOIN waits ON waits.seat=u.id"
+	}
+	query := `WITH ` + with + `seats AS (SELECT unnest(` + seats + `::uuid[]) id)
+ SELECT u.id,COALESCE(u.display_name,''),` + meetings + `,` + columns + `
+ FROM app_user u` + joinMet + joins + `
+ WHERE u.id IN (SELECT id FROM seats) ORDER BY lower(COALESCE(u.display_name,'')),u.id`
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, false, err
@@ -403,6 +436,20 @@ func readSdrTeamMembers(ctx context.Context, tx pgx.Tx, requested RequestedScope
 		return member, err
 	})
 	return out, truncated, err
+}
+
+// sdrTeamMemberHandoffsSQL is the members' handoff counts as three named
+// statements, ev, won and waits, each ending in a comma for the next.
+func sdrTeamMemberHandoffsSQL(b *reportingBindings, seats string, window sdrTeamWindow, at time.Time) string {
+	submitted, rejected, recycled := b.add(contacts.HandoffSubmitted), b.add(contacts.HandoffRejected), b.add(contacts.HandoffRecycled)
+	return `ev AS (SELECT e.submitter_id_at_change seat,count(*) FILTER (WHERE e.to_status=` + submitted + `) submitted,
+ count(*) FILTER (WHERE e.to_status=` + rejected + `) rejected,count(*) FILTER (WHERE e.to_status=` + recycled + `) recycled
+ FROM sdr_handoff_event e WHERE e.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(b, "e.occurred_at", window) + ` GROUP BY 1),
+ won AS (SELECT credit.submitter_id_at_change seat,count(*) n FROM ` + acceptedCreditSQL + `
+ WHERE credit.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(b, "credit.occurred_at", window) + ` GROUP BY 1),
+ waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL + `
+ WHERE h.status=` + submitted + ` AND ` + cycleByAsOf(b, at) + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1),
+ `
 }
 
 // sdrTeamMemberPage is the first sdrTeamMemberRows members of the scope the

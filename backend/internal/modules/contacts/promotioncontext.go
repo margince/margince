@@ -25,7 +25,7 @@ import (
 
 // promotionContextFormat versions the digest, so a change to the facts it
 // covers refuses approvals staged under the old shape instead of matching them.
-const promotionContextFormat = "employer.v1"
+const promotionContextFormat = "employer.v2"
 
 // employerDomainFacts are what an address says about a company to resolve,
 // read without asking who may see that company.

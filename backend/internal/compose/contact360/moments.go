@@ -58,7 +58,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v5"
+const ruleVersion = "contact-moment-ladder-v6"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -200,6 +200,9 @@ func (said momentCopy) deriveMomentPast(
 	dismissed func(crmcontracts.ContactMoment) bool,
 	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
+	if notice, ok := said.noticeDutyMoment(now, page); ok {
+		return notice
+	}
 	for _, plain := range said.ladder() {
 		rung := proposing(plain, propose)
 		moment, ok := rung(ctx, now, page)

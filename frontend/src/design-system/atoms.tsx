@@ -198,7 +198,7 @@ export function Skeleton({
   height = 14,
 }: Readonly<{
   width: number | string;
-  height?: number;
+  height?: number | string;
 }>) {
   return <div className="skeleton" style={{ width, height }} />;
 }

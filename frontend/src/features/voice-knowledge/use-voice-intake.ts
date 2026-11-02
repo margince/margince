@@ -90,6 +90,9 @@ type UseVoiceIntakeArgs = Readonly<{
   onChanged: () => void;
 }>;
 
+/** What a corpus intake zone reads and drives. */
+export type VoiceIntake = ReturnType<typeof useVoiceIntake>;
+
 export function useVoiceIntake({ profileId, onChanged }: UseVoiceIntakeArgs) {
   const qc = useQueryClient();
   // The keys this profile's sources are ALREADY stored under, read from the

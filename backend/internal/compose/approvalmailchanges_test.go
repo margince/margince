@@ -165,3 +165,83 @@ func TestAChangeEmailSaysWhoMustDecideAChangeTheReaderCannotSee(t *testing.T) {
 		t.Error("the email for a change its reader cannot see is not sent")
 	}
 }
+
+// The proposal line is the summary's sentence. Its field values get lines of
+// their own only where the preview shows no change, so nothing is said twice.
+func TestAChangeEmailShowsTheSummaryFieldsApartFromItsSentence(t *testing.T) {
+	words := mailcopy.For("en")
+	summary := "Update record deal: name=Acme, Inc., +1 more"
+	parts := &crmcontracts.ApprovalSummaryParts{
+		Sentence: "Update record deal", Fields: []crmcontracts.ApprovalSummaryField{{Field: "name", Value: "Acme, Inc."}}, MoreFields: 1,
+	}
+	empty := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{}}
+	got := factsText(changeMailFacts(crmcontracts.Approval{Summary: &summary, SummaryParts: parts, Preview: empty}, words))
+	for _, want := range []string{"Proposal: Update record deal\n", "Name: Acme, Inc.\n", ": +1 more"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("email without preview changes misses %q:\n%s", want, got)
+		}
+	}
+
+	// The preview names `name`, so the summary does not list it again; a field
+	// the preview leaves out is still listed.
+	ready := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{
+		{Field: "name", Before: previewText(previewValueText, "Acme"), After: previewText(previewValueText, "Acme, Inc.")},
+	}}
+	both := &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal", Fields: []crmcontracts.ApprovalSummaryField{
+		{Field: "name", Value: "Acme, Inc."}, {Field: "close_reason", Value: ""},
+	}}
+	got = factsText(changeMailFacts(crmcontracts.Approval{Summary: &summary, SummaryParts: both, Preview: ready}, words))
+	if strings.Contains(got, "Name: Acme, Inc.\n") {
+		t.Errorf("email repeats a field its preview already shows:\n%s", got)
+	}
+	if !strings.Contains(got, "Name: Acme → Acme, Inc.") || !strings.Contains(got, ": —") {
+		t.Errorf("email misses the preview change or the field the preview leaves out:\n%s", got)
+	}
+}
+
+// A digest line is all its reader sees of the approval, so it keeps the values.
+// The single email's subject is the sentence, with the values below it.
+func TestADigestLineKeepsTheSummaryValuesTheSubjectLeavesBelow(t *testing.T) {
+	summary := "Update record deal: name=Acme, Inc."
+	approval := crmcontracts.Approval{Summary: &summary, SummaryParts: &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal"}}
+	if got := digestOrSubjectLine(approval, forDigestLine); got != summary {
+		t.Errorf("digest line = %q, want the whole summary %q", got, summary)
+	}
+	if got := digestOrSubjectLine(approval, forSingleEmail); got != "Update record deal" {
+		t.Errorf("email subject = %q, want the sentence", got)
+	}
+	approval.SummaryParts.Sentence = ""
+	if got := digestOrSubjectLine(approval, forSingleEmail); got != summary {
+		t.Errorf("email subject with an empty sentence = %q, want the whole summary", got)
+	}
+}
+
+// A preview line the email cannot render, here an owner the reader may not
+// see, leaves the summary's own value to be listed. Summary lines share the
+// email's limit with the preview lines.
+func TestAChangeEmailListsWhatThePreviewHidAndCountsItInTheLimit(t *testing.T) {
+	words := mailcopy.For("en")
+	parts := &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal", Fields: []crmcontracts.ApprovalSummaryField{
+		{Field: "owner_id", Value: "u-7"},
+	}}
+	hidden := &crmcontracts.ApprovalPreview{Version: 1, State: previewReadyState, Changes: []crmcontracts.ApprovalPreviewChange{
+		{Field: "owner_id", Before: previewText(previewValueUnavailable, ""), After: previewText("owner", "Rainer")},
+	}}
+	got := factsText(changeMailFacts(crmcontracts.Approval{SummaryParts: parts, Preview: hidden}, words))
+	if !strings.Contains(got, ": u-7") {
+		t.Errorf("email dropped the owner the preview could not render:\n%s", got)
+	}
+
+	full := make([]crmcontracts.ApprovalPreviewChange, mailChangeLimit)
+	for i := range full {
+		full[i] = crmcontracts.ApprovalPreviewChange{
+			Field: fmt.Sprintf("field_%d", i), Before: previewText(previewValueText, "a"), After: previewText(previewValueText, "b"),
+		}
+	}
+	facts := changeMailFacts(crmcontracts.Approval{SummaryParts: parts, Preview: &crmcontracts.ApprovalPreview{
+		Version: 1, State: previewReadyState, Changes: full,
+	}}, words)
+	if got := factsText(facts); strings.Contains(got, "u-7") || !strings.Contains(got, ": +1 more") {
+		t.Errorf("a summary line past the limit was listed or not counted:\n%s", got)
+	}
+}

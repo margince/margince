@@ -106,18 +106,15 @@ func (s *Store) forWorkspace(ws ids.WorkspaceID) *Store {
 	return &Store{db: s.db.ForWorkspace(ws)}
 }
 
-// Hit is one ranked result. Score is scoreExpression over the entity's
-// search_tsv: it orders hits of one type well and hits of different types
-// poorly, since a message body repeating a name outranks the record that
-// bears it — which is what a grouped search (Input.PerType) answers. A contact
-// the employer arm finds scores -1/(1+its employer's rank), below zero, so it
-// follows every hit matched by its own text.
+// Hit carries an authorized lexical result. Identifier tiers precede text
+// ranking; employer-only hits remain negative.
 type Hit struct {
-	Type    string
-	ID      ids.UUID
-	Title   string
-	Snippet string
-	Score   float64
+	Type            string
+	ID              ids.UUID
+	Title           string
+	Snippet         string
+	Score           float64
+	IdentifierMatch *crmcontracts.SearchResultIdentifierMatch
 	// CarriedBy is set on a `tag` hit alone: how many records the caller may
 	// see carry this word. Nil elsewhere, and nil when no counter is bound.
 	CarriedBy *int
@@ -163,6 +160,8 @@ type Input struct {
 	// through a company the query matches. GET /v1/search and search_records ask
 	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
+	// AddressCompanies admits visible recipient-domain associations for interactive discovery.
+	AddressCompanies bool
 	// NearMatches asks an empty first page to offer close names. Anchor
 	// resolution and retrieval leave it unset: they must never resolve to a guess.
 	NearMatches bool
@@ -222,7 +221,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 		headPos, tailPos, hasFragment := bindTypedQuery(query, arg)
 		identifierPos := bindIdentifier(query, arg)
-		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, arg)
+		branches, err := admittedBranchSQL(ctx, types, headPos, tailPos, hasFragment, identifierPos, addressAssociation(in.AddressCompanies), arg)
 		if err != nil {
 			return err
 		}
@@ -309,12 +308,14 @@ func withinClause(within []ids.UUID, arg func(any) int) string {
 	return fmt.Sprintf("id = ANY($%d)", arg(within))
 }
 
+type addressAssociation bool
+
 // admittedBranchSQL builds one ranked SELECT per requested-and-admitted
 // entity type. A hit is a read twice over: object RBAC first (a role
 // without contact.read gets no contact hits — search must not out-see the
 // entity lists), then the row scope.
 func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int, hasFragment bool,
-	identifierPos identifierBinder, arg func(any) int,
+	identifierPos identifierBinder, addressCompanies addressAssociation, arg func(any) int,
 ) ([]string, error) {
 	var branches []string
 	for _, branch := range searchBranches {
@@ -344,52 +345,34 @@ func admittedBranchSQL(ctx context.Context, types []string, headPos, tailPos int
 		if scope != "" {
 			where += " AND " + scope
 		}
+		score := branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos)
+		if branch.entity == entityCompany && addressCompanies {
+			associated := sqlFalse
+			if identifierPos.addressPrefix {
+				match, err := companyAddressMatch(ctx, "t", identifierPos.position(false), arg)
+				if err != nil {
+					return nil, err
+				}
+				associated = match
+			}
+			candidates := fmt.Sprintf("t.id=ANY(ARRAY(SELECT lexical.id FROM company lexical WHERE lexical.search_tsv @@ %s UNION SELECT identified.id FROM company identified WHERE %s UNION SELECT t.id FROM company t WHERE %s))",
+				tsquery, branch.identifier.MatchSQL(identifierPos.position(true), "identified.id"), associated)
+			where = candidates + " AND t.archived_at IS NULL AND " + conjunction(branch.narrowing("t"), scope)
+			score = fmt.Sprintf("(%s + %d * (%s)::int)", score, companyAssociationScore, associated)
+		}
 		source := fmt.Sprintf("%s t WHERE %s", branch.table, where)
 		if branch.rankSample > 0 {
 			source = fmt.Sprintf("(SELECT t.* FROM %s LIMIT $%d) t", source, arg(branch.rankSample))
 		}
 		branches = append(branches, fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
-			        %s::float8 AS score, %s
+			        %s::float8 AS score, %s, %s AS identifier_match
 			 FROM %s`,
 			branch.entity, branch.title, snippet,
-			branch.ownScore("t", scoreExpression(branch.entity, "t", headPos, tailPos, hasFragment), identifierPos),
-			noEmployer, source))
+			score,
+			noEmployer, branch.identifierEvidence("t", identifierPos), source))
 	}
 	return branches, nil
-}
-
-// hitColumns is what every union element projects and both shapes select, in
-// the order scanHits reads it.
-const hitColumns = "rtype, id, title, snippet, score, employer_id, employer_name"
-
-// noEmployer is the employer pair of an element that finds records by their own
-// text. Typed, because an untyped NULL in the first element of a union resolves
-// as text and the arm's uuid then fails the whole statement.
-const noEmployer = "NULL::uuid AS employer_id, NULL::text AS employer_name"
-
-// scanHits materializes the rows of either shape's statement.
-func scanHits(rows pgx.Rows) ([]Hit, error) {
-	var hits []Hit
-	for rows.Next() {
-		var h Hit
-		var title, snippet, employerName *string
-		var employerID *ids.UUID
-		if err := rows.Scan(&h.Type, &h.ID, &title, &snippet, &h.Score, &employerID, &employerName); err != nil {
-			return nil, err
-		}
-		if employerID != nil && employerName != nil {
-			h.WorksAt = &Employer{CompanyID: *employerID, CompanyName: *employerName}
-		}
-		if title != nil {
-			h.Title = *title
-		}
-		if snippet != nil {
-			h.Snippet = strings.TrimSpace(*snippet)
-		}
-		hits = append(hits, h)
-	}
-	return hits, rows.Err()
 }
 
 // BadQueryError maps to a 422 at the transport. Field names WHICH query input

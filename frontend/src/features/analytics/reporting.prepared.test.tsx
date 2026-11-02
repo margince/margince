@@ -98,7 +98,7 @@ it("opens the section that already holds a prepared report", async () => {
   ) as HTMLElement;
   await userEvent
     .setup()
-    .click(within(row).getByRole("button", { name: "Open" }));
+    .click(within(row).getByRole("link", { name: "Open" }));
   expect(window.location.hash).toMatch(/^#\/analytics\/delivery/);
 });
 

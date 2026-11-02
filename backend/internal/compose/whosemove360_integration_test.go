@@ -45,6 +45,7 @@ func (o *owedEnv) accountOf(t *testing.T, name, address string) ids.CompanyID {
 // see a colleague's correspondence at all.
 func (o *owedEnv) shareMailbox(t *testing.T, seat ids.UUID) {
 	t.Helper()
+	o.e.GrantRole(t, seat, "rep")
 	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, seat)
@@ -142,6 +143,7 @@ func TestCompany360ReadsWhoseMoveByTheBadgesRules(t *testing.T) {
 // verdict.
 func TestCompany360DoesNotReadTheMoveOfAMailTheReaderMayNotRead(t *testing.T) {
 	o := setupOwed(t)
+	o.e.GrantRole(t, o.e.Rep2, "rep")
 	colleague := seatAddress(t, o.e, o.e.Rep2)
 	company := o.accountOf(t, "Private Thread GmbH", "pat@private.example")
 	private := o.captureFor(t, o.e.Rep2, colleague, owedMail{

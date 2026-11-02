@@ -15,6 +15,15 @@ import { DateInput, type DateInputProps, isoOrBlank } from "./dateinput";
 import { panelsOpenedFrom } from "./dialogfocus";
 import "./inlinechoice.css";
 
+export const INLINE_COMMIT_KEY = "Enter";
+
+/** A paragraph commits on ⌘/Ctrl+Enter, because Enter there is a newline. */
+export function isParagraphCommit(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">,
+): boolean {
+  return event.key === INLINE_COMMIT_KEY && (event.metaKey || event.ctrlKey);
+}
+
 // Edits a value where it is read, under InlineChoice's save and refusal rules.
 // Typing has no moment of choice, so Enter or leaving the field commits it.
 // One forwarding control holds the line, the day and the paragraph, so their
@@ -432,12 +441,11 @@ export function InlineText({
               void commit(true, settled);
             }}
             onKeyDown={(event) => {
-              // In a paragraph Enter is a newline and the commit moves to
-              // Cmd/Ctrl+Enter; in a line Enter is still the commit.
               if (
-                event.key === "Enter" &&
                 !isImeCommit(event) &&
-                (!multiline || event.metaKey || event.ctrlKey)
+                (multiline
+                  ? isParagraphCommit(event)
+                  : event.key === INLINE_COMMIT_KEY)
               ) {
                 event.preventDefault();
                 void commit(true);

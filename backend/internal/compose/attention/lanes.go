@@ -221,6 +221,7 @@ type Receipt struct {
 	ID              ids.UUID
 	Kind            string
 	Summary         string
+	SummaryParts    *crmcontracts.ApprovalSummaryParts
 	OccurredAt      time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the

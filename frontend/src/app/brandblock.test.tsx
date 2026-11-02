@@ -10,7 +10,6 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
-  MARKER,
   newClient,
   renderWith,
   repSeeing,
@@ -54,10 +53,11 @@ describe("The rail's brand block", () => {
     expect(document.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
       TWO_MARKS.logo_icon_url,
     );
-    // The attribution and the build badge stand beside the link. Neither is
-    // somewhere a press should lead.
+    // The attribution stands beside the link, not in it: it is not somewhere a
+    // press should lead.
     const attribution = document.querySelector(".ws-company");
-    expect(attribution?.textContent).toContain("Powered by Margince");
+    expect(attribution?.textContent).toBe("Powered by Margince");
+    expect(document.querySelector(".railhead-attributed")).toBeTruthy();
     expect(within(brand).queryByText("Powered by Margince")).toBeNull();
     expect(brand.getAttribute("href")).toBe("/#/home");
   });
@@ -127,6 +127,9 @@ describe("The rail's brand block", () => {
     expect(container.querySelector(".ws-name")?.textContent).toBe(
       en["shell.logoAria"],
     );
+    // No company, nothing to attribute: the head is the mark and the name.
+    expect(container.querySelector(".ws-company")).toBeNull();
+    expect(container.querySelector(".railhead-attributed")).toBeNull();
   });
 
   // A company whose site declared no icon has a face rather than a gap. The
@@ -145,30 +148,6 @@ describe("The rail's brand block", () => {
     );
     expect(container.querySelector(".ws-chip img")).toBeNull();
     expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
-  });
-
-  // Every brand branch carries it — the product's own mark, an installation's
-  // logo, an installation with only a monogram. The marker is a fact about the
-  // BUILD, so it does not depend on whether there is a company name above it,
-  // and the branch with nothing to attribute is the one a first-run reader sees.
-  it.each([
-    ["the product's own mark", undefined],
-    ["an installation's logo", TWO_MARKS],
-    [
-      "an installation's monogram",
-      { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
-    ],
-  ])("stamps the stage on the head with %s", (_name, company) => {
-    const client = newClient();
-    if (company) {
-      client.setQueryData(["me"], repSeeing(company));
-    }
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelectorAll(MARKER)).toHaveLength(1);
-    expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
   });
 
   // One shape at both widths: the head never swaps marks when the panel

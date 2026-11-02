@@ -249,6 +249,33 @@ describe("WebFormsCard", () => {
     expect(backend.sent[0]?.body).toMatchObject({ owner_id: "u-42" });
   });
 
+  it("sends the privacy notice and the policy it links to", async () => {
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () => jsonResponse(contactForm, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
+    await user.type(
+      screen.getByLabelText(/^Privacy notice/),
+      "We use your details to answer you.",
+    );
+    await user.type(
+      screen.getByLabelText(/^Privacy policy link/),
+      "https://acme.test/privacy",
+    );
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]?.body).toMatchObject({
+      privacy_notice: "We use your details to answer you.",
+      privacy_notice_url: "https://acme.test/privacy",
+    });
+  });
+
   it("names the owner each form's leads go to", async () => {
     vi.stubGlobal(
       "fetch",

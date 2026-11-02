@@ -227,6 +227,12 @@ export const SETTINGS_SECTIONS = {
   ],
   audit: [],
   "system-health": [
+    "health.history",
+    "embedreindex.statusLabel",
+    "embedreindex.rebuildLabel",
+    "recoveryHealth.lastDrill",
+    "recoveryHealth.lastBackup",
+    "embedreindex.title",
     "dataTasks.title",
     "settings.jobs",
     "settings.extIngest",

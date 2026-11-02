@@ -15,7 +15,7 @@ Margince holds five kinds of record: contacts, companies, leads, deals and proje
 Next to these are **activities** (the timeline of emails, calls, meetings, notes and tasks) and **documents**. Each has its own page.
 
 ### What is the difference between a lead and a deal?
-A lead in Margince is someone you have not qualified yet. A deal is one piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can open a deal in the same step.
+A lead in Margince is someone you have not qualified yet. A deal is one piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can join an existing deal or open a new one in the same step.
 Also called: prospect versus opportunity.
 
 ### What is the difference between a contact and a company?
@@ -37,7 +37,7 @@ Margince asks for fewer links between records than most CRM products.
 | Project → Company | **Required: at least one, always.** |
 | Activity → any record | Not required. One you log with no links is shared with everyone; a captured one with no links stays held. |
 
-**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. Qualifying a lead creates a deal with no company, also for a lead linked to a company.
+**A deal does not need a company.** Name, pipeline, stage and source are required. Value, company and expected close date are not. Value and currency go together: you cannot give one without the other. A deal with no value has no currency either. A deal opened while qualifying a lead takes the contact's employer, when one exists.
 
 A lead's company is plain text until you link it, so imported leads do not create half-filled companies in your CRM. The lead page offers **Link to** a company you can open: the one holding the lead's domain, else the only one with that name. Linking makes the company name on the lead open the company. If you later change the lead's company to another name, the link is removed unless the linked company holds the lead's domain. Linking creates no contact, and the lead keeps its status: someone is a lead or a contact, never both. When you qualify the lead, the contact gets a job link to the linked company, or else to its email domain's company.
 
@@ -83,7 +83,7 @@ To link a contact to a company in Margince, open the contact's page and choose *
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
 3. Tick **This is their current employer** if it is.
 4. Choose **Create**.
-To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**.
+To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
 A company name Margince read for a contact with no current job shows in the **Companies** panel and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open the company that holds the domain, Margince uses it and links the contact. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature.
 ### How do I match a purchased job history entry to a company?
@@ -282,7 +282,7 @@ One activity can link to many records at once, such as a contact and a deal. Eve
 A meeting holds a status: **booked, held, no-show, canceled.** **Activities are never fully deleted.** If something is filed on the wrong record, the fix is **Relink**, not delete.
 
 ### How do I edit or delete a note, call or meeting I logged?
-You cannot edit a logged activity in the Margince app. An activity on the timeline has **Relink**, **Change visibility** (except on email) and **Archive**, all under **More actions** (⋯) on its row, but no Edit. To fix one, log a new activity with the right details; a started meeting with no outcome takes **Update** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
+You cannot edit a logged activity in the Margince app. An activity on the timeline has **Relink**, **Change visibility** (except on email) and **Archive**, all under **More actions** (⋯) on its row, but no Edit. To fix one, log a new activity; a started meeting with no outcome takes **Held** or **Add notes** to [record what came of it](meetings-and-booking.md#how-do-i-record-what-came-of-a-meeting). You can still move an open task with **Move to** (a new date), **Snooze 1 day** or **Done**. To move an activity to the right record, choose **Relink** and search under "Search contacts, companies, deals, leads or projects". Tick **Replace existing link** to change the link and not add one, then choose **Relink**.
 
 To take an activity off the History, choose **Archive** and confirm. You may archive a note or task you wrote yourself, including one your agent logged for you. Captured email, meetings, calls and a colleague's notes need a role that may delete activities: Team lead, Management, Ops or Admin. Anyone else sees **Archive** greyed out with the reason.
 Also called: fix a note, delete a note, remove a duplicate note, change a task's due date, move an email.

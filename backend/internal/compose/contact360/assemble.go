@@ -235,6 +235,9 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNetwork, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.networkSection(ctx, tx, contactID, now, out)
 		}},
+		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedPrivacyNoticeDuties, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
+			return s.noticeDutiesSection(ctx, tx, contactID, out)
+		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.consentSection(ctx, tx, contactID, out)
 		}},

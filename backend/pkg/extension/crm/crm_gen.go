@@ -258,6 +258,48 @@ func (e ActivityAuthorKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityEmailTargetEntityType.
+const (
+	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
+	ActivityEmailTargetEntityTypeContact ActivityEmailTargetEntityType = "contact"
+	ActivityEmailTargetEntityTypeLead    ActivityEmailTargetEntityType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the ActivityEmailTargetEntityType enum.
+func (e ActivityEmailTargetEntityType) Valid() bool {
+	switch e {
+	case ActivityEmailTargetEntityTypeCompany:
+		return true
+	case ActivityEmailTargetEntityTypeContact:
+		return true
+	case ActivityEmailTargetEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityEmailTargetRefusal.
+const (
+	Archived   ActivityEmailTargetRefusal = "archived"
+	LeadClosed ActivityEmailTargetRefusal = "lead_closed"
+	NoAddress  ActivityEmailTargetRefusal = "no_address"
+)
+
+// Valid indicates whether the value is a known member of the ActivityEmailTargetRefusal enum.
+func (e ActivityEmailTargetRefusal) Valid() bool {
+	switch e {
+	case Archived:
+		return true
+	case LeadClosed:
+		return true
+	case NoAddress:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -1634,6 +1676,9 @@ type Activity struct {
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
+	// EmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
+	EmailTarget *ActivityEmailTarget `json:"email_target,omitempty"`
+
 	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
 	Guests *[]MeetingGuest `json:"guests,omitempty"`
 
@@ -1675,7 +1720,7 @@ type Activity struct {
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
-	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for.
 	OffersEmail bool                    `json:"offers_email"`
 	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
@@ -1765,6 +1810,21 @@ type ActivityAuthor struct {
 
 // ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
+
+// ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
+type ActivityEmailTarget struct {
+	EntityId   string                        `json:"entity_id"`
+	EntityType ActivityEmailTargetEntityType `json:"entity_type"`
+
+	// Refusal Why no email goes to the target: `archived` for an archived contact, `no_address` for a contact or lead with no address an email may use, and `lead_closed` for a lead that was promoted or disqualified.
+	Refusal *ActivityEmailTargetRefusal `json:"refusal,omitempty"`
+}
+
+// ActivityEmailTargetEntityType defines model for ActivityEmailTarget.EntityType.
+type ActivityEmailTargetEntityType string
+
+// ActivityEmailTargetRefusal Why no email goes to the target: `archived` for an archived contact, `no_address` for a contact or lead with no address an email may use, and `lead_closed` for a lead that was promoted or disqualified.
+type ActivityEmailTargetRefusal string
 
 // ActivityFollowUpTask defines model for ActivityFollowUpTask.
 type ActivityFollowUpTask struct {
@@ -1931,7 +1991,7 @@ type Company struct {
 	// viewer's role lacks computed_field:read visibility (STATE-4).
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
-	// ContactCount How many live contacts THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
 	ContactCount *int      `json:"contact_count,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -2936,6 +2996,8 @@ type SourceAuthor struct {
 
 // SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
 type SourceQuoteProof struct {
+	// Cut How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
+	Cut    *int   `json:"cut,omitempty"`
 	End    int    `json:"end"`
 	Sha256 string `json:"sha256"`
 	Start  int    `json:"start"`
@@ -2943,6 +3005,15 @@ type SourceQuoteProof struct {
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
 type WebFormConsent struct {
+	// FormId The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+	FormId *string `json:"form_id,omitempty"`
+
+	// FormName The form's name when it was sent. Absent on an older record.
+	FormName *string `json:"form_name,omitempty"`
+
+	// PageUrl The page the form was sent from, as `page_url` keeps it. Absent when the form sent none.
+	PageUrl *string `json:"page_url,omitempty"`
+
 	// PolicyVersion The privacy policy version the form named, when it named one.
 	PolicyVersion *string `json:"policy_version,omitempty"`
 	Ticked        bool    `json:"ticked"`
@@ -3226,6 +3297,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'email_summary': %w", err)
 		}
 		delete(object, "email_summary")
+	}
+
+	if raw, found := object["email_target"]; found {
+		err = json.Unmarshal(raw, &a.EmailTarget)
+		if err != nil {
+			return fmt.Errorf("error reading 'email_target': %w", err)
+		}
+		delete(object, "email_target")
 	}
 
 	if raw, found := object["guests"]; found {
@@ -3653,6 +3732,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["email_summary"], err = json.Marshal(a.EmailSummary)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'email_summary': %w", err)
+		}
+	}
+
+	if a.EmailTarget != nil {
+		object["email_target"], err = json.Marshal(a.EmailTarget)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email_target': %w", err)
 		}
 	}
 

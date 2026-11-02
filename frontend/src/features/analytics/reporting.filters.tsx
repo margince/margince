@@ -29,12 +29,15 @@ export function ReportingFilters({
   selection,
   onChange,
   showScope = true,
+  showPeriod = true,
   showPipeline = true,
   showTargets = true,
   showCloseWindow = showPipeline,
   dates: controlledDates,
 }: Readonly<{
   showScope?: boolean;
+  // False leaves the period and its dates to a control elsewhere on the page.
+  showPeriod?: boolean;
   showPipeline?: boolean;
   showTargets?: boolean;
   showCloseWindow?: boolean;
@@ -99,25 +102,27 @@ export function ReportingFilters({
           }
         />
       )}
-      <Field label={t("reporting.period")}>
-        {(field) => (
-          <Select
-            {...field}
-            value={selection.period}
-            options={REPORTING_PERIODS.map((value) => ({
-              value,
-              label: t(`reporting.${value}`),
-            }))}
-            onChange={(value) => {
-              const period = REPORTING_PERIODS.find(
-                (candidate) => candidate === value,
-              );
-              if (period) onChange({ ...selection, period });
-            }}
-          />
-        )}
-      </Field>
-      {selection.period === "custom" && (
+      {showPeriod && (
+        <Field label={t("reporting.period")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={selection.period}
+              options={REPORTING_PERIODS.map((value) => ({
+                value,
+                label: t(`reporting.${value}`),
+              }))}
+              onChange={(value) => {
+                const period = REPORTING_PERIODS.find(
+                  (candidate) => candidate === value,
+                );
+                if (period) onChange({ ...selection, period });
+              }}
+            />
+          )}
+        </Field>
+      )}
+      {showPeriod && selection.period === "custom" && (
         <>
           <Field label={t("reporting.fromDate")}>
             {(field) => (

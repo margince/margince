@@ -28,6 +28,19 @@ import (
 // the write uses. A second list here drifted from linkTargets and silently
 // dropped two kinds: an activity could be linked to a lead or a project and
 // then be unfindable by filtering on the very link that was just written.
+// appendEntityLinkClauses narrows the read to one record's activities, when
+// the input names one.
+func appendEntityLinkClauses(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.EntityType == nil || in.EntityID == nil {
+		return where, nil
+	}
+	entityWhere, err := entityLinkFilter(in, arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, entityWhere...), nil
+}
+
 func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string, err error) {
 	column := linkColumn(*in.EntityType)
 	if column == "" {
@@ -83,7 +96,8 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	// further away is a gate that census cannot see — and a reader it cannot
 	// see reads as one that excludes no held row.
 	gate := auth.ActivityDiscoverClause
-	if filtersOnContent(in) {
+	contentGated := filtersOnContent(in)
+	if contentGated {
 		// A filter over the subject, the body or the thread key is a READ of
 		// them: a withheld row that matched would tell the caller what it says
 		// through has_more and the page boundary. Such a list is content-gated,
@@ -97,21 +111,24 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if scope != "" {
 		where = append(where, scope)
 	}
-	content, err = auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, "", nil, nil, err
+	// The content gate holds the audience arm, so every row it lets through
+	// has its content available. A second copy would only cost planning.
+	content = sqlTrue
+	if !contentGated {
+		if content, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, "", nil, nil, err
+		}
 	}
 	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
 	where = append(where, timelineNarrowings(in, reminders, arg)...)
-	if in.EntityType != nil && in.EntityID != nil {
-		entityWhere, entityErr := entityLinkFilter(in, arg)
-		if entityErr != nil {
-			return nil, "", nil, nil, entityErr
-		}
-		where = append(where, entityWhere...)
+	if where, err = appendOutsidePartyClause(in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
+	if where, err = appendEntityLinkClauses(in, arg, where); err != nil {
+		return nil, "", nil, nil, err
 	}
 	if in.LinkedToDeals != nil {
 		where = append(where, sprintf(
@@ -185,6 +202,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	}
 	if in.AnswersThem {
 		where = append(where, answersThemSQL)
+	}
+	if in.onlyID != nil {
+		where = append(where, sprintf("a.id = $%d", arg(*in.onlyID)))
 	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)

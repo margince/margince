@@ -90,7 +90,8 @@ func (f *sdrFixture) page(ctx context.Context, t *testing.T, owner ids.UUID, cur
 
 func sdrServe(ctx context.Context, t *testing.T, e *forecastEnv, call func(sdrSummaryHandlers, http.ResponseWriter, *http.Request), at time.Time) []byte {
 	t.Helper()
-	h := newSdrSummaryHandlers(InstallationDB(e.Pool), func() time.Time { return at })
+	clock := func() time.Time { return at }
+	h := newSdrSummaryHandlers(InstallationDB(e.Pool), clock).withTargets(newReportingService(e.Pool, clock))
 	w := httptest.NewRecorder()
 	call(h, w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx))
 	if w.Code != http.StatusOK {

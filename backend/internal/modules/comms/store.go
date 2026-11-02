@@ -69,7 +69,8 @@ type Store struct {
 	// default: a role that transmits without one files every sent message
 	// under an identity that exists nowhere on the wire, and duplicates it on
 	// the timeline, silently.
-	identity MessageIdentityReconciler
+	identity       MessageIdentityReconciler
+	partyAdmission func(context.Context, ids.ActivityID) error
 	// bounce is told when a delivery dies permanently, so the module owning
 	// communication policy can stop writing to the address. An OPTION rather
 	// than a required parameter, unlike identity beside it: a store without one
@@ -300,6 +301,7 @@ func (s *Store) RecordSent(ctx context.Context, id ids.UUID, receipt connector.S
 		return err
 	}
 	s.reconcileIdentity(ctx, id, activityID, staged, receipt.RFC822MessageID)
+	s.admitSentParties(ctx, activityID)
 	return nil
 }
 
@@ -330,7 +332,7 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		arg := func(v any) string { args = append(args, v); return "$" + strconv.Itoa(len(args)) }
 		query := `
 			UPDATE comms_outbound
-			   SET status = 'sent', provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(s.now().UTC()) + `,
+			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(s.now().UTC()) + `,
 			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(` + arg(receipt.FromAddress) + `, ''), from_address)
 			 WHERE id = ` + arg(id) + ` AND status = 'pending'
 			RETURNING activity_id, coalesce(message_id, '')`

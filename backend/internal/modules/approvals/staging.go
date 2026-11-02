@@ -372,6 +372,11 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// the agent or an inbound sender could have written. Sanitizing at the
 	// one place every staging passes through means no stager can bypass it.
 	in.Summary = SanitizeSummary(in.Summary)
+	in.SummaryParts = SanitizeSummaryParts(in.SummaryParts)
+	summaryParts, err := marshalSummaryParts(in.SummaryParts)
+	if err != nil {
+		return ids.ApprovalID{}, err
+	}
 	pins, err := s.resolveStagingPins(ctx, tx, in)
 	if err != nil {
 		return ids.ApprovalID{}, err
@@ -404,9 +409,9 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
 			                       bundle_id, evidence, requested_decider_id, requested_decider_source,
-			                       staged_in_conversation_of, context_digest)
+			                       staged_in_conversation_of, context_digest, summary_parts)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-			         now() + $17::interval, $18, $19, $20, $21, $22, $23)
+			         now() + $17::interval, $18, $19, $20, $21, $22, $23, $24)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID), nullUUID(p.ConnectionID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
@@ -414,7 +419,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
 		nullUUID(in.BundleID), evidence, decider.member, string(decider.source),
-		nullUUID(conversationOf(ctx, p)), nullStr(pins.context)).Scan(&expiresAt); err != nil {
+		nullUUID(conversationOf(ctx, p)), nullStr(pins.context), summaryParts).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()

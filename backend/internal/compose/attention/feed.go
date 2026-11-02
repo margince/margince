@@ -180,6 +180,9 @@ type Service struct {
 	// employers is OPTIONAL in the same way: nil means a meeting row names who
 	// it was with and not which account they work for.
 	employers ContactEmployers
+	// organizers is OPTIONAL in the same way: nil means a meeting row names
+	// whose calendar it came off as its host.
+	organizers MeetingOrganizers
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves        DealMoves

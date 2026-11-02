@@ -920,7 +920,7 @@ Payload for email_signature.changed. A member wrote, edited or cleared the sign-
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
-| `data.has_signature` | boolean | yes | Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned". |
+| `data.has_signature` | boolean | yes | Whether the member has saved personal plain text or HTML. This reports stored presence; sanitized HTML without visible text uses the usual fallback. A workspace template or closing may still sign mail when this is false. |
 
 ### `engagement.reply`
 

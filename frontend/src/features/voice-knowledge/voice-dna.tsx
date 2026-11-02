@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
@@ -21,6 +25,7 @@ import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useVoiceProfile } from "../../lib/voice-profile";
+import { useVoiceIntake, type VoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 import {
   SharpenStrip,
@@ -55,16 +60,37 @@ export type VoiceProfile = components["schemas"]["VoiceProfile"];
 // owner's own profile, its corpus, and its builds. A profile that does not
 // exist yet is ONE card, because a heading over an empty body describes a
 // surface the owner does not have.
+// Every read a corpus change moves, by key prefix. An owner has one profile,
+// so the prefix reaches the new profile's reads as well as the old one's.
+function invalidateVoiceCorpus(qc: QueryClient) {
+  for (const key of [
+    "voice-profile",
+    "voice-sources",
+    "voice-versions",
+    "voice-deltas",
+    "voice-learning",
+  ]) {
+    qc.invalidateQueries({ queryKey: [key] });
+  }
+}
+
 export function VoiceDnaCard() {
   const t = useT();
   const canCreate = useCanWrite("voice_profile", "create");
   const qc = useQueryClient();
   const profile = useVoiceProfile();
+  // Owned above the empty and profile branches. The first sample mints the
+  // profile and swaps one branch for the other. The files still in flight then
+  // belong to the card that remains.
+  const intake = useVoiceIntake({
+    profileId: profile.data?.id ?? null,
+    onChanged: () => invalidateVoiceCorpus(qc),
+  });
   return (
     <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>
         data ? (
-          <VoiceDnaBody profile={data} />
+          <VoiceDnaBody profile={data} intake={intake} />
         ) : (
           // A profile is minted by the first add rather than by a step of
           // its own, so the add control renders here too. Without it an owner
@@ -82,13 +108,7 @@ export function VoiceDnaCard() {
                   create grant rather than the update one. */}
               {canCreate && (
                 <SettingList bleed="settings">
-                  <VoiceCorpusIntake
-                    first
-                    profileId={null}
-                    onChanged={() =>
-                      qc.invalidateQueries({ queryKey: ["voice-profile"] })
-                    }
-                  />
+                  <VoiceCorpusIntake first intake={intake} />
                 </SettingList>
               )}
             </Panel>
@@ -168,7 +188,10 @@ function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
 
 // A profile that exists is one long page about the voice. It runs from who the
 // writer is to the builds behind it, and the jump bar reaches each section.
-function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
+function VoiceDnaBody({
+  profile,
+  intake,
+}: Readonly<{ profile: VoiceProfile; intake: VoiceIntake }>) {
   const t = useT();
   // useCanWrite, not useCan: every affordance these children hold issues a
   // mutation, and the seat ceiling has to fold in — a read seat holding the
@@ -179,13 +202,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   // a sample is still arriving has to be held by the parent they share.
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [deltasAsked, setDeltasAsked] = useState(false);
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["voice-profile"] });
-    qc.invalidateQueries({ queryKey: ["voice-sources", profile.id] });
-    qc.invalidateQueries({ queryKey: ["voice-versions", profile.id] });
-    qc.invalidateQueries({ queryKey: ["voice-deltas", profile.id] });
-    qc.invalidateQueries({ queryKey: ["voice-learning", profile.id] });
-  };
+  const invalidate = () => invalidateVoiceCorpus(qc);
   const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
@@ -269,11 +286,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
           />
           {canEdit && (
             <SettingList bleed="settings">
-              <VoiceCorpusIntake
-                profileId={profile.id}
-                onChanged={invalidate}
-                onBusyChange={setIntakeBusy}
-              />
+              <VoiceCorpusIntake intake={intake} onBusyChange={setIntakeBusy} />
             </SettingList>
           )}
         </Panel>

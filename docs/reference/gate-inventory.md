@@ -99,10 +99,11 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a mailbox is answered on both sides of the wire, and the two answers must be the same three names. |
 | `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as withheld, or the screen states something false. |
+| `frontendmessagevoice_test.go` | H3 | _(no doc comment)_ |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
 | `frontendnoevidencemarker_test.go` | H3 | The server stores one sentence for a manual signal whose evidence was taken away. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
-| `frontendphoneparse_test.go` | H3 | The browser reads a phone number with ParsePhone's separators, dial prefix and E.164 pattern. |
+| `frontendphoneparse_test.go` | H3 | The browser reads a phone number with ParsePhone's trunk mark, separators, dial prefix and E.164 pattern. |
 | `frontendportfaultcopy_test.go` | H3 | A port error that answers a reader with its own code through MessageFault needs catalog copy on the screen. |
 | `frontendpriceinput_test.go` | H3 | The frontend's price pattern accepts what the server's price parser and the contract pattern accept, so a value the form lets through is not refused for its shape. |
 | `frontendproblemcodecopy_test.go` | H3 | Every problem code an httperr builder sends for a reader has catalog copy on the screen, keyed by the wire code (PROBLEM\_CODE\_COPY in problemcodecopy.ts). |
@@ -332,6 +333,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
 | `jobcensus_test.go` | H3 | Every job kind api/jobs.yaml declares is wired in internal/compose, and every wired kind is declared. |
+| `jobregistration_test.go` | H2 | The unexported marker can be implemented only in compose, including its tests. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for one workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
 | `laneinputscope_test.go` | H3 | A path-filtered lane runs on a change to the scripts it executes. |
 | `leadcontactlockorder_test.go` | H2 | One lock order over the lead and the contact it was promoted into. |
@@ -341,6 +343,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `likeescape_test.go` | H2 | A LIKE whose pattern carries a caller's text escapes the wildcards in it. |
 | `linktargetvisiblecallers_test.go` | H3 | A read that shows the caller where an activity is filed asks auth.LinkTargetReadableClause, which also requires the read grant on the linked record's type. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
+| `listedmailfilesingle_test.go` | H2 | The rules that keep a mail file off a Documents list are spelled once. |
 | `machineryapplied_test.go` | H2 | Every setting read through an ungated machinery reader (settings.ApplyTx or settings.ApplyManyTx) is declared MachineryApplied. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in one place, and that place spends the token that earns it. |
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
@@ -361,6 +364,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `moneysum_test.go` | H2 | Money this product computes has its arithmetic held by the database. |
 | `narrowindextwin_test.go` | H2 | A partial index whose columns already carry an unpredicated one says why it is worth a second B-tree on every write. |
 | `noopsaveinert_test.go` | H2 | A save that changes nothing changes nothing. |
+| `noticeassessmentsources_test.go` | H3 | _(no doc comment)_ |
 | `noticecasecolumns_test.go` | H2 | One SELECT list per whole-row read in the consent package. |
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
@@ -477,7 +481,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `liveprobelock_test.go` | H2 | A live-probed write of a held row locks its subject. |
 | `messagingpackreach_test.go` | H2 | Every messaging rule set a shipped unit declares is one the boot registers. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
-| `rbacgate_test.go` | H2 | Every exported method on a module's \*Store or \*Service (the seam both the HTTP handlers and the MCP tool surface call through) references the platform auth gate (object RBAC and/or the row-scope spellings), directly or through a same-package helper. |
+| `rbacgate_test.go` | H2 | Store and Service entry points must reach an auth gate or carry a ratified reason. |
 | `relayhandler_test.go` | H2 | Every method wearing the event-relay handler shape is wired to the bus. |
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | A replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
@@ -596,6 +600,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `pipefailgrepq_test.go` | H2 | A shell gate does not decide its verdict through a pipe that can break. |
 | `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | No prompt may declare a data boundary the writer of that data can spell. |
+| `promptminorunits_test.go` | H2 | No struct that is JSON-encoded into a model prompt carries a money amount in minor units. |
 | `proposedchangenumbers_test.go` | H2 | A proposed change is decoded by diffhash, never by a plain Unmarshal. |
 | `publicreferences_test.go` | H1 | This repository is public. |
 | `purgeexecutor_test.go` | H2 | What a selected purge does to a message is written once. |
@@ -644,6 +649,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `renovatelockfileage_test.go` | H3 | The lockfile refresh is not held back by the repo-wide release-age floor. |
 | `reviewoutcome_test.go` | H2 | Every way a held message can settle closes its review. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
+| `searchmembership_test.go` | H2 | _(no doc comment)_ |
 | `signatureeligibilityonespelling_test.go` | H2 | One spelling of "may this message be mined for this contact's signature", held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the only one of its kind is a claim a test must hold. |
 
@@ -666,7 +672,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
-| `jobkindgate_test.go` | H2 | The registration gate's own falsification. |
+| `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |

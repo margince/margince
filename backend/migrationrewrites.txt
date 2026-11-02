@@ -46,3 +46,9 @@
 1793397376_a_partner_stage_comes_from_a_list.down.sql | partner | runs only on a rollback and rewrites the partner table once, one row per partner company
 1793445932_a_mail_without_its_original_says_so.down.sql | activity | runs only on a rollback and moves back only mail the upgrade marked unverifiable: legacy captured mail stored before completeness was recorded whose original is gone, a fixed set no new capture adds to
 1793445933_a_mail_without_its_original_says_so_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793514621_notice_source_assessment.down.sql | * | the procedural block only checks whether source evidence exists and refuses before DDL; it rewrites no rows
+1793531111_notice_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793536357_a_website_forms_privacy_notice_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793594630_home_reads_are_cached_behind_an_access_fence.up.sql | * | the trigger functions advance one counter row in the new home_read_fence table and rewrite no existing row; the one INSERT seeds that singleton row in the table this migration creates
+1793612292_the_home_fence_moves_only_when_reach_narrows.up.sql | * | the trigger functions advance the one home_read_fence row and rewrite no existing row; the dropped columns are on the table of cached answers and the one counter row
+1793612292_the_home_fence_moves_only_when_reach_narrows.down.sql | *, home_read_cache | the restored trigger functions advance the one home_read_fence row and rewrite no existing row; the added columns carry a constant default; the DELETE drops the cached receipts, per-reader derived state

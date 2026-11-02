@@ -1032,6 +1032,7 @@ export const jobHealth: components["schemas"]["JobHealth"] = {
 // A mailbox with a backlog and every sweep on schedule, so the sweeps measure
 // the card's tables rather than its failed read.
 export const captureHealth: components["schemas"]["CaptureHealth"] = {
+  connection_concerns: [],
   generated_at: "2026-07-05T06:20:00Z",
   mailboxes: [
     {

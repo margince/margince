@@ -33,6 +33,7 @@ export function useConnectors(
     /** False holds the request without leaving the key: a reader that only
      *  wants the answer when it already exists still shares the one entry. */
     enabled?: boolean;
+    refreshHealth?: boolean;
     refetchOnWindowFocus?: boolean | "always";
   }>,
 ) {
@@ -57,7 +58,9 @@ export function useConnectors(
     },
     // Live while a mailbox imports: the orb, the capture chip and the import
     // dialog all draw the run from this read.
-    refetchInterval: (query) => connectorsPollInterval(query.state.data),
+    refetchInterval: (query) =>
+      connectorsPollInterval(query.state.data) ||
+      (options?.refreshHealth ? 60_000 : false),
   });
 }
 

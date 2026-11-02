@@ -260,6 +260,7 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		ExpiresAt:  &a.ExpiresAt,
 		DecidedAt:  a.DecidedAt,
 	}
+	out.SummaryParts = readSummaryParts(a.SummaryParts)
 	if recipient := requestedDecider(a); !recipient.IsZero() {
 		out.RequestedDeciderId = new(openapi_types.UUID(recipient))
 	}

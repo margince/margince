@@ -62,6 +62,7 @@ var companyGate = objectGate{
 // than in the gated set: removing the company condition could only WIDEN the
 // result the caller already sees.
 var predicateCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/unknownemploymentrepair.go:unknownEmploymentCandidate":  "a company liveness check only narrows the system data task repair and its relationship-authorized size estimate; no company field or identity leaves the predicate",
 	"internal/modules/contacts/sitereadlogo.go:logoUnwornByAnyCompany":                 "the NOT EXISTS that keeps a parked logo key while any company wears it, inside the release UPDATE on site_read. Nothing of a company is selected; removing it could only release more keys",
 	"internal/compose/dealscoutbuyer.go:scoutBuyerSignal":                              "company liveness only narrows verified buyer eligibility; the predicate returns no company fields, and the suggestion or signal reader separately checks the named company",
 	"internal/modules/deals/legalreviewview.go:readPacketNames":                        "names the company of a stored review pack at each open, so no copy outlives an erasure or rename. packetWire shows it only when readReviewerSight says the reader may see that company now",
@@ -151,6 +152,8 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X. rbacgate_test.go's header records being bitten by exactly that.
 var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/emailtarget.go:companyCandidatesSQL":             "the record an email about a written-about row goes to (activities.emailTargets). linkedCandidates asks auth.ReadGranted for the object it reads and renders that object's row scope, so a caller with no company grant is told about none; the census cannot see it because the object arrives as a PARAMETER",
+	"internal/modules/search/store.go:admittedBranchSQL":                          "builds the company candidate union only after branchScope admits the company object; the outer company row retains that same scope before ranking and truncation",
 	"internal/modules/approvals/offerdecidable.go:offeredRecordQueries":           "whether an offered record is still live, for the colleague it is offered to; only ids leave. Its one caller is decidableRows, which first requires the decision grants (update on the record type) and the payload naming the reader as receiver",
 	"internal/compose/ownershiptransfernotice.go:transferRecords":                 "the owner and name of a record a handover request moves. Read for the decision precheck and the line telling the colleague who asked, under the decider, whose decision grants already required update on the record type, or under the expiry sweep's system principal; the name goes only to the colleague who asked for that record while they could see it",
 	"internal/compose/assurancesignals.go:assuranceSignalSubjectsQuery":           "the statement AssuranceSignalSubjects runs, its one caller, which asks the company, signal and activity read gates first",

@@ -147,7 +147,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-37 columns · primary key `(id)` · referenced by 2 foreign keys
+39 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -163,6 +163,8 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `forward_measure` | `text` |  | One of `commit_evidence`, `weighted`, `manager_call`. |
 | `fx_missing_count` | `integer` | yes |  |
 | `input_fingerprint` | `text` |  |  |
+| `landing_call_minor` | `bigint` |  |  |
+| `landing_measure` | `text` |  | One of `commit_evidence`, `weighted`, `manager_call`. |
 | `local_day` | `date` | yes |  |
 | `open_minor` | `bigint` | yes |  |
 | `period_end` | `date` | yes |  |
@@ -202,6 +204,9 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_snapshot_counts_are_tallies`: `CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count)))`
 - `forecast_snapshot_evidence_minor_js_safe`: `CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_forward_measure_known`: `CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
+- `forecast_snapshot_landing_call_is_the_landing`: `CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'))))`
+- `forecast_snapshot_landing_call_minor_js_safe`: `CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint)))`
+- `forecast_snapshot_landing_measure_known`: `CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['commit_evidence', 'weighted', 'manager_call']))))`
 - `forecast_snapshot_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_period_ordered`: `CHECK ((period_end >= period_start))`
 - `forecast_snapshot_qualified_policy_present`: `CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> '')))`

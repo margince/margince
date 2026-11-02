@@ -23,11 +23,11 @@ import {
   startingMovement,
   teamEvaluation,
 } from "../features/analytics/analytics.overview.testkit";
-import { removeStored, STORAGE_KEYS } from "../lib/storage";
+import { forgetSeat } from "../lib/storage";
 import { jsonResponse } from "./story-utils";
 
 const originalFetch = globalThis.fetch;
-beforeEach(() => removeStored(STORAGE_KEYS.analyticsOverviewView));
+beforeEach(() => forgetSeat());
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
@@ -41,6 +41,8 @@ const SHELL: readonly string[] = ["/v1/me"];
 type View = Readonly<{
   critical: (url: URL) => boolean;
   optional: (url: URL) => boolean;
+  // The most optional reads the view may hold in flight at once.
+  inFlight: number;
 }>;
 
 const path = (url: URL) => url.pathname;
@@ -53,11 +55,22 @@ const SALES: View = {
       "/v1/analytics/metrics",
       "/v1/pipelines",
     ].includes(path(url)) ||
-    (path(url) === "/v1/analytics/evaluate" && !isMovement(url)),
+    (path(url) === "/v1/analytics/evaluate" &&
+      !isMovement(url) &&
+      !isChartRead(url)),
+  // The checks, the movement read and the board's charts, which the figures
+  // never wait for.
   optional: (url) =>
     path(url) === "/v1/forecast/assurance/exceptions" ||
-    (path(url) === "/v1/analytics/evaluate" && isMovement(url)),
+    (path(url) === "/v1/analytics/evaluate" &&
+      (isMovement(url) || isChartRead(url))),
+  inFlight: 2,
 };
+
+// Sales review's chart read: the board's charts with the metrics they belong to.
+function isChartRead(url: URL): boolean {
+  return url.searchParams.getAll("blocks").includes("bookings_trend");
+}
 
 const PROSPECTING: View = {
   critical: (url) =>
@@ -68,8 +81,16 @@ const PROSPECTING: View = {
       "/v1/analytics/evaluate",
       "/v1/analytics/sdr-summary",
     ].includes(path(url)),
+  // The day's moves, and below the first screen the waiting and returned
+  // handoffs, the booked meetings and the submitted cohort.
   optional: (url) =>
-    ["/v1/worklist", "/v1/analytics/sdr-summary/handoffs"].includes(path(url)),
+    [
+      "/v1/worklist",
+      "/v1/analytics/sdr-summary/handoffs",
+      "/v1/analytics/sdr-summary/meetings",
+      "/v1/analytics/sdr-team",
+    ].includes(path(url)),
+  inFlight: 3,
 };
 
 const TEAM: View = {
@@ -81,7 +102,9 @@ const TEAM: View = {
       "/v1/analytics/evaluate",
       "/v1/analytics/sdr-team",
     ].includes(path(url)),
-  optional: () => false,
+  // The team's booked meetings, a line under where the team stands.
+  optional: (url) => path(url) === "/v1/analytics/sdr-summary",
+  inFlight: 1,
 };
 
 // Every request the page made, sorted into the shell, the critical path and
@@ -106,11 +129,12 @@ describe("the request census of each opening view", () => {
       {},
       createQueryClient(),
     );
-    await screen.findByText(
-      "Comparison starts after a second compatible capture.",
-    );
+    await screen.findByText(/^History starts with the next capture, /);
     const headline = asked.filter(
-      ({ url }) => path(url) === "/v1/analytics/evaluate" && !isMovement(url),
+      ({ url }) =>
+        path(url) === "/v1/analytics/evaluate" &&
+        !isMovement(url) &&
+        !isChartRead(url),
     );
     expect(headline[0]?.url.searchParams.get("period")).toBe("this_quarter");
     expect(headline[0]?.url.searchParams.getAll("metrics")).toContain(
@@ -128,14 +152,14 @@ describe("the request census of each opening view", () => {
     });
   });
 
-  it("asks My prospecting for one evaluation of this week and no pipelines", async () => {
+  it("asks My prospecting for this week and its recent weeks, and no pipelines", async () => {
     const asked = open(
       "#/analytics",
       bySeat("sdr"),
       { seat: "sdr" },
       createQueryClient(),
     );
-    await screen.findByRole("heading", { name: /^Monthly targets, / });
+    await screen.findByText(/^Monthly targets, /);
     const sent = asked.find(({ url }) => path(url) === "/v1/analytics/evaluate")
       ?.url.searchParams;
     expect(sent?.get("period")).toBe("this_week");
@@ -145,6 +169,7 @@ describe("the request census of each opening view", () => {
     expect(census(asked, PROSPECTING)).toEqual({
       critical: [
         "/v1/analytics/context",
+        "/v1/analytics/evaluate",
         "/v1/analytics/evaluate",
         "/v1/analytics/framework",
         "/v1/analytics/metrics",
@@ -195,7 +220,9 @@ describe("the request census of each opening view", () => {
         ).toBeGreaterThan(0),
       );
       expect(census(asked, view).unplaced).toEqual([]);
-      expect(peakInFlight(asked, view.optional)).toBeLessThanOrEqual(2);
+      expect(peakInFlight(asked, view.optional)).toBeLessThanOrEqual(
+        view.inFlight,
+      );
     },
   );
 

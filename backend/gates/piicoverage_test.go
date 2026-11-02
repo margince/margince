@@ -211,8 +211,9 @@ var piiTables = map[string]piiHandling{
 	// Held by: TestTheRetentionSweepDestroysTheProviderOriginalToo and
 	// TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything
 	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
-	"raw_capture": {erasureWrite: true, sarRead: true},
-	"embedding":   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
+	"raw_capture":          {erasureWrite: true, sarRead: true},
+	"capture_party_source": {erasureWrite: true, sarRead: true},
+	"embedding":            {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// The 24-hour capture trace names its counterparty — by address for mail,
 	// by DISPLAY NAME for a channel where there is no address to write — and
 	// keeps a clamped subject line. It was absent from this registry for as

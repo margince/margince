@@ -191,6 +191,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 			ID:               ids.UUID(row.Id),
 			Kind:             row.Kind,
 			Summary:          summary,
+			SummaryParts:     row.SummaryParts,
 			OccurredAt:       *row.DecidedAt,
 			Actor:            proposerOf(row),
 			SourceActivityID: citedActivity(row.Evidence),

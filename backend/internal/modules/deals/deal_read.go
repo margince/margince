@@ -85,7 +85,8 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 const dealTaggableType = "deal"
 
 type ListDealsInput struct {
-	IDs []ids.UUID
+	IDs          []ids.UUID
+	WritableOnly bool
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
 	TagIDs      []ids.UUID
@@ -316,6 +317,11 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
 func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	var err error
+	where, err = appendDealWriteScope(ctx, where, in, arg)
+	if err != nil {
+		return nil, err
+	}
 	if len(in.IDs) > 0 {
 		where = append(where, fmt.Sprintf("id = ANY($%d)", arg(in.IDs)))
 	}
@@ -446,4 +452,20 @@ func referenceFilterClause(ctx context.Context, column, table string, id ids.UUI
 	}
 	return clause + storekit.SQLf(
 		" AND EXISTS (SELECT 1 FROM %s ref WHERE ref.id = $%d AND %s)", table, pos, scope), nil
+}
+
+func appendDealWriteScope(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if in.WritableOnly {
+		if err := auth.Require(ctx, dealListEntity, principal.ActionUpdate); err != nil {
+			return nil, err
+		}
+		clause, err := auth.WriteAuthorityClauseFor(ctx, dealTable, "deal", arg)
+		if err != nil {
+			return nil, err
+		}
+		if clause != "" {
+			where = append(where, clause)
+		}
+	}
+	return where, nil
 }

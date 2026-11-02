@@ -8,10 +8,8 @@
 
 backend/internal/modules/activities/activitylisttx.go activities.ListActivitiesTx the timeline list filter, shared by every activity list; rewritten on its own
 backend/internal/modules/activities/emailsummarybatch.go activities.EmailSummariesByIDBatch repeats the gate; awaits its own rewrite and bench measurement
-backend/internal/modules/activities/activityread.go activities.(*Store).CountActivities.func1 the timeline list filter, shared by every activity list; rewritten on its own
 backend/internal/modules/activities/dealactivitylists.go activities.ListActivitiesByDealTx the timeline list filter, shared by every activity list; rewritten on its own
 backend/internal/modules/activities/emailmove.go activities.MailMovesFor repeats the gate; awaits its own rewrite and bench measurement
-backend/internal/modules/contacts/taskclaims.go contacts.(*Store).readTaskClaims.func2 repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklycounts.go weekly.countWeekMeetings repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklycoverage.go weekly.readFigureStarts repeats the gate; awaits its own rewrite and bench measurement
 backend/internal/compose/weekly/weeklyscorecard.go weekly.scoreDeals repeats the gate; awaits its own rewrite and bench measurement

@@ -232,12 +232,12 @@ func changeInputsFor(
 		SELECT l.contact_id,
 		       max(a.occurred_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND a.direction = 'outbound'),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND a.direction = 'outbound')
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`)
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = ANY($1)
 		 WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+

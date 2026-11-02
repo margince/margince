@@ -5,11 +5,12 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { healthScope } from "../../lib/healthscope";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { EmbedReindexCard } from "./embedreindex";
 import {
-  embedReindexIdentitiesQueryKey,
-  embedReindexStatusQueryKey,
+  embedReindexIdentitiesKey,
+  embedReindexStatusKey,
 } from "./embedreindex.queries";
 
 type Handler = (body: unknown) => Response | Promise<Response>;
@@ -218,7 +219,13 @@ it("posts previewed_identity from the status read and force:false on a plain con
   expect(await screen.findByText("Reindexing…")).toBeTruthy();
   // The shell banner reads its own key, so the confirm seeds it too: an open
   // banner follows the confirm without a reload.
-  expect(client.getQueryData(embedReindexIdentitiesQueryKey)).toEqual({
+  expect(
+    client.getQueryData(
+      embedReindexIdentitiesKey(
+        healthScope(meFixture({ allow: REINDEX_OPERATOR })),
+      ),
+    ),
+  ).toEqual({
     configured_identity: STATUS_NEEDED.configured_identity,
     populated_identity: STATUS_NEEDED.populated_identity,
   });
@@ -280,7 +287,12 @@ it("F2: a stuck reembedding marker shows the age of the last progress and keeps 
       },
     });
     client.setQueryData(["me"], meFixture({ allow: REINDEX_OPERATOR }));
-    client.setQueryData(embedReindexStatusQueryKey, STATUS_STUCK_REEMBEDDING);
+    client.setQueryData(
+      embedReindexStatusKey(
+        healthScope(meFixture({ allow: REINDEX_OPERATOR })),
+      ),
+      STATUS_STUCK_REEMBEDDING,
+    );
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => json({ detail: "unused in this test" }, 404)),

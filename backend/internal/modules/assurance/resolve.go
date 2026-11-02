@@ -123,17 +123,27 @@ func (s *Store) ResolveTx(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, 
 // admitResolution checks who answers and what, before any transaction, and
 // returns the expiry the answer is stored with.
 func admitResolution(ctx context.Context, in Resolution, now time.Time) (principal.Principal, *time.Time, error) {
-	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+	actor, err := answeringActor(ctx)
+	if err != nil {
 		return principal.Principal{}, nil, err
+	}
+	settled, err := checkResolution(in, now)
+	return actor, settled, err
+}
+
+// answeringActor is who may answer any finding at all. AnswerableFindings asks
+// it too, so a list never offers an answer this refuses.
+func answeringActor(ctx context.Context) (principal.Principal, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+		return principal.Principal{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
 		// An answer is given BY somebody. A system principal has nobody to
 		// attribute one to, and the auto-resolve path is a different door.
-		return principal.Principal{}, nil, apperrors.ErrPermissionDenied
+		return principal.Principal{}, apperrors.ErrPermissionDenied
 	}
-	settled, err := checkResolution(in, now)
-	return actor, settled, err
+	return actor, nil
 }
 
 func (s *Store) resolveIn(

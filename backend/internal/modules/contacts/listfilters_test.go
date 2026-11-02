@@ -43,6 +43,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
 		"source": "webinar", "origin": "referral", "sla_state": "breached",
 		"industry": "logistics_transport", "country": "de", "size_band": "51-200",
+		"partner_company_id": ids.NewV7().String(), "partner_accepted": "false",
 	}))
 }
 
@@ -74,8 +75,8 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		}},
 		{datasource.EntityLead, []string{
 			"ai_written", "captured_by_kind", "country", "from_contact_id", "include_archived", "industry", "list_id",
-			"min_score", "origin", "owner_id", "owner_team_id", "size_band", "sla_state", "sort", "source", "status",
-			"tag_id", "tag_mode", "unassigned",
+			"min_score", "origin", "owner_id", "owner_team_id", "partner_accepted", "partner_company_id", "size_band",
+			"sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

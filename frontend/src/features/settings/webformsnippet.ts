@@ -26,6 +26,17 @@ function escapeHtml(text: string): string {
     .replaceAll('"', "&quot;");
 }
 
+// privacyNoticeLines is the notice the form shows under its button at the point
+// of collection, and the policy it links to. Either alone still says something.
+function privacyNoticeLines(form: WebForm): string[] {
+  const notice = form.privacy_notice?.trim() ?? "";
+  const policy = form.privacy_notice_url?.trim() ?? "";
+  if (notice === "" && policy === "") return [];
+  const link =
+    policy === "" ? "" : `<a href="${escapeHtml(policy)}">Privacy policy</a>`;
+  return [`  <p>${[escapeHtml(notice), link].filter(Boolean).join(" ")}</p>`];
+}
+
 // browserSnippet is a plain HTML form with the three spam-check fields. It
 // works without the script; the script adds the fill time, the page and an id
 // so a double click lands once.
@@ -50,6 +61,7 @@ export function browserSnippet(form: WebForm, url: string): string {
     '  <input type="hidden" name="_mrg_id">',
     '  <input type="hidden" name="page_url">',
     '  <button type="submit">Send</button>',
+    ...privacyNoticeLines(form),
     "</form>",
     "<script>",
     '  document.querySelectorAll("form[data-margince-form]").forEach(function (form) {',

@@ -255,11 +255,12 @@ func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
 func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcontracts.AttentionItem {
 	kind := approval.Kind
 	item := crmcontracts.AttentionItem{
-		Id:      approval.Id.String(),
-		Source:  crmcontracts.AttentionItemSource("approval"),
-		Kind:    &kind,
-		Title:   approval.Summary,
-		Actions: []crmcontracts.AttentionItemActions{"decide"},
+		Id:           approval.Id.String(),
+		Source:       crmcontracts.AttentionItemSource("approval"),
+		Kind:         &kind,
+		Title:        approval.Summary,
+		SummaryParts: approval.SummaryParts,
+		Actions:      []crmcontracts.AttentionItemActions{"decide"},
 	}
 	if approvals.PreviewRefusal(approval.Preview) != nil {
 		item.Actions = []crmcontracts.AttentionItemActions{}

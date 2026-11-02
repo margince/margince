@@ -498,6 +498,44 @@ kinds:
       retention this feature promises. An empty pass is one indexed probe.
 
 
+  captured_deal_refile:
+    role: worker
+    go_type: CapturedDealRefileArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: fan_out
+    args:
+      Workspace: id
+      Event: id
+      Correlation: id
+      Ceiling: id
+      Scope:
+        scalar: true
+        reason: Record identities and a boolean selecting the recovery census; no correspondence travels in the job.
+      AsOf:
+        scalar: true
+        reason: Fixed horizon instant for a resumable pass, never a message timestamp supplied by a sender.
+    reason: >-
+      Each attempt inspects at most 200 activities, committing one activity at a
+      time. A metadata cursor advances over unchanged and ambiguous candidates
+      before the job yields. Crashes replay through the same locked writer.
+
+  captured_deal_refile_sweep:
+    role: dispatcher
+    go_type: CapturedDealRefileSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1h
+    fans_out_to: captured_deal_refile
+    fan_out_unit: workspace
+    reason: >-
+      Recover missed or interrupted attribution without replaying old triggers.
+      The child carries a durable River cursor across attempts, so the scheduler only
+      starts a pass when no active recovery pass remains. It freezes its horizon and
+      resumes through bounded pages instead of rescanning the first page on each tick.
+
   capture_digest:
     role: worker
     fleet: true

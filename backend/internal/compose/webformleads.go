@@ -11,6 +11,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -214,8 +216,10 @@ func webFormRaw(landing webforms.Landing) (map[string]any, error) {
 		Campaign: webFormValues(e.UTM),
 	}
 	if landing.ConsentWording != nil {
+		formID := openapi_types.UUID(landing.FormID)
 		sent.Consent = &crmcontracts.WebFormConsent{
 			Ticked: e.Consent, Wording: *landing.ConsentWording, PolicyVersion: landing.ConsentPolicyVersion,
+			FormId: &formID, FormName: optional(landing.FormName), PageUrl: optional(e.PageURL),
 		}
 	}
 	encoded, err := json.Marshal(sent)

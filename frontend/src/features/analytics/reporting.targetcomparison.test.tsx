@@ -85,12 +85,15 @@ it("shows the gap, what is left and the coverage the server compared", () => {
   expect(screen.getByText("Not switched on")).toBeVisible();
 });
 
-it("labels qualified coverage apart from coverage over all open deals", () => {
+it("labels qualified coverage apart from coverage over the deals closing this quarter", () => {
   show({
     ...sample,
     qualified: { status: "compared", open_pipeline: 57_000_000, coverage: 1.5 },
   });
-  expect(screen.getByText("Coverage, all open deals")).toBeVisible();
+  expect(
+    screen.getByText("Coverage, deals closing this quarter"),
+  ).toBeVisible();
+  expect(screen.queryByText(/all open/i)).toBeNull();
   expect(screen.getByText("Coverage, qualified deals")).toBeVisible();
   expect(screen.getByText("1.5×")).toBeVisible();
 });

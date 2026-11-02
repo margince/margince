@@ -132,6 +132,7 @@ type backfillPass struct {
 // means a workspace part-way through recovery still answers "who was in this"
 // with something true.
 var backfillPasses = []backfillPass{
+	{recoverPartySourcesBatch, participantReplayBatch},
 	// The CCs and meeting attendees of activities whose two ends are recorded.
 	{replayParticipantsBatch, participantReplayBatch},
 	// The meetings whose attendees were read under the earlier rule, which bound no

@@ -276,6 +276,8 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		VALUES ($1, $2, $3, $4, 'connected', $5, $6, now())
 		ON CONFLICT (user_id, provider)
 		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
+		              connected_at = now(),
+		              silence_dismissed_since = CASE WHEN $7 THEN NULL ELSE capture_connection.silence_dismissed_since END,
 		              share_acknowledged_at = CASE WHEN $7 THEN now()
 		                                           ELSE COALESCE(capture_connection.share_acknowledged_at, now()) END,
 		              account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
@@ -335,6 +337,13 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		connectionAuditImage(in.provider, "connected", in.accountLabel)); err != nil {
 		return ids.Nil, nil, err
 	}
+	if err := resetConnectionSchedule(ctx, tx, id, rebound); err != nil {
+		return ids.Nil, nil, err
+	}
+	return id, priorRef, nil
+}
+
+func resetConnectionSchedule(ctx context.Context, tx pgx.Tx, id ids.UUID, rebound bool) error {
 	// A (re)connect starts the scheduling ladder clean: a row parked by
 	// reauth_required or degraded by backoff is due immediately with a fresh
 	// credential (ADR-0063).
@@ -342,9 +351,10 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		UPDATE capture_sync_state
 		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL, failing_since = NULL,
 		    last_synced_at = CASE WHEN @rebound THEN NULL ELSE last_synced_at END,
-		    last_success_at = CASE WHEN @rebound THEN NULL ELSE last_success_at END
+		    last_success_at = CASE WHEN @rebound THEN NULL ELSE last_success_at END,
+ last_delivery_at = CASE WHEN @rebound THEN NULL ELSE last_delivery_at END
 		WHERE connection_id = @id`, pgx.NamedArgs{"id": id, "rebound": rebound}); err != nil {
-		return ids.Nil, nil, err
+		return err
 	}
-	return id, priorRef, nil
+	return nil
 }

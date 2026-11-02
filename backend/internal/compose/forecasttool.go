@@ -124,25 +124,20 @@ func addForecastAssertions(
 		return nil, err
 	}
 	out.Snapshots = forecastSnapshotRefsToTool(refs)
-	call, err := store.CurrentCallTx(ctx, tx, period, resolved)
-	switch {
-	case err == nil:
-		rendered := forecastCallToTool(call)
-		if err := addCallReview(ctx, tx, rendered, call); err != nil {
-			return nil, err
-		}
-		encoded, err := json.Marshal(rendered)
-		if err != nil {
-			return nil, fmt.Errorf("compose: rendering the standing call: %w", err)
-		}
-		out.CurrentCall = encoded
-		return &call.AmountMinor, nil
-	case forecasting.IsNoStandingCall(err):
-		// Nobody has called this period. A real answer, left absent.
-		return called, nil
-	default:
+	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, resolved)
+	if err != nil || !seen {
 		return nil, err
 	}
+	rendered := forecastCallToTool(call)
+	if err := addCallReview(ctx, tx, rendered, call); err != nil {
+		return nil, err
+	}
+	encoded, err := json.Marshal(rendered)
+	if err != nil {
+		return nil, fmt.Errorf("compose: rendering the standing call: %w", err)
+	}
+	out.CurrentCall = encoded
+	return &call.AmountMinor, nil
 }
 
 // forecastLandingToTool is the endpoint's landing in the tool's shape.

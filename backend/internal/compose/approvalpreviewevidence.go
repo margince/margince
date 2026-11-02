@@ -116,8 +116,8 @@ func (r approvalPreviewReader) signalActivityEvidence(ctx context.Context, signa
 		if citation.SourceQuote == nil || source.Body == nil {
 			return nil, apperrors.ErrVersionSkew
 		}
-		proof := values.QuoteProof{Start: citation.SourceQuote.Start, End: citation.SourceQuote.End, SHA256: citation.SourceQuote.Sha256}
-		quote, valid := values.VerifyQuote(textlang.CurrentMessage(*source.Body), proof)
+		proof := lifecyclereview.QuoteProofOf(*citation.SourceQuote)
+		quote, valid := textlang.VerifySenderQuote(*source.Body, proof)
 		if !valid {
 			return nil, apperrors.ErrVersionSkew
 		}

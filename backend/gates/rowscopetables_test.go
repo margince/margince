@@ -627,5 +627,9 @@ const (
 	//
 	// 151: deals.StuckAfter returns the won-deal stage pace keyed by stage id.
 	// A stage is configuration every member reads, and the pace is a duration.
-	modulesTierUnscopedCeiling = 151
+	//
+	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
+	// guests onto the meeting that stays, under a system job or a calendar sync.
+	// The contacts move between two rows of one meeting, and nothing is returned.
+	modulesTierUnscopedCeiling = 152
 )

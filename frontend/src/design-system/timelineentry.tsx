@@ -39,7 +39,7 @@ import "./composed.css";
 export type TimelineGroup = {
   /** The newest member's id; the list keys on it. */
   id: string;
-  kind: "thread" | "bulk" | "single";
+  kind: "thread" | "bulk" | "newsletters" | "single";
   /** Newest first, like the list itself. */
   entries: TimelineEntry[];
   /** This group may continue past what the page holds. */
@@ -352,9 +352,13 @@ export function entryTimeOfDay(
 // five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
-  const base =
-    group.kind === "bulk" ? "timeline.group.bulk" : "timeline.group.thread";
-  const total = translatePlural(locale, base, count, {
+  const base = {
+    bulk: "timeline.group.bulk",
+    newsletters: "timeline.group.newsletters",
+    thread: "timeline.group.thread",
+    single: "timeline.group.thread",
+  } as const satisfies Record<TimelineGroup["kind"], string>;
+  const total = translatePlural(locale, base[group.kind], count, {
     count: formatNumber(count, locale),
   });
   if (group.kind !== "thread") {

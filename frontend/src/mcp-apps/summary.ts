@@ -100,6 +100,34 @@ export function detailsOf(value: unknown): Change[] {
     .filter((d) => d.field !== "" && d.label !== "");
 }
 
+/** A summary value is already text as the server bounded it, shown as sent. */
+const SUMMARY_VALUE = "summary_value";
+
+/** A summary taken apart: the sentence, its field values, and how many more. */
+export type SummaryParts = { sentence: string; fields: Change[]; more: number };
+
+/** summaryPartsOf reads `summary_parts`, or null where the answer carries none. */
+export function summaryPartsOf(value: unknown): SummaryParts | null {
+  const parts = asRecord(value);
+  const sentence = asText(parts.sentence);
+  if (sentence === "") return null;
+  const fields = asList(parts.fields)
+    .map(asRecord)
+    .map((f) => ({
+      field: asText(f.field),
+      label: inWords(asText(f.field)),
+      before: shownOf(undefined),
+      after: shownOf({ kind: SUMMARY_VALUE, text: asText(f.value) }),
+    }))
+    .filter((f) => f.field !== "");
+  const count = parts.more_fields;
+  const more =
+    typeof count === "number" && Number.isInteger(count) && count > 0
+      ? count
+      : 0;
+  return { sentence, fields, more };
+}
+
 /** inWords names a field the server sent no label for by its words. */
 export function inWords(name: string): string {
   const words = name
@@ -145,6 +173,8 @@ export function shown(field: string, value: Shown): string {
       return "Name not available";
     case "execution":
       return "Set when approved";
+    case SUMMARY_VALUE:
+      return value.text === "" ? ABSENT : value.text;
   }
   if (/(_at|_date)$/.test(field) && day(value.text) !== ABSENT) {
     return day(value.text);

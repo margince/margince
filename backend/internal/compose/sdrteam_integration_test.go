@@ -35,7 +35,13 @@ type sdrTeamFixture struct {
 
 func newSdrTeamFixture(t *testing.T) *sdrTeamFixture {
 	t.Helper()
-	f := &sdrTeamFixture{sdrFixture: newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr), now: clocktest.Now(t).UTC()}
+	return newSdrTeamFixtureFor(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+}
+
+// newSdrTeamFixtureFor is that team under the framework template given.
+func newSdrTeamFixtureFor(t *testing.T, template crmcontracts.ReportingFrameworkInputTemplate) *sdrTeamFixture {
+	t.Helper()
+	f := &sdrTeamFixture{sdrFixture: newSdrFixture(t, template), now: clocktest.Now(t).UTC()}
 	f.at = reportperiod.WeekStart(f.now, time.UTC).AddDate(0, 0, -6).Add(9 * time.Hour)
 	f.second = f.e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'second@forecast.test', 'Second SDR')`)
 	f.manager = f.e.seedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'manager@forecast.test', 'Manager')`)
@@ -167,10 +173,10 @@ func TestSdrTeamReviewSeparatesOutcomesFromRoundsAndCountsSharedWorkOnce(t *test
 	if len(got.Members) != 2 || got.MembersWithheld || got.MembersTruncated {
 		t.Fatalf("members = %+v, want one row per SDR", got.Members)
 	}
-	if first.MeetingsHeld == nil || *first.MeetingsHeld != 1 || first.Submitted != 3 || first.Accepted != 1 || first.Rejected != 1 || first.Recycled != 1 || first.Waiting != 0 {
+	if first.MeetingsHeld == nil || *first.MeetingsHeld != 1 || memberFigure(first.Submitted) != 3 || memberFigure(first.Accepted) != 1 || memberFigure(first.Rejected) != 1 || memberFigure(first.Recycled) != 1 || memberFigure(first.Waiting) != 0 {
 		t.Errorf("Rep1's row = %+v", first)
 	}
-	if second.MeetingsHeld == nil || *second.MeetingsHeld != 1 || second.Submitted != 1 || second.Accepted != 0 || second.Waiting != 1 || second.OldestWaitingSince == nil {
+	if second.MeetingsHeld == nil || *second.MeetingsHeld != 1 || memberFigure(second.Submitted) != 1 || memberFigure(second.Accepted) != 0 || memberFigure(second.Waiting) != 1 || second.OldestWaitingSince == nil {
 		t.Errorf("the second SDR's row = %+v; a meeting both attended is in each row", second)
 	}
 }
@@ -197,7 +203,7 @@ func TestSdrTeamReviewWithIndividualPerformanceOffKeepsTeamTotalsOnly(t *testing
 	}
 	// To Rep1 the same total minus their own is the second SDR's figure.
 	mine := f.review(f.as(e.Rep1), t, crmcontracts.GetSdrTeamReviewParamsScopeKindTeam, &e.Team1)
-	if !mine.Withheld || mine.Handoffs != nil || mine.Meetings != nil || len(mine.Members) != 0 {
+	if !mine.Withheld || mine.Handoffs != nil || mine.Meetings != nil || len(mine.Members) != 0 || mine.Workflow != crmcontracts.SdrTeamReviewWorkflowHandoff {
 		t.Fatalf("a total one colleague makes up is withheld: %+v", mine)
 	}
 }
@@ -214,7 +220,7 @@ func TestSdrTeamReviewCountsAnUnattributedEventForNoMember(t *testing.T) {
 		t.Fatalf("a team neither claims an event that names no submitter nor learns how many the company holds: %+v", team.Handoffs)
 	}
 	for _, row := range team.Members {
-		if row.Submitted != 0 || row.Waiting != 0 {
+		if memberFigure(row.Submitted) != 0 || memberFigure(row.Waiting) != 0 {
 			t.Fatalf("an unattributed event is no member's history: %+v", row)
 		}
 	}
@@ -246,8 +252,8 @@ func TestSdrTeamReviewCreditsADealAcceptedTwiceOnce(t *testing.T) {
 		if ids.UUID(row.Id) == e.Rep1 {
 			want = 1
 		}
-		if row.Accepted != want {
-			t.Errorf("%s is credited %d accepted, want %d: the deal goes to the first acceptance", row.Label, row.Accepted, want)
+		if memberFigure(row.Accepted) != want {
+			t.Errorf("%s is credited %d accepted, want %d: the deal goes to the first acceptance", row.Label, memberFigure(row.Accepted), want)
 		}
 	}
 }

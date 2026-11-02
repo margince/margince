@@ -120,7 +120,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:checkStagedEmployer":            "asks whether the decider may SEE the company a LinkedIn match card offers as employer, which is the product rule for that box. It changes no company: the write is an employment edge on the contact, whose create runs its own link-target probe on the company",
 	"internal/modules/deals:suggestionVisibleClause":           "reads the company and cited evidence before deciding a suggestion; the company itself is unchanged, and existing-deal linking separately requires update authority on its locked target",
 	"internal/modules/collections:recordArm":                   "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
-	"internal/modules/activities:offeredEmails":                "reads which contact a written-about row is filed on, under the reader's contact row scope, to say whether Write email opens with a recipient. It changes no contact: it runs in the read-back of a write the caller already passed, and answers a boolean and an address the caller may read",
+	"internal/modules/activities:linkedCandidates":             "reads which contact, lead or company a written-about row is filed on, under the reader's row scope for that object, to name where Write email goes. It changes no record: it runs in the read-back of a write the caller already passed, and answers a target and an address the caller may read",
 	"internal/modules/activities:resolveAuthorContacts":        "names the sender of rows a write returns by the one contact holding the stated address. It changes no contact; the object grant and row scope decide only whether the sender is named or stays an address",
 	"internal/modules/activities:readEmailPartiesOf":           "names the parties on rows a write returns. It changes no contact; the object grant and row scope decide only whether a party is named or stays an address, and the write's own gate is the activity's writable probe",
 	"internal/modules/activities:hiddenProjects":               "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",
@@ -808,9 +808,10 @@ func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn
 			continue
 		}
 		merged := &writeAuthorityFn{
-			mutates:  pkgLevel.mutates || info.mutates,
-			requires: map[string]bool{},
-			calls:    map[string]bool{},
+			previewOnly: pkgLevel.previewOnly && info.previewOnly,
+			mutates:     pkgLevel.mutates || info.mutates,
+			requires:    map[string]bool{},
+			calls:       map[string]bool{},
 		}
 		for _, src := range []*writeAuthorityFn{pkgLevel, info} {
 			merged.probes = append(merged.probes, src.probes...)

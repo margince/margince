@@ -222,7 +222,8 @@ func (r *callRuntime) normalized(rec extension.Record, declared extension.Ingres
 		EntityType: datasource.EntityActivity,
 		NaturalKey: r.naturalKey(rec),
 		Fields: capture.ActivityFields{
-			Kind: rec.Activity.Kind,
+			Kind:            rec.Activity.Kind,
+			ProviderPrivate: rec.Activity.ProviderPrivate,
 			// The transport the unit named, already held to what it DECLARED
 			// (refuseUndeclaredTransport) — so this carries a provider the
 			// installation registered rather than a string the unit chose.

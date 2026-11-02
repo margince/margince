@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, LocaleProvider } from "../i18n";
@@ -23,21 +24,7 @@ import { NotificationBell } from "./notificationbell";
 // a reader only ever sees their own notices and there is no seat that could be
 // refused the panel.
 
-type Notice = {
-  id: string;
-  kind: string;
-  subject: string;
-  body?: string;
-  created_at: string;
-  read_at?: string;
-  target?: { type: string; id: string };
-  origin?: {
-    event_id: string;
-    actor_type: string;
-    actor_id: string;
-    occurred_at: string;
-  };
-};
+type Notice = components["schemas"]["NotificationItem"];
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -219,15 +206,25 @@ describe("NotificationBell", () => {
     expect(items[1]?.textContent).toContain("An automation could not run");
   });
 
-  it("heads a notice that is only field pairs with its class, not the pairs", async () => {
-    const fields = "into_tag_id=01a11ecb-0000, to_stage_id=01a0ced5-0000";
+  it("heads an approval notice with its sentence and lists the values from its parts", async () => {
     vi.stubGlobal(
       "fetch",
       backendFor([
-        notice("n1", fields, { kind: "approval_pending" }),
-        notice("n2", "Update a deal, setting amount_minor: amount_minor=100", {
-          kind: "approval_pending",
-        }),
+        notice(
+          "n1",
+          "Update a deal: amount_minor=100, name=Smith, Jones & Co",
+          {
+            kind: "approval_pending",
+            summary_parts: {
+              sentence: "Update a deal",
+              fields: [
+                { field: "amount_minor", value: "100" },
+                { field: "name", value: "Smith, Jones & Co" },
+              ],
+              more_fields: 0,
+            },
+          },
+        ),
       ]).fetchMock,
     );
     const user = userEvent.setup();
@@ -235,15 +232,12 @@ describe("NotificationBell", () => {
 
     await user.click(await screen.findByRole("button", { name: /waiting/i }));
 
-    const [bare, sentence] = await screen.findAllByRole("listitem");
-    expect(within(bare).getByText("Approvals waiting on you")).toBeTruthy();
-    expect(within(bare).getByText(fields)).toBeTruthy();
-    // A sentence heads its row; the raw pairs after it are only detail.
-    expect(
-      within(sentence).getByText("Update a deal, setting amount_minor"),
-    ).toBeTruthy();
-    expect(within(sentence).getByText("amount_minor=100")).toBeTruthy();
-    expect(within(sentence).queryByText("Approvals waiting on you")).toBeNull();
+    const row = await screen.findByRole("listitem");
+    expect(within(row).getByText("Update a deal")).toBeTruthy();
+    // The values come from the parts, so a comma inside one stays inside it.
+    expect(within(row).getByText(/Smith, Jones & Co$/)).toBeTruthy();
+    expect(within(row).queryByText(/amount_minor=/)).toBeNull();
+    expect(within(row).queryByText("Approvals waiting on you")).toBeNull();
   });
 
   it("says when each notice was raised", async () => {

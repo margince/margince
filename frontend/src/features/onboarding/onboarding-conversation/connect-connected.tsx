@@ -28,6 +28,7 @@ import { SERVICE_ICON, SERVICE_WORDS } from "../../../lib/connect-services";
 import {
   accountHealth,
   healthBadge,
+  isConnectedAtAll,
   needsReconnect,
   serviceBadge,
   serviceReason,
@@ -73,7 +74,7 @@ export function ConnectedStep({
   const [calendarBusy, setCalendarBusy] = useState(false);
   const way: WayProps = {
     caption:
-      account.calendar?.status === "connected"
+      account.calendar && isConnectedAtAll(account.calendar)
         ? t("ob.conv.connect.connectedCaption", {
             page: t("settings.tab.connections"),
           })

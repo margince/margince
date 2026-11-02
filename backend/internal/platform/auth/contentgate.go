@@ -28,5 +28,7 @@ func ContentReadableActivitiesSQL(ctx context.Context, need string, arg func(any
 	if err != nil {
 		return "", err
 	}
-	return "SELECT readable.id FROM activity readable WHERE readable.id IN (" + need + ") AND " + gate, nil
+	// need is far smaller than activity, and the planner cannot know it, so it
+	// would walk the whole table. The array makes it look each id up instead.
+	return "SELECT readable.id FROM activity readable WHERE readable.id = ANY(ARRAY(" + need + ")) AND " + gate, nil
 }

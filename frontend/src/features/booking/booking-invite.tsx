@@ -20,6 +20,7 @@ import {
   type BookingMode,
   BookingPicker,
   type BookingSlot,
+  overlapsAPick,
 } from "./booking-picker";
 import { type BookingEdit, BookingReview } from "./booking-review";
 import { useWorkingHours } from "./working-hours";
@@ -151,8 +152,9 @@ export function BookingInviteScreen({
   );
 }
 
-// A proposal offers up to three times and an invite exactly one, so a pick
-// toggles within the mode's bound rather than silently growing past it.
+// A proposal offers up to three times and an invite one. A pick toggles
+// within the mode's bound rather than silently growing past it. A time that
+// shares minutes with a pick offers that pick twice, so it is refused.
 export function togglePick(
   current: readonly BookingSlot[],
   slot: BookingSlot,
@@ -161,6 +163,7 @@ export function togglePick(
   if (current.some((option) => option.start === slot.start))
     return current.filter((option) => option.start !== slot.start);
   if (mode === "invite") return [slot];
+  if (overlapsAPick(current, slot)) return [...current];
   return current.length < 3 ? [...current, slot] : [...current];
 }
 

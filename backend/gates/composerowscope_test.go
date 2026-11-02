@@ -73,8 +73,7 @@ const (
 	wantMinimumScopedSites = 10
 )
 
-// unscopedReferenceReads ratifies a compose read that hands back a row-scoped record's id without
-// applying that record's row scope. Keyed "package-dir:FuncName", each entry stating what stands in.
+// unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
@@ -174,6 +173,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// decision not to write.
 	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
+	"internal/compose:subjectMailScopeSQL":    "the direct-sender data task uses these contact ids only inside settleSubjectMailBatch, which requires the system principal before paging and settling cases; its other caller returns only a bounded count to a data-task reader, never contact references",
 	"internal/compose:settleWhenSubjectWrote": "the notice consumer's settle pass, under the system principal HandleEvent binds (compose/noticecaseopen.go): it resolves which contacts a connector-captured mail came FROM, and each id is spent inside the same transaction recording that the contact wrote to us and closing their capture-unknown notice cases — a caller never sees it",
 	"internal/compose:employerOf":             "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 

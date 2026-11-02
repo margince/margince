@@ -2214,6 +2214,9 @@ components:
         commitment_admissions_changed:
           type: boolean
           description: The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
+        request_settlement_changed:
+          type: boolean
+          description: The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
         agenda_changed:
           type: boolean
           description: The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried.
@@ -3327,8 +3330,9 @@ components:
         has_signature:
           type: boolean
           description: >-
-            Whether mail from this member now carries a sign-off. False after
-            a member empties the field, which is a chosen "send unsigned".
+            Whether the member has saved personal plain text or HTML. This reports
+            stored presence; sanitized HTML without visible text uses the usual fallback.
+            A workspace template or closing may still sign mail when this is false.
       additionalProperties: false
 
     PublicEventUserDeliveryChanged:

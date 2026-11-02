@@ -8,6 +8,7 @@ import {
 } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isConnectedAtAll } from "../../lib/connector-status";
 import { useConnectors } from "../../lib/connectors";
 import {
   readStored,
@@ -126,7 +127,7 @@ function MailboxConfirm({
   const connections = useConnectors();
   const live = connections.data?.data.some(
     (c) =>
-      c.status === "connected" &&
+      isConnectedAtAll(c) &&
       (mailbox === null ? isOAuthMailbox(c.provider) : c.provider === mailbox),
   );
   if (connections.isPending) {

@@ -58,6 +58,8 @@ type CreateInput struct {
 	ConsentRequired      bool
 	ConsentPolicyVersion *string
 	ConsentWording       *string
+	PrivacyNotice        *string
+	PrivacyNoticeURL     *string
 	RedirectURL          *string
 	SuccessMessage       *string
 }
@@ -85,6 +87,9 @@ func (in *CreateInput) normalize() error {
 	if in.LeadOrigin == nil {
 		origin := defaultLeadOrigin
 		in.LeadOrigin = &origin
+	}
+	if err := checkPrivacyNotice(in.PrivacyNotice, in.PrivacyNoticeURL); err != nil {
+		return err
 	}
 	return checkSettings(in.FieldMap, in.ConsentRequired, in.ConsentWording, in.RedirectURL, in.SuccessMessage, in.SenderSecret)
 }
@@ -136,12 +141,13 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 		}
 		row := tx.QueryRow(ctx, `
 			INSERT INTO web_form (name, form_key, sender, allowed_origins, secret_ref, lead_origin, owner_id,
-			  field_map, consent_required, consent_policy_version, consent_wording, redirect_url,
-			  success_message, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			  field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
+			  privacy_notice_url, redirect_url, success_message, captured_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 			RETURNING `+formColumns,
 			in.Name, key, in.Sender, in.AllowedOrigins, ref, in.LeadOrigin, in.OwnerID, in.FieldMap,
-			in.ConsentRequired, in.ConsentPolicyVersion, in.ConsentWording, in.RedirectURL, in.SuccessMessage, by)
+			in.ConsentRequired, in.ConsentPolicyVersion, in.ConsentWording, in.PrivacyNotice, in.PrivacyNoticeURL,
+			in.RedirectURL, in.SuccessMessage, by)
 		if out, err = scanForm(row); err != nil {
 			return err
 		}
@@ -180,6 +186,7 @@ func auditImage(f Form) map[string]any {
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
 		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, "field_map": f.FieldMap,
 		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
+		colPrivacyNotice: f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
 		colRedirectURL: f.RedirectURL, "state": f.State,
 	}
 }

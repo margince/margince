@@ -11,6 +11,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,6 +49,15 @@ func promotionContactSpec(lead crmcontracts.Lead, employer EmployerChoice, name,
 // promotionAcquisition preserves what the lead's address proves about its
 // origin. The lead is still live while this evidence is read.
 func promotionAcquisition(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (Acquisition, error) {
+	if lead.Origin != nil {
+		switch *lead.Origin {
+		case "referral", "partner":
+			return Acquisition{Kind: AcquiredReferral, OccurredAt: &lead.CreatedAt}, nil
+		case "linkedin", "cold_outreach":
+			return Acquisition{Kind: AcquiredPublicOrBusinessSource, OccurredAt: &lead.CreatedAt}, nil
+		}
+	}
+
 	if lead.Email == nil {
 		return Acquisition{Kind: AcquiredUnknownLegacy}, nil
 	}
@@ -105,6 +115,7 @@ type LeadContactChange struct {
 	Patch          *storekit.Patch
 	Phones         []ContactPhoneInput
 	Deal           *QualifyDealInput
+	ExistingDealID *ids.UUID
 	ReviewContact  *ids.ContactID
 	// CompanyIndustry is the industry the promotion writes to the linked company, or nil.
 	CompanyIndustry *string
@@ -117,6 +128,9 @@ type LeadContactChange struct {
 // PreviewLeadContactChange holds the writer's row locks while resolving the
 // contact and its field changes; it does not perform the promotion.
 func (s *Store) PreviewLeadContactChange(ctx context.Context, id ids.LeadID, in PromoteLeadInput) (LeadContactChange, error) {
+	if err := validatePromotionDeal(in); err != nil {
+		return LeadContactChange{}, err
+	}
 	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return LeadContactChange{}, err
 	}
@@ -265,6 +279,27 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	}
 	if out.CompanyIndustry, err = leadIndustryCarry(ctx, tx, company, lead.Industry); err != nil {
 		return LeadContactChange{}, err
+	}
+	if in.ExistingDealID != nil {
+		resolved, err := s.promotionDealEmployer(ctx, tx, lead, employer, candidate)
+		if err != nil {
+			return LeadContactChange{}, err
+		}
+		if resolved == nil {
+			return LeadContactChange{}, httperr.Validation("existing_deal_id", "company_required", "Resolve the employer before linking its deal.")
+		}
+		if err := s.holdQualificationDeal(ctx, tx, *resolved, *in.ExistingDealID); err != nil {
+			return LeadContactChange{}, err
+		}
+		out.ExistingDealID = in.ExistingDealID
+	}
+	if in.Deal != nil {
+		deal := *in.Deal
+		deal.CompanyID, err = s.promotionDealEmployer(ctx, tx, lead, employer, candidate)
+		if err != nil {
+			return LeadContactChange{}, err
+		}
+		in.Deal = &deal
 	}
 	out.Deal, err = s.previewQualifiedDeal(ctx, tx, lead, in.Deal)
 	return out, err

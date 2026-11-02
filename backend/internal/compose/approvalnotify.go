@@ -219,11 +219,11 @@ func (a *ApprovalNotify) announceToSeat(
 	// its job is a decision nobody is told about by the route they chose. The
 	// seat's preference decides only the message, in stageNoticeMail.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
-		decidable, err := a.approvals.PendingAskedOfInTx(seatCtx, tx, approvalID)
+		decidable, parts, err := a.approvals.PendingAskOfInTx(seatCtx, tx, approvalID)
 		if err != nil || !decidable {
 			return err
 		}
-		line := approvalNoticeFor(seat, approvalID, staged.Summary, approvalNoticeTarget(staged))
+		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged))
 		return recordApprovalNotice(ctx, tx, a.notices.CreateTx, a.mail, wsID, line)
 	})
 }
@@ -323,17 +323,20 @@ func (a *ApprovalNotify) seatContext(
 // The dedupe key names the APPROVAL, so every redelivery of this envelope — and
 // any later announcement about the same staging — collapses onto the one line
 // each seat already has.
-func approvalNoticeFor(seat ids.UUID, approvalID ids.ApprovalID, summary string, target notices.Target) notices.NewNotice {
+func approvalNoticeFor(
+	seat ids.UUID, approvalID ids.ApprovalID, summary string, parts *crmcontracts.ApprovalSummaryParts, target notices.Target,
+) notices.NewNotice {
 	subject := summary
 	if subject == "" {
 		subject = unsummarisedProposal
 	}
 	return notices.NewNotice{
-		Recipient: ids.From[ids.UserKind](seat),
-		Kind:      notices.KindApprovalPending,
-		Subject:   subject,
-		DedupeKey: approvalNoticeDedupeKey(approvalID.UUID),
-		Target:    target,
+		Recipient:    ids.From[ids.UserKind](seat),
+		Kind:         notices.KindApprovalPending,
+		Subject:      subject,
+		SubjectParts: parts,
+		DedupeKey:    approvalNoticeDedupeKey(approvalID.UUID),
+		Target:       target,
 	}
 }
 

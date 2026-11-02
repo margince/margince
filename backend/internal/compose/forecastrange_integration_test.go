@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -67,6 +68,40 @@ func TestTheHTTPDoorAndTheToolStateOneLanding(t *testing.T) {
 	if tool == nil || tool.AmountMinor != door.AmountMinor || tool.Measure != string(door.Measure) ||
 		tool.WonMinor != door.WonMinor || tool.RemainingMinor != door.RemainingMinor {
 		t.Fatalf("the tool's landing %+v differs from the HTTP door's %+v", tool, door)
+	}
+}
+
+// The reporting metric states the landing, its basis and its range as
+// GET /forecast states them. Its context names the whole quarter apart from
+// the cutoff its actuals run through.
+func TestTheReportingLandingStatesTheBasisAndRangeTheForecastStates(t *testing.T) {
+	f := newStageCohortFixture(t)
+	today := clocktest.Now(t)
+	f.openDeal(t, f.stage(0), today)
+	weighted := string(forecasting.MeasureWeighted)
+	if err := config.Save(reportingActor(f.env), StoredConfig(f.env.Pool), identity.ForecastForwardMeasure, weighted); err != nil {
+		t.Fatal(err)
+	}
+	overHTTP := f.forecastOverHTTP(t, today)
+	service := newReportingService(f.env.Pool, func() time.Time { return today })
+	evaluation := f.evaluateAs(reportingActor(f.env), t, service, crmcontracts.ReportingSelection{
+		Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_quarter", TargetBasis: "fiscal_quarter",
+		CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingForecastLanding},
+	})
+	metric := evaluation.Metrics[0]
+	basis, door := metric.ForecastBasis, overHTTP.Landing
+	if basis == nil || door == nil || !reflect.DeepEqual(basis.Landing, *door) || metric.Value == nil || *metric.Value != float64(door.AmountMinor) {
+		t.Fatalf("the reporting landing %v with basis %+v differs from GET /forecast's %+v", metric.Value, basis, door)
+	}
+	if *metric.RangeLowMinor != *overHTTP.RangeLowMinor || *metric.RangeHighMinor != *overHTTP.RangeHighMinor ||
+		basis.PricedCount != int64(overHTTP.PricedCount) || basis.EligibleCount != int64(overHTTP.EligibleCount) {
+		t.Fatalf("the reporting range %d..%d over %d of %d deals differs from GET /forecast's %d..%d over %d of %d",
+			*metric.RangeLowMinor, *metric.RangeHighMinor, basis.PricedCount, basis.EligibleCount,
+			*overHTTP.RangeLowMinor, *overHTTP.RangeHighMinor, overHTTP.PricedCount, overHTTP.EligibleCount)
+	}
+	frame := evaluation.Context
+	if frame.Horizon == nil || !frame.Horizon.EndAt.Equal(basis.Period.EndAt) || !frame.Interval.EndAt.Equal(frame.EvaluatedAt) || !frame.Interval.EndAt.Before(frame.Horizon.EndAt) {
+		t.Fatalf("context interval %+v horizon %+v, want actuals to the cutoff inside the quarter %+v", frame.Interval, frame.Horizon, basis.Period)
 	}
 }
 

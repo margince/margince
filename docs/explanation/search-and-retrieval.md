@@ -5,6 +5,20 @@
 Search is how a typed query becomes a ranked list of records. Behind one more seam, it is also how
 the AI layers build their answers on the workspace's own data.
 
+A complete email or domain match comes before an identifier prefix, and both come before a
+name-only match. An email prefix needs an `@`, so a first name keeps its text rank.
+
+The server
+scores these before each page is cut. In record search, a company also ranks higher when its
+domain belongs to a visible contact or lead whose address matches. Retrieval does not use this
+address link. The domain rank breaks company ties before record identity.
+The ranked cursor carries the complete score and ranking version; an older version is refused.
+
+The palette and results page show the strongest identifier hit as **Best match**, and keep it in
+its normal group. The server supplies that match kind; a client using an older server shows
+the groups without guessing a winner. Finding a domain fragment does not add contacts. Only
+a company name or exact domain can seed the employer arm.
+
 Two separate ranks run for each query. The **lexical** arm is Postgres full-text search over
 generated `search_tsv` columns. The **vector** arm ranks by how much the meaning matches, over
 pgvector embeddings. RRF (`reciprocal rank fusion`) merges the two into one list.
@@ -73,8 +87,8 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
 - **A pasted address or domain finds its record.** The `search_tsv` of a contact holds no email
   address, and that of a company holds no domain. So the contact and company branches also match
   `storekit.ContactEmails` and `storekit.CompanyDomains`. They compare the whole query, in lower
-  case, with a live row. The contact and company lists match the same two tables. A hit found this way
-  gets the 1 a whole word adds, and it passes the same row scope as a name hit.
+  case, with a live row. The contact and company lists match the same two tables. Whole identifiers
+  and prefixes rank before text-only hits, with the same row scope as a name hit.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
   operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
   index. The query per branch, kept to one identity, reads the table in order. An index over a
