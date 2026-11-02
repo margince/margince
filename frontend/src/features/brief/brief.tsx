@@ -47,7 +47,7 @@ import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { BriefReadingsStrip } from "./brief.readings";
+import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
@@ -147,6 +147,7 @@ export function BriefScreen() {
       week={review.data}
       firstName={firstName}
       now={new Date(nowMs)}
+      pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
       titleAside={morning ? undefined : <WeekStepper />}
@@ -288,6 +289,18 @@ function PersonalMorning({
                   run={brief.data}
                   onRetry={() => void query.refetch()}
                 />
+              </div>
+            )}
+            {/* The figures stand above the meetings, so their wait holds
+                their place rather than letting the meetings rise and fall. */}
+            {/* Hidden from a screen reader: the meetings below already
+                announce the wait. */}
+            {state === "loading" && (
+              <div className="brief-overview" aria-hidden="true">
+                <Eyebrow as="h2" className="brief-section-label">
+                  {t("brief.rail.numbers")}
+                </Eyebrow>
+                <BriefReadingsPending />
               </div>
             )}
             <SchedulePanel day={day} state={state} />

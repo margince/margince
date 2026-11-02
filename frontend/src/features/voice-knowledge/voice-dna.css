@@ -34,15 +34,58 @@
    beside the zone every time because "what should I upload?" is asked at the
    moment of uploading, not once in onboarding. */
 .vdna-zone {
+  container: vdna-zone / inline-size;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
+}
+
+/* Drop and paste are the same act by two routes, so they share a row and a
+   height rather than queueing in a narrow column beside empty card. */
+.vdna-zone-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
 }
 
 .vdna-zone .fdz {
-  min-height: 5.5rem;
+  flex: 1 1 auto;
+  flex-direction: column;
   justify-content: center;
+  min-height: 7rem;
   text-align: center;
+}
+
+/* The zone grows to the paste column's foot, so both boxes share a top line
+   under their labels and the button row sets the bottom one. */
+.vdna-drop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fieldGap);
+}
+
+.vdna-paste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Pinned to the foot, so a taller zone beside it keeps one bottom line. */
+.vdna-paste > .vdna-composer-actions {
+  margin-top: auto;
+}
+
+/* A soft panel, so the advice reads as a note beside the inputs. */
+.vdna-works {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+  color: var(--textPrimary);
+}
+
+.vdna-works > p:last-child {
+  margin: 0;
 }
 
 .vdna-works-list {
@@ -52,6 +95,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+}
+
+@container vdna-zone (width >= 40rem) {
+  .vdna-zone-inputs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container vdna-zone (width >= 52rem) {
+  .vdna-works-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: var(--space-6);
+  }
 }
 
 /* The distance to the first build, shown only below the floor. */

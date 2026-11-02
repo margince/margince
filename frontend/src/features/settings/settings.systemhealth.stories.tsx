@@ -129,3 +129,27 @@ export const PartialCapture: Story = {
     );
   },
 };
+
+export const MailDecisions: Story = {
+  render: story({
+    ...attentionReport,
+    action_count: 2,
+    findings: ["capture_owner_review", "capture_thread_uncertain"].map(
+      (code, index) => ({
+        ...overdueFinding,
+        id: `capture:${code}`,
+        source: "capture",
+        code,
+        condition: "waiting_human",
+        responsible: "mailbox_owner",
+        count: index + 1,
+        unit: "mailboxes",
+        job_kinds: undefined,
+      }),
+    ),
+  }),
+};
+export const MailDecisionsDark: Story = {
+  ...MailDecisions,
+  globals: { theme: "dark" },
+};

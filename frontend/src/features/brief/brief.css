@@ -214,6 +214,14 @@
 .brief-morning > .brief-main {
   gap: var(--space-12);
 }
+/* Held while the day is read: one line of the facts' type. Beside the date
+   it adds no line; on a phone it holds the one line a usual agenda takes. */
+.glance-sentence-pending {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: top;
+  min-block-size: 1lh;
+}
 .brief-morning .brief-overview {
   margin: 0;
 }
@@ -644,6 +652,9 @@
     -webkit-line-clamp: 4;
     line-clamp: 4;
     overflow: hidden;
+  }
+  .glance-facts > .glance-sentence-pending {
+    display: flex;
   }
   .glance-facts > * + *::before,
   .glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {

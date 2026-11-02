@@ -10579,8 +10579,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "mailSharing.saveFailed": "Einstellung nicht gespeichert",
   "mailSharing.cardTitle": "Teilen und Abgleich von E-Mails",
   "connectors.originLabel": "Adresse in versendeten Links",
-  "connectors.originReachable": "Erreichbar",
-  "connectors.originUnreachable": "Nicht erreichbar",
+  "connectors.originReachable": "Von diesem Server erreichbar",
+  "connectors.originUnreachable": "Von diesem Server nicht erreichbar",
   "connectors.loading": "Connectors werden geladen…",
   "connectors.originUnchecked": "Nicht geprüft",
   "connectors.sub":
@@ -13020,6 +13020,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
     "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
+  "settings.voice.dropLabel": "Dateien hochladen",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "settings.voice.pasteLabel": "Text einfügen",
   "settings.voice.pasteAdd": "Text hinzufügen",
@@ -14844,7 +14845,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportsHideRevoked": "Widerrufene ausblenden",
   "operations.schedules.title": "Zeitpläne der Hintergrund-Jobs",
   "operations.schedules.sub":
-    "Wie oft jeder Hintergrundlauf startet. Ein laufender Worker übernimmt eine Änderung innerhalb einer Minute: Der Lauf startet einmal und läuft dann im neuen Abstand weiter.",
+    "Häufigkeit automatischer Prüfungen einstellen. Jede Zeile erklärt die Auswirkungen. Änderungen gelten innerhalb einer Minute.",
   "operations.schedules.fold": "Alle Zeitpläne",
   "operations.pacing.title": "Versandtempo",
   "operations.pacing.sub":
@@ -19740,13 +19741,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
   "analytics.decision.part.commit_evidence": "Bestätigter Commit",
   "analytics.decision.part.weighted": "Gewichtete offene Deals",
+  "health.needsFix": "Beheben",
+  "health.needsReview": "Prüfung nötig",
+  "health.actionsNeeded_one": "Problem mit Handlungsbedarf: {count}",
+  "health.actionsNeeded_other": "Probleme mit Handlungsbedarf: {count}",
+  "health.inspectRuns": "Fehlgeschlagene Läufe prüfen",
+  "health.inspectMail": "Mail-Erfassung prüfen",
+  "health.inspectUpdates": "Ausstehende Updates prüfen",
+  "health.noPendingUpdates": "Keine erforderlichen Updates sind offen.",
+  "health.optionalMaintenance": "Optionale Wartung",
+  "health.completedUpdates": "Abgeschlossene Updates",
+  "health.effect.companyTechnical":
+    "Auf Firmenseiten können automatisch ermittelte Angaben zu Mailanbieter, E-Mail-Sicherheit und Hosting fehlen oder veraltet sein. Angaben bis zur Behebung selbst prüfen. Gespeicherte Firmendaten bleiben verfügbar.",
+  "health.scopeUnknown": "Betroffener Umfang nicht gemessen",
+  "health.failedRunsReview": "Fehlgeschlagene Läufe prüfen",
+  "health.inspectWork": "Hintergrundarbeit prüfen",
+  "health.filteredFinding_one": "1 von {count} Problemen angezeigt",
+  "health.filteredFinding_other": "1 von {count} Problemen angezeigt",
+  "health.showAllFindings": "Alle Probleme anzeigen",
+  "health.jobDelayed": "{kind}: verzögert",
   "health.views": "Ansichten des Systemzustands",
   "health.overview": "Übersicht",
   "health.diagnostics": "Diagnose",
   "health.configurationWithheld":
     "Deine Rolle darf diese Einstellungen nicht ansehen. Frage einen Admin.",
-  "health.configuration": "Konfiguration",
-  "health.loading": "Nachweise werden geladen…",
+  "health.configuration": "Zeitpläne und Versand",
+  "health.loading": "Prüfungen werden geladen…",
   "health.attention": "Handlungsbedarf",
   "health.stoppedNext":
     "Sende den Fehlerbericht an den Systembetreiber. Er soll den Abschluss prüfen, die Ursache beheben und nur offene Arbeit neu starten; diese fehlgeschlagenen Läufe starten nicht automatisch neu.",
@@ -19829,19 +19849,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Datenaktualisierungen",
   "health.source.recovery": "Wiederherstellungsnachweise",
   "health.source.automatic": "Qualität automatischer Arbeit",
-  "health.impact": "Bekannte Auswirkung",
-  "health.measuredImpact": "Die Quelle hat die betroffene Arbeit gemessen.",
-  "health.possibleImpact":
-    "Arbeit kann verzögert oder unvollständig sein; betroffene Teammitglieder werden nicht gezählt.",
-  "health.unknownImpact": "Der betroffene Umfang ist unbekannt.",
   "health.scope": "Betroffener Umfang",
   "health.window": "Berichtszeitraum",
-  "health.currentRetained":
-    "Aktueller gespeicherter Stand; gegebenenfalls aufbewahrter Verlauf",
   "health.observed": "Letzte Beobachtung",
   "health.firstObserved": "Erstmals beobachtet",
   "health.nextAttempt": "Nächster erfasster automatischer Versuch",
-  "health.responsible": "Wer handeln kann",
   "health.responsible.you": "Du",
   "health.responsible.mailbox_owner": "Postfachinhaber",
   "health.responsible.administrator": "Admin",
@@ -19864,7 +19876,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
   "health.ownerHandoff":
-    "Den Postfachinhaber bitten, seine Verbindungen oder Erfassungsprüfung zu öffnen. Diese Seite öffnet keine privaten E-Mails.",
+    "Eigene Mail-Entscheidungen unter Verbindungen prüfen. Bei anderen Postfächern die Zuständigen bitten; private Nachrichten sind nur für sie sichtbar.",
   "health.operatorHandoff":
     "Ein technischer Betreiber muss den Fall prüfen. Die Diagnoseübersicht für die Übergabe kopieren.",
   "health.copy": "Technischen Bericht kopieren",
@@ -19902,11 +19914,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Erfassungsrückstand in den geprüften Kategorien erkannt",
   "health.code.capture_processing": "Absendeadressen werden eingeordnet",
   "health.code.capture_uncertain":
-    "Einige Absendeadressen brauchen eine Entscheidung des Postfachverantwortlichen",
+    "Festlegen, wessen Nachrichten ins CRM gehören",
   "health.code.capture_exhausted":
     "Automatische Versuche der Absendereinordnung sind ausgeschöpft",
   "health.code.capture_owner_review":
-    "Postfachinhaber müssen Erfassungsentscheidungen prüfen",
+    "Für das Postfach steht eine Mail-Entscheidung aus",
   "health.code.capture_unread":
     "Ungelesene Postfachzeiträume brauchen einen Wiederherstellungsnachweis",
   "health.code.capture_held":
@@ -19947,7 +19959,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
   "health.code.capture_thread_uncertain":
-    "Einige Unterhaltungen brauchen eine Prüfung durch den Postfachverantwortlichen",
+    "Festlegen, welche Gespräche für das Team sichtbar sind",
   "health.queueCoverage":
     "Der Warteschlangenverlauf wird nur begrenzt aufbewahrt. Sein Fehlen belegt nicht, dass zuvor fehlgeschlagene Arbeit erledigt wurde.",
 

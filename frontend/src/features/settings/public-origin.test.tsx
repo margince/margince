@@ -13,8 +13,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 it.each([
-  { reachable: true, label: "Reachable" },
-  { reachable: false, label: "Unreachable" },
+  { reachable: true, label: "Reachable from this server" },
+  { reachable: false, label: "Unreachable from this server" },
   { reachable: null, label: "Not checked" },
 ])(
   "renders the stored $label observation without a probe",
