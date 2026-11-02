@@ -430,12 +430,50 @@ into a separate store needs extra code for every line above, for every kind
 
 ---
 
+### 2.11 Server time and what the reader sees
+
+A reader feels two kinds of waiting, and they need different fixes:
+
+```
+ GET /worklist ──── server time ─────────────────────────────► rows arrive
+       │                                                          │
+       └── the page waits: placeholders hold each part's room ───┘
+                                                                  │
+       then the task card reads  /activities/{id}  ──►  /contacts/{id}
+```
+
+- **Server time** is what this document changes: less planning, the identity
+  list once, fewer tail reads. The rep's Home call goes from 1.33 s to 1.01 s
+  on the bench data (3.1).
+- **What the page does while it waits** is a frontend matter. Pull request
+  #9905 makes Home draw each part's placeholder at the size of what replaces
+  it (the card in hand, the opening line, the rail's figures, a task's verbs),
+  so the page no longer jumps when the day lands. It measured the layout-shift
+  score (CLS) at 0.037 before and 0.0002 after on a desktop, on demo data with
+  a forced slow read. It does not change how long the read takes. The two
+  changes touch different files and add up.
+- **The card's follow-up reads.** After the Worklist answers, a task card reads
+  the task and then its contact, one after the other
+  (`frontend/src/features/brief/brief.focus.tsx`, `useTaskContact`), to offer
+  Email and Call. The row's `contact` field (`WorklistContactFacts`) holds the
+  contact's id, name, last touch and employer, but no email or phone. Carrying
+  what the verbs need on the row would remove both round trips. That changes
+  the API contract and what a row discloses, so it is a question for the
+  table, not part of this proposal.
+
+---
+
 ## Part 3. Figures and the PoC
 
 ### 3.1 Speed, with every answer identical to today
 
-The ground-truth check made 269 calls: 60 answers with rows, 93 empty, 116
-refused (a scope that member may not use). Times are means.
+How it was measured: the ground-truth check made the screens' own calls for
+every member of the bench data (15 members, 3 of them managers), in every view
+and scope, with the clock pinned to one instant. It ran three times on one
+machine against one database: `main`, `main` plus the identity change, and
+`main` plus both changes. Times are the mean of one timed read per call. Of the
+269 calls, 60 answers had rows, 93 were empty and 116 were refused (a scope
+that member may not use).
 
 ```
                                 today (main)   + identity   + identity       change
@@ -500,9 +538,14 @@ faults. The copy-based versions failed with blockers (wrong access gate, a
 capped rebuild, a lock taken in the wrong order). The current approach passed
 with wording fixes, which are applied.
 
-### 3.5 Not proven yet
+### 3.5 Known limits and what is not proven yet
 
-- Speed on large data: the bench at full scale (scale 1).
+- Speed on large data: the bench at full scale (scale 1). A generic plan
+  cannot use an index that only applies to some values, so a statement that
+  was fast with a custom plan may be slower on large data.
+- The figures come from one machine and one run per setting; the team figures
+  are means over 3 managers.
+- The rep's Home call ends at the 1 s line, not under it.
 - The check's coverage: filters beyond each view's own; the small writes a read
   makes (snoozes returning, brief marked as opened, walk freeze); more hard
   cases in the bench data.
@@ -560,3 +603,6 @@ The `poc` build tag keeps every PoC test out of `make check` and CI.
    do we hand over the check and the two proven changes?
 3. Is the additive `source: extension` contract change acceptable?
 4. Who runs the full-scale bench, and what number do we accept?
+5. Should a Worklist row carry what its card's verbs need (a contact's email
+   and phone), so the card makes no follow-up reads? It changes the contract
+   and what a row discloses.
