@@ -248,3 +248,41 @@ export const CompactWeeks: Story = {
     />
   ),
 };
+
+export const StatusCounts: Story = {
+  render: () => (
+    <BulletChart
+      label="System checks"
+      dataLabel="Show counts"
+      valueLabel="Checks"
+      targetLabel="Checks"
+      readings={[
+        {
+          key: "failed",
+          label: "Failed",
+          value: 2,
+          amount: "2",
+          tone: "danger",
+        },
+        {
+          key: "review",
+          label: "Needs review",
+          value: 3,
+          amount: "3",
+          tone: "warning",
+        },
+        {
+          key: "passing",
+          label: "Passing",
+          value: 5,
+          amount: "5",
+          tone: "success",
+        },
+      ]}
+    />
+  ),
+};
+export const StatusCountsDark: Story = {
+  ...StatusCounts,
+  globals: { theme: "dark" },
+};

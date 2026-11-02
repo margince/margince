@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -12,6 +12,7 @@ import {
 } from "../../testing/story-utils";
 import {
   type HealthSessionAccess,
+  healthSenderReviewRoutes,
   healthSessionRoutes,
 } from "../../testing/systemhealth.session-fixtures";
 import { HealthSessionPage } from "../../testing/systemhealth-session";
@@ -20,6 +21,7 @@ import {
   attentionReport,
   healthReport,
   overdueFinding,
+  stoppedMailReport,
 } from "./systemhealth.fixtures";
 
 function story(report: components["schemas"]["SystemHealth"]) {
@@ -125,7 +127,7 @@ export const PartialCapture: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByText("All checks"));
     await expect(canvas.getByText(/Mail capture/)).toHaveTextContent(
-      "No capture backlog detected in checked categories",
+      "No capture action needed in checked categories",
     );
   },
 };
@@ -134,7 +136,16 @@ export const MailDecisions: Story = {
   render: story({
     ...attentionReport,
     action_count: 2,
-    findings: ["capture_owner_review", "capture_thread_uncertain"].map(
+    sources: healthReport.sources.map((source) =>
+      source.id === "capture"
+        ? {
+            ...source,
+            condition: "waiting_human",
+            code: "capture_uncertain",
+          }
+        : source,
+    ),
+    findings: ["capture_uncertain", "capture_thread_uncertain"].map(
       (code, index) => ({
         ...overdueFinding,
         id: `capture:${code}`,
@@ -143,7 +154,7 @@ export const MailDecisions: Story = {
         condition: "waiting_human",
         responsible: "mailbox_owner",
         count: index + 1,
-        unit: "mailboxes",
+        unit: index === 0 ? "records" : "threads",
         job_kinds: undefined,
       }),
     ),
@@ -152,4 +163,111 @@ export const MailDecisions: Story = {
 export const MailDecisionsDark: Story = {
   ...MailDecisions,
   globals: { theme: "dark" },
+};
+
+export const ResolutionOverview: Story = {
+  render: () => {
+    const reviews = healthSenderReviewRoutes();
+    const senderFinding: components["schemas"]["HealthFinding"] = {
+      ...overdueFinding,
+      id: "capture:capture_uncertain",
+      source: "capture",
+      code: "capture_uncertain",
+      condition: "waiting_human",
+      urgency: 1,
+      responsible: "mailbox_owner",
+      count: 2,
+      unit: "records",
+      job_kinds: undefined,
+    };
+    installFetchStub({
+      ...healthSessionRoutes("configure"),
+      ...reviews.routes,
+      "GET /admin/system-health": () =>
+        jsonResponse({
+          ...stoppedMailReport,
+          action_count: 2,
+          findings: [
+            ...stoppedMailReport.findings,
+            { ...senderFinding, count: reviews.remaining() + 1 },
+          ],
+          sources: stoppedMailReport.sources.map((source) =>
+            source.id === "capture"
+              ? {
+                  ...source,
+                  condition: "waiting_human",
+                  code: "capture_uncertain",
+                }
+              : source,
+          ),
+        }),
+      "GET /admin/capture-health": () =>
+        jsonResponse({
+          generated_at: stoppedMailReport.generated_at,
+          mailboxes: [],
+          sweeps: [],
+          connection_concerns: [],
+          classifier: {
+            pending: 0,
+            unsure: reviews.remaining() + 1,
+            exhausted: 0,
+          },
+          held_meetings: { count: 0 },
+          owner_reviews: [
+            {
+              user_id: "00000000-0000-4000-8000-000000000001",
+              display_name: "Alex",
+              sender_decisions: reviews.remaining(),
+              thread_decisions: 0,
+            },
+            {
+              user_id: "00000000-0000-4000-8000-000000000002",
+              display_name: "Maya",
+              sender_decisions: 1,
+              thread_decisions: 0,
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <HealthSessionPage />
+      </StoryProviders>
+    );
+  },
+};
+export const ResolutionOverviewDark: Story = {
+  ...ResolutionOverview,
+  globals: { theme: "dark" },
+};
+export const ResolutionOverviewPhone: Story = {
+  ...ResolutionOverview,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const SenderDecisionJourney: Story = {
+  ...ResolutionOverview,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Review mailbox decisions" }),
+    );
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: "Review my choices" }),
+    );
+    await waitFor(() =>
+      expect(canvas.getByText("Add Alex Buyer to Contacts")).toBeVisible(),
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Decide" }),
+    );
+    await userEvent.click(await body.findByRole("button", { name: "Approve" }));
+    await waitFor(() =>
+      expect(
+        canvas.queryByText("Add Alex Buyer to Contacts"),
+      ).not.toBeInTheDocument(),
+    );
+  },
 };

@@ -14,7 +14,9 @@ import { Panel } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
+import { CAPTURE_REVIEW_PARAM, captureReview } from "../../lib/capturereview";
 import { problemMessageOf } from "../../lib/problem";
+import { useUrlParams } from "../../lib/urlstate";
 import {
   NetworkReach,
   reachCaveat,
@@ -40,7 +42,15 @@ export function ConnectionOutcomesCard() {
   const waiting = useAwaitingDecision();
   const held = useHeldThreads();
   const reach = useLinkedInReach();
-  const [open, setOpen] = useState<Outcome | null>(null);
+  const [params, setParams] = useUrlParams();
+  const [selected, setSelected] = useState<Outcome | null>(null);
+  const open = captureReview(params.get(CAPTURE_REVIEW_PARAM)) ?? selected;
+  const setOpen = (outcome: Outcome | null) => {
+    const next = new Map(params);
+    next.delete(CAPTURE_REVIEW_PARAM);
+    setParams(next);
+    setSelected(outcome);
+  };
   const close = () => setOpen(null);
   const titleId = useId();
   const viewBase = useId();

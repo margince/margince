@@ -44121,6 +44121,8 @@ export interface components {
          *     what is waiting inside it is not named at all.
          */
         CaptureHealth: {
+            /** @description Mailbox owners with decisions ready for human review. Counts and names only. */
+            owner_reviews?: components["schemas"]["CaptureOwnerReview"][];
             categories?: components["schemas"]["CaptureHealthCategories"];
             /** @description Active connection concerns for live members. Names account state, never correspondence. */
             connection_concerns: components["schemas"]["CaptureConnectionConcern"][];
@@ -44208,6 +44210,13 @@ export interface components {
              * @description The moment reading resumed.
              */
             to: string;
+        };
+        CaptureOwnerReview: {
+            /** Format: uuid */
+            user_id: string;
+            display_name?: string;
+            sender_decisions: number;
+            thread_decisions: number;
         };
         CaptureMailboxHealth: {
             /**
