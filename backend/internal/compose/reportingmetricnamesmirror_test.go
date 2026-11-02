@@ -20,8 +20,8 @@ import (
 
 const frontendReportingFixture = "../../../frontend/src/testing/reporting.fixtures.ts"
 
-// fixtureMetricName reads one `id: "Name"` pair, the id bare or quoted.
-var fixtureMetricName = regexp.MustCompile(`(?m)^\s*["']?([a-z_]+)["']?\s*:\s*"([^"]*)"\s*,?\s*$`)
+// fixtureMetricName reads one trimmed `id: "Name",` line, the id bare or quoted.
+var fixtureMetricName = regexp.MustCompile(`^["']?([a-z][a-z0-9_]*)["']?\s*:\s*"([^"]*)",?$`)
 
 func TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes(t *testing.T) {
 	source, err := os.ReadFile(frontendReportingFixture)
@@ -37,8 +37,23 @@ func TestTheFrontendFixtureNamesEveryMetricAsTheCatalogDoes(t *testing.T) {
 	if !closed {
 		t.Fatalf("%s: %s has no closing brace", frontendReportingFixture, opening)
 	}
+	_, entries, opened := strings.Cut(block, "= {")
+	if !opened {
+		t.Fatalf("%s: %s opens no object literal", frontendReportingFixture, opening)
+	}
+	// Every entry line must parse, so an id the pattern cannot read fails here
+	// instead of leaving the census one short.
 	browser := map[string]string{}
-	for _, pair := range fixtureMetricName.FindAllStringSubmatch(block, -1) {
+	for line := range strings.Lines(entries) {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "//") {
+			continue
+		}
+		pair := fixtureMetricName.FindStringSubmatch(line)
+		if pair == nil {
+			t.Errorf("%s: cannot read the fixture line %q", frontendReportingFixture, line)
+			continue
+		}
 		browser[pair[1]] = pair[2]
 	}
 	for id, phrase := range reportingMetricNames {
