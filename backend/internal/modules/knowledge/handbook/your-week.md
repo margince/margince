@@ -11,7 +11,8 @@ The weekly review in Margince is on **Home → Weekly**, and reads as a report. 
 once, on the Monday after the week it covers, and marks it **Frozen**. You cannot make it again: the
 counts are what they were.
 
-Its title is the week it covers. Above it are the calendar week and when the report was frozen.
+Its title is the week it covers, under the calendar week. The line under the title says when the
+report was frozen.
 Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
 a report. Under it, a card holds what Margince wrote about the week, in your own language, marked
 as written by AI. The report's parts are:

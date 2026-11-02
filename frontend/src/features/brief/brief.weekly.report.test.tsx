@@ -27,6 +27,10 @@ beforeEach(() => {
   window.location.hash = "#/home?view=weekly";
 });
 
+// The title reads as one heading: the report's week, then the days it covers.
+const kicker = (week: string) =>
+  en["brief.report.kicker"].replace("{week}", week);
+
 // ── The report's own shape ──
 
 describe("BriefScreen — the weekly report", () => {
@@ -58,11 +62,8 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: /^29 June\s*[–-]\s*5 July$/,
+        name: new RegExp(`^${kicker("27")}\\s+29 June\\s*[–-]\\s*5 July$`),
       }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(en["brief.report.kicker"].replace("{week}", "27")),
     ).toBeTruthy();
   });
 
@@ -185,7 +186,7 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: /^22\s*[–-]\s*28 June$/,
+        name: new RegExp(`^${kicker("26")}\\s+22\\s*[–-]\\s*28 June$`),
       }),
     ).toBeTruthy();
     expect(

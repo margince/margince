@@ -125,7 +125,7 @@ export function BriefScreen() {
       }}
     />
   );
-  // The dial stands on the date's line, and the week stepper on the title's.
+  // The dial ends the facts' line, and the week stepper the title's.
   const glance = (
     <BriefGlance
       view={address.view}
@@ -162,7 +162,7 @@ export function BriefScreen() {
       {/* The head stands over the panes in both views, so the dial never
           moves when it is pressed. */}
       <div className="brief-frame">
-        <div className="brief-head">{glance}</div>
+        {glance}
         <BriefBody address={address} query={query} queueToggle={queueToggle} />
       </div>
       <BriefQueue />

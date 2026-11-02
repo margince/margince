@@ -180,10 +180,20 @@ test.describe("the Brief — page shape", () => {
     const heading = await topOf(page.locator("main h1"));
     const date = await topOf(page.locator(`${GLANCE} time`));
     const work = await topOf(page.locator(FOCUS));
-    expect(heading).toBeLessThan(work);
+    expect(heading).toBeLessThan(date);
     expect(date).toBeLessThan(work);
+    // The date opens the agenda's line: before it on one line, over it on two.
     const agenda = page.getByTestId("glance-sentence");
-    if (await agenda.count()) expect(date).toBeLessThan(await topOf(agenda));
+    if (await agenda.count()) {
+      const firstLine = (el: Element) => {
+        const box = el.getClientRects()[0];
+        return { x: box.x, y: box.y };
+      };
+      const at = await page.locator(`${GLANCE} time`).evaluate(firstLine);
+      const words = await agenda.evaluate(firstLine);
+      if (Math.abs(at.y - words.y) < 2) expect(at.x).toBeLessThan(words.x);
+      else expect(at.y).toBeLessThan(words.y);
+    }
   });
 
   test("summarizes only complete positive focus, in an unclipped paragraph", async ({
@@ -208,10 +218,15 @@ test.describe("the Brief — page shape", () => {
     await expect(page.locator(`${GLANCE} p.glance-sentence`)).toHaveCount(
       complete ? 1 : 0,
     );
+    // The clamp holds the whole facts line, or the sentence alone on a phone.
     if (complete) {
       const clipped = await page
-        .getByTestId("glance-sentence")
-        .evaluate((el) => el.scrollHeight > el.clientHeight);
+        .locator(`${GLANCE} .glance-facts`)
+        .evaluate((facts) =>
+          [facts, ...facts.querySelectorAll(".glance-sentence")].some(
+            (el) => el.scrollHeight > el.clientHeight,
+          ),
+        );
       expect(clipped).toBe(false);
     }
   });
@@ -245,7 +260,7 @@ test.describe("the Brief — page shape", () => {
 
     await expect(page.locator(".brief-rail")).toHaveCount(0);
     const pane = await page.locator(".brief-weekly-page").boundingBox();
-    const header = await page.locator(".brief-head").boundingBox();
+    const header = await page.locator(GLANCE).boundingBox();
     if (!pane || !header) {
       throw new Error("the weekly view drew no pane to measure");
     }

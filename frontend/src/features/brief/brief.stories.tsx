@@ -10,10 +10,12 @@ import {
   deals,
   decisionRow,
   digest,
+  firstWeek,
   lapsed,
   NOT_FOUND,
   narratedWeek,
   pipelineRows,
+  quietRun,
   ranked,
   readingsDay,
   report,
@@ -559,6 +561,39 @@ export const Week: Story = {
 
 export const WeekPhone: Story = {
   ...Week,
+  tags: ["uat-phone"],
+};
+
+// The head's facts line ends on the agent's badge, then the dial.
+export const TodayBriefed: Story = {
+  render: brief({
+    approvals: [...singles],
+    extra: { "GET /brief": () => jsonResponse(quietRun) },
+  }),
+};
+
+export const TodayBriefedPhone: Story = {
+  ...TodayBriefed,
+  tags: ["uat-phone"],
+};
+
+// A week nobody narrated: when it was frozen and its counted sentence share
+// the dial's line, and the stepper stands at the title's end.
+export const WeekCounted: Story = {
+  beforeEach: onWeekly,
+  render: brief({
+    approvals: [],
+    weekly: firstWeek,
+    extra: {
+      "GET /weekly-reviews": () =>
+        jsonResponse({ weeks: [WEEK_START, "2026-06-22"] }),
+    },
+  }),
+  play: Week.play,
+};
+
+export const WeekCountedPhone: Story = {
+  ...WeekCounted,
   tags: ["uat-phone"],
 };
 

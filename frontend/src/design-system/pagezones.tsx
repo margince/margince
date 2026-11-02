@@ -7,13 +7,10 @@ import "./pagepane.css";
 import "./pagezones.css";
 
 // PageZones is the page-level column layout: one work column, and up to two
-// rails of context beside it.
-//
-// It carries the grid, and with `panes` the surface each column stands on, and
-// nothing else: no name, no mark, no badge, no tabs.
-// Those belong to whatever composes it, which makes the shape available to any
-// page. A second stylesheet spelling the same three ratios and the same two
-// folds would drift the first time either moved.
+// rails of context beside it. It carries the grid, and with `panes` the surface
+// each column stands on: no name, no mark, no badge, no tabs. Those belong to
+// whatever composes it. A second stylesheet spelling the same three ratios and
+// the same two folds would drift the first time either moved.
 
 /**
  * Which columns the page has, and therefore which grid it draws.
