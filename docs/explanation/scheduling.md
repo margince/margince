@@ -18,7 +18,8 @@ host can be booked is that host's call.
 ## Free times are read live, and a failed read shows no times
 
 The invite engine reads the provider's busy time at the moment of the request. Google gets a
-free/busy query plus only the event data it needs. Microsoft gets `calendarView`, asked for in UTC.
+free/busy query plus only the event data it needs, and the event read decides where free/busy
+cannot find a calendar. Microsoft gets `calendarView`, asked for in UTC.
 Margince trusts the times that answer returns, all-day bounds included. It refuses an answer that
 ignores the timezone request, rather than reading it in the host's zone. Busy time never becomes a
 CRM activity, and the public `/availability` API never returns titles, guests or event text.
