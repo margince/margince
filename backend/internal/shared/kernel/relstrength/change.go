@@ -99,9 +99,9 @@ type ChangeInputs struct {
 	// the number it explains cannot disagree.
 	Current Inputs
 	// Previous is that same fold over the window ending ComparisonDays ago.
-	// Its LastTouch and LastEngaged must be the last ones BEFORE that instant,
-	// not the overall ones, or the earlier score inherits today's recency and
-	// no band ever appears to move.
+	// Its LastTouch and LastEngaged must be the last ones before that instant,
+	// not the overall ones. Otherwise the earlier score inherits today's
+	// recency and no band ever appears to move.
 	Previous Inputs
 	// LatestInbound is when they last wrote to us; nil if they never have.
 	LatestInbound *occurredday.Moment

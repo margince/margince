@@ -6,7 +6,7 @@
 package compose
 
 // The colleague edge knows when the pair last met, on the incremental fold and
-// on the rebuild alike, so its recency counts from a meeting as well as a reply.
+// on the rebuild alike. Its recency then counts from a meeting as well as a reply.
 
 import (
 	"testing"

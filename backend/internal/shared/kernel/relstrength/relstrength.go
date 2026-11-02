@@ -104,10 +104,10 @@ func Compute(in Inputs, now time.Time) Score {
 	s.Recency = recency(in.LastEngaged, now)
 	s.Frequency = math.Min(1.0, float64(in.Count90d)/FreqSaturation)
 	// Reciprocity rewards a two-way exchange and floors a one-way one. The
-	// floor keeps a hundred unanswered sends from scoring as a relationship
-	// while still admitting that they happened. Recency counts only from the
-	// contact's own part, for the same reason: a send of ours they did not
-	// answer is not a sign the relationship is warm.
+	// floor keeps a hundred unanswered sends from scoring as a relationship,
+	// and still admits that they happened. Recency counts only from the
+	// contact's own part for the same reason. A send of ours they did not
+	// answer is no sign the relationship is warm.
 	directed := in.Inbound90d + in.Outbound90d
 	balance := 0.0
 	if directed > 0 {

@@ -182,8 +182,8 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 			&stored.Count90d, &stored.InCount90d, &stored.OutCount90d, &g.ourSideTotal); err != nil {
 			return edge, err
 		}
-		// Scored HERE rather than in SQL, through the edge's own rule, so the
-		// card and every other surface run the identical arithmetic.
+		// Scored in Go through the edge's own rule, so the card and every
+		// other surface run the identical arithmetic.
 		edge.strength = stored.StrengthOf(g.now)
 		return edge, nil
 	})
