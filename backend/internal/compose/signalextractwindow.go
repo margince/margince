@@ -124,7 +124,7 @@ func threadWindow(
 		  FROM (SELECT id, direction, subject, body, occurred_at,
 		               `+provenance.MailBodyCompleteSQL("activity")+` AS complete
 		          FROM activity
-		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
+		         WHERE activity_thread_available(thread_key) AND thread_key = $2 AND kind = 'email' AND (archived_at IS NULL AND activity_thread_available(thread_key))
 		           -- The audience, tested HERE and not only in the pass that
 		           -- offered this conversation. dueThreads runs in its own
 		           -- transaction and this window is read in a later one, so a
@@ -139,7 +139,7 @@ func threadWindow(
 		           -- the pass, and a short window is the right answer to it.
 		           AND `+activities.AutomaticMailContent+`
 		           AND (id = $7 OR EXISTS (SELECT 1 FROM activity window_anchor
-		                 WHERE window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text", "")+`))
+		                 WHERE activity_thread_available(window_anchor.thread_key) AND window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text", "")+`))
 		           -- Null means no bound: the newest window, which is the
 		           -- ordinary case and the one a thread starts from.
 		           --
@@ -183,7 +183,7 @@ func windowAnchor(ctx context.Context, tx pgx.Tx, key string, through *ids.UUID)
 	var counterparty string
 	err := tx.QueryRow(ctx, `
 		SELECT id, coalesce(counterparty_email, '') FROM activity
-		 WHERE thread_key = $1 AND kind = 'email' AND archived_at IS NULL
+		 WHERE activity_thread_available(thread_key) AND thread_key = $1 AND kind = 'email' AND (archived_at IS NULL AND activity_thread_available(thread_key))
 		   AND `+activities.AutomaticMailContent+` AND ($2::uuid IS NULL OR id = $2)
 		 ORDER BY `+correspondence.ProvenSQL("activity")+` DESC, occurred_at DESC, id DESC
 		 LIMIT 1`, key, through).Scan(&anchor, &counterparty)

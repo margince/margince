@@ -35,14 +35,14 @@ const requestOpenSQL = `a.kind IN ('email', 'message')
  AND a.archived_at IS NULL AND a.restricted_at IS NULL
  AND NOT EXISTS (SELECT 1 FROM activity settled
    WHERE settled.source_system = '` + EmailRequestTaskSource + `'
-     AND settled.source_activity_id = a.id AND settled.is_done)
+     AND settled.source_activity_id = a.id AND (NOT activity_thread_available(settled.thread_key) OR settled.is_done))
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement answered
    WHERE answered.request_activity_id = a.id
      AND answered.verdict = '` + RequestSettled + `'
      AND NOT EXISTS (SELECT 1 FROM activity reopened
-       WHERE reopened.source_system = '` + EmailRequestTaskSource + `'
+       WHERE activity_thread_available(reopened.thread_key) AND reopened.source_system = '` + EmailRequestTaskSource + `'
          AND reopened.source_activity_id = a.id
-         AND reopened.is_done = false AND reopened.archived_at IS NULL))`
+         AND reopened.is_done = false AND (reopened.archived_at IS NULL AND activity_thread_available(reopened.thread_key))))`
 
 // notDismissedSQL is false once anybody judged the thread not sales.
 const notDismissedSQL = `NOT EXISTS (SELECT 1 FROM activity_sales_state dismissed
@@ -52,7 +52,7 @@ const notDismissedSQL = `NOT EXISTS (SELECT 1 FROM activity_sales_state dismisse
 // Taking a request records intent in the audited source-linked task. It does
 // not overwrite the classifier's verdict on somebody else's correspondence.
 var acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
- WHERE accepted.source_system = '` + EmailRequestTaskSource + `'
+ WHERE activity_thread_available(accepted.thread_key) AND accepted.source_system = '` + EmailRequestTaskSource + `'
  AND accepted.source_activity_id = a.id AND ` + storekit.HumanWroteActivityClause("accepted") + `)`
 
 // heldRequestSQL is a request a human kept: an open reminder a human wrote,
@@ -63,15 +63,15 @@ var acceptedRequestSQL = `EXISTS (SELECT 1 FROM activity accepted
 // open reminder a human wrote, far under any value size limit.
 func heldRequestSQL() string {
 	return `a.id = ANY (ARRAY(SELECT held.source_activity_id FROM activity held
- WHERE held.source_activity_id IS NOT NULL AND held.restricted_at IS NULL
+ WHERE activity_thread_available(held.thread_key) AND held.source_activity_id IS NOT NULL AND (held.restricted_at IS NULL AND activity_thread_available(held.thread_key))
  AND held.source_system = '` + EmailRequestTaskSource + `'
  AND ` + storekit.HeldTaskClause("held") + `))`
 }
 
 const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
- WHERE reminder.source_system = '` + EmailRequestTaskSource + `'
+ WHERE activity_thread_available(reminder.thread_key) AND reminder.source_system = '` + EmailRequestTaskSource + `'
  AND reminder.source_activity_id = a.id AND NOT reminder.is_done
- AND reminder.archived_at IS NULL)`
+ AND (reminder.archived_at IS NULL AND activity_thread_available(reminder.thread_key)))`
 
 // confirmedRequestSQL is a request the classifier or a human confirmed.
 var confirmedRequestSQL = `a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL
@@ -109,7 +109,7 @@ func reviewableRequestSQL(asOf string) string {
 	return requestUnsettledSQL + ` AND (a.owed_verdict = 'asks_us' OR ` + acceptedRequestSQL + `
  OR (a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
-       AND NOT ` + answeredSQL("a", asOf) + `))))`
+       AND ` + unansweredSQL("a", asOf) + `))))`
 }
 
 // Current work needs confirmed intent and a responsible seat. Review remains broader.

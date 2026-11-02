@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -118,7 +119,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	var storedReason *string
 	err := tx.QueryRow(ctx, `
 		SELECT audience, audience_reason FROM activity
-		 WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`,
+		 WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key)) FOR UPDATE`,
 		activityID).Scan(&stored, &storedReason)
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -321,6 +322,9 @@ func noRecordHoldStands(ctx context.Context, tx pgx.Tx, activityID ids.ActivityI
 // why is the verdict's own account of itself — the word the reader is shown when
 // this contribution is the strictest one (`legal`, `personnel`).
 func contributionOf(posture, status, why *string) (audience, reason string) {
+	if held, reason := rowCarriedHold(audienceParticipants, why); held && deref(status) != "shared_by_owner" && reason != ReasonNoRecord && reason != ReasonNoCounterparty {
+		return audienceParticipants, reason
+	}
 	switch deref(status) {
 	case "held", "held_by_owner":
 		// Never ReasonManual as the fallback: that word tells the next recompute
@@ -358,13 +362,26 @@ func writeDerivedAudienceTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	stored string, storedReason *string, derived, reason string,
 ) error {
+	return writeDerivedAudienceWithRepairTx(ctx, tx, activityID, stored, storedReason, derived, reason, false)
+}
+
+func writeDerivedAudienceWithRepairTx(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	stored string, storedReason *string, derived, reason string, threadRepair bool,
+) error {
+	if threadRepair {
+		if err := auth.RequireSystem(ctx); err != nil {
+			return err
+		}
+	}
 	before := map[string]any{auditFieldAudience: stored, auditFieldAudienceReason: deref(storedReason)}
 	// The audience pin is the concurrency guard, re-stating what the caller read
 	// under FOR UPDATE.
 	tag, err := tx.Exec(ctx, `
-		UPDATE activity SET audience = $2, audience_reason = NULLIF($3, '')
-		 WHERE id = $1 AND audience = $4 AND restricted_at IS NULL`,
-		activityID, derived, reason, stored)
+		UPDATE activity SET audience = @audience, audience_reason = NULLIF(@audience_reason, '')
+ WHERE id = @id AND audience = @stored_audience AND restricted_at IS NULL
+ AND (@thread_repair OR activity_thread_available(thread_key))`,
+		pgx.NamedArgs{"id": activityID, auditFieldAudience: derived, auditFieldAudienceReason: reason, "stored_audience": stored, "thread_repair": threadRepair})
 	if err != nil {
 		return fmt.Errorf("activities: writing the derived audience of %s: %w", activityID, err)
 	}

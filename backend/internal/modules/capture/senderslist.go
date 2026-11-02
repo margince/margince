@@ -180,7 +180,7 @@ func senderMailTx(ctx context.Context, tx pgx.Tx, user ids.UUID, out []SenderDec
 		SELECT a.counterparty_email, count(*), max(a.occurred_at), `+occurredday.LatestPrecisionSQL("a", "")+`
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = `+seat+`
-		 WHERE a.counterparty_email = ANY(`+listed+`) AND a.kind = 'email' AND a.archived_at IS NULL
+		 WHERE a.counterparty_email = ANY(`+listed+`) AND a.kind = 'email' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		 GROUP BY a.counterparty_email`, args...)
 	if err != nil {
 		return fmt.Errorf("capture: counting a seat's mail per sender: %w", err)

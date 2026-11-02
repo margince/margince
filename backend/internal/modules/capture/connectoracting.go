@@ -31,6 +31,10 @@ func connectorActing(ctx context.Context, authority authz.Resolver, name string,
 	if err != nil {
 		return nil, err
 	}
+	return connectorAuthorityContext(ctx, name, grantedBy, rbac, seat), nil
+}
+
+func connectorAuthorityContext(ctx context.Context, name string, grantedBy ids.UserID, rbac authz.RBAC, seat principal.SeatType) context.Context {
 	p := principal.Principal{
 		Type:        principal.PrincipalConnector,
 		ID:          connectorPrincipalID(name),
@@ -40,5 +44,5 @@ func connectorActing(ctx context.Context, authority authz.Resolver, name string,
 		SeatType:    seat,
 		Permissions: rbac.Permissions,
 	}
-	return principal.WithActor(ctx, p), nil
+	return principal.WithActor(ctx, p)
 }

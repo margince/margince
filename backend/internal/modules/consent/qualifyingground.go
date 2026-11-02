@@ -238,7 +238,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
 		JOIN activity_participant p ON p.activity_id = a.id
 		     AND p.role = 'from' AND p.contact_id = $1::uuid
-		WHERE a.direction = 'inbound' AND a.archived_at IS NULL
+		WHERE a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  AND `+occurredday.FromSQL("a", "$2")+`
 		ORDER BY a.occurred_at DESC
 		LIMIT 1`, contactID, since).Scan(&activityID, &event.OccurredAt)
@@ -321,7 +321,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		SELECT a.id, a.occurred_at
 		FROM activity a
 		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
-		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		WHERE a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
 		  AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))

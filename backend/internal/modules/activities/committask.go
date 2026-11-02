@@ -31,7 +31,7 @@ func (s *Store) CommitmentTaskWritten(ctx context.Context, tx pgx.Tx, locators .
 	var written bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM activity
-		                WHERE source_system = $1 AND source_id = ANY($2::text[]))`,
+		                WHERE activity_thread_available(thread_key) AND source_system = $1 AND source_id = ANY($2::text[]))`,
 		CommitmentTaskSource, locators).Scan(&written); err != nil {
 		return false, fmt.Errorf("activities: reading whether the commitment's task exists: %w", err)
 	}

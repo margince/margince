@@ -122,7 +122,7 @@ func readFilingBlockers(ctx context.Context, q Querier, activityIDs []ids.UUID) 
 		       coalesce(bool_or(EXISTS (SELECT 1 FROM activity_retention_evidence e
 		                                 WHERE e.activity_id = a.id AND e.basis <> $2)), false),
 		       coalesce(bool_or(`+retentionscope.QualifyingDealLink("a.id")+`), false)
-		  FROM activity a WHERE a.id = ANY($1)`, activityIDs, BasisProjectLinked).Scan(
+		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY($1)`, activityIDs, BasisProjectLinked).Scan(
 		&b.found, &b.restricted, &b.archived, &b.legalHold, &b.erasurePending, &b.otherBasis, &b.qualifiedDeal)
 	return b, err
 }

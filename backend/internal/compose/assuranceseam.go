@@ -20,11 +20,14 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -96,7 +99,7 @@ const assuranceSubjectsSQL = `
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
-		           AND a.archived_at IS NULL
+		           AND a.archived_at IS NULL AND activity_thread_available(a.thread_key)
 		           AND ((a.kind = 'task' AND a.is_done = false AND %[1]s)
 		                -- MeetingAheadSQL admits NULL, a meeting nothing has said
 		                -- is off. An imported one carries no status, and the strict form raised a
@@ -120,7 +123,15 @@ const assuranceSubjectsSQL = `
 		               AND e.deal_id = d.id
 		               AND e.met
 		               AND e.refuted_at IS NULL
-		               AND %[5]s)) AS unmet_exit_criteria
+		               AND %[5]s)) AS unmet_exit_criteria,
+               EXISTS(SELECT 1 FROM (
+                 SELECT linked.activity_id FROM activity_link linked WHERE linked.deal_id=d.id
+                 UNION SELECT source_task.source_activity_id FROM activity_link linked
+                   JOIN activity source_task ON source_task.id=linked.activity_id
+                   WHERE linked.deal_id=d.id AND source_task.source_activity_id IS NOT NULL
+                 ) needed JOIN activity deferred_source ON deferred_source.id=needed.activity_id
+                 WHERE deferred_source.archived_at IS NULL
+                   AND %[11]s) AS sources_deferred
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'%[9]s
@@ -178,7 +189,11 @@ func assuranceSubjects(
 	if err != nil {
 		return nil, err
 	}
-	query := assuranceSubjectsQuery(now, identities, only, arg)
+	pending, err := auth.ActivityRepairPendingClause(principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: assuranceActor}), "deferred_source", arg)
+	if err != nil {
+		return nil, err
+	}
+	query := assuranceSubjectsQuery(now, identities, only, pending, arg)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
@@ -199,15 +214,19 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	var stageID *ids.UUID
 	var evidence deals.ViabilityInput
 	var fingerprint string
+	var deferred bool
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 		&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &stageID, &out.StageEnteredAt,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
 		&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
+		&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria, &deferred)
 	if err != nil {
 		return out, err
+	}
+	if deferred {
+		return out, fmt.Errorf("conversation evidence is being repaired; retry assessment: %w", apperrors.ErrConflict)
 	}
 	out.DealID = dealID.String()
 	if owner != nil {
@@ -265,7 +284,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
-		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
+		                  WHERE pl.deal_id = %[1]s.id AND (pa.archived_at IS NULL AND activity_thread_available(pa.thread_key))
 		                    AND NOT %[8]s AND %[7]s) THEN NULL
 		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
 		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
@@ -281,7 +300,7 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 
 // assuranceSubjectsQuery is the statement assuranceSubjects runs. Rendered
 // apart so a test can read which tables the check reads.
-func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, arg func(any) int) string {
+func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, pending string, arg func(any) int) string {
 	// A task the product filed itself asks for a next step; it is not one.
 	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
@@ -290,7 +309,7 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, a
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
-		storekit.AuditNotFromAnImport("au"))
+		storekit.AuditNotFromAnImport("au"), pending)
 }
 
 // onlyDealSQL narrows the read to the deals in only, or not at all when only is
@@ -306,7 +325,7 @@ func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
 // the system and its answer reaches every reader of the forecast, so a limited
 // or restricted message must not move it.
 func visibleToAllSQL(alias string) string {
-	return "(" + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
+	return "(activity_thread_available(" + alias + ".thread_key) AND " + relstrength.WorkspaceAudienceSQL(alias) + " AND " + alias + ".restricted_at IS NULL)"
 }
 
 // customerWroteSQL is a message one of the deal's contacts wrote.

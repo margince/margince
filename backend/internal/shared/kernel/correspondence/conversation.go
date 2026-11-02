@@ -25,7 +25,7 @@ func ThreadSQL(row, anchor string) string {
 	return fmt.Sprintf(`%[2]s.thread_key <> '' AND %[1]s.thread_key = %[2]s.thread_key
      AND %[1]s.kind = %[2]s.kind
      AND %[1]s.channel_provider IS NOT DISTINCT FROM %[2]s.channel_provider
-     AND %[1]s.archived_at IS NULL`, row, anchor)
+     AND %[1]s.archived_at IS NULL AND activity_thread_available(%[1]s.thread_key)`, row, anchor)
 }
 
 // OurOutboundSQL is the test that row is mail we sent. The direction alone is
@@ -51,7 +51,7 @@ func ProvenSQL(row string) string {
 // Only connector provenance can support closing a capture-origin notice duty.
 func SubjectMailSQL(row string) string {
 	return fmt.Sprintf(`(%[1]s.kind = 'email' AND %[1]s.direction = 'inbound'
- AND %[1]s.archived_at IS NULL AND starts_with(%[1]s.captured_by, 'connector:')
+ AND %[1]s.archived_at IS NULL AND activity_thread_available(%[1]s.thread_key) AND starts_with(%[1]s.captured_by, 'connector:')
  AND (NOT %[1]s.bulk_mail_attested OR %[1]s.inbound_sender_authenticated))`, row)
 }
 

@@ -29,7 +29,7 @@ const (
 func mailFileIDs(linkedTo string) string {
 	return fmt.Sprintf(`SELECT mf.id FROM activity a
 		  JOIN attachment mf ON mf.entity_type = '%s' AND mf.entity_id = a.id AND mf.archived_at IS NULL
-		 WHERE a.archived_at IS NULL AND %s AND %s`,
+		 WHERE a.archived_at IS NULL AND activity_thread_available(a.thread_key) AND %s AND %s`,
 		linkEntityActivity, linkedTo, storekit.ListedMailFileSQL("mf"))
 }
 

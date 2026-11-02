@@ -16,7 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-func answeredSQL(inbound, until string) string { return storekit.AnsweredSQL(inbound, until) }
+func answeredSQL(inbound, until string) string   { return storekit.AnsweredSQL(inbound, until) }
+func unansweredSQL(inbound, until string) string { return storekit.UnansweredSQL(inbound, until) }
 func answeredReadableSQL(inbound, until, readable string) string {
 	return storekit.AnsweredReadableSQL(inbound, until, readable)
 }
@@ -58,15 +59,15 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)
 	   OR (NOT EXISTS (SELECT 1 FROM activity newer
-	         WHERE newer.thread_key = a.thread_key
+	         WHERE activity_thread_available(newer.thread_key) AND newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
 	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
-	           AND newer.archived_at IS NULL
+	           AND (newer.archived_at IS NULL AND activity_thread_available(newer.thread_key))
 	           AND ` + occurredday.BegunSQL("newer", asOf) + `
 	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
-	       AND NOT ` + answeredSQL("a", asOf) + `)))`
+	       AND ` + unansweredSQL("a", asOf) + `)))`
 }
 
 // machineSenderSQL is true when the message came from an address no human

@@ -170,10 +170,18 @@ func SupersedeStaleTagSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error)
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	pending, err := auth.ActivityRepairPendingClause(ctx, "repair_source", arg)
+	if err != nil {
+		return 0, err
+	}
 	rows, err := tx.Query(ctx, `
 		UPDATE tag_suggestion s SET state = 'superseded', decided_at = now()
 		 WHERE s.state = 'open' AND NOT `+tagSuggestionStandsClause("s")+`
-		RETURNING s.id`)
+ AND NOT EXISTS(SELECT 1 FROM activity repair_source JOIN (`+tagSuggestionEvidenceActivitiesSQL("s")+`) evidence
+ ON evidence.activity_id=repair_source.id WHERE repair_source.archived_at IS NULL AND (`+pending+`))
+		RETURNING s.id`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("collections: superseding tag suggestions: %w", err)
 	}
@@ -228,7 +236,11 @@ func tagSuggestionStandsClause(alias string) string {
 	          WHERE tco.id = %[1]s.company_id AND tco.archived_at IS NULL
 	            AND NOT EXISTS (SELECT 1 FROM taggable tg WHERE tg.tag_id = %[1]s.tag_id
 	                  AND tg.entity_type = 'company' AND tg.entity_id = tco.id)))
-	  AND (SELECT count(*) FROM tag_suggestion_evidence te
-	        JOIN activity ta ON ta.id = te.activity_id AND ta.archived_at IS NULL AND %[2]s
-	       WHERE te.suggestion_id = %[1]s.id) = %[1]s.evidence_count)`, alias, auth.ActivityAvailableClause("ta"))
+	  AND (SELECT count(*) FROM (%[3]s) te
+	        JOIN activity ta ON ta.id = te.activity_id AND (ta.archived_at IS NULL AND activity_thread_available(ta.thread_key)) AND %[2]s
+	       ) = %[1]s.evidence_count)`, alias, auth.ActivityAvailableClause("ta"), tagSuggestionEvidenceActivitiesSQL(alias))
+}
+
+func tagSuggestionEvidenceActivitiesSQL(alias string) string {
+	return fmt.Sprintf(`SELECT activity_id FROM tag_suggestion_evidence WHERE suggestion_id=%s.id`, alias)
 }

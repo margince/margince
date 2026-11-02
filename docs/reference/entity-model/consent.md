@@ -6,7 +6,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_basis
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -18,7 +18,9 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `note` | `text` |  |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `source_activity_id` | `uuid` |  | Points at `activity.id`. |
+| `thread_derived_from` | `uuid` |  | Points at `communication_basis.id`. |
 | `thread_key` | `text` |  |  |
+| `thread_source_activity_id` | `uuid` |  |  |
 | `valid_from` | `timestamp with time zone`, default `now()` | yes |  |
 | `valid_until` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -30,6 +32,7 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `lead_id` | `lead` | deleting the parent deletes this row |
 | `source_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
+| `thread_derived_from` | `communication_basis` | deleting the parent deletes this row |
 
 **Rules**
 
@@ -42,8 +45,15 @@ The 20 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `communication_basis_live_contact`: `btree (contact_id, kind) WHERE ((contact_id IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_basis_live_lead`: `btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL))`
 - `communication_basis_pkey`: `unique, btree (id)`
+- `communication_basis_thread_derived_source`: `btree (COALESCE(thread_source_activity_id, source_activity_id), id)`
+- `communication_basis_thread_origin`: `btree (thread_derived_from) WHERE (thread_derived_from IS NOT NULL)`
+- `communication_basis_thread_repair_page`: `btree (thread_key, id) WHERE (revoked_at IS NULL)`
 - `idx_communication_basis_contact`: `btree (contact_id)`
 - `idx_communication_basis_lead`: `btree (lead_id)`
+
+**Triggers**
+
+- `communication_basis_source_erased`: `BEFORE UPDATE OF source_activity_id FOR EACH ROW EXECUTE FUNCTION communication_basis_source_erased()`
 
 ## communication_decision
 

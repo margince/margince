@@ -122,7 +122,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	// The activities this contact is on, shared by both directions; the
 	// inbound arm adds authorship on top.
 	reached := fmt.Sprintf(`FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
+		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s AND (%s)%s%s`,
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
 	asOf := "now()"

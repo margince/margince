@@ -101,7 +101,7 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 			                   FROM (SELECT DISTINCT project_id, project_name FROM activity_retention_evidence
 			                          WHERE activity_id = a.id AND project_id IS NOT NULL) e), '[]'::jsonb)
 			  FROM activity a
-			 WHERE a.restricted_at IS NOT NULL `+where+`
+			 WHERE activity_thread_available(a.thread_key) AND a.restricted_at IS NOT NULL `+where+`
 			 ORDER BY a.restricted_at ASC, a.id ASC
 			 LIMIT $`+fmt.Sprint(len(args))+``, args...)
 		if err != nil {

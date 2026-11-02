@@ -214,12 +214,12 @@ func visibleActivityIDs(ctx context.Context, tx pgx.Tx, want []ids.ActivityID) (
 	if err != nil {
 		return nil, err
 	}
-	where := []string{"a.id = ANY($1)", "a.archived_at IS NULL"}
+	where := []string{"a.id = ANY($1)", "(a.archived_at IS NULL AND activity_thread_available(a.thread_key))"}
 	if scope != "" {
 		where = append(where, scope)
 	}
 	rows, err := tx.Query(ctx,
-		`SELECT a.id FROM activity a WHERE `+strings.Join(where, " AND "), args...)
+		`SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND `+strings.Join(where, " AND "), args...)
 	if err != nil {
 		return nil, fmt.Errorf("filter score sources: %w", err)
 	}

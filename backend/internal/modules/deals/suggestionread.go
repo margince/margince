@@ -64,7 +64,7 @@ func suggestionVisibleClause(ctx context.Context, arg func(any) int, readable st
 		if err != nil {
 			return "", err
 		}
-		passes = "SELECT 1 FROM activity ea WHERE ea.id = need.id AND ea.archived_at IS NULL AND " + content
+		passes = "SELECT 1 FROM activity ea WHERE activity_thread_available(ea.thread_key) AND ea.id = need.id AND (ea.archived_at IS NULL AND activity_thread_available(ea.thread_key)) AND " + content
 	}
 	// A kind the reader holds no grant for admits no evidence of that kind.
 	activityGranted := grantedSQL(ctx, "activity")
@@ -361,10 +361,10 @@ func attachEvidence(ctx context.Context, tx pgx.Tx, list []Suggestion) error {
 		       coalesce(a.occurred_precision, carried.occurred_precision, `+storekit.CitedActivityPrecision("sg.evidence")+`)
 		  FROM deal_suggestion_evidence e
 		  JOIN deal_suggestion s ON s.id = e.suggestion_id
-		  LEFT JOIN activity a ON a.id = e.activity_id
+		  LEFT JOIN activity a ON a.id = e.activity_id AND activity_thread_available(a.thread_key)
 		  LEFT JOIN signal sg ON sg.id = e.signal_id
 		  LEFT JOIN attachment at ON at.id = e.attachment_id
-		  LEFT JOIN activity carried ON carried.id = at.activity_id
+		  LEFT JOIN activity carried ON carried.id = at.activity_id AND activity_thread_available(carried.thread_key)
 		 WHERE e.suggestion_id = ANY($1) AND `+visible+`
 		 ORDER BY e.occurred_at DESC, e.id`, args...)
 	if err != nil {

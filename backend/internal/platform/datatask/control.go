@@ -20,6 +20,8 @@ import (
 // EstimateAction is shared by operator adapters and ledger audit actions.
 const EstimateAction = "estimate"
 
+const retryAction = "retry"
+
 // Control requires the version the operator read, so a stale click cannot replace progress.
 func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, version int64) error {
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -56,6 +58,14 @@ func (e *Engine) Control(ctx context.Context, taskID, stepName, action string, v
 		if action == EstimateAction {
 			return e.refreshEstimate(ctx, tx, task, step, p)
 		}
+		if action == retryAction && step.Retry != nil {
+			if _, err := controlStatus(p.Status, action); err != nil {
+				return err
+			}
+			if err := step.Retry(ctx, tx); err != nil {
+				return err
+			}
+		}
 		return e.changeStatus(ctx, tx, p, action)
 	})
 	if storekit.IsLockTimeout(err) {
@@ -70,7 +80,7 @@ func controlStatus(status, action string) (string, error) {
 		return Paused, nil
 	case action == "resume" && status == Paused:
 		return Pending, nil
-	case action == "retry" && status == Failed:
+	case action == retryAction && status == Failed:
 		return Pending, nil
 	default:
 		return "", fmt.Errorf("refresh this correction before changing its state: %w", apperrors.ErrConflict)
@@ -134,7 +144,7 @@ func (e *Engine) changeStatus(ctx context.Context, tx pgx.Tx, p Progress, action
 		return err
 	}
 	failures := p.ConsecutiveFailures
-	if action == "retry" {
+	if action == retryAction {
 		failures = 0
 	}
 	tag, err := tx.Exec(ctx, `UPDATE data_task_run SET status = @status,

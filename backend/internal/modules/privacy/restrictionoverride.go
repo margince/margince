@@ -164,7 +164,7 @@ func (e *Eraser) PinToFloor(ctx context.Context, activityID ids.UUID, reason Sta
 			           CASE WHEN a.counterparty_email IS NOT NULL THEN 'counterparty_email' END]) AS c
 			         WHERE c IS NOT NULL),
 			       archived_at = coalesce(a.archived_at, now())
-			 WHERE a.id = $1 AND a.restricted_at IS NULL
+			 WHERE a.id = $1 AND a.restricted_at IS NULL AND activity_thread_available(a.thread_key)
 			 RETURNING a.restricted_until`, activityID, retentionClassCorrespondence, floorCurrent, floorCarried).Scan(&until)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("the record is already under a retention obligation: %w", apperrors.ErrConflict)

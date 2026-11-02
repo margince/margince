@@ -119,6 +119,7 @@ type SARPackage struct {
 	CommunicationExceptions []map[string]any `json:"communication_exceptions"`
 	RawCapture              []map[string]any `json:"raw_capture"`
 	CapturePartySources     []map[string]any `json:"capture_party_sources"`
+	ConversationDerivations []map[string]any `json:"conversation_derivations"`
 	FieldOrigins            []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.

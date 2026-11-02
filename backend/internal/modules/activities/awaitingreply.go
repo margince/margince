@@ -264,15 +264,14 @@ const (
 func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) string {
 	return `(a.kind IN (` + kinds + `)
 	   AND a.direction = 'outbound'
-	   AND a.archived_at IS NULL
+	   AND a.archived_at IS NULL AND activity_thread_available(a.thread_key)
 	   AND NOT ` + ImportedHistorySQL + `
 	   AND ` + relstrength.WrittenByHumanSQL("a") + `
 	   AND NOT ` + calendarCopySQL + `
 	   AND ` + sentByReader + `
 	   AND NOT EXISTS (SELECT 1 FROM activity later
 	                    WHERE later.archived_at IS NULL
-	                      AND ` + laterContent + `
-	                      AND ` + relstrength.WrittenByHumanSQL("later") + `
+ AND ` + followUpEvidenceSQL("later", laterContent, relstrength.WrittenByHumanSQL("later")) + `
 	                      AND a.thread_key IS NOT NULL AND a.thread_key <> ''
 	                      AND later.thread_key = a.thread_key
 	                      AND later.kind = a.kind
@@ -302,7 +301,7 @@ func sentByReaderSQL(reader, addresses string) string {
 // awaitingRepliesSQL also tests, so it never drops a row the lane reports.
 func awaitingCandidatesSQL(asOf, sentByReader, window string) string {
 	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, a.occurred_at FROM activity a
-	 WHERE a.kind IN (` + mailKinds + `) AND a.direction = 'outbound' AND a.archived_at IS NULL
+	 WHERE activity_thread_available(a.thread_key) AND a.kind IN (` + mailKinds + `) AND a.direction = 'outbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 	   AND ` + sentByReader + `
 	   ` + fmt.Sprintf("AND a.occurred_at <= %s::timestamptz - make_interval(days => %s::int) -- occurred_at raw: an age of whole days\n", asOf, window) + `
 	   AND ` + occurredday.FromSQL("a", fmt.Sprintf("%s::timestamptz - make_interval(days => %s::int + %d)", asOf, window, AwaitingReplyLookbackDays))
@@ -336,8 +335,7 @@ var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
 	  JOIN activity later ON later.id = heard.activity_id
 	 WHERE later.id <> c.id
 	   AND later.archived_at IS NULL
-	   AND %[7]s
-	   AND %[8]s
+ AND ` + followUpEvidenceSQL("later", "%[7]s", "%[8]s") + `
 	   AND later.occurred_at > c.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
 	   AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)`
 
@@ -382,5 +380,9 @@ var awaitingRepliesSQL = `
 // names a relation with an activity's id, thread_key, kind and channel_provider.
 func threadNeedSQL(candidates string) string {
 	return `SELECT c.id FROM ` + candidates + ` c
-	 UNION SELECT t.id FROM ` + candidates + ` c JOIN activity t ON ` + correspondence.ThreadSQL("t", "c") + ` AND t.restricted_at IS NULL`
+	 UNION SELECT t.id FROM ` + candidates + ` c JOIN activity t ON ` + correspondence.ThreadSQL("t", "c") + ` AND (t.restricted_at IS NULL AND activity_thread_available(t.thread_key))`
+}
+
+func followUpEvidenceSQL(alias, readable, counts string) string {
+	return "(NOT activity_thread_available(" + alias + ".thread_key) OR ((" + readable + ") AND (" + counts + ")))"
 }

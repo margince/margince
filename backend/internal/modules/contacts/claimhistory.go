@@ -42,7 +42,7 @@ func (s *Store) CustomerPromiseHistoryTx(ctx context.Context, tx pgx.Tx, source 
 		contact = sqlAlwaysVisible
 	}
 	query := fmt.Sprintf(`SELECT c.evidence_fingerprint, c.contact_id
- FROM conversation_claim c JOIN activity a ON a.id=c.source_activity_id AND a.archived_at IS NULL
+ FROM conversation_claim c JOIN activity a ON a.id=c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
  JOIN contact p ON p.id=c.contact_id
  WHERE c.source_activity_id=$%d AND c.kind='commitment_theirs' AND (%s) AND (%s)`, arg(source), content, contact)
 	rows, err := tx.Query(ctx, query, args...)

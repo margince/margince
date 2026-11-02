@@ -68,6 +68,9 @@ func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // not become a bypass a held row's write-authority check does not have to
 // answer for.
 func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live bool) error {
+	if err := EnsureActivityThreadAvailable(ctx, tx, id); err != nil {
+		return err
+	}
 	if live {
 		if err := ensureActivity(ctx, tx, id, ActivityContentClause, true); err != nil {
 			return err
@@ -95,7 +98,7 @@ func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live 
 
 	var permitted bool
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND %s)`,
+		SELECT EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND %s)`,
 		idPos, arms), args...).Scan(&permitted); err != nil {
 		return err
 	}
@@ -161,7 +164,7 @@ func ActivityWritableSubset(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID) (
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(
 		`SELECT a.id FROM activity a
-		  WHERE a.id = ANY($%d) AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		  WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
 		    AND (%s) AND %s`,
 		idsPos, content, arms), args...)
 	if err != nil {
@@ -194,7 +197,7 @@ func activityAudienceIncludes(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool
 	}
 	var included bool
 	err = tx.QueryRow(ctx, fmt.Sprintf(
-		`SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND (%s))`, idPos, audience),
+		`SELECT EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND (%s))`, idPos, audience),
 		args...).Scan(&included)
 	return included, err
 }

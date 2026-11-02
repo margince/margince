@@ -47,7 +47,7 @@ func keepsTypedText(kind crmcontracts.ActivityKind) bool {
 // member typed, so a masked value from its history is not what it held.
 func KeepsTypedTextTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
 	var kind crmcontracts.ActivityKind
-	err := tx.QueryRow(ctx, `SELECT kind FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&kind)
+	err := tx.QueryRow(ctx, `SELECT kind FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key))`, id).Scan(&kind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, apperrors.ErrNotFound
 	}
