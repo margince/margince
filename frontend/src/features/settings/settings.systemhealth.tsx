@@ -13,20 +13,23 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge } from "../../format/interval";
 import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { useHealthScope } from "../../lib/healthscope";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { useUrlParams } from "../../lib/urlstate";
+import { PublicOriginCard } from "./public-origin";
 import {
   healthAvailability,
   healthCodes,
   healthConditions,
   healthSourceLabels,
 } from "./systemhealth.copy";
+import { findingNextStepKey } from "./systemhealth.effect";
 import { useSystemHealth } from "./systemhealth.queries";
 import { FindingPanel } from "./systemhealthfinding";
+import { healthTone } from "./systemhealthstatus";
 
 const Diagnostics = lazy(() => import("./systemhealthdiagnostics"));
 const Configuration = lazy(() => import("./systemhealthconfiguration"));
@@ -142,6 +145,7 @@ function Overview({
         <Heading size="small" as="h2">
           {title}
         </Heading>
+        <OverviewStatus report={report} stale={stale} />
         <Button
           pending={refreshing}
           onClick={async () => {
@@ -158,17 +162,63 @@ function Overview({
         </Button>
       </ActionRow>
       {changed && <p role="status">{t("health.prioritiesChanged")}</p>}
-      {shown.map((finding) => (
-        <FindingPanel key={finding.id} finding={finding} />
-      ))}
+      <OverviewFindings findings={shown} />
       <Disclosure summary={t("health.capabilities")}>
         {report.sources
           .filter((source) => source.availability !== "withheld")
           .map((source) => (
             <SourceReading key={source.id} source={source} />
           ))}
+        <PublicOriginCard status={report.public_origin} />
       </Disclosure>
     </>
+  );
+}
+
+function OverviewFindings({
+  findings,
+}: Readonly<{ findings: Report["findings"] }>) {
+  const groups = new Map<string, Report["findings"]>();
+  for (const finding of findings) {
+    const key =
+      finding.source === "capture"
+        ? JSON.stringify([
+            finding.source,
+            finding.responsible,
+            finding.action.destination,
+            findingNextStepKey(finding),
+          ])
+        : finding.id;
+    groups.set(key, [...(groups.get(key) ?? []), finding]);
+  }
+  return Array.from(groups, ([key, entries]) =>
+    entries[0] ? (
+      <FindingPanel
+        key={key}
+        finding={entries[0]}
+        related={entries.length > 1 ? entries : undefined}
+      />
+    ) : null,
+  );
+}
+
+function OverviewStatus({
+  report,
+}: Readonly<{ report: Report; stale: boolean }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!report.action_count) return null;
+  const tone = report.findings.some(
+    (f) => f.requires_action && healthTone(f) === "danger",
+  )
+    ? "danger"
+    : "warning";
+  return (
+    <Badge tone={tone}>
+      {plural("health.actionsNeeded", report.action_count, {
+        count: formatNumber(report.action_count, locale),
+      })}
+    </Badge>
   );
 }
 
@@ -233,18 +283,7 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
 
 function SourceStatus({ source }: Readonly<{ source: Source }>) {
   const t = useT();
-  const available = source.availability === "available";
-  const tone =
-    source.availability === "failed" ||
-    source.condition === "technical" ||
-    source.code === "queue_unverified"
-      ? "danger"
-      : ["retrying", "waiting_human", "unverified"].includes(source.condition)
-        ? "warning"
-        : source.condition === "processing" ||
-            (available && ["clear", "recovered"].includes(source.condition))
-          ? "success"
-          : "default";
+  const tone = healthTone(source);
   return (
     <Badge tone={tone}>
       {t(

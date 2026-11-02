@@ -309,12 +309,13 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
 **System health** opens on **Overview**: what needs work, who can act and the next step.
-Only work that needs a person appears here, with its effect until fixed. **All checks** holds service status; **Diagnostics** shows the technical details.
+Only work that needs a person appears here, grouped by feature, with its effect until fixed. The status label says what to fix or review. **All checks** holds service status; **Diagnostics** shows the technical details.
 
-**Diagnostics** shows each source. Mail capture shows counts only; held meetings are counted across the whole installation. Filter background runs or open the next page; totals include all runs still kept in that window.
+**Diagnostics** shows each source and keeps the selected check in its address. Data updates shows open work first; completed updates and optional work open separately. Mail capture shows counts only; held meetings are counted across the whole installation. Filter background runs or open the next page; totals include all runs still kept in that window.
+
 A canceled run is not a failed run. Deleted runs do not prove the work is done. **Copy technical report** copies recorded errors, attempts and run IDs; it sends no message.
 
-**System health > Configuration** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
+**System health > Schedules and sending** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
 Moving to another view asks you to save a draft first. **Search settings** opens the view with the control you asked for.
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,

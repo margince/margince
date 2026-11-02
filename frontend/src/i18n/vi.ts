@@ -10296,8 +10296,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "mailSharing.cardTitle": "Chia sẻ và đồng bộ thư",
   "connectors.originLabel":
     "\u0110\u1ecba ch\u1ec9 d\u00f9ng trong li\u00ean k\u1ebft g\u1eedi qua email",
-  "connectors.originReachable": "C\u00f3 ph\u1ea3n h\u1ed3i",
-  "connectors.originUnreachable": "Không thể truy cập",
+  "connectors.originReachable": "Truy cập được từ máy chủ này",
+  "connectors.originUnreachable": "Không truy cập được từ máy chủ này",
   "connectors.loading": "Đang tải trình kết nối…",
   "connectors.originUnchecked": "Ch\u01b0a ki\u1ec3m tra",
   "connectors.sub":
@@ -14456,7 +14456,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportsHideRevoked": "Ẩn passport đã thu hồi",
   "operations.schedules.title": "Lịch chạy nền",
   "operations.schedules.sub":
-    "Tần suất chạy của từng tác vụ nền. Tiến trình nền đang chạy sẽ nhận thay đổi trong vòng một phút: tác vụ chạy một lần, rồi tiếp tục theo chu kỳ mới.",
+    "Điều chỉnh tần suất từng kiểm tra tự động. Mỗi dòng giải thích tác động của kiểm tra đó. Thay đổi có hiệu lực trong vòng một phút.",
   "operations.schedules.fold": "Tất cả lịch chạy",
   "operations.pacing.title": "Nhịp gửi thư",
   "operations.pacing.sub":
@@ -19208,13 +19208,32 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền xem các kiểm tra dự báo.",
   "analytics.decision.part.commit_evidence": "Cam kết đã xác nhận",
   "analytics.decision.part.weighted": "Deal đang mở theo trọng số",
+  "health.needsFix": "Cần sửa",
+  "health.needsReview": "Cần xem xét",
+  "health.actionsNeeded_one": "Vấn đề cần xử lý: {count}",
+  "health.actionsNeeded_other": "Vấn đề cần xử lý: {count}",
+  "health.inspectRuns": "Xem các lần chạy lỗi",
+  "health.inspectMail": "Xem hoạt động thu thập thư",
+  "health.inspectUpdates": "Xem bản cập nhật chờ xử lý",
+  "health.noPendingUpdates": "Không có bản cập nhật bắt buộc nào còn dở dang.",
+  "health.optionalMaintenance": "Bảo trì tùy chọn",
+  "health.completedUpdates": "Bản cập nhật đã hoàn tất",
+  "health.effect.companyTechnical":
+    "Trên trang công ty, thông tin tự động về nhà cung cấp thư, bảo mật email và dịch vụ lưu trữ có thể thiếu hoặc cũ. Kiểm tra riêng các thông tin này cho đến khi sửa xong. Hồ sơ công ty đã lưu vẫn có thể truy cập.",
+  "health.scopeUnknown": "Chưa đo lường số lượng bị ảnh hưởng",
+  "health.failedRunsReview": "Cần xem xét các lần chạy lỗi",
+  "health.inspectWork": "Xem công việc xử lý nền",
+  "health.filteredFinding_one": "Đang hiển thị 1 trong {count} vấn đề",
+  "health.filteredFinding_other": "Đang hiển thị 1 trong {count} vấn đề",
+  "health.showAllFindings": "Hiển thị mọi vấn đề",
+  "health.jobDelayed": "{kind}: bị chậm",
   "health.views": "Chế độ xem tình trạng hệ thống",
   "health.overview": "Tổng quan",
   "health.diagnostics": "Chẩn đoán",
   "health.configurationWithheld":
     "Vai trò của bạn không được xem các cài đặt này. Hãy hỏi quản trị viên.",
-  "health.configuration": "Cấu hình",
-  "health.loading": "Đang tải bằng chứng…",
+  "health.configuration": "Lịch chạy và gửi thư",
+  "health.loading": "Đang tải các mục kiểm tra…",
   "health.attention": "Cần chú ý",
   "health.stoppedNext":
     "Gửi báo cáo lỗi cho người vận hành. Họ cần kiểm tra việc hoàn tất, sửa nguyên nhân và chỉ khởi động lại công việc chưa xong; các lượt chạy thất bại này không tự thử lại.",
@@ -19296,18 +19315,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Cập nhật dữ liệu",
   "health.source.recovery": "Bằng chứng khôi phục",
   "health.source.automatic": "Chất lượng công việc tự động",
-  "health.impact": "Ảnh hưởng đã biết",
-  "health.measuredImpact": "Nguồn đã đo lường công việc bị ảnh hưởng.",
-  "health.possibleImpact":
-    "Công việc có thể bị chậm hoặc chưa hoàn tất; chưa đo số người bị ảnh hưởng.",
-  "health.unknownImpact": "Chưa biết phạm vi bị ảnh hưởng.",
   "health.scope": "Phạm vi ảnh hưởng",
   "health.window": "Khoảng báo cáo",
-  "health.currentRetained": "Trạng thái đang lưu; lịch sử còn giữ lại nếu có",
   "health.observed": "Quan sát mới nhất",
   "health.firstObserved": "Lần đầu quan sát",
   "health.nextAttempt": "Lần thử tự động tiếp theo đã ghi nhận",
-  "health.responsible": "Ai có thể xử lý",
   "health.responsible.you": "Bạn",
   "health.responsible.mailbox_owner": "Chủ hộp thư",
   "health.responsible.administrator": "Quản trị viên",
@@ -19329,7 +19341,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
   "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
   "health.ownerHandoff":
-    "Nhờ chủ hộp thư mở Kết nối hoặc phần duyệt thư của họ. Trang này không mở thư riêng của người khác.",
+    "Chủ hộp thư: mở Kết nối để xem lại quyết định về thư của chính mình. Với hộp thư của người khác, yêu cầu chủ hộp thư xem xét; chỉ họ mới thấy thư riêng tư.",
   "health.operatorHandoff":
     "Người vận hành kỹ thuật cần kiểm tra. Sao chép bản tóm tắt chẩn đoán để bàn giao.",
   "health.copy": "Sao chép báo cáo kỹ thuật",
@@ -19365,12 +19377,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.capture_checked":
     "Không phát hiện tồn đọng thư trong các loại đã kiểm tra",
   "health.code.capture_processing": "Đang phân loại người gửi",
-  "health.code.capture_uncertain":
-    "Một số người gửi cần chủ hộp thư quyết định",
+  "health.code.capture_uncertain": "Quyết định người gửi nào được đưa vào CRM",
   "health.code.capture_exhausted":
     "Phân loại người gửi đã hết số lần thử tự động",
-  "health.code.capture_owner_review":
-    "Chủ hộp thư có quyết định thu thập cần duyệt",
+  "health.code.capture_owner_review": "Thư cần chủ hộp thư quyết định",
   "health.code.capture_unread": "Khoảng thư chưa đọc cần xác minh khôi phục",
   "health.code.capture_held": "Bản ghi đã lưu đang chờ lượt sửa chữa",
   "health.code.capture_repair_unverified":
@@ -19405,7 +19415,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_routing": "Cần xem lại phân công công việc tự động",
   "health.code.capture_thread_processing": "Đang phân loại chuỗi thư",
   "health.code.capture_thread_uncertain":
-    "Một số phân loại chuỗi thư cần chủ hộp thư duyệt",
+    "Quyết định đồng nghiệp được xem cuộc hội thoại nào",
   "health.queueCoverage":
     "Lịch sử hàng đợi chỉ được giữ trong thời gian giới hạn. Việc không còn lịch sử không chứng minh công việc từng lỗi đã hoàn tất.",
 
