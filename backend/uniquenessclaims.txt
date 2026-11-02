@@ -401,7 +401,6 @@ internal/modules/customfields/engine.go#func quoteIdentifier
 internal/modules/customfields/engine.go#type FieldSpec
 internal/modules/customfields/engine.go#var FieldObjects
 internal/modules/customfields/service.go#const catalogColumns
-internal/modules/dealrooms/document_read.go#const inTheDealsFilesArea
 internal/modules/dealrooms/document_read.go#func documentIDOf
 internal/modules/dealrooms/errors.go#const block at const codeTooLong
 internal/modules/dealrooms/errors.go#const codeRequired
