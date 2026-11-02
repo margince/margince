@@ -82,6 +82,7 @@ const (
 	eventContractStatusChanged = "contract.status_changed"
 	eventActivityCaptured      = "activity.captured"
 	eventActivityUpdated       = "activity.updated"
+	eventDealUpdated           = "deal.updated"
 )
 
 // activityKindMeeting is the activity.kind a meeting carries. Read from the row
@@ -196,6 +197,8 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 		return t.onActivityCaptured(ctx, env)
 	case eventActivityUpdated:
 		return t.onActivityUpdated(ctx, env)
+	case eventDealUpdated:
+		return t.onDealUpdated(ctx, env)
 	}
 	return nil
 }
@@ -321,6 +324,21 @@ func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events
 	return t.judgeActivity(ctx, env.Entity.ID)
 }
 
+// onDealUpdated re-offers the move when a deal's evidence is judged again,
+// which an own-domain change does. Nothing else comes back afterwards: no job
+// is queued, and the next claim may be months away. Every other edit is
+// ignored.
+func (t *StageEvidenceTrigger) onDealUpdated(ctx context.Context, env events.Envelope) error {
+	var payload crmcontracts.PublicEventDealUpdated
+	if !t.readPayload(ctx, env, &payload) {
+		return nil
+	}
+	if _, judged := payload.ChangedFields[deals.ChangedFieldStageEvidence]; !judged {
+		return nil
+	}
+	return t.proposeStageMove(ctx, ids.From[ids.DealKind](env.Entity.ID))
+}
+
 // judgeActivity queues the model's reading of an activity, and writes
 // event_held where the record itself shows a meeting took place.
 //
@@ -362,7 +380,8 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 		return nil
 	}
 	proof := deals.MeetingWasHeld(
-		facts.MeetingStatus, facts.HasTranscript, facts.BuyerParticipants)
+		facts.MeetingStatus, facts.HasTranscript, facts.BuyerParticipants,
+	)
 	if !proof.Held {
 		return nil
 	}
