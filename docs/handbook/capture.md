@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadroot.go backend/internal/modules/capture/threadrepair.go backend/internal/compose/company360/suggestionreads.go backend/internal/compose/assuranceseam.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
@@ -238,6 +238,11 @@ To see every email with a contact in Margince, open the contact and choose its *
 You see only the messages whose audience includes you; a held message stays with those who were on it. See [Who can see an email](who-can-see-an-email.md).
 Also called: email history, correspondence, all mails with a customer.
 
+### What counts as one email thread?
+A reply with a changed subject starts a new conversation. Reply and forward prefixes do not count as a change. A project key in square brackets does not count when Margince has matched that project to the message; other labels in brackets still count. A reply without a subject follows its parent conversation. A blank subject does not join conversations with different subjects.
+
+When Margince needs to split older mail, that conversation stays hidden until all its messages are ready to show together. The company overview and suggested next steps wait if they need that conversation. Other companies and the company record itself remain available. Pipeline checks keep their last findings while the conversation is hidden; a later check uses it once it is ready.
+
 ### How do I read a whole email thread?
 To read a whole thread in Margince, press an email on the **History** tab. The thread opens beside the record, oldest message first.
 1. The message you pressed is open. Press any other message to open it, and press its sender to fold it again.
@@ -391,8 +396,5 @@ how many there are.
 back right now, with the reason and the outside addresses on each. **Share with
 the team** releases one.
 
-Three settings decide who may read captured mail. **Mail visibility** is in
-each mailbox's settings in Settings → Connections. **Private correspondence** is on a
-contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules,
-for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
-together with whose capture activity you can see.
+Three settings decide who may read captured mail. **Mail visibility** is in each mailbox's settings in Settings → Connections. **Private correspondence** is on a contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules, for administrators only.
+They are explained in [Who can see an email](who-can-see-an-email.md), together with whose capture activity you can see.

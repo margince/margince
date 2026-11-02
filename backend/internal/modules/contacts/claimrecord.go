@@ -41,8 +41,8 @@ func currentCommitmentAdmission(asOf time.Time, arg func(any) int) string {
 	return `(` + unplacedPromiseSQL + ` OR c.corrected_at IS NOT NULL OR (starts_with(c.captured_by, 'human:') AND NOT EXISTS (
  SELECT 1 FROM audit_log imported WHERE imported.entity_type='contact' AND imported.entity_id=c.contact_id
  AND imported.after->>'claim_id'=c.id::text AND NOT ` + storekit.AuditNotFromAnImport("imported") + `)) OR ` + current + `
- OR EXISTS (SELECT 1 FROM activity adopted_task WHERE adopted_task.id=c.task_activity_id
- AND adopted_task.archived_at IS NULL AND NOT adopted_task.is_done AND (` + storekit.HumanWroteActivityClause("adopted_task") + `
+ OR EXISTS (SELECT 1 FROM activity adopted_task WHERE activity_thread_available(adopted_task.thread_key) AND adopted_task.id=c.task_activity_id
+ AND (adopted_task.archived_at IS NULL AND activity_thread_available(adopted_task.thread_key)) AND NOT adopted_task.is_done AND (` + storekit.HumanWroteActivityClause("adopted_task") + `
  OR (adopted_task.assignee_id, adopted_task.id::text) IN (SELECT reader_id,row_id FROM ` + auth.EffectiveWorklistPinsSQL(arg) + ` pins WHERE pins.source='task'))))`
 }
 
@@ -172,7 +172,7 @@ func recordClaimInTx(
 // and one found only in the quoted reply is somebody else's words.
 func requireQuoteInActivity(ctx context.Context, tx pgx.Tx, in ClaimInput) error {
 	var subject, body string
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(subject, ''), COALESCE(body, '') FROM activity WHERE id = $1`,
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(subject, ''), COALESCE(body, '') FROM activity WHERE activity_thread_available(thread_key) AND id = $1`,
 		in.ActivityID).Scan(&subject, &body); err != nil {
 		return fmt.Errorf("read the message a claim cites: %w", err)
 	}
@@ -254,7 +254,7 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 		return nil
 	}
 	var done bool
-	err := tx.QueryRow(ctx, `SELECT is_done FROM activity WHERE id = $1 AND kind = 'task'`, taskID).Scan(&done)
+	err := tx.QueryRow(ctx, `SELECT is_done FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND kind = 'task'`, taskID).Scan(&done)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}

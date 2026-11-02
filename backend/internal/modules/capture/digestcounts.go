@@ -19,16 +19,16 @@ func readDigestCounts(ctx context.Context, tx pgx.Tx, userID ids.UUID, since, un
 	args := []any{}
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
 	start, end, reader := arg(since), arg(until), arg(userID)
-	imported := " AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.audience = 'workspace' AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = " + reader + ")"
+	imported := " AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.audience = 'workspace' AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = " + reader + ")"
 	created := "created_at >= " + start + " AND created_at <= " + end
 	labeled := "capture_labeled_at >= " + start + " AND capture_labeled_at <= " + end
 	err := tx.QueryRow(ctx, `SELECT
-  (SELECT count(*) FROM activity a WHERE a.captured_by LIKE 'connector:%' AND a.kind = 'email' AND `+created+imported+`),
+  (SELECT count(*) FROM activity a WHERE activity_thread_available(a.thread_key) AND a.captured_by LIKE 'connector:%' AND a.kind = 'email' AND `+created+imported+`),
   (SELECT count(*) FROM contact WHERE captured_by LIKE 'connector:%' AND `+created+` AND owner_id = `+reader+`),
   (SELECT count(*) FROM company WHERE (captured_by LIKE 'connector:%' OR source LIKE 'domain\_triage:%') AND `+created+` AND owner_id = `+reader+`),
-  (SELECT count(*) FROM activity a WHERE capture_label = 'commitment' AND `+labeled+imported+`),
-  (SELECT count(*) FROM activity a WHERE capture_label = 'meeting' AND `+labeled+imported+`),
-  (SELECT count(*) FROM activity a WHERE capture_label = 'noise' AND `+labeled+imported+`)`, args...).Scan(
+  (SELECT count(*) FROM activity a WHERE activity_thread_available(a.thread_key) AND capture_label = 'commitment' AND `+labeled+imported+`),
+  (SELECT count(*) FROM activity a WHERE activity_thread_available(a.thread_key) AND capture_label = 'meeting' AND `+labeled+imported+`),
+  (SELECT count(*) FROM activity a WHERE activity_thread_available(a.thread_key) AND capture_label = 'noise' AND `+labeled+imported+`)`, args...).Scan(
 		&p.Capture.ActivitiesCreated, &p.Capture.ContactsCreated, &p.Capture.CompaniesCreated,
 		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Noise)
 	if err != nil {

@@ -51126,6 +51126,28 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Activity + link ----
+    ActivityEmailTarget:
+      type: object
+      additionalProperties: false
+      required: [entity_type, entity_id]
+      description: >-
+        The record an email about this call, meeting, note or task goes to. It is the
+        row's one linked contact. A task with no single contact goes on to its one live
+        linked lead, and then to its one linked company; two live leads name nobody. A task
+        whose only lead is closed and that names no company gets that lead, refused. Absent
+        where the row names no target, on the same rows `offers_email` is always false for,
+        and for a record this caller may not read. A client offers Write email or Draft
+        email when this is present without `refusal`, and says the refusal otherwise.
+      properties:
+        entity_type: { type: string, enum: [contact, lead, company] }
+        entity_id: { type: string, format: uuid }
+        refusal:
+          type: string
+          enum: [archived, no_address, lead_closed]
+          description: >-
+            Why no email goes to the target: `archived` for an archived contact,
+            `no_address` for a contact or lead with no address an email may use, and
+            `lead_closed` for a lead that was promoted or disqualified.
     ActivityLink:
       type: object
       required: [entity_type, entity_id]
@@ -51757,11 +51779,14 @@ components:
           description: >-
             Whether Write email on this row opens with a recipient filled in: true exactly when
             `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call,
-            meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`.
-            Always false for an email or a message, which are answered with Reply instead, for
-            an archived row, for a task the product filed itself (`automatic_kind` product),
-            and for a row whose content is withheld from the caller. A client offers Write email
-            only when this is true, and reads the address from reply-recipient.
+            meeting, note or task. Both are computed by one rule, the one `email_target`
+            states. Always false for an email or a message, which are answered with Reply
+            instead, for an archived row, for a task the product filed itself (`automatic_kind`
+            product), and for a row whose content is withheld from the caller. False for a
+            company target too, which has no single address: the composer asks which of the
+            company's contacts the mail is for.
+        email_target:
+          $ref: '#/components/schemas/ActivityEmailTarget'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         imported_from:

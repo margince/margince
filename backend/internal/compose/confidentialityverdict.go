@@ -317,7 +317,7 @@ func threadAddressesTx(ctx context.Context, tx pgx.Tx, row capture.PendingThread
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT lower(trim(counterparty_email))
 		  FROM activity
-		 WHERE id = $1 AND restricted_at IS NULL
+		 WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key))
 		   AND counterparty_email IS NOT NULL
 		   AND counterparty_email <> ''`, row.ActivityID)
 	if err != nil {

@@ -23,17 +23,17 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 	source := provenance.CurrentCommitmentClause(alias+".source_activity_id", alias+".source_id", alias+".due_at", asOf, arg)
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	horizon := WaitingHorizonSQL(asOf, arg)
-	request := `EXISTS (SELECT 1 FROM activity request_source WHERE request_source.id = ` + alias + `.source_activity_id
- AND request_source.kind = 'email' AND request_source.direction = 'inbound' AND request_source.archived_at IS NULL
+	request := `EXISTS (SELECT 1 FROM activity request_source WHERE activity_thread_available(request_source.thread_key) AND request_source.id = ` + alias + `.source_activity_id
+ AND request_source.kind = 'email' AND request_source.direction = 'inbound' AND (request_source.archived_at IS NULL AND activity_thread_available(request_source.thread_key))
  AND ` + AutomaticRequestIntentClause("request_source") + `
  AND NOT EXISTS (SELECT 1 FROM activity successor WHERE successor.source_system = ` + alias + `.source_system
  AND successor.source_activity_id = ` + alias + `.source_activity_id AND successor.id <> ` + alias + `.id
- AND ` + HeldTaskClause("successor") + `)
+ AND (NOT activity_thread_available(successor.thread_key) OR ` + HeldTaskClause("successor") + `))
  AND ` + occurredday.BegunSQL("request_source", instant) + `
  AND ` + occurredday.FromSQL("request_source", instant+` - make_interval(days => `+horizon+`)`) + ` AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
 	engagement := CurrentLeadEngagementClause(provenance.TaskSourceActivitySQL(alias), asOf, arg) + " AND " + latestLeadAdviceSQL(alias)
 	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
-	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
+	return `activity_thread_available(` + alias + `.thread_key) AND ` + fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
@@ -128,7 +128,7 @@ func taskSourcesOf(currency taskCurrency) []string {
 // text reads provenance.MailBodyCompleteSQL.
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
-	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
+	return `EXISTS (SELECT 1 FROM activity current_source WHERE activity_thread_available(current_source.thread_key) AND current_source.id = ` + source + `
  AND ` + SourceWithinHorizonSQL("current_source", asOf, arg) + `
  AND ` + occurredday.BegunSQL("current_source", instant) + `)`
 }
@@ -143,7 +143,7 @@ func SourceWithinHorizonSQL(alias string, asOf time.Time, arg func(any) int) str
 // expression at, such as the row's own capture time. asOf picks the horizon
 // measurement in force; alias and at are compile-time literals.
 func SourceWithinHorizonAtSQL(alias, at string, asOf time.Time, arg func(any) int) string {
-	return alias + `.archived_at IS NULL AND ` + occurredday.FromSQL(alias, at+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`)
+	return alias + `.archived_at IS NULL AND activity_thread_available(` + alias + `.thread_key) AND ` + occurredday.FromSQL(alias, at+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`)
 }
 
 // UndatedTaskSources names current work that needs no invented deadline.

@@ -120,7 +120,7 @@ func newestMessage(
 		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
 		       %[6]s
 		FROM activity a
-		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
+		WHERE activity_thread_available(a.thread_key) AND %[5]s AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
@@ -182,7 +182,7 @@ func hasOpenTask(
 	query := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
-		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
+		  WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %[1]s
 		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
 	err = tx.QueryRow(ctx, query, args...).Scan(&scheduled)
@@ -264,6 +264,11 @@ func gatherSuggestionInputs(
 	pipeline := auth.ReadGranted(ctx, "deal")
 	contractsGranted := auth.ReadGranted(ctx, "contract")
 	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
+	if timeline {
+		if err := requireCompanyEvidenceReady(ctx, tx, companyID, opts); err != nil {
+			return suggestionInputs{}, err
+		}
+	}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
 		if err != nil {

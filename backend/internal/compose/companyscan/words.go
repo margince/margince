@@ -79,7 +79,7 @@ func readWords(
 		       greatest(coalesce(char_length(a.body), 0) - $%[3]d, 0),
 		       coalesce(a.thread_key || '/' || a.kind || '/' || coalesce(a.channel_provider, ''), '')
 		  FROM activity a
-		 WHERE %[6]s AND a.archived_at IS NULL
+		 WHERE activity_thread_available(a.thread_key) AND %[6]s AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND %[2]s AND (%[5]s)
 		   AND %[1]s
 		 ORDER BY a.occurred_at DESC, a.id DESC

@@ -103,7 +103,7 @@ func RecordTagInterestAnswersTx(ctx context.Context, tx pgx.Tx, vocabulary strin
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO tag_interest_read (activity_id, vocabulary_digest, content_digest, tag_ids)
 			SELECT a.id, $2::text, $3::text, $4::uuid[] FROM activity a
-			 WHERE a.id = $1 AND a.archived_at IS NULL AND `+auth.ActivityAvailableClause("a")+`
+			 WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND `+auth.ActivityAvailableClause("a")+`
 			   AND `+TagInterestContactsLiveClause("a.id")+`
 			   AND `+content("a")+` = $3::text
 			   FOR SHARE OF a

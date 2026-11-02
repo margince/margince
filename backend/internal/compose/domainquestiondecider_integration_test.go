@@ -48,6 +48,7 @@ func TestEveryPendingDomainReasonAsksOnlyItsDecider(t *testing.T) {
 				captureStaffMail(t, e, mail)
 				mail.mailbox = e.Rep2
 				captureStaffMail(t, e, mail)
+				finishThreadRepairs(t, e)
 				runVendorTriage(t, e, domain)
 				e.WsExec(t, `UPDATE company_domain_disposition SET pending_reason = $2 WHERE domain = $1`, domain, reason)
 				for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {

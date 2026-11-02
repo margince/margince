@@ -89,7 +89,7 @@ func (s *Store) ResolveProposalToken(ctx context.Context, token string) (ids.UUI
 	var host ids.UserID
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		args := schedulingArgs{}
-		return tx.QueryRow(ctx, `SELECT p.activity_id,p.host_user_id FROM meeting_proposal p JOIN activity a ON a.id=p.activity_id WHERE p.token_hash=`+args.add(hex.EncodeToString(sum[:]))+` AND a.archived_at IS NULL AND p.expires_at>`+args.add(s.now()), args...).Scan(&id, &host)
+		return tx.QueryRow(ctx, `SELECT p.activity_id,p.host_user_id FROM meeting_proposal p JOIN activity a ON a.id=p.activity_id WHERE p.token_hash=`+args.add(hex.EncodeToString(sum[:]))+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND p.expires_at>`+args.add(s.now()), args...).Scan(&id, &host)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = apperrors.ErrNotFound
@@ -282,7 +282,7 @@ func openProposalRows(ctx context.Context, tx pgx.Tx, host ids.UserID, contact i
 		coalesce(nullif(p.request->'options', 'null'::jsonb), '[]'::jsonb), p.created_at, p.expires_at, p.link_ref
 		FROM meeting_proposal p JOIN activity a ON a.id = p.activity_id
 		WHERE p.host_user_id = $%d AND (p.request->>'contact_id')::uuid = $%d
-		  AND p.used_at IS NULL AND p.expires_at > $%d AND a.archived_at IS NULL AND %s
+		  AND p.used_at IS NULL AND p.expires_at > $%d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s
 		ORDER BY p.created_at DESC, p.activity_id DESC LIMIT $%d`, hostPos, contactPos, nowPos, scope, limitPos), args...)
 	if err != nil {
 		return nil, err

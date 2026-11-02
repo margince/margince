@@ -99,7 +99,7 @@ func visibleTagSuggestionsQuery(ctx context.Context, arg func(any) int, read tag
 	   AND (SELECT count(*) FROM tag_suggestion_evidence vn WHERE vn.suggestion_id = s.id) = s.evidence_count
 	   AND NOT EXISTS (SELECT 1 FROM tag_suggestion_evidence ve JOIN activity va ON va.id = ve.activity_id
 	         WHERE ve.suggestion_id = s.id
-	           AND NOT (va.archived_at IS NULL AND ` + auth.ActivityAvailableClause("va") + ` AND ` + content + `))`
+	           AND NOT ((va.archived_at IS NULL AND activity_thread_available(va.thread_key)) AND ` + auth.ActivityAvailableClause("va") + ` AND ` + content + `))`
 	if read.openOnly {
 		query += ` AND s.state = 'open' AND ` + tagSuggestionStandsClause("s")
 	}
@@ -113,7 +113,7 @@ const tagSuggestionEvidenceJSON = `(SELECT coalesce(jsonb_agg(jsonb_build_object
 	         'occurred_precision', ea.occurred_precision,
 	         'subject', CASE WHEN 'subject' = ANY(ea.redacted_fields) THEN NULL ELSE ea.subject END)
 	         ORDER BY ee.occurred_at DESC, ee.activity_id), '[]'::jsonb)
-	    FROM tag_suggestion_evidence ee JOIN activity ea ON ea.id = ee.activity_id
+	    FROM tag_suggestion_evidence ee JOIN activity ea ON ea.id = ee.activity_id AND activity_thread_available(ea.thread_key)
 	   WHERE ee.suggestion_id = s.id)`
 
 // recordArm is the reader's row scope over one record type as a join

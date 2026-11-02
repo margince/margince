@@ -71,6 +71,9 @@ var participantRecordsSQL = `
 	ORDER BY organized DESC, rank, id`
 
 func participantRecords(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]participantRecord, error) {
+	if err := auth.EnsureActivityThreadAvailable(ctx, tx, activityID.UUID); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, participantRecordsSQL, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the records an activity's participants name: %w", err)

@@ -192,7 +192,7 @@ func reconcileEvidenceAuthorshipTx(
 // found is false when the activity no longer exists or names no author.
 func judgeActivityAuthor(ctx context.Context, tx pgx.Tx, activityID ids.UUID, domains []string) (AuthorSide, bool, error) {
 	var direction *string
-	err := tx.QueryRow(ctx, `SELECT direction FROM activity WHERE id = $1`, activityID).Scan(&direction)
+	err := tx.QueryRow(ctx, `SELECT direction FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, activityID).Scan(&direction)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", false, nil
 	}

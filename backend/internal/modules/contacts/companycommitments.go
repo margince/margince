@@ -211,7 +211,7 @@ func rankedClaims(
 		       c.source_activity_id, a.kind, c.due_at, a.occurred_at, a.occurred_precision,
 		       count(*) OVER () AS admitted
 		  FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+side(asOf, arg)+`
 		   AND c.archived_at IS NULL
@@ -260,7 +260,7 @@ func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 	query := `
 		SELECT count(*)
 		  FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE ` + side(asOf, arg) + `
 		   AND c.archived_at IS NULL
@@ -334,7 +334,7 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		SELECT c.id, c.contact_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
 		       c.source_activity_id, c.due_at, a.occurred_at
 		  FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+ourPromiseNotYetATask(s.clock(), arg)+`
 		   AND c.archived_at IS NULL
@@ -414,7 +414,7 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 	query := fmt.Sprintf(`
 		SELECT count(*)
 		  FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+openCommitmentEitherSide(s.clock(), arg)+`
 		   AND c.archived_at IS NULL

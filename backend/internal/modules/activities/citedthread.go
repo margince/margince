@@ -54,13 +54,13 @@ func SettledCitations(
          THEN NOT (%[1]s AND (coalesce(%[2]s, false) OR NOT %[3]s))
        WHEN a.direction = 'outbound' AND a.kind = 'email'
          THEN EXISTS (SELECT 1 FROM activity kept
-                WHERE %[4]s AND (%[5]s)
+                WHERE activity_thread_available(kept.thread_key) AND %[4]s AND (%[5]s)
                   AND EXISTS (SELECT 1 FROM activity_participant promised
                        WHERE promised.activity_id = a.id AND promised.role IN ('to', 'cc')
                          AND promised.contact_id = ANY($%[9]d) AND %[6]s))
        ELSE false END, false)
   FROM activity a
- WHERE a.id = ANY($%[7]d) AND a.archived_at IS NULL AND (%[8]s)`,
+ WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%[7]d) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND (%[8]s)`,
 		requestOpenSQL, confirmedRequestSQL, answeredReadableSQL("a", until, orUnbounded(answerReadable)),
 		promiseFollowUpSQL("kept", "a", until), orUnbounded(keptReadable),
 		promiseRecipientAddressedSQL("kept", "promised.contact_id"), citedPos, orUnbounded(readable), recipientsPos), args...)

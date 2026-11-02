@@ -13,7 +13,6 @@ package mailmap
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -211,7 +210,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		counterparty:     counterparty,
 		counterpartyName: counterpartyName,
 		threadKey:        threadKey(header.Get("References"), header.Get("In-Reply-To"), messageID),
-		replyTo:          replyIDs(header.Get("References"), header.Get("In-Reply-To"), messageID),
+		replyTo:          connector.OrderedMailReferences(header.Get("References"), header.Get("In-Reply-To"), messageID),
 		deliveredTo:      deliveredTo,
 		senderAuth:       senderAuth,
 		autoReply:        autoReply,
@@ -318,12 +317,8 @@ func allAddresses(lists ...[]*mail.Address) []string {
 	return out
 }
 
-// threadKey derives the conversation identity from the standard reply
-// headers: the References ROOT (its first id — stable across every reply in
-// the thread), else In-Reply-To, else the message's own id (a fresh thread
-// is rooted at its opener, so later replies referencing it join it). Never
-// a subject heuristic — "Re: Invoice" joining unrelated threads is worse
-// than no join (CAP-FORMULA-1's no-subject-fallback rule).
+// threadKey is the provisional header root. Capture partitions only identity-linked
+// messages at subject boundaries; a shared subject alone never joins messages.
 func threadKey(references, inReplyTo, messageID string) string {
 	if refs := strings.Fields(references); len(refs) > 0 {
 		return trimAngle(refs[0])
@@ -332,43 +327,6 @@ func threadKey(references, inReplyTo, messageID string) string {
 		return trimAngle(irt)
 	}
 	return trimAngle(strings.TrimSpace(messageID))
-}
-
-// maxReplyIDs bounds how many referenced ids one message contributes. A real
-// References chain is a handful of ids; the header is the sender's text, and
-// an unbounded list would let one message fan out into arbitrarily many rows.
-const maxReplyIDs = 50
-
-// maxReplyIDBytes is the longest referenced id kept, the same bound the
-// capture sink holds a thread key to (maxIndexedHeaderChars).
-const maxReplyIDBytes = 998
-
-// replyIDs lists every Message-ID this message says it answers: In-Reply-To
-// first, then the References chain from its newest end, so the ids nearest
-// this message survive the bound. Its own id and anything oversized are left
-// out.
-func replyIDs(references, inReplyTo, messageID string) []string {
-	own := trimAngle(strings.TrimSpace(messageID))
-	refs := strings.Fields(references)
-	candidates := make([]string, 0, len(refs)+1)
-	candidates = append(candidates, strings.Fields(inReplyTo)...)
-	for _, ref := range slices.Backward(refs) {
-		candidates = append(candidates, ref)
-	}
-	seen := make(map[string]bool, len(candidates))
-	out := make([]string, 0, len(candidates))
-	for _, c := range candidates {
-		id := trimAngle(c)
-		if id == "" || id == own || seen[id] || len(id) > maxReplyIDBytes {
-			continue
-		}
-		seen[id] = true
-		out = append(out, id)
-		if len(out) == maxReplyIDs {
-			break
-		}
-	}
-	return out
 }
 
 // trimAngle strips the RFC822 angle brackets off a message id.

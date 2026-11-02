@@ -79,7 +79,7 @@ func admitPatchPrecision(ctx context.Context, tx pgx.Tx, current crmcontracts.Ac
 		return &InvalidPrecisionError{}
 	}
 	var holdsSlot bool
-	if err := tx.QueryRow(ctx, `SELECT `+occupiesHostSlotSQL+` FROM activity a WHERE a.id = $1`, current.Id).Scan(&holdsSlot); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+occupiesHostSlotSQL+` FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1`, current.Id).Scan(&holdsSlot); err != nil {
 		return fmt.Errorf("activities: reading whether the activity holds a slot: %w", err)
 	}
 	if err := refuseDayHeldSlot(*in.OccurredPrecision, holdsSlot); err != nil {

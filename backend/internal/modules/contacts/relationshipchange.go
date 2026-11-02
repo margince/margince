@@ -240,7 +240,7 @@ func changeInputsFor(
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`)
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = ANY($1)
-		 WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+
+		 WHERE `+strengthCountsAt(5)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+
 		auth.AudienceWorkspaceOnly("a")+foldWithin+`
 		 GROUP BY l.contact_id`,
 		foldArgs...,

@@ -200,8 +200,8 @@ public.activity_identity.attested_by text NOT NULL gen=- def=-
 public.activity_identity.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_identity.identity_key text NOT NULL gen=- def=-
 public.activity_identity.identity_kind text NOT NULL gen=- def=-
-public.activity_identity_activity_idx CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id)
 public.activity_identity_pkey CREATE UNIQUE INDEX activity_identity_pkey ON public.activity_identity USING btree (identity_kind, identity_key)
+public.activity_identity_repair_page CREATE INDEX activity_identity_repair_page ON public.activity_identity USING btree (activity_id, identity_kind, identity_key)
 public.activity_kind acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_kind.activity_kind_pkey PRIMARY KEY (kind)
 public.activity_kind.kind text NOT NULL gen=- def=-
@@ -295,10 +295,13 @@ public.activity_mail_reference acl=margince_owner=arwdDxt/margince_owner,marginc
 public.activity_mail_reference.activity_id uuid NOT NULL gen=- def=-
 public.activity_mail_reference.activity_mail_reference_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_mail_reference.activity_mail_reference_pkey PRIMARY KEY (activity_id, referenced_id)
+public.activity_mail_reference.activity_mail_reference_reference_order_check CHECK ((reference_order >= 0))
 public.activity_mail_reference.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_mail_reference.reference_order integer NOT NULL gen=- def=0
 public.activity_mail_reference.referenced_id text NOT NULL gen=- def=-
+public.activity_mail_reference_inverse CREATE INDEX activity_mail_reference_inverse ON public.activity_mail_reference USING btree (referenced_id, activity_id)
+public.activity_mail_reference_ordered CREATE INDEX activity_mail_reference_ordered ON public.activity_mail_reference USING btree (activity_id, reference_order, referenced_id)
 public.activity_mail_reference_pkey CREATE UNIQUE INDEX activity_mail_reference_pkey ON public.activity_mail_reference USING btree (activity_id, referenced_id)
-public.activity_mail_reference_referenced_idx CREATE INDEX activity_mail_reference_referenced_idx ON public.activity_mail_reference USING btree (referenced_id)
 public.activity_meeting_attendee_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_meeting_attendee_repair.activity_id uuid NOT NULL gen=- def=-
 public.activity_meeting_attendee_repair.activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -767,6 +770,12 @@ public.activity_sales_state.set_at timestamp with time zone NOT NULL gen=- def=n
 public.activity_sales_state.set_by text NOT NULL gen=- def=-
 public.activity_sales_state.thread_key text NOT NULL gen=- def=-
 public.activity_sales_state_pkey CREATE UNIQUE INDEX activity_sales_state_pkey ON public.activity_sales_state USING btree (thread_key, kind, channel_provider)
+public.activity_thread_available(thread text) secdef=false cfg=- acl=- SELECT NOT EXISTS (
+ SELECT 1 FROM capture_thread_barrier b JOIN capture_thread_repair r ON r.id=b.repair_id
+ WHERE b.blocked_key=thread AND r.phase <> 'published'
+) AND NOT EXISTS(SELECT 1 FROM capture_thread_pending p WHERE p.source_key=thread AND p.blocked)
+ AND NOT EXISTS(SELECT 1 FROM capture_thread_invalidation i WHERE i.source_key=thread)
+public.activity_thread_repair_page CREATE INDEX activity_thread_repair_page ON public.activity USING btree (thread_key, id) WHERE (kind = 'email'::text)
 public.activity_ts_config(lang text) secdef=false cfg=- acl=- 
 public.activity_waiting_horizon acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_waiting_horizon.activity_waiting_horizon_days_check CHECK ((horizon_days > 0))
@@ -1934,6 +1943,7 @@ public.capture_import.imported_at timestamp with time zone NOT NULL gen=- def=no
 public.capture_import.posture_at_import text gen=- def=-
 public.capture_import.provider_received_at timestamp with time zone gen=- def=-
 public.capture_import.source_occurred_at timestamp with time zone gen=- def=-
+public.capture_import.thread_input_hash text NOT NULL gen=- def=''::text
 public.capture_import.user_id uuid NOT NULL gen=- def=-
 public.capture_import.verdict_reason text gen=- def=-
 public.capture_import.verdict_reasons text[] gen=- def=-
@@ -2111,6 +2121,128 @@ public.capture_test_mailbox_sent.to_addresses jsonb NOT NULL gen=- def=-
 public.capture_test_mailbox_sent.user_id uuid NOT NULL gen=- def=-
 public.capture_test_mailbox_sent_pkey CREATE UNIQUE INDEX capture_test_mailbox_sent_pkey ON public.capture_test_mailbox_sent USING btree (id)
 public.capture_test_mailbox_sent_user_message_unique CREATE UNIQUE INDEX capture_test_mailbox_sent_user_message_unique ON public.capture_test_mailbox_sent USING btree (user_id, message_id)
+public.capture_thread_barrier acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_barrier.after_activity uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_barrier.blocked_key text NOT NULL gen=- def=-
+public.capture_thread_barrier.capture_thread_barrier_pkey PRIMARY KEY (repair_id, blocked_key)
+public.capture_thread_barrier.capture_thread_barrier_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES capture_thread_repair(id) ON DELETE RESTRICT
+public.capture_thread_barrier.loaded boolean NOT NULL gen=- def=false
+public.capture_thread_barrier.repair_id uuid NOT NULL gen=- def=-
+public.capture_thread_barrier_key CREATE INDEX capture_thread_barrier_key ON public.capture_thread_barrier USING btree (blocked_key, repair_id)
+public.capture_thread_barrier_load_page CREATE INDEX capture_thread_barrier_load_page ON public.capture_thread_barrier USING btree (repair_id, loaded, blocked_key)
+public.capture_thread_barrier_pkey CREATE UNIQUE INDEX capture_thread_barrier_pkey ON public.capture_thread_barrier USING btree (repair_id, blocked_key)
+public.capture_thread_invalidation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_invalidation.activity_id uuid NOT NULL gen=- def=-
+public.capture_thread_invalidation.after_node uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_invalidation.after_repair uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_invalidation.after_topic uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_invalidation.capture_thread_invalidation_failures_check CHECK (((failures >= 0) AND (failures <= 3)))
+public.capture_thread_invalidation.capture_thread_invalidation_pkey PRIMARY KEY (activity_id)
+public.capture_thread_invalidation.capture_thread_invalidation_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES capture_thread_repair(id) ON DELETE SET NULL
+public.capture_thread_invalidation.capture_thread_invalidation_state_check CHECK ((state = ANY (ARRAY['ready'::text, 'backoff'::text, 'quarantined'::text])))
+public.capture_thread_invalidation.failures integer NOT NULL gen=- def=0
+public.capture_thread_invalidation.proofs_cleared boolean NOT NULL gen=- def=false
+public.capture_thread_invalidation.queue_order bigint NOT NULL gen=- def=-
+public.capture_thread_invalidation.repair_id uuid gen=- def=-
+public.capture_thread_invalidation.retry_after timestamp with time zone gen=- def=-
+public.capture_thread_invalidation.run_id uuid NOT NULL gen=- def=-
+public.capture_thread_invalidation.source_key text NOT NULL gen=- def=-
+public.capture_thread_invalidation.state text NOT NULL gen=- def='ready'::text
+public.capture_thread_invalidation_fifo CREATE INDEX capture_thread_invalidation_fifo ON public.capture_thread_invalidation USING btree (queue_order) WHERE (state = 'ready'::text)
+public.capture_thread_invalidation_pkey CREATE UNIQUE INDEX capture_thread_invalidation_pkey ON public.capture_thread_invalidation USING btree (activity_id)
+public.capture_thread_invalidation_quarantine CREATE INDEX capture_thread_invalidation_quarantine ON public.capture_thread_invalidation USING btree (activity_id) WHERE (state = 'quarantined'::text)
+public.capture_thread_invalidation_queue_order_seq acl=- rls=false force=false
+public.capture_thread_invalidation_repair CREATE INDEX capture_thread_invalidation_repair ON public.capture_thread_invalidation USING btree (repair_id, activity_id) WHERE (repair_id IS NOT NULL)
+public.capture_thread_invalidation_retry CREATE INDEX capture_thread_invalidation_retry ON public.capture_thread_invalidation USING btree (retry_after, queue_order) WHERE (state = 'backoff'::text)
+public.capture_thread_invalidation_source CREATE INDEX capture_thread_invalidation_source ON public.capture_thread_invalidation USING btree (source_key, queue_order)
+public.capture_thread_one_active CREATE UNIQUE INDEX capture_thread_one_active ON public.capture_thread_repair USING btree ((true)) WHERE ((phase <> 'published'::text) AND (state = 'ready'::text))
+public.capture_thread_pending acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_pending.blocked boolean NOT NULL gen=- def=false
+public.capture_thread_pending.capture_thread_pending_pkey PRIMARY KEY (source_key)
+public.capture_thread_pending.queue_order bigint NOT NULL gen=- def=-
+public.capture_thread_pending.source_key text NOT NULL gen=- def=-
+public.capture_thread_pending_fifo CREATE INDEX capture_thread_pending_fifo ON public.capture_thread_pending USING btree (queue_order)
+public.capture_thread_pending_pkey CREATE UNIQUE INDEX capture_thread_pending_pkey ON public.capture_thread_pending USING btree (source_key)
+public.capture_thread_pending_queue_order_seq acl=- rls=false force=false
+public.capture_thread_quarantine_page CREATE INDEX capture_thread_quarantine_page ON public.capture_thread_repair USING btree (id) WHERE (state = 'quarantined'::text)
+public.capture_thread_repair acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_repair.after_activity uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair.capture_thread_repair_failures_check CHECK (((failures >= 0) AND (failures <= 3)))
+public.capture_thread_repair.capture_thread_repair_phase_check CHECK ((phase = ANY (ARRAY['load'::text, 'discover'::text, 'topics'::text, 'labels'::text, 'roots'::text, 'targets'::text, 'inherit'::text, 'apply'::text, 'repair'::text, 'refresh'::text, 'published'::text])))
+public.capture_thread_repair.capture_thread_repair_pkey PRIMARY KEY (id)
+public.capture_thread_repair.capture_thread_repair_state_check CHECK ((state = ANY (ARRAY['ready'::text, 'backoff'::text, 'quarantined'::text])))
+public.capture_thread_repair.created_xid xid8 NOT NULL gen=- def=pg_current_xact_id()
+public.capture_thread_repair.failures integer NOT NULL gen=- def=0
+public.capture_thread_repair.graph_best_key text NOT NULL gen=- def=''::text
+public.capture_thread_repair.graph_best_topic text NOT NULL gen=- def=''::text
+public.capture_thread_repair.graph_cursor uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair.graph_cycle uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair.graph_stage text NOT NULL gen=- def='reset'::text
+public.capture_thread_repair.id uuid NOT NULL gen=- def=-
+public.capture_thread_repair.phase text NOT NULL gen=- def='load'::text
+public.capture_thread_repair.retry_after timestamp with time zone gen=- def=-
+public.capture_thread_repair.run_id uuid NOT NULL gen=- def=-
+public.capture_thread_repair.state text NOT NULL gen=- def='ready'::text
+public.capture_thread_repair.was_blocked boolean NOT NULL gen=- def=false
+public.capture_thread_repair_node acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_repair_node.activity_id uuid NOT NULL gen=- def=-
+public.capture_thread_repair_node.after_basis uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair_node.after_delivery uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair_node.after_seat uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair_node.ancestor_distance integer NOT NULL gen=- def='-1'::integer
+public.capture_thread_repair_node.ancestor_topic text NOT NULL gen=- def=''::text
+public.capture_thread_repair_node.capture_thread_repair_node_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_thread_repair_node.capture_thread_repair_node_ancestor_distance_check CHECK ((ancestor_distance >= '-1'::integer))
+public.capture_thread_repair_node.capture_thread_repair_node_graph_pending_check CHECK ((graph_pending >= 0))
+public.capture_thread_repair_node.capture_thread_repair_node_graph_state_check CHECK ((graph_state = ANY (ARRAY['waiting'::text, 'ready'::text, 'done'::text, 'cycle'::text])))
+public.capture_thread_repair_node.capture_thread_repair_node_parent_activity_id_fkey FOREIGN KEY (parent_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.capture_thread_repair_node.capture_thread_repair_node_pkey PRIMARY KEY (repair_id, activity_id)
+public.capture_thread_repair_node.capture_thread_repair_node_repair_id_fkey FOREIGN KEY (repair_id) REFERENCES capture_thread_repair(id) ON DELETE RESTRICT
+public.capture_thread_repair_node.child_after uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair_node.edges_done boolean NOT NULL gen=- def=false
+public.capture_thread_repair_node.frontier_key text NOT NULL gen=- def=''::text
+public.capture_thread_repair_node.frontier_topic text NOT NULL gen=- def=''::text
+public.capture_thread_repair_node.graph_after uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair_node.graph_pending integer NOT NULL gen=- def=0
+public.capture_thread_repair_node.graph_state text NOT NULL gen=- def='waiting'::text
+public.capture_thread_repair_node.inherit_source text NOT NULL gen=- def=''::text
+public.capture_thread_repair_node.message_key text NOT NULL gen=- def=-
+public.capture_thread_repair_node.observed_version bigint NOT NULL gen=- def=-
+public.capture_thread_repair_node.own_topic text NOT NULL gen=- def=-
+public.capture_thread_repair_node.parent_activity_id uuid gen=- def=-
+public.capture_thread_repair_node.parent_key text NOT NULL gen=- def=''::text
+public.capture_thread_repair_node.repair_after_seat uuid NOT NULL gen=- def='00000000-0000-0000-0000-000000000000'::uuid
+public.capture_thread_repair_node.repair_id uuid NOT NULL gen=- def=-
+public.capture_thread_repair_node.root_key text NOT NULL gen=- def=-
+public.capture_thread_repair_node.root_proven boolean NOT NULL gen=- def=false
+public.capture_thread_repair_node.source_key text NOT NULL gen=- def=-
+public.capture_thread_repair_node.stage text NOT NULL gen=- def='verdict'::text
+public.capture_thread_repair_node_activity CREATE INDEX capture_thread_repair_node_activity ON public.capture_thread_repair_node USING btree (activity_id, repair_id)
+public.capture_thread_repair_node_edges CREATE INDEX capture_thread_repair_node_edges ON public.capture_thread_repair_node USING btree (repair_id, edges_done, activity_id)
+public.capture_thread_repair_node_identity CREATE INDEX capture_thread_repair_node_identity ON public.capture_thread_repair_node USING btree (repair_id, message_key)
+public.capture_thread_repair_node_parent CREATE INDEX capture_thread_repair_node_parent ON public.capture_thread_repair_node USING btree (repair_id, parent_activity_id, activity_id)
+public.capture_thread_repair_node_pkey CREATE UNIQUE INDEX capture_thread_repair_node_pkey ON public.capture_thread_repair_node USING btree (repair_id, activity_id)
+public.capture_thread_repair_node_target CREATE INDEX capture_thread_repair_node_target ON public.capture_thread_repair_node USING btree (repair_id, root_key, activity_id)
+public.capture_thread_repair_node_work CREATE INDEX capture_thread_repair_node_work ON public.capture_thread_repair_node USING btree (repair_id, graph_state, activity_id)
+public.capture_thread_repair_pkey CREATE UNIQUE INDEX capture_thread_repair_pkey ON public.capture_thread_repair USING btree (id)
+public.capture_thread_reply acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_reply.activity_id uuid NOT NULL gen=- def=-
+public.capture_thread_reply.capture_thread_reply_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_thread_reply.capture_thread_reply_pkey PRIMARY KEY (activity_id)
+public.capture_thread_reply.emitted boolean NOT NULL gen=- def=false
+public.capture_thread_reply_pkey CREATE UNIQUE INDEX capture_thread_reply_pkey ON public.capture_thread_reply USING btree (activity_id)
+public.capture_thread_retry_page CREATE INDEX capture_thread_retry_page ON public.capture_thread_repair USING btree (retry_after, id) WHERE (state = 'backoff'::text)
+public.capture_thread_topic acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_thread_topic.activity_id uuid NOT NULL gen=- def=-
+public.capture_thread_topic.capture_thread_topic_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_thread_topic.capture_thread_topic_pkey PRIMARY KEY (activity_id)
+public.capture_thread_topic.effective_topic text NOT NULL gen=- def=-
+public.capture_thread_topic.own_topic text NOT NULL gen=- def=-
+public.capture_thread_topic.recognized_keys text[] NOT NULL gen=- def='{}'::text[]
+public.capture_thread_topic.root_key text NOT NULL gen=- def=-
+public.capture_thread_topic.subject_hash text NOT NULL gen=- def=''::text
+public.capture_thread_topic_pkey CREATE UNIQUE INDEX capture_thread_topic_pkey ON public.capture_thread_topic USING btree (activity_id)
+public.capture_thread_topic_root CREATE INDEX capture_thread_topic_root ON public.capture_thread_topic USING btree (root_key, activity_id)
 public.capture_thread_verdict acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_thread_verdict.attempts integer NOT NULL gen=- def=0
 public.capture_thread_verdict.capture_thread_verdict_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
@@ -2360,7 +2492,7 @@ public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
 public.comms_outbound_party_admission CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL))
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
-public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
+public.comms_outbound_thread_repair_page CREATE INDEX comms_outbound_thread_repair_page ON public.comms_outbound USING btree (activity_id, id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_basis.captured_by text NOT NULL gen=- def=-
@@ -2370,6 +2502,8 @@ public.communication_basis.communication_basis_lead_id_fkey FOREIGN KEY (lead_id
 public.communication_basis.communication_basis_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.communication_basis.communication_basis_pkey PRIMARY KEY (id)
 public.communication_basis.communication_basis_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.communication_basis.communication_basis_source_erased CREATE TRIGGER communication_basis_source_erased BEFORE UPDATE OF source_activity_id ON public.communication_basis FOR EACH ROW EXECUTE FUNCTION communication_basis_source_erased()
+public.communication_basis.communication_basis_thread_derived_from_fkey FOREIGN KEY (thread_derived_from) REFERENCES communication_basis(id) ON DELETE CASCADE
 public.communication_basis.communication_basis_window CHECK (((valid_until IS NULL) OR (valid_until > valid_from)))
 public.communication_basis.contact_id uuid gen=- def=-
 public.communication_basis.id uuid NOT NULL gen=- def=uuidv7()
@@ -2378,12 +2512,27 @@ public.communication_basis.lead_id uuid gen=- def=-
 public.communication_basis.note text gen=- def=-
 public.communication_basis.revoked_at timestamp with time zone gen=- def=-
 public.communication_basis.source_activity_id uuid gen=- def=-
+public.communication_basis.thread_derived_from uuid gen=- def=-
 public.communication_basis.thread_key text gen=- def=-
+public.communication_basis.thread_source_activity_id uuid gen=- def=-
 public.communication_basis.valid_from timestamp with time zone NOT NULL gen=- def=now()
 public.communication_basis.valid_until timestamp with time zone gen=- def=-
 public.communication_basis_live_contact CREATE INDEX communication_basis_live_contact ON public.communication_basis USING btree (contact_id, kind) WHERE ((contact_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_live_lead CREATE INDEX communication_basis_live_lead ON public.communication_basis USING btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL))
 public.communication_basis_pkey CREATE UNIQUE INDEX communication_basis_pkey ON public.communication_basis USING btree (id)
+public.communication_basis_source_erased() secdef=false cfg=- acl=- 
+BEGIN
+ IF OLD.source_activity_id IS NOT NULL AND NEW.source_activity_id IS NULL THEN
+  NEW.revoked_at=coalesce(OLD.revoked_at,NEW.revoked_at,statement_timestamp());
+  NEW.thread_source_activity_id=NULL;
+  NEW.note=NULL;
+ END IF;
+ RETURN NEW;
+END
+
+public.communication_basis_thread_derived_source CREATE INDEX communication_basis_thread_derived_source ON public.communication_basis USING btree (COALESCE(thread_source_activity_id, source_activity_id), id)
+public.communication_basis_thread_origin CREATE INDEX communication_basis_thread_origin ON public.communication_basis USING btree (thread_derived_from) WHERE (thread_derived_from IS NOT NULL)
+public.communication_basis_thread_repair_page CREATE INDEX communication_basis_thread_repair_page ON public.communication_basis USING btree (thread_key, id) WHERE (revoked_at IS NULL)
 public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince_app=ard/margince_owner rls=false force=false
 public.communication_decision.actor text NOT NULL gen=- def=-
 public.communication_decision.attempt integer NOT NULL gen=- def=0

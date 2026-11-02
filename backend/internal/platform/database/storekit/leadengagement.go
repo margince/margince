@@ -36,10 +36,10 @@ func IsInboundReply(kind, direction string) bool {
 // source is a compile-time UUID expression, never request input.
 func CurrentLeadEngagementClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
-	return `EXISTS (SELECT 1 FROM activity lead_source WHERE lead_source.id = ` + source + `
- AND lead_source.restricted_at IS NULL AND ` + SourceWithinHorizonSQL("lead_source", asOf, arg) + `
+	return `EXISTS (SELECT 1 FROM activity lead_source WHERE activity_thread_available(lead_source.thread_key) AND lead_source.id = ` + source + `
+ AND (lead_source.restricted_at IS NULL AND activity_thread_available(lead_source.thread_key)) AND ` + SourceWithinHorizonSQL("lead_source", asOf, arg) + `
  AND ((` + InboundReplySQL("lead_source") + `
- AND ` + occurredday.BegunSQL("lead_source", instant) + ` AND NOT ` + AnsweredSQL("lead_source", instant) + `)
+ AND ` + occurredday.BegunSQL("lead_source", instant) + ` AND ` + UnansweredSQL("lead_source", instant) + `)
  OR (lead_source.kind = 'meeting' AND ` + relstrength.MeetingCountsSQL("lead_source") + `)))`
 }
 

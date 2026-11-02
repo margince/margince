@@ -33,7 +33,7 @@ func viabilityFingerprintSQL(deal string) string {
 		        (SELECT count(*) FROM activity_participant fp
 		          WHERE fp.activity_id = ANY (array_agg(fa.id)) AND fp.response = 'accepted'))
 		   FROM activity_link fl JOIN activity fa ON fa.id = fl.activity_id
-		  WHERE fl.deal_id = ` + deal + `.id AND fa.archived_at IS NULL AND ` + visibleToAllSQL("fa") + ` AND ` +
+		  WHERE fl.deal_id = ` + deal + `.id AND (fa.archived_at IS NULL AND activity_thread_available(fa.thread_key)) AND ` + visibleToAllSQL("fa") + ` AND ` +
 		relstrength.OriginIsEngagementSQL("fa") + `)))`
 }
 

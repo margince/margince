@@ -64,7 +64,7 @@ type HistoryIn struct {
 	// not this brief's, and only when the caller may see that deal. Both it and
 	// OnDeal are settled by fileUnderDeal once the brief's deal is chosen.
 	OtherDeal *FiledDeal
-	// Filed is every deal the caller may see that the conversation is filed
+	// Filed lists the deals the caller may see that the conversation is filed
 	// under, an open one first.
 	Filed []FiledDeal
 	// Withheld says this caller is outside the activity's audience: the row
@@ -100,7 +100,7 @@ const historyQuery = `
 	         WHERE ol.activity_id = a.id AND ol.deal_id IS NOT NULL AND %[10]s
 	       ), '[]'::json) AS filed
 	FROM activity a
-	WHERE a.archived_at IS NULL
+	WHERE a.archived_at IS NULL AND activity_thread_available(a.thread_key)
 	  AND a.kind <> 'task'
 	  AND a.id <> $%[4]d
 	  AND %[5]s

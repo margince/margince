@@ -88,7 +88,7 @@ var firstResponseSQL = `
 	       ) reply
 	 WHERE inbound.kind IN ('email', 'message')
 	   AND inbound.direction = 'inbound'
-	   AND inbound.archived_at IS NULL
+	   AND (inbound.archived_at IS NULL AND activity_thread_available(inbound.thread_key))
 	   AND reply.occurred_at IS NOT NULL
 	   AND ` + occurredday.WithinSQL("inbound", "$1", "$2") + `
 	   AND %[1]s

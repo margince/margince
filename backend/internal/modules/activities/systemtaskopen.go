@@ -44,7 +44,7 @@ func OpenSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType
 	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT EXISTS (
 		SELECT 1 FROM activity t JOIN activity_link l ON l.activity_id = t.id
 		 WHERE l.%s = $%d AND t.kind = 'task' AND t.source_system = $%d
-		   AND t.is_done = false AND t.archived_at IS NULL AND %s)`, column, entityArg, sourceArg, current),
+		   AND t.is_done = false AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key)) AND %s)`, column, entityArg, sourceArg, current),
 		args...).Scan(&open)
 	if err != nil {
 		return false, fmt.Errorf("activities: reading the open %s task on a %s: %w", sourceSystem, entityType, err)

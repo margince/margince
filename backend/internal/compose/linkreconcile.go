@@ -272,7 +272,7 @@ func (w *linkReconcileWorker) liftFiledMeetingHolds(ctx context.Context, lifted 
 		query := `
 			SELECT a.id
 			  FROM activity a
-			 WHERE ` + where + `
+			 WHERE activity_thread_available(a.thread_key) AND ` + where + `
 			 ORDER BY a.occurred_at DESC, a.id
 			 LIMIT ` + fmt.Sprintf("$%d", arg(liftFiledMeetingHoldsPerTick))
 		rows, err := tx.Query(ctx, query, args...)

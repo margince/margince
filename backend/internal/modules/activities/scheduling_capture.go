@@ -34,7 +34,7 @@ func ResolveCalendarInvitation(ctx context.Context, tx pgx.Tx, provider, event, 
 	host, p, e, r := args.add(actor.UserID), args.add(provider), args.add(event), args.add(strings.ReplaceAll(request, "-", ""))
 	var id ids.ActivityID
 	err := tx.QueryRow(ctx, `SELECT m.activity_id FROM meeting_invitation m JOIN activity a ON a.id=m.activity_id
- WHERE m.host_user_id=`+host+` AND m.provider=`+p+` AND a.archived_at IS NULL
+ WHERE m.host_user_id=`+host+` AND m.provider=`+p+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
  AND (m.receipt->>'event_id'=`+e+` OR (`+r+`<>'' AND replace(m.appointment->>'RequestID','-','')=`+r+`))`, args...).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.ActivityID{}, false, nil

@@ -80,7 +80,7 @@ func ThreadHoldsItsCounterparty(ctx context.Context, tx pgx.Tx, activityID ids.U
 // than a second copy.
 func CounterpartyHeldOn(alias string) string {
 	held := "'" + strings.Join(append(slices.Clone(verdictProofReasons), audienceReasonInheritedVerdict), "', '") + "'"
-	return fmt.Sprintf(`(%[1]s.restricted_at IS NOT NULL
+	return fmt.Sprintf(`(NOT activity_thread_available(%[1]s.thread_key) OR %[1]s.restricted_at IS NOT NULL
 		OR (%[1]s.audience <> 'workspace' AND %[1]s.audience_reason IN (%[2]s))
 		OR EXISTS (
 		      SELECT 1 FROM capture_thread_verdict v

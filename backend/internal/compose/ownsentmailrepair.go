@@ -114,7 +114,7 @@ func selectOwnSentMailCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]o
 		  JOIN raw_capture rc ON `+storekit.StoredOriginalSQL("a", "rc")+`
 		  LEFT JOIN activity_own_sent_mail_repair r ON r.activity_id = a.id
 		 WHERE a.kind = 'email' AND a.direction = 'inbound'
-		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
 		   AND NOT a.has_calendar_part AND NOT a.bulk_mail_attested
 		   AND a.created_at < (SELECT captured_before FROM activity_own_sent_mail_repair_cutoff)
 		   AND split_part(a.captured_by, ':', 1) = 'connector'
