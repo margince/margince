@@ -16224,15 +16224,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strength.sentence.weakStale":
     "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.weakFew":
-    "Schwach: es gab kürzlich Kontakt, aber nur wenige geteilte Interaktionen in den letzten 90 Tagen. Letzter Kontakt war am {last}.",
+    "Schwach: es gab kürzlich Kontakt, aber nur wenige geteilte Interaktionen in 90 Tagen.",
   "contact.strength.sentence.weakLopsided":
-    "Schwach: es gab kürzlich Kontakt, aber der geteilte Austausch läuft überwiegend in eine Richtung. Letzter Kontakt war am {last}.",
+    "Schwach: es gab kürzlich Kontakt, aber der geteilte Austausch läuft meist in eine Richtung.",
   "contact.strength.sentence.weakNoReply":
-    "Schwach: es gab kürzlich Kontakt, aber kaum Belege für einen Austausch in beide Richtungen. Letzter Kontakt war am {last}. Der Wert zählt nur geteilte Interaktionen, und darunter wurde keine Antwort dieses Kontakts gezählt.",
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Antwort dieses Kontakts wurde gezählt.",
   "contact.strength.sentence.weakOnlyThem":
-    "Schwach: es gab kürzlich Kontakt, aber kaum Belege für einen Austausch in beide Richtungen. Letzter Kontakt war am {last}. Der Wert zählt nur geteilte Interaktionen, und darunter wurde keine Nachricht deines Teams gezählt.",
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Nachricht deines Teams wurde gezählt.",
   "contact.strength.sentence.weakUndirected":
-    "Schwach: es gab kürzlich Kontakt, aber kaum Belege für einen Austausch in beide Richtungen. Letzter Kontakt war am {last}. Keine geteilte Interaktion wurde als Nachricht dieses Kontakts oder deines Teams gezählt. Termine und Antworten anderer Kontakte zählen nicht so.",
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Interaktion zählte als Nachricht.",
   "contact.strength.sentence.moderate":
     "Mittel: ihr habt hin und wieder Kontakt. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.strong":

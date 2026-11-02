@@ -16089,15 +16089,15 @@ export const en = {
   "contact.strength.sentence.weakStale":
     "Weak: it has been a while. You last were in touch on {last}.",
   "contact.strength.sentence.weakFew":
-    "Weak: recent contact, but few shared interactions in the last 90 days. Last contact was on {last}.",
+    "Weak: recent contact, but few shared interactions in the last 90 days.",
   "contact.strength.sentence.weakLopsided":
-    "Weak: recent contact, but the shared exchange runs mostly one way. Last contact was on {last}.",
+    "Weak: recent contact, but the shared exchange runs mostly one way.",
   "contact.strength.sentence.weakNoReply":
-    "Weak: recent contact, with limited evidence of a two-way exchange. Last contact was on {last}. The score uses shared interactions only, and no qualifying replies from this contact were counted.",
+    "Weak: recent contact, but no reply from this contact counted among shared interactions.",
   "contact.strength.sentence.weakOnlyThem":
-    "Weak: recent contact, with limited evidence of a two-way exchange. Last contact was on {last}. The score uses shared interactions only, and no qualifying messages from your team were counted.",
+    "Weak: recent contact, but no message from your team counted among shared interactions.",
   "contact.strength.sentence.weakUndirected":
-    "Weak: recent contact, with limited evidence of a two-way exchange. Last contact was on {last}. No shared interaction was counted as a message from this contact or from your team. Meetings and replies from other contacts do not count that way.",
+    "Weak: recent contact, but no shared interaction counted as a message either way.",
   "contact.strength.sentence.moderate":
     "Moderate: you are in touch from time to time. Last contact was on {last}.",
   "contact.strength.sentence.strong":

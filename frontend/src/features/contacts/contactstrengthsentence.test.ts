@@ -56,13 +56,13 @@ describe("strengthSentence", () => {
 
   it("states outbound-only evidence as no reply counted, not none sent", () => {
     expect(sentence(weak({ all: 3, inbound: 0, outbound: 3 }))).toBe(
-      "Weak: recent contact, with limited evidence of a two-way exchange. Last contact was on 11 Aug. The score uses shared interactions only, and no qualifying replies from this contact were counted.",
+      "Weak: recent contact, but no reply from this contact counted among shared interactions.",
     );
   });
 
   it("names how few interactions hold back a balanced two-way exchange", () => {
     expect(sentence(weak({ all: 4, inbound: 2, outbound: 2 }))).toBe(
-      "Weak: recent contact, but few shared interactions in the last 90 days. Last contact was on 11 Aug.",
+      "Weak: recent contact, but few shared interactions in the last 90 days.",
     );
   });
 
@@ -71,19 +71,19 @@ describe("strengthSentence", () => {
       "few shared interactions",
     );
     expect(sentence(weak({ all: 18, inbound: 1, outbound: 17 }))).toBe(
-      "Weak: recent contact, but the shared exchange runs mostly one way. Last contact was on 11 Aug.",
+      "Weak: recent contact, but the shared exchange runs mostly one way.",
     );
   });
 
   it("says no shared interaction counted as a message either way", () => {
     expect(sentence(weak({ all: 2, inbound: 0, outbound: 0 }))).toContain(
-      "No shared interaction was counted as a message from this contact or from your team.",
+      "no shared interaction counted as a message either way",
     );
   });
 
   it("says nothing of ours was counted when only they wrote", () => {
     expect(sentence(weak({ all: 2, inbound: 2, outbound: 0 }))).toContain(
-      "no qualifying messages from your team were counted",
+      "no message from your team counted",
     );
   });
 
@@ -118,7 +118,7 @@ describe("strengthSentence", () => {
 
   it("falls back to the factors when the counts are not on the wire", () => {
     expect(sentence(weak({ all: 2 }, { inbound_90d: undefined }))).toBe(
-      "Weak: recent contact, but the shared exchange runs mostly one way. Last contact was on 11 Aug.",
+      "Weak: recent contact, but the shared exchange runs mostly one way.",
     );
   });
 

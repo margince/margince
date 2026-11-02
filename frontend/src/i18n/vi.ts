@@ -15783,15 +15783,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strength.sentence.weakStale":
     "Yếu: đã khá lâu rồi. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.weakFew":
-    "Yếu: có liên hệ gần đây, nhưng chỉ có ít tương tác được chia sẻ trong 90 ngày qua. Lần liên hệ gần nhất là {last}.",
+    "Yếu: có liên hệ gần đây, nhưng ít tương tác được chia sẻ trong 90 ngày qua.",
   "contact.strength.sentence.weakLopsided":
-    "Yếu: có liên hệ gần đây, nhưng trao đổi được chia sẻ chủ yếu đi một chiều. Lần liên hệ gần nhất là {last}.",
+    "Yếu: có liên hệ gần đây, nhưng trao đổi được chia sẻ chủ yếu đi một chiều.",
   "contact.strength.sentence.weakNoReply":
-    "Yếu: có liên hệ gần đây, nhưng ít bằng chứng về trao đổi hai chiều. Lần liên hệ gần nhất là {last}. Điểm số chỉ tính các tương tác được chia sẻ, và không có phản hồi nào từ liên hệ này được tính.",
+    "Yếu: có liên hệ gần đây, nhưng không có phản hồi được chia sẻ nào từ liên hệ này được tính.",
   "contact.strength.sentence.weakOnlyThem":
-    "Yếu: có liên hệ gần đây, nhưng ít bằng chứng về trao đổi hai chiều. Lần liên hệ gần nhất là {last}. Điểm số chỉ tính các tương tác được chia sẻ, và không có tin nhắn nào từ nhóm của bạn được tính.",
+    "Yếu: có liên hệ gần đây, nhưng không có tin nhắn được chia sẻ nào từ nhóm của bạn được tính.",
   "contact.strength.sentence.weakUndirected":
-    "Yếu: có liên hệ gần đây, nhưng ít bằng chứng về trao đổi hai chiều. Lần liên hệ gần nhất là {last}. Không có tương tác được chia sẻ nào được tính là tin nhắn từ liên hệ này hoặc từ nhóm của bạn. Cuộc họp và phản hồi từ liên hệ khác không được tính như vậy.",
+    "Yếu: có liên hệ gần đây, nhưng không có tương tác được chia sẻ nào được tính là tin nhắn.",
   "contact.strength.sentence.moderate":
     "Trung bình: thỉnh thoảng hai bên có liên hệ. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.strong":
