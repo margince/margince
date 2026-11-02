@@ -50,8 +50,8 @@ var conversationHead = `
 			       -- big-endian bytes in hex — and the read below casts it back.
 			       min(a.id::text) FILTER (WHERE a.occurred_at = (
 			         SELECT min(b.occurred_at) FROM activity b
-			          WHERE b.thread_key = a.thread_key AND b.kind = 'email'
-			            AND b.archived_at IS NULL AND b.captured_by LIKE 'connector:%'
+			          WHERE activity_thread_available(b.thread_key) AND b.thread_key = a.thread_key AND b.kind = 'email'
+			            AND (b.archived_at IS NULL AND activity_thread_available(b.thread_key)) AND b.captured_by LIKE 'connector:%'
 			       ))::uuid AS oldest_id,
 			       count(DISTINCT a.id) AS message_count,
 			       -- A thread with no message from a human sender has nothing to read
@@ -125,15 +125,15 @@ var conversationHead = `
 			       -- open ones: the two differ on a thread whose every message
 			       -- is somehow absent, and only this direction refuses it.
 			       NOT EXISTS (SELECT 1 FROM activity t
-			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
-			                      AND t.archived_at IS NULL
+			                    WHERE activity_thread_available(t.thread_key) AND t.thread_key = a.thread_key AND t.kind = 'email'
+			                      AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key))
 			                      AND t.audience <> 'workspace') AS every_message_open,
 			       -- Every message read in full. A message not read in full may be
 			       -- the withdrawal of an older one, so a window without it is not
 			       -- the current conversation. Tested before the cap, so blocked
 			       -- threads take no slot; a later assessment lifts the block.
 			       NOT EXISTS (SELECT 1 FROM activity t
-			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
+			                    WHERE activity_thread_available(t.thread_key) AND t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
 			                      AND NOT ` + provenance.MailBodyCompleteSQL("t") + `) AS every_message_read
 			  FROM activity a
@@ -163,7 +163,7 @@ var conversationHead = `
 			     WHERE vl.activity_id = a.id
 			  ) vis ON true
 			 WHERE a.thread_key IS NOT NULL AND a.kind = 'email'
-			   AND a.archived_at IS NULL AND a.captured_by LIKE 'connector:%'`
+			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.captured_by LIKE 'connector:%'`
 
 const conversationTail = `
 			 GROUP BY a.thread_key

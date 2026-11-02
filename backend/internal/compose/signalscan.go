@@ -85,7 +85,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			       ro.company_id, a.id, a.direction, a.occurred_at, a.occurred_precision
 			  FROM activity a
 			  JOIN (`+activities.CompanyReachSet()+`) ro ON ro.activity_id = a.id
-			 WHERE a.archived_at IS NULL
+			 WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 			   AND `+relstrength.InteractionCountsSQL("a")+`
 			   -- An interaction with no recorded direction cannot say who spoke
 			   -- last, so it is skipped rather than guessed at — the same rule

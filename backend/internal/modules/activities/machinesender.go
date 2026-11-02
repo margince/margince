@@ -25,7 +25,7 @@ type InboundSender struct {
 // not marked sender_is_machine yet. A marked row leaves it, so a replay of the
 // data task finds nothing to change.
 const unmarkedInboundMailScope = `FROM activity a
-	 WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.counterparty_email IS NOT NULL AND NOT a.sender_is_machine`
+	 WHERE activity_thread_available(a.thread_key) AND a.kind = 'email' AND a.direction = 'inbound' AND a.counterparty_email IS NOT NULL AND NOT a.sender_is_machine`
 
 // InboundSendersTx reads the next limit unmarked received mails after the
 // cursor, in id order. Which of them a sending system sent is the caller's

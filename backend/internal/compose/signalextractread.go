@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/auth"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -277,6 +278,9 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 func recordThreadRefusal(
 	ctx context.Context, tx pgx.Tx, thread settledThread, now time.Time,
 ) (int, error) {
+	if err := auth.EnsureThreadAvailable(ctx, tx, thread.Key); err != nil {
+		return 0, err
+	}
 	var refusals int
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO signal_thread_scan

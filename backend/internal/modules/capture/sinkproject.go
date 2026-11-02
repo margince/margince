@@ -308,7 +308,7 @@ func threadProject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 		 WHERE a.thread_key = $1 AND a.id <> $2
 		   AND a.kind = $3
 		   AND a.channel_provider IS NOT DISTINCT FROM NULLIF($4, '')
-		   AND a.restricted_at IS NULL AND a.archived_at IS NULL
+		   AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND a.archived_at IS NULL
 		   AND p.archived_at IS NULL`+scoped+`
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT 1`, args...).Scan(&projectID)

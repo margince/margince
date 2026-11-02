@@ -29,7 +29,7 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 		SELECT reminder.id FROM activity reminder
 		  JOIN activity request ON request.id = reminder.source_activity_id
 		 WHERE reminder.source_system = @source
-		   AND NOT reminder.is_done AND reminder.archived_at IS NULL
+		   AND NOT reminder.is_done AND (reminder.archived_at IS NULL AND activity_thread_available(reminder.thread_key))
 		   AND reminder.captured_by = @actor
 		   AND request.occurred_at < @cutoff -- occurred_at raw: the age of a captured mail, an instant
 		   AND `+pristineRepairTaskSQL("reminder")+`
@@ -48,7 +48,7 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 	// trail as of its own snapshot, so a human edit that committed while it
 	// waited for a lock is visible only to a later statement.
 	rows, err = tx.Query(ctx, `SELECT reminder.id FROM activity reminder
-		 WHERE reminder.id = ANY(@locked) AND `+pristineRepairTaskSQL("reminder"), pgx.NamedArgs{"locked": locked})
+		 WHERE activity_thread_available(reminder.thread_key) AND reminder.id = ANY(@locked) AND `+pristineRepairTaskSQL("reminder"), pgx.NamedArgs{"locked": locked})
 	if err != nil {
 		return fmt.Errorf("activities: rechecking aged reminders under their lock: %w", err)
 	}

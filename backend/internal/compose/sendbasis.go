@@ -154,7 +154,7 @@ func readShownItems(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUI
 	}
 	currentWork := storekit.CurrentTaskClause("t", now, identities, arg)
 	items, err := tx.Query(ctx, `SELECT t.id, 'activity', t.version, (`+sendTaskEligibleSQL+` AND `+currentWork+`), '{}'::uuid[], t.source_activity_id, NULL::text, NULL::text, NULL::uuid
-		  FROM activity t WHERE t.kind = 'task' AND t.id = ANY($1)
+		  FROM activity t WHERE activity_thread_available(t.thread_key) AND t.kind = 'task' AND t.id = ANY($1)
 		UNION ALL
 		SELECT a.id, 'approval', a.version, `+sendApprovalEligibleSQL+`,
 		       coalesce((SELECT array_agg(c::uuid) FROM jsonb_array_elements_text(coalesce(a.proposed_change->'claim_ids', '[]'::jsonb)) c), '{}')
@@ -393,7 +393,7 @@ func holdSendBasisTx(ctx context.Context, tx pgx.Tx, basis sendBasis, clock func
 		return fmt.Errorf("send: holding the recipient: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM team_membership m WHERE m.user_id = $1
-		    OR (m.team_id = $2 AND m.user_id IN (SELECT assignee_id FROM activity WHERE id = ANY($3) AND archived_at IS NULL))
+		    OR (m.team_id = $2 AND m.user_id IN (SELECT assignee_id FROM activity WHERE activity_thread_available(thread_key) AND id = ANY($3) AND (archived_at IS NULL AND activity_thread_available(thread_key))))
 		   FOR SHARE OF m`, basis.seat, basis.team, basis.refs.teamTasks); err != nil {
 		return fmt.Errorf("send: holding the recipient's teams: %w", err)
 	}

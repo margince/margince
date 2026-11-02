@@ -92,7 +92,7 @@ func selectNameRecoveryCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.source_system = a.source_system AND rc.source_id = a.source_id
-		 WHERE a.archived_at IS NULL
+		 WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND a.source_system IN ($1, $2)
 		   AND EXISTS (
 		       SELECT 1 FROM activity_participant ap

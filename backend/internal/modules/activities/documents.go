@@ -268,7 +268,7 @@ func activityParentClause(ctx context.Context, arg func(any) int) (string, error
 		clause = scopeUnbounded
 	}
 	return fmt.Sprintf(
-		"(at.entity_type = '%s' AND EXISTS (SELECT 1 FROM activity p WHERE p.id = at.entity_id AND %s))",
+		"(at.entity_type = '%s' AND EXISTS (SELECT 1 FROM activity p WHERE activity_thread_available(p.thread_key) AND p.id = at.entity_id AND %s))",
 		linkEntityActivity, clause), nil
 }
 

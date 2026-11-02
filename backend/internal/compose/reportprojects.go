@@ -45,7 +45,7 @@ const (
 	// overdue. Both read through the caller's activity content clause.
 	openCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
 		" AND al.entity_type = 'project' AND al.project_id = t.id" +
-		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + reportActivityScopeToken + ")"
+		" WHERE a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND " + reportActivityScopeToken + ")"
 )
 
 // Project totals and coverage compose the deal module's valuation under the
@@ -53,7 +53,7 @@ const (
 var (
 	overdueCommitmentsExpr = "(SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id" +
 		" AND al.entity_type = 'project' AND al.project_id = t.id" +
-		" WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND " + storekit.TaskDueSQL("a") + " < now() AND " +
+		" WHERE a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND " + storekit.TaskDueSQL("a") + " < now() AND " +
 		reportActivityScopeToken + ")"
 	openDealValueBaseExpr = projectDealMoneySQL("open", false)
 	wonDealValueBaseExpr  = projectDealMoneySQL("won", false)

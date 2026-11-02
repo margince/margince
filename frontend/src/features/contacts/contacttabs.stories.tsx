@@ -251,6 +251,7 @@ export const FiveVerbsBesideTheHead: Story = {
             subject: "Depot walkthrough with the workshop lead",
             body: "Walked the Hamburg depot with Dana and her workshop lead.",
             offers_email: true,
+            email_target: { entity_type: "contact", entity_id: "p-1" },
             writable: true,
             occurred_at: "2026-08-12T08:00:00Z",
           }),

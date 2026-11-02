@@ -36,7 +36,7 @@ func leadEvidenceOrderSQL(leadRef string) string {
 // offers it and the promotion requires it, so the two agree.
 func leadEvidenceFromSQL(leadRef string, asOf time.Time, arg func(any) int) string {
 	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	  WHERE l.lead_id = ` + leadRef + ` AND a.restricted_at IS NULL
+	  WHERE l.lead_id = ` + leadRef + ` AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
 	    AND ` + storekit.SourceWithinHorizonSQL("a", asOf, arg) + `
 	    AND (` + storekit.InboundReplySQL("a") + `
 	         OR (a.kind = 'meeting' AND ` + meetingProofSQL("a", leadRef) + ` IS NOT NULL))
@@ -168,7 +168,7 @@ func lockEvidenceActivity(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Prom
 	if err != nil || !found {
 		return ids.ActivityID{}, err
 	}
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE id = $1 FOR SHARE`, evidence); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, evidence); err != nil {
 		return ids.ActivityID{}, fmt.Errorf("lock promotion evidence: %w", err)
 	}
 	return evidence, nil

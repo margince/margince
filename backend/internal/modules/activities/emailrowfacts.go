@@ -102,7 +102,7 @@ func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activi
 		return err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id, `+moveSQL(sentByReader, laterContent, conversationKinds)+`
- FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
+ FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))`, args...)
 	if err != nil {
 		return fmt.Errorf("activities: reading whose move each chat message is: %w", err)
 	}

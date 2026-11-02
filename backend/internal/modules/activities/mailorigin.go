@@ -73,7 +73,7 @@ func mailOrigins(ctx context.Context, tx pgx.Tx, mails []ids.UUID) (map[ids.UUID
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, sprintf(`SELECT a.id, a.kind, a.subject, a.occurred_at, a.occurred_precision FROM activity a
-		 WHERE a.id = ANY($%d) AND a.kind IN ('%s', '%s') AND a.archived_at IS NULL AND %s`,
+		 WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND a.kind IN ('%s', '%s') AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s`,
 		set, crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, orUnbounded(content)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading where the files came from: %w", err)

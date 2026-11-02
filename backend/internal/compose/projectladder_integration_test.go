@@ -22,12 +22,14 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -200,13 +202,28 @@ func TestAReplyThatDroppedTheKeyInheritsItsThreadsProject(t *testing.T) {
 	a := seedLadderAccount(t, e)
 	projectID, key := a.project(t, "Ladder Rollout")
 
-	thread := "thread-root-1"
-	opener := a.capture(t, thread, thread, "["+key+"] kickoff")
+	e.GrantRole(t, e.Rep1, "rep")
+	address := seatAddress(t, e, e.Rep1)
+	captureMail := func(message, parent, subject string) ids.UUID {
+		raw := []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nMessage-ID: <%s>\r\nIn-Reply-To: %s\r\nSubject: %s\r\nDate: Mon, 01 Jun 2026 08:00:00 +0000\r\n\r\nhello", ladderCounterparty, address, message, parent, subject))
+		parsed, err := mailmap.Parse(raw, address)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ref, err := a.sink.Upsert(a.captureCtx, parsed.ToRecord("gmail", raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		finishThreadRepairs(t, e)
+		return ref.ID
+	}
+	thread := "thread-root-1@ladder.example"
+	opener := captureMail(thread, "", "["+key+"] kickoff")
 	if got := filedUnder(t, e, opener); got != projectID {
 		t.Fatalf("the thread opener was not filed, so the reply proves nothing: got %v", got)
 	}
 
-	reply := a.capture(t, "reply-no-key-1", thread, "Re: kickoff")
+	reply := captureMail("reply-no-key-1@ladder.example", "<"+thread+">", "Re: kickoff")
 
 	if got := filedUnder(t, e, reply); got != projectID {
 		t.Errorf("a keyless reply on a filed thread landed under %v, want %v", got, projectID)

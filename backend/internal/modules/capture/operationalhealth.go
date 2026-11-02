@@ -18,6 +18,7 @@ type OperationalCategories struct {
 	UncertainThreads     int
 	OwnerReviewMailboxes int
 	UnreadMailboxes      int
+	QuarantinedRepairs   int
 }
 
 // OwnerReviewCountsSQL keeps the summary and its resolution list on one set.
@@ -43,7 +44,9 @@ func ReadOperationalCategoriesTx(ctx context.Context, tx pgx.Tx) (OperationalCat
  (SELECT count(*) FROM capture_thread_verdict WHERE `+threadOwedAnswerSQL+`),
  (SELECT coalesce(sum(thread_decisions),0) FROM owners),
  (SELECT count(*) FROM owners),
- (SELECT count(DISTINCT user_id) FROM capture_connection WHERE unread_from IS NOT NULL)`).Scan(
-		&out.SenderReviews, &out.MachineThreads, &out.UncertainThreads, &out.OwnerReviewMailboxes, &out.UnreadMailboxes)
+ (SELECT count(DISTINCT user_id) FROM capture_connection WHERE unread_from IS NOT NULL),
+ (SELECT count(*) FROM capture_thread_repair WHERE state='quarantined')+
+ (SELECT count(*) FROM capture_thread_invalidation WHERE state='quarantined')`).Scan(
+		&out.SenderReviews, &out.MachineThreads, &out.UncertainThreads, &out.OwnerReviewMailboxes, &out.UnreadMailboxes, &out.QuarantinedRepairs)
 	return out, err
 }

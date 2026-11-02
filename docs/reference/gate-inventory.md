@@ -328,7 +328,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `humanonlytransport_test.go` | H1 | A human-only operation says so at the transport, not only in the gate. |
 | `ifmatchversion_test.go` | H2 | Every route taking `If-Match` is checked for a read that publishes the record's version, with the routes having none ratified by name. |
 | `importedeventconsumers_test.go` | H3 | Every consumer of a stream an import writes has decided what it does with an imported event. |
-| `inlinemailimagesingle_test.go` | H2 | The inline-image rule of a deal's files is spelled once. |
 | `insertattemptcaps_test.go` | H2 | An insert that names no MaxAttempts still has a retry ladder: River's default of 25, on attempt-to-the-fourth backoff, which reaches days. |
 | `interactionunit_test.go` | H3 | Every count that becomes a relationship-strength number counts the shared unit, not rows. |
 | `jobbinding_test.go` | H2 | workspaceBindFloor guards against a vacuous pass. |
@@ -343,6 +342,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `likeescape_test.go` | H2 | A LIKE whose pattern carries a caller's text escapes the wildcards in it. |
 | `linktargetvisiblecallers_test.go` | H3 | A read that shows the caller where an activity is filed asks auth.LinkTargetReadableClause, which also requires the read grant on the linked record's type. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
+| `listedmailfilesingle_test.go` | H2 | The rules that keep a mail file off a Documents list are spelled once. |
 | `machineryapplied_test.go` | H2 | Every setting read through an ungated machinery reader (settings.ApplyTx or settings.ApplyManyTx) is declared MachineryApplied. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in one place, and that place spends the token that earns it. |
 | `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
@@ -444,6 +444,12 @@ The eight shapes, what each is for, and how each one silently passes:
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
+| `threadavailability_test.go` | H2 | _(no doc comment)_ |
+| `threadstatementcatalogcases_test.go` | H2 | _(no doc comment)_ |
+| `threadstatementguardcolumns_test.go` | H2 | _(no doc comment)_ |
+| `threadstatementproducercases_test.go` | H2 | _(no doc comment)_ |
+| `threadstatements_test.go` | H2 | _(no doc comment)_ |
+| `threadstatementscases_test.go` | H2 | _(no doc comment)_ |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |

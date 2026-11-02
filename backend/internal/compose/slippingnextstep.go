@@ -55,7 +55,7 @@ import (
 //     Thursday's review has a next step, and reporting it as missing sends a rep
 //     to chase something already booked.
 //
-// The predicate itself is deals.OpenNextStepSQL, shared with the overnight
+// The predicate itself is deals.NoOpenNextStepSQL, shared with the overnight
 // follow-up sweep. Both once carried their own copy of the task-only reading,
 // and fixing one alone would have left the other proposing a follow-up for a
 // deal this lane had just called planned.
@@ -70,9 +70,6 @@ func dealsWithNoOpenNextStep(
 	if len(candidates) == 0 {
 		return none, nil
 	}
-	for _, id := range candidates {
-		none[id] = true
-	}
 	// Selected FROM deal rather than from the activity rows, because the shared
 	// predicate asks about a deal and answers over two different tables: a
 	// statement shaped around one of them could not see the other.
@@ -84,9 +81,13 @@ func dealsWithNoOpenNextStep(
 			return err
 		}
 		current := storekit.CurrentTaskClause("t", asOf, identities, arg)
+		noStep, err := deals.NoOpenNextStepSQL(ctx, "d.id", "$2", current, arg)
+		if err != nil {
+			return err
+		}
 		query := fmt.Sprintf(`
 		SELECT d.id FROM deal d
-		 WHERE d.id = ANY($1) AND %s`, deals.OpenNextStepSQL("d.id", "$2", current))
+		 WHERE d.id = ANY($1) AND %s`, noStep)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
@@ -97,7 +98,7 @@ func dealsWithNoOpenNextStep(
 			if err := rows.Scan(&dealID); err != nil {
 				return err
 			}
-			delete(none, dealID)
+			none[dealID] = true
 		}
 		return rows.Err()
 	})

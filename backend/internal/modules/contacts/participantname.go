@@ -145,7 +145,7 @@ func fillContactNameFromAttendance(ctx context.Context, tx pgx.Tx, contactID ids
 		  JOIN activity a ON a.id = ap.activity_id
 		 WHERE ap.contact_id = $1
 		   AND coalesce(ap.display_name, '') <> ''
-		   AND a.archived_at IS NULL
+		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT 1`, contactID).Scan(&displayName, &address)
 	if err != nil {

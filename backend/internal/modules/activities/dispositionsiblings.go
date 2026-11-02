@@ -31,7 +31,7 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
 		  JOIN activity card ON card.id = $%[1]d AND card.owed_verdict = '`+OwedVerdictAsksUs+`'
-		 WHERE a.archived_at IS NULL AND a.thread_key = card.thread_key AND a.kind = card.kind
+		 WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.thread_key = card.thread_key AND a.kind = card.kind
 		   AND coalesce(a.channel_provider, '') = coalesce(card.channel_provider, '')
 		   AND (a.occurred_at, a.id) < (card.occurred_at, card.id)
 		   AND a.owed_verdict = '`+OwedVerdictAsksUs+`'
@@ -77,7 +77,7 @@ func sameAct(ctx context.Context, tx pgx.Tx, card ids.ActivityID, reader ids.UUI
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT state.activity_id FROM activity_reader_state state
-		  JOIN activity a ON a.id = state.activity_id AND a.archived_at IS NULL
+		  JOIN activity a ON a.id = state.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  JOIN activity card ON card.id = $3
 		 WHERE state.reader_id = $1 AND state.set_at = $2 AND state.activity_id <> card.id
 		   AND a.thread_key = card.thread_key AND a.kind = card.kind

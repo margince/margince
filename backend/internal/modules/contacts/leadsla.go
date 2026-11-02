@@ -80,7 +80,11 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 // arriving through creation or import.
 var leadHasInboundSQL = auth.LiveLeadInquiryClause("lead")
 
-var leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL AND " + leadHasInboundSQL
+var leadOwesAReplySQL = "archived_at IS NULL AND first_response_at IS NULL AND " + leadHasInboundSQL + " AND " + leadReplyEvidenceReadySQL
+
+var leadReplyEvidenceReadySQL = `NOT EXISTS (SELECT 1 FROM activity_link pending_link
+ JOIN activity pending_reply ON pending_reply.id=pending_link.activity_id
+ WHERE pending_link.lead_id=lead.id AND pending_reply.archived_at IS NULL AND (` + auth.ActivityRepairPendingSQL("pending_reply") + `))`
 
 // firstResponseAtSQL is the stamp a response at `at` earns on the lead under
 // alias, firstResponseStamp in SQL: a predicate over many leads cannot call Go.
@@ -278,7 +282,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	q := `SELECT ` + leadTouchColumns(ctx, "$1", arg) + `
 		FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		WHERE l.lead_id = $1 AND a.archived_at IS NULL
+		WHERE l.lead_id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  AND ` + occurredday.ProvenSQL("a") + ` <= $2
 		  AND ` + auth.ActivityAvailableClause("a")
 	rows, err := tx.Query(ctx, q, args...)

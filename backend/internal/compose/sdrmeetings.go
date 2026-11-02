@@ -175,7 +175,7 @@ func readUpcomingMeetingPage(ctx context.Context, tx pgx.Tx, requested Requested
 	}
 	query := `SELECT a.id,a.occurred_at,a.occurred_precision,COALESCE(a.subject,''),rec.kind,rec.id,rec.label
  FROM activity a LEFT JOIN LATERAL (` + record + `) rec ON true
- WHERE ` + where + page + ` ORDER BY a.occurred_at,a.id LIMIT ` + b.add(limit+1)
+ WHERE activity_thread_available(a.thread_key) AND ` + where + page + ` ORDER BY a.occurred_at,a.id LIMIT ` + b.add(limit+1)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, nil, err

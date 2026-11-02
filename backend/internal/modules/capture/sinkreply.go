@@ -53,62 +53,53 @@ type replyOrigin struct {
 	contactID *ids.ContactID
 }
 
-// emitReply is CAP-FORMULA-1: an INBOUND message in a thread we previously
-// wrote OUTBOUND in is a reply — the engagement signal scoring feeds on.
-// Emitted only when the activity row is new, so the at-least-once sync loop
-// cannot double-fire it; never a subject heuristic.
+// emitReply records an inbound reply against a prior outbound on its thread.
+// Composed mail waits for publication; its durable ledger prevents replay duplicates.
 func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields) error {
+	if rec.NaturalKey.SourceSystem == connector.EmailSourceSystem && s.threadJoin.complete() {
+		if fields.Direction != connector.DirectionInbound {
+			return nil
+		}
+		live, err := threadSourceLiveTx(ctx, tx, id)
+		if err != nil || !live {
+			return err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO capture_thread_reply(activity_id) VALUES(@id) ON CONFLICT DO NOTHING`, pgx.NamedArgs{"id": id})
+		return err
+	}
+	return emitReplyNow(ctx, tx, auditID, id, rec, fields)
+}
+
+func emitReplyNow(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields) error {
 	if fields.Direction != connector.DirectionInbound || rec.ThreadKey == "" {
 		return nil
 	}
 	var matched ids.UUID
-	// archived_at IS NULL is the formula's own prior-outbound scan. An archived
-	// message is off the timeline, so naming one as the matched outbound would
-	// point the reply fact at a row its consumers cannot read back.
-	//
-	// Archiving here is not only a human act: the retention evaluator
-	// (privacy/retention.go) and the noise sweep (activities/capturenoise.go)
-	// both archive activities by machine. So an installation running a retention
-	// policy stops reply-detecting threads whose outbound legs have aged out,
-	// even for a customer replying today. That follows the formula rather than
-	// this file's choosing, and it is the behaviour the spec pins.
-	// Matched within ONE medium, and this is a security control rather than a
-	// convenience. thread_key is a single flat namespace holding both a mail
-	// thread root and a channel's `<provider>:<bot>:<chat>` key, and the mail
-	// half is attacker-supplied: it is the message's own References root, so a
-	// sender chooses it verbatim. Without the medium match, a forged References
-	// header naming a Telegram conversation — whose parts are both discoverable,
-	// a bot id being public and a private chat's id being the user's own —
-	// manufactures a reply fact against a conversation that sender was never in.
-	// A reply is answered on the medium it arrived on, so a cross-medium match
-	// could never have been actionable anyway.
-	//
-	// It matches on the PAIR because kind alone stopped discriminating at
-	// ADR-0107/A158: every channel row now carries kind='message' whatever
-	// carried it, so kind separates mail from channel but no longer one
-	// transport from another — and the same forgery would then reach across
-	// providers instead of across media. IS NOT DISTINCT FROM is what lets one
-	// statement serve both: mail compares NULL to NULL and matches, a channel
-	// compares provider to provider.
-	//
-	// The thread key is the whole bound, which is what makes the forged-root case
-	// worth stating: a References header naming a thread the sender was never on
-	// still has to match an outbound leg of THAT thread, on the same medium, that
-	// this installation itself sent. idx_activity_channel_thread is what serves it.
+	// Deferred detection must not turn an earlier inbound into a reply to
+	// later mail. Native ancestry resolves equal timestamps for late parents.
 	err := tx.QueryRow(ctx, `
-		SELECT id FROM activity
-		 WHERE thread_key = $1 AND direction = 'outbound' AND kind = $2
-		  AND channel_provider IS NOT DISTINCT FROM NULLIF($3, '')
-		  AND archived_at IS NULL AND id <> $4
-		ORDER BY occurred_at DESC LIMIT 1`,
-		rec.ThreadKey, fields.Kind, fields.ChannelProvider, id).Scan(&matched)
+		SELECT outbound.id FROM activity outbound
+		 JOIN activity inbound ON inbound.id=@id AND activity_thread_available(inbound.thread_key)
+		 WHERE outbound.thread_key=@thread AND outbound.direction='outbound' AND outbound.kind=@kind
+		  AND outbound.channel_provider IS NOT DISTINCT FROM NULLIF(@provider, '')
+		  AND outbound.archived_at IS NULL AND activity_thread_available(outbound.thread_key)
+		  AND outbound.id<>inbound.id
+		  AND (outbound.occurred_at<inbound.occurred_at -- occurred_at raw: relative ordering of two messages, not whether either happened by now
+		    OR (outbound.occurred_at=inbound.occurred_at AND (outbound.created_at<inbound.created_at
+		      OR EXISTS (SELECT 1 FROM activity_mail_reference reference
+		        JOIN activity_identity identity ON identity.identity_key=reference.referenced_id
+		         AND identity.identity_kind='mail' AND identity.activity_id=outbound.id
+		        WHERE reference.activity_id=inbound.id))))
+		 ORDER BY outbound.occurred_at DESC,outbound.id LIMIT 1`, pgx.NamedArgs{
+		"id": id, "thread": rec.ThreadKey, auditKeyKind: fields.Kind, IdentitySourceProvider: fields.ChannelProvider,
+	}).Scan(&matched)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("capture: reply detection: %w", err)
 	}
-	origin, ok, err := s.replyOriginOf(ctx, tx, rec.Counterparty)
+	origin, ok, err := replyOriginForShape(ctx, tx, rec.Counterparty, counterpartyShapeOf(rec.Counterparty))
 	if err != nil {
 		return err
 	}
@@ -124,6 +115,17 @@ func (s *Sink) emitReply(ctx context.Context, tx pgx.Tx, auditID ids.UUID, id id
 	}
 	idempotencyKey := rec.NaturalKey.SourceSystem + ":" + rec.NaturalKey.SourceID
 	payload := engagementReplyPayload(matched, origin, occurredday.Moment{At: fields.OccurredAt, DateOnly: fields.DateOnly}, idempotencyKey)
+	if auditID == ids.Nil {
+		auditID, err = storekit.AuditEvent(ctx, tx, "update", "activity", id.UUID, map[string]string{"matched_outbound_activity_id": matched.String()})
+		if err != nil {
+			return err
+		}
+	}
+	if rec.NaturalKey.SourceSystem == connector.EmailSourceSystem {
+		if _, err := tx.Exec(ctx, `UPDATE capture_thread_reply SET emitted=true WHERE activity_id=@id`, pgx.NamedArgs{"id": id}); err != nil {
+			return err
+		}
+	}
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
 }
 
@@ -145,6 +147,10 @@ func (s *Sink) replyOriginOf(ctx context.Context, tx pgx.Tx, cp connector.Counte
 // calls it: a caller choosing its own shape would be re-deciding the one
 // question counterpartyShapeOf exists to answer.
 func (s *Sink) replyOriginForShape(ctx context.Context, tx pgx.Tx, cp connector.Counterparty, shape counterpartyShape) (replyOrigin, bool, error) {
+	return replyOriginForShape(ctx, tx, cp, shape)
+}
+
+func replyOriginForShape(ctx context.Context, tx pgx.Tx, cp connector.Counterparty, shape counterpartyShape) (replyOrigin, bool, error) {
 	switch shape {
 	case shapeMail:
 		contact, found, err := mailReplyContact(ctx, tx, cp.Email)

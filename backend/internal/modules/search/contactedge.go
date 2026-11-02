@@ -127,7 +127,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		        ON pb.activity_id = pa.activity_id
 		       AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`
 		      JOIN activity a
-		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		        ON a.id = pa.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
@@ -156,7 +156,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		       SELECT 1
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
-		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
+		         JOIN activity a ON a.id = pa.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
 		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`)`,

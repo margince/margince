@@ -113,7 +113,7 @@ func appendActivityCustomValues(ctx context.Context, tx pgx.Tx, activities []map
 		return err
 	}
 	rows, err := tx.Query(ctx, `SELECT id`+storekit.SelectSuffix(cols)+
-		` FROM activity WHERE id = ANY($1::uuid[])`, activityIDs)
+		` FROM activity WHERE activity_thread_available(thread_key) AND id = ANY($1::uuid[])`, activityIDs)
 	if err != nil {
 		return err
 	}

@@ -34,7 +34,7 @@ func ensureClaimContentVisible(ctx context.Context, tx pgx.Tx, id ids.UUID) erro
 		return err
 	}
 	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM conversation_claim c
- JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+ JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
  WHERE c.id = $%d AND c.archived_at IS NULL AND %s)`, arg(id), content)
 	var visible bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&visible); err != nil {

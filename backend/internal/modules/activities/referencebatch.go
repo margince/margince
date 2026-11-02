@@ -82,7 +82,7 @@ func ReferencesByID(
 		  FROM (
 		    SELECT a.id, a.kind, a.occurred_at, a.occurred_precision, a.subject, (%s) AS readable
 		      FROM activity a
-		     WHERE %s
+		     WHERE activity_thread_available(a.thread_key) AND %s
 		  ) admitted`, content, strings.Join(where, " AND "))
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {

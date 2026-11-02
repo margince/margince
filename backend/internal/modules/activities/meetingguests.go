@@ -66,7 +66,7 @@ func attachGuests(ctx context.Context, tx pgx.Tx, a *crmcontracts.Activity) erro
 	}
 	a.Guests = &guests
 	var leftOut int
-	if err := tx.QueryRow(ctx, `SELECT guests_left_out FROM activity WHERE id = $1`, a.Id).Scan(&leftOut); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT guests_left_out FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, a.Id).Scan(&leftOut); err != nil {
 		return fmt.Errorf("activities: reading how many guests a meeting leaves out: %w", err)
 	}
 	a.GuestsLeftOut = &leftOut

@@ -88,7 +88,7 @@ func ownWords(
 		         FROM activity a
 		         JOIN activity_participant ap
 		           ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = who.id
-		        WHERE a.direction = 'inbound' AND a.archived_at IS NULL
+		        WHERE a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		          AND %s AND (%s)
 		          AND EXISTS (
 		              SELECT 1 FROM activity_link tie

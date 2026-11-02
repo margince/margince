@@ -135,7 +135,7 @@ func recordImportedProvenance(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // message, whatever the header says.
 func sameKindAs(ctx context.Context, tx pgx.Tx, incumbent ids.ActivityID, kind string) (bool, error) {
 	var have string
-	if err := tx.QueryRow(ctx, `SELECT kind FROM activity WHERE id = $1`, incumbent).Scan(&have); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT kind FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, incumbent).Scan(&have); err != nil {
 		return false, err
 	}
 	return have == kind, nil

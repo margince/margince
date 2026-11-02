@@ -84,7 +84,7 @@ func nextMeetingSection(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.occurred_precision, coalesce(a.subject, ''), %[3]s
 		FROM activity a
-		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		WHERE activity_thread_available(a.thread_key) AND a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  -- A canceled meeting is still a future row. Offering it as the next
 		  -- meeting sends a rep to prepare for something that will not happen,
 		  -- and hides the real next one behind it. A NULL status is a manual

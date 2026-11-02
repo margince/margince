@@ -69,7 +69,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
           SELECT `+storekit.TaskDueSQL("a")+` AS due_at, %[6]s AS completed_at FROM activity a
-           WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
+           WHERE activity_thread_available(a.thread_key) AND a.kind='task' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
              AND ((`+storekit.TaskDueSQL("a")+` >= $%[1]d AND `+storekit.TaskDueSQL("a")+` < $%[2]d)
                OR a.done_at >= $%[1]d OR (`+storekit.TaskDueSQL("a")+` < $%[2]d AND NOT a.is_done)
@@ -253,18 +253,18 @@ func countWeekMeetings(
 	// meeting nothing said was off, whose time has come and gone, is one that
 	// happened. A calendar connector records no status at all, so the strict
 	// form counted none of a rep's synced meetings in their own review.
-	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
+	heldByRep := `m.kind = 'meeting' AND (m.archived_at IS NULL AND activity_thread_available(m.thread_key))
 		      AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
 		      AND ` + occurredday.WithinSQL("m", "$%[1]d", "$%[2]d") + `
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
-		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`),
-		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
+		  (SELECT count(*) FROM activity m WHERE activity_thread_available(m.thread_key) AND `+heldByRep+`),
+		  (SELECT count(*) FROM activity m WHERE activity_thread_available(m.thread_key) AND `+heldByRep+`
 		      AND EXISTS (
 		        SELECT 1 FROM activity task
-		         WHERE %[6]s
+		         WHERE activity_thread_available(task.thread_key) AND %[6]s
 		           AND task.created_at < $%[2]d AND (%[5]s)))`,
 		startPos, endPos, hostPos, scope, taskScope, NextStepTaskSQL("task", "m")), args...).
 		Scan(&held, &withNextStep)

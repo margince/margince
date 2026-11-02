@@ -38,7 +38,7 @@ func HoldMembersOnlyTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.Activit
 		var storedReason *string
 		err := tx.QueryRow(ctx, `
 			SELECT a.audience, a.audience_reason FROM activity a
-			 WHERE a.id = $1 AND `+MembersOnlyHoldable+` FOR UPDATE OF a`, id).Scan(&stored, &storedReason)
+			 WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND `+MembersOnlyHoldable+` FOR UPDATE OF a`, id).Scan(&stored, &storedReason)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}

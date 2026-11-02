@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "components/logactivity.openmeeting.test.tsx",
+    why: "A date-only meeting is stored at noon UTC. Only a zone well east of UTC puts an instant from the evening before nearer the day's start than that noon, which is the case the closest-meeting pick must get right.",
+  },
+  {
     file: "features/privacy/noticesource.test.tsx",
     why: "Pins the acquisition calendar to prove that the submitted civil date converts to the intended UTC instant.",
   },

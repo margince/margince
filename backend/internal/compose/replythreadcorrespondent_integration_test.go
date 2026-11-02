@@ -53,6 +53,7 @@ func pricingMail(from, to, id, body string, minutes int, authenticated bool) owe
 // to the selected message, so these checks inspect the language reader itself.
 func replyLanguageReading(t *testing.T, o *owedEnv, anchor ids.UUID) string {
 	t.Helper()
+	finishThreadRepairs(t, o.e)
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Pricing","body":"Thanks."}`}}
 	drafter := newReplyDrafter(o.e.Pool, brain, slog.New(slog.DiscardHandler))
 	reader := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
@@ -80,6 +81,7 @@ func alphaThread(t *testing.T, o *owedEnv) ids.UUID {
 
 func requireOneThreadKey(t *testing.T, o *owedEnv, anchor ids.UUID, want int) {
 	t.Helper()
+	finishThreadRepairs(t, o.e)
 	if n := o.e.WsCount(t, `SELECT count(*) FROM activity WHERE thread_key = (SELECT thread_key FROM activity WHERE id = $1)`, anchor); n != want {
 		t.Fatalf("precondition: %d messages share the anchor's thread key, want %d", n, want)
 	}

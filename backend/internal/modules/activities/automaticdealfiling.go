@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -93,6 +94,9 @@ type filingByHand struct {
 func retractMachineLinkTx(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, entityType string, target ids.UUID, human filingByHand, evidence map[string]any,
 ) (bool, error) {
+	if err := auth.EnsureActivityThreadAvailable(ctx, tx, id.UUID); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
