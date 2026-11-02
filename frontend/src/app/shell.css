@@ -559,19 +559,11 @@
 /* The head's second line: what this installation runs on. It is a SIBLING of
    the brand anchor and not a child of it: the press target is the name, and
    the attribution is not somewhere it should lead. */
+/* Body S, because this is the attribution under the name and not a second
+   name. At the body size it reads as a peer of the heading above it. */
 .rail .ws-company {
   grid-area: by;
   min-width: 0;
-  display: flex;
-  align-items: center;
-}
-/* The ellipsis is the TEXT's, not the row's, because the row is a flex box and
-   only a block-level child clips.
-
-   Body S, because this is the attribution UNDER the name and not a second name:
-   at the body size it read as a peer of the heading above it and the head had
-   two titles. */
-.rail .ws-company-text {
   font: var(--fontBodySmall);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1541,7 +1533,7 @@
   /* And the attribution: the sheet is 600px wide, so the line the 56px rail
      drops is spelled out in full here. */
   .rail.sheetopen .ws-company {
-    display: flex;
+    display: block;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner
      there is no room for one, and "Close" is what its `aria-label` says. */

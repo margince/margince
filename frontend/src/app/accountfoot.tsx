@@ -9,8 +9,8 @@ import { CORE_RELEASE, comparableRelease, SPA_RELEASE } from "../lib/release";
 import { useLogout } from "../lib/session";
 import type { RowSeat } from "./accountseats";
 
-// The way out of the account menu, and the release the reader is on.
-// Apart from account.tsx so the menu's roving walk and its rows read on their own.
+// The sign-out row, and the build this bundle was made from. The help menu
+// prints the build, and a problem report names its release.
 
 /**
  * The way out, with the guard against a second POST while the first is in
@@ -50,33 +50,58 @@ export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
 }
 
 /**
- * The release a problem report names. The tracker is the core's, so an instance
- * build names the core release it pins rather than its own.
+ * What this bundle knows of its build. A stamped core release marks an instance
+ * build, whose own release may still be unstamped.
  */
-export function reportedRelease(): string | undefined {
+export type BuildRelease =
+  | Readonly<{ kind: "instance"; core: string; instance?: string }>
+  | Readonly<{ kind: "core"; release: string }>
+  | Readonly<{ kind: "unstamped" }>;
+
+export function buildRelease(): BuildRelease {
   if (comparableRelease(CORE_RELEASE)) {
-    return CORE_RELEASE;
+    return {
+      kind: "instance",
+      core: CORE_RELEASE,
+      instance: comparableRelease(SPA_RELEASE) ? SPA_RELEASE : undefined,
+    };
   }
-  return comparableRelease(SPA_RELEASE) ? SPA_RELEASE : undefined;
+  return comparableRelease(SPA_RELEASE)
+    ? { kind: "core", release: SPA_RELEASE }
+    : { kind: "unstamped" };
 }
 
 /**
- * The releases this bundle was built from, so a reader reporting a problem can
- * say which build it is in. A statement, not a row: `role="none"` keeps it out
- * of the menu's items and out of the roving tabstop. A stamped core release
- * marks an instance build, which names both repositories even when they agree.
- * An unstamped build says so rather than printing a version that is not one.
+ * The release a problem report names. The tracker is the core's, so an instance
+ * build names the core release it pins.
+ */
+export function reportedRelease(build: BuildRelease): string | undefined {
+  switch (build.kind) {
+    case "instance":
+      return build.core;
+    case "core":
+      return build.release;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The build, so a reader reporting a problem can say which one they are on. A
+ * statement, not a row: `role="none"` keeps it out of the menu's items. An
+ * instance build names both repositories, even when they agree.
  */
 export function AccountRelease() {
   const t = useT();
+  const build = buildRelease();
   const lines: string[] = [];
-  if (comparableRelease(CORE_RELEASE)) {
-    if (comparableRelease(SPA_RELEASE)) {
-      lines.push(t("shell.instanceVersion", { version: SPA_RELEASE }));
+  if (build.kind === "instance") {
+    if (build.instance) {
+      lines.push(t("shell.instanceVersion", { version: build.instance }));
     }
-    lines.push(t("shell.coreVersion", { version: CORE_RELEASE }));
-  } else if (comparableRelease(SPA_RELEASE)) {
-    lines.push(t("shell.version", { version: SPA_RELEASE }));
+    lines.push(t("shell.coreVersion", { version: build.core }));
+  } else if (build.kind === "core") {
+    lines.push(t("shell.version", { version: build.release }));
   } else {
     lines.push(t("shell.help.devBuild"));
   }

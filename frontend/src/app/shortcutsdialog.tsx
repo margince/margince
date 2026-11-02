@@ -11,10 +11,11 @@ import {
 import { Eyebrow } from "../design-system/eyebrow";
 import { FactList } from "../design-system/factlist";
 import { Heading } from "../design-system/heading";
+import { INLINE_COMMIT_KEY } from "../design-system/inlinetext";
 import { Modal } from "../design-system/modal";
 import { DECK_KEY_WORDS } from "../features/brief/brief.deckwords";
 import { type Translator, useT } from "../i18n";
-import { DISMISS_KEY, sidebarHotkeyCaps } from "./hotkeys";
+import { modifierCap, sidebarHotkeyCaps } from "./hotkeys";
 import { paletteHotkeyCaps } from "./palette";
 
 export type Shortcut = Readonly<{
@@ -35,7 +36,6 @@ const KEY_CAPS: Readonly<Record<string, string>> = {
   ArrowLeft: "←",
   ArrowUp: "↑",
   ArrowDown: "↓",
-  Escape: "Esc",
 };
 
 /** A `KeyboardEvent.key` value as the cap a keyboard prints for it. */
@@ -44,8 +44,9 @@ export function capOf(key: string): string {
 }
 
 /**
- * Every shortcut the product binds, read from the definitions its handlers
- * read. Nothing here names a key of its own.
+ * The shortcuts the dialog lists. ⌘K, ⌘B, the paragraph save and the deck's
+ * keys come from the definitions their handlers read. Esc is the platform's
+ * own, so its cap is written here.
  */
 export function shortcutGroups(
   t: Translator,
@@ -69,7 +70,18 @@ export function shortcutGroups(
         {
           id: "dismiss",
           label: t("shell.shortcuts.dismiss"),
-          caps: [capOf(DISMISS_KEY)],
+          caps: ["Esc"],
+        },
+      ],
+    },
+    {
+      id: "editing",
+      title: t("shell.shortcuts.editing"),
+      shortcuts: [
+        {
+          id: "paragraph",
+          label: t("shell.shortcuts.paragraphSave"),
+          caps: [modifierCap(platform), capOf(INLINE_COMMIT_KEY)],
         },
       ],
     },

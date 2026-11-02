@@ -130,6 +130,15 @@ describe("Help and feedback", () => {
     expect(document.activeElement).toBe(trigger());
   });
 
+  // Help opens a menu. Theme opens radios, which no `aria-haspopup` value names.
+  it("says the help row opens a menu, and the theme row nothing", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await user.click(trigger());
+    expect(row("Help and feedback")).toHaveAttribute("aria-haspopup", "menu");
+    expect(row("Theme")).not.toHaveAttribute("aria-haspopup");
+  });
+
   it("closes both layers when Tab leaves", async () => {
     const user = userEvent.setup();
     renderMenu();

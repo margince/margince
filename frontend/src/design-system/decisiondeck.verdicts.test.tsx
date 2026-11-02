@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PRINTABLE_KEYS } from "../testing/keys";
 import type { DecisionDeckItem } from "./decisiondeck";
 import {
   DECK_COMMIT_KEY,
@@ -45,10 +46,6 @@ const NAMED_KEYS = [
   "F1",
 ];
 
-const PRINTABLE = Array.from({ length: 95 }, (_, at) =>
-  String.fromCodePoint(32 + at),
-);
-
 function claimedKeys(): string[] {
   const { container } = render(
     <fieldset
@@ -65,7 +62,7 @@ function claimedKeys(): string[] {
   if (!surface) {
     throw new Error("the surface did not render");
   }
-  return [...NAMED_KEYS, ...PRINTABLE].filter(
+  return [...NAMED_KEYS, ...PRINTABLE_KEYS].filter(
     (key) => !fireEvent.keyDown(surface, { key }),
   );
 }

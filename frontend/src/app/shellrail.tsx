@@ -87,9 +87,7 @@ function BrandBlock() {
         </Heading>
         {nameTip}
       </AppLink>
-      <span className="ws-company">
-        <span className="ws-company-text">{t("shell.poweredBy")}</span>
-      </span>
+      <span className="ws-company">{t("shell.poweredBy")}</span>
     </div>
   );
 }

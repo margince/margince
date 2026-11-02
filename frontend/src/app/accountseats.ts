@@ -27,7 +27,7 @@ function isSeatFocusable(element: HTMLElement | null): element is HTMLElement {
  * keeps the modulus positive walking back. After one full lap of disabled rows
  * the reader stays put.
  */
-export function nextSeat(
+function nextSeat(
   seats: readonly (HTMLElement | null)[],
   from: number,
   delta: number,

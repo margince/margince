@@ -31,7 +31,7 @@ export function useFlyout(seat: number, move: (at: number) => void) {
   return { open, setOpen, panel, id, close };
 }
 
-export type Flyout = ReturnType<typeof useFlyout>;
+type Flyout = ReturnType<typeof useFlyout>;
 
 /**
  * The row that opens a flyout, and the seat the flyout is positioned against.
@@ -41,11 +41,14 @@ export function FlyoutRow({
   label,
   seat,
   flyout,
+  popup,
   children,
 }: Readonly<{
   label: string;
   seat: RowSeat;
   flyout: Flyout;
+  /** What the flyout is, when it is a widget `aria-haspopup` can name. */
+  popup?: "menu";
   children: ReactNode;
 }>) {
   return (
@@ -56,9 +59,8 @@ export function FlyoutRow({
         type="button"
         className="acctrow"
         role="menuitem"
-        // No `aria-haspopup`: the theme row opens a group of radios, which no
-        // value of it names. Expanded and naming its region is what tells the
-        // menu's own dismissal that a layer inside it owns Escape.
+        aria-haspopup={popup}
+        // The dismissal guard in app/popover.ts reads these two together.
         aria-expanded={flyout.open}
         aria-controls={flyout.open ? flyout.id : undefined}
         {...seat}

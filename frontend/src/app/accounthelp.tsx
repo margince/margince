@@ -6,7 +6,7 @@ import { type KeyboardEvent, type RefObject, useEffect } from "react";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AccountRelease, reportedRelease } from "./accountfoot";
+import { AccountRelease, buildRelease, reportedRelease } from "./accountfoot";
 import { type RowSeat, useRovingSeats } from "./accountseats";
 
 const REPOSITORY = "https://github.com/margince/margince";
@@ -15,7 +15,7 @@ const REPOSITORY = "https://github.com/margince/margince";
 export function reportProblemHref(): string {
   const url = new URL(`${REPOSITORY}/issues/new`);
   url.searchParams.set("template", "bug_report.yml");
-  const release = reportedRelease();
+  const release = reportedRelease(buildRelease());
   if (release) {
     url.searchParams.set("commit", release);
   }
@@ -59,7 +59,7 @@ function OffsiteRow({
     >
       <span className="acctrowlabel">
         {t(labelKey)}
-        <span className="sr-only"> {t("shell.help.newTab")}</span>
+        <span className="sr-only"> {t("common.opensNewTab")}</span>
       </span>
       <ExternalLink size={14} className="acctmore" aria-hidden />
     </OffsiteLink>

@@ -47,11 +47,8 @@ type SessionUser = components["schemas"]["MeResponse"]["user"];
 const SETTINGS_HREF = routeHash({ screen: SETTINGS_SCREEN });
 
 /**
- * Where each row of the menu sits in the roving walk.
- *
- * Named rather than counted at the call sites, because the theme row's index is
- * read from three places — the tabstop, the submenu's way back, and the walk
- * itself — and three hand-written `1`s is how one of them comes to disagree.
+ * Where each row of the menu sits in the roving walk. A flyout row's seat is
+ * read twice, by its tabstop and by the flyout that hands focus back to it.
  */
 const SETTINGS_SEAT = 0;
 
@@ -216,6 +213,7 @@ function AccountPanel({
         label={t("shell.helpMenu")}
         seat={seat(HELP_SEAT)}
         flyout={help}
+        popup="menu"
       >
         <HelpSubmenu
           id={help.id}

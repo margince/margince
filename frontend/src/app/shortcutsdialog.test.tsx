@@ -17,19 +17,18 @@ import {
   DECK_UNSTAGE_KEY,
   DECK_VERDICT_KEYS,
 } from "../design-system/decisiondeck.verdicts";
+import {
+  INLINE_COMMIT_KEY,
+  isParagraphCommit,
+} from "../design-system/inlinetext";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { isSidebarChord, sidebarHotkeyCaps } from "./hotkeys";
+import { PRINTABLE_KEYS } from "../testing/keys";
+import { isSidebarChord, modifierCap, sidebarHotkeyCaps } from "./hotkeys";
 import { paletteHotkeyCaps, usePaletteHotkey } from "./palette";
 import { capOf, ShortcutsDialog } from "./shortcutsdialog";
 
 afterEach(cleanup);
-
-const PLATFORMS = ["MacIntel", "Win32", "Linux x86_64"];
-
-const PRINTABLE = Array.from({ length: 95 }, (_, at) =>
-  String.fromCodePoint(32 + at),
-);
 
 function renderDialog() {
   render(
@@ -51,7 +50,9 @@ function capsBeside(dialog: HTMLElement, label: string): string[] {
 
 /** The one letter a platform chord answers to, as its cap. */
 function chordCaps(claims: (key: string) => boolean): string[] {
-  return [...new Set(PRINTABLE.filter(claims).map((key) => key.toUpperCase()))];
+  return [
+    ...new Set(PRINTABLE_KEYS.filter(claims).map((key) => key.toUpperCase())),
+  ];
 }
 
 describe("the keyboard shortcuts dialog", () => {
@@ -90,35 +91,48 @@ describe("the keyboard shortcuts dialog", () => {
   });
 });
 
-// A handler that answers a letter the caps do not name, or caps naming a letter
-// no handler answers, fails here, whichever side moved.
+// A handler that answers a key the caps do not name, or caps naming a key no
+// handler answers, fails here, whichever side moved.
 describe("the chords the handlers bind", () => {
-  it.each(PLATFORMS)(
-    "binds the sidebar on the letter its caps name (%s)",
-    (platform) => {
-      const claims = (key: string) =>
-        isSidebarChord({
-          key,
-          metaKey: true,
-          ctrlKey: false,
-          altKey: false,
-          shiftKey: false,
-        });
-      expect(chordCaps(claims)).toEqual([sidebarHotkeyCaps(platform).at(-1)]);
-    },
-  );
+  const platform = navigator.platform;
 
-  it.each(PLATFORMS)(
-    "binds search on the letter its caps name (%s)",
-    (platform) => {
-      const setOpen = vi.fn();
-      renderHook(() => usePaletteHotkey(false, setOpen));
-      const claims = (key: string) => {
-        setOpen.mockClear();
-        fireEvent.keyDown(window, { key, ctrlKey: true });
-        return setOpen.mock.calls.length > 0;
-      };
-      expect(chordCaps(claims)).toEqual([paletteHotkeyCaps(platform).at(-1)]);
-    },
-  );
+  it("binds the sidebar on the letter its caps name", () => {
+    const claims = (key: string) =>
+      isSidebarChord({
+        key,
+        metaKey: true,
+        ctrlKey: false,
+        altKey: false,
+        shiftKey: false,
+      });
+    expect(chordCaps(claims)).toEqual([sidebarHotkeyCaps(platform).at(-1)]);
+  });
+
+  it("binds search on the letter its caps name", () => {
+    const setOpen = vi.fn();
+    renderHook(() => usePaletteHotkey(false, setOpen));
+    const claims = (key: string) => {
+      setOpen.mockClear();
+      fireEvent.keyDown(window, { key, ctrlKey: true });
+      return setOpen.mock.calls.length > 0;
+    };
+    expect(chordCaps(claims)).toEqual([paletteHotkeyCaps(platform).at(-1)]);
+  });
+
+  it("saves a paragraph on the key its caps name, and only with a modifier", () => {
+    const keys = [...PRINTABLE_KEYS, INLINE_COMMIT_KEY, "Tab", "Escape"];
+    const chord = (key: string, metaKey: boolean, ctrlKey: boolean) =>
+      isParagraphCommit({ key, metaKey, ctrlKey });
+    expect(keys.filter((key) => chord(key, true, false))).toEqual([
+      INLINE_COMMIT_KEY,
+    ]);
+    expect(keys.filter((key) => chord(key, false, true))).toEqual([
+      INLINE_COMMIT_KEY,
+    ]);
+    expect(keys.filter((key) => chord(key, false, false))).toEqual([]);
+    expect(capsBeside(renderDialog(), "Save multi-line field")).toEqual([
+      modifierCap(platform),
+      capOf(INLINE_COMMIT_KEY),
+    ]);
+  });
 });

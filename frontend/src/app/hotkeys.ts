@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The app-wide chords, each defined once, so the handler that binds a chord and
-// the shortcuts dialog that lists it cannot come to disagree.
+// The sidebar's chord and the platform's modifier cap. The sidebar's handler,
+// the palette's caps and the shortcuts dialog read them.
 
 const APPLE_PLATFORM = /mac|iphone|ipad|ipod/i;
 
@@ -34,6 +34,3 @@ export function isSidebarChord(event: Chord): boolean {
 export function sidebarHotkeyCaps(platform: string): readonly string[] {
   return [modifierCap(platform), SIDEBAR_KEY.toUpperCase()];
 }
-
-/** The key every popover and dialog in the product closes on. */
-export const DISMISS_KEY = "Escape";
