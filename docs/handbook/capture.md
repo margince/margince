@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part
@@ -164,15 +164,13 @@ When several deals fit, one colleague gets one task per thread: "Which deal is t
 
 To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done.
 
+Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
+
+Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them. An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work.
+
 An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
 
-To put an email on a deal yourself, use **Relink** on the message.
-1. Open the contact or company timeline and find the email.
-2. Press **Relink**.
-3. Search for the deal under "Search contacts, companies, deals, leads or projects" and pick it.
-4. Leave **Replace existing link** off to add the deal beside the current links. Tick **Move rest of thread** to bring the whole thread.
-5. Press **Relink**.
-Also called: email missing from opportunity, attach email to deal, associate email.
+To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-the-right-contact-or-deal).
 
 ## How a message finds its project
 

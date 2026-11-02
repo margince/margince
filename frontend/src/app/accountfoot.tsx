@@ -7,30 +7,16 @@ import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { CORE_RELEASE, comparableRelease, SPA_RELEASE } from "../lib/release";
 import { useLogout } from "../lib/session";
+import type { RowSeat } from "./accountseats";
 
-// The foot of the account menu: the way out, and the release the reader is on.
-// Apart from account.tsx so the menu's roving walk and its rows read on their own.
-
-/**
- * What a row needs to be a menu item. It holds the row's roving tabstop, the
- * handle the menu moves focus with, and the callback that records focus.
- *
- * Optional at every call site, because the phone sheet's rows are ordinary
- * content walked with Tab. A `role="menuitem"` there would promise keys that
- * nothing implements.
- */
-export type RowSeat = Readonly<{
-  ref: (element: HTMLElement | null) => void;
-  tabIndex: number;
-  onFocus: () => void;
-}>;
+// The sign-out row, and the build this bundle was made from. The help menu
+// prints the build, and a problem report names its release.
 
 /**
  * The way out, with the guard against a second POST while the first is in
- * flight. One spelling for the menu and the sheet: two would be two ways to sign
- * out, and only one of them would keep the guard.
+ * flight.
  */
-export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
+export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
   const t = useT();
   const logout = useLogout();
   return (
@@ -38,10 +24,8 @@ export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
       <button
         type="button"
         className="acctrow"
-        role={seat ? "menuitem" : undefined}
-        tabIndex={seat?.tabIndex}
-        ref={seat?.ref}
-        onFocus={seat?.onFocus}
+        role="menuitem"
+        {...seat}
         disabled={logout.isPending}
         onClick={() => logout.mutate()}
       >
@@ -66,34 +50,66 @@ export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
 }
 
 /**
- * The releases this bundle was built from, so a reader reporting a problem can
- * say which build it is in. A statement, not a row: `role="none"` keeps it out
- * of the menu's items and out of the roving tabstop. A stamped core release
- * marks an instance build, which names both repositories even when they agree.
- * An unstamped value prints nothing rather than a version that is not one.
+ * What this bundle knows of its build. A stamped core release marks an instance
+ * build, whose own release may still be unstamped.
+ */
+export type BuildRelease =
+  | Readonly<{ kind: "instance"; core: string; instance?: string }>
+  | Readonly<{ kind: "core"; release: string }>
+  | Readonly<{ kind: "unstamped" }>;
+
+export function buildRelease(): BuildRelease {
+  if (comparableRelease(CORE_RELEASE)) {
+    return {
+      kind: "instance",
+      core: CORE_RELEASE,
+      instance: comparableRelease(SPA_RELEASE) ? SPA_RELEASE : undefined,
+    };
+  }
+  return comparableRelease(SPA_RELEASE)
+    ? { kind: "core", release: SPA_RELEASE }
+    : { kind: "unstamped" };
+}
+
+/**
+ * The release a problem report names. The tracker is the core's, so an instance
+ * build names the core release it pins.
+ */
+export function reportedRelease(build: BuildRelease): string | undefined {
+  switch (build.kind) {
+    case "instance":
+      return build.core;
+    case "core":
+      return build.release;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The build, so a reader reporting a problem can say which one they are on. A
+ * statement, not a row: `role="none"` keeps it out of the menu's items. An
+ * instance build names both repositories, even when they agree.
  */
 export function AccountRelease() {
   const t = useT();
+  const build = buildRelease();
   const lines: string[] = [];
-  if (comparableRelease(CORE_RELEASE)) {
-    if (comparableRelease(SPA_RELEASE)) {
-      lines.push(t("shell.instanceVersion", { version: SPA_RELEASE }));
+  if (build.kind === "instance") {
+    if (build.instance) {
+      lines.push(t("shell.instanceVersion", { version: build.instance }));
     }
-    lines.push(t("shell.coreVersion", { version: CORE_RELEASE }));
-  } else if (comparableRelease(SPA_RELEASE)) {
-    lines.push(t("shell.version", { version: SPA_RELEASE }));
-  }
-  if (lines.length === 0) {
-    return null;
+    lines.push(t("shell.coreVersion", { version: build.core }));
+  } else if (build.kind === "core") {
+    lines.push(t("shell.version", { version: build.release }));
+  } else {
+    lines.push(t("shell.help.devBuild"));
   }
   return (
-    <>
-      <hr />
-      <div className="acctversion t-caption" role="none">
-        {lines.map((line) => (
-          <div key={line}>{line}</div>
-        ))}
-      </div>
-    </>
+    <div className="acctversion t-caption" role="none">
+      {lines.map((line) => (
+        <div key={line}>{line}</div>
+      ))}
+    </div>
   );
 }

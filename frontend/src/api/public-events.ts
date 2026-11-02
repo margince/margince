@@ -995,6 +995,8 @@ export interface components {
             automatic_task_repaired?: boolean;
             /** @description The source's recorded commitment decisions changed; fetch the source through its normal content access gate. */
             commitment_admissions_changed?: boolean;
+            /** @description The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate. */
+            request_settlement_changed?: boolean;
             /** @description The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried. */
             agenda_changed?: boolean;
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */
@@ -1408,7 +1410,7 @@ export interface components {
         };
         /** @description Payload for email_signature.changed. A member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later. So the change is audited and published rather than written silently. The payload leaves out the signature text. That text is the member's own words about themselves, often with a direct line or an address. A subscriber needs to know the sign-off moved, not what it says. */
         PublicEventEmailSignatureChanged: {
-            /** @description Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned". */
+            /** @description Whether the member has saved personal plain text or HTML. This reports stored presence; sanitized HTML without visible text uses the usual fallback. A workspace template or closing may still sign mail when this is false. */
             has_signature: boolean;
         };
         /** @description Payload for user_delivery.changed. A member chose what the product may send them (identity/userdelivery.go's SaveMyDelivery). The brief and the weekly are on their screen either way. This is about the nudge toward them, the one part a member may switch off. It names what moved and not what it moved to. What somebody chose about their own inbox is theirs. A fan-out carrying the values would tell every subscription owner who had turned their mail off. So the values stay on the row, which only that member and the job read. */

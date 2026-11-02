@@ -155,7 +155,7 @@ func (s *Service) worklistIn(
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	out.TeamWeek = new(identity.TeamWeekOf(ctx))
 	defer timeStage(ctx, "row_names")()
-	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings, day); err != nil {
+	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	return out, nil
@@ -190,12 +190,7 @@ func (s *Service) worklistFrom(
 	besideTheDay []*crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.Worklist {
 	defer timeStage(ctx, "rank")()
-	if limit <= 0 {
-		limit = worklistPage
-	}
-	if limit > worklistMaxPage {
-		limit = worklistMaxPage
-	}
+	limit = pageLimit(limit)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	// One admission rule for every row the page, Focus and counts will read.
 	rows, refused := admitBySource(ctx, slices.Concat(
@@ -456,4 +451,13 @@ func (s *Service) rankedWaits(
 		return waits[i].occurredAt.Before(waits[j].occurredAt)
 	})
 	return s.narrowToScope(ctx, waits, scope, s.taskOwner)
+}
+
+// pageLimit is the page a requested limit gets: the default when none was
+// asked, and never past the largest page.
+func pageLimit(limit int) int {
+	if limit <= 0 {
+		return worklistPage
+	}
+	return min(limit, worklistMaxPage)
 }

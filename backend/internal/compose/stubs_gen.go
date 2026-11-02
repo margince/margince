@@ -119,6 +119,10 @@ func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
 
+func (stubs) ClaimTaskReminderDelivery(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ClaimTaskReminderDelivery")
+}
+
 func (stubs) GetReplyRecipient(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetReplyRecipient")
 }

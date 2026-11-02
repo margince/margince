@@ -131,16 +131,14 @@
 }
 
 /* ===== the rows =====
-   One class for the popover's rows, the flyout's, and the phone sheet's flat
-   ones: the sheet IS the sidebar, so the surfaces carry the same row geometry and
-   only the chrome around them differs. A class rather than an element selector,
-   because the flyout nests its own buttons inside a row's wrapper and a
-   descendant rule would reach controls that are not rows at all. */
+   One class for the menu's rows and the flyouts'. A class rather than an
+   element selector, because a flyout nests its own controls inside a row's
+   wrapper and a descendant rule would reach controls that are not rows. */
 /* Almost no leading glyphs. A gear beside "Settings" is the word twice, so the
    destinations are labels the eye reads straight down — and the ONE row that
    ends the session keeps its mark, because it is the one row here whose result
-   is not another screen. The theme row's trailing chevron is the panel's other
-   mark, and it means the same kind of thing: there is more behind this row. */
+   is not another screen. The trailing marks say what is behind a row: a chevron
+   for a layer, an arrow out of a box for another tab. */
 .acctrow {
   display: flex;
   align-items: center;
@@ -173,8 +171,8 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
-/* The label takes the room the row has, so what follows it — the flyout's
-   chevron — is pushed to the row's trailing edge instead of sitting against the
+/* The label takes the room the row has, so what follows it — a trailing
+   mark — is pushed to the row's trailing edge instead of sitting against the
    word. */
 .acctrowlabel {
   flex: 1;
@@ -208,19 +206,19 @@
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
-/* The release at the foot of the menu. It takes the rows' inset so it stands on
-   their left edge, and like the identity block it sits outside the row rule — no
-   hover and no pointer, because it goes nowhere. */
+/* The build, at the foot of the help flyout. It takes the rows' inset so it
+   stands on their left edge, and like the identity block it sits outside the
+   row rule — no hover and no pointer, because it goes nowhere. */
 .acctversion {
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
   color: var(--textSecondary);
   overflow-wrap: anywhere;
 }
 
-/* ===== the theme flyout =====
-   The seat is what the flyout is measured against; it is `role="none"` in the
-   markup and draws nothing of its own. */
-.acctthemeseat {
+/* ===== the flyouts =====
+   Theme and help. The seat is what a flyout is measured against; it is
+   `role="none"` in the markup and draws nothing of its own. */
+.acctflyoutseat {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -241,6 +239,9 @@
      (the phone rule at the foot of this file is what answers that). Its rows
      carry the anatomy in full. */
   min-width: 168px;
+  /* Anchored by its right edge outside the seat, it would otherwise shrink to
+     its longest word and wrap every row. */
+  inline-size: max-content;
   display: flex;
   flex-direction: column;
   padding: var(--controlGap);
@@ -288,13 +289,14 @@
     transform: scale(1);
   }
 }
-/* ===== the flyout at phone width =====
+/* ===== the flyouts at phone width =====
    A 168px flyout opening INWARD from a menu that is itself anchored to the right
    edge starts at a negative x once the viewport is narrower than about 430px:
    the menu's own left edge is already close to the window's, and there is no
-   scrollbar to recover what falls off it. It is also the only appearance control
-   at that width, so it may not be the one that goes off screen.
-   Below the sheet's breakpoint (PHONE_MAX_WIDTH in lib/viewport.ts) it stops
+   scrollbar to recover what falls off it. The theme flyout is also the only
+   appearance control at that width, so it may not be the one that goes off
+   screen.
+   Below the phone breakpoint (PHONE_MAX_WIDTH in lib/viewport.ts) it stops
    being a popover and becomes an indented group inside the menu: in the flow, no
    surface of its own, its rows stepped in so they read as belonging to the row
    that opened them. */
@@ -302,6 +304,7 @@
   .accountsub {
     position: static;
     min-width: 0;
+    inline-size: auto;
     padding: var(--space-1) 0 var(--space-1) var(--space-4);
     border: 0;
     border-radius: 0;
@@ -309,6 +312,24 @@
     box-shadow: none;
     animation: none;
   }
+}
+
+/* The keyboard shortcuts dialog: a group per place the keys work, each a list
+   of what a key does beside its caps. */
+.acctshortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.acctshortcutsgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.acctkeys {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
 }
 
 /* A refused sign-out, stated in the menu it was asked from. It bleeds out

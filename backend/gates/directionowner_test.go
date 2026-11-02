@@ -14,6 +14,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -45,17 +46,31 @@ var messageStateReaders = gatekit.Waive(map[string]string{
 func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {
 	t.Parallel()
 	defer messageStateReaders.AssertAllMatched(t)
+	registered := readDirectionRegister(t)
+	spelling := map[string]bool{}
 	var readers, withRule int
 	for _, pkg := range goPackagesUnder(t, ".") {
 		for _, file := range pkg.files {
-			if strings.Contains(file.relPath, relstrengthDir) || !readsRelstrength(file, exchangeReaderRenderers) {
+			if strings.Contains(file.relPath, relstrengthDir) {
+				continue
+			}
+			// Spelling the column is itself a reader, not only calling one of
+			// the renderers. A fold that counted the sides in its own SQL and
+			// asked relstrength for nothing sat outside this walk. The census
+			// could not see the reader it most needed to.
+			spells := spellsDirection(file)
+			if !spells && !readsRelstrength(file, exchangeReaderRenderers) {
 				continue
 			}
 			readers++
 			if readsRelstrength(file, directionRuleRenderers) {
 				withRule++
 			}
-			if !spellsDirection(file) || messageStateReaders.Waived(t, file.relPath) {
+			if !spells {
+				continue
+			}
+			spelling[file.relPath] = true
+			if messageStateReaders.Waived(t, file.relPath) || registered[file.relPath] {
 				continue
 			}
 			t.Errorf("%s reads exchanges and spells activity.direction in its own SQL. Ask relstrength.TheyWroteSQL "+
@@ -65,6 +80,24 @@ func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {
 	}
 	// The strength fold, both 360 pages and the colleague graph read the rule;
 	// a walk that found fewer read a smaller tree.
+	// A register entry whose file no longer spells the column is paid debt.
+	// Left there, it lets the count stand still while the tree improves.
+	for path := range registered {
+		if messageStateReaders.Waived(t, path) {
+			t.Errorf("%s is waived as a message-state reader and also in %s — one answer, one place",
+				path, directionRegisterPath)
+		}
+		if !spelling[path] {
+			t.Errorf("%s is in %s and no longer spells the column — delete that line", path, directionRegisterPath)
+		}
+	}
+	// Exact, not a bound. Under a bound, a paid entry can be swapped for a new
+	// reader with the number unmoved. The debt then stands still while the
+	// file reads as though it shrank.
+	if len(registered) != directionDebtCeiling {
+		t.Errorf("%s holds %d entries and the ceiling says %d; move the ceiling with the register",
+			directionRegisterPath, len(registered), directionDebtCeiling)
+	}
 	if readers < 10 || withRule < 4 {
 		t.Fatalf("found %d exchange readers and %d asking the direction rule; the census has stopped seeing them", readers, withRule)
 	}
@@ -106,4 +139,35 @@ func TestTheDirectionCensusSeesAPlantedReader(t *testing.T) {
 			t.Errorf("the census misses a planted %s", name)
 		}
 	}
+}
+
+// directionRegisterPath is the debt register, and directionDebtCeiling the
+// count it may not exceed. The file's own header says why it carries no
+// per-entry reasons.
+const (
+	directionRegisterPath = "directionspellers.txt"
+	directionDebtCeiling  = 56
+)
+
+func readDirectionRegister(t *testing.T) map[string]bool {
+	t.Helper()
+	body, err := os.ReadFile(directionRegisterPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", directionRegisterPath, err)
+	}
+	out := map[string]bool{}
+	for line := range strings.SplitSeq(string(body), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if out[line] {
+			t.Errorf("%s is registered twice — one debt, one line", line)
+		}
+		out[line] = true
+	}
+	if len(out) == 0 {
+		t.Fatalf("%s yielded no entries; the register has stopped being read", directionRegisterPath)
+	}
+	return out
 }

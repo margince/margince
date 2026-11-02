@@ -42,7 +42,7 @@ describe("BriefIntro", () => {
   it("plays on the first visit of the day and records the day", () => {
     intro();
     expect(screen.getByRole("button", curtain).textContent).toContain(
-      "Good morning, Ada.",
+      "Good morning, Ada",
     );
     expect(readStored(STORAGE_KEYS.briefIntroShown)).toBe(TODAY);
   });
@@ -71,7 +71,7 @@ describe("BriefIntro", () => {
   it("rises before the day's read, so the page never shows first", () => {
     render(<BriefIntro firstName="Ada" day={undefined} now={NOW} />);
     const shown = screen.getByRole("button", curtain);
-    expect(shown.textContent).toContain("Good morning, Ada.");
+    expect(shown.textContent).toContain("Good morning, Ada");
     expect(
       shown.querySelector(".brief-intro-figures[data-pending]"),
     ).not.toBeNull();
@@ -156,7 +156,7 @@ describe("BriefIntro", () => {
   it("reads the greeting and its figures out, not only the way out", () => {
     intro();
     const name = screen.getByRole("button", curtain).textContent ?? "";
-    expect(name).toContain("Good morning, Ada.");
+    expect(name).toContain("Good morning, Ada");
     expect(name).toContain(en["brief.intro.waiting"]);
   });
 

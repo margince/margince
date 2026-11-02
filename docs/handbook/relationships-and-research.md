@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
+<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
@@ -20,7 +20,7 @@ A contact's **Network** tab shows which colleagues have written with them, best 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
 ### How strength is worked out
-Relationship strength in Margince comes from one rule, worked out from captured mail **each time you look**:
+Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
@@ -29,9 +29,18 @@ Relationship strength in Margince comes from one rule, worked out from captured 
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
-**You cannot change it by hand.** It shows what happened in captured mail.
+**You cannot change it by hand.** It shows what happened in captured interactions.
 
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
+
+A recent contact can still score **Weak**. The contact page then names what holds the score down:
+
+- few shared interactions in 90 days;
+- an exchange that goes mostly one way;
+- no reply from the contact among the shared interactions;
+- interactions, such as meetings or replies from other contacts, that count as no message either way.
+
+The score counts only interactions that everyone in Margince can see. So "no replies counted" does not mean the contact never replied.
 
 The route also shows which way the mail goes: "{total} two-way exchanges in 90 days" against "{total} interactions in 90 days, one-sided". So six real exchanges never read the same as six sends with no answer.
 

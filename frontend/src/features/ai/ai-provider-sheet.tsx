@@ -231,10 +231,7 @@ function ProviderPrices({
                 {" · "}
                 <a href={page} target="_blank" rel="noreferrer noopener">
                   {t("aiProviders.priceSource")}
-                  <span className="sr-only">
-                    {" "}
-                    {t("aiProviders.opensNewTab")}
-                  </span>
+                  <span className="sr-only"> {t("common.opensNewTab")}</span>
                 </a>
               </>
             ) : null}

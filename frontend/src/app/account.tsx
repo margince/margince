@@ -1,7 +1,9 @@
-import { ChevronRight, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 import {
   type KeyboardEvent,
+  lazy,
   type RefObject,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -15,10 +17,20 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
-import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
+import { FlyoutRow, useFlyout } from "./accountflyout";
+import { SignOutRow } from "./accountfoot";
+import { HelpSubmenu } from "./accounthelp";
+import { type RowSeat, useRovingSeats } from "./accountseats";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";
 import { ThemeSubmenu } from "./accounttheme";
+
+// Lazy: the list reads the Brief's deck vocabulary, and most sessions never open it.
+const ShortcutsDialog = lazy(() =>
+  import("./shortcutsdialog").then((module) => ({
+    default: module.ShortcutsDialog,
+  })),
+);
 
 export { THEME_LABEL_KEYS } from "./accounttheme";
 
@@ -35,11 +47,8 @@ type SessionUser = components["schemas"]["MeResponse"]["user"];
 const SETTINGS_HREF = routeHash({ screen: SETTINGS_SCREEN });
 
 /**
- * Where each row of the menu sits in the roving walk.
- *
- * Named rather than counted at the call sites, because the theme row's index is
- * read from three places — the tabstop, the submenu's way back, and the walk
- * itself — and three hand-written `1`s is how one of them comes to disagree.
+ * Where each row of the menu sits in the roving walk. A flyout row's seat is
+ * read twice, by its tabstop and by the flyout that hands focus back to it.
  */
 const SETTINGS_SEAT = 0;
 
@@ -47,9 +56,11 @@ const THEME_SEAT = 1;
 
 const BOOKING_SEAT = 2;
 
-const SIGN_OUT_SEAT = 3;
+const HELP_SEAT = 3;
 
-const SEAT_COUNT = 4;
+const SIGN_OUT_SEAT = 4;
+
+const SEAT_COUNT = 5;
 
 /**
  * Who is signed in, in the shapes the block prints them in.
@@ -77,9 +88,6 @@ type Identity = ReturnType<typeof identityOf>;
 /**
  * The contact, printed: their display name when the record carries one, otherwise
  * the address alone — which is then not repeated underneath itself.
- *
- * One spelling, because the trigger, the panel and the phone sheet all print it
- * and a second copy is how they would come to disagree about which line is which.
  */
 function IdentityLines({ identity }: Readonly<{ identity: Identity }>) {
   return (
@@ -93,26 +101,20 @@ function IdentityLines({ identity }: Readonly<{ identity: Identity }>) {
 }
 
 /**
- * The way into settings — the only one the product has.
- *
- * `onActivate` is how a caller says this click should BOTH act and close: the
- * menu is chrome over the page the link is about to replace, and a popover left
- * standing over the destination it just opened is the reader's to dismiss for no
- * reason. The phone sheet passes nothing; its rows are the surface.
+ * The way into settings, the only one the product has. `onActivate` closes the
+ * menu, so it does not stay open over the page the link opens.
  */
 function SettingsRow({
   seat,
   onActivate,
-}: Readonly<{ seat?: RowSeat; onActivate?: () => void }>) {
+}: Readonly<{ seat: RowSeat; onActivate?: () => void }>) {
   const t = useT();
   return (
     <AppLink
       className="acctrow"
       href={SETTINGS_HREF}
-      role={seat ? "menuitem" : undefined}
-      tabIndex={seat?.tabIndex}
-      ref={seat?.ref}
-      onFocus={seat?.onFocus}
+      role="menuitem"
+      {...seat}
       onClick={onActivate}
     >
       {t("nav.settings")}
@@ -120,138 +122,47 @@ function SettingsRow({
   );
 }
 
-/** A disabled control cannot hold focus, so the roving walk steps over it rather
- *  than landing the reader on a row nothing happens on. */
-function isSeatFocusable(element: HTMLElement | null): element is HTMLElement {
-  return (
-    element !== null &&
-    !(element instanceof HTMLButtonElement && element.disabled)
-  );
-}
-
 /**
- * The next seat a reader can actually stand on, wrapping at both ends.
- *
- * `count * count` keeps the modulus positive for a backwards walk; the loop
- * gives up after one full lap, which is the case where every other row is
- * disabled and the reader stays where they are.
- */
-function nextSeat(
-  seats: readonly (HTMLElement | null)[],
-  from: number,
-  delta: number,
-): number {
-  const count = seats.length;
-  for (let hop = 1; hop <= count; hop++) {
-    const at = (from + delta * hop + count * count) % count;
-    if (isSeatFocusable(seats[at] ?? null)) {
-      return at;
-    }
-  }
-  return from;
-}
-
-/**
- * What the menu holds: who you are, the settings door, the appearance choice,
- * and the way out.
- *
- * A real `role="menu"`, which the two-row panel this replaces did not need and
- * this one does — a submenu a reader can only reach with a pointer is a setting
- * only pointer users can change. So: a roving tabstop, Up/Down between the rows,
- * Home/End to the ends, Right or Enter into the submenu, Left back out.
- *
- * The identity block is not a menu item and carries no role. It is a statement
- * about who is signed in, and it is also the menu's own accessible name, so a
- * reader entering the panel in menu mode hears whose account they are about to
- * act on rather than having to leave the menu to find out.
+ * A real `role="menu"`, so a keyboard reader can reach both submenus. The
+ * identity block carries no role, since it is a statement. It also names the
+ * menu, so a reader in menu mode hears whose account they act on.
  */
 function AccountPanel({
   identity,
   id,
   panel,
   onDismiss,
+  onShortcuts,
 }: Readonly<{
   identity: Identity;
   id: string;
   panel: RefObject<HTMLDivElement | null>;
   onDismiss: () => void;
+  onShortcuts: () => void;
 }>) {
   const t = useT();
-  const rows = useRef<(HTMLElement | null)[]>([]);
-  const [active, setActive] = useState(SETTINGS_SEAT);
-  const [themeOpen, setThemeOpen] = useState(false);
-  const submenu = useRef<HTMLDivElement>(null);
-  const themeId = useId();
+  const { seat, walk, move } = useRovingSeats(SEAT_COUNT);
+  const theme = useFlyout(THEME_SEAT, move);
+  const help = useFlyout(HELP_SEAT, move);
 
   // The menu takes focus when it opens. A panel that leaves focus on the trigger
   // is one the keyboard reader has to walk into with a key nothing told them
   // about, and it is what makes the Escape return below mean anything.
   useEffect(() => {
-    rows.current[SETTINGS_SEAT]?.focus();
-  }, []);
-
-  /**
-   * Close the submenu, and put focus back on the row that opened it.
-   *
-   * Only when the submenu actually HELD focus — the same rule the menu's own
-   * dismissal keeps: an outside click usually lands on something focusable of
-   * its own, and pulling focus onto the theme row afterwards would undo what the
-   * click just did.
-   */
-  const closeTheme = useCallback(() => {
-    const held = submenu.current?.contains(document.activeElement) ?? false;
-    setThemeOpen(false);
-    if (held) {
-      setActive(THEME_SEAT);
-      rows.current[THEME_SEAT]?.focus();
-    }
-  }, []);
-
-  // The INNER dismissal layer, from the same hook as the outer one. Its listener
-  // is registered after the menu's — this panel only mounts inside an open menu,
-  // and the submenu only opens later — so on Escape the menu's copy runs first,
-  // sees the still-expanded theme row, and stands down for this one.
-  usePopoverDismiss(themeOpen, submenu, closeTheme);
-
-  const move = (at: number) => {
-    setActive(at);
-    rows.current[at]?.focus();
-  };
+    move(SETTINGS_SEAT);
+  }, [move]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Tab leaves the menu, so the menu goes with it (the APG menu-button
-    // pattern). Not prevented: the reader asked to move on, and the panel used
-    // to stay painted over whatever they moved on to.
+    // pattern). Not prevented: the reader asked to move on.
     if (event.key === "Tab") {
       onDismiss();
       return;
     }
-    switch (event.key) {
-      case "ArrowDown":
-        move(nextSeat(rows.current, active, 1));
-        break;
-      case "ArrowUp":
-        move(nextSeat(rows.current, active, -1));
-        break;
-      case "Home":
-        move(nextSeat(rows.current, SEAT_COUNT - 1, 1));
-        break;
-      case "End":
-        move(nextSeat(rows.current, 0, -1));
-        break;
-      default:
-        return;
+    if (walk(event.key)) {
+      event.preventDefault();
     }
-    event.preventDefault();
   };
-
-  const seat = (index: number): RowSeat => ({
-    ref: (element) => {
-      rows.current[index] = element;
-    },
-    tabIndex: active === index ? 0 : -1,
-    onFocus: () => setActive(index),
-  });
 
   return (
     <div
@@ -263,9 +174,7 @@ function AccountPanel({
           ? `${t("shell.accountAria")} — ${identity.spoken}`
           : t("shell.accountAria")
       }
-      // Focusable, and only programmatically: the roving tabstop lives on the
-      // rows, and the effect above lands the reader on one of them the moment
-      // this opens. See ThemeSubmenu for why the value is -1 rather than 0.
+      // Focusable only by script: the roving tabstop lives on the rows.
       tabIndex={-1}
       ref={panel}
       onKeyDown={onKeyDown}
@@ -281,43 +190,13 @@ function AccountPanel({
         </>
       )}
       <SettingsRow seat={seat(SETTINGS_SEAT)} onActivate={onDismiss} />
-      {/* `role="none"` on the wrapper: a menu's children are its items, and a
-          plain div between the two would break that parentage. The wrapper earns
-          its place by being what the flyout is positioned against. */}
-      <div className="acctthemeseat" role="none">
-        <button
-          type="button"
-          className="acctrow"
-          role="menuitem"
-          // No `aria-haspopup`: what this opens is a group of radios, and every
-          // value that attribute takes names a widget this is not. Expanded, and
-          // NAMING what it expanded, is the honest pair — and it is also what
-          // tells the menu's own dismissal that a layer inside it owns Escape
-          // (app/popover.ts).
-          aria-expanded={themeOpen}
-          aria-controls={themeOpen ? themeId : undefined}
-          tabIndex={active === THEME_SEAT ? 0 : -1}
-          ref={(element) => {
-            rows.current[THEME_SEAT] = element;
-          }}
-          onFocus={() => setActive(THEME_SEAT)}
-          onClick={() => setThemeOpen((was) => !was)}
-          onKeyDown={(event) => {
-            if (event.key !== "ArrowRight") {
-              return;
-            }
-            setThemeOpen(true);
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-        >
-          <span className="acctrowlabel">{t("shell.theme")}</span>
-          <ChevronRight size={14} className="acctmore" aria-hidden />
-        </button>
-        {themeOpen && (
-          <ThemeSubmenu id={themeId} panel={submenu} onBack={closeTheme} />
-        )}
-      </div>
+      <FlyoutRow
+        label={t("shell.theme")}
+        seat={seat(THEME_SEAT)}
+        flyout={theme}
+      >
+        <ThemeSubmenu id={theme.id} panel={theme.panel} onBack={theme.close} />
+      </FlyoutRow>
       {/* The groups: where you go, then the way out. An <hr> rather than a border
           on the last row — it separates a group, and a screen reader is told so. */}
       <hr />
@@ -330,17 +209,37 @@ function AccountPanel({
       >
         {t("scheduling.myLink")}
       </AppLink>
+      <FlyoutRow
+        label={t("shell.helpMenu")}
+        seat={seat(HELP_SEAT)}
+        flyout={help}
+        popup="menu"
+      >
+        <HelpSubmenu
+          id={help.id}
+          panel={help.panel}
+          onBack={help.close}
+          onLeave={onDismiss}
+          onShortcuts={onShortcuts}
+        />
+      </FlyoutRow>
+      <hr />
       <SignOutRow seat={seat(SIGN_OUT_SEAT)} />
-      <AccountRelease />
     </div>
   );
 }
 
-/** The account menu owns settings, appearance, booking links and sign-out. */
+/**
+ * The account menu owns settings, appearance, the booking link, help and
+ * feedback with the keyboard shortcuts, and sign-out.
+ */
 export function AccountMenu() {
   const t = useT();
   const me = useMe();
   const [open, setOpen] = useState(false);
+  const [shortcuts, setShortcuts] = useState<"unopened" | "open" | "closed">(
+    "unopened",
+  );
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const spokenId = useId();
@@ -423,7 +322,22 @@ export function AccountMenu() {
           id={menuId}
           panel={menu}
           onDismiss={dismiss}
+          onShortcuts={() => {
+            dismiss();
+            setShortcuts("open");
+          }}
         />
+      )}
+      {/* Mounted from the first opening on, so closing plays Modal's exit
+          rather than pulling the dialog out from under it. */}
+      {shortcuts !== "unopened" && (
+        <Suspense fallback={null}>
+          <ShortcutsDialog
+            open={shortcuts === "open"}
+            onClose={() => setShortcuts("closed")}
+            returnFocusTo={() => trigger.current}
+          />
+        </Suspense>
       )}
     </div>
   );

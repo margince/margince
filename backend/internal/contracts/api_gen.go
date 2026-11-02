@@ -9137,7 +9137,6 @@ func (e CreateRecordGrantRequestSubjectType) Valid() bool {
 const (
 	CreateRelationshipRequestEmploymentStatusCurrent CreateRelationshipRequestEmploymentStatus = "current"
 	CreateRelationshipRequestEmploymentStatusFormer  CreateRelationshipRequestEmploymentStatus = "former"
-	CreateRelationshipRequestEmploymentStatusUnknown CreateRelationshipRequestEmploymentStatus = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the CreateRelationshipRequestEmploymentStatus enum.
@@ -9146,8 +9145,6 @@ func (e CreateRelationshipRequestEmploymentStatus) Valid() bool {
 	case CreateRelationshipRequestEmploymentStatusCurrent:
 		return true
 	case CreateRelationshipRequestEmploymentStatusFormer:
-		return true
-	case CreateRelationshipRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -10628,7 +10625,6 @@ func (e EmploymentImportRequestAction) Valid() bool {
 const (
 	EmploymentImportRequestEmploymentStatusCurrent EmploymentImportRequestEmploymentStatus = "current"
 	EmploymentImportRequestEmploymentStatusFormer  EmploymentImportRequestEmploymentStatus = "former"
-	EmploymentImportRequestEmploymentStatusUnknown EmploymentImportRequestEmploymentStatus = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the EmploymentImportRequestEmploymentStatus enum.
@@ -10637,8 +10633,6 @@ func (e EmploymentImportRequestEmploymentStatus) Valid() bool {
 	case EmploymentImportRequestEmploymentStatusCurrent:
 		return true
 	case EmploymentImportRequestEmploymentStatusFormer:
-		return true
-	case EmploymentImportRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -19258,6 +19252,24 @@ func (e SearchResponseTypesWithMore) Valid() bool {
 	}
 }
 
+// Defines values for SearchResultIdentifierMatch.
+const (
+	SearchResultIdentifierMatchExact  SearchResultIdentifierMatch = "exact"
+	SearchResultIdentifierMatchPrefix SearchResultIdentifierMatch = "prefix"
+)
+
+// Valid indicates whether the value is a known member of the SearchResultIdentifierMatch enum.
+func (e SearchResultIdentifierMatch) Valid() bool {
+	switch e {
+	case SearchResultIdentifierMatchExact:
+		return true
+	case SearchResultIdentifierMatchPrefix:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResultTrustTier.
 const (
 	SearchResultTrustTierSearchResultTrustTierAuthoritative SearchResultTrustTier = "authoritative"
@@ -21695,7 +21707,6 @@ func (e UpdateProductRequestBillingModel) Valid() bool {
 const (
 	UpdateRelationshipRequestEmploymentStatusCurrent UpdateRelationshipRequestEmploymentStatus = "current"
 	UpdateRelationshipRequestEmploymentStatusFormer  UpdateRelationshipRequestEmploymentStatus = "former"
-	UpdateRelationshipRequestEmploymentStatusUnknown UpdateRelationshipRequestEmploymentStatus = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the UpdateRelationshipRequestEmploymentStatus enum.
@@ -21704,8 +21715,6 @@ func (e UpdateRelationshipRequestEmploymentStatus) Valid() bool {
 	case UpdateRelationshipRequestEmploymentStatusCurrent:
 		return true
 	case UpdateRelationshipRequestEmploymentStatusFormer:
-		return true
-	case UpdateRelationshipRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -34723,7 +34732,7 @@ type Company struct {
 	// viewer's role lacks computed_field:read visibility (STATE-4).
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
-	// ContactCount How many live contacts THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
 	ContactCount *int      `json:"contact_count,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -40607,7 +40616,7 @@ type CreateRelationshipRequest struct {
 	CounterpartyContactId *openapi_types.UUID `json:"counterparty_contact_id,omitempty"`
 	DealId                *openapi_types.UUID `json:"deal_id,omitempty"`
 
-	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	// EmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 	EmploymentStatus *CreateRelationshipRequestEmploymentStatus `json:"employment_status,omitempty"`
 	EndedAt          *openapi_types.Date                        `json:"ended_at,omitempty"`
 	EndedPrecision   *CreateRelationshipRequestEndedPrecision   `json:"ended_precision,omitempty"`
@@ -40620,7 +40629,7 @@ type CreateRelationshipRequest struct {
 	StartedPrecision *CreateRelationshipRequestStartedPrecision `json:"started_precision,omitempty"`
 }
 
-// CreateRelationshipRequestEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+// CreateRelationshipRequestEmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 type CreateRelationshipRequestEmploymentStatus string
 
 // CreateRelationshipRequestEndedPrecision defines model for CreateRelationshipRequest.EndedPrecision.
@@ -42584,7 +42593,7 @@ type EmailPresentationLifecycle string
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {
 	// Html The same block as the sanitized markup the HTML part carries. Present only when
-	// `kind` is `template`.
+	// `kind` is `template` or a personal HTML `signature`.
 	Html *string `json:"html,omitempty"`
 
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
@@ -42620,16 +42629,19 @@ type EmailSignOffRequest struct {
 
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
-	// Body The sign-off appended below every message this member sends, plain text.
-	// Empty means none written; a send then closes with a plain greeting and
-	// the member's display name when one is on file.
+	// Body Plain-text fallback after personal HTML and the company template.
+	// With none set, a send closes with a greeting and the member's name.
 	Body string `json:"body"`
+
+	// Html Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html string `json:"html"`
 
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
 	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`.
+	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -42642,6 +42654,11 @@ type EmailSignature struct {
 // the stored one, so the preview shows what saving would produce. Writes nothing,
 // and a send never reads it.
 type EmailSignatureDraft struct {
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
+
 	// Phone The caller's phone as edited.
 	Phone *string `json:"phone,omitempty"`
 
@@ -42662,7 +42679,7 @@ type EmailSignatureTemplate struct {
 	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
 	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
-	// none: each member signs with their own plain-text signature.
+	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
 }
 
@@ -54720,6 +54737,11 @@ type SaveEmailSignatureRequest struct {
 	// is a document riding on every message.
 	Body string `json:"body"`
 
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
+
 	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`
 
@@ -55328,6 +55350,9 @@ type SearchResult struct {
 	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
+	// IdentifierMatch The record's own email or domain matches the complete query; absent for text and employer matches.
+	IdentifierMatch *SearchResultIdentifierMatch `json:"identifier_match,omitempty"`
+
 	// IsPartner For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone.
 	IsPartner *bool `json:"is_partner,omitempty"`
 
@@ -55348,6 +55373,9 @@ type SearchResult struct {
 	// WorksAt On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
 	WorksAt *SearchHitEmployer `json:"works_at,omitempty"`
 }
+
+// SearchResultIdentifierMatch The record's own email or domain matches the complete query; absent for text and employer matches.
+type SearchResultIdentifierMatch string
 
 // SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
@@ -57136,6 +57164,18 @@ type Taggable struct {
 
 // TaggableEntityType defines model for Taggable.EntityType.
 type TaggableEntityType string
+
+// TaskReminderClaim defines model for TaskReminderClaim.
+type TaskReminderClaim struct {
+	// Claimed True for the first claim at this instant and assignee, false for every later one.
+	Claimed bool `json:"claimed"`
+}
+
+// TaskReminderClaimRequest defines model for TaskReminderClaimRequest.
+type TaskReminderClaimRequest struct {
+	// RemindAt The reminder instant the tab is about to show, as the activity list returned it.
+	RemindAt time.Time `json:"remind_at"`
+}
 
 // Team Mirrors the `team` table.
 type Team struct {
@@ -58965,7 +59005,7 @@ type UpdateRelationshipRequest struct {
 	// ClearStartedAt Remove an incorrect start date and its precision.
 	ClearStartedAt *bool `json:"clear_started_at,omitempty"`
 
-	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	// EmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 	EmploymentStatus *UpdateRelationshipRequestEmploymentStatus `json:"employment_status,omitempty"`
 	EndedAt          *openapi_types.Date                        `json:"ended_at,omitempty"`
 	EndedPrecision   *UpdateRelationshipRequestEndedPrecision   `json:"ended_precision,omitempty"`
@@ -58975,7 +59015,7 @@ type UpdateRelationshipRequest struct {
 	StartedPrecision *UpdateRelationshipRequestStartedPrecision `json:"started_precision,omitempty"`
 }
 
-// UpdateRelationshipRequestEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+// UpdateRelationshipRequestEmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 type UpdateRelationshipRequestEmploymentStatus string
 
 // UpdateRelationshipRequestEndedPrecision defines model for UpdateRelationshipRequest.EndedPrecision.
@@ -64990,7 +65030,7 @@ type ListContactsParams struct {
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListContactsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
-	// CompanyId Contacts who work at this account, by their CURRENT PRIMARY employment edge
+	// CompanyId Contacts who work at this account, by a current employment edge, whether primary or secondary
 	// (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
 	// "who works there" and "who has ever worked there" are different questions, and the
 	// list answers the first.
@@ -70303,6 +70343,9 @@ type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
 
 // RelinkActivityJSONRequestBody defines body for RelinkActivity for application/json ContentType.
 type RelinkActivityJSONRequestBody RelinkActivityJSONBody
+
+// ClaimTaskReminderDeliveryJSONRequestBody defines body for ClaimTaskReminderDelivery for application/json ContentType.
+type ClaimTaskReminderDeliveryJSONRequestBody = TaskReminderClaimRequest
 
 // SendEmailJSONRequestBody defines body for SendEmail for application/json ContentType.
 type SendEmailJSONRequestBody = SendEmailRequest
@@ -82946,6 +82989,9 @@ type ServerInterface interface {
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
+	// Claim the one browser notification a due task reminder gets.
+	// (POST /activities/{id}/reminder-delivery)
+	ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Request, id Id)
 	// Who a reply to this message would be addressed to.
 	// (GET /activities/{id}/reply-recipient)
 	GetReplyRecipient(w http.ResponseWriter, r *http.Request, id Id)
@@ -85961,6 +86007,12 @@ func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.
 // Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 // (POST /activities/{id}/relink)
 func (_ Unimplemented) RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Claim the one browser notification a due task reminder gets.
+// (POST /activities/{id}/reminder-delivery)
+func (_ Unimplemented) ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92961,6 +93013,38 @@ func (siw *ServerInterfaceWrapper) RelinkActivity(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RelinkActivity(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClaimTaskReminderDelivery operation middleware
+func (siw *ServerInterfaceWrapper) ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClaimTaskReminderDelivery(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -133615,6 +133699,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/reminder-delivery", wrapper.ClaimTaskReminderDelivery)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/activities/{id}/reply-recipient", wrapper.GetReplyRecipient)

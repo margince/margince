@@ -100,6 +100,7 @@ describe("a stored value", () => {
         "name" in key ? key.name : `${key.prefix}*`,
       ),
     ).toEqual([
+      "margince.palette.recents",
       "margince.locale",
       "margince.theme",
       "margince.sidebarCollapsed",

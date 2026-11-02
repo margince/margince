@@ -1418,7 +1418,7 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: |
-            Contacts who work at this account, by their CURRENT PRIMARY employment edge
+            Contacts who work at this account, by a current employment edge, whether primary or secondary
             (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
@@ -8644,6 +8644,40 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EmailPresentation' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/{id}/reminder-delivery:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: claimTaskReminderDelivery
+      x-agent-access: human-only
+      summary: Claim the one browser notification a due task reminder gets.
+      description: |
+        A due reminder is shown as a browser notification while a Margince tab is open. A member
+        signed in on two browsers would otherwise see it once in each. The first tab to claim a
+        reminder at its `remind_at` gets `claimed: true` and shows it; every later claim for that
+        instant answers false. Moving `remind_at`, or handing the task to someone else, arms it again.
+
+        A claim admits the rows the `reminder_due` list returns: the caller's own open task, due at
+        that instant within the list's 30-day window, with content the caller may read. Any other
+        task, including one the caller cannot see, answers `claimed: false`, which says nothing
+        about it.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskReminderClaimRequest' }
+      responses:
+        '200':
+          description: Whether this caller is the one to show the notification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskReminderClaim' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/audience:
@@ -31966,12 +32000,12 @@ paths:
       x-agent-access: human-only
       summary: Write or clear your own sign-off.
       description: |
-        An empty `body` CLEARS the signature — a member emptying the field means
-        "sign off with the plain closing", not "leave what was there".
+        An empty `body` clears the plain-text fallback. Personal HTML and the
+        workspace template retain their precedence until cleared separately.
 
-        Plain text only. The transport sends `text/plain` and the drafting
-        prompts forbid the model from writing a sign-off of its own, so what is
-        stored here is exactly what arrives under every message the caller sends.
+        `body` stores plain text. Optional `html` stores personal markup, sanitized
+        when rendered. Personal HTML takes precedence over the workspace template,
+        then plain text and the closing line. An agent sends without a sign-off.
       requestBody:
         required: true
         content:
@@ -37963,6 +37997,22 @@ components:
           items: { $ref: '#/components/schemas/WebFormValue' }
         consent: { $ref: '#/components/schemas/WebFormConsent' }
 
+    TaskReminderClaimRequest:
+      type: object
+      required: [remind_at]
+      properties:
+        remind_at:
+          type: string
+          format: date-time
+          description: The reminder instant the tab is about to show, as the activity list returned it.
+    TaskReminderClaim:
+      type: object
+      required: [claimed]
+      properties:
+        claimed:
+          type: boolean
+          description: True for the first claim at this instant and assignee, false for every later one.
+
     WebFormValue:
       type: object
       required: [name, value]
@@ -42704,8 +42754,7 @@ components:
           readOnly: true
           minimum: 0
           description: >-
-            How many live contacts THE CALLER MAY SEE list this account as their current primary
-            employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's
+            How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's
             contact row scope, exactly as the contact list is: a count is a read, and a number that
             moved when a colleague captured a private contact would disclose that contact. Present,
             zero included, on `listCompanies` and `getCompany` — the reads that render the
@@ -44925,7 +44974,7 @@ components:
         key: { type: string, description: Episode key returned by the preview; required for resolve or dismiss. }
         company_id: { type: string, format: uuid, description: Existing company explicitly selected by the user. }
         domain: { type: string, description: Company website explicitly confirmed by the user; creates a missing company only after identity resolution. }
-        employment_status: { type: string, enum: [current, former, unknown], description: Explicit user correction of this episode status. }
+        employment_status: { type: string, enum: [current, former], description: Explicit user correction of this episode status. }
 
     EmploymentImportItem:
       type: object
@@ -48003,14 +48052,19 @@ components:
 
     EmailSignature:
       type: object
-      required: [body, title, phone, template_active]
+      required: [body, html, title, phone, template_active]
       properties:
         body:
           type: string
           description: |
-            The sign-off appended below every message this member sends, plain text.
-            Empty means none written; a send then closes with a plain greeting and
-            the member's display name when one is on file.
+            Plain-text fallback after personal HTML and the company template.
+            With none set, a send closes with a greeting and the member's name.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           description: The member's title, filled into the workspace template's `{title}`.
@@ -48021,7 +48075,7 @@ components:
           type: boolean
           description: |
             The workspace has a signature template. Every send this member makes then signs
-            with the template, filled in with their name, title and phone, instead of `body`.
+            with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
             An agent's send carries no sign-off.
         updated_at: { type: [string, 'null'], format: date-time }
     EmailSignatureTemplate:
@@ -48037,7 +48091,7 @@ components:
             `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
             mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
-            none: each member signs with their own plain-text signature.
+            none: each member uses personal HTML, plain text or the closing line.
     EmailSignOffRequest:
       type: object
       required: [body]
@@ -48062,6 +48116,13 @@ components:
           type: string
           maxLength: 4000
           description: The workspace template as edited. Empty previews a workspace with none.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Personal HTML as typed. Empty clears it; omitted on a write or preview
+            leaves it unchanged. Rendering uses the signature sanitizer without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           maxLength: 120
@@ -48083,7 +48144,7 @@ components:
           type: string
           description: |
             The same block as the sanitized markup the HTML part carries. Present only when
-            `kind` is `template`.
+            `kind` is `template` or a personal HTML `signature`.
         kind:
           type: string
           enum: [signature, closing, template, none]
@@ -48103,6 +48164,13 @@ components:
             Plain text. Empty clears the signature. The cap is what a signature is
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Personal HTML as typed. Empty clears it; omitted on a write or preview
+            leaves it unchanged. Rendering uses the signature sanitizer without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           maxLength: 120
@@ -48899,7 +48967,7 @@ components:
         # primary — so declaring a default would tell every generated client to
         # materialize `false` and state a decision its caller never made.
         is_current_primary: { type: boolean }
-        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        employment_status: { type: string, enum: [current, former], description: 'current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.' }
         started_precision: { type: string, enum: [day, month] }
         ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
@@ -48913,7 +48981,7 @@ components:
         clear_ended_at: { type: boolean, description: Remove an incorrect end date and its precision. }
         role: { type: [string, 'null'] }
         is_current_primary: { type: boolean }
-        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        employment_status: { type: string, enum: [current, former], description: 'current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.' }
         started_precision: { type: string, enum: [day, month] }
         ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
@@ -62075,6 +62143,11 @@ components:
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
         score: { type: [number, 'null'], description: Relevance score. }
+        identifier_match:
+          type: string
+          enum: [exact, prefix]
+          readOnly: true
+          description: The record's own email or domain matches the complete query; absent for text and employer matches.
         carried_by:
           type: [integer, 'null']
           minimum: 0
