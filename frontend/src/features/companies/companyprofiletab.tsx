@@ -120,7 +120,7 @@ export function CompanyProfileForm({
             tone="info"
             kind="standing"
             // The sentence carries the id every refused control below points at,
-            // so the heading IS the description rather than a copy of it.
+            // so the heading is the description rather than a copy of it.
             title={<span id={reasonId}>{reason}</span>}
           />
         )}
@@ -155,14 +155,13 @@ export function CompanyProfileForm({
                   companyId={company.id}
                   anchor={company.is_anchor === true}
                   fields={fields}
-                  // A pending or failed read is not the same claim as "this
-                  // field has no row": editing on that guess sends no If-Match
-                  // and overwrites a value the reader never saw.
+                  // A pending or failed read does not mean the field has no row.
+                  // Editing on that guess sends no If-Match and overwrites an
+                  // unseen value.
                   fieldsLoaded={profileQuery.isSuccess}
                   field={field}
-                  // The label comes from the ONE vocabulary map
-                  // (PROFILE_FIELD_LABELS), not a second list here: a field
-                  // renamed there must not keep its old name on this tab.
+                  // The label comes from PROFILE_FIELD_LABELS, not a second list,
+                  // so a field renamed there is renamed on this tab too.
                   label={profileFieldLabel(field, t)}
                   placeholderKey="co.narrative.add"
                   canEdit={canEdit}

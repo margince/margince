@@ -159,8 +159,8 @@ function renderGrid(company: Company) {
   );
 }
 
-// Settles the grid on its slowest read: a sidecar row stays read-only until
-// the profile fields land, a different rendering and not the one under test.
+// Settles the grid on its slowest read. A sidecar row stays read-only until
+// the profile fields land, which is not the rendering under test.
 async function renderSettledGrid(
   company: Company,
   profileFields: readonly ProfileField[] = [],

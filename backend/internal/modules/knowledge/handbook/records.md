@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx -->
+<!-- describes: frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records frontend/src/components/handoverrequest.tsx backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx -->
 # Contacts, companies, leads, deals and projects
 
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
@@ -74,8 +74,7 @@ Also called: update a contact, change a phone number, rename.
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator." If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 
-In the details beside a record, a field you can edit sits in a box. A box that opens a list shows an arrow. A field you cannot edit shows as plain text. When the whole record is locked, a note above the fields says why. On a colleague's contact or company, the note offers to ask them to hand it over, if your account may make changes. A field locked for a reason of its own shows a lock; press it for the reason.
-
+In the details beside a record, a field you can edit sits in a box, with an arrow when it opens a list. A field you cannot edit shows as plain text. When the whole record is locked, a note above the fields says why. On a colleague's contact or company, the note offers to ask them to hand it over, if your account may make changes. A field locked for a reason of its own shows a lock; press it for the reason.
 Also called: read-only record, edit greyed out, cannot change.
 
 ### How do I link a contact to a company?
