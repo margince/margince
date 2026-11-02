@@ -26,6 +26,21 @@ import (
 // teamScopedActivityReader is activityReader's RowScopeTeam twin: the tier
 // that actually reaches AnalyticsPopulationClause's owner_id resolution,
 // which an all-scope reader's lens never does.
+// activityReaderAs is teamScopedActivityReader for a named seat.
+func (e *forecastEnv) activityReaderAs(seat ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat,
+		TeamIDs: []ids.UUID{e.Team1},
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Read: true}, "forecast": {Read: true}, "installation_settings": {Read: true},
+			},
+			RowScope: principal.RowScopeTeam,
+		},
+	})
+}
+
 func (e *forecastEnv) teamScopedActivityReader() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	return principal.WithActor(ctx, principal.Principal{
@@ -105,10 +120,13 @@ func TestAHeldMeetingsCreditDoesNotFollowALaterResponse(t *testing.T) {
 	}
 }
 
-// creditedCount is how many meetings the report credits to one seat.
+// creditedCount is how many meetings the report credits to one seat, asked by
+// that seat. Another colleague's figure is an individual-performance question,
+// which the switch withholds, so asking as anybody else would measure the
+// switch instead of the credit rule.
 func (e *forecastEnv) creditedCount(t *testing.T, seat ids.UUID) int {
 	t.Helper()
-	answer, err := e.askAnalytics(e.teamScopedActivityReader(), t, analyticsquery.Query{
+	answer, err := e.askAnalytics(e.activityReaderAs(seat), t, analyticsquery.Query{
 		Entity:   "activities-by-kind",
 		Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "activities"}},
 		Filters: []analyticsquery.Filter{
