@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { isISODate } from "../design-system/dateinput";
 import { dayStartIso } from "../design-system/recordtimeline";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
@@ -237,6 +238,7 @@ describe("logging a meeting where one owes its outcome", () => {
       ).toBe(true),
     );
     const day = calendarDay(new Date(), ZONE);
+    if (!isISODate(day)) throw new Error(`today is not a day: ${day}`);
     const lookup = captured.find(
       (entry) => entry.query.get("kind") === "meeting",
     );
