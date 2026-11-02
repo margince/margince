@@ -5,6 +5,7 @@ package emailview
 
 import (
 	"html"
+	"slices"
 	"strings"
 )
 
@@ -15,7 +16,7 @@ import (
 type look struct{ ink, fill, edge, shadow token }
 
 func (l look) attrs(css string, layout ...string) string {
-	classes := append([]string(nil), layout...)
+	classes := slices.Clone(layout)
 	style := css
 	add := func(t token, class, property string) {
 		if t == noToken {
@@ -62,8 +63,8 @@ func button(label, target string, primary bool) string {
 		`>` + html.EscapeString(label) + `</a></td></tr></table>`
 }
 
-// panel is the design system's Panel. A list of records is layout; a fact or
-// stat panel stays a data table, so its header cells keep their scope.
+// panel is the design system's Panel. A list of records or figures is
+// layout; a fact panel stays a data table, so its header cells keep scope.
 func panel(inner, class string, data bool) string {
 	role := ` role="presentation"`
 	if data {
@@ -91,10 +92,11 @@ func renderFacts(facts []Fact) string {
 	return panel(rows.String(), "facts", true)
 }
 
-// renderStats is the StatStrip at its plate density: figures over labels,
-// hairlines between cells.
+// renderStats is the StatStrip at its plate density. Each cell holds its
+// figure over its label, so a narrow screen that stacks the cells keeps
+// every label with its figure.
 func renderStats(stats []Stat) string {
-	var values, labels strings.Builder
+	var cells strings.Builder
 	for i, stat := range stats {
 		side := ""
 		if i > 0 {
@@ -104,10 +106,11 @@ func renderStats(stats []Stat) string {
 		if stat.Tone != Neutral {
 			ink = toneInk(stat.Tone)
 		}
-		values.WriteString(`<td valign="bottom"` + look{ink: ink, edge: borderSubtle}.attrs(side+"padding:14px 16px 2px;font:"+headingXLarge.font()) + `>` + html.EscapeString(stat.Value) + `</td>`)
-		labels.WriteString(`<th scope="col" align="left" valign="top"` + look{ink: textSecondary, edge: borderSubtle}.attrs(side+"padding:0 16px 14px;font:"+bodySmall.font()) + `>` + html.EscapeString(stat.Label) + `</th>`)
+		cells.WriteString(`<td valign="top"` + look{edge: borderSubtle}.attrs(side+"padding:14px 16px") + `>` +
+			`<div` + look{ink: ink}.attrs("font:"+headingXLarge.font()) + `>` + html.EscapeString(stat.Value) + `</div>` +
+			`<div` + look{ink: textSecondary}.attrs("margin-top:2px;font:"+bodySmall.font()) + `>` + html.EscapeString(stat.Label) + `</div></td>`)
 	}
-	return panel(`<tr>`+values.String()+`</tr><tr>`+labels.String()+`</tr>`, "stats", true)
+	return panel(`<tr>`+cells.String()+`</tr>`, "stats", false)
 }
 
 func toneInk(tone Tone) token {

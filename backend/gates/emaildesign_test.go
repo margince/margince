@@ -7,6 +7,7 @@ package gates
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"os"
 	"regexp"
@@ -90,13 +91,8 @@ func productTokenThemes(t *testing.T) (cssTheme, cssTheme) {
 	}
 	css := string(source)
 	light := declarations(cssBlock(t, css, ":root {"))
-	dark := cssTheme{}
-	for name, value := range light {
-		dark[name] = value
-	}
-	for name, value := range declarations(cssBlock(t, css, `[data-theme="dark"] {`)) {
-		dark[name] = value
-	}
+	dark := maps.Clone(light)
+	maps.Copy(dark, declarations(cssBlock(t, css, `[data-theme="dark"] {`)))
 	return light, dark
 }
 
@@ -126,7 +122,7 @@ var cssComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
 
 func declarations(block string) cssTheme {
 	theme := cssTheme{}
-	for _, statement := range strings.Split(cssComment.ReplaceAllString(block, ""), ";") {
+	for statement := range strings.SplitSeq(cssComment.ReplaceAllString(block, ""), ";") {
 		name, value, found := strings.Cut(statement, ":")
 		name = strings.TrimSpace(name)
 		if found && strings.HasPrefix(name, "--") {

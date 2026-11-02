@@ -5,6 +5,7 @@ package emailview
 
 import (
 	"html"
+	"slices"
 	"strings"
 )
 
@@ -46,8 +47,8 @@ func renderBlocks(blocks []Block, placeholder string) (string, string) {
 // lastAction is the index of the last action that stands on its own and
 // renders as a link.
 func lastAction(blocks []Block, placeholder string) int {
-	for i := len(blocks) - 1; i >= 0; i-- {
-		if blocks[i].ActionURL != "" && !blocks[i].Footnote && !blocks[i].ItemLink && actionURL(blocks[i].ActionURL, placeholder) {
+	for i, block := range slices.Backward(blocks) {
+		if block.ActionURL != "" && !block.Footnote && !block.ItemLink && actionURL(block.ActionURL, placeholder) {
 			return i
 		}
 	}

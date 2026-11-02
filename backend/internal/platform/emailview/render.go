@@ -68,7 +68,7 @@ func renderText(message Message) string {
 // for clients that honour prefers-color-scheme; the rest keep the light card.
 func document(language, preheader, card string) string {
 	return `<!doctype html><html lang="` + html.EscapeString(language) + `"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">` +
-		`<style>@media(max-width:480px){.pad{padding-left:20px!important;padding-right:20px!important}.facts th,.facts td{display:block!important;width:auto!important}.facts th{padding:10px 0 0!important;border-top:0!important}.facts td{border-top:0!important;padding:2px 0 10px!important}.stats td,.stats th{display:block!important;width:auto!important;border-left:0!important}}` +
+		`<style>@media(max-width:480px){.pad{padding-left:20px!important;padding-right:20px!important}.facts th,.facts td{display:block!important;width:auto!important}.facts th{padding:10px 0 0!important;border-top:0!important}.facts td{border-top:0!important;padding:2px 0 10px!important}.stats td{display:block!important;width:auto!important;border-left:0!important}}` +
 		`@media(prefers-color-scheme:dark){` + darkSheet(":root") + `}</style></head>` +
 		`<body data-email-version="` + strconv.Itoa(PresentationVersion) + `"` + look{ink: textPrimary, fill: bgPage}.attrs("margin:0;font:"+body.font()+";overflow-wrap:anywhere;word-wrap:break-word") + `>` +
 		`<div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">` + html.EscapeString(preheader) + `</div>` +
