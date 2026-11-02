@@ -2160,6 +2160,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.auto_apply": "Automatische Freigabe",
   "systemJob.automation": "Automatisierung",
   "systemJob.brief_overnight": "Nächtliche Zusammenfassung",
+  "systemJob.captured_deal_refile": "Erfasste Gespräche zuordnen",
   "systemJob.capture": "E-Mail-Erfassung",
   "systemJob.capture_auto_enrich":
     "Anreicherung von Unternehmensdaten aus E-Mails",
@@ -9266,6 +9267,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_counterparty_verdict": "Prüfung der Absendeadressen",
   "jobs.kind.capture_digest": "Morgendliche E-Mail-Zusammenfassung",
   "jobs.kind.capture_enrich": "Kontaktdaten aus Signaturen",
+  "jobs.kind.captured_deal_refile": "Erfasste Aktivitäten zu Deals zuordnen",
+  "jobs.kind.captured_deal_refile_sweep":
+    "Zuordnung erfasster Aktivitäten nachholen",
   "jobs.kind.capture_part_slim": "Bereinigung des E-Mail-Speichers",
   "jobs.kind.capture_sync": "Postfach-Synchronisierung",
   "jobs.kind.check_company_vat": "Prüfung der Umsatzsteuer-ID",
