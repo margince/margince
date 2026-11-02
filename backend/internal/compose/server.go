@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 )
 
 // Option, readinessChecks, and every With* role-customization function live
@@ -146,10 +147,14 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
 	// webhooks, the extension inbound routes — keys on the one address it
 	// decided rather than on whichever proxy the request happened to arrive by.
-	return httpserver.RecoverPanics(log,
+	//
+	// instrument.HTTP sits just inside the panic guard, so a unit's request
+	// transaction is open around everything below it, and a panic that escapes
+	// the chain is reported by RecoverPanics, never swallowed by a unit.
+	return httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is
