@@ -31,7 +31,7 @@ func TestWorklistTailCostPoC(t *testing.T) {
 		}
 	}
 	service := newAttentionService(app, NewApprovalsService(InstallationDB(app)), func() time.Time { return asOf })
-	stages := []string{"rank", "tail", "tail_task", "tail_customer_waiting", "tail_deal_at_risk"}
+	stages := []string{"waiting_customers", "rank", "tail", "tail_task", "tail_customer_waiting", "tail_deal_at_risk"}
 	total := map[string][2]float64{}
 	pages := 0
 	for i, m := range pocMembers(t, owner, app) {

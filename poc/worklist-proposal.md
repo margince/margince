@@ -198,7 +198,7 @@ cannot put real work on the list at all: it can only send a plain notice.
 | Kind catalog | One YAML file says what each kind of work is; extensions add to it | YAML, loader, checks and the frontend table: yes. Backend table: next |
 | Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | Yes (switched on by the test; the production hook is next) |
 | Identity check once | The "who am I" list is computed once per statement, not once per row | Yes |
-| Scroll tail | Measured: its cost is the planning of one waiting statement; the fix gives that statement a plan Postgres can keep | Measured; fix next |
+| Scroll tail and waiting statements | Their cost is planning the waiting statements; a kept plan removes it once an address + time index bounds the seat's mail | Measured and tested; index next |
 | A read that only reads | The Worklist read stops writing, so it can be prepared ahead, cached safely and run on a replica | Next |
 | Ground-truth check | Proves a change gives today's answers, field by field | Yes |
 
@@ -346,12 +346,63 @@ What we tried and dropped:
    filed under any deal costs more than judging the few asked about.
 ```
 
-Next: the waiting statements keep a fixed text and bind their cap as a value,
-so a prepared statement can hold a plan. Then measure which plan the
-id-narrowed statements should use. `PlanEachBind` exists because the generic
-plan of the open waiting scan is poor; a statement narrowed to a list of
-message ids may not share that problem. This is the shared plan-reuse fix
-(2.3) applied to the statements it cannot reach today, not a fix for one kind.
+Tested: can the waiting statements keep a plan? A temporary switch (since
+removed) ran them as kept prepared statements, with the cards statement's cap
+rounded up to a power of two. Its rows are already limited to the judged ids,
+so any cap at least that large gives the same rows. The text then took 2 forms
+over 7 calls. On the bench data, mean over the same 30 pages:
+
+```
+                               plan / call     run / call    at-risk tail
+ cards: today (unnamed)        336 ms          7.5 ms        240 ms
+ cards: kept, custom plan      350 ms          7.7 ms        232 ms   parsing was never the cost
+ cards: kept, generic plan     232 ms once,    34 ms         153 ms
+                               then ~0
+
+                               plan, 25 calls  run, 25 calls  waiting_customers stage
+ lane: today                   4.5 s           0.68 s         291–304 ms
+ lane: kept, generic plan      0.15 s          1.17 s         117–119 ms
+```
+
+The ground-truth check, replayed with these switches against the branch's own
+answers (two runs each for the stage figures above):
+
+```
+ mean per call (n = calls)          today    waiting generic   whole read generic
+                                                               + waiting generic
+ rep, Home call (mine, today) n=12  1.28 s   1.02 s            0.77 s
+ rep, unassigned today        n=12  0.50 s   0.30 s            0.10 s
+ manager, team today          n=3   1.42 s   1.15 s            0.68 s
+ manager, all today           n=1   2.61 s   2.55 s            2.29 s
+
+ identical to today:                268/268  268/268           268/268
+```
+
+Why this is not ready to switch on. `EXPLAIN (GENERIC_PLAN)` on both
+statements shows where the generic plan pays. A seat's mail list
+(`storekit.DirectMailActivitiesSQL`) starts from `activity_participant` by
+address, and that table has no time column. A custom plan sees the horizon's
+value and can start from `activity`'s time index instead. A generic plan cannot
+see it, so it reads every message ever sent to the seat's address and checks the
+horizon row by row:
+
+```
+ generic plan, seat mail
+   Parallel Bitmap Heap Scan on activity_participant recipient   ← whole history by address
+     → Index Scan on activity mail, Filter: occurred_at >= horizon   ← horizon tested per row
+```
+
+So its run time grows with a mailbox's history, not with the horizon. That is
+the cost #9961 removed for custom plans, and the reason `PlanEachBind` exists.
+On the bench data it costs 1.7 times the custom run time (4.5 times for the
+cards statement), far less than the planning it saves. On mailboxes with years
+of mail it would keep growing.
+
+The fix that holds at any size is an index that bounds both at once: the
+seat's address and the message time. Then neither plan has to guess which to
+start from, and both statements can keep a generic plan. That needs a schema
+change (the message time beside each participant row, or an index the planner
+can use for both), so it is a proposal here, not built.
 
 ### 2.6 The kind catalog
 
@@ -617,8 +668,9 @@ measure the engine; the rows to watch are the ones the cache does not answer.
 ```
  1  plan reuse + identity once      proven: same answers; shared by every kind
  2  #9950 contact cases             the largest single cost for members with many duplicates
- 3  scroll tail: waiting statements  up to 0.9 s on a page; planning, not running
-    keep a plan
+ 3  waiting statements keep a plan  tested: rep Home call 1.28 → 0.77 s with
+    (needs an address + time index)   whole-read reuse, 268/268 identical; needs the
+                                      index first so large mailboxes stay bounded
  4  a read that only reads          unlocks the cache warm-up, a replica, parallel lanes
  5  kind catalog: backend table,    growth and extensions; no speed effect
     extension fragments
@@ -655,8 +707,9 @@ that member may not use).
 ```
 
 PERF-8 asks for under 1 s. With plan reuse and the identity change, the rep's
-Home call is at the line, not under it. The scroll tail is the next step for
-that call, and the bench must run at full scale before anyone claims PERF-8.
+Home call is at the line, not under it. With the waiting statements on a kept
+plan as well (2.5) it was 0.77 s, every answer identical, but that step needs
+an index first. The bench must run at full scale before anyone claims PERF-8.
 
 ### 3.2 Other measurements
 
@@ -729,7 +782,9 @@ with wording fixes, which are applied.
 - The daily bench figures in 3.2 are one run each. The rows the cache does not
   answer did not get faster after the merge; whether they got slower needs more
   runs.
-- Not built yet: the scroll tail's waiting statements with a plan they keep, the backend side of the catalog
+- The waiting statements' kept plan (2.5) was tested on bench data only. Its
+  run time grows with mailbox history until an address + time index exists.
+- Not built yet: that index and the waiting statements' kept plan, the backend side of the catalog
   generator (the engine's maps reading a generated table), and the merge of
   extension catalog fragments.
 
@@ -743,7 +798,8 @@ with wording fixes, which are applied.
  0c4126c3  PlanEachBind: the waiting scan keeps its own plans
  b551b735  the frontend kind table generated from the catalog
  e86f3e3f  main merged in: the Home cache (#9915) and the waiting scan's bound (#9961)
- next      tail stages in the stage metrics; the tail measured (2.5)
+ 3c55df08  tail stages in the stage metrics; the tail measured (2.5)
+ later     waiting statements with a kept plan, tested and reverted (2.5)
  later     this proposal
 ```
 
