@@ -425,8 +425,10 @@ into a separate store needs extra code for every line above, for every kind
   "slowest lane", but it needs several database connections per request
   against a pool of 16, and splits the snapshot. Only if the changes above are
   not enough.
-- **Pushing work into a precomputed list.** Fast for expensive kinds, but
-  it needs its own access, routing and freshness code per kind. Parked.
+- **Pushing work into a precomputed list per kind.** Fast for expensive
+  kinds, but it needs its own access, routing and freshness code per kind.
+  Parked. Caching the whole answer is being done separately (pull request
+  #9915, see 2.12), and it works alongside the changes above.
 
 ---
 
@@ -460,6 +462,51 @@ A reader feels two kinds of waiting, and they need different fixes:
   what the verbs need on the row would remove both round trips. That changes
   the API contract and what a row discloses, so it is a question for the
   table, not part of this proposal.
+
+### 2.12 Related work in flight
+
+Other recent pull requests change how Home and the Worklist run. This is how
+each one fits with the system above.
+
+| Pull request | What it does | What it gives | Fit |
+|---|---|---|---|
+| #9915 (open) | Serves a member's first Worklist page and receipt from a stored copy while it is under 5 minutes old, no write anywhere has narrowed anyone's access, and the member has not written | A repeat open skips the engine | Works with this system: see below |
+| #9905 (merged) | Draws each part of Home at its final size while it loads | Layout shift 0.037 → 0.0002 on a desktop | Covers what the page does while it waits (2.11) |
+| #9909 (merged) | Home reads the day on change and every 5 minutes, not every minute | Less load from open tabs | Fewer reads; each read still costs what the engine costs |
+| #9910 (merged) | The receipt reads change images only where its sentence needs them | One receipt arm 130 → 30 ms (`EXPLAIN ANALYZE`) | The receipt, not the Worklist |
+| #9891, #9868, #9852 (merged) | One Worklist statement each made cheaper | Per statement | Plan reuse and the identity change do this for every statement at once |
+
+How the cache in #9915 and this system combine:
+
+```
+ a member opens Home
+   ├─ cache hit ............ the stored answer (#9915)
+   └─ cache miss ........... the engine; plan reuse and the identity change make it faster
+ every read the cache skips  (page 2 onward, another member's queue, non-human callers)
+                             the engine, with the same changes
+```
+
+A cache misses on the first open of the day, every 5 minutes, after the
+member's own writes, and after any narrowing write anywhere in the workspace,
+because one shared counter (`home_read_fence`) ends every member's copy. So
+the engine's own speed still matters on every miss.
+
+Three things this system can add to the cache:
+
+1. **Proof it serves today's answer.** The ground-truth check (2.9) can compare
+   a cached answer with a fresh one at the same instant, for every member,
+   after each kind of write.
+2. **A census for its trigger list.** The cache is correct only while every
+   write that can narrow access moves the counter. The triggers are listed by
+   hand in a migration. A gate that takes the tables and columns from the
+   access rules in `platform/auth` would fail when a new one has no trigger.
+3. **Freshness counted from the answer's age.** The client waits 5 minutes from
+   when an answer arrives (#9909); a cached answer can already be up to 5
+   minutes old when it arrives, so a colleague's new work can take about 10
+   minutes to show. Counting from the answer's `as_of` would keep it at 5.
+
+The pull request does not yet give a hit rate or a time for a hit or a miss.
+A run of the daily bench with the cache on and off would answer both.
 
 ---
 
@@ -603,6 +650,8 @@ The `poc` build tag keeps every PoC test out of `make check` and CI.
    do we hand over the check and the two proven changes?
 3. Is the additive `source: extension` contract change acceptable?
 4. Who runs the full-scale bench, and what number do we accept?
-5. Should a Worklist row carry what its card's verbs need (a contact's email
+5. How do the cache in #9915 and these engine changes land together: who adds
+   the trigger census and the cached-versus-fresh check?
+6. Should a Worklist row carry what its card's verbs need (a contact's email
    and phone), so the card makes no follow-up reads? It changes the contract
    and what a row discloses.
