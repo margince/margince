@@ -70,6 +70,11 @@
   gap: var(--space-2);
 }
 
+/* Pinned to the foot, so a taller zone beside it keeps one bottom line. */
+.vdna-paste > .vdna-composer-actions {
+  margin-top: auto;
+}
+
 /* A soft panel, so the advice reads as a note beside the inputs. */
 .vdna-works {
   padding: var(--space-3) var(--space-4);

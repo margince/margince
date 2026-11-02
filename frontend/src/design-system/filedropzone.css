@@ -57,7 +57,7 @@
   color: var(--textSecondary);
   pointer-events: none;
 }
-.fdz:hover .fdz-icon,
+.fdz:not(:has(:disabled)):hover .fdz-icon,
 .fdz.dragover .fdz-icon {
   color: var(--accentText);
 }
