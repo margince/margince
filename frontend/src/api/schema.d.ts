@@ -6844,6 +6844,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduling/calendar-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Name the current host's selected calendar that could not be read, if any.
+         * @description Reads every calendar the signed-in host selected for scheduling once, over the next hour and
+         *     without the booking window, so the settings page can mark one the provider could not report.
+         *     Only the host in person may ask; the answer names the host's own calendar id.
+         */
+        get: operations["getSchedulingCalendarHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduling/calendars": {
         parameters: {
             query?: never;
@@ -65554,6 +65576,38 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             502: components["responses"]["CalendarUnavailable"];
             /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSchedulingCalendarHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The unreadable calendar, or null when every selected calendar was read. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description The id of the first selected calendar that could not be read. */
+                        unreadable_calendar: string | null;
+                    };
+                };
+            };
+            /** @description The calendar connection is unavailable. */
             default: {
                 headers: {
                     [name: string]: unknown;

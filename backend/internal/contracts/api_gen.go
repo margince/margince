@@ -85563,6 +85563,9 @@ type ServerInterface interface {
 	// Withdraw a scheduled message before it fires.
 	// (POST /scheduled-sends/{id}/cancel)
 	CancelScheduledSend(w http.ResponseWriter, r *http.Request, id Id)
+	// Name the current host's selected calendar that could not be read, if any.
+	// (GET /scheduling/calendar-health)
+	GetSchedulingCalendarHealth(w http.ResponseWriter, r *http.Request)
 	// List the current host's connected calendars for scheduling settings.
 	// (GET /scheduling/calendars)
 	GetSchedulingCalendars(w http.ResponseWriter, r *http.Request, params GetSchedulingCalendarsParams)
@@ -91041,6 +91044,12 @@ func (_ Unimplemented) RescheduleScheduledSend(w http.ResponseWriter, r *http.Re
 // Withdraw a scheduled message before it fires.
 // (POST /scheduled-sends/{id}/cancel)
 func (_ Unimplemented) CancelScheduledSend(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Name the current host's selected calendar that could not be read, if any.
+// (GET /scheduling/calendar-health)
+func (_ Unimplemented) GetSchedulingCalendarHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -127797,6 +127806,26 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// GetSchedulingCalendarHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetSchedulingCalendarHealth(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSchedulingCalendarHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetSchedulingCalendars operation middleware
 func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request) {
 
@@ -136388,6 +136417,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduled-sends/{id}/cancel", wrapper.CancelScheduledSend)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/calendar-health", wrapper.GetSchedulingCalendarHealth)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/calendars", wrapper.GetSchedulingCalendars)

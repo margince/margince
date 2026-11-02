@@ -188,6 +188,7 @@ function CalendarFields({
         {provider !== "" && ready && (
           <CalendarChoices
             calendar={calendar}
+            saved={draft.baseline}
             onCalendar={(value) =>
               setForm({
                 ...form,
@@ -332,15 +333,21 @@ function CalendarChoices({
   calendar,
   onCalendar,
   onBlocking,
+  saved,
 }: Readonly<{
   calendar: ReturnType<typeof useMeetingCalendar>;
+  saved: Profile;
   onCalendar: (id: string) => void;
   onBlocking: (ids: string[]) => void;
 }>) {
   const t = useT();
   const { calendarID, blocking } = calendar;
+  const connection = calendar.providers.find(
+    (item) => item.provider === saved.provider,
+  );
   const unreadable = useUnreadableCalendar(
-    calendar.ready && calendar.provider !== "",
+    saved,
+    calendar.ready && connection ? connection.status : "",
   );
   // The line sits under the row that holds the calendar it names.
   const unreadableBlocks = unreadable !== null && blocking.includes(unreadable);

@@ -116,6 +116,21 @@ func (h Handlers) writeMeetingAvailability(w http.ResponseWriter, r *http.Reques
 	}{slots, truncated})
 }
 
+// GetSchedulingCalendarHealth answers which selected calendar, if any, the
+// host's provider could not report, for the settings page to mark.
+func (h Handlers) GetSchedulingCalendarHealth(w http.ResponseWriter, r *http.Request) {
+	calendar, err := h.store.UnreadableCalendar(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	var unreadable *string
+	if calendar != "" {
+		unreadable = &calendar
+	}
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unreadable_calendar": unreadable})
+}
+
 // GetSchedulingCalendars lists calendars available on the acting host’s connection.
 func (h Handlers) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request, params crmcontracts.GetSchedulingCalendarsParams) {
 	host, err := schedulingHost(r.Context())

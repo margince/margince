@@ -3391,6 +3391,10 @@ func (stubs) CancelScheduledSend(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "CancelScheduledSend")
 }
 
+func (stubs) GetSchedulingCalendarHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetSchedulingCalendarHealth")
+}
+
 func (stubs) GetSchedulingCalendars(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSchedulingCalendarsParams) {
 	httperr.NotImplemented(w, r, "GetSchedulingCalendars")
 }

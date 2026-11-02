@@ -59,12 +59,13 @@ function routes(extra = {}) {
     "GET /scheduling/profile": () => jsonResponse(profile),
     "GET /scheduling/calendars": () => jsonResponse(calendars),
     "GET /availability": () => unreadable(),
+    "GET /scheduling/calendar-health": () =>
+      jsonResponse({ unreadable_calendar: holidays }),
     ...extra,
   };
 }
 
-it("names the unreadable calendar under the row that holds it on the settings page", async () => {
-  installFetchStub(routes());
+function mountSettings() {
   render(
     <StoryProviders>
       <ToastProvider>
@@ -74,7 +75,31 @@ it("names the unreadable calendar under the row that holds it on the settings pa
       </ToastProvider>
     </StoryProviders>,
   );
+}
+
+it("names the unreadable calendar under the row that holds it on the settings page", async () => {
+  installFetchStub(routes());
+  mountSettings();
   expect(await screen.findByText(NAMED)).toBeTruthy();
+});
+
+// A calendar deleted since it was chosen has no name left to show, and its id
+// is no name either.
+it("says a saved calendar could not be read when the list no longer has it", async () => {
+  const gone = "c_0123456789abcdef@group.calendar.google.com";
+  installFetchStub(
+    routes({
+      "GET /scheduling/profile": () =>
+        jsonResponse({ ...profile, blocking_calendars: [gone] }),
+      "GET /scheduling/calendar-health": () =>
+        jsonResponse({ unreadable_calendar: gone }),
+    }),
+  );
+  mountSettings();
+  expect(
+    await screen.findByText(/A saved calendar could not be read/),
+  ).toBeTruthy();
+  expect(screen.queryByText(new RegExp(gone))).toBeNull();
 });
 
 it("names the unreadable calendar in the host's preview", async () => {

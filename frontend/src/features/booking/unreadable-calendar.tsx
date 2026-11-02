@@ -3,9 +3,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { ProblemError } from "../../lib/problem";
+import { ProblemError, unwrap } from "../../lib/problem";
 import { problemCode, problemDetails } from "../../lib/problembody";
 import { useBookingCalendar } from "./booking-calendar-state";
 
@@ -23,31 +24,28 @@ export function unreadableCalendarOf(error: unknown): string | null {
   return typeof calendar === "string" && calendar !== "" ? calendar : null;
 }
 
-// One hour from now is enough: every selected calendar is read for any window.
-const CHECK_WINDOW_MS = 60 * 60 * 1000;
+type Profile = components["schemas"]["SchedulingProfile"];
 
-/** Reads the host's own availability once, to learn which calendar fails. */
-export function useUnreadableCalendar(enabled: boolean) {
+/**
+ * Asks the server once which saved calendar it could not read. The check skips
+ * the booking window, so a notice period never hides the answer. A save, a
+ * reconnect or coming back to the tab asks again.
+ */
+export function useUnreadableCalendar(saved: Profile, connection: string) {
   const check = useQuery({
-    queryKey: ["reliable-availability", "calendar-check"],
-    enabled,
+    queryKey: [
+      "scheduling-calendar-health",
+      saved.provider,
+      saved.calendar_id,
+      saved.blocking_calendars ?? [],
+      connection,
+    ],
+    enabled: saved.provider !== "" && connection !== "",
     retry: false,
-    queryFn: async () => {
-      const from = new Date();
-      const { data, error } = await api.GET("/availability", {
-        params: {
-          query: {
-            from: from.toISOString(),
-            to: new Date(from.getTime() + CHECK_WINDOW_MS).toISOString(),
-            reliable: true,
-          },
-        },
-      });
-      if (error) throw new ProblemError(error);
-      return data;
-    },
+    refetchOnWindowFocus: "always",
+    queryFn: async () => unwrap(await api.GET("/scheduling/calendar-health")),
   });
-  return unreadableCalendarOf(check.error);
+  return check.data?.unreadable_calendar ?? null;
 }
 
 /** Names the calendar that could not be read, by the name its provider lists. */
@@ -58,7 +56,13 @@ export function UnreadableCalendarLine({
   const t = useT();
   const { calendars } = useBookingCalendar(provider, calendar !== null);
   if (calendar === null) return null;
-  const name =
-    calendars.data?.find((item) => item.id === calendar)?.name ?? calendar;
-  return <ErrorLine>{t("scheduling.calendarUnreadable", { name })}</ErrorLine>;
+  // A calendar the list no longer has is named by nothing: its id is no name.
+  const name = calendars.data?.find((item) => item.id === calendar)?.name;
+  return (
+    <ErrorLine>
+      {name
+        ? t("scheduling.calendarUnreadable", { name })
+        : t("scheduling.savedCalendarUnreadable")}
+    </ErrorLine>
+  );
 }

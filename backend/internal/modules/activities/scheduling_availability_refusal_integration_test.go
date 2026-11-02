@@ -92,8 +92,8 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 }
 
 // The host asking about their own calendars learns which selected calendar
-// could not be read. A visitor on a public door, and a colleague asking about
-// the host, are refused without the calendar.
+// could not be read. A public door, a colleague, an agent acting for the host
+// and a system job never see it.
 func TestOnlyTheHostIsToldWhichCalendarCouldNotBeRead(t *testing.T) {
 	const unreadable = "team-holidays@group.calendar.test"
 	f := newInvitationFixture(t)
@@ -130,10 +130,19 @@ func TestOnlyTheHostIsToldWhichCalendarCouldNotBeRead(t *testing.T) {
 	if own.Code != http.StatusBadGateway || !strings.Contains(own.Body.String(), `"calendar":"`+unreadable+`"`) {
 		t.Errorf("the host's own read answered %d %s, want calendar_unavailable naming the calendar", own.Code, own.Body.String())
 	}
+	ownRead := func(w *httptest.ResponseRecorder, r *http.Request) {
+		h.GetAvailability(w, r, crmcontracts.GetAvailabilityParams{From: from, To: to, Reliable: &reliable})
+	}
+	agent := host
+	agent.Type, agent.ID, agent.PassportID, agent.OnBehalfOf = principal.PrincipalAgent, "agent:passport", ids.NewV7(), host.UserID
+	system := host
+	system.Type, system.ID = principal.PrincipalSystem, "system:test"
 	for door, call := range map[string]func(*httptest.ResponseRecorder, *http.Request){
 		"a colleague asking about the host": func(w *httptest.ResponseRecorder, r *http.Request) {
 			h.GetAvailability(w, r, crmcontracts.GetAvailabilityParams{From: from, To: to, Reliable: &reliable, HostUserId: &hostID})
 		},
+		"an agent passport acting for the host": ownRead,
+		"a system job":                          ownRead,
 		"the booking page": func(w *httptest.ResponseRecorder, r *http.Request) {
 			h.GetPublicAvailability(w, r, *saved.Slug, crmcontracts.GetPublicAvailabilityParams{From: from, To: to})
 		},
@@ -142,12 +151,53 @@ func TestOnlyTheHostIsToldWhichCalendarCouldNotBeRead(t *testing.T) {
 		},
 	} {
 		ctx := f.ctx
-		if door == "a colleague asking about the host" {
+		switch door {
+		case "a colleague asking about the host":
 			ctx = principal.WithActor(f.ctx, colleague)
+		case "an agent passport acting for the host":
+			ctx = principal.WithActor(f.ctx, agent)
+		case "a system job":
+			ctx = principal.WithActor(f.ctx, system)
 		}
 		rec := answer(call, ctx)
-		if rec.Code == http.StatusOK || strings.Contains(rec.Body.String(), unreadable) {
-			t.Errorf("%s answered %d %s, want a refusal that names no calendar", door, rec.Code, rec.Body.String())
+		if strings.Contains(rec.Body.String(), unreadable) {
+			t.Errorf("%s answered %d %s, which names the host's calendar", door, rec.Code, rec.Body.String())
 		}
+	}
+}
+
+// The settings page asks once, outside the booking window. With the default
+// two hours' notice, a window starting now would be refused for its notice
+// before any calendar is read.
+func TestTheSettingsCheckNamesTheUnreadableCalendarUnderTheDefaultNotice(t *testing.T) {
+	const unreadable = "team-holidays@group.calendar.test"
+	f := newInvitationFixture(t)
+	profile := defaultSchedulingProfile()
+	profile.Provider = "gcal"
+	if _, err := f.store.SaveSchedulingProfile(f.ctx, profile); err != nil {
+		t.Fatal(err)
+	}
+	f.calendar.busyErr = connector.NewCalendarUnavailable(unreadable, "notFound", nil)
+	h := Handlers{store: f.store}
+	host, ok := principal.Actor(f.ctx)
+	if !ok {
+		t.Fatal("the fixture reads as nobody")
+	}
+	agent := host
+	agent.Type, agent.ID, agent.PassportID, agent.OnBehalfOf = principal.PrincipalAgent, "agent:passport", ids.NewV7(), host.UserID
+	check := func(ctx context.Context) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.GetSchedulingCalendarHealth(rec, httptest.NewRequest(http.MethodGet, "/scheduling/calendar-health", nil).WithContext(ctx))
+		return rec
+	}
+	if rec := check(f.ctx); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"unreadable_calendar":"`+unreadable+`"`) {
+		t.Errorf("the host's check answered %d %s, want the unreadable calendar named", rec.Code, rec.Body.String())
+	}
+	if rec := check(principal.WithActor(f.ctx, agent)); rec.Code == http.StatusOK || strings.Contains(rec.Body.String(), unreadable) {
+		t.Errorf("an agent acting for the host answered %d %s, want a refusal", rec.Code, rec.Body.String())
+	}
+	f.calendar.busyErr = nil
+	if rec := check(f.ctx); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"unreadable_calendar":null`) {
+		t.Errorf("a readable calendar answered %d %s, want null", rec.Code, rec.Body.String())
 	}
 }

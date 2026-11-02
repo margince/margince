@@ -298,7 +298,7 @@ func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params
 	}
 	slots, truncated, err := availability(r.Context(), host, params.From, params.To, duration)
 	if err != nil {
-		writeStoreErr(w, r, calendarNamedToItsHost(err, actor.UserID, host))
+		writeStoreErr(w, r, calendarNamedToItsHost(err, actor, host))
 		return
 	}
 	backing, err := h.calendars.BackingFor(r.Context(), actor.UserID, host)
