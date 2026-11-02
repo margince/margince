@@ -44,6 +44,13 @@ import "./logactivity.css";
 import { FollowUpTaskFields } from "./followuptaskfields";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
+  type OpenMeeting,
+  openMeetingKey,
+  RecordOfMeetingQuestion,
+  recordOnMeeting,
+  useOpenMeetingOnDay,
+} from "./logactivity.openmeeting";
+import {
   attachLoggedFiles,
   LogActivityFilesField,
   type PickedFile,
@@ -110,6 +117,21 @@ export function LogActivityForm({
   // The same test activityRequestBody sends source_system on.
   const transcript = draft.kind === "meeting" && draft.asTranscript;
   const banded = frame !== undefined;
+  // A meeting logged here may be the record of one booked here. A transcript
+  // is not asked about: a write to the meeting cannot mark its notes as one.
+  const openMeeting = useOpenMeetingOnDay(
+    entityType,
+    entityId,
+    draft.day,
+    recordZone,
+    draft.kind === "meeting" && !draft.asTranscript,
+  );
+  // Yes is the default, and a different meeting asks again from Yes.
+  const [notRecordOf, setNotRecordOf] = useState<string | undefined>();
+  const recordsMeeting =
+    openMeeting !== undefined && notRecordOf !== openMeeting.id
+      ? openMeeting
+      : undefined;
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
@@ -123,7 +145,22 @@ export function LogActivityForm({
       attendees: MeetingAttendees;
       idempotencyKey: string;
       files: readonly File[];
+      meeting: OpenMeeting | undefined;
     }) => {
+      if (input.meeting) {
+        const id = await recordOnMeeting(
+          {
+            meeting: input.meeting,
+            draft: input.draft,
+            entityType,
+            entityId,
+            zone: input.zone,
+            idempotencyKey: input.idempotencyKey,
+          },
+          t,
+        );
+        return { id, unattached: await attachLoggedFiles(id, input.files) };
+      }
       const created = unwrap(
         await api.POST("/activities", {
           params: { header: { "Idempotency-Key": input.idempotencyKey } },
@@ -141,6 +178,15 @@ export function LogActivityForm({
       const unattached = await attachLoggedFiles(created.id, input.files);
       return { id: created.id, unattached };
     },
+    // A refused version re-reads the meeting: answered meanwhile, the question
+    // goes and Save logs a separate meeting.
+    onError: () => {
+      if (entityType && entityId) {
+        queryClient.invalidateQueries({
+          queryKey: openMeetingKey(entityType, entityId),
+        });
+      }
+    },
     onSuccess: (logged, input) => {
       reportUnattached(logged.unattached);
       const keys =
@@ -156,6 +202,9 @@ export function LogActivityForm({
           : [TASK_QUEUE_KEY];
       if (input.draft.sourceActivityId)
         keys.push(activityFollowUpsKey(input.draft.sourceActivityId));
+      if (input.meeting) keys.push(["activity", input.meeting.id]);
+      if (entityType && entityId)
+        keys.push([...openMeetingKey(entityType, entityId)]);
       keys.push(worklistKey);
       if (input.files.length > 0)
         keys.push(...activityFileStaleKeys(logged.id));
@@ -215,6 +264,7 @@ export function LogActivityForm({
           attendees,
           idempotencyKey,
           files: files.map((held) => held.file),
+          meeting: recordsMeeting,
         });
       })}
     >
@@ -264,6 +314,16 @@ export function LogActivityForm({
           )}
         </Field>
       </div>
+      {openMeeting && (
+        <RecordOfMeetingQuestion
+          meeting={openMeeting}
+          value={recordsMeeting !== undefined}
+          onChange={(recordsIt) =>
+            setNotRecordOf(recordsIt ? undefined : openMeeting.id)
+          }
+          zone={recordZone}
+        />
+      )}
       {/* WHO owes this task, asked beside when it is due. Only a task is held
           by a colleague; the field renders nothing for a note or meeting, and
           defers its roster walk to that same condition. */}

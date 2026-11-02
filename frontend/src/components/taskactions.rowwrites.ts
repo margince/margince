@@ -68,6 +68,38 @@ export function useAutomationRetry(invalidateKeys: readonly QueryKey[]) {
  * of activity. Widening it would let a caller send `is_done` for a meeting. The
  * server refuses that with `field_not_valid_for_kind`, and the types prevent it.
  */
+/** One answer to a meeting: its outcome, and its notes when the writer has some. */
+export type MeetingOutcomeWrite = {
+  id: string;
+  // The version the answer was decided against, as the task verb carries.
+  // Without it, two readers answering one meeting both succeed, and the
+  // later one wins with no warning.
+  version: number | undefined;
+  status: "held" | "no_show" | "canceled";
+  // Sent only when given, so an answer alone never touches the notes.
+  body?: string | null;
+};
+
+/** The one write of a meeting's outcome, for the hook below and the Log form. */
+export async function writeMeetingOutcome(
+  input: MeetingOutcomeWrite,
+  t: ReturnType<typeof useT>,
+): Promise<void> {
+  unwrap(
+    await api.PATCH("/activities/{id}", {
+      params: {
+        path: { id: input.id },
+        ...ifMatch(requireVersion(input.version)),
+      },
+      body: {
+        meeting_status: input.status,
+        ...(input.body === undefined ? {} : { body: input.body }),
+      },
+    }),
+    t,
+  );
+}
+
 export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -80,25 +112,7 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
     queryClient.invalidateQueries({ queryKey: ["activity", id] });
   };
   return useMutation({
-    mutationFn: async (input: {
-      id: string;
-      // The version the answer was decided against, as the task verb carries.
-      // Without it, two readers answering one meeting both succeed, and the
-      // later one wins with no warning.
-      version: number | undefined;
-      status: "held" | "no_show" | "canceled";
-    }) => {
-      unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id: input.id },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: { meeting_status: input.status },
-        }),
-        t,
-      );
-    },
+    mutationFn: (input: MeetingOutcomeWrite) => writeMeetingOutcome(input, t),
     onSuccess: (_data, input) => reread(input.id),
     // A retry must carry the version the meeting holds now, not the one refused.
     onError: (error, input) => {

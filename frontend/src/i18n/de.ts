@@ -6734,6 +6734,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Aus deinem Videokonferenz-Tool einfügen, etwa Teams, Zoom oder Meet. Vorhandene Sprecherangaben bleiben erhalten.",
+  "log.recordOfMeeting": "Ist das der Eintrag zu {subject}, {time}?",
+  "log.recordOfMeetingUntitled": "dem Termin",
+  "log.recordOfMeetingYes":
+    "Ja, beim Termin speichern und als stattgefunden markieren",
+  "log.recordOfMeetingNo": "Nein, einen eigenen Termin erfassen",
+  "log.recordOfMeetingManaged":
+    "Betreff und Notizen gehören zur Kalendereinladung. Ihre Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",

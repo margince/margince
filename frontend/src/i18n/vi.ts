@@ -6573,6 +6573,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán từ công cụ họp, ví dụ Teams, Zoom hoặc Meet. Nếu có nhãn người nói, nhãn được giữ nguyên.",
+  "log.recordOfMeeting": "Đây có phải là ghi chép của {subject}, {time} không?",
+  "log.recordOfMeetingUntitled": "cuộc họp",
+  "log.recordOfMeetingYes": "Có, lưu vào cuộc họp đó và đánh dấu đã diễn ra",
+  "log.recordOfMeetingNo": "Không, ghi một cuộc họp riêng",
+  "log.recordOfMeetingManaged":
+    "Lời mời trên lịch giữ tiêu đề và ghi chú của cuộc họp đó. Ghi chú của bạn được lưu thành một ghi chú ở đây, và cuộc họp được đánh dấu đã diễn ra.",
   "log.asTranscript": "Văn bản này là bản chép lời",
   "log.transcriptUpload": "Hoặc tải lên tệp",
   "log.transcriptUploadRejected": "Chỉ chấp nhận tệp .txt.",

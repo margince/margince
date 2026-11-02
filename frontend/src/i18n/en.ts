@@ -6770,6 +6770,12 @@ export const en = {
   "log.transcriptLabel": "Transcript",
   "log.transcriptHint":
     "Paste from your meeting tool, such as Teams, Zoom or Meet. Speaker labels, if present, are kept.",
+  "log.recordOfMeeting": "Is this the record of {subject}, {time}?",
+  "log.recordOfMeetingUntitled": "the meeting",
+  "log.recordOfMeetingYes": "Yes, save it on that meeting as held",
+  "log.recordOfMeetingNo": "No, log a separate meeting",
+  "log.recordOfMeetingManaged":
+    "The calendar invitation keeps the subject and notes of that meeting. Your notes are saved as a note here, and the meeting is marked held.",
   "log.asTranscript": "This text is a transcript",
   "log.transcriptUpload": "Or upload a file",
   "log.transcriptUploadRejected": "Only a .txt file is accepted.",
