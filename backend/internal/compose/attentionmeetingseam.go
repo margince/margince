@@ -65,7 +65,7 @@ func (m attentionMeetings) openIn(
 	return rows, err
 }
 
-// named turns the lane's rows into meetings, each with who it is with, whether
+// named turns the lane's rows into meetings. Each says who it is with, whether
 // anybody from outside is on it, and the reader's own preparation for it.
 func (m attentionMeetings) named(ctx context.Context, rows []crmcontracts.Activity) ([]attention.Meeting, error) {
 	ahead := make([]attention.Meeting, 0, len(rows))

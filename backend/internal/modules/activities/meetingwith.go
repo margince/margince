@@ -20,12 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// meetingWithQuery picks, per meeting, the first participant by name who holds
-// no seat, is not a colleague (colleagueParticipantSQL) and is not employed by
-// the installation's own company: the same "outside" HeldMeetingCounterparties
-// means, without needing an employer. By name, because participant rows carry
-// no reliable order of their own, and two reads of an unchanged meeting must
-// name the same contact.
+// meetingWithQuery picks, per meeting, the first outside participant by name.
+// Outside means no seat, no colleague and no employee of the own company.
+// By name, because participant rows carry no reliable order of their own.
 const meetingWithQuery = `
 	SELECT DISTINCT ON (ap.activity_id) ap.activity_id, ap.contact_id
 	  FROM activity_participant ap
@@ -40,19 +37,11 @@ const meetingWithQuery = `
 	          AND %s AND %s)
 	 ORDER BY ap.activity_id, c.full_name, c.id`
 
-// MeetingCounterparties answers who each of these meetings was with, for THIS
-// caller: the first outside participant, by name, who is a contact the caller
-// may see. A meeting with no such participant is absent from the map. A
-// colleague is never outside: a contact whose address is on a trusted own
-// domain, is a live member's login or a mailbox a provider proved for a seat
-// (colleagueParticipantSQL). The own-company test reads only employment edges
-// and companies the caller may read, so which contact is named discloses no
-// edge they may not see.
-//
-// Participants and not activity links: a link says what a meeting is filed
-// under, and a meeting filed under a deal or a colleague's record is still with
-// the customer who sat in it. A caller who may not read activities or contacts
-// is told about nobody rather than refused, so the page around them stands.
+// MeetingCounterparties answers who each meeting was with, for this caller:
+// the first outside participant, by name, whose contact the caller may see.
+// A colleague is never outside (colleagueParticipantSQL). The own-company test
+// reads only edges and companies the caller may read. A caller who may not read
+// activities or contacts is told about nobody, so the page around them stands.
 func (s *Store) MeetingCounterparties(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]ids.UUID, error) {
 	out := make(map[ids.UUID]ids.UUID, len(meetingIDs))
 	if len(meetingIDs) == 0 {
@@ -144,17 +133,11 @@ func orUnbounded(clause string) string {
 	return clause
 }
 
-// colleagueParticipantSQL is the condition that the participant row aliased ap
-// is a colleague, though it holds no seat: its address, or a live address of
-// its contact, is on a trusted own domain (auth.TrustedOwnDomainsFoldedSQL), is
-// a live member's login, or is a mailbox a provider proved for a live seat.
-// provedIdentities is the binding storekit.ProvedMailSeatIdentitiesSQL wrote,
-// or empty where no transaction can read it; the proved arm is then absent.
-//
-// Every arm compares the domain folds the writers store. A row whose fold is
-// not written yet fails open: it counts as outside, as it did before the rule.
-// The alias is fixed because the own-domain gate reads CoversSQL's literal
-// column names.
+// colleagueParticipantSQL holds when participant row ap is a colleague. Its
+// address or a contact address is on a trusted own domain, is a live member's
+// login, or is a mailbox proved for a seat. provedIdentities is the binding
+// storekit.ProvedMailSeatIdentitiesSQL wrote; empty leaves that arm out.
+// A row whose domain fold is missing counts as outside.
 func colleagueParticipantSQL(provedIdentities string) string {
 	const address = "lower(ap.address)"
 	ownAddress := owndomain.CoversSQL("ap.address_domain_folded", "own_domain.domain")
@@ -174,10 +157,8 @@ func colleagueParticipantSQL(provedIdentities string) string {
 		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.LiveMemberSQL("u"), seatAddress, ownContact, seatContact)
 }
 
-// meetingsWithoutOutsidePartyQuery selects the meetings on which every
-// participant holds a seat, is a colleague or is employed by the
-// installation's own company. A participant with an address and no contact, or
-// with neither, counts as outside: nothing says it is one of us.
+// meetingsWithoutOutsidePartyQuery selects the meetings with no outside
+// participant. A participant with no contact counts as outside.
 const meetingsWithoutOutsidePartyQuery = `
 	SELECT a.id FROM activity a
 	 WHERE a.id = ANY($%d) AND a.kind = 'meeting' AND ` + activityLive + ` AND %s
@@ -191,19 +172,11 @@ const meetingsWithoutOutsidePartyQuery = `
 	               WHERE emp.contact_id = ap.contact_id AND emp.kind = 'employment' AND emp.archived_at IS NULL
 	                 AND %s))`
 
-// MeetingsWithoutOutsideParty answers which of these meetings have nobody from
-// outside on them: every participant holds a seat, is a colleague
-// (colleagueParticipantSQL) or works for the installation's own company. Such a
-// meeting is not a customer meeting.
-//
-// The answer must not depend on what this reader may see, or a customer meeting
-// would vanish because its guest is outside the reader's row scope. So the
-// participants, their contacts and the employment edges are read without row
-// scope. Only the activity gates apply: the reader may read the meeting's
-// content, which already shows its participants. The answer names nobody.
-//
-// A reader who may not read activities is told nothing, so every meeting keeps
-// whatever place it has.
+// MeetingsWithoutOutsideParty answers which meetings have nobody from outside.
+// Every participant is a seat, a colleague or an own-company employee.
+// Contacts and edges are read without row scope, so a hidden guest never
+// hides a customer meeting. Only the activity content gate applies.
+// A reader who may not read activities is told nothing.
 func (s *Store) MeetingsWithoutOutsideParty(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]bool, error) {
 	out := make(map[ids.UUID]bool, len(meetingIDs))
 	if len(meetingIDs) == 0 {

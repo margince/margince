@@ -290,9 +290,9 @@ func TestAReaderWhoMayNotReadActivitiesIsToldTheMeetingWasWithNobody(t *testing.
 // colleagueTestDomain is the domain the harness gives every seat's login.
 const colleagueTestDomain = "authz.test"
 
-// bookedMeeting writes a booked meeting an hour after journeyMorning as
-// calendar capture stores it: Rep1 on it by its login address, then one
-// participant row per guest address, resolved to the contact given beside it.
+// bookedMeeting writes a booked meeting an hour after journeyMorning, as
+// calendar capture stores it. Rep1 attends by login address. Each guest
+// address gets a participant row with the contact given beside it.
 func bookedMeeting(t *testing.T, e *integration.Env, subject string, guests map[string]ids.UUID) ids.UUID {
 	t.Helper()
 	seat, seatAddress := e.Rep1, "a@"+colleagueTestDomain
@@ -343,9 +343,9 @@ func trustOwnDomain(t *testing.T, e *integration.Env) {
 	e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ($1, 'admin', true)`, colleagueTestDomain)
 }
 
-// The issue's reproduction (#9994): a colleague's contact on the own domain,
-// with no employment edge to the own company and no seat, is never named as
-// the meeting's contact, and the meeting is not on the lane.
+// The issue's reproduction (#9994). A colleague's contact on the own domain,
+// with no seat and no own-company employment, is never the meeting's contact.
+// The meeting is not on the lane.
 func TestAColleaguesContactOnTheOwnDomainIsNeverAMeetingsContact(t *testing.T) {
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
@@ -366,8 +366,8 @@ func TestAColleaguesContactOnTheOwnDomainIsNeverAMeetingsContact(t *testing.T) {
 	}
 }
 
-// A meeting whose only other participant is a seat's colleague address leaves
-// the lane; the same meeting with a customer on it stays and names them.
+// A meeting with only a colleague's address on it leaves the lane. The same
+// meeting with a customer on it stays and names them.
 func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
@@ -391,8 +391,8 @@ func TestAMeetingAmongColleaguesLeavesKeepMomentum(t *testing.T) {
 	}
 }
 
-// A meeting whose only outside guest the reader may not see stays on the lane,
-// naming nobody: a row-scope rule never makes a customer meeting vanish.
+// A meeting whose only guest the reader may not see stays on the lane and
+// names nobody. A row-scope rule never hides a customer meeting.
 func TestAMeetingWhoseOnlyGuestIsHiddenStaysOnTheLane(t *testing.T) {
 	e := integration.Setup(t)
 	trustOwnDomain(t, e)
@@ -416,7 +416,7 @@ func TestAMeetingWhoseOnlyGuestIsHiddenStaysOnTheLane(t *testing.T) {
 	}
 }
 
-// A seat's login on a domain nobody trusts is still a colleague: it is not
+// A seat's login on an untrusted domain is still a colleague. It is not
 // named, and a meeting with nobody else on it leaves the lane.
 func TestAMemberLoginOffTheOwnDomainIsAColleague(t *testing.T) {
 	e := integration.Setup(t)

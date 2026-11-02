@@ -15,9 +15,9 @@ import (
 )
 
 // meetingsAhead is the meetings lane: what starts between asOf and the day's
-// end, and the day meetings dated today, which the zone says, each with
-// somebody from outside on it. more says a meeting was read and cut, or a read
-// filled its ceiling.
+// end, and the day meetings dated today, which the zone says. Only meetings
+// with somebody from outside stay. more says a meeting was read and cut, or a
+// read filled its ceiling.
 func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kept []Meeting, more bool, err error) {
 	loc, err := s.location(ctx)
 	if err != nil {

@@ -8,25 +8,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// HeldMeetingCounterparties is the body of a derived table with one
-// (activity_id, company_id) row per held meeting and the current employer of
-// each outside participant on it. A meeting with no recorded status that is
-// already over counts as held: a calendar import writes no status, and nothing
-// said it was off. Deal Scout reads it: a meeting held with
-// somebody at a company is evidence about that company.
+// HeldMeetingCounterparties is the body of a derived table: one
+// (activity_id, company_id) row per held meeting and current employer of each
+// outside participant. Deal Scout reads it. A meeting with no status that is
+// over counts as held, because a calendar import writes no status.
 //
-// It is its own walk, not CompanyReachSet. That set deliberately files nothing
-// through participants, because a signal filed against a Cc'd contact's
-// employer is a claim nobody made. A meeting is different: the contacts who
-// sat in it are the counterparty.
-//
-// "Outside" means a contact who is not a seat (user_id IS NULL), is not a
-// colleague and whose employer is not the installation's own company. A
-// colleague is a participant whose address or contact address is on a trusted
-// own domain or is a live member's login (colleagueParticipantSQL). This is a
-// static string with no transaction, so it cannot bind the mailboxes providers
-// proved for seats; that arm of the rule is absent here. A meeting among
-// colleagues reaches no company here.
+// Outside means no seat, no colleague and no own-company employer. Without a
+// transaction, colleagueParticipantSQL runs without the proved-mailbox arm.
 func HeldMeetingCounterparties() string {
 	return `SELECT DISTINCT ap.activity_id, emp.company_id
 		  FROM activity_participant ap

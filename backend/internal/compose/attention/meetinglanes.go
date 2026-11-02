@@ -93,16 +93,14 @@ type Meeting struct {
 	// Who the meeting is with, and so whose page the brief is read on. The
 	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
 	// id names the meeting and says nothing about where to read it. Zero when
-	// the outside party is withheld from this reader or is no contact: the row
-	// then offers no verb rather than a link to a page picked at random. A
-	// meeting with no outside party at all says so in NoOutsideParty.
+	// the outside party is withheld or is no contact. The row then offers no
+	// verb. NoOutsideParty says the meeting has no outside party at all.
 	ContactID ids.UUID
 
 	// NoOutsideParty says every participant is a seat, a colleague or works
-	// for the installation's own company. Such a meeting is not a customer
-	// meeting and leaves the lane. It is read without the reader's row scope,
-	// so a guest the reader may not see never sets it. The zero value keeps
-	// the row.
+	// for the own company. Such a meeting leaves the lane. It is read without
+	// the reader's row scope, so a hidden guest never sets it. The zero value
+	// keeps the row.
 	NoOutsideParty bool
 
 	// The reader's own preparation for the meeting. Nil when the reader does
