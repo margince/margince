@@ -370,7 +370,7 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 
 // The number only goes down. Convert a file, lower it, and the next private
 // copy cannot be written without this gate asking why.
-const privateProbeFiles = 11
+const privateProbeFiles = 9
 
 // sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
 // the gates that hold it.

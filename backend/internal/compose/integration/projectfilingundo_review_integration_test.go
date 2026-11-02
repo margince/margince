@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -296,16 +297,11 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 	tick := time.NewTicker(20 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		var blocked int
-		// A fresh reading each pass: the statistics view is a per-transaction snapshot.
-		if _, err := observer.Exec(context.Background(), `SELECT pg_stat_clear_snapshot()`); err != nil {
+		queued, err := testdb.QueuedBehind(context.Background(), observer, int32(holderPID))
+		if err != nil {
 			t.Fatal(err)
 		}
-		if err := observer.QueryRow(context.Background(),
-			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`, holderPID).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked > 0 {
+		if queued > 0 {
 			return
 		}
 		select {
