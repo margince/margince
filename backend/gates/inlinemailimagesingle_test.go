@@ -12,15 +12,18 @@ package gates
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
 
+// inlineImageTest is the rule's content-type test, in any case and however the
+// SQL around it is laid out.
+var inlineImageTest = regexp.MustCompile(`(?i)like\s+'image/`)
+
 func TestTheInlineMailImageRuleIsSpelledOnce(t *testing.T) {
 	t.Parallel()
-	// The rule is recognisable by its content-type test. A second copy has to
-	// write it again, in Go or in SQL, in any case.
-	const imageTest = "like 'image/"
+	// A second copy has to write the content-type test again, in Go or in SQL.
 	const owner = "internal/platform/database/storekit/dealfiles.go"
 
 	var spellings []string
@@ -33,7 +36,7 @@ func TestTheInlineMailImageRuleIsSpelledOnce(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if strings.Contains(strings.ToLower(string(body)), imageTest) {
+		if inlineImageTest.Match(body) {
 			spellings = append(spellings, filepath.ToSlash(path))
 		}
 		return nil

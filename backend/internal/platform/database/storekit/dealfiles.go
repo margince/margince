@@ -15,7 +15,8 @@ import "fmt"
 const InlineMailImageCeiling = 65536
 
 // NotInlineMailImageSQL is true unless file, an attachment alias, is an inline
-// image of a captured message. A part with no content type or size is not one.
+// image of a captured message. A part with no content type is not one; a
+// missing size counts as 0.
 func NotInlineMailImageSQL(file string) string {
 	return fmt.Sprintf(`NOT (COALESCE(%[1]s.content_type, '') LIKE 'image/%%' AND COALESCE(%[1]s.byte_size, 0) < %[2]d)`,
 		file, InlineMailImageCeiling)
