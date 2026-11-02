@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -55,6 +56,14 @@ func TestWorklistTailCostPoC(t *testing.T) {
 					line += fmt.Sprintf(" %s=%d/%.0fms", stage, statements, spent*1000)
 					sum := total[stage]
 					total[stage] = [2]float64{sum[0] + float64(statements), sum[1] + spent*1000}
+				}
+				if os.Getenv("POC_ALL_STAGES") == strconv.Itoa(i) {
+					for key, cost := range after {
+						spent := afterTime[key].Sum() - beforeTime[key].Sum()
+						if key.Read == attention.ReadWorklist && spent > 0.02 {
+							t.Logf("  stage %-24s %5d statements %6.0f ms", key.Stage, cost.Statements-before[key].Statements, spent*1000)
+						}
+					}
 				}
 				pages++
 				t.Log(line)

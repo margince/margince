@@ -398,11 +398,66 @@ On the bench data it costs 1.7 times the custom run time (4.5 times for the
 cards statement), far less than the planning it saves. On mailboxes with years
 of mail it would keep growing.
 
-The fix that holds at any size is an index that bounds both at once: the
-seat's address and the message time. Then neither plan has to guess which to
-start from, and both statements can keep a generic plan. That needs a schema
-change (the message time beside each participant row, or an index the planner
-can use for both), so it is a proposal here, not built.
+Tested: a seat's mail bounded by address and time. In a copy of the bench
+data, each participant row got its message's time (`occurred_at`, a 5 s
+backfill at scale 0.1 and 88 s for 1.9 million rows at scale 1), with one index
+on both:
+
+```
+ CREATE INDEX ... ON activity_participant (lower(address), occurred_at DESC)
+   WHERE role = 'to' AND address IS NOT NULL
+```
+
+The seat's mail list then reads in two parts, each with an index of its own:
+
+```
+ seat's mail = recipients by (address, time ≥ horizon)       ← the new index
+             ∪ recipients whose message is a held request    ← a few, by id
+```
+
+To test growth, one seat (`rep-a1@daily-bench.test`, 9,079 inbound mails) got
+30 copies of its mail, each 400 days further back: 272,370 old mails, none
+inside the horizon. The seat's mail list alone, with `EXPLAIN ANALYZE`:
+
+```
+ seat mail for rep-a1                     participant rows read     time
+ 1× history,  today's form, generic plan          9,079             14 ms
+ 30× history, today's form, generic plan        281,448            243 ms
+ 30× history, today's form, custom plan         281,449            451 ms   today's code
+ 30× history, address + time, generic plan        1,033             12 ms
+```
+
+So today's code also reads a seat's whole history, whichever plan it gets:
+the bound #9961 gives holds only while the history is short. In the whole
+read, rep-a1's waiting stage:
+
+```
+                                    1× history   30× history
+ today (custom plan)                  379 ms       545 ms
+ kept plan, today's form              196 ms       458 ms    grows with history
+ kept plan, address + time            —            293 ms
+```
+
+The ground-truth check on the 30× copy: 268 of 268 answers identical with the
+address + time form, with and without kept plans. At full scale (3.2) it is
+270 of 270.
+
+What else grows with history. The same test showed most of the extra time
+outside the waiting stage. Rep-a1's whole read went from 1.85 s to 5.6 s:
+`relationship_decay` from 258 ms to 3,235 ms and `row_names` from 107 ms to
+591 ms. Every other member's read also got 0.5 to 1.5 s slower. Lanes that
+look for a contact's last touch read the whole history, so they need the same
+treatment: an index that starts from the contact and the time. This is a
+measured direction, not built.
+
+What a product change needs:
+
+- a migration that adds the column, and a data task that fills it on
+  installed databases (a large correction, per the migration rules);
+- a writer rule that keeps the column equal to the message's time, in the
+  activities module that owns both tables;
+- the two-part seat mail list in `storekit.DirectMailActivitiesSQL`, then
+  kept plans for the waiting statements.
 
 ### 2.6 The kind catalog
 
@@ -530,6 +585,10 @@ into a separate store needs extra code for every line above, for every kind
   because they are new on every read; page 2 is compared by what it shows.
 - Replaying `main` against itself matches every answer, so the check is
   deterministic.
+- A source that failed is never recorded as the truth. At full scale the
+  manager's `all` read takes 5.5 to 6.2 s, and once its waiting lane ran past
+  its 4 s budget: the recorded page had no waiting customers, and every replay
+  "differed". The check now refuses an answer with a failed source.
 - File: `backend/internal/compose/worklistparity_poc_test.go`. In production it
   becomes an integration test that takes its views, scopes and filters from the
   API contract, so it fails if coverage shrinks.
@@ -657,6 +716,45 @@ Three things this system can add to the cache:
    minutes old when it arrives, so a colleague's new work can take about 10
    minutes to show. Counting from the answer's `as_of` would keep it at 5.
 
+How often the cache can answer, from the code and a test:
+
+```
+ stamp ─── read takes ~1 s ───► answer arrives ── client waits 5:00 ──► next ask
+ └──────────── server keeps it 5:00 (Life) ──────┘                     ↑ ~1 s too late
+```
+
+- The timed refresh never hits. The server keeps an answer 5 minutes from the
+  moment its read began (`homecache.Life`); the client asks again 5 minutes
+  after the answer arrived (`HOME_DAY_FRESH_MS`). That is right for its job:
+  the refresh is there to show colleagues' changes. Hits come from opening
+  Home again within 5 minutes: a reload, a new tab, a second device.
+- One captured mail ends every member's copy. Capture links a mail to its
+  sender after the capture transaction commits
+  (`capture/sinkensure.go`), so the mail is unlinked for a moment, and linking
+  it moves the shared fence (`home_read_fence_first_link`). A PoC test
+  (`homefence_actions_poc_test.go`) drives the real code: each captured mail
+  moves the fence by one, also from a known sender. Creating contacts,
+  companies, deals, notes and tasks, renaming and completing a task, and
+  filing a note on a deal move it by zero; archiving a note moves it by one.
+- On the bench data, mail arrives at 11.5 inbound mails per working hour for
+  15 members. If each one ends every copy, a copy is still served when Home is
+  opened again after 1 minute 83% of the time, after 2 minutes 68%, after 5
+  minutes 38%. The rate grows with the number of mailboxes, so the hit rate
+  falls as a team grows.
+- A statement that changes no participant or link row still moves the fence:
+  those two triggers run once per statement (`FOR EACH STATEMENT`). Tested:
+  `UPDATE activity_participant ... WHERE false` moved it from 32 to 33.
+
+Ways to raise the hit rate, none built:
+
+1. Link a captured mail in the capture transaction, so no reader ever sees it
+   unlinked; then linking narrows nothing and needs no fence.
+2. A fence per reader for this case: only the readers who could see the
+   unlinked mail lose their copy, through `Forget`, not every member.
+3. Skip statements that changed no row: a trigger with a transition table
+   fires only when a row changed.
+4. Count hits and misses on `/metrics`, so the rate is measured, not modelled.
+
 The pull request does not give a hit rate. The daily bench on the PoC branch,
 which carries `main` with the cache, now shows both sides (3.2): a repeated
 Home call is answered in 5 to 13 ms, and the calls the cache does not answer
@@ -668,11 +766,17 @@ measure the engine; the rows to watch are the ones the cache does not answer.
 ```
  1  plan reuse + identity once      proven: same answers; shared by every kind
  2  #9950 contact cases             the largest single cost for members with many duplicates
- 3  waiting statements keep a plan  tested: rep Home call 1.28 → 0.77 s with
-    (needs an address + time index)   whole-read reuse, 268/268 identical; needs the
-                                      index first so large mailboxes stay bounded
- 4  a read that only reads          unlocks the cache warm-up, a replica, parallel lanes
- 5  kind catalog: backend table,    growth and extensions; no speed effect
+ 3  a seat's mail by address +       tested: bounded at 30× history, 270/270
+    time (column, index, data task)   identical at full scale; needed before 4
+ 4  waiting statements keep a plan  tested: rep Home call −26% at full scale with
+                                      whole-read reuse, 270/270 identical
+ 5  last-touch lanes by contact +    relationship_decay 0.26 → 3.2 s at 30× history;
+    time                             measured, not built
+ 6  a read that only reads          unlocks the cache warm-up, a replica, parallel lanes
+ 7  Home cache: link mail in the    one captured mail ends every member's copy (2.13)
+    capture transaction, or a
+    fence per reader
+ 8  kind catalog: backend table,    growth and extensions; no speed effect
     extension fragments
 ```
 
@@ -709,7 +813,8 @@ that member may not use).
 PERF-8 asks for under 1 s. With plan reuse and the identity change, the rep's
 Home call is at the line, not under it. With the waiting statements on a kept
 plan as well (2.5) it was 0.77 s, every answer identical, but that step needs
-an index first. The bench must run at full scale before anyone claims PERF-8.
+an index first. At full scale (3.2) the same changes take the rep's Home call
+from 2.16 to 1.59 s, so PERF-8 needs more than plan reuse.
 
 ### 3.2 Other measurements
 
@@ -731,6 +836,22 @@ an index first. The bench must run at full scale before anyone claims PERF-8.
    first load of the day, rep .... 3.07 s            3.22 s     empty caches
 
  scroll tail (2.5): ran on 21 of 31 pages, mean 0.46 s when it ran
+
+ daily bench at full scale (scale 1: 500,000 activities, 1.9 million
+ participants; 57 min to seed), against scale 0.1, one run each
+                                 scale 0.1    scale 1
+   home_worklist, rep ............ 1.54 s      2.24 s
+   home_worklist, manager ........ 0.77 s      0.90 s
+   worklist_team, manager ........ 1.81 s      4.05 s
+   first load of the day, rep .... 3.22 s      4.59 s
+   worklist, rep, repeated ....... 13 ms       16 ms     cache hit
+
+ ground-truth check at full scale, mean per call
+                                 today    address+time    + kept plans
+   rep, Home call (n=12) ......... 2.16 s   2.09 s          1.59 s    −26%
+   manager, team today (n=3) ..... 3.01 s   3.15 s          2.36 s    −22%
+   manager, all today (n=1) ...... 5.81 s   6.24 s          5.49 s     −5%
+   identical to today ............          270/270         270/270
 
  where the time goes on main (Today, mine, page of 25, live clock)
    member with no work ........ 0.57–0.85 s
@@ -782,8 +903,13 @@ with wording fixes, which are applied.
 - The daily bench figures in 3.2 are one run each. The rows the cache does not
   answer did not get faster after the merge; whether they got slower needs more
   runs.
-- The waiting statements' kept plan (2.5) was tested on bench data only. Its
-  run time grows with mailbox history until an address + time index exists.
+- The kept plan and the address + time form (2.5) were tested on bench data at
+  scale 0.1 and 1, and on one seat with 30× synthetic history. Synthetic
+  history copies one seat's mail; real history differs in links and threads.
+- At full scale the gains shrink (rep Home call −26%, manager `all` −5%):
+  more of the time is running, not planning. No read is under 1 s at scale 1.
+- At full scale the manager's `all` waiting lane can exceed its 4 s budget,
+  and the page then shows no waiting customers.
 - Not built yet: that index and the waiting statements' kept plan, the backend side of the catalog
   generator (the engine's maps reading a generated table), and the merge of
   extension catalog fragments.
@@ -799,7 +925,9 @@ with wording fixes, which are applied.
  b551b735  the frontend kind table generated from the catalog
  e86f3e3f  main merged in: the Home cache (#9915) and the waiting scan's bound (#9961)
  3c55df08  tail stages in the stage metrics; the tail measured (2.5)
- later     waiting statements with a kept plan, tested and reverted (2.5)
+ 4e092c8e  waiting statements with a kept plan, tested and reverted (2.5)
+ later     address + time form tested at 30× history and full scale; Home
+           cache fence census; the check refuses a failed source
  later     this proposal
 ```
 
@@ -815,7 +943,8 @@ Files that matter:
 | `backend/internal/platform/auth/memberidentity.go` | The identity check, once per statement |
 | `backend/internal/modules/activities/waitingsql.go` | `perBind`, used by the five waiting call sites |
 | `backend/internal/compose/worklistparity_poc_test.go` | The ground-truth check |
-| `backend/internal/compose/worklisttail_poc_test.go` | The scroll tail's cost per stage (2.5) |
+| `backend/internal/compose/worklisttail_poc_test.go` | The scroll tail's cost per stage (2.5); `POC_ALL_STAGES` prints every stage for one member |
+| `backend/internal/compose/integration/homefence_actions_poc_test.go` | How everyday actions and capture move the Home fence (2.13) |
 | `backend/internal/compose/worklist*_poc_test.go` | The other measurements |
 | `backend/internal/modules/worklist/store.go` | The push experiment's store (3.3) |
 

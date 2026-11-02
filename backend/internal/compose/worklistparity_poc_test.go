@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -146,6 +147,13 @@ func TestWorklistParityPoC(t *testing.T) {
 				// The walk and cursor name a snapshot row minted per read; the
 				// second page is compared by what it shows instead.
 				page.Walk, page.NextCursor = nil, nil
+				// A source that failed is a time budget, not an answer: the
+				// comparison would hold a failure as the truth.
+				for _, gone := range page.SourcesUnavailable {
+					if gone.Reason == "failed" {
+						t.Errorf("%s page %d: source %s failed; this answer is no ground truth", c.key, n+1, gone.Source)
+					}
+				}
 				answer, err := json.Marshal(page)
 				if err != nil {
 					t.Fatal(err)
@@ -194,6 +202,14 @@ func TestWorklistParityPoC(t *testing.T) {
 		for key, want := range truth {
 			if string(want) != string(answers[key]) {
 				t.Errorf("%s differs from the ground truth", key)
+				if dir := os.Getenv("POC_PARITY_DIFF"); dir != "" {
+					name := strings.NewReplacer("/", "_", "=", "-").Replace(key)
+					for side, body := range map[string][]byte{"want": want, "got": answers[key]} {
+						if err := os.WriteFile(filepath.Join(dir, name+"."+side+".json"), body, 0o600); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}
 				continue
 			}
 			same++
