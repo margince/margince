@@ -25,7 +25,9 @@ package meetingbrief
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,11 +60,27 @@ type HistoryIn struct {
 	ThreadKey string
 	// OnDeal marks a conversation filed under the deal this brief is about.
 	OnDeal bool
+	// OtherDeal is the deal a conversation is filed under when that deal is
+	// not this brief's, and only when the caller may see that deal. Both it and
+	// OnDeal are settled by fileUnderDeal once the brief's deal is chosen.
+	OtherDeal *FiledDeal
+	// Filed is every deal the caller may see that the conversation is filed
+	// under, an open one first.
+	Filed []FiledDeal
 	// Withheld says this caller is outside the activity's audience: the row
 	// happened, and what it says is not theirs to read. Subject and body are
 	// empty for such a row — not because it was empty, which is the confusion
 	// this field exists to prevent.
 	Withheld bool
+}
+
+// FiledDeal names another deal a conversation is filed under, and whether it
+// is open, won or lost. The plan model needs both to keep a lost deal's thread
+// out of this meeting's objective.
+type FiledDeal struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	State string `json:"state"`
 }
 
 const historyQuery = `
@@ -71,7 +89,16 @@ const historyQuery = `
 	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
 	          SELECT 1 FROM activity_link dl
 	          WHERE dl.activity_id = a.id AND dl.deal_id = $%[3]d)) AS on_deal,
-	       (%[2]s) AS readable
+	       (%[2]s) AS readable,
+	       -- The deals the row is filed under, under the caller's deal scope.
+	       -- An open one first, so a thread on a live and a lost deal is named live.
+	       COALESCE((
+	         SELECT json_agg(json_build_object('id', fd.id, 'name', fd.name, 'state', fd.status)
+	                         ORDER BY (fd.status = 'open') DESC, fd.id)
+	         FROM activity_link ol
+	         JOIN deal fd ON fd.id = ol.deal_id AND fd.archived_at IS NULL
+	         WHERE ol.activity_id = a.id AND ol.deal_id IS NOT NULL AND %[10]s
+	       ), '[]'::json) AS filed
 	FROM activity a
 	WHERE a.archived_at IS NULL
 	  AND a.kind <> 'task'
@@ -144,23 +171,36 @@ func (s *Service) readHistory(
 	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
 	attendeePos := arg(room.Room)
 	within := projectWithinPredicate("a", "hw", project, arg)
+	otherDeal, err := scopeFor(ctx, "deal", "fd", arg)
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
 		scope, readable, dealPos, roomPos, occurredday.WithinSQL("a", floor, opens), attendeePos, within, historyCap, happened,
+		otherDeal,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}
 	defer rows.Close()
 
+	return scanHistory(rows)
+}
+
+func scanHistory(rows pgx.Rows) ([]HistoryIn, error) {
 	var history []HistoryIn
 	for rows.Next() {
 		var row HistoryIn
 		var id ids.UUID
 		var readableRow bool
+		var filed []byte
 		if err := rows.Scan(&id, &row.Kind, &row.Subject, &row.Direction,
-			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
+			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow, &filed); err != nil {
 			return nil, fmt.Errorf("read the account history: %w", err)
+		}
+		if err := json.Unmarshal(filed, &row.Filed); err != nil {
+			return nil, fmt.Errorf("read the deals a conversation is filed under: %w", err)
 		}
 		row.ID = id.String()
 		row.Withheld = !readableRow
@@ -168,6 +208,7 @@ func (s *Service) readHistory(
 			// What it was called is content. The row still counts; it says
 			// nothing and, per threads.go, does not shape the arc either.
 			row.Subject = ""
+			row.Filed = nil
 		}
 		history = append(history, row)
 	}
@@ -175,6 +216,36 @@ func (s *Service) readHistory(
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}
 	return history, nil
+}
+
+// fileUnderDeal settles which history rows are on the brief's deal and which
+// other deal the rest name. It runs once the deal is chosen: a meeting filed
+// under no deal takes the contact's leading open deal, after history is read.
+func fileUnderDeal(in *Input) {
+	deal := ""
+	if in.Deal != nil {
+		deal = in.Deal.ID
+	}
+	for i := range in.History {
+		row := &in.History[i]
+		row.OnDeal = row.OnDeal || slices.ContainsFunc(row.Filed, func(f FiledDeal) bool { return f.ID == deal })
+		row.OtherDeal = otherDealOf(*row, deal)
+	}
+}
+
+// otherDealOf is the other deal a row may name. A row on this deal is about
+// this deal, whatever else it is filed under. A withheld row names nothing,
+// as it carries no subject.
+func otherDealOf(row HistoryIn, deal string) *FiledDeal {
+	if row.Withheld || row.OnDeal {
+		return nil
+	}
+	for _, filed := range row.Filed {
+		if filed.ID != deal {
+			return &filed
+		}
+	}
+	return nil
 }
 
 // withheldCount is how many conversations this caller may know happened but
