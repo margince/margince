@@ -659,9 +659,8 @@ describe("Rail levels (a section's entries as the second level)", () => {
     }
   });
 
-  // The other half of the same head, and the half a real installation wears:
-  // the company's mark with "Powered by Margince" under it, on a level too, so
-  // the chrome says what the product is on every settings address.
+  // An installation's head: the company's mark with "Powered by Margince" under
+  // it. It draws the same on a level, so every settings address names the product.
   it("draws an installation's own head the same on a level as off one", () => {
     shellStyles = mountShellStyles();
     const client = newClient();

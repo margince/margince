@@ -7,21 +7,17 @@ import type { RowSeat } from "./accountseats";
 import { usePopoverDismiss } from "./popover";
 
 /**
- * A layer that flies out of one row of the account menu: its open state, the
- * box `usePopoverDismiss` tests containment against, and the close that hands
- * focus back to the row it came from.
- *
- * Its dismissal listener registers after the menu's, because this layer only
- * opens inside an open menu. So on Escape the menu's copy runs first, sees the
- * still-expanded row, and stands down for this one (app/popover.ts).
+ * A layer that flies out of one row of the account menu. Its dismissal listener
+ * registers after the menu's, since it only opens inside an open menu. On
+ * Escape the menu's listener sees the expanded row and stands down (app/popover.ts).
  */
 export function useFlyout(seat: number, move: (at: number) => void) {
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const id = useId();
 
-  // Focus goes back to the row only when the flyout held it: an outside click
-  // lands on something focusable of its own, and pulling focus away undoes it.
+  // Focus goes back to the row only when the flyout held it. An outside click
+  // has already put focus where the reader wanted it.
   const close = useCallback(() => {
     const held = panel.current?.contains(document.activeElement) ?? false;
     setOpen(false);

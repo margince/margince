@@ -104,12 +104,8 @@ function IdentityLines({ identity }: Readonly<{ identity: Identity }>) {
 }
 
 /**
- * The way into settings — the only one the product has.
- *
- * `onActivate` is how a caller says this click should BOTH act and close: the
- * menu is chrome over the page the link is about to replace, and a popover left
- * standing over the destination it just opened is the reader's to dismiss for no
- * reason.
+ * The way into settings, the only one the product has. `onActivate` closes the
+ * menu, so it does not stay open over the page the link opens.
  */
 function SettingsRow({
   seat,
@@ -130,18 +126,9 @@ function SettingsRow({
 }
 
 /**
- * What the menu holds: who you are, the settings door, the appearance choice,
- * the booking link, help and feedback, and the way out.
- *
- * A real `role="menu"`, because a submenu a reader can only reach with a
- * pointer is a setting only pointer users can change. So: a roving tabstop,
- * Up/Down between the rows, Home/End to the ends, Right or Enter into a
- * submenu, Left back out.
- *
- * The identity block is not a menu item and carries no role. It is a statement
- * about who is signed in, and it is also the menu's own accessible name, so a
- * reader entering the panel in menu mode hears whose account they are about to
- * act on rather than having to leave the menu to find out.
+ * A real `role="menu"`, so a keyboard reader can reach both submenus. The
+ * identity block carries no role, since it is a statement. It also names the
+ * menu, so a reader in menu mode hears whose account they act on.
  */
 function AccountPanel({
   identity,
@@ -190,9 +177,7 @@ function AccountPanel({
           ? `${t("shell.accountAria")} — ${identity.spoken}`
           : t("shell.accountAria")
       }
-      // Focusable, and only programmatically: the roving tabstop lives on the
-      // rows, and the effect above lands the reader on one of them the moment
-      // this opens.
+      // Focusable only by script: the roving tabstop lives on the rows.
       tabIndex={-1}
       ref={panel}
       onKeyDown={onKeyDown}

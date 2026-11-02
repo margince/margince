@@ -441,19 +441,10 @@ function defaultSelection(
 
 const PALETTE_KEY = "k";
 
-// Global ⌘K / Ctrl+K binding (AC-shell-3).
-// Both chords work, but an affordance may only advertise ONE and it has to be
-// the one the reader's keyboard has: a Windows user told to press ⌘K is told to
-// press a key that is not there. Pure in its argument, so the call site passes
-// `navigator.platform` and this stays testable without stubbing it.
 /**
- * The chord as its KEYS, because every surface that draws it draws a cap per
- * key (app/topbar.tsx, app/shortcutsdialog.tsx).
- *
- * Keys rather than a joined string, and no regex: the top bar used to split a
- * "⌘K" label with a lookbehind, which is a parse-time SyntaxError on an engine
- * without lookbehind (Safari before 16.4) — a blank app rather than a
- * plain-looking shortcut.
+ * The ⌘K / Ctrl K chord as one cap per key. Both modifiers work, but a surface
+ * shows only the one the reader's keyboard has. Pure in `platform`, so a test
+ * needs no stub.
  */
 export function paletteHotkeyCaps(platform: string): readonly string[] {
   return [modifierCap(platform), PALETTE_KEY.toUpperCase()];

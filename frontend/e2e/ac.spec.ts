@@ -461,7 +461,7 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
 
 // Help and feedback is a submenu of real menu items, and the shortcuts it opens
 // are a dialog. Both are swept by axe in the state a reader reaches them in.
-test("features/10 §7: help and feedback and the keyboard shortcuts meet AA", async ({
+test("help and feedback and the keyboard shortcuts meet AA", async ({
   page,
 }) => {
   await page.goto("/#/home");

@@ -39,9 +39,8 @@ export function OffsiteLink({
     "href" | "children" | "className" | "target" | "rel" | "aria-label"
   > & {
     href: string;
-    // What the reader sees. Callers pass a shortened or humanized form of the
-    // address; the full one stays in `href`, so the row reads as a value rather
-    // than as a URL.
+    // What the reader sees: a shortened form of the address. The full one stays
+    // in `href`, so the row reads as a value, not a URL.
     children: ReactNode;
     // The affordance this link wears. Defaults to the product's secondary text
     // affordance; a caller whose surface already styles its own anchors passes

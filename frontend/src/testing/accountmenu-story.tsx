@@ -16,8 +16,8 @@ import {
 // strip's sheet, so without it every frame draws an unstyled strip.
 import "../app/topbar.css";
 
-// The account menu's story frame, shared by the stories beside account.tsx and
-// the modules it is split into, so each renders the menu where the product does.
+// The account menu's story frame. Each story beside account.tsx and its split
+// modules renders the menu where the product does.
 
 type SessionUser = components["schemas"]["MeResponse"]["user"];
 
@@ -44,10 +44,9 @@ export function TopBarTrail({ children }: Readonly<{ children: ReactNode }>) {
       <main className="main">
         <header className="topbar">
           <div className="topbar-lead" />
-          <div
-            className="topbar-searchslot"
-            style={{ minInlineSize: "var(--controlHeight)" }}
-          />
+          <div className="topbar-searchslot">
+            <span className="topbar-search" aria-hidden />
+          </div>
           <div className="topbar-trail">{children}</div>
         </header>
         <div className="scroll" />

@@ -57,19 +57,10 @@ export const TopBar: Story = {
 };
 
 /**
- * The panel, open, in the arrangement it ships in.
- *
- * Read top to bottom it is the whole of what this menu is for: who you are —
- * printed HERE because the trigger no longer prints it — the product's one door
- * into settings, the appearance choice, the booking link, help and feedback,
- * and the way out under its own rule.
- *
- * Only ONE row carries a leading glyph, and it is Sign out. The others are
- * words in a list, where a column of icons is decoration that has to be
- * scanned past; the way out is the row nobody wants to hit by accident, so it is
- * the one that earns a second signal beside its label. The chevrons on Theme
- * and Help are not that signal — they say there is a layer behind the row,
- * which is a fact about the control rather than an emblem for it.
+ * The panel, open: who you are, settings, theme, the booking link, help and
+ * feedback, and sign out under its own rule. Only Sign out has a leading glyph,
+ * because it is the row nobody wants to press by accident. A chevron says a
+ * layer is behind its row.
  */
 export const TopBarMenu: Story = {
   name: "Top bar menu",

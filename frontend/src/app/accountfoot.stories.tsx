@@ -12,11 +12,9 @@ import { jsonResponse } from "../testing/story-utils";
 import { SignOutRow } from "./accountfoot";
 
 /**
- * The way out, refused: the server's own words in an alert, in the menu the
- * reader asked from, under a Sign out row that is enabled again.
- *
- * `AccountRelease`, the other half of this file, is drawn where it ships, at
- * the foot of "Shell/Account help and feedback".
+ * Sign out, refused: the server's words in an alert under the row. The row is
+ * enabled again. `AccountRelease` is drawn where it ships, at the foot of
+ * "Shell/Account help and feedback".
  */
 const meta: Meta<typeof SignOutRow> = {
   title: "Shell/Account sign-out",

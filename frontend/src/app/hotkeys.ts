@@ -19,9 +19,8 @@ type Chord = Pick<
 >;
 
 /**
- * ⌘B / Ctrl B, exactly: one platform modifier and no other. Cmd+Shift+B is
- * bold-with-a-selection in most editors, so a chord that merely includes Meta or
- * Ctrl would swallow it.
+ * ⌘B / Ctrl B with one platform modifier and no other. Cmd+Shift+B is bold with
+ * a selection in most editors, and a looser match would swallow it.
  */
 export function isSidebarChord(event: Chord): boolean {
   return (

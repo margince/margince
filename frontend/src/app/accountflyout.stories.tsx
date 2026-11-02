@@ -10,10 +10,9 @@ import {
 import { FlyoutRow } from "./accountflyout";
 
 /**
- * A row of the account menu with its flyout open, at phone width, where the
- * flyout stops being a popover and folds into the menu under the row that
- * opened it. The desktop frames are under "Shell/Account block" and
- * "Shell/Account help and feedback".
+ * The theme row with its flyout open at phone width. There the flyout folds
+ * into the menu under its row. The desktop frames are under "Shell/Account
+ * block" and "Shell/Account help and feedback".
  */
 const meta: Meta<typeof FlyoutRow> = {
   title: "Shell/Account flyout row",

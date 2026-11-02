@@ -18,11 +18,11 @@ import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
-// One lockup at every width: a square mark and the name, with what the
-// installation runs on under it once it has a name of its own.
+// One lockup at every width: a square mark and the name. Once the installation
+// has a name of its own, what it runs on sits under it.
 // A square is the one shape every company's mark fits at one weight.
 // Only the name is the link, and the mark repeats it, so the mark is hidden
-// from assistive tech. shell.css stretches the link over the whole card.
+// from assistive tech. The link covers the whole card (shell.css).
 function BrandBlock() {
   const t = useT();
   // The installation's own name and marks (ADR-0061: one installation, one

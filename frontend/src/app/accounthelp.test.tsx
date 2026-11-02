@@ -27,8 +27,8 @@ vi.mock("../lib/release", async (importOriginal) => {
   };
 });
 
-// A pressed link opens a tab the test runner has no use for; the menu's own
-// handlers still run, because they listen on the bubble path below this.
+// A pressed link would open a tab. The menu's own handlers still run, since
+// they listen on the bubble path.
 const stayHere = (event: MouseEvent) => event.preventDefault();
 
 beforeEach(() => {
@@ -229,8 +229,7 @@ describe("the build at the foot of Help and feedback", () => {
     },
   );
 
-  // A statement, not a row: it goes nowhere, so it is not a menu item and the
-  // keyboard walk ends on the last link above it.
+  // A statement, not a row. The keyboard walk ends on the last link above it.
   it("names a stamped release, outside the menu's items", async () => {
     bundle.release = "v1.4.0";
     const user = userEvent.setup();

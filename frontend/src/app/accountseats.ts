@@ -23,11 +23,9 @@ function isSeatFocusable(element: HTMLElement | null): element is HTMLElement {
 }
 
 /**
- * The next seat a reader can actually stand on, wrapping at both ends.
- *
- * `count * count` keeps the modulus positive for a backwards walk; the loop
- * gives up after one full lap, which is the case where every other row is
- * disabled and the reader stays where they are.
+ * The next seat a reader can stand on, wrapping at both ends. `count * count`
+ * keeps the modulus positive walking back. After one full lap of disabled rows
+ * the reader stays put.
  */
 export function nextSeat(
   seats: readonly (HTMLElement | null)[],
@@ -45,8 +43,8 @@ export function nextSeat(
 }
 
 /**
- * One roving tabstop over a menu's `count` rows, for the account menu and for
- * every menu that flies out of it: Up and Down step, Home and End go to the ends.
+ * One roving tabstop over a menu's `count` rows. Up and Down step, and Home and
+ * End go to the ends.
  */
 export function useRovingSeats(count: number) {
   const rows = useRef<(HTMLElement | null)[]>([]);
