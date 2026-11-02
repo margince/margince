@@ -187,8 +187,8 @@ in the session scratchpad. `.gitignore` already covers the files we know about; 
 kind is still yours to keep out, and to add there.
 
 **Paid lanes are optional in a PR.** Never run `make e2e-ai` or `make e2e-llm` to finish one, and
-never stop to ask if you may: a loop has no one to answer. Name the `stale` or `absent` records in
-the PR body instead. Run a paid lane only when the request asks for it.
+never stop to ask if you may: a loop has no one to answer. In the PR body, list each record and its
+state that `make e2e-ai-report` shows as not `current`. Run a paid lane only if the request asks.
 
 ## Layout
 
