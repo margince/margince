@@ -13304,7 +13304,8 @@ components:
         two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
-        outbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where this colleague wrote to them.}
+        outbound_90d: {type: integer, minimum: 0, description: "Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent."}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d."}
         last_inbound_at: {type: [string, 'null'], format: date-time, description: When they last replied to this colleague. Null means they never have.}
         last_outbound_at: {type: [string, 'null'], format: date-time, description: When this colleague last wrote to them.}
     ContactNetwork:
