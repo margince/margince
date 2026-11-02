@@ -763,16 +763,16 @@ full request path in a log call. It cannot see what you send to other places.
 | Hook | The core calls it |
 |---|---|
 | `LogHandler` | Once, to wrap the root log handler. Every record from every package goes through it |
-| `HTTP` | Once, to wrap every request. It wraps the whole router, inside the panic catch. No request id or principal is on the context yet, `r.RemoteAddr` is still the proxy (the real client address is settled later), and the body is not yet capped |
+| `HTTP` | Once, to wrap every request. It wraps the whole router, inside the panic catch. No request id or `principal` is on the context yet, `r.RemoteAddr` is still the proxy (the real client address is settled later), and the body is not yet capped |
 | `Work` | Around every job (core, extension and scheduler) and every extension delivery. It gets a `Work` (`Kind` is `"job"` or `"subscription"`, then `Name`, the River kind or the subscription's name, and `Unit`) and the `run` to call. `Unit` is set only for a subscription delivery. It is empty for every job, even one your unit owns, whose `Name` is its River kind |
-| `Panic` | When the core catches a panic, at four places: a request or the worker's event listener, any job that panics out of its work, an extension job tick and an extension delivery |
+| `Panic` | When the core catches a panic, at four places: a request or the worker's event handler, any job that panics out of its work, an extension job tick and an extension delivery |
 | `Shutdown` | When the process exits, so the unit can send what it still holds |
 
-A log record that carries a `panic` attribute describes a panic already handed to `Panic`, so do not report it
+A log record that carries a `panic` field describes a panic already handed to `Panic`, so do not report it
 twice. A panic that other code recovers by itself does not reach `Panic`. It reaches your `LogHandler` at
-`Error` level, and nowhere else.
+`Error` level, and in no other way.
 
-A `Work` hook must call `run` on the calling goroutine and return what it returns. The work runs once even if the hook never calls
+A `Work` hook must call `run` in the call itself, not from another thread, and return what it returns. The work runs once even if the hook never calls
 `run`, or panics before it does. If the work panics, the panic reaches its caller as it was, so a job fails
 as it would without the unit.
 
@@ -814,9 +814,9 @@ export const instrument: BrowserInstrument = ({ version, edge }) => ({
 The page calls it once, before the first screen shows. `version` is the page's release. `edge` is the
 path above. It may return nothing, or either hook.
 
-- **`onError`** gets React render errors: one that nothing handled, and one that a screen's error card shows.
+- **`onError`** gets React errors from drawing a screen: one that nothing handled, and one that a screen's error card shows.
   `info.caught` tells them apart. A window `error` or an `unhandledrejection` is not wired. A unit that
-  wants them adds its own listeners. Reporting an error changes nothing on screen.
+  wants them adds its own handlers. Reporting an error changes nothing on screen.
 - **`onNavigate`** gets each change of screen once. It gets the route with ids replaced, such as
   `deals/:id`. It never gets the address or the query.
 
