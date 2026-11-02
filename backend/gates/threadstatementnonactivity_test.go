@@ -256,8 +256,8 @@ func (p threadSQLPackage) parameterSQLSources(name string, target *ast.FuncDecl,
 		return threadSQLSources{opaque: true}
 	}
 	// Every field of one parameter asks for its callers again, so the answer is
-	// kept per reach. Depth is left out: reach already ends every cycle.
-	memoKey := key + ":" + name + ":" + threadSQLReachKey(reached)
+	// kept per reach and depth.
+	memoKey := key + ":" + name + ":" + threadSQLReachKey(reached) + ":" + strconv.Itoa(depth)
 	if sources, ok := p.parameterMemo[memoKey]; ok {
 		return sources
 	}
