@@ -262,9 +262,26 @@ of a core is 1,440 CPU-seconds an hour); every Home read beyond what that
 floor pays for spends the balance, and a spent balance is the worst case
 above.
 
-Every member opening Home at once, through the app's pool of 16 connections:
-no read finished within a minute. 2.15 (B8) is the rule and the test that
-answer it.
+Every member opening Home at once (18 reads, 2 CPUs, 3 ms, the app's pool of
+16 connections): as the code stands, no read finished within a minute; 2.15
+(B8) is the rule and the test that answer it. With that fixed in a temporary
+patch, the burst completes, slowly:
+
+```
+ 18 reads at once, 2 CPUs, 3 ms, no open cases   p50      p90      worst
+ pool of 16                                      39.1 s   45.9 s   46.3 s
+ pool of 4 (predicted p50 about 8 s)             23.7 s   32.3 s   42.8 s
+```
+
+- Each connection holds about 210 MB of private memory during a read (up to
+  314 MB), measured inside the server. 16 of them and the 1 GB shared cache
+  overflow 4 GB: the kernel killed a backend in two of four bursts.
+- A smaller pool avoided the kill and cut p50 from 39 to 24 s, but missed its
+  prediction of about 8 s. A burst is bound by CPU: 18 reads at 1.7 CPU-seconds each on 2
+  CPUs is at least 15 s for the last one, before round trips and the cache
+  misses that memory pressure adds.
+- So the levers for a burst are the CPU seconds per Home read and the reads
+  that never reach the database (the Home cache), not the pool size.
 
 What this says about 10 s:
 
@@ -294,10 +311,15 @@ What the measurements above fit, per Home read:
  T  ≈  k × ( W(scope, history, temperature) + 15 ms × min(c, 200) )
      + r × ( R0 + 8 × min(c, 200) )
 
+ a burst of n reads at once finishes no sooner than
+     n × CPU-seconds per read / CPUs      (+ round trips, + cache misses)
+
  T     the Home read, seconds
  W     database work with no open cases, 2 CPUs, 8 years: p50 1.7 s, p90
        3.4 s warm; the manager's team view the largest; cold adds most past memory
  k     CPU stretch: 1 with 2 CPUs, about 2.2 when credits are spent (0.4 of a core)
+ CPU-seconds per Home read: 1.7 (no cases), 2.4 (cases), 0.9 (address+time,
+       kept plans); private memory per connection during a read: ~210 MB
  c     open duplicate cases in the reader's view (a manager: the team's)
  r     round trip between app and database
  R0    round trips with no open case: 112–434, median 294
@@ -1060,11 +1082,15 @@ connection for its whole run; any step inside it that asks the pool for a
 second connection makes concurrent reads wait on each other once the pool is
 full. Test: a whole first-page read, every lane populated, `mine` and `team`,
 on a pool of one connection, with a short timeout. It must pass; today it does
-not.
+not. A temporary patch made the two paths join the snapshot, and every read
+then ran on one connection. Joining is not the fix for the walk freeze: two
+reads by one reader then failed with "could not serialize access", which is
+why the freeze runs apart. The freeze belongs after the snapshot ends.
 
 B9. Budgets for what a single read cannot show:
 
-- connections held and pool wait under a burst of opens;
+- connections held, pool wait and private memory per connection under a
+  burst of opens;
 - the cold p90 of the manager's team view;
 - the statement text sent per call;
 - server CPU per read, against the floor a burstable server earns;

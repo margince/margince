@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -194,7 +195,7 @@ func TestWorklistConcurrentOpenPoC(t *testing.T) {
 	}
 	close(start)
 	var took []time.Duration
-	timedOut := 0
+	timedOut, failed := 0, 0
 	for range reads {
 		r := <-results
 		if errors.Is(r.err, context.DeadlineExceeded) {
@@ -202,13 +203,18 @@ func TestWorklistConcurrentOpenPoC(t *testing.T) {
 			timedOut++
 			continue
 		}
-		if r.err != nil {
+		if errors.Is(r.err, apperrors.ErrPermissionDenied) || errors.Is(r.err, apperrors.ErrNotFound) {
 			continue // a scope this member may not read
+		}
+		if r.err != nil {
+			t.Logf("%s failed: %v", r.label, r.err)
+			failed++
+			continue
 		}
 		took = append(took, r.took)
 		t.Logf("%s whole=%dms", r.label, r.took.Milliseconds())
 	}
-	t.Logf("reads that did not finish in a minute: %d", timedOut)
+	t.Logf("reads that did not finish in a minute: %d, that failed: %d", timedOut, failed)
 	if len(took) == 0 {
 		return
 	}
