@@ -107,7 +107,9 @@ func foldCapturedMeeting(meetings *activities.Store) capture.MeetingFolder {
 		err := tx.QueryRow(ctx, `
 			SELECT `+auth.ConnectorSeatSQL("d")+`::uuid,
 			       EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = $2 AND ci.user_id::text = `+auth.ConnectorSeatSQL("d")+`)
-			    OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = $2 AND ap.user_id::text = `+auth.ConnectorSeatSQL("d")+`)
+			    OR EXISTS (SELECT 1 FROM activity_participant ap JOIN activity s ON s.id = ap.activity_id
+			                WHERE ap.activity_id = $2 AND ap.user_id::text = `+auth.ConnectorSeatSQL("d")+`
+			                  AND `+auth.ParticipantStandsSQL("ap", "s")+`)
 			  FROM activity d WHERE d.id = $1 AND d.archived_at IS NULL`, duplicate, survivor).Scan(&seat, &onSurvivor)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return false, nil

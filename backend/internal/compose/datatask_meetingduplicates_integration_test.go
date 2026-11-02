@@ -114,8 +114,8 @@ func meetingDuplicatesEstimate(ctx context.Context, t *testing.T, e *integration
 	return count
 }
 
-// Another seat on the copy does not keep it when that seat already imports the
-// survivor with the same posture: retiring the copy loses that seat nothing.
+// Another seat on the copy does not keep it when that seat imports the
+// survivor with the same posture. Retiring the copy loses that seat nothing.
 func TestTheMeetingDuplicatesTaskRetiresACopyWhoseOtherImporterHoldsTheSurvivor(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")

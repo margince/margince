@@ -150,14 +150,14 @@ func (s *Sink) settleMeetingReplay(
 }
 
 // foldOwnDuplicate answers the row this capture is about when the identity
-// resolved to known while this seat's own key also holds a live meeting. The
+// resolved to known (alreadyFiled) while this seat's own key also holds a live meeting. The
 // own row folds onto known. If a human worked it, known folds onto the own row
 // instead, and the own row moves to the record's start. When neither retires
 // cleanly both stay, and the pair is logged.
 func (s *Sink) foldOwnDuplicate(
-	ctx context.Context, tx pgx.Tx, known ids.ActivityID, rec connector.NormalizedRecord,
+	ctx context.Context, tx pgx.Tx, known ids.ActivityID, alreadyFiled bool, rec connector.NormalizedRecord,
 ) (ids.ActivityID, error) {
-	if s.foldMeeting == nil || !rec.CrossDoorIdentity.Stated() {
+	if !alreadyFiled || s.foldMeeting == nil || !rec.CrossDoorIdentity.Stated() {
 		return known, nil
 	}
 	own, found, err := ownLiveMeetingTx(ctx, tx, rec.NaturalKey, actorUserID(ctx))

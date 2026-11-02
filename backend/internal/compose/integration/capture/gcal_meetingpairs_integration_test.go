@@ -81,8 +81,11 @@ func newPairEnv(t *testing.T) *pairEnv {
 	env := newCaptureEnv(t)
 	guest := seatFor(t, env.e, guestColleagueA)
 	seedCaptureRoleFor(t, env.e, guest)
-	p := &pairEnv{env: env, guestSeat: guest, conns: map[string]ids.UUID{},
-		cals: &seatCalendars{owners: map[string]string{"a": captureOwner, "b": guestColleagueA}, feeds: map[string][]map[string]any{}}}
+	cals := &seatCalendars{
+		owners: map[string]string{"a": captureOwner, "b": guestColleagueA},
+		feeds:  map[string][]map[string]any{},
+	}
+	p := &pairEnv{env: env, cals: cals, guestSeat: guest, conns: map[string]ids.UUID{}}
 	stub := p.cals.serve(t)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	api := gcal.NewAPI(stub.Client(), stub.URL)
@@ -150,8 +153,8 @@ func (p *pairEnv) exec(t *testing.T, sql string, args ...any) {
 
 // loseRace leaves what two first syncs racing without the identity lock left:
 // both calendars stored a row, and the organiser's row holds the identity.
-// Both rows are filed under the same records, so only a person's work on a
-// row can keep it.
+// Both rows are filed under the same records, so only human work on a row
+// can keep it.
 func (p *pairEnv) loseRace(t *testing.T, start time.Time) (organiser, guest ids.UUID) {
 	t.Helper()
 	p.book(start)
@@ -166,7 +169,7 @@ func (p *pairEnv) loseRace(t *testing.T, start time.Time) (organiser, guest ids.
 	return organiser, guest
 }
 
-// workedByHand records an outcome a person set on the row.
+// workedByHand records an outcome a human set on the row.
 func (p *pairEnv) workedByHand(t *testing.T, meeting ids.UUID) {
 	t.Helper()
 	p.exec(t, `UPDATE activity SET meeting_status = 'held' WHERE id = $1`, meeting)
@@ -204,12 +207,10 @@ func TestTwoSeatsFirstSyncsRacingFileOneMeeting(t *testing.T) {
 	ready.Add(1)
 	errs := make(chan error, 2)
 	for _, label := range []string{"a", "b"} {
-		done.Add(1)
-		go func() {
-			defer done.Done()
+		done.Go(func() {
 			ready.Wait()
 			errs <- p.env.registry.SyncOnce(principal.WithWorkspaceID(context.Background(), p.env.e.WS), p.conns[label])
-		}()
+		})
 	}
 	ready.Done()
 	done.Wait()
@@ -254,7 +255,7 @@ func TestAMovedMeetingSyncedByTheGuestFirstFoldsOnTheOrganisersSync(t *testing.T
 	}
 }
 
-// A person recorded the outcome on the guest's row, so that row stays and the
+// A human recorded the outcome on the guest's row, so that row stays and the
 // organiser's row is retired onto it.
 func TestAHumanWorkedOwnRowSurvivesAndTakesTheCopy(t *testing.T) {
 	p := newPairEnv(t)
@@ -272,7 +273,7 @@ func TestAHumanWorkedOwnRowSurvivesAndTakesTheCopy(t *testing.T) {
 	}
 }
 
-// Both rows carry a person's work, so neither retires and both stay.
+// Both rows carry human work, so neither retires and both stay.
 func TestAPairNeitherSideCanRetireStaysTwo(t *testing.T) {
 	p := newPairEnv(t)
 	start := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)

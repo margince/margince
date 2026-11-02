@@ -101,9 +101,9 @@ type calendarCopy struct {
 	payload  []byte
 }
 
-// retireCalendarCopy folds one copy onto the meeting a sync for its seat
-// binds the event to today, when that is another live row and retiring the
-// copy loses nothing.
+// retireCalendarCopy folds one copy onto the meeting its seat's sync binds the
+// event to today. It does so only for another live row, and only when nothing
+// is lost.
 func retireCalendarCopy(ctx context.Context, tx pgx.Tx, meetings *activities.Store, c calendarCopy) (bool, error) {
 	if c.seat == nil {
 		return false, nil
