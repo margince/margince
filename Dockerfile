@@ -405,3 +405,7 @@ COPY scripts/deploy/ /deploy/
 COPY config/margince.example.yaml /config/margince.example.yaml
 COPY .env.example /margince.env.example
 COPY LICENSE /LICENSE
+
+# Exported as files and never run, so no account is named; a non-root id keeps
+# a `docker run` of it from starting as root.
+USER 65532:65532
