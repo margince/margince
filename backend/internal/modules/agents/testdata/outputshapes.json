@@ -16289,6 +16289,9 @@
                 "match": {
                   "type": "object",
                   "properties": {
+                    "identifier_match": {
+                      "type": "string"
+                    },
                     "snippet": {
                       "type": "string"
                     },

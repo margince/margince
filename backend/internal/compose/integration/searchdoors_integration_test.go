@@ -11,6 +11,7 @@ package integration
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -18,7 +19,8 @@ import (
 
 type routeSearchPage struct {
 	Data []struct {
-		ID string `json:"id"`
+		ID              string `json:"id"`
+		IdentifierMatch string `json:"identifier_match"`
 	} `json:"data"`
 	TypesWithMore *[]string `json:"types_with_more"`
 }
@@ -27,7 +29,8 @@ type toolSearchPage struct {
 	Records []struct {
 		ID    string `json:"id"`
 		Match *struct {
-			WorksAt *struct {
+			IdentifierMatch string `json:"identifier_match"`
+			WorksAt         *struct {
 				CompanyID string `json:"company_id"`
 			} `json:"works_at"`
 		} `json:"match"`
@@ -258,5 +261,23 @@ func TestBothDoorsOfferTheSameNearMatchesWhenNothingMatches(t *testing.T) {
 	}
 	if len(tool.Notes) != 1 || tool.Notes[0].Code != "near_matches_only" {
 		t.Errorf("the tool notes are %v, want near_matches_only", tool.Notes)
+	}
+}
+
+func TestBothSearchDoorsCarryTheSameIdentifierEvidence(t *testing.T) {
+	d := newTwoDoors(t, "identifier-search-doors", "read")
+	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Unrelated exact", "emails": []AnyMap{{"email": "a_b@example.com", "is_primary": true}}})
+	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Unrelated prefix", "emails": []AnyMap{{"email": "a_b@example.com.au", "is_primary": true}}})
+	query := "a_b@example.com"
+	route := decodedAs[routeSearchPage](t, d.rest(t, "GET", "/v1/search?q="+url.QueryEscape(query)+"&types=contact&limit=10", nil))
+	tool := decodedAs[toolSearchPage](t, d.tool(t, "search_records", map[string]any{"q": query, "record_types": []string{"contact"}, "limit": 10}))
+	sameRanking(t, "identifier tiers", route.ids(), tool.ids())
+	if len(route.Data) != 2 || len(tool.Records) != 2 {
+		t.Fatalf("route=%+v tool=%+v", route, tool)
+	}
+	for i, want := range []string{"exact", "prefix"} {
+		if route.Data[i].IdentifierMatch != want || tool.Records[i].Match == nil || tool.Records[i].Match.IdentifierMatch != want {
+			t.Fatalf("hit %d evidence differs: route=%+v tool=%+v", i, route, tool)
+		}
 	}
 }
