@@ -73,7 +73,7 @@ func tablesRead(statements ...string) []string {
 func checkReads() string {
 	arg := func(any) int { return 1 }
 	at := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
-	return assuranceSubjectsQuery(at, "''", nil, arg) + assuranceSignalSubjectsQuery(at, arg)
+	return assuranceSubjectsQuery(at, "''", nil, "false", arg) + assuranceSignalSubjectsQuery(at, arg)
 }
 
 // undecidedFamilies answers two lists. undecided holds the types, in a family

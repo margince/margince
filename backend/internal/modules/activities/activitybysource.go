@@ -26,7 +26,7 @@ func (s *Store) ActivityIDBySource(ctx context.Context, system, sourceID string)
 	var found ids.ActivityID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
-			`SELECT id FROM activity WHERE source_system = $1 AND source_id = $2`, system, sourceID).Scan(&found)
+			`SELECT id FROM activity WHERE activity_thread_available(thread_key) AND source_system = $1 AND source_id = $2`, system, sourceID).Scan(&found)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

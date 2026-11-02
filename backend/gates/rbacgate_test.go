@@ -205,6 +205,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/capture:NoiseMailToRedact":              "retention sweep read: noise mail past its redaction window",
 	"internal/modules/capture:ClaimNoiseMailForRedactionTx":   "retention sweep lock inside the caller's transaction, re-asking the redaction predicate of one message the same sweep selected",
 	"internal/modules/capture:StalledBacklogSeats":            "sweep read: which seats have pending dispositions nothing has touched. It answers seat ids and counts, never an address or a subject, and its only caller runs under the verdict pass's system principal to tell each seat their own backlog stopped moving",
+	"internal/modules/capture:PurgeActivityProjectionsTx":     "erasure projection purge inside the authorized caller transaction over the activities that same erasure selected",
 	"internal/modules/capture:PurgeRawCaptureTx":              "retention sweep purge inside the caller's transaction, over activities the same sweep selected",
 	"internal/modules/capture:ReconcileDeclined":              "sweep reconciling declined proposals back onto their pending rows",
 	"internal/modules/capture:ReleaseBudget":                  "returns the slot ReserveBudget took, same sweep",
@@ -414,24 +415,6 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:CompanyNameCandidates":        "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named companies and the signature evidence naming them",
 	"internal/modules/privacy:EvaluateInstallation":          "the retention pass: its one production caller is the privacy-retention River worker (compose/jobs_privacyretention.go), which builds a PrincipalSystem actor onto the context before the call, so no human principal exists here to admit. Gating it on one would be wrong rather than merely redundant — a retention obligation outlives any seat, and an installation whose reviewer lost access must still age out the data it promised to",
 
-	// comms: delivery machinery, not the message. StageTx runs inside the
-	// caller's own transaction, alongside the activity write that already
-	// passed the gated activity:create check — the outbound send itself was
-	// admitted there. But activity:create alone would only prove the actor
-	// may create an activity, not that the delivery may send through THEIR
-	// mailbox — the security-relevant fact this store owns — so StageTx
-	// itself derives user_id from the authenticated principal on ctx
-	// (storekit.Actor) and fails closed when none resolves to an app_user;
-	// no caller input can name a different sender. Object-RBAC has nothing
-	// left to narrow once that derivation stands. Load/RecordSent/Park/
-	// ParkTransmitted/RecordFailure/RecordDeferral/MarkInFlight/ClearInFlight
-	// are the dispatcher's own state-machine steps, driven by the outbox/River worker
-	// under the system principal with no human principal in the call at all;
-	// nothing here discloses a record to anyone — the reason each of them
-	// writes is an operator-facing transport diagnosis, not tenant data.
-	"internal/modules/comms:StageTx":                      "derives user_id from the authenticated principal (storekit.Actor) and fails closed with no caller-suppliable override; the activity:create check on the shared transaction admits the send action itself, but the sending IDENTITY is enforced here, in the store, not inherited from that check",
-	"internal/modules/comms:StageChannelTx":               "the channel-shaped twin of StageTx and the same posture: it derives user_id from the authenticated principal (stagingUser, shared with StageTx so neither can grow a caller-suppliable override) and runs inside the caller's already-gated activity transaction",
-	"internal/modules/comms:StageControllerTx":            "the INSTALLATION sending in its own name, so there is no human identity to derive and no seat to check: the caller is a compose seam acting for the system principal, and what constrains the write instead is the registered template — an unregistered key, a placeholder that disagrees with the material, and an absent registry are all refused before any row is written. Admission for the underlying act happened where the timeline activity was logged, on the same transaction",
 	"internal/modules/comms:RecordDirectedExecutionTx":    "stamps a delivery with the decision it goes out under, on the caller's transaction, immediately after that decision was checked and spent. The gate that matters already ran and could not be moved here: directing a send needs auth.RequireHuman AND communication_exception:create, and both are consent's to check because consent owns the instruction row — this module cannot see it. What this writes is a marker naming an instruction the same transaction just consumed, and the database refuses a marker naming anything else (the FK) or a second delivery naming one instruction (the unique index). A caller reaching this without an instruction to name writes nothing, because there is no id to write",
 	"internal/modules/comms:ClearPayloadRef":              "retires spent one-time link material, called by the dispatcher under the system principal after the relay has taken the message or the delivery reached a terminal state. It only ever NULLs a reference — there is no read, no other column and nothing a caller could name — and gating it on a human would leave live credentials standing whenever a job, rather than a human, closed the send",
 	"internal/modules/comms:ExpiredControllerPayloads":    "the read half of ClearPayloadRef's write, and the same posture: the payload sweep runs under the system principal on a cadence, so there is no human seat to check, and it returns delivery IDs only — no address, no body, no material. What it names is one-time link material past its own expiry, which is a fact about the clock rather than about any subject, and gating it on a human would leave live credentials standing exactly when a job rather than a human is the only thing looking",

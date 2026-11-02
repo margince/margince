@@ -102,7 +102,7 @@ func (s *PendingStore) AwaitingReview(ctx context.Context, limit int) ([]Pending
 			   -- still answer for them on their own Senders page.
 			   AND EXISTS (
 			     SELECT 1 FROM activity a
-			      WHERE a.id = p.activity_id AND a.audience = 'workspace'
+			      WHERE activity_thread_available(a.thread_key) AND a.id = p.activity_id AND a.audience = 'workspace'
 			        AND a.restricted_at IS NULL)
 			   -- Only a mailbox owner who can be asked: the offer is theirs
 			   -- alone, and staging refuses it for anybody else.

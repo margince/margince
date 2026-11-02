@@ -52,3 +52,5 @@
 1793594630_home_reads_are_cached_behind_an_access_fence.up.sql | * | the trigger functions advance one counter row in the new home_read_fence table and rewrite no existing row; the one INSERT seeds that singleton row in the table this migration creates
 1793612292_the_home_fence_moves_only_when_reach_narrows.up.sql | * | the trigger functions advance the one home_read_fence row and rewrite no existing row; the dropped columns are on the table of cached answers and the one counter row
 1793612292_the_home_fence_moves_only_when_reach_narrows.down.sql | *, home_read_cache | the restored trigger functions advance the one home_read_fence row and rewrite no existing row; the added columns carry a constant default; the DELETE drops the cached receipts, per-reader derived state
+
+1793602000_thread_subject_boundaries.up.sql | * | the source-erasure trigger changes only the one future basis row being updated; this migration creates empty repair ledgers and comparison metadata, and rewrites no existing domain rows

@@ -278,7 +278,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	var gone bool
 	err := tx.QueryRow(ctx, `
 		SELECT kind, thread_key, archived_at IS NOT NULL OR restricted_at IS NOT NULL
-		  FROM activity WHERE id = $1`, source).Scan(&kind, &key, &gone)
+		  FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, source).Scan(&kind, &key, &gone)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && gone) {
 		return nil, fmt.Errorf("compose: the conversation this commitment was read from is gone: %w",
 			apperrors.ErrNotFound)

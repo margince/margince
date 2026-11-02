@@ -36,7 +36,7 @@ func (s *Store) restoreRequestTask(ctx context.Context, tx pgx.Tx, task crmcontr
 		return current, false, nil
 	}
 	var adopted bool
-	if err := tx.QueryRow(ctx, "SELECT "+storekit.HumanWroteActivityClause("a")+" FROM activity a WHERE a.id=$1", id).Scan(&adopted); err != nil {
+	if err := tx.QueryRow(ctx, "SELECT "+storekit.HumanWroteActivityClause("a")+" FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id=$1", id).Scan(&adopted); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	if !pending && !adopted {

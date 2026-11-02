@@ -148,7 +148,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			      ELSE NOT EXISTS (
 				SELECT 1 FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at -- occurred_at raw: since the dismissal, a window's lower edge
+				WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.occurred_at > bi.state_at -- occurred_at raw: since the dismissal, a window's lower edge
 				  -- Not after this instant. A future-dated activity has not
 				  -- happened, so treating it as "the deal moved" brings a
 				  -- dismissed deal back for something still to come — and the
@@ -186,7 +186,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 			WHERE a.kind = 'task' AND NOT a.is_done
-			  AND a.archived_at IS NULL AND a.assignee_id = $%d AND %s))`, userPos, userPos, activities.CurrentTaskClause("a", now, identities, arg))
+			  AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.assignee_id = $%d AND %s))`, userPos, userPos, activities.CurrentTaskClause("a", now, identities, arg))
 	q += " ORDER BY d.id"
 
 	rows, err := tx.Query(ctx, q, args...)
@@ -239,7 +239,7 @@ func briefEvidenceRows(
 	overnightSQL := fmt.Sprintf(`
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
-		WHERE a.archived_at IS NULL
+		WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  AND ($%[2]d::timestamptz IS NULL OR a.occurred_at > $%[2]d) -- occurred_at raw: since the last view of the reader, a window edge
 		  -- Bounded at the cutoff, the way the dismissal filter above is: a
 		  -- future-dated row has not happened, so counting it as overnight

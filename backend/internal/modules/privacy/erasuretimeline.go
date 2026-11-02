@@ -145,6 +145,9 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	if err != nil {
 		return nil, err
 	}
+	if err := e.purgeErasedActivityProjections(ctx, tx, redacted); err != nil {
+		return nil, err
+	}
 	if err := clearActivityCustomValues(ctx, tx, redacted); err != nil {
 		return nil, err
 	}

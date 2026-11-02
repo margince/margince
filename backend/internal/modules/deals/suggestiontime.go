@@ -27,10 +27,10 @@ func suggestionSourceTimes(ctx context.Context, tx pgx.Tx, evidence []Suggestion
 			query = `SELECT ` + storekit.CitedActivityStamp("s.evidence") + `, ` + storekit.CitedActivityTime("s.evidence") + `
 		 FROM signal s WHERE s.id = $1 AND s.archived_at IS NULL`
 		case EvidenceMeeting:
-			query = `SELECT a.occurred_at, ` + occurredday.StartSQL("a") + ` FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL`
+			query = `SELECT a.occurred_at, ` + occurredday.StartSQL("a") + ` FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
 		case EvidenceAttachment:
 			query = `SELECT a.occurred_at, ` + occurredday.StartSQL("a") + ` FROM attachment at JOIN activity a ON a.id = at.activity_id
- WHERE at.id = $1 AND at.archived_at IS NULL AND a.archived_at IS NULL`
+ WHERE at.id = $1 AND at.archived_at IS NULL AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
 		default:
 			return nil, false, nil
 		}

@@ -138,7 +138,7 @@ func (s *Store) MeetingRoom(ctx context.Context, meetingID ids.UUID) (room Meeti
 	var attendees []byte
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, fmt.Sprintf(`SELECT %s FROM activity a
-			WHERE a.id = $%d AND %s AND %s`, columns, meeting, activityLive, orUnbounded(scope)),
+			WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND %s AND %s`, columns, meeting, activityLive, orUnbounded(scope)),
 			args...).Scan(&dealID, &attendees)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

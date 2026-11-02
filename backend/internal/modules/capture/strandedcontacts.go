@@ -90,7 +90,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			         WHERE l.entity_type = 'contact' AND l.contact_id = p.id
 			           AND a.captured_by LIKE 'connector:%'
 			           AND lower(btrim(coalesce(a.counterparty_email, ''))) = pe.email
-			           AND a.archived_at IS NULL AND a.restricted_at IS NULL
+			           AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
 			         ORDER BY a.occurred_at DESC, a.id DESC
 			         LIMIT 1)
 			  FROM contact p

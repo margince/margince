@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 348 |
-| Columns | 4112 |
-| Foreign keys | 569 |
+| Tables | 355 |
+| Columns | 4182 |
+| Foreign keys | 577 |
 | Owning areas | 37 |
 
 ## The 12 records everything else hangs off
@@ -42,7 +42,7 @@ Ranked by how many foreign keys point at them.
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 150 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 43 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 47 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 46 | 27 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 47 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
@@ -99,7 +99,7 @@ erDiagram
 | [assignments](assignments.md) | 2 |
 | [assurance](assurance.md) | 9 |
 | [automation](automation.md) | 3 |
-| [capture](capture.md) | 28 |
+| [capture](capture.md) | 35 |
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
@@ -133,7 +133,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 69 | 43 |
+| [`activity`](activities.md#activity) | activities | 69 | 47 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -141,7 +141,7 @@ erDiagram
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
 | [`activity_link`](activities.md#activity_link) | activities | 9 | 0 |
-| [`activity_mail_reference`](activities.md#activity_mail_reference) | activities | 3 | 0 |
+| [`activity_mail_reference`](activities.md#activity_mail_reference) | activities | 4 | 0 |
 | [`activity_meeting_attendee_repair`](compose.md#activity_meeting_attendee_repair) | compose | 4 | 0 |
 | [`activity_meeting_history`](activities.md#activity_meeting_history) | activities | 13 | 0 |
 | [`activity_meeting_rsvp_backfill`](compose.md#activity_meeting_rsvp_backfill) | compose | 3 | 0 |
@@ -205,7 +205,7 @@ erDiagram
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |
 | [`capture_freemail_domain`](capture.md#capture_freemail_domain) | capture | 5 | 0 |
-| [`capture_import`](capture.md#capture_import) | capture | 12 | 0 |
+| [`capture_import`](capture.md#capture_import) | capture | 13 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
 | [`capture_party_admission_cursor`](capture.md#capture_party_admission_cursor) | capture | 4 | 0 |
@@ -216,6 +216,13 @@ erDiagram
 | [`capture_sweep_run`](capture.md#capture_sweep_run) | capture | 8 | 0 |
 | [`capture_sync_state`](capture.md#capture_sync_state) | capture | 11 | 0 |
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
+| [`capture_thread_barrier`](capture.md#capture_thread_barrier) | capture | 4 | 0 |
+| [`capture_thread_invalidation`](capture.md#capture_thread_invalidation) | capture | 12 | 0 |
+| [`capture_thread_pending`](capture.md#capture_thread_pending) | capture | 3 | 0 |
+| [`capture_thread_repair`](capture.md#capture_thread_repair) | capture | 14 | 3 |
+| [`capture_thread_repair_node`](capture.md#capture_thread_repair_node) | capture | 25 | 0 |
+| [`capture_thread_reply`](capture.md#capture_thread_reply) | capture | 2 | 0 |
+| [`capture_thread_topic`](capture.md#capture_thread_topic) | capture | 6 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
 | [`capture_trace`](capture.md#capture_trace) | capture | 12 | 0 |
 | [`channel_connection`](capture.md#channel_connection) | capture | 12 | 0 |
@@ -224,7 +231,7 @@ erDiagram
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
 | [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
-| [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
+| [`communication_basis`](consent.md#communication_basis) | consent | 14 | 1 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |

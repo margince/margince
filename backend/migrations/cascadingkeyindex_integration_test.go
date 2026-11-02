@@ -23,8 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
@@ -55,11 +53,7 @@ func TestEveryCascadingKeyCanFindItsChildren(t *testing.T) {
 	}
 }
 
-// TestTheCascadeIndexQueryNoticesAWithdrawnIndex takes an index the schema is
-// relying on away again, inside a transaction it rolls back. An empty result is
-// the one way the gate above can fail short — a `covered` clause that matches
-// everything reads as a clean schema — so the discrimination is proven rather
-// than assumed.
+// The live query must distinguish one indexed key from the same key without its index.
 func TestTheCascadeIndexQueryNoticesAWithdrawnIndex(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -76,37 +70,26 @@ func TestTheCascadeIndexQueryNoticesAWithdrawnIndex(t *testing.T) {
 		}
 	}()
 
-	const anIndexACascadeUses = `
-SELECT i.indexrelid::regclass::text, fk.child || '.' || fk.conname
-  FROM (SELECT c.conrelid AS childoid, c.conrelid::regclass::text AS child, c.conkey, c.conname,
-               (SELECT string_agg(att.attname, ', ' ORDER BY u.ord)
-                  FROM unnest(c.conkey) WITH ORDINALITY AS u(k, ord)
-                  JOIN pg_attribute att ON att.attrelid = c.conrelid AND att.attnum = u.k) AS cols
-          FROM pg_constraint c
-          JOIN pg_class t ON t.oid = c.conrelid
-          JOIN pg_namespace n ON n.oid = t.relnamespace
-         WHERE c.contype = 'f' AND c.confdeltype = 'c' AND n.nspname = 'public') fk
-  JOIN pg_index i ON i.indrelid = fk.childoid
- WHERE i.indisvalid AND i.indpred IS NULL AND NOT i.indisprimary
-   AND (SELECT array_agg(k ORDER BY ord) FROM unnest(fk.conkey) WITH ORDINALITY AS u(k, ord))
-       = (SELECT array_agg(a ORDER BY ord)
-            FROM unnest(i.indkey::int2[]) WITH ORDINALITY AS x(a, ord)
-           WHERE ord <= array_length(fk.conkey, 1))
- ORDER BY 1 LIMIT 1`
-
-	var index, key string
-	if err := tx.QueryRow(ctx, anIndexACascadeUses).Scan(&index, &key); err != nil {
-		t.Fatalf("finding an index a cascade uses: %v", err)
+	for _, statement := range []string{
+		`CREATE TABLE cascade_index_probe_parent (id uuid PRIMARY KEY)`,
+		`CREATE TABLE cascade_index_probe_child (id uuid PRIMARY KEY, parent_id uuid CONSTRAINT cascade_index_probe_fk REFERENCES cascade_index_probe_parent(id) ON DELETE CASCADE)`,
+		`CREATE INDEX cascade_index_probe_parent_lookup ON cascade_index_probe_child(parent_id)`,
+	} {
+		if _, err := tx.Exec(ctx, statement); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if _, err := tx.Exec(ctx, "DROP INDEX "+pgx.Identifier{index}.Sanitize()); err != nil {
-		t.Fatalf("dropping %s: %v", index, err)
+	const key = "cascade_index_probe_child.cascade_index_probe_fk"
+	if uncovered := uncoveredIn(ctx, t, tx, testdb.CascadingKeys); slices.ContainsFunc(uncovered, func(u testdb.UncoveredKey) bool { return u.Constraint == key }) {
+		t.Fatalf("indexed probe key is reported uncovered: %s", key)
+	}
+	if _, err := tx.Exec(ctx, `DROP INDEX cascade_index_probe_parent_lookup`); err != nil {
+		t.Fatal(err)
 	}
 
 	uncovered := uncoveredIn(ctx, t, tx, testdb.CascadingKeys)
 	if !slices.ContainsFunc(uncovered, func(u testdb.UncoveredKey) bool { return u.Constraint == key }) {
-		t.Errorf("dropped %s, the only index serving the cascade on %s, and the query still "+
-			"reported it covered — it is matching something other than a usable index, so a "+
-			"schema with no index at all would read as clean", index, key)
+		t.Errorf("withdrew the probe key's only index, but the query still reports %s covered", key)
 	}
 }
 

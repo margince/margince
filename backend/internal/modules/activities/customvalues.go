@@ -87,7 +87,7 @@ func withCustomValues(ctx context.Context, tx pgx.Tx, active []fieldcatalog.Colu
 		return nil
 	}
 	found, err := tx.Query(ctx,
-		`SELECT id`+storekit.SelectSuffix(active)+` FROM activity WHERE id = ANY($1) AND restricted_at IS NULL`, readable)
+		`SELECT id`+storekit.SelectSuffix(active)+` FROM activity WHERE activity_thread_available(thread_key) AND id = ANY($1) AND (restricted_at IS NULL AND activity_thread_available(thread_key))`, readable)
 	if err != nil {
 		return err
 	}

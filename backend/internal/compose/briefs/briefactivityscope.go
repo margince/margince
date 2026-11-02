@@ -74,7 +74,7 @@ func servedActivityRefsSQL(ctx context.Context, arg func(any) int, items string)
 	}
 	with = fmt.Sprintf(`WITH served_activity AS MATERIALIZED (
 		SELECT ev_a.id FROM activity ev_a
-		 WHERE ev_a.archived_at IS NULL AND ev_a.id IN (
+		 WHERE activity_thread_available(ev_a.thread_key) AND (ev_a.archived_at IS NULL AND activity_thread_available(ev_a.thread_key)) AND ev_a.id IN (
 		        SELECT ref.id FROM brief_item ri, unnest(ri.evidence_ids) AS ref(id) WHERE %[1]s
 		        UNION
 		        SELECT rl.activity_id FROM brief_item ri

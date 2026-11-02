@@ -44,7 +44,7 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = ANY($1)
 		   AND a.kind = 'email'
-		   AND a.archived_at IS NULL AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
+		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
 		   AND `+relstrength.WrittenByHumanSQL("a")+`
 		   `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		 ORDER BY l.deal_id, a.occurred_at DESC, a.id DESC`, dealIDs)

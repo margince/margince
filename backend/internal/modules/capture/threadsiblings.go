@@ -117,7 +117,7 @@ func undecidedSiblingsTx(
 		  FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
 		 WHERE a.thread_key = $1
-		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
 		   AND (i.verdict_status IS NULL OR i.verdict_status = $3)
 		 ORDER BY a.occurred_at, a.id
 		 LIMIT $4`, threadKey, user, VerdictPending, threadSiblingBatch)

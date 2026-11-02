@@ -190,7 +190,7 @@ func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSugge
 			SELECT a.id, a.kind, coalesce(a.subject, ''), ` + tagSuggestBodySQL("a") + `, a.occurred_at,
 			       ` + tagSuggestContentDigestSQL("a") + `, ` + tagSuggestReadersSQL("a") + `
 			  FROM activity a
-			 WHERE ` + tagScoutCitable("a") + `
+			 WHERE activity_thread_available(a.thread_key) AND ` + tagScoutCitable("a") + `
 			   AND ` + arg(now.Add(-tagScoutWindow)) + ` < a.occurred_at -- occurred_at raw: the scout window's lower edge
 			   AND ` + occurredday.BegunSQL("a", arg(now)) + `
 			   AND EXISTS (SELECT 1 FROM activity_link l

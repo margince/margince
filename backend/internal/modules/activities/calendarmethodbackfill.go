@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -145,7 +146,7 @@ func SetCalendarMethodTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, meth
 		return false, fmt.Errorf("activities: setting the calendar method of %s: %w", id, err)
 	}
 	if tag.RowsAffected() != 1 {
-		return false, nil
+		return false, fmt.Errorf("calendar metadata changed; retry this correction: %w", apperrors.ErrConflict)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID,
 		map[string]any{auditFieldCalendarMethod: nil},

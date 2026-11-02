@@ -49,7 +49,7 @@ import (
 func ClassifyBacklogPredicate(rulesetParam string) string {
 	return `capture_label IS NULL
 	  AND captured_by LIKE 'connector:%' AND kind = 'email'
-	  AND archived_at IS NULL
+	  AND archived_at IS NULL AND activity_thread_available(thread_key)
 	  -- A limited message is not labelled. The label is derived from the
 	  -- message's subject and body and shown on a worklist the message's own
 	  -- audience does not bound, so labelling one is that message's content on
@@ -146,7 +146,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 			             AND p.status = ANY($2)),
 			  (`+ClassifyBacklogPredicate("$3")+`)
 			FROM activity
-			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses(), classifyRuleset)
+			WHERE activity_thread_available(thread_key) AND id = $1`, id, pipelinetrace.OpenDispositionStatuses(), classifyRuleset)
 		if err := row.Scan(&out.HasContactLink, &label, &threadKey, &kind, &capturedBy,
 			&archived, &audienceLimited, &declined, &senderUndecided, &eligible); err != nil {
 			return err

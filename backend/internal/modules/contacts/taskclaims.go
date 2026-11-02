@@ -93,8 +93,8 @@ func taskClaimsStatement(ctx context.Context, named []ids.UUID, identity string)
  SELECT c.id, c.contact_id, c.source_activity_id, c.task_activity_id, pr.full_name, c.status, c.evidence_fingerprint
  FROM task_claims c
  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
- JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
- LEFT JOIN activity task ON task.id = c.task_activity_id AND task.archived_at IS NULL
+ JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+ LEFT JOIN activity task ON task.id = c.task_activity_id AND (task.archived_at IS NULL AND activity_thread_available(task.thread_key))
  WHERE (%s) AND a.id IN (SELECT id FROM readable_claim_activity) AND (%s)
  AND (c.task_activity_id IS NULL OR task.id IN (SELECT id FROM readable_claim_activity))
  ORDER BY c.task_activity_id, pr.full_name, c.id`, identity, taskPos, readable, scope, renewal), args, nil

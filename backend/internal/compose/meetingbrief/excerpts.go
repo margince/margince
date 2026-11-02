@@ -52,8 +52,8 @@ const excerptQuery = `
 	SELECT a.id, COALESCE(a.subject, ''), COALESCE(a.direction, ''), a.occurred_at,
 	       left(COALESCE(a.body, ''), %[3]d)
 	FROM activity a
-	WHERE a.id = ANY($%[2]d)
-	  AND a.archived_at IS NULL
+	WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%[2]d)
+	  AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 	  AND %[1]s
 	ORDER BY a.occurred_at`
 
