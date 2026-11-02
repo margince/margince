@@ -107,14 +107,10 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   );
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
-  // The saved drawer stays open for more edits, so close it before the page
-  // behind it is used again.
-  //
-  // Escape asks before closing while any unsaved claim is still held, and a
-  // claim can outlive the Save button it belongs to: the claim is released in
-  // an unmount cleanup, and under load the ask wins the race often enough to
-  // red the lane. There is nothing to discard, since the save landed above, so
-  // take the ask when it comes rather than assuming it will not.
+  // Close the saved drawer before the page behind it is used again. Escape
+  // asks first while an unsaved claim is held, and a claim can outlive its
+  // Save button because the release runs on unmount. Nothing needs
+  // discarding, so take the ask when it comes. The product gap is #9931.
   await expect(
     page.getByRole("button", { name: "Speichern", exact: true }),
   ).toBeHidden();
