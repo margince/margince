@@ -227,6 +227,9 @@ var plainPools = []struct{ prefix, list string }{
 	{"docs/tutorials/", "docs/how-to/plain-words.txt"},
 	{"docs/explanation/", "docs/explanation/plain-words.txt"},
 	{"docs/reference/", "docs/reference/plain-words.txt"},
+	// Operations prose is the reference register: the one who runs an
+	// installation reads flags, roles and probes, as a reference reader does.
+	{"docs/operations/", "docs/reference/plain-words.txt"},
 	{"README.md", plainWordsFile},
 	{"CONTRIBUTING.md", plainWordsFile},
 	{"SECURITY.md", plainWordsFile},

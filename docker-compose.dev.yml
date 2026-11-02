@@ -185,7 +185,7 @@ services:
 
   redis:
     # 7.2 is the newest Redis the product supports
-    # (docs/reference/system-requirements.md): 7.4 left the BSD license
+    # (docs/operations/system-requirements.md): 7.4 left the BSD license
     # family. renovate.json holds this image below 7.3; digest updates
     # within the 7.2 tag still flow, which is how patch releases arrive.
     image: redis:7.2@sha256:46f15cf64fdef63e483dcda99e74e3d51c017b1175547b6bb874152ee2391aad

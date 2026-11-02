@@ -223,7 +223,9 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [openrouter-routing-fields.md](reference/openrouter-routing-fields.md): each field of a `routing:`
   setting, the default we ship, and region pins.
 - [make-targets.md](reference/make-targets.md): every `make` command.
-- [system-requirements.md](reference/system-requirements.md): what an installation needs, on one
+- [system-requirements.md](operations/system-requirements.md): what an installation needs, on one
+- [install-from-binaries.md](operations/install-from-binaries.md): build the three
+  programs and start them on a host without images.
   machine or on many.
 - [ai-egress.md](reference/ai-egress.md): which AI tasks can send data out of the installation.
   Generated.
