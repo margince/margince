@@ -70,6 +70,7 @@ var memberReferences = map[string]memberReference{
 	"capture_digest.user_id":                   {disposition: referenceRetain},
 	"capture_exclusion.user_id":                {disposition: referenceRetain},
 	"capture_freemail_domain.created_by":       {disposition: referenceRetain},
+	"capture_party_source.user_id":             {disposition: referenceRetain},
 	"capture_import.user_id":                   {disposition: referenceRetain},
 	"capture_owner_identity.user_id":           {disposition: referenceRetain},
 	"capture_owner_identity_withdrawn.user_id": {disposition: referenceRetain},

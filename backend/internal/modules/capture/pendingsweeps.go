@@ -285,7 +285,7 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 		activityIDs); err != nil {
 		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
 	}
-	return nil
+	return purgePartySourcesTx(ctx, tx, activityIDs)
 }
 
 // disownedSenders gathers the addresses the workspace has disowned, and by

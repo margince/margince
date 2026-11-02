@@ -99,6 +99,7 @@ Records, deals and mail in Margince, by page:
 - [Connecting your website](connect-your-website.md): putting a contact form on
   your website, or keeping your own, so each question lands as a lead. WordPress,
   Webflow, Typeform, Tally, Payload and your own server, plus spam and consent.
+- [Other recipients on a conversation](recipients-on-conversations.md): when other recipients and meeting guests become contacts, and how to add a suggested contact.
 - [Capture](capture.md): how email, calendar and chat get in, and what happens
   to a message step by step. The rules that file it against the right contact,
   deal and project. What happens when nothing matches, and what capture refuses

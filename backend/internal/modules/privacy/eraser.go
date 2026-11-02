@@ -11,8 +11,14 @@ package privacy
 // erasing a contact DOES is next door.
 
 import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Eraser executes the shared erase path both the DSR surface and the
@@ -56,6 +62,9 @@ func NewEraser(db *database.DB) *Eraser { return &Eraser{db: db} }
 // the natural-key join those rows are found by.
 func (e *Eraser) WithRawCapturePurger(purge RawCapturePurger) *Eraser {
 	clone := *e
+	if rawCapturePurgerMissing(purge) {
+		purge = nil
+	}
 	clone.purgeRawCaptures = purge
 	return &clone
 }
@@ -75,4 +84,11 @@ func (e *Eraser) WithBlobstore(blob blobstore.Store) *Eraser {
 	clone := *e
 	clone.blob = blob
 	return &clone
+}
+
+func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
+	if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
+		return err
+	}
+	return refuseContactUnderLegalHold(ctx, tx, subject)
 }

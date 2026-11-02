@@ -121,6 +121,7 @@ type Server struct {
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
+	conversationSuggestionHandlers
 	claimHandlers
 	ownershipRequestHandlers
 	dealCommitmentHandlers

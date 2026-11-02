@@ -138,6 +138,11 @@ The app makes this clear: "Archive keeps the record. Anonymize and erase destroy
 
 Anonymize and erase clear different things. An erasure also reaches the first copies of captured messages and the files sent with those messages. It reaches the contact's leads and scores, their unsubscribe links and their Deal Room seats too. Anonymizing leaves all of those.
 
+Both actions remove stored recipient evidence used to add contacts from captured
+conversations. An access package includes only the subject's own addresses from
+messages the requester may share. It excludes other recipients' addresses and
+private folder names.
+
 ### What anonymize and erase do
 **Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.
 

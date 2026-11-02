@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 162666,
+    "tool_catalog_bytes": 162597,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41981,
+    "approx_wire_tokens_total": 41964,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 35809,
-      "input_schema_bytes": 67712,
+      "description_bytes": 35673,
+      "input_schema_bytes": 67779,
       "output_schema_bytes": 49641,
-      "description_plus_input_schema_bytes": 103521
+      "description_plus_input_schema_bytes": 103452
     }
   },
   "tools": {
@@ -8536,7 +8536,7 @@
           "readOnlyHint": true,
           "title": "Read a view"
         },
-        "description": "Read what the record tools do not answer: a record's derived views (company_360, company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each view answers what its REST route answers. Name the view, its id and any of its filters. A view refuses an argument it does not take and names the ones it does.",
+        "description": "Read derived record views, workspace reference lists and reporting objects through their REST routes. Name the view, its id and filters. Unknown arguments are refused with the accepted names.",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -8750,6 +8750,7 @@
                 "contact_360",
                 "contact_case",
                 "contact_cases",
+                "contact_conversation_suggestions",
                 "contact_graph",
                 "contact_strength",
                 "custom_field_live_lists",
@@ -8774,6 +8775,7 @@
                 "latest_site_read",
                 "latest_technical_enrich",
                 "latest_transcript_read",
+                "lead_conversation_suggestions",
                 "lead_disqualify_reasons",
                 "lead_origins",
                 "lead_settings",
