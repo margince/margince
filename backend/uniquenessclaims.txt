@@ -488,7 +488,6 @@ internal/platform/agentvolume/counter.go#func CounterFor
 internal/platform/agentvolume/meter_test.go#var governedCounters
 internal/platform/auth/capturePrivacyCoverage_test.go#func TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate
 internal/platform/auth/edgeread.go#const relationshipObject
-internal/platform/auth/fieldmask.go#func StampWritable
 internal/platform/auth/inheritedscope.go#func probeExistsLive
 internal/platform/auth/inheritedscope.go#func relationshipEndpoints
 internal/platform/auth/inheritedscope.go#var relationshipEndpointColumns

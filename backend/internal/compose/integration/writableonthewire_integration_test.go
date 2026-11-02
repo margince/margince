@@ -230,7 +230,7 @@ func TestARefusedRecordSaysWhy(t *testing.T) {
 	if _, err := e.Contacts.ArchiveContact(e.Admin(), ids.From[ids.ContactKind](mine), nil); err != nil {
 		t.Fatalf("archiving the contact: %v", err)
 	}
-	readSeat := onReadSeat(t, rep)
+	readSeat := onReadSeat(rep, t)
 	viewOnlyRole := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutUpdate(AccountRepPerms, "contact"))
 
 	for _, row := range []struct {
@@ -273,7 +273,7 @@ func withoutUpdate(perms principal.Permissions, object string) principal.Permiss
 }
 
 // onReadSeat is ctx's own principal moved to a read-only seat.
-func onReadSeat(t *testing.T, ctx context.Context) context.Context {
+func onReadSeat(ctx context.Context, t *testing.T) context.Context {
 	t.Helper()
 	p, ok := principal.Actor(ctx)
 	if !ok {

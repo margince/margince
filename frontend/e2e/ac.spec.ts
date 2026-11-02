@@ -3364,6 +3364,12 @@ test.describe("an archived contact opens read-only", () => {
       page,
     }) => {
       await page.emulateMedia({ colorScheme });
+      // A reader who could change it while live: the archive is the refusal.
+      await page.route(/\/v1\/me$/, (route) =>
+        route.fulfill({
+          json: meFixture({ allow: { contact: ["read", "update"] } }),
+        }),
+      );
       await page.route(/\/v1\/contacts\/p-anna$/, (route) =>
         route.fulfill({
           json: {
