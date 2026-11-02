@@ -145,6 +145,105 @@ describe("contactVerdict", () => {
     });
   });
 
+  // The sentence under a moment's heading never points the other way from it.
+  it.each<[ContactMomentRule, Contact360["relationship_changes"], string]>([
+    [
+      "gone_quiet",
+      [
+        {
+          kind: "warmed",
+          at: AS_OF,
+          from_bucket: "weak",
+          to_bucket: "moderate",
+        },
+      ],
+      "The relationship moved from weak to moderate.",
+    ],
+    [
+      "overdue_promise",
+      [{ kind: "replied_after_gap", at: AS_OF, quiet_days: 30 }],
+      "They replied after 30 quiet days.",
+    ],
+    [
+      "re_engaged",
+      [
+        {
+          kind: "cooled",
+          at: AS_OF,
+          from_bucket: "strong",
+          to_bucket: "moderate",
+        },
+      ],
+      "The relationship cooled from strong to moderate.",
+    ],
+  ])(
+    "puts no contrary change under the %s heading",
+    (rule, changes, contrary) => {
+      const verdict = contactVerdict(
+        {
+          ...VIEW,
+          moment: moment(rule),
+          strength: strength("moderate", 54),
+          relationship_changes: changes,
+        },
+        t,
+      );
+      expect(verdict?.word).toBe(t(`contact.moment.rule.${rule}`));
+      expect(verdict?.sentence).toBeDefined();
+      expect(verdict?.sentence).not.toBe(contrary);
+    },
+  );
+
+  it("takes the newest change that agrees with the heading", () => {
+    const verdict = contactVerdict(
+      {
+        ...VIEW,
+        moment: moment("gone_quiet"),
+        strength: strength("moderate", 54),
+        relationship_changes: [
+          {
+            kind: "warmed",
+            at: AS_OF,
+            from_bucket: "weak",
+            to_bucket: "moderate",
+          },
+          {
+            kind: "cooled",
+            at: AS_OF,
+            from_bucket: "strong",
+            to_bucket: "weak",
+          },
+        ],
+      },
+      t,
+    );
+    expect(verdict?.sentence).toBe(
+      "The relationship cooled from strong to weak.",
+    );
+  });
+
+  it("keeps a band move under the band's own reading", () => {
+    const verdict = contactVerdict(
+      {
+        ...VIEW,
+        moment: moment("nothing_needed"),
+        strength: strength("moderate", 54),
+        relationship_changes: [
+          {
+            kind: "warmed",
+            at: AS_OF,
+            from_bucket: "weak",
+            to_bucket: "moderate",
+          },
+        ],
+      },
+      t,
+    );
+    expect(verdict?.sentence).toBe(
+      "The relationship moved from weak to moderate.",
+    );
+  });
+
   it("has no verdict when the moment and the strength are both withheld", () => {
     expect(
       contactVerdict({ ...VIEW, sections_omitted: ["moments", "strength"] }, t),

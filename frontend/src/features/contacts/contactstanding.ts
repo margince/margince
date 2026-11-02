@@ -17,6 +17,7 @@ import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentRule = components["schemas"]["ContactMomentRule"];
+type RelationshipChange = components["schemas"]["RelationshipChange"];
 
 /** The call How it stands draws. */
 export type ContactVerdict = Readonly<{
@@ -58,7 +59,7 @@ export function contactVerdict(
     // relationship's own reading and the two never print one line twice.
     return {
       word: t(`contact.moment.rule.${moment.rule}`),
-      sentence: bandSentence(view, t),
+      sentence: bandSentence(view, t, MOMENT_TONE[moment.rule]),
       tone: MOMENT_TONE[moment.rule],
     };
   }
@@ -86,8 +87,42 @@ export function contactVerdict(
   };
 }
 
-function bandSentence(view: Contact360, t: Translator): string | undefined {
-  const change = view.relationship_changes?.[0];
+// Which way each change moved the relationship.
+const CHANGE_DIRECTION: Readonly<
+  Record<RelationshipChange["kind"], "better" | "worse">
+> = {
+  warmed: "better",
+  replied_after_gap: "better",
+  cooled: "worse",
+  went_quiet: "worse",
+};
+
+// A change may stand under a heading only when it points the same way. Under
+// "Gone quiet", a band that moved up is true and still reads as a
+// contradiction, so the newest change that agrees is used instead.
+function agreesWith(change: RelationshipChange, tone: ReadingTone): boolean {
+  const direction = CHANGE_DIRECTION[change.kind];
+  if (tone === "danger" || tone === "warning") return direction !== "better";
+  if (tone === "success") return direction !== "worse";
+  return true;
+}
+
+/** The newest change that may stand under a heading of this tone. */
+export function changeUnder(
+  view: Contact360,
+  tone: ReadingTone,
+): RelationshipChange | undefined {
+  return view.relationship_changes?.find((candidate) =>
+    agreesWith(candidate, tone),
+  );
+}
+
+function bandSentence(
+  view: Contact360,
+  t: Translator,
+  tone: ReadingTone = "neutral",
+): string | undefined {
+  const change = changeUnder(view, tone);
   if (change) {
     return changeSentence(change, t);
   }

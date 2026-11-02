@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
 import { HowItStands } from "../../design-system/howitstands";
-import { statTone } from "../../design-system/readingtone";
+import { type ReadingTone, statTone } from "../../design-system/readingtone";
 import { StandingDims } from "../../design-system/standingdims";
 import { StrengthRing } from "../../design-system/standingring";
 import { StandingTimeline } from "../../design-system/standingtimeline";
@@ -12,7 +12,7 @@ import { contactTabRoute } from "../../lib/contacttab";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
-import { contactDims, contactVerdict } from "./contactstanding";
+import { changeUnder, contactDims, contactVerdict } from "./contactstanding";
 import { type ContactPeeks, contactPeeks } from "./contactstanding.peeks";
 import {
   type ContactFigure,
@@ -49,7 +49,13 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
       verdict={verdict}
-      hero={<StrengthHero view={view} sentence={verdict.sentence} />}
+      hero={
+        <StrengthHero
+          view={view}
+          sentence={verdict.sentence}
+          tone={verdict.tone}
+        />
+      }
       dims={
         dims.length > 0 ? (
           <StandingDims
@@ -107,11 +113,13 @@ function openFigure(contactId: string, figure: ContactFigure) {
   }
 }
 
-// The caption is the newest change of band, unless the verdict already says it.
+// The caption is the newest change of band that agrees with the heading,
+// unless the verdict already says it.
 function StrengthHero({
   view,
   sentence,
-}: Readonly<{ view: Contact360; sentence?: string }>) {
+  tone,
+}: Readonly<{ view: Contact360; sentence?: string; tone: ReadingTone }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -119,7 +127,7 @@ function StrengthHero({
   if (!strength) {
     return null;
   }
-  const change = view.relationship_changes?.[0];
+  const change = changeUnder(view, tone);
   const caption = change ? changeSentence(change, t) : undefined;
   return (
     <div className="pe-standing-hero">
