@@ -44,21 +44,21 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
   }
 
   it("names four bands, at the boundaries of each", () => {
-    expect(greetingAt(5, "Ada")).toBe("Good morning, Ada.");
-    expect(greetingAt(11, "Ada")).toBe("Good morning, Ada.");
-    expect(greetingAt(12, "Ada")).toBe("Good afternoon, Ada.");
-    expect(greetingAt(17, "Ada")).toBe("Good afternoon, Ada.");
-    expect(greetingAt(18, "Ada")).toBe("Good evening, Ada.");
-    expect(greetingAt(21, "Ada")).toBe("Good evening, Ada.");
-    expect(greetingAt(22, "Ada")).toBe("Working late, Ada.");
-    expect(greetingAt(4, "Ada")).toBe("Working late, Ada.");
+    expect(greetingAt(5, "Ada")).toBe("Good morning, Ada");
+    expect(greetingAt(11, "Ada")).toBe("Good morning, Ada");
+    expect(greetingAt(12, "Ada")).toBe("Good afternoon, Ada");
+    expect(greetingAt(17, "Ada")).toBe("Good afternoon, Ada");
+    expect(greetingAt(18, "Ada")).toBe("Good evening, Ada");
+    expect(greetingAt(21, "Ada")).toBe("Good evening, Ada");
+    expect(greetingAt(22, "Ada")).toBe("Working late, Ada");
+    expect(greetingAt(4, "Ada")).toBe("Working late, Ada");
   });
 
   // The hour is known before the name is. Greeting nobody until /me answers
   // would move the heading under the reader a moment after they read it.
   it("greets the hour with no name at all while the session is in flight", () => {
-    expect(greetingAt(9, null)).toBe("Good morning.");
-    expect(greetingAt(2, null)).toBe("Working late.");
+    expect(greetingAt(9, null)).toBe("Good morning");
+    expect(greetingAt(2, null)).toBe("Working late");
   });
 
   it("draws no line for a reading it was not given", () => {

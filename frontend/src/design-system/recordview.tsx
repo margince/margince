@@ -131,7 +131,7 @@ export function RecordView({
     <div className="record-split">
       {back}
       <div className="record-split-row">
-        <div className="page-pane record-split-details">
+        <div className="page-pane page-pane-sticky record-split-details">
           <RecordHead {...head} />
           {aside && (
             <aside className="record-aside" aria-label={t("record.context")}>

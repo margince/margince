@@ -151,6 +151,9 @@
   .page-zones-panes > .page-zones-aside-column > * {
     width: calc(var(--asideOpenW) - 2 * (var(--padPane) + 1px));
   }
+  .page-zones > .page-zones-aside-column.page-pane-sticky {
+    overflow-y: auto;
+  }
 }
 @media (max-width: 1200px) {
   .page-zones {
@@ -190,6 +193,11 @@
   }
   .page-zones[data-aside="closed"] > .page-zones-main {
     margin-inline-end: 0;
+  }
+  .page-zones > .page-pane-sticky {
+    position: static;
+    max-block-size: none;
+    overflow-y: visible;
   }
 }
 @media (max-width: 720px) {

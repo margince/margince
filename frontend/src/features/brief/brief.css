@@ -209,7 +209,7 @@
   gap: var(--space-6);
   max-width: 70rem;
   margin-inline: auto;
-  padding-block-start: var(--space-10);
+  padding-block-start: var(--space-6);
 }
 .brief-morning > .brief-main {
   gap: var(--space-12);
