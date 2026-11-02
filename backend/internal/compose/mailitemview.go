@@ -5,7 +5,6 @@ package compose
 
 import (
 	"slices"
-	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -13,9 +12,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
-func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *time.Location) string {
+func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *time.Location) (emailview.Item, bool) {
 	if item.Source == crmcontracts.WorklistItemSourceApproval && !slices.Contains(item.Actions, crmcontracts.WorklistItemActions("decide")) {
-		return ""
+		return emailview.Item{}, false
 	}
 	label := ""
 	if item.Subject != nil && item.Subject.Label != nil {
@@ -25,17 +24,17 @@ func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *tim
 		label = *item.Title
 	}
 	if label == "" {
-		return ""
+		return emailview.Item{}, false
 	}
-	lines := []string{mailcopy.OneLine(label)}
+	row := emailview.Item{Title: mailcopy.OneLine(label), Verb: mailWorkAction(item, words)}
 	if item.Detail != nil && *item.Detail != "" {
-		lines = append(lines, mailcopy.OneLine(*item.Detail))
+		row.Lines = append(row.Lines, emailview.Line{Text: mailcopy.OneLine(*item.Detail)})
 	}
 	if item.CauseLabel != nil && *item.CauseLabel != "" {
-		lines = append(lines, mailcopy.OneLine(*item.CauseLabel))
+		row.Lines = append(row.Lines, emailview.Line{Text: mailcopy.OneLine(*item.CauseLabel), Tone: emailview.Warning})
 	}
 	if item.Owner != nil && item.Owner.Label != nil {
-		lines = append(lines, words.MailOwner+": "+mailcopy.OneLine(*item.Owner.Label))
+		row.Lines = append(row.Lines, emailview.Line{Text: words.MailOwner + ": " + mailcopy.OneLine(*item.Owner.Label)})
 	}
 	if item.DueAt != nil {
 		at := *item.DueAt
@@ -46,16 +45,15 @@ func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *tim
 		if item.Source == crmcontracts.WorklistItemSourceWeeklyCommitment {
 			due = words.Date(*item.DueAt)
 		}
-		lines = append(lines, words.MailDue+": "+due)
+		row.Lines = append(row.Lines, emailview.Line{Text: words.MailDue + ": " + due, Tone: emailview.Info})
 	}
-	lines = append(lines, mailWorkAction(item, words))
-	return strings.Join(lines, "\n")
+	return row, true
 }
 
 func routineFooterContent(base string, words mailcopy.Copy) emailview.Content {
 	var content emailview.Content
-	content.Paragraph(words.MailWhy)
-	content.Action(words.ManagePreferencesLabel, mailcopy.Destination(base, mailcopy.PreferencesFragment))
+	content.Footnote(words.MailWhy)
+	content.FootnoteAction(words.ManagePreferencesLabel, mailcopy.Destination(base, mailcopy.PreferencesFragment))
 	return content
 }
 
@@ -65,7 +63,7 @@ func writeMailItemLink(body *emailview.Content, item crmcontracts.WorklistItem, 
 	}
 	fragment := mailcopy.RecordFragment(string(item.Subject.Type), item.Subject.Id.String())
 	if fragment != "" {
-		body.Action(words.MailReview, mailcopy.Destination(base, fragment))
+		body.ItemAction(words.MailReview, mailcopy.Destination(base, fragment))
 	}
 }
 

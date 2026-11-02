@@ -48,6 +48,7 @@ is here: [authorization.md](../explanation/authorization.md).)
 
 `emailview` renders escaped product content in the user’s language as HTML and plain text. It reads no records
 and sends no mail. Controller wording stays with consent; customer mail stays with its send owner.
+It writes the design-system tokens in as values, and `gates/emaildesign_test.go` checks them against `tokens.css` in both themes.
 `mailwire` builds MIME parts and attachments for mailbox connectors and SMTP. SMTP uses
 `quoted-printable`; mailbox sends keep their existing body bytes and envelope handling.
 
