@@ -46,6 +46,24 @@ func TestEveryInputTheAssessmentReadsMovesTheFingerprint(t *testing.T) {
 		}
 	})
 
+	t.Run("which contact owns an address", func(t *testing.T) {
+		v := setupViability(t)
+		contact := v.contactOnTheDeal(t, v.supported)
+		v.WsExec(t, `INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+			 VALUES ($1, $2, 'buyer@customer.example', 'work', true, 'manual', 'human:x')`,
+			ids.NewV7(), contact)
+		// Seeded, or the edit below would change nothing and the fingerprint
+		// would be right to stay where it is.
+		if n := v.WsScalar(t, `SELECT count(*)::text FROM contact_email WHERE contact_id = $1`, contact); n != "1" {
+			t.Fatalf("the contact holds %s addresses, want 1", n)
+		}
+		before := v.fingerprintOf(t, v.supported)
+		v.WsExec(t, `UPDATE contact_email SET email = 'moved@customer.example' WHERE contact_id = $1`, contact)
+		if after := v.fingerprintOf(t, v.supported); after == before {
+			t.Error("an edited address left the fingerprint where it was")
+		}
+	})
+
 	t.Run("a guest's response", func(t *testing.T) {
 		v := setupViability(t)
 		contact := v.contactOnTheDeal(t, v.supported)
