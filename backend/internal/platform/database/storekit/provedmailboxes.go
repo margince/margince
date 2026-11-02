@@ -12,11 +12,18 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ProvedMailboxLabels reads labels attested by a connected OAuth provider, never typed IMAP labels.
+//
+// The seat has to still be one. A departed member's connection stays connected
+// until somebody takes it down. The label on it would otherwise go on
+// attributing imports to a mailbox nobody holds.
 func ProvedMailboxLabels(ctx context.Context, tx pgx.Tx) (map[ids.UUID][]string, error) {
-	rows, err := tx.Query(ctx, `SELECT c.user_id, c.account_label FROM capture_connection c WHERE `+provedMailboxClause("c"))
+	rows, err := tx.Query(ctx, `SELECT c.user_id, c.account_label FROM capture_connection c
+		 JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
+		 WHERE `+provedMailboxClause("c"))
 	if err != nil {
 		return nil, fmt.Errorf("reading proved mailbox labels: %w", err)
 	}
