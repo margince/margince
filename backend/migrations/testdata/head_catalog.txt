@@ -4342,6 +4342,7 @@ public.email_signature.email_signature_owner_id_fkey FOREIGN KEY (owner_id) REFE
 public.email_signature.email_signature_owner_id_key UNIQUE (owner_id)
 public.email_signature.email_signature_pkey PRIMARY KEY (id)
 public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.email_signature.html text NOT NULL gen=- def=''::text
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
 public.email_signature.phone text NOT NULL gen=- def=''::text

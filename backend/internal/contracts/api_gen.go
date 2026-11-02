@@ -42593,7 +42593,7 @@ type EmailPresentationLifecycle string
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {
 	// Html The same block as the sanitized markup the HTML part carries. Present only when
-	// `kind` is `template`.
+	// `kind` is `template` or a personal HTML `signature`.
 	Html *string `json:"html,omitempty"`
 
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
@@ -42629,16 +42629,19 @@ type EmailSignOffRequest struct {
 
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
-	// Body The sign-off appended below every message this member sends, plain text.
-	// Empty means none written; a send then closes with a plain greeting and
-	// the member's display name when one is on file.
+	// Body Plain-text fallback after personal HTML and the company template.
+	// With none set, a send closes with a greeting and the member's name.
 	Body string `json:"body"`
+
+	// Html Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html string `json:"html"`
 
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
 	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`.
+	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -42651,6 +42654,11 @@ type EmailSignature struct {
 // the stored one, so the preview shows what saving would produce. Writes nothing,
 // and a send never reads it.
 type EmailSignatureDraft struct {
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
+
 	// Phone The caller's phone as edited.
 	Phone *string `json:"phone,omitempty"`
 
@@ -42671,7 +42679,7 @@ type EmailSignatureTemplate struct {
 	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
 	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
-	// none: each member signs with their own plain-text signature.
+	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
 }
 
@@ -54728,6 +54736,11 @@ type SaveEmailSignatureRequest struct {
 	// FOR — a name, a role, a way to reach the sender — and past it a block
 	// is a document riding on every message.
 	Body string `json:"body"`
+
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
 
 	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`

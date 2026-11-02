@@ -118,6 +118,7 @@ Records, deals and mail in Margince, by page:
 - [Deals the customer still supports](deals-the-customer-supports.md): the review
   a deal gets when its customer stops answering. The switch that leaves such deals
   out of the forecast.
+- [Your email signature](email-signatures.md): plain text, personal HTML and the company template.
 - [Writing and sending mail](sending-mail.md): the composer, replying to one
   message in a thread, filing a send under a project, and drafting in your
   voice. The purpose picker and the consent check. What a send refuses and what

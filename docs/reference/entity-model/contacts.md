@@ -1127,12 +1127,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## email_signature
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `body` | `text` | yes | The sign-off appended below every message this member sends, plain text. |
+| `body` | `text` | yes | Plain-text fallback after personal HTML and the company template. |
+| `html` | `text`, default `''::text` | yes | Saved personal HTML, trimmed at both ends. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
 | `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |

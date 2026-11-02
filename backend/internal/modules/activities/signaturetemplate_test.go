@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -122,5 +123,143 @@ func TestAPreviewRendersTheUnsavedDraft(t *testing.T) {
 	}
 	if drafted.Text != "Anna\nDraft title" || drafted.LogoKey != "logos/a.png" || !strings.Contains(drafted.HTML, signatureLogoSrc) {
 		t.Fatalf("drafted preview = %+v, want the draft's template and title with the logo", drafted)
+	}
+}
+
+func TestPersonalMarkupUsesTheSignaturePolicyWithoutExpandingPlaceholders(t *testing.T) {
+	t.Parallel()
+	store := (&Store{}).WithSignature(&stubSignature{
+		html:     `<p onclick="bad()"><b>Personal</b><br><i>{name}</i> <u>{title}</u> {phone} {logo}<span style="color:#2a7;font-size:12px;background:url(x)">Team</span><a href="javascript:bad()">Link</a><img src="https://tracker.test/pixel"><script>bad()</script></p>`,
+		template: "<p>Company</p>", body: "Saved plain text",
+	})
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello", "Hi", "Anna")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sign.Kind != SignOffSignature || sign.Text != "Personal\n{name} {title} {phone} {logo}TeamLink" {
+		t.Fatalf("sign = %+v", sign)
+	}
+	for _, forbidden := range []string{"Company", "Saved plain text", "onclick", "javascript:", "tracker.test", "<script", "bad()", "background"} {
+		if strings.Contains(sign.HTML, forbidden) {
+			t.Errorf("markup kept %q: %s", forbidden, sign.HTML)
+		}
+	}
+	for _, kept := range []string{"<b>Personal</b>", "<i>{name}</i>", "<u>{title}</u>", `style="color:#2a7;font-size:12px"`} {
+		if !strings.Contains(sign.HTML, kept) {
+			t.Errorf("markup lacks %q: %s", kept, sign.HTML)
+		}
+	}
+}
+
+func TestPersonalMarkupFallsThroughOnlyWhenItHasNoVisibleText(t *testing.T) {
+	t.Parallel()
+	for _, own := range []string{"", "   ", "<script>bad()</script>", `<img src="https://tracker.test/pixel">`, "<p> </p>"} {
+		for _, fallback := range []struct {
+			template, body string
+			kind           SignOffKind
+			text           string
+		}{
+			{"<p>Company</p>", "Saved", SignOffTemplate, "Company"},
+			{"", "Saved", SignOffSignature, "Saved"},
+			{"", "", SignOffClosing, "Best regards,\nAnna"},
+		} {
+			store := (&Store{}).WithSignature(&stubSignature{html: own, template: fallback.template, body: fallback.body})
+			sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Hello, I am sending the requested documents for your review.", "Documents", "Anna")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if sign.Kind != fallback.kind || sign.Text != fallback.text {
+				t.Errorf("own %q: sign %+v, want %s %q", own, sign, fallback.kind, fallback.text)
+			}
+		}
+	}
+}
+
+func TestPersonalMarkupPreviewOverridesAndClearingShareTheSendDecision(t *testing.T) {
+	t.Parallel()
+	store := (&Store{}).WithSignature(&stubSignature{html: "<p>Saved personal</p>", template: "<p>Company</p>", logoKey: "logos/company.png"})
+	for _, test := range []struct {
+		markup     string
+		kind       SignOffKind
+		text, logo string
+	}{
+		{"<p>Draft personal</p>", SignOffSignature, "Draft personal", ""},
+		{"", SignOffTemplate, "Company", ""},
+		{"<p>Personal</p>" + signatureLogoTag, SignOffSignature, "Personal", "logos/company.png"},
+	} {
+		sign, err := store.signOffDrafted(humanCtx(ids.NewV7()), "", "", "Anna", signatureDraft{HTML: &test.markup})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sign.Kind != test.kind || sign.Text != test.text || sign.LogoKey != test.logo {
+			t.Errorf("sign = %+v, want %+v", sign, test)
+		}
+	}
+}
+
+func TestMarkupWithoutAnAvailableLogoDoesNotSendABrokenEmbeddedImage(t *testing.T) {
+	t.Parallel()
+	for _, signature := range []*stubSignature{
+		{html: "<p>Personal</p>" + signatureLogoTag},
+		{template: "<p>Company</p>" + signatureLogoTag},
+	} {
+		sign, err := (&Store{}).WithSignature(signature).signOffAs(humanCtx(ids.NewV7()), "Hello", "Hello", "Anna")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sign.LogoKey != "" || strings.Contains(sign.HTML, "<img") {
+			t.Fatalf("sign = %+v", sign)
+		}
+	}
+}
+
+func TestPersonalMarkupSignsOnceAboveDisclosuresAndTheUnsubscribeFooter(t *testing.T) {
+	t.Parallel()
+	sign, err := (&Store{}).WithSignature(&stubSignature{html: "<p><b>Personal</b></p>"}).signOffAs(humanCtx(ids.NewV7()), "Hello", "Hello", "Anna")
+	if err != nil {
+		t.Fatal(err)
+	}
+	derived := sendDeliverability{
+		links:       unsubscribeLinks{unsubscribe: "https://app.test/unsubscribe/token", manage: "https://app.test/preferences/token"},
+		disclosures: []DisclosureLine{{Kind: "identity", Text: "Controller identity"}},
+		words:       mailcopy.For("en"),
+	}
+	markup := signedHTML("<p>Body</p>", sign, derived)
+	if strings.Count(markup, sign.HTML) != 1 || strings.Count(markup, "Controller identity") != 1 {
+		t.Fatalf("markup = %s", markup)
+	}
+	if strings.Index(markup, sign.HTML) > strings.Index(markup, "Controller identity") || strings.Index(markup, "Controller identity") > strings.Index(markup, derived.links.unsubscribe) {
+		t.Fatalf("sign-off, disclosure and footer out of order: %s", markup)
+	}
+}
+
+func TestPastedSignatureBlocksKeepTheirReadableBoundaries(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"<div>Mira Voss</div><div>Head of Sales</div><table><tr><td>+49 711</td><td>mira@example.com</td></tr></table>",
+		"<h2>Mira Voss</h2><table><tr><td><p>Head of Sales</p></td></tr><tr><td>+49 711</td><td>mira@example.com</td></tr></table>",
+	} {
+		markup, text, err := signatureMarkup(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := "Mira Voss\nHead of Sales\n+49 711 mira@example.com"
+		if text != want || !strings.Contains(markup, "<br>") {
+			t.Fatalf("markup=%q text=%q, want %q", markup, text, want)
+		}
+	}
+}
+
+func TestSignatureTextKeepsLinkDestinationsAndMarkupKeepsTextVisible(t *testing.T) {
+	t.Parallel()
+	markup, text, err := signatureMarkup(`<span style="color:transparent">Mira</span><br><a href="https://calendar.example/mira">Book a call</a><br><a href="mailto:mira@example.com">mira@example.com</a><img src="data:image/png;base64,AAAA">`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(markup, "transparent") || strings.Contains(markup, "data:") {
+		t.Fatalf("hidden text or unsupported image survived: %s", markup)
+	}
+	if text != "Mira\nBook a call <https://calendar.example/mira>\nmira@example.com" {
+		t.Fatalf("text alternatives lost readable content: %q", text)
 	}
 }
