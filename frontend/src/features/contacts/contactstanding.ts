@@ -17,7 +17,7 @@ import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentRule = components["schemas"]["ContactMomentRule"];
-type RelationshipChange = components["schemas"]["RelationshipChange"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 
 /** The call How it stands draws. */
 export type ContactVerdict = Readonly<{
