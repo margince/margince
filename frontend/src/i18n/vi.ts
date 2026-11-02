@@ -15782,8 +15782,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strength.detail": "Liên hệ gần nhất {last}",
   "contact.strength.sentence.weakStale":
     "Yếu: đã khá lâu rồi. Lần liên hệ gần nhất là {last}.",
-  "contact.strength.sentence.weakRare":
-    "Yếu: hai bên hiếm khi liên hệ. Lần liên hệ gần nhất là {last}.",
+  "contact.strength.sentence.weakFew":
+    "Yếu: có liên hệ gần đây, nhưng ít tương tác được chia sẻ trong 90 ngày qua.",
+  "contact.strength.sentence.weakLopsided":
+    "Yếu: có liên hệ gần đây, nhưng trao đổi được chia sẻ chủ yếu đi một chiều.",
+  "contact.strength.sentence.weakNoReply":
+    "Yếu: có liên hệ gần đây, nhưng không có phản hồi được chia sẻ từ liên hệ này được tính.",
+  "contact.strength.sentence.weakOnlyThem":
+    "Yếu: có liên hệ gần đây, nhưng không có tin nhắn được chia sẻ từ nhóm của bạn được tính.",
+  "contact.strength.sentence.weakUndirected":
+    "Yếu: có liên hệ gần đây, nhưng không có tương tác được chia sẻ nào được tính là tin nhắn.",
   "contact.strength.sentence.moderate":
     "Trung bình: thỉnh thoảng hai bên có liên hệ. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.strong":
