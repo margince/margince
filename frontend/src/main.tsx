@@ -50,20 +50,21 @@ reloadOnStaleBuild();
 api.use(sessionRefusalWatch(queryClient));
 
 // Extension instruments start before the first render, so an error in it is
-// theirs to see. The generated registry is untyped; it is typed here.
-startInstruments(
-  extensionInstruments as Readonly<Record<string, BrowserInstrument>>,
-  SPA_RELEASE,
-);
+// theirs to see. The generated registry is untyped; it is annotated here.
+const composedInstruments: Readonly<Record<string, BrowserInstrument>> =
+  extensionInstruments;
+startInstruments(composedInstruments, SPA_RELEASE);
 
 const root = document.getElementById("root");
 if (!root) {
   throw new Error("index.html must provide #root");
 }
 createRoot(root, {
-  // React reports both to the console by default. These keep that and also
-  // tell the instruments. A boundary-caught error is still the boundary's to
-  // draw, and reporting it changes nothing on screen.
+  // These keep React's production behaviour (a caught error goes to
+  // console.error, an uncaught one to reportError) and also tell the
+  // instruments. React's extra development-only hints are not kept. A
+  // boundary-caught error is still the boundary's to draw, and reporting it
+  // changes nothing on screen.
   onCaughtError: (error, info) => {
     console.error(error);
     reportError(error, {

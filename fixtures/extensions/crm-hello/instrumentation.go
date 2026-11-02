@@ -13,7 +13,8 @@ import (
 
 // The smoke fixture's instrumentation is the least that walks the whole path.
 // It has a Start at boot, a Work hook around every job, an edge the browser can
-// reach without a session, and a browser export. It counts and observes nothing.
+// reach without a session, and a browser export. Its Work hook only counts the
+// runs it wraps, so a test can see the hook was called.
 var workRuns atomic.Int64
 
 func startInstrumentation(context.Context, extension.Process) (extension.Instruments, error) {

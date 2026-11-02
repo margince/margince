@@ -1,3 +1,4 @@
+import { extensions } from "@composition/extensions";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { noteHistoryEntry } from "./historydepth";
 import { publishRecordAddress, restoreRecordAddress } from "./recordaddress";
@@ -233,11 +234,21 @@ export function routeIdentity(route: Route): string {
 /**
  * The route as a pattern an observer may record: the screen, with each
  * record id replaced by a placeholder. A unit's screen keeps the unit's
- * name, which is not a record. Never carries the query.
+ * name only when it is a composed unit, and a fork screen is always
+ * `x/:key` (lib cannot see the fork registry). Any other id, which anyone can
+ * type into an address, becomes a placeholder. Never carries the query.
  */
-export function routePattern(route: Route): string {
-  if (route.screen === "ext" || route.screen === "x") {
-    return route.id ? `${route.screen}/${route.id}` : route.screen;
+export function routePattern(
+  route: Route,
+  unitNames: readonly string[] = extensions.map((unit) => unit.name),
+): string {
+  if (route.screen === "ext") {
+    return route.id && unitNames.includes(route.id)
+      ? `ext/${route.id}`
+      : "ext/:unit";
+  }
+  if (route.screen === "x") {
+    return "x/:key";
   }
   const parts: string[] = [route.screen];
   if (route.id) parts.push(":id");

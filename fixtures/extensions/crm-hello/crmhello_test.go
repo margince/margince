@@ -134,6 +134,7 @@ func TestTheInstrumentsWorkHookRunsTheWorkOnceAndReturnsItsError(t *testing.T) {
 	}
 	want := errors.New("the job failed")
 	calls := 0
+	before := workRuns.Load()
 	got := ins.Work(context.Background(), extension.Work{Kind: extension.WorkJob, Name: "x"}, func(context.Context) error {
 		calls++
 		return want
@@ -143,6 +144,9 @@ func TestTheInstrumentsWorkHookRunsTheWorkOnceAndReturnsItsError(t *testing.T) {
 	}
 	if !errors.Is(got, want) {
 		t.Fatalf("Work returned %v, want the run's error unchanged", got)
+	}
+	if runs := workRuns.Load() - before; runs != 1 {
+		t.Fatalf("the Work hook counted %d runs, want 1", runs)
 	}
 }
 

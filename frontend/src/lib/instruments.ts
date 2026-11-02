@@ -24,8 +24,10 @@ export type BrowserInstruments = {
   onNavigate?(route: string): void;
 };
 
-/** A unit's browser instrument: the named export its Go side declares. */
-// A unit that has nothing to hook may return nothing, hence `void`.
+/**
+ * A unit's browser instrument: the named export its Go side declares. A unit
+ * that has nothing to hook may return nothing, hence `void`.
+ */
 export type BrowserInstrument = (
   ctx: BrowserInstrumentContext,
   // biome-ignore lint/suspicious/noConfusingVoidType: a block body that returns nothing is void, not undefined

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   notifyNavigate,
@@ -74,5 +76,15 @@ describe("notifyNavigate", () => {
     notifyNavigate("contacts/:id");
     notifyNavigate("deals");
     expect(onNavigate.mock.calls).toEqual([["contacts/:id"], ["deals"]]);
+  });
+});
+
+describe("boot order", () => {
+  // Starting after the first render would miss the errors of that render.
+  it("starts the instruments before the app first renders", () => {
+    const main = readFileSync(resolve(__dirname, "../main.tsx"), "utf8");
+    const start = main.indexOf("startInstruments(");
+    expect(start).toBeGreaterThan(-1);
+    expect(start).toBeLessThan(main.indexOf("createRoot(root"));
   });
 });
