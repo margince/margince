@@ -232,44 +232,15 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 	return labeled, nil
 }
 
-// commitLabel writes one label and the reply verdict riding it. A label that
-// did not apply takes no reply verdict, because both are about the text read.
+// commitLabel writes one label and the reply verdict this call also produced,
+// in one transaction. A label that did not apply takes no reply verdict,
+// because both are about the text read. The reply rides the label's confidence,
+// so a message below the floor stores neither.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
-	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
-	if err != nil {
-		return false, err
-	}
-	if !applied {
-		return false, nil
-	}
-	return true, c.recordReply(ctx, msg, v, judge)
-}
-
-// recordReply stores the reply verdict this call also produced, when it produced
-// one. Absent is the common case and a legitimate answer: outbound mail, and any
-// inbound message that does not read as a reply, leave the column NULL — which a
-// rate counts in neither half.
-//
-// It rides the SAME confidence the label was gated on, and the prompt is what
-// makes that honest: it defines `confidence` as covering every judgement in the
-// entry and asks for the LOWER of the two. Without that sentence the number
-// would be the label's alone, and a model sure the mail is a meeting but unsure
-// whether it was a yes would have its guess stored — a number somebody is
-// measured on, resting on a certainty nobody reported.
-//
-// It shares the label's confidence rather than carrying its own. Both judgements
-// come from one reading of one message, and a second number would claim the
-// model reported a separate certainty it was never asked for. The consequence is
-// stated plainly: a message whose LABEL was confident enough to store also
-// stores its reply verdict, and one below the floor stores neither.
-func (c *CaptureClassifier) recordReply(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) error {
 	if v.Reply == "" {
-		return nil
+		return c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	}
-	if _, err := c.store.SetReplyVerdict(ctx, msg.ID, v.Reply, judge); err != nil {
-		return fmt.Errorf("classify: recording the reply verdict: %w", err)
-	}
-	return nil
+	return c.store.SetCaptureLabelAndReply(ctx, msg.ID, v.Label, msg.Version, v.Reply, judge)
 }
 
 // classifyRequest builds the ONE model call that labels one batch. It is a pure

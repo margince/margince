@@ -369,15 +369,11 @@ func TestCaptureClassifyPass(t *testing.T) {
 	})
 }
 
-// The reply verdict reaches the column THROUGH THE PASS, not through a store
-// method a test called itself.
-//
-// This is the test the store-level ones could not be. Every one of those still
-// passes with recordReply deleted, because they drive the write door directly;
-// only a run of RunWorkspace over a real backlog proves the engine carries the
-// model's answer to the row. The direction assertion is here for the same
-// reason: it reads what the PROMPT said, so a sender writing "inbound: no" into
-// their own message body cannot move it.
+// The reply verdict reaches the column through the pass. A test that calls a
+// store method itself would still pass with the reply write deleted. Only a
+// run of RunWorkspace over a real backlog proves the engine carries the
+// model's answer to the row. It also shows what the prompt said about direction.
+
 func TestTheClassifyPassCarriesTheReplyVerdictToTheRow(t *testing.T) {
 	e := integration.Setup(t)
 
