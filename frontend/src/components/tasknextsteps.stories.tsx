@@ -56,7 +56,7 @@ const LENA = {
   archived_at: null,
 };
 
-const ON_LEAD = {
+const ON_LEAD: components["schemas"]["Activity"] = {
   ...TASK,
   subject: "Email Lena about the pilot",
   source_activity_id: null,
