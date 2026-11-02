@@ -33,7 +33,7 @@ func TestStartInstrumentationSkipsAFailingOrPanickingUnitAndKeepsTheRest(t *test
 			return extension.Instruments{Shutdown: func(context.Context) error { shutdowns++; return nil }}, nil
 		}}},
 	}
-	startInstrumentation(context.Background(), exts, "api", slog.New(slog.NewTextHandler(&logged, nil)))
+	startUnits(context.Background(), exts, "api", slog.New(slog.NewTextHandler(&logged, nil)))
 	instrument.Shutdown(context.Background())
 	if shutdowns != 1 {
 		t.Fatalf("shutdowns = %d, want 1 (only the working unit installed)", shutdowns)
@@ -51,7 +51,7 @@ func TestStartInstrumentationSkipsAFailingOrPanickingUnitAndKeepsTheRest(t *test
 func TestStartInstrumentationRedactsCapabilityPaths(t *testing.T) {
 	t.Cleanup(instrument.Reset)
 	var redact func(string) string
-	startInstrumentation(context.Background(), []extension.Extension{{Name: "w", Instrumentation: &extension.Instrumentation{
+	startUnits(context.Background(), []extension.Extension{{Name: "w", Instrumentation: &extension.Instrumentation{
 		Start: func(_ context.Context, p extension.Process) (extension.Instruments, error) {
 			redact = p.RedactPath
 			return extension.Instruments{}, nil

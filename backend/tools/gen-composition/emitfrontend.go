@@ -199,10 +199,8 @@ func extScreensGen(units []extensionUnit, panels map[string][]declaredPanel) []b
 // instruments the browser sessions, by the named export of its frontend
 // package. Like extScreensGen the empty set reproduces the committed vanilla
 // stub byte-for-byte, and a unit absent from the map instruments nothing.
-//
-// Import order follows unit order, already sorted by name, so the file is a
-// function of the enabled set. A declared export the package does not have
-// fails the composed typecheck rather than instrumenting nothing.
+// Import order follows the sorted unit order, so the file is a function of the
+// enabled set. A declared export the package lacks fails the composed typecheck.
 func extInstrumentsGen(units []extensionUnit, browser map[string]string) []byte {
 	var imports, entries strings.Builder
 	for _, u := range units {

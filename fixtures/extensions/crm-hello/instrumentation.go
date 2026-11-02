@@ -11,9 +11,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// The smoke fixture's instrumentation: the least that walks the whole path —
-// Start at boot, a Work hook around every job, an edge the browser can reach
-// without a session, and a browser export. It counts and observes nothing.
+// The smoke fixture's instrumentation is the least that walks the whole path.
+// It has a Start at boot, a Work hook around every job, an edge the browser can
+// reach without a session, and a browser export. It counts and observes nothing.
 var workRuns atomic.Int64
 
 func startInstrumentation(context.Context, extension.Process) (extension.Instruments, error) {

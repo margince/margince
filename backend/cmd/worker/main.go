@@ -38,8 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
-	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
@@ -74,13 +72,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 	// Registered before the pool, the bus, the observer, the lanes and the job
-	// runner, so LIFO runs it after every one of them has stopped: the last
-	// events a draining job or lane logs are still flushed.
-	defer func() {
-		flushCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		instrument.Shutdown(flushCtx)
-	}()
+	// runner, so it runs after every one of them has stopped. The last events a
+	// draining job or lane logs are still flushed.
+	defer compose.FlushInstrumentation(ctx)
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
 	pool, err := database.NewPool(ctx, cfg.dsn)
@@ -191,7 +185,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
 	weeklyMail := weeklyMailConfig(ctx, cfg, pool, vault, logger)
-	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
 	stopJobs, err := startJobRunner(ctx, pool, vault,
 		logger, cfg, modelPath, lanes, weeklyMail, stdout)
@@ -287,14 +280,9 @@ func configureWorker(ctx context.Context, args []string, stdout io.Writer) (work
 	if err != nil {
 		return workerBoot{}, err
 	}
-	// Instrumentation starts before the process logger so the logger is built
-	// already wrapped; its boot logger sits on the bare handler so a unit's own
-	// diagnostics never pass through a unit's wrapper. run() defers the flush.
-	bootHandler, err := httpserver.LogHandler(stdout, cfg.logLevel, cfg.logFormat)
-	if err != nil {
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
 		return workerBoot{}, err
 	}
-	compose.StartInstrumentation(ctx, "worker", slog.New(bootHandler))
 	log, err := newWorkerLogger(cfg, stdout)
 	if err != nil {
 		return workerBoot{}, err

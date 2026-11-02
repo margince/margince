@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
@@ -15,15 +16,27 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
+// instrumentFlushWindow bounds how long a unit may take to flush at shutdown.
+const instrumentFlushWindow = 2 * time.Second
+
 // StartInstrumentation calls every composed unit's Instrumentation.Start and
 // installs what they return. A role calls it once, after RegisterExtensions
-// and before InstallProcessLogger, handing it a logger on the base handler so
-// a unit's own diagnostics never pass through a unit's wrapper.
+// and before InstallProcessLogger. The logger it is handed sits on the base
+// handler, so a unit's own diagnostics never pass through a unit's wrapper.
 func StartInstrumentation(ctx context.Context, role string, boot *slog.Logger) {
-	startInstrumentation(ctx, ComposedExtensions(), role, boot)
+	startUnits(ctx, ComposedExtensions(), role, boot)
 }
 
-func startInstrumentation(ctx context.Context, exts []extension.Extension, role string, boot *slog.Logger) {
+// FlushInstrumentation gives every unit's Shutdown hook a bounded window to
+// flush. A role defers it so it runs after the signal context is cancelled,
+// which is why the window is detached from ctx's cancellation.
+func FlushInstrumentation(ctx context.Context) {
+	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), instrumentFlushWindow)
+	defer cancel()
+	instrument.Shutdown(flushCtx)
+}
+
+func startUnits(ctx context.Context, exts []extension.Extension, role string, boot *slog.Logger) {
 	version := buildinfo.ReleaseVersion
 	if version == "" {
 		version = buildinfo.Unknown

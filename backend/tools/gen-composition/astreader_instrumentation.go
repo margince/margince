@@ -25,9 +25,9 @@ type unitInstrumentation struct {
 }
 
 // readInstrumentation reads the &extension.Instrumentation{...} literal. Start
-// and Edge are code and are only recorded as present, never evaluated; Browser
-// is a literal and, with the other two, passes the published Validate the boot
-// runs, so generation refuses what the boot would.
+// and Edge are code and are only recorded as present, never evaluated. Browser
+// is a literal. All three pass the published Validate the boot runs, so
+// generation refuses what the boot would.
 func (r *unitReader) readInstrumentation(expr ast.Expr) (*unitInstrumentation, error) {
 	unary, ok := expr.(*ast.UnaryExpr)
 	if !ok || unary.Op != token.AND {

@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -36,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
@@ -79,22 +79,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// Instrumentation starts after registration and BEFORE the process logger
-	// below, so the logger is built already wrapped by the units' handlers. It
-	// is handed a logger on the bare handler: a unit's own diagnostics must not
-	// pass through a unit's wrapper. The flush is deferred here, before the
-	// pool and the other closers, so LIFO runs it LAST — after the HTTP drain
-	// and every closer, and events logged while shutting down still leave.
-	bootHandler, err := httpserver.LogHandler(stdout, cfg.logLevel, cfg.logFormat)
-	if err != nil {
+	// The flush is deferred before the pool and the other closers, so it runs
+	// last. Events logged while shutting down still leave.
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
 		return err
 	}
-	compose.StartInstrumentation(ctx, "api", slog.New(bootHandler))
-	defer func() {
-		flushCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		instrument.Shutdown(flushCtx)
-	}()
+	defer compose.FlushInstrumentation(ctx)
 
 	// INSTALLED as the process default, not merely built. Everything below is
 	// handed this logger explicitly, but the tree also logs through the
@@ -126,11 +116,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// AllowTestMailbox is an operations.* kill switch, not a capture.* tuning
-	// knob, so it is set here rather than folded into CaptureConfigFromDeploy.
-	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
-	compose.WarnStaleRates(cfg.settings, logger)
-	captureCfg.AllowTestMailbox = config.Val(cfg.settings, programsettings.AllowTestMailbox)
+	captureCfg := captureConfig(cfg, logger)
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
@@ -177,10 +163,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	opts = append(opts, modelOpts...)
-	opts = append(opts, compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)))
-	opts = append(opts, compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)))
-	opts = append(opts, compose.SecurityTxtOption(cfg.settings, time.Now(), logger))
+	opts = append(opts, slices.Concat(modelOpts, settingOptions(cfg, logger))...)
 
 	viewOpts, stopViewRefresh, err := mcpAppViewsLane(ctx, cfg, logger)
 	if err != nil {
@@ -197,6 +180,25 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
+}
+
+// captureConfig is the capture posture the deployment's settings decide.
+// AllowTestMailbox is an operations.* kill switch, not a capture.* tuning knob,
+// so it is set here rather than folded into CaptureConfigFromDeploy.
+func captureConfig(cfg apiConfig, logger *slog.Logger) compose.CaptureConfig {
+	captureCfg := compose.CaptureConfigFromDeploy(cfg.settings, logger)
+	compose.WarnStaleRates(cfg.settings, logger)
+	captureCfg.AllowTestMailbox = config.Val(cfg.settings, programsettings.AllowTestMailbox)
+	return captureCfg
+}
+
+// settingOptions are the options the deployment's settings alone decide.
+func settingOptions(cfg apiConfig, logger *slog.Logger) []compose.Option {
+	return []compose.Option{
+		compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)),
+		compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)),
+		compose.SecurityTxtOption(cfg.settings, time.Now(), logger),
+	}
 }
 
 // openInstallation opens what this role reaches the installation THROUGH: the

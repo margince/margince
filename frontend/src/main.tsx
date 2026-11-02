@@ -61,9 +61,9 @@ if (!root) {
   throw new Error("index.html must provide #root");
 }
 createRoot(root, {
-  // React reports both to the console by default; these keep that and also
+  // React reports both to the console by default. These keep that and also
   // tell the instruments. A boundary-caught error is still the boundary's to
-  // draw — reporting it changes nothing on screen.
+  // draw, and reporting it changes nothing on screen.
   onCaughtError: (error, info) => {
     console.error(error);
     reportError(error, {

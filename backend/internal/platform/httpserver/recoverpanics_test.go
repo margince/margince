@@ -97,6 +97,7 @@ func TestRecoverPanicsDoesNotReportAnAbortedStream(t *testing.T) {
 		panic(http.ErrAbortHandler)
 	}))
 	func() {
+		//craft:ignore swallowed-errors recover() returns the panic value, not an error; the handler's abort is the expected outcome
 		defer func() { _ = recover() }()
 		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 	}()

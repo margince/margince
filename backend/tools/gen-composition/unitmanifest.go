@@ -105,10 +105,7 @@ type unitManifest struct {
 	// Panels are the places on core pages that draw the unit's own component.
 	Panels []declaredPanel `json:"panels,omitempty"`
 
-	// Instrumentation says the unit observes the whole process: that it wraps
-	// logs, requests and jobs (start), runs code in every browser session
-	// (browser), and answers anonymous requests (edge). An operator reads this
-	// before enabling a unit that sees everything.
+	// Instrumentation says what the unit observes of the whole process.
 	Instrumentation *unitInstrumentation `json:"instrumentation,omitempty"`
 
 	// OAuthApps are the vendors whose consent flow the core runs for the unit

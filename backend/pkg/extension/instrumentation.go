@@ -11,14 +11,13 @@ import (
 	"regexp"
 )
 
-// Instrumentation lets a unit observe the whole process: the root log handler,
-// the HTTP chain, each job and subscription delivery, and recovered panics,
-// and in the browser, errors and navigation. It names no vendor. What a unit
-// does with what it observes is the unit's own affair.
+// Instrumentation lets a unit observe the whole process. It sees the root log
+// handler, the HTTP chain, each job and subscription delivery, and recovered
+// panics. In the browser it sees errors and navigation. It names no vendor.
 //
-// The core guards every call. A Start that fails or panics is logged and the
-// process boots without that unit's hooks, and a hook that panics is logged
-// and the work it wrapped goes on. Instrumentation never stops the product.
+// The core guards every call. A Start that fails or panics is logged, and the
+// process boots without that unit's hooks. A hook that panics is logged, and
+// the work it wrapped goes on.
 type Instrumentation struct {
 	// Start runs once per process (api, worker), before it serves or runs
 	// work. Nil means the unit has no backend part.
@@ -36,7 +35,7 @@ type Process struct {
 	Role    string       // "api" or "worker"
 	Version string       // the build's release version; "dev" when unknown
 	Logger  *slog.Logger // the base logger, not yet wrapped by any unit
-	// RedactPath blanks the credential segment of a capability URL. A unit MUST
+	// RedactPath blanks the credential segment of a capability URL. A unit must
 	// name anything derived from a request path through it.
 	RedactPath func(path string) string
 }

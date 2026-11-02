@@ -16,9 +16,9 @@ import (
 )
 
 // publicInstrumentPrefix is where a unit's Instrumentation.Edge is served,
-// without a session: the browser half of a unit's instrumentation reaches
-// its backend here, before anyone has signed in and past a CSP that admits
-// only this origin. The segment after the prefix is the unit's name, not a
+// without a session. The browser half of a unit's instrumentation reaches its
+// backend here, before anyone has signed in and past a CSP that admits only
+// this origin. The segment after the prefix is the unit's name, not a
 // credential.
 const publicInstrumentPrefix = "/v1/public/instrument/"
 

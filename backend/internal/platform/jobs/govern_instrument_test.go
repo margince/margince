@@ -55,6 +55,7 @@ func TestGovernReportsAPanicAndStillLetsRiverRecoverIt(t *testing.T) {
 	var repanicked any
 	func() {
 		defer func() { repanicked = recover() }()
+		//craft:ignore swallowed-errors the work panics, so Work never returns a value
 		_ = w.Work(context.Background(), &river.Job[probeArgs]{})
 	}()
 	if reported != "job blew up" || repanicked != "job blew up" {

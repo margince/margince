@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package instrument holds the hooks extension units returned from their
-// Instrumentation.Start, for the life of the process, and is the one place the
+// Instrumentation.Start, for the life of the process. It is the one place the
 // core's choke points call them through. Every call is guarded: a hook that
-// panics is logged and skipped, so instrumentation can never take the product
-// down with it.
+// panics is logged and skipped, so it cannot take the product down.
 //
 // It is set once at boot (Install) and read everywhere after, the same
 // lifetime as the process logger.
@@ -55,15 +54,15 @@ func installedUnits() ([]Started, *slog.Logger) {
 	return in.units, in.log
 }
 
-// safely runs fn and reports whether it panicked. The panic is logged against
-// the unit and hook that raised it, and does not propagate.
-func safely(log *slog.Logger, unit, hook string, fn func()) (panicked bool) {
-	return guard(log, unit, hook, nil, fn)
+// safely runs fn. A panic is logged against the unit and hook that raised it,
+// and does not propagate.
+func safely(log *slog.Logger, unit, hook string, fn func()) {
+	guard(log, unit, hook, nil, fn)
 }
 
-// guard is safely with one exception: when quiet reports true, a panic is
-// contained but not logged, because it is the work's own panic passing through
-// the hook on its way to the caller, not a fault of the hook.
+// guard is safely with one exception. When quiet reports true, a panic is
+// contained but not logged. It is the work's own panic passing through the
+// hook, not a fault of the hook. It reports whether fn panicked.
 func guard(log *slog.Logger, unit, hook string, quiet func() bool, fn func()) (panicked bool) {
 	defer func() {
 		if rec := recover(); rec != nil {
@@ -79,6 +78,8 @@ func guard(log *slog.Logger, unit, hook string, quiet func() bool, fn func()) (p
 }
 
 // LogHandler wraps h in every unit's LogHandler, the first unit outermost.
+// The process logger wraps the sink inside correlation, so a unit's handler
+// sees the correlation_id too.
 func LogHandler(h slog.Handler) slog.Handler {
 	units, log := installedUnits()
 	for _, u := range slices.Backward(units) {
@@ -94,7 +95,9 @@ func LogHandler(h slog.Handler) slog.Handler {
 	return h
 }
 
-// HTTP wraps h in every unit's HTTP hook, the first unit outermost.
+// HTTP wraps h in every unit's HTTP hook, the first unit outermost. It sits
+// just inside the panic guard, so a panic that escapes the chain is reported
+// by RecoverPanics and never swallowed by a unit.
 func HTTP(h http.Handler) http.Handler {
 	units, log := installedUnits()
 	for _, u := range slices.Backward(units) {
@@ -111,7 +114,7 @@ func HTTP(h http.Handler) http.Handler {
 }
 
 // Work runs run inside every unit's Work hook, the first unit outermost. run
-// executes exactly once whatever the hooks do: a hook that panics before
+// executes once whatever the hooks do: a hook that panics before
 // calling it, or returns without calling it, still has it run.
 func Work(ctx context.Context, w extension.Work, run func(context.Context) error) error {
 	units, log := installedUnits()
@@ -191,6 +194,8 @@ func wrapWork(log *slog.Logger, u Started, w extension.Work, inner func(context.
 }
 
 // Panic tells every unit about a recovered panic. It never re-panics.
+//
+//craft:ignore naked-any value mirrors recover(), whose result is any; extension.Instruments.Panic is published API
 func Panic(ctx context.Context, value any, stack []byte) {
 	units, log := installedUnits()
 	for _, u := range units {

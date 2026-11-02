@@ -783,7 +783,7 @@ The page's content security policy lets it reach only its own origin, so a brows
 directly. A unit that needs to carry something out of the browser serves an `Edge`. The core mounts it at
 `/v1/public/instrument/<unit>/` and strips that prefix, so your handler sees paths that start at `/`.
 
-- No session is needed. Any caller may be a person you do not know.
+- No session is needed. Any caller can reach it, so do not trust the sender.
 - It takes `GET` and `POST`. Any other method gets 405.
 - A body is at most 1 MiB.
 - Each client address has a limit. Past it, the request is refused.

@@ -71,9 +71,6 @@ func LogHandler(w io.Writer, level, format string) (slog.Handler, error) {
 // correlation_id whichever context it was given — which is why fault.go used
 // to attach the id by hand, and why it no longer has to.
 //
-// Extension instrumentation wraps the sink inside correlation, so a unit's
-// handler sees the correlation_id too.
-//
 // A role builds its logger ONCE, at boot, before anything serves. Nothing here
 // guards against a second call: the process default is a single value by
 // construction, and a role that installed two logs through whichever won.
