@@ -370,7 +370,7 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 
 // The number only goes down. Convert a file, lower it, and the next private
 // copy cannot be written without this gate asking why.
-const privateProbeFiles = 9
+const privateProbeFiles = 6
 
 // sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
 // the gates that hold it.
@@ -402,12 +402,12 @@ func TestNoNewPrivateContentionProbe(t *testing.T) {
 	sort.Strings(owners)
 	switch {
 	case len(owners) > privateProbeFiles:
-		t.Fatalf(`%d files write their own pg_blocking_pids query, and %d is the pinned number:
+		t.Fatalf(`%d files write their own %s query, and %d is the pinned number:
   %s
 testdb.QueuedBehind counts the whole queue behind a holder, after clearing the
 stats snapshot, and testdb.AwaitQueuedBehind waits on it. Wait through those
 instead, or lower the pin in the same change that removes a copy.`,
-			len(owners), privateProbeFiles, strings.Join(owners, "\n  "))
+			len(owners), blockingPidsProbe, privateProbeFiles, strings.Join(owners, "\n  "))
 	case len(owners) < privateProbeFiles:
 		t.Errorf("%d files write their own probe, below the pinned %d. Lower privateProbeFiles to %d",
 			len(owners), privateProbeFiles, len(owners))
@@ -420,8 +420,13 @@ instead, or lower the pin in the same change that removes a copy.`,
 func asksBlockingPids(decl ast.Decl) bool {
 	found := false
 	ast.Inspect(decl, func(n ast.Node) bool {
-		lit, isLit := n.(*ast.BasicLit)
-		if isLit && strings.Contains(lit.Value, blockingPidsProbe) {
+		expr, isExpr := n.(ast.Expr)
+		if !isExpr {
+			return !found
+		}
+		// gatekit.LiteralText decodes the string, because a query in double
+		// quotes reaches the source text with its escapes and would be missed.
+		if text, ok := gatekit.LiteralText(expr); ok && strings.Contains(text, blockingPidsProbe) {
 			found = true
 		}
 		return !found

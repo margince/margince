@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // ProbeBudget bounds the wait for a racer that never blocks.
@@ -125,9 +126,17 @@ func whichFailure(racerReturned <-chan struct{}, finishedEarly, missed string) s
 	}
 }
 
+// Prober is a handle a probe can ask twice: once to drop the snapshot, once to
+// read the queue. A race test holds the contended transaction open, so some
+// probes run on a pgx.Tx and others on the connection under it.
+type Prober interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
 // QueuedBehind counts the sessions waiting on holder's backend, directly or
 // behind one that does, since a lock queues its second waiter behind the first.
-func QueuedBehind(ctx context.Context, conn *pgx.Conn, holder int32) (int, error) {
+func QueuedBehind(ctx context.Context, conn Prober, holder int32) (int, error) {
 	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
 		return 0, fmt.Errorf("clearing the stats snapshot before probing the lock queue: %w", err)
 	}
@@ -145,7 +154,7 @@ func QueuedBehind(ctx context.Context, conn *pgx.Conn, holder int32) (int, error
 
 // AwaitQueuedBehind returns once n sessions wait behind holder. Scoped to that
 // backend, so no unrelated lock wait stands in for the racer the failures name.
-func AwaitQueuedBehind(t *testing.T, conn *pgx.Conn, holder int32, n int, racerReturned <-chan struct{}, racer string) {
+func AwaitQueuedBehind(t *testing.T, conn Prober, holder int32, n int, racerReturned <-chan struct{}, racer string) {
 	t.Helper()
 	WaitForContention(t, racerReturned,
 		fmt.Sprintf("%s finished without waiting behind backend %d, so the race never happened", racer, holder),
@@ -154,4 +163,46 @@ func AwaitQueuedBehind(t *testing.T, conn *pgx.Conn, holder int32, n int, racerR
 			queued, err := QueuedBehind(ctx, conn, holder)
 			return queued >= n, err
 		})
+}
+
+// QueuedAnywhere counts the sessions in this database waiting on any lock.
+//
+// Weaker than QueuedBehind, which names the holder: a wait belonging to another
+// test satisfies this one. The integration lane gives each package its own
+// database, which is what keeps the answer about the caller's own race.
+func QueuedAnywhere(ctx context.Context, conn Prober) (int, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return 0, fmt.Errorf("clearing the stats snapshot before counting lock waits: %w", err)
+	}
+	var waiting int
+	if err := conn.QueryRow(
+		ctx, `
+		SELECT count(*) FROM pg_stat_activity
+		 WHERE datname = current_database() AND cardinality(pg_blocking_pids(pid)) > 0`,
+	).Scan(&waiting); err != nil {
+		return 0, fmt.Errorf("counting the sessions waiting on a lock: %w", err)
+	}
+	return waiting, nil
+}
+
+// WaiterBehind names the one session waiting directly on holder's backend, for
+// a caller that goes on to ask something else about that backend.
+//
+// It refuses a second waiter rather than picking one, because a caller that
+// names a backend cannot be given an arbitrary choice between two.
+func WaiterBehind(ctx context.Context, conn Prober, holder int32) (int32, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return 0, fmt.Errorf("clearing the stats snapshot before naming the waiter: %w", err)
+	}
+	var pids []int32
+	if err := conn.QueryRow(ctx, `
+		SELECT coalesce(array_agg(pid), '{}') FROM pg_stat_activity
+		 WHERE datname = current_database() AND $1 = ANY(pg_blocking_pids(pid))`,
+		holder).Scan(&pids); err != nil {
+		return 0, fmt.Errorf("naming the session waiting behind backend %d: %w", holder, err)
+	}
+	if len(pids) != 1 {
+		return 0, fmt.Errorf("%d sessions wait behind backend %d, so none of them is the waiter", len(pids), holder)
+	}
+	return pids[0], nil
 }
