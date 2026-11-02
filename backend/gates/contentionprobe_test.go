@@ -364,12 +364,13 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 }
 
 // privateProbeFiles is how many files outside testdb still write their own
-// pg_blocking_pids query. testdb.QueuedBehind is the one probe, and every one
-// of these is a second answer to the same question.
-//
+// pg_blocking_pids query, each a second answer to testdb.QueuedBehind's
+// question. Two read the waiting pid rather than a count, which that function
+// does not answer, so they need a reader beside it.
+
 // The number only goes down. Convert a file, lower it, and the next private
 // copy cannot be written without this gate asking why.
-const privateProbeFiles = 19
+const privateProbeFiles = 18
 
 // sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
 // the gates that hold it.

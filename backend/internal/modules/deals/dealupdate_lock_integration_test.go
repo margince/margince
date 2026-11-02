@@ -14,31 +14,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// waitUntilBlockedBy returns once a backend waits on a lock held by blocker,
-// so the competing commit happens only after the writer reached its lock.
-func waitUntilBlockedBy(ctx context.Context, t *testing.T, e *configEnv, blocker int) {
-	t.Helper()
-	for ctx.Err() == nil {
-		if _, err := e.owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the activity snapshot: %v", err)
-		}
-		var waiting bool
-		if err := e.owner.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY (pg_blocking_pids(pid)))`, blocker,
-		).Scan(&waiting); err != nil {
-			t.Fatalf("looking for a writer blocked by the reassignment: %v", err)
-		}
-		if waiting {
-			return
-		}
-	}
-	t.Fatal("no writer ever blocked on the reassigning transaction")
-}
 
 // asFormerOwner holds every deal verb over the caller's own deals only.
 func (e *configEnv) asFormerOwner() context.Context {
@@ -108,8 +88,12 @@ func refusedAfterReassignment(t *testing.T, e *configEnv, deal ids.DealID, write
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- write(e.asFormerOwner()) }()
-	waitUntilBlockedBy(ctx, t, e, blocker)
+	racer := make(chan struct{})
+	go func() {
+		done <- write(e.asFormerOwner())
+		close(racer)
+	}()
+	testdb.AwaitQueuedBehind(t, e.owner, int32(blocker), 1, racer, "the competing write")
 	if err := reassign.Commit(ctx); err != nil {
 		t.Fatalf("committing the reassignment: %v", err)
 	}
