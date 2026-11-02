@@ -87,9 +87,15 @@ it("keeps last-known findings visible after bounded read failures", async () => 
   ).toBeInTheDocument();
   expect(
     screen.getByRole("heading", {
-      name: "Background work is delayed",
+      name: "Mail sorting: delayed",
     }),
   ).toBeInTheDocument();
+  expect(screen.getByText("Needs fixing").closest(".badge")).toHaveClass(
+    "badge-danger",
+  );
+  expect(
+    screen.getByText("Problem needing action: 1").closest(".badge"),
+  ).toHaveClass("badge-danger");
   expect(document.activeElement).toBe(refresh);
 });
 it("coalesces automatic polling with an in-flight explicit refresh", async () => {
@@ -215,7 +221,7 @@ it("rejects an unknown unit before it can render a misleading count", async () =
   await settle(4_000);
   expect(screen.getByRole("alert")).toBeInTheDocument();
   expect(
-    screen.queryByRole("heading", { name: "Background work is delayed" }),
+    screen.queryByRole("heading", { name: "Mail sorting: delayed" }),
   ).toBeNull();
 });
 

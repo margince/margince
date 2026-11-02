@@ -300,7 +300,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.effect.automatic",
     "health.effect.unknown",
     "health.condition.waiting_human",
-    "health.possibleImpact",
     "health.responsible.operator",
     "health.recovery.intake",
     "health.ownerHandoff",

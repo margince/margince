@@ -251,3 +251,107 @@ it("keeps focus on the state control when pause becomes resume", async () => {
   fireEvent.click(pause);
   expect(await screen.findByRole("button", { name: "Resume" })).toHaveFocus();
 });
+
+it("separates completed history and unrequested maintenance from pending updates", async () => {
+  routes({
+    data: [
+      {
+        ...runningDataTask,
+        title: "Required update",
+        status: "failed",
+        blocked_reason: "failed",
+      },
+      {
+        ...runningDataTask,
+        task_id: "finished",
+        title: "Finished update",
+        status: "done",
+      },
+      {
+        ...runningDataTask,
+        task_id: "optional",
+        title: "Optional repair",
+        version: 0,
+        blocked_reason: "review_required",
+      },
+    ],
+  });
+  render(<DataTasksHealthCard />);
+  expect(await screen.findByText("Required update")).toBeVisible();
+  expect(screen.queryByText("Finished update")).not.toBeVisible();
+  expect(screen.queryByText("Optional repair")).not.toBeVisible();
+  fireEvent.click(screen.getByText("Completed updates"));
+  expect(screen.getByText("Finished update")).toBeVisible();
+  expect(screen.getAllByRole("button", { name: "Estimate rows" })).toHaveLength(
+    1,
+  );
+});
+
+it("keeps work visible when polling marks it completed", async () => {
+  let done = false;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const request = input instanceof Request ? input : new Request(input);
+      if (request.url.endsWith("/me"))
+        return jsonResponse(
+          meFixture({ allow: { data_task: ["read", "update"] } }),
+        );
+      if (request.method === "POST") {
+        done = true;
+        return new Response(null, { status: 204 });
+      }
+      return jsonResponse({
+        data: [
+          {
+            ...runningDataTask,
+            status: done ? "done" : "running",
+            version: done ? 5 : 4,
+          },
+        ],
+      });
+    }),
+  );
+  render(<DataTasksHealthCard />);
+  fireEvent.click(await screen.findByRole("button", { name: "Pause" }));
+  expect(await screen.findByText("Done")).toBeVisible();
+  expect(screen.getByText("Correct held mail")).toBeVisible();
+  expect(screen.queryByText("Completed updates")).toBeNull();
+});
+
+it("leaves earlier steps neutral and separates an unrequested review", async () => {
+  routes({
+    data: [
+      { ...runningDataTask, blocked_reason: "earlier_step" },
+      {
+        ...runningDataTask,
+        task_id: "optional",
+        status: "pending",
+        version: 0,
+        blocked_reason: "review_required",
+        title: "Optional repair",
+      },
+    ],
+  });
+  render(<DataTasksHealthCard />);
+  expect(
+    (await screen.findByText("Running")).closest(".badge"),
+  ).not.toHaveClass("badge-warning");
+  expect(screen.queryByText("Optional repair")).not.toBeVisible();
+  fireEvent.click(screen.getByText("Optional maintenance"));
+  expect(screen.getByText("Optional repair")).toBeVisible();
+});
+
+it("keeps completed earlier steps out of a task's initial pending view", async () => {
+  routes({
+    data: [
+      runningDataTask,
+      { ...runningDataTask, step: "earlier", status: "done" },
+    ],
+  });
+  render(<DataTasksHealthCard />);
+  await screen.findByRole("button", { name: "Pause" });
+  expect(screen.queryByText("Step: earlier")).not.toBeVisible();
+  fireEvent.click(screen.getByText("Completed updates"));
+  expect(screen.getByText("Step: earlier")).toBeVisible();
+});

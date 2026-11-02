@@ -4,7 +4,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button } from "../../design-system/atoms";
+import { Badge, Button, Card, PendingBody } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import {
   type SectionState,
@@ -96,31 +96,40 @@ export function BriefFeed({
           </Button>
         </p>
       )}
-      <SurfaceState
-        state={
-          state !== "ready"
-            ? state
-            : rows.length > 0 || partial
-              ? "ready"
-              : "empty"
-        }
-        emptyLabel={t("brief.feed.clear")}
-        loadingLabel={t("brief.feed.loading")}
-      >
-        {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
-        {lead && (
-          <HomeListReturnScope>
-            <Triage
-              rows={rows}
-              at={at}
-              lead={lead}
-              onChoose={(item) => setChosen(identity(item))}
-              onOpenEmail={setOpenEmail}
-              onContext={onContext}
-            />
-          </HomeListReturnScope>
-        )}
-      </SurfaceState>
+      {/* The card in hand is taller than a few lines of text, so its wait is
+          drawn in the card's own frame, and the page does not jump when the
+          day lands under it. */}
+      {state === "loading" ? (
+        <Card as="div" className="brief-triage-lead brief-triage-pending">
+          <PendingBody label={t("brief.feed.loading")} lines={6} />
+        </Card>
+      ) : (
+        <SurfaceState
+          state={
+            state !== "ready"
+              ? state
+              : rows.length > 0 || partial
+                ? "ready"
+                : "empty"
+          }
+          emptyLabel={t("brief.feed.clear")}
+          loadingLabel={t("brief.feed.loading")}
+        >
+          {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
+          {lead && (
+            <HomeListReturnScope>
+              <Triage
+                rows={rows}
+                at={at}
+                lead={lead}
+                onChoose={(item) => setChosen(identity(item))}
+                onOpenEmail={setOpenEmail}
+                onContext={onContext}
+              />
+            </HomeListReturnScope>
+          )}
+        </SurfaceState>
+      )}
       {queueToggle && <div className="brief-first-foot">{queueToggle}</div>}
       <OpenEmailDrawer
         activityId={openEmail}
