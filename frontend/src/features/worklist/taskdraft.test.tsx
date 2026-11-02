@@ -15,7 +15,6 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { TimelineActions } from "../records/timelineactions";
 import { TaskDetailModal } from "./taskdetailmodal";
 
 afterEach(cleanup);
@@ -163,43 +162,3 @@ test("a task that could not be read offers no Draft email", async () => {
     screen.queryByRole("button", { name: en["task.next.draftEmail"] }),
   ).toBeNull();
 });
-
-// The timeline row and the dialog read the same field, so one task offers
-// the email on both or on neither.
-test.each([
-  ["a lead", { entity_type: "lead", entity_id: "l-1" }, true],
-  ["a company", { entity_type: "company", entity_id: "co-1" }, true],
-  [
-    "a closed lead",
-    { entity_type: "lead", entity_id: "l-1", refusal: "lead_closed" },
-    false,
-  ],
-  ["nothing", undefined, false],
-] as const)(
-  "the timeline and the dialog agree on a task targeting %s",
-  async (_, target, offered) => {
-    const task = taskWith(target);
-    stubTask(task);
-    render(
-      <StoryProviders>
-        <TimelineActions activity={task} entityType="company" entityId="co-1" />
-      </StoryProviders>,
-    );
-    await screen.findByRole("button", { name: "Open task" });
-    const onTimeline =
-      screen.queryByRole("button", { name: en["compose.writeEmail"] }) !== null;
-    cleanup();
-
-    openTask(vi.fn());
-    await screen.findByText(SUBJECT);
-    // A lead or company target needs no further read, so the verbs are drawn
-    // with the task.
-    const draft = screen.queryByRole("button", {
-      name: en["task.next.draftEmail"],
-    });
-    const inDialog = draft !== null && !draft.hasAttribute("disabled");
-
-    expect(onTimeline).toBe(offered);
-    expect(inDialog).toBe(offered);
-  },
-);

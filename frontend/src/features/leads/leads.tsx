@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   LatestInboundLine,
@@ -15,6 +16,7 @@ import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
+import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -43,8 +45,7 @@ export type Lead = components["schemas"]["Lead"];
 
 export type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
-import { leadQuery } from "../../lib/lead.queries";
-import { leadWriteKeys } from "../../lib/leadkeys";
+import { leadKey, leadWriteKeys } from "../../lib/leadkeys";
 import { useAddressedTab } from "../records/recordtab";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 
@@ -274,11 +275,20 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
 
 export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const lead = useQuery(leadQuery(id));
+  const leadQuery = useQuery({
+    queryKey: leadKey(id),
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/leads/{id}", {
+          params: { path: { id } },
+        }),
+      );
+    },
+  });
 
   return (
     <div className="wrap lead-surface">
-      <QueryGate query={lead} pendingLabel={t("nav.leads")}>
+      <QueryGate query={leadQuery} pendingLabel={t("nav.leads")}>
         {(lead) => (
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and
