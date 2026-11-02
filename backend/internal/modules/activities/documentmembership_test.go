@@ -15,7 +15,7 @@ func TestEveryHolderKindRendersTheSharedFileRules(t *testing.T) {
 	rules := []string{
 		"at.archived_at IS NULL",
 		"NOT at.bytes_withheld",
-		storekit.NotInlineMailImageSQL("mf"),
+		storekit.ListedMailFileSQL("mf"),
 		"a.archived_at IS NULL",
 		"mf.entity_type = 'activity'",
 		"UNION ALL",
