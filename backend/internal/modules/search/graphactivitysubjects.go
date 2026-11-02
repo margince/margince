@@ -356,7 +356,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			  JOIN relationship r ON r.contact_id = p.id
 			  JOIN company o ON o.id = r.company_id
 			 WHERE p.archived_at IS NULL
-			   AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
+			   AND `+employment.CurrentMembershipSQL("r")+`
 			   AND o.archived_at IS NULL
 			   AND %[3]s
 			 ORDER BY o.id, onEvent.role_rank, r.is_current_primary DESC

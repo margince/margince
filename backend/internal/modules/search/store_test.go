@@ -11,11 +11,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestRankedCursorRoundTripsFullPrecision(t *testing.T) {
-	in := rankedCursor{Score: 0.1234567890123456789, Type: "activity", ID: ids.NewV7()}
+	in := rankedCursor{Version: rankedCursorVersion, Score: 0.1234567890123456789, Type: "activity", ID: ids.NewV7()}
 	out, err := decodeCursor(encodeCursor(in))
 	if err != nil {
 		t.Fatal(err)
@@ -63,6 +64,19 @@ func TestTheTooBroadRefusalNamesNoDoorsArgument(t *testing.T) {
 	for _, argument := range []string{"types", "record_types"} {
 		if strings.Contains(message, argument) {
 			t.Errorf("the refusal %q names %q, which only one door takes", message, argument)
+		}
+	}
+}
+
+func TestRankedCursorRefusesAnEarlierRanking(t *testing.T) {
+	t.Parallel()
+	for _, version := range []int{0, 1, rankedCursorVersion + 1} {
+		token, err := storekit.EncodeOpaque(rankedCursor{Version: version, Score: 1, Type: "contact", ID: ids.NewV7()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := decodeCursor(token); err == nil {
+			t.Fatalf("ranking version %d was accepted", version)
 		}
 	}
 }

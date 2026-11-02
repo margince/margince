@@ -646,6 +646,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `renovatelockfileage_test.go` | H3 | The lockfile refresh is not held back by the repo-wide release-age floor. |
 | `reviewoutcome_test.go` | H2 | Every way a held message can settle closes its review. |
 | `rolemailboxonelist_test.go` | H2 | One role-mailbox list, held by a test rather than by a comment. |
+| `searchmembership_test.go` | H2 | _(no doc comment)_ |
 | `signatureeligibilityonespelling_test.go` | H2 | One spelling of "may this message be mined for this contact's signature", held by a test rather than by a comment. |
 | `uniquenessclaims_test.go` | H1 | A comment that says a declaration is the only one of its kind is a claim a test must hold. |
 

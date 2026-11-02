@@ -19252,6 +19252,24 @@ func (e SearchResponseTypesWithMore) Valid() bool {
 	}
 }
 
+// Defines values for SearchResultIdentifierMatch.
+const (
+	SearchResultIdentifierMatchExact  SearchResultIdentifierMatch = "exact"
+	SearchResultIdentifierMatchPrefix SearchResultIdentifierMatch = "prefix"
+)
+
+// Valid indicates whether the value is a known member of the SearchResultIdentifierMatch enum.
+func (e SearchResultIdentifierMatch) Valid() bool {
+	switch e {
+	case SearchResultIdentifierMatchExact:
+		return true
+	case SearchResultIdentifierMatchPrefix:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SearchResultTrustTier.
 const (
 	SearchResultTrustTierSearchResultTrustTierAuthoritative SearchResultTrustTier = "authoritative"
@@ -55319,6 +55337,9 @@ type SearchResult struct {
 	EmailSummary *EmailSummary      `json:"email_summary,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
+	// IdentifierMatch The record's own email or domain matches the complete query; absent for text and employer matches.
+	IdentifierMatch *SearchResultIdentifierMatch `json:"identifier_match,omitempty"`
+
 	// IsPartner For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone.
 	IsPartner *bool `json:"is_partner,omitempty"`
 
@@ -55339,6 +55360,9 @@ type SearchResult struct {
 	// WorksAt On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
 	WorksAt *SearchHitEmployer `json:"works_at,omitempty"`
 }
+
+// SearchResultIdentifierMatch The record's own email or domain matches the complete query; absent for text and employer matches.
+type SearchResultIdentifierMatch string
 
 // SearchResultTrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
 type SearchResultTrustTier string
