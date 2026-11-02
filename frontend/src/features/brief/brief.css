@@ -97,25 +97,31 @@
   gap: var(--space-2) var(--space-4);
 }
 .glance-greeting {
+  min-width: 0;
   margin: 0;
+  overflow-wrap: break-word;
   text-wrap: balance;
 }
 .glance-greeting-lead,
 .glance-greeting-name {
   display: block;
 }
-/* A rung under the line it leads to. It keeps its height when empty, so the
-   facts' line stands at one height in both views. */
+/* A rung under the line it leads to, and quieter in weight. It keeps its height
+   when empty, so the facts' line stands at one height in both views. */
 .glance-greeting-lead {
   font: var(--fontHeadingMedium);
+  font-weight: var(--fontWeightRegular);
   min-block-size: 1lh;
+}
+.glance-greeting-name {
+  font: var(--fontDisplayLarge);
 }
 .greeting-name {
   color: var(--accentText);
 }
 /* The stepper takes one line of the title and no more, for the same reason. */
 .glance-title > .brief-report-stepper {
-  font: var(--fontHeadingLarge);
+  font: var(--fontDisplayLarge);
   block-size: 1lh;
   align-items: center;
 }

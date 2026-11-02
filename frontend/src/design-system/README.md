@@ -67,14 +67,14 @@ beside its `font`, or the prose keeps the rhythm of the default.
 | `--fontHeadingXSmall` | The same, tighter still: the title of a flag. |
 | `--fontHeadingXXSmall` | Use with care; it goes with Body S, as small print does. |
 
-Five more sizes are for the greeting that fills the window and for the one figure a view leads
-with. Nothing else uses them. The display sizes scale with the window, because each is the one line
+Five more sizes are for the head of Home, the greeting that fills the window, and the one figure a
+view leads with. Nothing else uses them. The display sizes scale with the window, because each is the one line
 a reader sees whole when it opens:
 
 | Token | For |
 |---|---|
 | `--fontDisplayXLarge` | The greeting that fills the window once a day. |
-| `--fontDisplayLarge` | The figure an MCP app view leads with. |
+| `--fontDisplayLarge` | The title at the head of Home: the reader's name, or the days the weekly report covers. Also the figure an MCP app view leads with. |
 | `--fontDisplayMedium` | A figure under the full-window greeting. |
 | `--fontDisplayFigure` | The one figure a report view leads with, such as Sales won on Sales review. It is smaller than the figure under the greeting, so the readings and the first action still fit the first screen. |
 | `--fontLead` | The line under the full-window greeting. Its line is tall enough to hold a large `RecordChip`. |

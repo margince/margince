@@ -640,7 +640,7 @@
   /* The full-window greeting. */
   --fontDisplayXLarge:
     var(--fontWeightBold) clamp(3.25rem, 8vw, 7rem) / 1 var(--fontFamilyHeading);
-  /* The figure an MCP app view leads with. */
+  /* The title at the head of Home, and the figure an MCP app view leads with. */
   --fontDisplayLarge:
     var(--fontWeightBold) clamp(2.75rem, 5.4vw, 4.25rem) / 1.05
     var(--fontFamilyHeading);

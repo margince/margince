@@ -171,7 +171,7 @@ const DISPLAY: ReadonlyArray<{ token: string; context: string }> = [
   { token: "--fontDisplayXLarge", context: "the full-window greeting" },
   {
     token: "--fontDisplayLarge",
-    context: "the figure an MCP app view leads with",
+    context: "Home's title, and an MCP app view's figure",
   },
   { token: "--fontDisplayMedium", context: "a figure under the greeting" },
   {
