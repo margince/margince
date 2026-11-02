@@ -9137,7 +9137,6 @@ func (e CreateRecordGrantRequestSubjectType) Valid() bool {
 const (
 	CreateRelationshipRequestEmploymentStatusCurrent CreateRelationshipRequestEmploymentStatus = "current"
 	CreateRelationshipRequestEmploymentStatusFormer  CreateRelationshipRequestEmploymentStatus = "former"
-	CreateRelationshipRequestEmploymentStatusUnknown CreateRelationshipRequestEmploymentStatus = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the CreateRelationshipRequestEmploymentStatus enum.
@@ -9146,8 +9145,6 @@ func (e CreateRelationshipRequestEmploymentStatus) Valid() bool {
 	case CreateRelationshipRequestEmploymentStatusCurrent:
 		return true
 	case CreateRelationshipRequestEmploymentStatusFormer:
-		return true
-	case CreateRelationshipRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -10628,7 +10625,6 @@ func (e EmploymentImportRequestAction) Valid() bool {
 const (
 	EmploymentImportRequestEmploymentStatusCurrent EmploymentImportRequestEmploymentStatus = "current"
 	EmploymentImportRequestEmploymentStatusFormer  EmploymentImportRequestEmploymentStatus = "former"
-	EmploymentImportRequestEmploymentStatusUnknown EmploymentImportRequestEmploymentStatus = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the EmploymentImportRequestEmploymentStatus enum.
@@ -10637,8 +10633,6 @@ func (e EmploymentImportRequestEmploymentStatus) Valid() bool {
 	case EmploymentImportRequestEmploymentStatusCurrent:
 		return true
 	case EmploymentImportRequestEmploymentStatusFormer:
-		return true
-	case EmploymentImportRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -21695,7 +21689,6 @@ func (e UpdateProductRequestBillingModel) Valid() bool {
 const (
 	UpdateRelationshipRequestEmploymentStatusCurrent UpdateRelationshipRequestEmploymentStatus = "current"
 	UpdateRelationshipRequestEmploymentStatusFormer  UpdateRelationshipRequestEmploymentStatus = "former"
-	UpdateRelationshipRequestEmploymentStatusUnknown UpdateRelationshipRequestEmploymentStatus = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the UpdateRelationshipRequestEmploymentStatus enum.
@@ -21704,8 +21697,6 @@ func (e UpdateRelationshipRequestEmploymentStatus) Valid() bool {
 	case UpdateRelationshipRequestEmploymentStatusCurrent:
 		return true
 	case UpdateRelationshipRequestEmploymentStatusFormer:
-		return true
-	case UpdateRelationshipRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -34723,7 +34714,7 @@ type Company struct {
 	// viewer's role lacks computed_field:read visibility (STATE-4).
 	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
 
-	// ContactCount How many live contacts THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
 	ContactCount *int      `json:"contact_count,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 
@@ -40607,7 +40598,7 @@ type CreateRelationshipRequest struct {
 	CounterpartyContactId *openapi_types.UUID `json:"counterparty_contact_id,omitempty"`
 	DealId                *openapi_types.UUID `json:"deal_id,omitempty"`
 
-	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	// EmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 	EmploymentStatus *CreateRelationshipRequestEmploymentStatus `json:"employment_status,omitempty"`
 	EndedAt          *openapi_types.Date                        `json:"ended_at,omitempty"`
 	EndedPrecision   *CreateRelationshipRequestEndedPrecision   `json:"ended_precision,omitempty"`
@@ -40620,7 +40611,7 @@ type CreateRelationshipRequest struct {
 	StartedPrecision *CreateRelationshipRequestStartedPrecision `json:"started_precision,omitempty"`
 }
 
-// CreateRelationshipRequestEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+// CreateRelationshipRequestEmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 type CreateRelationshipRequestEmploymentStatus string
 
 // CreateRelationshipRequestEndedPrecision defines model for CreateRelationshipRequest.EndedPrecision.
@@ -58965,7 +58956,7 @@ type UpdateRelationshipRequest struct {
 	// ClearStartedAt Remove an incorrect start date and its precision.
 	ClearStartedAt *bool `json:"clear_started_at,omitempty"`
 
-	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	// EmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 	EmploymentStatus *UpdateRelationshipRequestEmploymentStatus `json:"employment_status,omitempty"`
 	EndedAt          *openapi_types.Date                        `json:"ended_at,omitempty"`
 	EndedPrecision   *UpdateRelationshipRequestEndedPrecision   `json:"ended_precision,omitempty"`
@@ -58975,7 +58966,7 @@ type UpdateRelationshipRequest struct {
 	StartedPrecision *UpdateRelationshipRequestStartedPrecision `json:"started_precision,omitempty"`
 }
 
-// UpdateRelationshipRequestEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+// UpdateRelationshipRequestEmploymentStatus current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
 type UpdateRelationshipRequestEmploymentStatus string
 
 // UpdateRelationshipRequestEndedPrecision defines model for UpdateRelationshipRequest.EndedPrecision.
@@ -64990,7 +64981,7 @@ type ListContactsParams struct {
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListContactsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
-	// CompanyId Contacts who work at this account, by their CURRENT PRIMARY employment edge
+	// CompanyId Contacts who work at this account, by a current employment edge, whether primary or secondary
 	// (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
 	// "who works there" and "who has ever worked there" are different questions, and the
 	// list answers the first.

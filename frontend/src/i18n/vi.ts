@@ -18135,6 +18135,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "employment.status.current": "Hiện tại",
   "employment.status.former": "Trước đây",
   "employment.status.unknown": "Chưa rõ trạng thái",
+  "employment.keepImportedStatus": "Giữ trạng thái đã nhập",
+  "employment.statusChoose": "Chọn trạng thái",
   "employment.statusLabel": "Trạng thái công tác",
   "employment.review": "Xem lại vai trò trước khi liên kết.",
   "employment.matchNeeded": "Cần khớp công ty.",

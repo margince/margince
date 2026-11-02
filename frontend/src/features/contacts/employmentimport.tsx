@@ -230,8 +230,8 @@ function EmploymentMatchModal({
   const [domain, setDomain] = useState(item.domain ?? "");
   const [started, setStarted] = useState(item.started ?? "");
   const [ended, setEnded] = useState(item.ended ?? "");
-  const [status, setStatus] = useState<Item["employment_status"]>(
-    item.employment_status,
+  const [status, setStatus] = useState<"current" | "former" | "">(
+    item.employment_status === "unknown" ? "" : item.employment_status,
   );
   return (
     <Modal open onClose={onClose} labelledBy={heading} intent="form">
@@ -294,20 +294,14 @@ function EmploymentMatchModal({
             <Select
               {...control}
               value={status}
+              placeholder={t("employment.keepImportedStatus")}
               onChange={(value) => {
-                if (
-                  value === "current" ||
-                  value === "former" ||
-                  value === "unknown"
-                )
-                  setStatus(value);
+                if (value === "current" || value === "former") setStatus(value);
               }}
-              options={(["current", "former", "unknown"] as const).map(
-                (value) => ({
-                  value,
-                  label: t(`employment.status.${value}`),
-                }),
-              )}
+              options={[
+                { value: "current", label: t("employment.status.current") },
+                { value: "former", label: t("employment.status.former") },
+              ]}
               disabled={pending}
             />
           )}
@@ -333,7 +327,7 @@ function EmploymentMatchModal({
               key: item.key,
               company_id: company?.id,
               domain: company ? undefined : domain.trim(),
-              employment_status: status,
+              employment_status: status || undefined,
               started,
               ended,
             })

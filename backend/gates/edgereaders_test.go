@@ -216,8 +216,10 @@ var deferredEdgeReads = gatekit.Waive(map[string]string{})
 // calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
 // path the census cannot follow, such as a storekit.Field value.
 var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
-	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":        "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
-	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin": "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
+	"internal/compose/company360/graphreads.go:readEmployment":                           "CompanyRosterEdgesSQL admits relationship reads and scopes every returned relationship id through the shared roster owner before this join reads the role; no edge outside that admitted set reaches the graph",
+	"internal/modules/contacts/unknownemploymentrepair.go:repairUnknownEmploymentLinkTx": "RepairUnknownEmploymentTx requires the system principal and relationship update before locking an internal repair candidate; the returned row passes updateRelationshipInTx authorization and only its boolean progress leaves the data task",
+	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":            "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
+	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin":     "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
 })
 
 // ruledEdgeReads: a DISCLOSING read the product has ruled needs no edge gate.
