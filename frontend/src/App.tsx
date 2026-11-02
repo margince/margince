@@ -43,6 +43,12 @@ import { RecordZoneProvider, useConfiguredRecordZone } from "./lib/recordzone";
 import { SPA_RELEASE } from "./lib/release";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
 import { currentParams } from "./lib/urlstate";
 
@@ -141,6 +147,30 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
+// On a browser that had a session, Home's reads start with the session probe.
+// Waiting for the gates it opens costs two round trips. An answer that sends the
+// reader elsewhere stops them, and the cleanup aborts them.
+function homeMayRead(
+  state: Readonly<{
+    screen: Screen;
+    signedIn: boolean;
+    sessionSeen: boolean;
+    refused: boolean;
+    confined: boolean;
+    described: boolean | undefined;
+    unfinished: boolean;
+  }>,
+): boolean {
+  return (
+    state.screen === "home" &&
+    (state.signedIn || state.sessionSeen) &&
+    !state.refused &&
+    !state.confined &&
+    state.described !== false &&
+    !state.unfinished
+  );
+}
+
 // AuthGate: everything behind the session probes GET /v1/me, and the
 // boundary branches on the TYPED failure (§4 of the login spec):
 // 401 → login, network/5xx → connection problem, 503 → installation
@@ -171,6 +201,7 @@ function AuthedApp({
   useEffect(() => {
     if (me.data) {
       hadSession.current = true;
+      writeStored(STORAGE_KEYS.sessionSeen, "1");
       setNotice(null);
       markJourney("session");
       return;
@@ -179,6 +210,7 @@ function AuthedApp({
       me.error instanceof AuthProbeError &&
       me.error.kind === "unauthorized"
     ) {
+      removeStored(STORAGE_KEYS.sessionSeen);
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -228,16 +260,21 @@ function AuthedApp({
   }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
+  const [sessionSeen] = useState(
+    () => readStored(STORAGE_KEYS.sessionSeen) === "1",
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const gatesPending = companyPending || recordZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
-  // Home's reads start here rather than when its lazy screen commits, and only
-  // once nothing will send the reader to onboarding instead.
-  const opensHome =
-    shellReady &&
-    described === true &&
-    !progress.unfinished &&
-    route.screen === "home";
+  const opensHome = homeMayRead({
+    screen: route.screen,
+    signedIn: me.data !== undefined,
+    sessionSeen,
+    refused: me.isError,
+    confined: confinement !== null,
+    described,
+    unfinished: progress.unfinished,
+  });
   const queryClient = useQueryClient();
   useEffect(() => {
     if (shellReady) {
