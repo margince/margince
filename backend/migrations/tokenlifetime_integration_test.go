@@ -98,8 +98,9 @@ func TestEveryExpiringRowExpiresAfterItWasCreated(t *testing.T) {
 			continue
 		}
 		if e.creation == "" {
-			t.Errorf("%s carries expires_at and neither created_at nor issued_at, so its "+
-				"lifetime cannot be bounded: give it a creation column or say here why it has none", e.table)
+			t.Errorf("%s carries expires_at and none of created_at, issued_at or fetched_at, "+
+				"so its lifetime cannot be bounded: give it a creation column or say here why "+
+				"it has none", e.table)
 			continue
 		}
 		want := fmt.Sprintf("expires_at > %s", e.creation)

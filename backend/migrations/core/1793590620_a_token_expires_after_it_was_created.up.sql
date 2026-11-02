@@ -1,8 +1,10 @@
 -- A token expires after it was created, and nothing said so.
 --
--- expires_at is on thirteen tables and no CHECK anywhere mentioned it. Five of
--- them hand out authority: a passport, an oauth grant, an authorization code, a
--- deal-room session and a deal-room invitation are all bearer credentials. A
+-- expires_at is on twenty-three tables. Four already bound it against their
+-- creation column and two are waived, which leaves the seventeen bounded here.
+-- Five of those hand out
+-- authority: a passport, an oauth grant, an authorization code, a deal-room
+-- session and a deal-room invitation are all bearer credentials. A
 -- row whose expiry precedes its creation has a lifetime nobody can reason
 -- about, and every reader asking "is this still valid" gets an answer that
 -- depends on which column it trusted.
