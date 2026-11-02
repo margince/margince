@@ -52,9 +52,9 @@ func calendarNamedToItsHost(err error, actor ids.UUID, host ids.UserID) error {
 	if !ok || actor.IsZero() || actor != host.UUID || unavailable.Calendar == "" {
 		return err
 	}
-	code, message := unavailable.MessageFault()
+	_, message := unavailable.MessageFault()
 	return &httperr.DetailedError{
-		Status: http.StatusBadGateway, Code: code, Detail: message,
+		Status: http.StatusBadGateway, Code: connector.CalendarUnavailableCode, Detail: message,
 		Details: map[string]any{"calendar": unavailable.Calendar},
 	}
 }

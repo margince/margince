@@ -230,7 +230,7 @@ connected calendar as a row: it reads busy times, sends invitations, and shows
 its last sync. Then comes **Add booked meetings to**, the calendar each booking
 lands in. Last is **Also count as busy**, other calendars that hide time from
 guests. Event names stay private. A calendar Margince cannot read is named under
-its row and in the preview. Guests see only that no times are offered.
+its row and in the preview, while guests see only that no times are offered.
 
 With both Google and Microsoft calendars
 connected, a **Calendar provider** choice comes first. **Save calendar** appears
