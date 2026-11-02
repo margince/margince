@@ -5772,6 +5772,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/reminder-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim the one browser notification a due task reminder gets.
+         * @description A due reminder is shown as a browser notification while a Margince tab is open. A member
+         *     signed in on two browsers would otherwise see it once in each. The first tab to claim a
+         *     reminder at its `remind_at` gets `claimed: true` and shows it; every later claim for that
+         *     instant answers false. Moving `remind_at`, or handing the task to someone else, arms it again.
+         *
+         *     A claim admits the rows the `reminder_due` list returns: the caller's own open task, due at
+         *     that instant within the list's 30-day window, with content the caller may read. Any other
+         *     task, including one the caller cannot see, answers `claimed: false`, which says nothing
+         *     about it.
+         */
+        post: operations["claimTaskReminderDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/audience": {
         parameters: {
             query?: never;
@@ -25888,6 +25919,17 @@ export interface components {
             campaign: components["schemas"]["WebFormValue"][];
             consent?: components["schemas"]["WebFormConsent"];
         };
+        TaskReminderClaimRequest: {
+            /**
+             * Format: date-time
+             * @description The reminder instant the tab is about to show, as the activity list returned it.
+             */
+            remind_at: string;
+        };
+        TaskReminderClaim: {
+            /** @description True for the first claim at this instant and assignee, false for every later one. */
+            claimed: boolean;
+        };
         WebFormValue: {
             name: string;
             value: string;
@@ -30047,7 +30089,7 @@ export interface components {
             readonly logo_url?: string | null;
             /** @description Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions. */
             readonly strength?: components["schemas"]["RelationshipStrength"];
-            /** @description How many live contacts THE CALLER MAY SEE list this account as their current primary employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied. */
+            /** @description How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied. */
             readonly contact_count?: number;
             /** @description How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it. */
             readonly open_deal_count?: number;
@@ -31814,7 +31856,7 @@ export interface components {
              * @description Explicit user correction of this episode status.
              * @enum {string}
              */
-            employment_status?: "current" | "former" | "unknown";
+            employment_status?: "current" | "former";
         };
         EmploymentImportItem: {
             key: string;
@@ -34881,10 +34923,10 @@ export interface components {
             role?: string | null;
             is_current_primary?: boolean;
             /**
-             * @description Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+             * @description current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
              * @enum {string}
              */
-            employment_status?: "current" | "former" | "unknown";
+            employment_status?: "current" | "former";
             /** @enum {string} */
             started_precision?: "day" | "month";
             /** @enum {string} */
@@ -34903,10 +34945,10 @@ export interface components {
             role?: string | null;
             is_current_primary?: boolean;
             /**
-             * @description Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+             * @description current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.
              * @enum {string}
              */
-            employment_status?: "current" | "former" | "unknown";
+            employment_status?: "current" | "former";
             /** @enum {string} */
             started_precision?: "day" | "month";
             /** @enum {string} */
@@ -55950,7 +55992,7 @@ export interface operations {
                  */
                 tag_mode?: "any" | "all" | "none";
                 /**
-                 * @description Contacts who work at this account, by their CURRENT PRIMARY employment edge
+                 * @description Contacts who work at this account, by a current employment edge, whether primary or secondary
                  *     (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
                  *     "who works there" and "who has ever worked there" are different questions, and the
                  *     list answers the first.
@@ -63748,6 +63790,36 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    claimTaskReminderDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskReminderClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Whether this caller is the one to show the notification. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskReminderClaim"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

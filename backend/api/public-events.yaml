@@ -2214,6 +2214,9 @@ components:
         commitment_admissions_changed:
           type: boolean
           description: The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
+        request_settlement_changed:
+          type: boolean
+          description: The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
         agenda_changed:
           type: boolean
           description: The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried.

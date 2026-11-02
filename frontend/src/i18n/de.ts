@@ -6826,10 +6826,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.previewEmail": "Vorschau",
-  "compose.earlierShow_one": "{count} frühere Nachricht zeigen",
-  "compose.earlierShow_other": "{count} frühere Nachrichten zeigen",
-  "compose.earlierHide": "Frühere Nachrichten ausblenden",
+  "compose.selectedShow": "Ausgewählte Nachricht anzeigen",
+  "compose.selectedHide": "Ausgewählte Nachricht ausblenden",
   "compose.quotedHeader": "Am {when} schrieb {who}:",
+  "compose.quotedTeam": "Das Team",
   "compose.quotedYou": "du",
   "compose.filesTotal_one": "{count} Datei · {size}",
   "compose.filesTotal_other": "{count} Dateien · {size}",
@@ -6861,7 +6861,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.draftReply": "Antwort entwerfen",
   "compose.newEmail": "Neue E-Mail",
   "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
-  "compose.followingUp": "Follow-up zu deiner E-Mail „{subject}“ · {when}",
+  "compose.followingUp": "Nachfassen zu „{subject}“ · {when}",
   "compose.aboutRow": "Bezug: {subject}",
   "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
@@ -13020,6 +13020,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
     "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
+  "settings.voice.dropLabel": "Dateien hochladen",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "settings.voice.pasteLabel": "Text einfügen",
   "settings.voice.pasteAdd": "Text hinzufügen",
@@ -16223,8 +16224,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strength.detail": "Letzter Kontakt {last}",
   "contact.strength.sentence.weakStale":
     "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
-  "contact.strength.sentence.weakRare":
-    "Schwach: ihr habt nur selten Kontakt. Letzter Kontakt war am {last}.",
+  "contact.strength.sentence.weakFew":
+    "Schwach: es gab kürzlich Kontakt, aber in den letzten 90 Tagen wenige Interaktionen.",
+  "contact.strength.sentence.weakLopsided":
+    "Schwach: es gab kürzlich Kontakt, aber der Austausch läuft meist in eine Richtung.",
+  "contact.strength.sentence.weakNoReply":
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Antwort dieses Kontakts zählte.",
+  "contact.strength.sentence.weakOnlyThem":
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Nachricht deines Teams zählte.",
+  "contact.strength.sentence.weakUndirected":
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Interaktion zählte als Nachricht.",
   "contact.strength.sentence.moderate":
     "Mittel: ihr habt hin und wieder Kontakt. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.strong":
@@ -18626,6 +18635,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "employment.status.current": "Aktuell",
   "employment.status.former": "Ehemalig",
   "employment.status.unknown": "Status unbekannt",
+  "employment.keepImportedStatus": "Importierten Status beibehalten",
+  "employment.statusChoose": "Status wählen",
   "employment.statusLabel": "Anstellungsstatus",
   "employment.review": "Prüfe diese Rolle, bevor du sie verknüpfst.",
   "employment.matchNeeded": "Unternehmen muss zugeordnet werden.",

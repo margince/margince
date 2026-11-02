@@ -6662,10 +6662,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.writeEmail": "Viết email",
   "compose.relink": "Đổi hồ sơ",
   "compose.previewEmail": "Xem trước",
-  "compose.earlierShow_one": "Hiện {count} thư trước",
-  "compose.earlierShow_other": "Hiện {count} thư trước",
-  "compose.earlierHide": "Ẩn các thư trước",
+  "compose.selectedShow": "Hiện thư đã chọn",
+  "compose.selectedHide": "Ẩn thư đã chọn",
   "compose.quotedHeader": "Vào {when}, {who} đã viết:",
+  "compose.quotedTeam": "Nhóm của bạn",
   "compose.quotedYou": "bạn",
   "compose.filesTotal_one": "{count} tệp · {size}",
   "compose.filesTotal_other": "{count} tệp · {size}",
@@ -12663,6 +12663,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addFirstLabel": "Văn mẫu đầu tiên",
   "settings.voice.dropHint":
     "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc.",
+  "settings.voice.dropLabel": "Tải tệp lên",
   "settings.voice.dropEmpty": "Thả tệp vào đây, hoặc bấm để chọn",
   "settings.voice.pasteLabel": "Dán văn bản",
   "settings.voice.pasteAdd": "Thêm văn bản",
@@ -15782,8 +15783,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strength.detail": "Liên hệ gần nhất {last}",
   "contact.strength.sentence.weakStale":
     "Yếu: đã khá lâu rồi. Lần liên hệ gần nhất là {last}.",
-  "contact.strength.sentence.weakRare":
-    "Yếu: hai bên hiếm khi liên hệ. Lần liên hệ gần nhất là {last}.",
+  "contact.strength.sentence.weakFew":
+    "Yếu: có liên hệ gần đây, nhưng ít tương tác được chia sẻ trong 90 ngày qua.",
+  "contact.strength.sentence.weakLopsided":
+    "Yếu: có liên hệ gần đây, nhưng trao đổi được chia sẻ chủ yếu đi một chiều.",
+  "contact.strength.sentence.weakNoReply":
+    "Yếu: có liên hệ gần đây, nhưng không có phản hồi được chia sẻ từ liên hệ này được tính.",
+  "contact.strength.sentence.weakOnlyThem":
+    "Yếu: có liên hệ gần đây, nhưng không có tin nhắn được chia sẻ từ nhóm của bạn được tính.",
+  "contact.strength.sentence.weakUndirected":
+    "Yếu: có liên hệ gần đây, nhưng không có tương tác được chia sẻ nào được tính là tin nhắn.",
   "contact.strength.sentence.moderate":
     "Trung bình: thỉnh thoảng hai bên có liên hệ. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.strong":
@@ -18135,6 +18144,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "employment.status.current": "Hiện tại",
   "employment.status.former": "Trước đây",
   "employment.status.unknown": "Chưa rõ trạng thái",
+  "employment.keepImportedStatus": "Giữ trạng thái đã nhập",
+  "employment.statusChoose": "Chọn trạng thái",
   "employment.statusLabel": "Trạng thái công tác",
   "employment.review": "Xem lại vai trò trước khi liên kết.",
   "employment.matchNeeded": "Cần khớp công ty.",

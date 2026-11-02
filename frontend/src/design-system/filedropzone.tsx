@@ -4,6 +4,7 @@
 import { type DragEvent, useState } from "react";
 import { Field, type FieldControl } from "./atoms";
 import "./filedropzone.css";
+import type { Glyph } from "./materialsymbols";
 
 // FileDropzone: choosing a file, by drop AND by click, from one control.
 //
@@ -99,6 +100,7 @@ export function FileDropzoneControl({
   files,
   accept,
   disabled,
+  icon: Icon,
 }: Readonly<{
   control: FieldControl;
   emptyLabel: string;
@@ -108,6 +110,8 @@ export function FileDropzoneControl({
   files?: readonly File[];
   accept?: string;
   disabled?: boolean;
+  // A mark above the prompt, for a zone tall enough to stand as a panel.
+  icon?: Glyph;
 }>) {
   const [over, setOver] = useState(false);
 
@@ -179,6 +183,11 @@ export function FileDropzoneControl({
           take(event.dataTransfer.files);
         }}
       />
+      {Icon && (
+        <span className="fdz-icon" aria-hidden="true">
+          <Icon size={20} />
+        </span>
+      )}
       {/* A live region, and it has to be: the input's value is cleared
               after every pick (see above), so the control itself announces "no
               file chosen" whatever is actually held. This text is the only

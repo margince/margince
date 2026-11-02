@@ -180,7 +180,7 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: |-
-            Contacts who work at this account, by their CURRENT PRIMARY employment edge. A past employer does not match:
+            Contacts who work at this account, by a current employment edge, whether primary or secondary. A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
       responses:
@@ -10965,7 +10965,7 @@ components:
           readOnly: true
           minimum: 0
           description: >-
-            How many live contacts THE CALLER MAY SEE list this account as their current primary employer. Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+            How many distinct live contacts THE CALLER MAY SEE hold a current job at this account. Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
         open_deal_count:
           type: integer
           readOnly: true
@@ -14611,7 +14611,7 @@ components:
         project_id: {type: [string, 'null'], format: uuid}
         role: {type: [string, 'null']}
         is_current_primary: {type: boolean}
-        employment_status: {type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.'}
+        employment_status: {type: string, enum: [current, former], description: 'current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.'}
         started_precision: {type: string, enum: [day, month]}
         ended_precision: {type: string, enum: [day, month]}
         started_at: {type: [string, 'null'], format: date}
@@ -14624,7 +14624,7 @@ components:
         clear_ended_at: {type: boolean, description: Remove an incorrect end date and its precision.}
         role: {type: [string, 'null']}
         is_current_primary: {type: boolean}
-        employment_status: {type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.'}
+        employment_status: {type: string, enum: [current, former], description: 'current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.'}
         started_precision: {type: string, enum: [day, month]}
         ended_precision: {type: string, enum: [day, month]}
         started_at: {type: [string, 'null'], format: date}

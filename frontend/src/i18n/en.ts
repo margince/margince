@@ -6851,10 +6851,10 @@ export const en = {
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.previewEmail": "Preview",
-  "compose.earlierShow_one": "Show {count} earlier message",
-  "compose.earlierShow_other": "Show {count} earlier messages",
-  "compose.earlierHide": "Hide earlier messages",
+  "compose.selectedShow": "Show selected message",
+  "compose.selectedHide": "Hide selected message",
   "compose.quotedHeader": "On {when}, {who} wrote:",
+  "compose.quotedTeam": "Your team",
   "compose.quotedYou": "you",
   "compose.filesTotal_one": "{count} file · {size}",
   "compose.filesTotal_other": "{count} files · {size}",
@@ -6886,7 +6886,7 @@ export const en = {
   "compose.draftReply": "Draft reply",
   "compose.newEmail": "New email",
   "compose.replyingTo": "Replying to “{subject}” · {when}",
-  "compose.followingUp": "Following up on your email “{subject}” · {when}",
+  "compose.followingUp": "Following up on “{subject}” · {when}",
   "compose.aboutRow": "About: {subject}",
   "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
@@ -12998,6 +12998,7 @@ export const en = {
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
     "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
+  "settings.voice.dropLabel": "Upload files",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
   "settings.voice.pasteLabel": "Paste text",
   "settings.voice.pasteAdd": "Add text",
@@ -16088,8 +16089,16 @@ export const en = {
   "contact.strength.detail": "Last contact {last}",
   "contact.strength.sentence.weakStale":
     "Weak: it has been a while. You last were in touch on {last}.",
-  "contact.strength.sentence.weakRare":
-    "Weak: you are in touch only rarely. Last contact was on {last}.",
+  "contact.strength.sentence.weakFew":
+    "Weak: recent contact, but few shared interactions in the last 90 days.",
+  "contact.strength.sentence.weakLopsided":
+    "Weak: recent contact, but the shared exchange runs mostly one way.",
+  "contact.strength.sentence.weakNoReply":
+    "Weak: recent contact, but no reply from this contact counted among shared interactions.",
+  "contact.strength.sentence.weakOnlyThem":
+    "Weak: recent contact, but no message from your team counted among shared interactions.",
+  "contact.strength.sentence.weakUndirected":
+    "Weak: recent contact, but no shared interaction counted as a message either way.",
   "contact.strength.sentence.moderate":
     "Moderate: you are in touch from time to time. Last contact was on {last}.",
   "contact.strength.sentence.strong":
@@ -18468,6 +18477,8 @@ export const en = {
   "employment.status.current": "Current",
   "employment.status.former": "Former",
   "employment.status.unknown": "Status unknown",
+  "employment.keepImportedStatus": "Keep imported status",
+  "employment.statusChoose": "Choose a status",
   "employment.statusLabel": "Employment status",
   "employment.review": "Review this role before linking it.",
   "employment.matchNeeded": "Company match needed.",
