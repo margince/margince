@@ -88,23 +88,22 @@
   padding: 0;
 }
 
-/* The title, with what acts on it (the weekly's stepper) at its line's end. */
+/* The heading spans both tracks and its lead line keeps to the first, so the
+   weekly's stepper stands at that line's end and outside the heading's text. */
 .glance-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-4);
 }
 .glance-greeting {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: subgrid;
   min-width: 0;
   margin: 0;
   overflow-wrap: break-word;
   text-wrap: balance;
-}
-.glance-greeting-lead,
-.glance-greeting-name {
-  display: block;
 }
 /* A rung under the line it leads to, and quieter in weight. It keeps its height
    when empty, so the facts' line stands at one height in both views. */
@@ -114,14 +113,18 @@
   min-block-size: 1lh;
 }
 .glance-greeting-name {
+  grid-column: 1 / -1;
   font: var(--fontDisplayLarge);
 }
 .greeting-name {
   color: var(--accentText);
 }
-/* The stepper takes one line of the title and no more, for the same reason. */
+/* Held to the lead line's height, so it never pushes the title down. */
 .glance-title > .brief-report-stepper {
-  font: var(--fontDisplayLarge);
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  font: var(--fontHeadingMedium);
   block-size: 1lh;
   align-items: center;
 }
