@@ -2566,6 +2566,7 @@ export const en = {
   // extensions/<unit>/frontend/i18n/, namespaced `ext<Unit>.` and merged into
   // the catalogue by gen-composition (see i18n/index.tsx).
 
+  "search.bestMatch": "Best match",
   "search.placeholder":
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",

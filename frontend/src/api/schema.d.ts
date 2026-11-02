@@ -45141,6 +45141,11 @@ export interface components {
             snippet?: string | null;
             /** @description Relevance score. */
             score?: number | null;
+            /**
+             * @description The record's own email or domain matches the complete query; absent for text and employer matches.
+             * @enum {string}
+             */
+            readonly identifier_match?: "exact" | "prefix";
             /** @description For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */

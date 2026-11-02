@@ -154,3 +154,33 @@ export const NoMatches: Story = {
   render: () => palette(noHits),
   play: type("zzzzz"),
 };
+
+export const IdentifierBestMatch: Story = {
+  render: () =>
+    palette(() =>
+      jsonResponse({
+        data: [
+          { type: "company", id: "o1", title: "Example customer", score: 4.1 },
+          {
+            type: "lead",
+            id: "l1",
+            title: "Lena Becker",
+            identifier_match: "prefix",
+            score: 8,
+          },
+        ],
+        page: { has_more: false, next_cursor: null },
+      }),
+    ),
+  play: async ({ canvasElement }) => {
+    await userEvent.type(
+      within(canvasElement).getByRole("searchbox"),
+      "lena@exam",
+    );
+    await within(canvasElement).findByText("Best match");
+  },
+};
+export const IdentifierBestMatchDark: Story = {
+  ...IdentifierBestMatch,
+  globals: { theme: "dark" },
+};

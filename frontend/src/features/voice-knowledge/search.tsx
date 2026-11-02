@@ -18,6 +18,7 @@ import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate, useRoute } from "../../lib/router";
 import {
+  bestIdentifierMatch,
   groupSearchHits,
   SEARCH_FILTER_KEY,
   SEARCH_GROUP_KEY,
@@ -276,8 +277,18 @@ function SearchGroups({
 }>) {
   const t = useT();
   const groups = groupSearchHits(results);
+  const best = bestIdentifierMatch(results);
   return (
     <div className="search-groups arrive-stack">
+      {best && (
+        <Panel title={t("search.bestMatch")}>
+          <PanelBody>
+            <SearchHitList card={searchHitHasCard(best.type)}>
+              <SearchHit hit={best} onOpen={onOpen} />
+            </SearchHitList>
+          </PanelBody>
+        </Panel>
+      )}
       {groups.map(({ group, hits }, index) => {
         const heading = t(SEARCH_GROUP_KEY[group]);
         const type = searchGroupType(group);
