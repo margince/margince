@@ -542,6 +542,7 @@ export const TodayPhone: Story = {
 export const TodayDark: Story = {
   globals: { theme: "dark" },
   render: brief({ approvals: [...singles] }),
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
 };
 
 function onWeekly() {

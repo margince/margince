@@ -100,6 +100,7 @@ export const LongAgenda: Story = {
       focus: { items: crowded, total: crowded.length, urgent_remaining: 0 },
     },
   },
+  play: Briefed.play,
 };
 export const LongAgendaPhone: Story = { ...LongAgenda, tags: ["uat-phone"] };
 

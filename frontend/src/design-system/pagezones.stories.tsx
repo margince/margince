@@ -110,6 +110,8 @@ export const Panes: Story = {
   },
 };
 
+export const PanesDark: Story = { ...Panes, globals: { theme: "dark" } };
+
 /**
  * Both rails at the first fold: the work column goes full width and the two
  * rails sit under it, side by side.
