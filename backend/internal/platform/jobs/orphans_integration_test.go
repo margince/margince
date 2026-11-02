@@ -54,7 +54,8 @@ func timeoutOf(t *testing.T, kind string) time.Duration {
 }
 
 // A worker drops the lock before River records its snooze, so a row still
-// running inside its timeout may be a live run. Only a row past it is closed.
+// running inside its timeout may be a live run. A row past it, or with no
+// attempt time at all, is closed.
 func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.T) {
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
@@ -65,16 +66,20 @@ func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.
 	own := seedRun(ctx, t, pool, timedKind, "running", timeout+time.Hour)
 	queued := seedRun(ctx, t, pool, timedKind, "available", timeout+time.Hour)
 	other := seedRun(ctx, t, pool, untimedKind, "running", timeout+time.Hour)
+	unstamped := seedRun(ctx, t, pool, timedKind, "running", 0)
+	if _, err := pool.Exec(ctx, `UPDATE river_job SET attempted_at = NULL WHERE id = $1`, unstamped); err != nil {
+		t.Fatalf("clearing the attempt time: %v", err)
+	}
 
 	closed, err := jobs.DiscardOrphanedRuns(ctx, pool, timedKind, own)
 	if err != nil {
 		t.Fatalf("DiscardOrphanedRuns: %v", err)
 	}
-	if closed != 1 {
-		t.Errorf("closed %d rows, want 1", closed)
+	if closed != 2 {
+		t.Errorf("closed %d rows, want 2", closed)
 	}
 	for id, want := range map[int64]string{
-		dead: "discarded", returning: "running", fullBatch: "running",
+		dead: "discarded", unstamped: "discarded", returning: "running", fullBatch: "running",
 		own: "running", queued: "available", other: "running",
 	} {
 		if got := stateOf(ctx, t, pool, id); got != want {

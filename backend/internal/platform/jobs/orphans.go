@@ -26,10 +26,11 @@ func DiscardOrphanedRuns(ctx context.Context, pool *pgxpool.Pool, kind string, k
 	if !declared {
 		return 0, fmt.Errorf("discarding orphaned %s runs: api/jobs.yaml does not declare the kind", kind)
 	}
+	// A running row with no attempt time has no live attempt to wait for.
 	tag, err := pool.Exec(ctx, `
 		UPDATE river_job SET state = 'discarded', finalized_at = now()
 		WHERE kind = $1 AND state = 'running' AND id <> $2
-		  AND attempted_at < now() - $3::interval`, kind, keep, orphanAge(spec.Timeout))
+		  AND coalesce(attempted_at, '-infinity') < now() - $3::interval`, kind, keep, orphanAge(spec.Timeout))
 	if err != nil {
 		return 0, err
 	}
