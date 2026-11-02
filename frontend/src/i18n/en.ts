@@ -17948,7 +17948,7 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
-  "worklist.verb.meetingUpdate": "Update",
+  "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
   "worklist.verb.meetingWhatHappened": "Meeting notes",
@@ -17961,7 +17961,8 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
-  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingAddNotesFor": "Add notes to {subject}",
+  "worklist.verb.meetingHeldFor": "Held: {subject}",
   "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "The calendar invitation keeps this meeting. Cancel it through the invitation.",

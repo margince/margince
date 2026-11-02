@@ -37,8 +37,9 @@ A move to a new start clears **Held** or **No-show**, so the meeting asks how it
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-To record what came of a meeting, press **Update** on its Worklist row. A customer meeting that has
-started with no outcome also shows **Update** on the contact's **Meetings** tab and on the timeline.
+A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
+has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
+and on the timeline. To say more, or to record a no-show, press **Add notes**:
 1. Pick **Held** or **No-show** and write what was said.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
