@@ -2583,6 +2583,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
 
+  "search.bestMatch": "Kết quả phù hợp nhất",
   "search.placeholder":
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",

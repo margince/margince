@@ -285,8 +285,16 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its
 	// counter rows go with their company by FK cascade, so a reset that clears
 	// the companies leaves no counter behind. TestAResetLeavesNoFactRevision holds it.
-	"company_fact trg_company_fact_count_revision": "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
-	"field_mask report_authority_field_mask":       "Advances the preserved projection fence once per statement and refuses no delete; reset must invalidate publications that began under the old field masks.",
+	"company_fact trg_company_fact_count_revision":                       "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
+	"record_grant home_read_fence_record_grant":                          "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"activity_audience_member home_read_fence_audience_member":           "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"activity_link home_read_fence_link_change":                          "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"activity_participant home_read_fence_participant":                   "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"capture_import home_read_fence_capture_import":                      "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"activity_commitment_admission home_read_fence_commitment_admission": "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"company_domain home_read_fence_company_domain":                      "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"workspace_email_domain home_read_fence_workspace_domain":            "advances the preserved Home fence at commit and refuses no delete; a reset must end every cached Home answer",
+	"field_mask report_authority_field_mask":                             "Advances the preserved projection fence once per statement and refuses no delete; reset must invalidate publications that began under the old field masks.",
 	// Not a protected table: the guard refuses a DELETE only while a row carries
 	// `restricted_at`, which is a statutory hold on that one record. Preserving
 	// `activity` would leave every conversation behind on a reset whose whole

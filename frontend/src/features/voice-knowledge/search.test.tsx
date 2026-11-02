@@ -915,3 +915,29 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     ).toBeNull();
   });
 });
+
+it("shows a best identifier match and retains the lead in its group", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      jsonResponse({
+        data: [
+          { type: "company", id: "o1", title: "Example" },
+          {
+            type: "lead",
+            id: "l1",
+            title: "Lena",
+            identifier_match: "prefix",
+            score: 8,
+          },
+        ],
+        page: { has_more: false, next_cursor: null },
+      }),
+    ),
+  );
+  render(<SearchScreen q="lena@exam" />);
+  await screen.findByRole("heading", { name: "Best match" });
+  expect(screen.getAllByRole("button", { name: "Lena" })).toHaveLength(2);
+  await userEvent.click(screen.getAllByRole("button", { name: "Lena" })[0]);
+  expect(window.location.hash).toBe("#/leads/l1");
+});

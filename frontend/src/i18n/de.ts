@@ -2666,6 +2666,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
 
+  "search.bestMatch": "Bester Treffer",
   "search.placeholder":
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
