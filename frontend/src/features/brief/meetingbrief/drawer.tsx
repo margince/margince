@@ -17,7 +17,7 @@ import {
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ENTITY, isEntityKind } from "../../../lib/entity";
-import { problemMessageOf, unwrap } from "../../../lib/problem";
+import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
 import { useRecordZone } from "../../../lib/recordzone";
 import { navigate } from "../../../lib/router";
 import type { MeetingFacts, PreparedFor } from "./header";
@@ -104,6 +104,10 @@ export function ContactMeetingBrief({
   let state: BriefViewState;
   if (brief.isSuccess && brief.data) {
     state = { kind: "ready", brief: brief.data };
+  } else if (brief.isError && [403, 404].includes(problemStatus(brief.error))) {
+    // A refusal and a meeting outside the reader's rows read alike, and a
+    // retry cannot change either answer.
+    state = { kind: "withheld" };
   } else if (brief.isError) {
     state = {
       kind: "failed",

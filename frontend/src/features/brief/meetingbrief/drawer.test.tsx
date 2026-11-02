@@ -125,4 +125,25 @@ describe("the meeting brief drawer", () => {
     await waitFor(() => expect(urls).toHaveLength(2));
     expect(await screen.findByText("Goal for this meeting")).toBeTruthy();
   });
+
+  it.each([
+    [403, "permission_denied"],
+    [404, "not_found"],
+  ])("says a %i is withheld, and offers no retry", async (status, code) => {
+    let attempts = 0;
+    seen({
+      "GET /activities/a-1/meeting-brief": () => {
+        attempts += 1;
+        return jsonResponse({ status, code }, status);
+      },
+    });
+    render(
+      <StoryProviders>
+        <ContactMeetingBrief activityId="a-1" open onClose={() => {}} />
+      </StoryProviders>,
+    );
+    expect(await screen.findByText("Hidden for your role")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(attempts).toBe(1);
+  });
 });
