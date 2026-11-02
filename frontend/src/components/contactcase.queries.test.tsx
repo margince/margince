@@ -22,10 +22,10 @@ function wrap() {
 }
 
 // A contact in no case is the common contact, and the route answers 404 for it.
-// That is the absence, not a failure, and the screen reads it as "no case" —
-// which is why the read checks the status before unwrapping. An unwrap would
-// raise the 404 as a problem and the page would show an error for a contact
-// with nothing wrong with it.
+// That is the absence, not a failure, and the screen reads it as "no case".
+// So the read checks the status before unwrapping. An unwrap would raise the
+// 404 as a problem, and the page would then show an error for a contact with
+// nothing wrong with it.
 it("reads a 404 as no case rather than as a failure", async () => {
   vi.stubGlobal(
     "fetch",
