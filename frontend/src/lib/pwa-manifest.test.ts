@@ -36,6 +36,29 @@ function purposeOf(icon: ManifestIcon): string {
   return icon.purpose ?? "any";
 }
 
+// The browser asks for whatever index.html names. A name that no file in
+// public/ answers falls through to the SPA's index.html, so the browser parses
+// a page as a manifest and reports it as invalid rather than as missing.
+describe("the install manifest is where the page says it is", () => {
+  const head = parse(readFileSync(join(frontendRoot, "index.html"), "utf8"));
+  const href = head
+    .querySelectorAll("link")
+    .find((link) => link.getAttribute("rel") === "manifest")
+    ?.getAttribute("href");
+
+  it("is linked once, from a root-relative path", () => {
+    expect(href).toBeDefined();
+    expect(href?.startsWith("/")).toBe(true);
+  });
+
+  it("names a file public/ actually holds, and holds JSON", () => {
+    const served = join(publicDir, (href ?? "").replace(/^\//, ""));
+    const body = readFileSync(served, "utf8");
+    expect(() => JSON.parse(body) as unknown).not.toThrow();
+    expect((JSON.parse(body) as { name?: string }).name).toBeTruthy();
+  });
+});
+
 describe("the install manifest", () => {
   it("offers an unmasked icon and the PNGs Android masks", () => {
     const offered = manifest.icons.map(
