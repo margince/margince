@@ -7,7 +7,7 @@ import {
   readingsDay,
   waitingEmailRow,
 } from "../../testing/brief.fixtures";
-import { BriefGlance } from "./brief.glance";
+import { BriefGlance, Greeting } from "./brief.glance";
 import type { BriefView } from "./brief.view";
 
 afterEach(() => {
@@ -84,6 +84,73 @@ describe("BriefGlance — the greeting follows the reader's own hour", () => {
   });
 });
 
+// ── The title is cut at the reader's name ──
+
+describe("BriefGlance — the greeting stands over the reader's name", () => {
+  function headOf(locale: "en" | "de", firstName: string | null) {
+    rtlRender(
+      <LocaleProvider initial={locale}>
+        <BriefGlance
+          view="morning"
+          firstName={firstName}
+          now={new Date(2026, 6, 5, 14, 0, 0)}
+          day={undefined}
+          week={undefined}
+        />
+      </LocaleProvider>,
+    );
+    const heading = screen.getByRole("heading", { level: 1 });
+    return {
+      lead: heading.querySelector(".glance-greeting-lead")?.textContent,
+      name: heading.querySelector(".glance-greeting-name")?.textContent,
+      accent: heading.querySelector(".glance-greeting-name > .greeting-name")
+        ?.textContent,
+    };
+  }
+
+  it("puts the words before the name on the lead line, and the name under them", () => {
+    const head = headOf("en", "Ada");
+    expect(head.lead).toBe("Good afternoon, ");
+    expect(head.name).toBe("Ada");
+  });
+
+  it("draws the name alone in the accent ink", () => {
+    expect(headOf("en", "Ada").accent).toBe("Ada");
+  });
+
+  // "Guten Tag, Tag": the first "Tag" is the greeting's own word.
+  it("cuts at the last place the name stands in the line", () => {
+    const head = headOf("de", "Tag");
+    expect(head.lead).toBe("Guten Tag, ");
+    expect(head.accent).toBe("Tag");
+  });
+
+  it("gives the whole greeting to the name line when there is no name", () => {
+    for (const firstName of [null, ""]) {
+      const head = headOf("en", firstName);
+      expect(head).toEqual({
+        lead: "",
+        name: "Good afternoon",
+        accent: undefined,
+      });
+      cleanup();
+    }
+  });
+
+  it("keeps a line that does not hold the name whole, out of the accent", () => {
+    rtlRender(
+      <h1>
+        <Greeting text="Welcome back" firstName="Ada" />
+      </h1>,
+    );
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.querySelector(".glance-greeting-name")?.textContent).toBe(
+      "Welcome back",
+    );
+    expect(heading.querySelector(".greeting-name")).toBeNull();
+  });
+});
+
 // ── The weekly speaks about its own week ──
 
 describe("BriefGlance — the weekly's sentence comes from the closed week", () => {
@@ -147,6 +214,23 @@ describe("BriefGlance — the weekly's sentence comes from the closed week", () 
     expect(sentenceOf("weekly", CLOSED_WEEK)).not.toBe(
       sentenceOf("morning", CLOSED_WEEK),
     );
+  });
+
+  it("names the report's week apart from the days it covers", () => {
+    rtlRender(
+      <LocaleProvider initial="en">
+        <BriefGlance
+          view="weekly"
+          firstName="Ada"
+          now={new Date(2026, 6, 5, 9, 0, 0)}
+          day={undefined}
+          week={CLOSED_WEEK}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: /Week 27\s*,\s*29 June/ }),
+    ).toBeTruthy();
   });
 
   // A week still in flight, or one that failed to read. The heading names the

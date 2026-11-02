@@ -53,6 +53,21 @@ async function openBrief(page: Page): Promise<Worklist> {
   return response.json();
 }
 
+/** A day the glance sums up in its agenda sentence: every focus row read. */
+function completeFocus(day: Worklist): boolean {
+  return Boolean(
+    day.focus &&
+      day.focus.total > 0 &&
+      day.focus.total <= day.focus.items.length &&
+      !day.scope_truncated &&
+      !day.readings?.more_available &&
+      !day.counts.some((count) => count.more_available) &&
+      !day.sources_unavailable.some(
+        (source) => source.contributes_rows !== false,
+      ),
+  );
+}
+
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
   await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
@@ -174,7 +189,8 @@ test.describe("the Brief — page shape", () => {
   test("keeps the greeting and date above the work, with an optional factual agenda", async ({
     page,
   }) => {
-    await openBrief(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const day = await openBrief(page);
     await expectShellRendered(page);
 
     const heading = await topOf(page.locator("main h1"));
@@ -182,17 +198,24 @@ test.describe("the Brief — page shape", () => {
     const work = await topOf(page.locator(FOCUS));
     expect(heading).toBeLessThan(date);
     expect(date).toBeLessThan(work);
-    // The date opens the agenda's line: before it on one line, over it on two.
+    // Above 640px the facts are one line: the date opens it, the dial ends it.
+    const firstLine = (el: Element) => {
+      const box = el.getClientRects().item(0);
+      if (!box) throw new Error("the fact draws no line box");
+      return { x: box.x, top: box.top, bottom: box.bottom };
+    };
+    const at = await page.locator(`${GLANCE} time`).evaluate(firstLine);
+    const dial = await page
+      .getByRole("group", { name: copy("brief.view.label") })
+      .evaluate(firstLine);
+    expect(dial.top).toBeLessThan(at.bottom);
+    expect(dial.bottom).toBeGreaterThan(at.top);
     const agenda = page.getByTestId("glance-sentence");
-    if (await agenda.count()) {
-      const firstLine = (el: Element) => {
-        const box = el.getClientRects()[0];
-        return { x: box.x, y: box.y };
-      };
-      const at = await page.locator(`${GLANCE} time`).evaluate(firstLine);
+    await expect(agenda).toHaveCount(completeFocus(day) ? 1 : 0);
+    if (completeFocus(day)) {
       const words = await agenda.evaluate(firstLine);
-      if (Math.abs(at.y - words.y) < 2) expect(at.x).toBeLessThan(words.x);
-      else expect(at.y).toBeLessThan(words.y);
+      expect(Math.abs(at.top - words.top)).toBeLessThan(2);
+      expect(at.x).toBeLessThan(words.x);
     }
   });
 
@@ -202,16 +225,7 @@ test.describe("the Brief — page shape", () => {
     const day = await openBrief(page);
     await expectShellRendered(page);
 
-    const complete =
-      day.focus &&
-      day.focus.total > 0 &&
-      day.focus.total <= day.focus.items.length &&
-      !day.scope_truncated &&
-      !day.readings?.more_available &&
-      !day.counts.some((count) => count.more_available) &&
-      !day.sources_unavailable.some(
-        (source) => source.contributes_rows !== false,
-      );
+    const complete = completeFocus(day);
     await expect(page.getByTestId("glance-sentence")).toHaveCount(
       complete ? 1 : 0,
     );
@@ -259,6 +273,23 @@ test.describe("the Brief — page shape", () => {
     await expectShellRendered(page);
 
     await expect(page.locator(".brief-rail")).toHaveCount(0);
+    const fill = await page
+      .locator(".page-pane.brief-weekly-page > .brief-report")
+      .evaluate((report) => {
+        const pane = report.parentElement;
+        if (!pane) throw new Error("the weekly report stands on no pane");
+        const style = getComputedStyle(pane);
+        const inset =
+          Number.parseFloat(style.paddingLeft) +
+          Number.parseFloat(style.paddingRight);
+        return {
+          inset,
+          report: report.getBoundingClientRect().width,
+          inner: pane.clientWidth - inset,
+        };
+      });
+    expect(fill.inset).toBeGreaterThan(0);
+    expect(Math.abs(fill.report - fill.inner)).toBeLessThan(1);
     const pane = await page.locator(".brief-weekly-page").boundingBox();
     const header = await page.locator(GLANCE).boundingBox();
     if (!pane || !header) {

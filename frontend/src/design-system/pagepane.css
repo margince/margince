@@ -32,9 +32,9 @@
 .page-pane-sticky:where(:hover) {
   scrollbar-color: var(--borderControl) transparent;
 }
-/* Chrome and Safari draw a 6px bar from the WebKit pseudo-elements. They
-   ignore those while either standard property is set, so the hover selector
-   outranks the shell's hover rule (app.css). Firefox keeps its thin bar. */
+/* Chrome and Safari draw this 6px bar only while both standard properties are
+   `auto`. The hover selector outranks the shell's `*:hover` rule (app.css),
+   which would set them again. Firefox skips this block and keeps a thin bar. */
 @supports selector(::-webkit-scrollbar) {
   .page-pane-sticky,
   .page-pane.page-pane-sticky:hover {

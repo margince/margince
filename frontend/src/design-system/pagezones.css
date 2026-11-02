@@ -61,7 +61,7 @@
 .page-zones[data-aside="closed"] > .page-zones-main {
   margin-inline-end: calc(-1 * var(--zonesGap));
 }
-.page-zones-panes {
+.page-zones.page-zones-panes {
   --zonesGap: var(--gapPanes);
 }
 .page-zones-panes > .page-pane {
@@ -186,8 +186,7 @@
   }
   /* Folded, the pane is a ROW under the work column rather than a track beside
      it: there is no width for it to travel and no gutter to hand back, so a
-     closed pane is simply absent — which is what this fold did before the pane
-     could travel at all. */
+     closed pane is simply absent. */
   .page-zones[data-aside="closed"] > .page-zones-aside-column {
     display: none;
   }

@@ -29,6 +29,10 @@ import {
   wholeMeetings,
 } from "../../testing/brief.fixtures";
 import {
+  expectDialPlacement,
+  expectReportFillsPane,
+} from "../../testing/briefheadchecks";
+import {
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -553,9 +557,8 @@ export const Week: Story = {
   beforeEach: onWeekly,
   render: brief({ approvals: [] }),
   play: async ({ canvasElement }) => {
-    await waitFor(() =>
-      expect(canvasElement.querySelector(".brief-weekly-page")).not.toBeNull(),
-    );
+    await expectReportFillsPane(canvasElement);
+    await expectDialPlacement(canvasElement);
   },
 };
 
@@ -570,6 +573,7 @@ export const TodayBriefed: Story = {
     approvals: [...singles],
     extra: { "GET /brief": () => jsonResponse(quietRun) },
   }),
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
 };
 
 export const TodayBriefedPhone: Story = {

@@ -45,9 +45,7 @@
   padding: 0;
 }
 
-/* ── The report ─────────────────────────────────────────────────────────────
- * The pane's whole inner width, its first line at the pane's own inset, as the
- * morning's work column stands. */
+/* ── The report ──────────────────────────────────────────────────────────── */
 .brief-weekly-page > .brief-report {
   padding-block-end: var(--space-10);
 }

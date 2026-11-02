@@ -9,6 +9,7 @@ import {
   taskRow,
   waitingEmailRow,
 } from "../../testing/brief.fixtures";
+import { expectDialPlacement } from "../../testing/briefheadchecks";
 import { StoryProviders } from "../../testing/story-utils";
 import { BriefDials } from "./brief.dials";
 import { BriefGlance } from "./brief.glance";
@@ -70,6 +71,7 @@ export const Briefed: Story = {
     briefedAt: "2026-09-03T05:30:00Z",
     controls: <BriefDials address={{ view: "morning" }} onChange={noop} />,
   },
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
 };
 export const BriefedPhone: Story = { ...Briefed, tags: ["uat-phone"] };
 
@@ -110,5 +112,6 @@ export const Weekly: Story = {
     week: firstWeek,
     controls: <BriefDials address={{ view: "weekly" }} onChange={noop} />,
   },
+  play: Briefed.play,
 };
 export const WeeklyPhone: Story = { ...Weekly, tags: ["uat-phone"] };

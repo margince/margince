@@ -62,7 +62,7 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: new RegExp(`^${kicker("27")}\\s+29 June\\s*[–-]\\s*5 July$`),
+        name: new RegExp(`^${kicker("27")}\\s*,\\s*29 June\\s*[–-]\\s*5 July$`),
       }),
     ).toBeTruthy();
   });
@@ -186,7 +186,7 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: new RegExp(`^${kicker("26")}\\s+22\\s*[–-]\\s*28 June$`),
+        name: new RegExp(`^${kicker("26")}\\s*,\\s*22\\s*[–-]\\s*28 June$`),
       }),
     ).toBeTruthy();
     expect(

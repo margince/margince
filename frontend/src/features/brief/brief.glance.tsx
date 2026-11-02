@@ -70,7 +70,7 @@ export function greetingText(
  * so each language keeps its own word order around it. With no name in the
  * line, the whole line stands on the second.
  */
-function Greeting({
+export function Greeting({
   text,
   firstName,
 }: Readonly<{ text: string; firstName: string | null }>) {
@@ -172,7 +172,8 @@ function WeekTitle({ weekStart }: Readonly<{ weekStart: string | undefined }>) {
             })}
           </time>
         )}
-      </span>{" "}
+        {weekStart && <span className="sr-only">,</span>}
+      </span>
       <span className="glance-greeting-name">
         {weekStart
           ? formatDayRange(
@@ -267,7 +268,7 @@ function GlanceOpening({
         className="glance-sentence glance-sentence-pending"
         aria-hidden="true"
       >
-        <Skeleton width="16ch" />
+        <Skeleton width="6ch" />
       </div>
     ) : null;
   return <p className="glance-sentence">{t("brief.glance.introWeekly")}</p>;

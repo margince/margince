@@ -78,9 +78,7 @@
   }
 }
 
-/* ── The briefing ──────────────────────────────────────────────────────────
- * The head on the page ground: the title on two lines, then one line of facts
- * with the page's controls at its far end, right over the panes. */
+/* ── The briefing ────────────────────────────────────────────────────────── */
 .glance {
   display: flex;
   flex-direction: column;
@@ -88,8 +86,8 @@
   padding: 0;
 }
 
-/* The heading spans both tracks and its lead line keeps to the first, so the
-   weekly's stepper stands at that line's end and outside the heading's text. */
+/* The heading spans both tracks, and its lead line keeps to the first. So the
+   weekly's stepper ends that line, outside the heading's text. */
 .glance-title {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -214,8 +212,8 @@
 .brief-morning > .brief-main {
   gap: var(--space-12);
 }
-/* Held while the day is read: one line of the facts' type. Beside the date
-   it adds no line; on a phone it holds the one line a usual agenda takes. */
+/* Held while the day is read, one line high. It is as wide as the shortest
+   agenda ("1 lead"), so it never starts a line the sentence would not. */
 .glance-sentence-pending {
   display: inline-flex;
   align-items: center;
@@ -624,8 +622,8 @@
 
 /* ── Folds ────────────────────────────────────────────────────────────────
  * `PageZones` folds the columns; what folds here is the head's facts line.
- * Under 640px the German line no longer fits beside the dial, so each fact
- * takes its own line and the dial stands under them, over the panes. */
+ * Under 640px the German line does not fit beside the dial. So each fact takes
+ * its own line, and the dial stands under them. */
 @media (max-width: 720px) {
   .glance-facts {
     font: var(--fontBody);

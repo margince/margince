@@ -644,7 +644,7 @@
   --fontDisplayLarge:
     var(--fontWeightBold) clamp(2.75rem, 5.4vw, 4.25rem) / 1.05
     var(--fontFamilyHeading);
-  /* A figure under the full-window greeting. */
+  /* A figure under the full-window greeting, and the HowItStands verdict. */
   --fontDisplayMedium:
     var(--fontWeightBold) clamp(2.125rem, 4vw, 3.25rem) / 1.05
     var(--fontFamilyHeading);
