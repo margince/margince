@@ -8,10 +8,9 @@ import { unwrap } from "./problem";
 /**
  * One approval, under the key a write to it invalidates.
  *
- * The worklist, the record page, a transcript and the setup repair all show the
- * same approval, and they used to ask for it under keys of their own. Two of
- * them open together paid for it twice, and invalidating one left the other
- * showing an answer the server had already replaced.
+ * Four surfaces show the same approval: the worklist, the record page, a
+ * transcript and the setup repair. They used to ask under keys of their own.
+ * So two open together paid twice, and invalidating one left the other stale.
  */
 export function approvalQueryKey(approvalId: string) {
   return ["approval", approvalId] as const;
