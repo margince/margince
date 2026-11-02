@@ -15,6 +15,7 @@ import { dayStartIso } from "../design-system/recordtimeline";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay } from "../format/calendarday";
+import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { RecordZoneProvider } from "../lib/recordzone";
@@ -31,7 +32,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const ZONE = "Europe/Berlin";
+const ZONE = UTC_ZONE;
 
 type Captured = {
   key: string;

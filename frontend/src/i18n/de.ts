@@ -6740,7 +6740,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ja, beim Termin speichern und als stattgefunden markieren",
   "log.recordOfMeetingNo": "Nein, einen eigenen Termin erfassen",
   "log.recordOfMeetingManaged":
-    "Betreff und Notizen gehören zur Kalendereinladung. Ihre Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
+    "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",
