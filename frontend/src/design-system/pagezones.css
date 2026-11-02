@@ -17,8 +17,9 @@
   initial-value: 0px;
 }
 .page-zones {
+  --zonesGap: var(--gapCards);
   display: grid;
-  gap: var(--gapCards);
+  gap: var(--zonesGap);
   align-items: start;
   /* The pane's open width, spelled ONCE: it is both the track the pane holds
      and the width its cards keep while that track is travelling. */
@@ -53,12 +54,18 @@
    different named template — two templates do not interpolate, so the column
    would jump where it has to travel. The work column takes the gutter back as
    the track goes, because a gutter measured against a column that is no longer
-   there is a 16px band standing between the work and the page's right edge. */
+   there is a band standing between the work and the page's right edge. */
 .page-zones[data-aside="closed"] {
   --asideW: 0px;
 }
 .page-zones[data-aside="closed"] > .page-zones-main {
-  margin-inline-end: calc(-1 * var(--gapCards));
+  margin-inline-end: calc(-1 * var(--zonesGap));
+}
+.page-zones.page-zones-panes {
+  --zonesGap: var(--gapPanes);
+}
+.page-zones-panes > .page-pane {
+  padding: var(--padPane);
 }
 /* Armed one frame after mount (pagezones.tsx), which is what keeps a page that
    LOADS with its pane open — or with it folded — from animating into the state
@@ -140,6 +147,13 @@
   .page-zones > .page-zones-aside-column > * {
     width: var(--asideOpenW);
   }
+  /* The pane's own inset and edge, the 1px of `.page-pane`. */
+  .page-zones-panes > .page-zones-aside-column > * {
+    width: calc(var(--asideOpenW) - 2 * (var(--padPane) + 1px));
+  }
+  .page-zones > .page-zones-aside-column.page-pane-sticky {
+    overflow-y: auto;
+  }
 }
 @media (max-width: 1200px) {
   .page-zones {
@@ -172,13 +186,17 @@
   }
   /* Folded, the pane is a ROW under the work column rather than a track beside
      it: there is no width for it to travel and no gutter to hand back, so a
-     closed pane is simply absent — which is what this fold did before the pane
-     could travel at all. */
+     closed pane is simply absent. */
   .page-zones[data-aside="closed"] > .page-zones-aside-column {
     display: none;
   }
   .page-zones[data-aside="closed"] > .page-zones-main {
     margin-inline-end: 0;
+  }
+  .page-zones > .page-pane-sticky {
+    position: static;
+    max-block-size: none;
+    overflow-y: visible;
   }
 }
 @media (max-width: 720px) {

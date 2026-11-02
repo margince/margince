@@ -81,7 +81,7 @@ func focusEligible(row ranked, asOf time.Time) bool {
 // so each naming read runs once per page rather than once per list. A failed
 // advice read keeps the rows and is named on the page.
 func (s *Service) nameWorklistRows(
-	ctx context.Context, page *crmcontracts.Worklist, findings map[ids.UUID]string, day crmcontracts.Attention,
+	ctx context.Context, page *crmcontracts.Worklist, findings map[ids.UUID]string,
 ) error {
 	lists := []*[]crmcontracts.WorklistItem{&page.Queue}
 	if page.Focus != nil {
@@ -94,7 +94,7 @@ func (s *Service) nameWorklistRows(
 	for _, list := range lists {
 		rows = append(rows, *list...)
 	}
-	advised, adviceErr := s.readingDealMoves(ctx, rows, day)
+	advised, adviceErr := s.readingDealMoves(ctx, rows)
 	if adviceErr != nil {
 		page.SourcesUnavailable = append(page.SourcesUnavailable, s.stampSources([]crmcontracts.WorklistSourceUnavailable{*adviceErr})...)
 	}
