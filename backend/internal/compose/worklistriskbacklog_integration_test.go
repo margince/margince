@@ -8,6 +8,9 @@ package compose
 import (
 	"context"
 	"fmt"
+	"maps"
+	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -196,8 +199,50 @@ func TestTheAtRiskTailReachesEveryDealOnce(t *testing.T) {
 			if tailed == 0 {
 				t.Error("no at-risk deal was served below the ranked top, so the tail proves nothing")
 			}
+			b.assertTailAdvised(check.ctx, t, served, frozen)
 		})
 	}
+}
+
+// assertTailAdvised holds that each at-risk deal served below the ranked top
+// carries the step its status card names, as a ranked row of it would.
+func (b *riskBacklog) assertTailAdvised(ctx context.Context, t *testing.T, served []servedRow, frozen map[string]bool) {
+	t.Helper()
+	tail := map[ids.UUID]*crmcontracts.WorklistMove{}
+	for _, row := range served {
+		if row.source == crmcontracts.WorklistItemSourceDealAtRisk && !frozen[row.id] {
+			tail[ids.MustParse(row.id)] = row.move
+		}
+	}
+	cards := newDealStatusService(b.r.e.Pool, func() time.Time { return b.r.now })
+	want, err := cards.CurrentMoves(ctx, slices.Collect(maps.Keys(tail)))
+	if err != nil {
+		t.Fatalf("reading the tail deals' current steps: %v", err)
+	}
+	for deal, move := range tail {
+		card, advised := want[deal]
+		if !advised {
+			t.Fatalf("the status card names no step for tail deal %s, so the check proves nothing", deal)
+		}
+		if !sameMove(move, card) {
+			t.Errorf("tail deal %s carries %+v, its card names %+v", deal, move, card)
+		}
+	}
+}
+
+// sameMove is whether a row carries the card's move. The wire spells a card's
+// draft_email that names a message draft_reply, and copies everything else.
+func sameMove(move *crmcontracts.WorklistMove, card crmcontracts.DealStatusCardMove) bool {
+	if move == nil {
+		return false
+	}
+	action := string(move.Action)
+	if move.Action == crmcontracts.WorklistMoveActionDraftReply && move.ActivityId != nil {
+		action = string(crmcontracts.WorklistMoveActionDraftEmail)
+	}
+	return action == card.Action && reflect.DeepEqual(move.Arguments, card.Arguments) &&
+		reflect.DeepEqual(move.Basis, card.Basis) && reflect.DeepEqual(move.MailCoverage, card.MailCoverage) &&
+		reflect.DeepEqual(move.Recommendation, card.Recommendation)
 }
 
 // markDone has Rep1 mark two deals below the ranked top done, through the
