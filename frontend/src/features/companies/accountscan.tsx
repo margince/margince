@@ -85,9 +85,16 @@ export function useAccountScan(
   });
   const fire = ensure.mutate;
   useEffect(() => {
-    if (enabled) {
-      fire(companyId);
+    if (!enabled) {
+      return;
     }
-  }, [enabled, companyId, fire]);
+    // One question per account, not per reader. The ensure is the half that
+    // can cost a model call, and `mutate` registers before the next consumer's
+    // effect runs, so the second one sees the first and stays quiet.
+    if (client.isMutating({ mutationKey: accountScanKey(companyId) }) > 0) {
+      return;
+    }
+    fire(companyId);
+  }, [client, enabled, companyId, fire]);
   return scan.data;
 }

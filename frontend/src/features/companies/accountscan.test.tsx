@@ -27,6 +27,20 @@ function Probe({ enabled }: Readonly<{ enabled: boolean }>) {
   return <output>{held?.state ?? "none"}</output>;
 }
 
+// Two consumers of one account in one cache, which is what a record page with
+// both the tasks panel and a scan-reading sibling is.
+function mountTwo() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <Probe enabled />
+      <Probe enabled />
+    </QueryClientProvider>,
+  );
+}
+
 function mount(enabled: boolean) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -127,5 +141,18 @@ describe("useAccountScan", () => {
     await act(async () => {});
     expect(calls).toEqual([]);
     expect(screen.getByRole("status").textContent).toBe("none");
+  });
+
+  it("asks the server once when two consumers read one account", async () => {
+    const calls = stubScan([]);
+    mountTwo();
+    await waitFor(() =>
+      expect(screen.getAllByRole("status")[0]?.textContent).toBe("queued"),
+    );
+    // The ensure is the expensive half: it is what can cost a model call. Two
+    // consumers of one account are one question about it.
+    expect(calls.filter((call) => call.startsWith("POST"))).toEqual([
+      "POST /v1/companies/o-1/scan",
+    ]);
   });
 });
