@@ -18626,6 +18626,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "employment.status.current": "Aktuell",
   "employment.status.former": "Ehemalig",
   "employment.status.unknown": "Status unbekannt",
+  "employment.keepImportedStatus": "Importierten Status beibehalten",
+  "employment.statusChoose": "Status wählen",
   "employment.statusLabel": "Anstellungsstatus",
   "employment.review": "Prüfe diese Rolle, bevor du sie verknüpfst.",
   "employment.matchNeeded": "Unternehmen muss zugeordnet werden.",

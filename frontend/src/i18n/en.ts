@@ -18468,6 +18468,8 @@ export const en = {
   "employment.status.current": "Current",
   "employment.status.former": "Former",
   "employment.status.unknown": "Status unknown",
+  "employment.keepImportedStatus": "Keep imported status",
+  "employment.statusChoose": "Choose a status",
   "employment.statusLabel": "Employment status",
   "employment.review": "Review this role before linking it.",
   "employment.matchNeeded": "Company match needed.",
