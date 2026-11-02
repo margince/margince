@@ -132,3 +132,18 @@ describe("CommandPalette Enter", () => {
     expect(window.location.hash).toBe("#/search/quarterly/a2/activity");
   });
 });
+
+it("shows the address match above its normal group and opens the same lead", async () => {
+  const user = steppedClock();
+  hits([
+    { type: "company", id: "o1", title: "Example" },
+    { type: "lead", id: "l1", title: "Lena", identifier_match: "prefix" },
+  ]);
+  renderPalette();
+  await user.type(screen.getByRole("searchbox"), "lena@exam");
+  await screen.findByText("Best match");
+  const rows = screen.getAllByRole("button", { name: /Lena/ });
+  expect(rows).toHaveLength(2);
+  await user.click(rows[0]);
+  expect(window.location.hash).toBe("#/leads/l1");
+});

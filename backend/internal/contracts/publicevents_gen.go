@@ -1815,7 +1815,7 @@ type PublicEventDealUpdated struct {
 
 // PublicEventEmailSignatureChanged Payload for email_signature.changed. A member wrote, edited or cleared the sign-off appended to every message they send (contacts/emailsignature.go's SaveMyEmailSignature). How a contact is represented on outbound mail is a fact worth answering later. So the change is audited and published rather than written silently. The payload leaves out the signature text. That text is the member's own words about themselves, often with a direct line or an address. A subscriber needs to know the sign-off moved, not what it says.
 type PublicEventEmailSignatureChanged struct {
-	// HasSignature Whether mail from this member now carries a sign-off. False after a member empties the field, which is a chosen "send unsigned".
+	// HasSignature Whether the member has saved personal plain text or HTML. This reports stored presence; sanitized HTML without visible text uses the usual fallback. A workspace template or closing may still sign mail when this is false.
 	HasSignature bool `json:"has_signature"`
 }
 

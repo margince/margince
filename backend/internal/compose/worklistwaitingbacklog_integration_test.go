@@ -182,6 +182,7 @@ type servedRow struct {
 	id     string
 	source crmcontracts.WorklistItemSource
 	at     *time.Time
+	move   *crmcontracts.WorklistMove
 }
 
 // walkWorklist follows next_cursor to the end. It answers every row served,
@@ -208,7 +209,7 @@ func walkWorklist(
 			if row.Source == crmcontracts.WorklistItemSourceCustomerWaiting {
 				at = row.OccurredAt
 			}
-			served = append(served, servedRow{row.Id, row.Source, at})
+			served = append(served, servedRow{id: row.Id, source: row.Source, at: at, move: row.Move})
 		}
 		if page == 0 {
 			first = day

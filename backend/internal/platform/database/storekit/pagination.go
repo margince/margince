@@ -216,7 +216,7 @@ func DomainTerm(q string) string {
 // ExactSQL is true when a live identifier row of the record equals the query at
 // pos. The ARRAY is built once, so the primary key joins the bitmap union over
 // the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
-// Ranking reads this arm, so a fragment hit is not lifted above a name match.
+// Ranking uses this arm for whole identifiers and PrefixSQL for typed address prefixes.
 func (id Identifier) ExactSQL(pos int, idColumn string) string {
 	return id.arraySQL(idColumn, fmt.Sprintf("%s = lower(btrim($%d))", id.Column, pos))
 }
@@ -227,6 +227,11 @@ func (id Identifier) ExactSQL(pos int, idColumn string) string {
 func (id Identifier) ContainsSQL(pos int, idColumn string) string {
 	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE '%%' || %s || '%%'",
 		id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
+}
+
+// PrefixSQL matches a literal identifier prefix using the same folding as discovery.
+func (id Identifier) PrefixSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE %s || '%%'", id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
 }
 
 // MatchSQL finds a record by a whole identifier or by a fragment of one.

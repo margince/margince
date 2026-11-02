@@ -2076,6 +2076,7 @@ export const en = {
   "systemJob.auto_apply": "Automatic approval",
   "systemJob.automation": "Automation",
   "systemJob.brief_overnight": "Overnight summary",
+  "systemJob.captured_deal_refile": "Captured conversation filing",
   "systemJob.capture": "Mail capture",
   "systemJob.capture_auto_enrich": "Company enrichment from mail",
   "systemJob.capture_classify": "Mail sorting",
@@ -2565,6 +2566,7 @@ export const en = {
   // extensions/<unit>/frontend/i18n/, namespaced `ext<Unit>.` and merged into
   // the catalogue by gen-composition (see i18n/index.tsx).
 
+  "search.bestMatch": "Best match",
   "search.placeholder":
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
@@ -6196,14 +6198,14 @@ export const en = {
   "brief.act": "Mark handled",
   "brief.dismiss": "Dismiss",
 
-  "brief.glance.morning": "Good morning, {name}.",
-  "brief.glance.morningAnon": "Good morning.",
-  "brief.glance.afternoon": "Good afternoon, {name}.",
-  "brief.glance.afternoonAnon": "Good afternoon.",
-  "brief.glance.evening": "Good evening, {name}.",
-  "brief.glance.eveningAnon": "Good evening.",
-  "brief.glance.night": "Working late, {name}.",
-  "brief.glance.nightAnon": "Working late.",
+  "brief.glance.morning": "Good morning, {name}",
+  "brief.glance.morningAnon": "Good morning",
+  "brief.glance.afternoon": "Good afternoon, {name}",
+  "brief.glance.afternoonAnon": "Good afternoon",
+  "brief.glance.evening": "Good evening, {name}",
+  "brief.glance.eveningAnon": "Good evening",
+  "brief.glance.night": "Working late, {name}",
+  "brief.glance.nightAnon": "Working late",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
   "brief.suggestions.empty": "No deal suggestions in this brief.",
@@ -8042,6 +8044,15 @@ export const en = {
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
     "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+  "settings.signatureFormat": "Format",
+  "settings.signatureFormatText": "Plain text",
+  "settings.signatureFormatHtml": "HTML",
+  "settings.signatureHtmlLabel": "HTML signature",
+  "settings.signatureHtmlHintTemplate":
+    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Remote images and scripts are removed.",
+  "settings.signatureHtmlHintPlain":
+    "Leave this empty to use your plain text again. Remote images and scripts are removed.",
+  "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
@@ -9281,6 +9292,8 @@ export const en = {
   "jobs.kind.capture_counterparty_verdict": "Mail sender check",
   "jobs.kind.capture_digest": "Morning mail digest",
   "jobs.kind.capture_enrich": "Contact details from signatures",
+  "jobs.kind.captured_deal_refile": "File recent captured activity on deals",
+  "jobs.kind.captured_deal_refile_sweep": "Recover captured activity filing",
   "jobs.kind.capture_part_slim": "Mail storage cleanup",
   "jobs.kind.capture_sync": "Mailbox sync",
   "jobs.kind.check_company_vat": "VAT number check",
@@ -10576,8 +10589,8 @@ export const en = {
   "mailSharing.saveFailed": "Setting not saved",
   "mailSharing.cardTitle": "Mail sharing and sync",
   "connectors.originLabel": "Address used in emailed links",
-  "connectors.originReachable": "Reachable",
-  "connectors.originUnreachable": "Unreachable",
+  "connectors.originReachable": "Reachable from this server",
+  "connectors.originUnreachable": "Unreachable from this server",
   "connectors.loading": "Loading connectors…",
   "connectors.originUnchecked": "Not checked",
   "connectors.sub":
@@ -12998,6 +13011,7 @@ export const en = {
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
     "Drop or choose files (.txt, .md, .pdf, .docx, .vtt, .srt or .json), several at once.",
+  "settings.voice.dropLabel": "Upload files",
   "settings.voice.dropEmpty": "Drop files here, or click to choose",
   "settings.voice.pasteLabel": "Paste text",
   "settings.voice.pasteAdd": "Add text",
@@ -14776,7 +14790,7 @@ export const en = {
   "settings.passportsHideRevoked": "Hide revoked",
   "operations.schedules.title": "Background schedules",
   "operations.schedules.sub":
-    "How often each background pass runs. A running worker picks up a change within a minute: the pass runs once, then continues at the new interval.",
+    "Control how often each automatic check runs. Each row explains what it affects. Changes take effect within a minute.",
   "operations.schedules.fold": "All schedules",
   "operations.pacing.title": "Send pacing",
   "operations.pacing.sub":
@@ -19536,13 +19550,32 @@ export const en = {
     "Forecast checks are not available to you.",
   "analytics.decision.part.commit_evidence": "Confirmed commit",
   "analytics.decision.part.weighted": "Weighted open deals",
+  "health.needsFix": "Needs fixing",
+  "health.needsReview": "Review needed",
+  "health.actionsNeeded_one": "Problem needing action: {count}",
+  "health.actionsNeeded_other": "Problems needing action: {count}",
+  "health.inspectRuns": "Inspect failed runs",
+  "health.inspectMail": "Inspect mail capture",
+  "health.inspectUpdates": "Review pending updates",
+  "health.noPendingUpdates": "No required updates are unfinished.",
+  "health.optionalMaintenance": "Optional maintenance",
+  "health.completedUpdates": "Completed updates",
+  "health.effect.companyTechnical":
+    "On company pages, automatically collected mail provider, email security and hosting details may be missing or out of date. Check these details independently until the lookup is fixed. Saved company records remain available.",
+  "health.scopeUnknown": "Affected amount not measured",
+  "health.failedRunsReview": "Failed runs to review",
+  "health.inspectWork": "Inspect background work",
+  "health.filteredFinding_one": "Showing 1 of {count} problem",
+  "health.filteredFinding_other": "Showing 1 of {count} problems",
+  "health.showAllFindings": "Show all problems",
+  "health.jobDelayed": "{kind}: delayed",
   "health.views": "System health views",
   "health.overview": "Overview",
   "health.diagnostics": "Diagnostics",
   "health.configurationWithheld":
     "Your role cannot view these settings. Ask an administrator.",
-  "health.configuration": "Configuration",
-  "health.loading": "Loading evidence…",
+  "health.configuration": "Schedules and sending",
+  "health.loading": "Loading checks…",
   "health.attention": "Attention needed",
   "health.stoppedNext":
     "Send the error report to your system operator. They should check completion, fix the cause and restart only unfinished work; these failed runs will not retry.",
@@ -19624,19 +19657,11 @@ export const en = {
   "health.source.updates": "Data updates",
   "health.source.recovery": "Recovery evidence",
   "health.source.automatic": "Automatic work quality",
-  "health.impact": "Known impact",
-  "health.measuredImpact": "The source measured the affected work.",
-  "health.possibleImpact":
-    "Work may be delayed or incomplete; affected team members are not counted.",
-  "health.unknownImpact": "The affected scope is not known.",
   "health.scope": "Affected scope",
   "health.window": "Reporting window",
-  "health.currentRetained":
-    "Current stored state; retained history where applicable",
   "health.observed": "Latest observation",
   "health.firstObserved": "First observed",
   "health.nextAttempt": "Next recorded automatic attempt",
-  "health.responsible": "Who can act",
   "health.responsible.you": "You",
   "health.responsible.mailbox_owner": "Mailbox owner",
   "health.responsible.administrator": "Administrator",
@@ -19659,7 +19684,7 @@ export const en = {
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
   "health.ownerHandoff":
-    "Ask the mailbox owner to open their own Connections or capture review. This page cannot open their private mail.",
+    "Mailbox owners: open Connections to review your own mail decisions. For someone else’s mailbox, ask its owner to review; private mail is only visible to them.",
   "health.operatorHandoff":
     "A technical operator must investigate. Copy the diagnostic summary for the handoff.",
   "health.copy": "Copy technical report",
@@ -19694,11 +19719,10 @@ export const en = {
   "health.code.capture_checked":
     "No capture backlog detected in checked categories",
   "health.code.capture_processing": "Sender classification is processing",
-  "health.code.capture_uncertain": "Some senders need an owner decision",
+  "health.code.capture_uncertain": "Decide which senders belong in the CRM",
   "health.code.capture_exhausted":
     "Sender classification exhausted its automatic attempts",
-  "health.code.capture_owner_review":
-    "Mailbox owners have capture decisions to review",
+  "health.code.capture_owner_review": "Mail needs an owner decision",
   "health.code.capture_unread":
     "Unread mailbox periods need recovery verification",
   "health.code.capture_held": "Filed records are waiting for a repair pass",
@@ -19733,7 +19757,7 @@ export const en = {
   "health.code.capture_thread_processing":
     "Thread classification is processing",
   "health.code.capture_thread_uncertain":
-    "Some thread classifications need owner review",
+    "Decide which conversations colleagues may see",
   "health.queueCoverage":
     "Queue history is retained for a limited time. Its absence cannot establish that previously failed work was completed.",
 

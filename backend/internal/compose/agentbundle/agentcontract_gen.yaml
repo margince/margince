@@ -14282,7 +14282,7 @@ components:
             `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
             mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
-            none: each member signs with their own plain-text signature.
+            none: each member uses personal HTML, plain text or the closing line.
     CompanyGraphEdge:
       type: object
       description: |-
@@ -21331,6 +21331,11 @@ components:
         title: {type: [string, 'null'], description: Display label (name/subject).}
         snippet: {type: [string, 'null']}
         score: {type: [number, 'null'], description: Relevance score.}
+        identifier_match:
+          type: string
+          enum: [exact, prefix]
+          readOnly: true
+          description: The record's own email or domain matches the complete query; absent for text and employer matches.
         carried_by:
           type: [integer, 'null']
           minimum: 0

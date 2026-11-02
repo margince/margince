@@ -37,6 +37,14 @@ func NewAdminStore(db *database.DB, s *settings.Store, cfg *config.Config, users
 	return &AdminStore{db: db, settings: s, cfg: cfg, fullUsers: users, deferred: deferred, now: time.Now}
 }
 
+// WithSealer returns a store that can open a sealed provider key, so the
+// status read sees the same keys the router serves with.
+func (s *AdminStore) WithSealer(sealer config.Sealer) *AdminStore {
+	next := *s
+	next.cfg = s.cfg.WithSealer(sealer)
+	return &next
+}
+
 // BudgetChange ties a complete draft to the configuration its editor read.
 type BudgetChange struct {
 	Config           BudgetConfig `json:"config"`

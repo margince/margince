@@ -5772,6 +5772,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/reminder-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim the one browser notification a due task reminder gets.
+         * @description A due reminder is shown as a browser notification while a Margince tab is open. A member
+         *     signed in on two browsers would otherwise see it once in each. The first tab to claim a
+         *     reminder at its `remind_at` gets `claimed: true` and shows it; every later claim for that
+         *     instant answers false. Moving `remind_at`, or handing the task to someone else, arms it again.
+         *
+         *     A claim admits the rows the `reminder_due` list returns: the caller's own open task, due at
+         *     that instant within the list's 30-day window, with content the caller may read. Any other
+         *     task, including one the caller cannot see, answers `claimed: false`, which says nothing
+         *     about it.
+         */
+        post: operations["claimTaskReminderDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/audience": {
         parameters: {
             query?: never;
@@ -21710,12 +21741,12 @@ export interface paths {
         get: operations["getMyEmailSignature"];
         /**
          * Write or clear your own sign-off.
-         * @description An empty `body` CLEARS the signature — a member emptying the field means
-         *     "sign off with the plain closing", not "leave what was there".
+         * @description An empty `body` clears the plain-text fallback. Personal HTML and the
+         *     workspace template retain their precedence until cleared separately.
          *
-         *     Plain text only. The transport sends `text/plain` and the drafting
-         *     prompts forbid the model from writing a sign-off of its own, so what is
-         *     stored here is exactly what arrives under every message the caller sends.
+         *     `body` stores plain text. Optional `html` stores personal markup, sanitized
+         *     when rendered. Personal HTML takes precedence over the workspace template,
+         *     then plain text and the closing line. An agent sends without a sign-off.
          */
         put: operations["saveMyEmailSignature"];
         post?: never;
@@ -25887,6 +25918,17 @@ export interface components {
             /** @description The `utm_` parameters the page carried. */
             campaign: components["schemas"]["WebFormValue"][];
             consent?: components["schemas"]["WebFormConsent"];
+        };
+        TaskReminderClaimRequest: {
+            /**
+             * Format: date-time
+             * @description The reminder instant the tab is about to show, as the activity list returned it.
+             */
+            remind_at: string;
+        };
+        TaskReminderClaim: {
+            /** @description True for the first claim at this instant and assignee, false for every later one. */
+            claimed: boolean;
         };
         WebFormValue: {
             name: string;
@@ -34078,18 +34120,22 @@ export interface components {
         };
         EmailSignature: {
             /**
-             * @description The sign-off appended below every message this member sends, plain text.
-             *     Empty means none written; a send then closes with a plain greeting and
-             *     the member's display name when one is on file.
+             * @description Plain-text fallback after personal HTML and the company template.
+             *     With none set, a send closes with a greeting and the member's name.
              */
             body: string;
+            /**
+             * @description Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+             *     expanding placeholders. Empty sanitized content uses the usual fallback.
+             */
+            html: string;
             /** @description The member's title, filled into the workspace template's `{title}`. */
             title: string;
             /** @description The member's phone number, filled into the workspace template's `{phone}`. */
             phone: string;
             /**
              * @description The workspace has a signature template. Every send this member makes then signs
-             *     with the template, filled in with their name, title and phone, instead of `body`.
+             *     with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
              *     An agent's send carries no sign-off.
              */
             template_active: boolean;
@@ -34103,7 +34149,7 @@ export interface components {
              *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
              *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
              *     and spans with a colour and a pixel size, and drops everything else. Empty means
-             *     none: each member signs with their own plain-text signature.
+             *     none: each member uses personal HTML, plain text or the closing line.
              */
             template: string;
         };
@@ -34122,6 +34168,12 @@ export interface components {
         EmailSignatureDraft: {
             /** @description The workspace template as edited. Empty previews a workspace with none. */
             template?: string;
+            /**
+             * @description Personal HTML as typed. Empty clears it; omitted on a write or preview
+             *     leaves it unchanged. Rendering uses the signature sanitizer without
+             *     expanding placeholders. Empty sanitized content uses the usual fallback.
+             */
+            html?: string;
             /** @description The caller's title as edited. */
             title?: string;
             /** @description The caller's phone as edited. */
@@ -34135,7 +34187,7 @@ export interface components {
             text: string;
             /**
              * @description The same block as the sanitized markup the HTML part carries. Present only when
-             *     `kind` is `template`.
+             *     `kind` is `template` or a personal HTML `signature`.
              */
             html?: string;
             /**
@@ -34154,6 +34206,12 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+            /**
+             * @description Personal HTML as typed. Empty clears it; omitted on a write or preview
+             *     leaves it unchanged. Rendering uses the signature sanitizer without
+             *     expanding placeholders. Empty sanitized content uses the usual fallback.
+             */
+            html?: string;
             /** @description The member's title, for the workspace template. Omitted leaves it as it is. */
             title?: string;
             /** @description The member's phone number, for the workspace template. Omitted leaves it as it is. */
@@ -45084,6 +45142,11 @@ export interface components {
             snippet?: string | null;
             /** @description Relevance score. */
             score?: number | null;
+            /**
+             * @description The record's own email or domain matches the complete query; absent for text and employer matches.
+             * @enum {string}
+             */
+            readonly identifier_match?: "exact" | "prefix";
             /** @description For a `tag` hit only: how many contacts, companies, deals and leads carry this word, as THIS caller may see them — the same types the tag page counts and the filters offer, not every type `taggable` admits. It is what tells a searcher whether the word is worth opening before they open it. Null on every other hit type, and null when no count was taken. */
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
@@ -63748,6 +63811,36 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    claimTaskReminderDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskReminderClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Whether this caller is the one to show the notification. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskReminderClaim"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

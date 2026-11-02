@@ -126,6 +126,10 @@
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
 }
+/* The card's wait spans the card, not the width of its widest bar. */
+.brief-triage-pending > .pending {
+  align-self: stretch;
+}
 /* THE HEAD: why the row is here, whose it is, where it sits and when, as one
    caption line split by dots. */
 .brief-triage-lead-head {

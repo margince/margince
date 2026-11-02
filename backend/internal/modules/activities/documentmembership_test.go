@@ -4,9 +4,10 @@
 package activities
 
 import (
-	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func TestEveryHolderKindRendersTheSharedFileRules(t *testing.T) {
@@ -14,7 +15,7 @@ func TestEveryHolderKindRendersTheSharedFileRules(t *testing.T) {
 	rules := []string{
 		"at.archived_at IS NULL",
 		"NOT at.bytes_withheld",
-		fmt.Sprintf("< %d", inlineImageCeiling),
+		storekit.NotInlineMailImageSQL("mf"),
 		"a.archived_at IS NULL",
 		"mf.entity_type = 'activity'",
 		"UNION ALL",
@@ -35,9 +36,10 @@ func TestOnlyTheCompanyReadsMailFilesThroughTheEmploymentWalk(t *testing.T) {
 	if !strings.Contains(documentMembership(holderCompany, 1), walk) {
 		t.Error("the company membership does not use the links walk without participants")
 	}
-	for _, holder := range []string{holderDeal, holderContact} {
-		if !strings.Contains(documentMembership(holder, 1), "l."+holder+"_id = $1") {
-			t.Errorf("%s membership does not walk the mail's %s link", holder, holder)
-		}
+	if !strings.Contains(documentMembership(holderDeal, 1), storekit.MessageOnDealSQL("a.id", "$1")) {
+		t.Error("the deal membership does not walk the mail's deal link the deal room walks")
+	}
+	if !strings.Contains(documentMembership(holderContact, 1), "l.contact_id = $1") {
+		t.Error("the contact membership does not walk the mail's contact link")
 	}
 }

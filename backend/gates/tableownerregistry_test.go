@@ -74,16 +74,22 @@ var tableOwners = map[string]string{
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose
 	// package that writes it, the way compose/weekly owns team_weekly_review.
-	"worklist_snapshot":      "internal/compose/worklistsnap",
-	"relationship":           "internal/modules/contacts",
-	"partner":                "internal/modules/contacts",
-	"lead":                   "internal/modules/contacts",
-	"lead_score_history":     "internal/modules/contacts",
-	"lead_manual_signal":     "internal/modules/contacts",
-	"lead_source":            "internal/modules/contacts",
-	"lead_origin":            "internal/modules/contacts",
-	"lead_disqualify_reason": "internal/modules/contacts",
-	"partner_stage":          "internal/modules/contacts",
+	"worklist_snapshot": "internal/compose/worklistsnap",
+	// One reader's cached Home answers, the fence that ends them and the
+	// reader's last write, owned by the compose package that serves them.
+	"home_read_cache":         "internal/compose/homecache",
+	"home_read_fence":         "internal/compose/homecache",
+	"home_read_forgotten":     "internal/compose/homecache",
+	"home_read_fence_pending": "internal/compose/homecache",
+	"relationship":            "internal/modules/contacts",
+	"partner":                 "internal/modules/contacts",
+	"lead":                    "internal/modules/contacts",
+	"lead_score_history":      "internal/modules/contacts",
+	"lead_manual_signal":      "internal/modules/contacts",
+	"lead_source":             "internal/modules/contacts",
+	"lead_origin":             "internal/modules/contacts",
+	"lead_disqualify_reason":  "internal/modules/contacts",
+	"partner_stage":           "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
 	// administered reason a refusal names. contacts owns them because the SUBJECT
@@ -205,6 +211,7 @@ var tableOwners = map[string]string{
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
 	"activity_request_settlement":   "internal/modules/activities",
+	"activity_reminder_delivery":    "internal/modules/activities",
 	"activity_commitment_admission": "internal/modules/activities",
 	// Which owed mails had their stored original re-read for a calendar method.
 	// Its candidates are owedSQL, which this module owns, so the marker is here

@@ -16,7 +16,7 @@ import {
   identifierNumber,
 } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useUrlParams } from "../../lib/urlstate";
@@ -26,14 +26,17 @@ import { DataTasksHealthCard } from "./datataskshealth";
 import { EmbedReindexCard } from "./embedreindex";
 import { ExtensionIngestHealthCard } from "./extingesthealth";
 import { JobHealthCard } from "./jobhealth";
+import { jobKindNameKey } from "./jobkinds";
 import { ProviderHealthCard } from "./providerhealth";
-import { PublicOriginCard } from "./public-origin";
 import { RecoveryHealthCard } from "./recoveryhealth";
 import { healthSourceLabels } from "./systemhealth.copy";
 import { useJobHistory } from "./systemhealth.queries";
 import { jobRunEvidence } from "./systemhealth.report";
 import { FindingPanel } from "./systemhealthfinding";
-import { healthSourceForSection } from "./systemhealthnavigation";
+import {
+  healthSectionForSource,
+  healthSourceForSection,
+} from "./systemhealthnavigation";
 
 type Report = components["schemas"]["SystemHealth"];
 type State = "retryable" | "discarded" | "cancelled";
@@ -47,19 +50,34 @@ export default function SystemHealthDiagnostics({
   report,
 }: Readonly<{ report: Report }>) {
   const t = useT();
-  const [params] = useUrlParams();
-  const [selected, setSource] = useState<string>();
-  const requested = selected ?? healthSourceForSection(params.get("section"));
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const [params, setParams] = useUrlParams();
+  const requested = healthSourceForSection(params.get("section"));
   const allowed = report.sources.filter((s) => s.availability !== "withheld");
   const source = allowed.some((s) => s.id === requested)
     ? requested
     : (allowed[0]?.id ?? "none");
+  const related = report.findings.filter(
+    (f) => f.source === source && f.requires_action,
+  );
+  const selected = related.find((f) => f.id === params.get("finding"));
+  const clearFinding = () => {
+    const next = new Map(params);
+    for (const key of ["finding", "kind", "state"]) next.delete(key);
+    setParams(next);
+  };
   return (
     <>
       <FilterPills
         label={t("health.capabilities")}
         value={source ?? "none"}
-        onChange={setSource}
+        onChange={(value) => {
+          const next = new Map(params);
+          next.set("section", healthSectionForSource(value) ?? "");
+          for (const key of ["finding", "kind", "state"]) next.delete(key);
+          setParams(next);
+        }}
         pills={report.sources
           .filter((s) => s.availability !== "withheld")
           .map((s) => ({
@@ -67,17 +85,31 @@ export default function SystemHealthDiagnostics({
             label: t(healthSourceLabels[s.id] ?? "health.unknown"),
           }))}
       />
-      {report.findings
-        .filter((f) => f.source === source && f.requires_action)
-        .map((f) => (
-          <FindingPanel key={f.id} finding={f} detail />
-        ))}
-      {source === "jobs" && (
-        <>
-          <JobHistory />
-          <JobHealthCard showHistory={false} />
-        </>
+      {selected && related.length > 1 && (
+        <ActionRow>
+          <p>
+            {plural("health.filteredFinding", related.length, {
+              count: formatNumber(related.length, locale),
+            })}
+          </p>
+          <Button onClick={clearFinding}>{t("health.showAllFindings")}</Button>
+        </ActionRow>
       )}
+      {(selected ? [selected] : related).map((f) => (
+        <FindingPanel key={f.id} finding={f} detail />
+      ))}
+      {source === "jobs" &&
+        (params.get("state") === "discarded" ? (
+          <>
+            <JobHistory />
+            <JobHealthCard showHistory={false} />
+          </>
+        ) : (
+          <>
+            <JobHealthCard showHistory={false} />
+            <JobHistory />
+          </>
+        ))}
       {source === "capture" && <CaptureHealthCard />}
       {source === "intake" && <ExtensionIngestHealthCard />}
       {source === "recovery" && <RecoveryHealthCard />}
@@ -85,7 +117,6 @@ export default function SystemHealthDiagnostics({
       {source === "providers" && <ProviderHealthCard />}
       {source === "search" && <EmbedReindexCard />}
       {source === "updates" && <DataTasksHealthCard />}
-      <PublicOriginCard status={report.public_origin} />
     </>
   );
 }
@@ -195,7 +226,10 @@ function JobHistoryBody() {
                   {
                     key: "kind",
                     header: t("jobs.col.job"),
-                    render: (g) => g.kind,
+                    render: (g) => {
+                      const key = jobKindNameKey(g.kind);
+                      return key ? t(key) : g.kind;
+                    },
                   },
                   {
                     key: "scope",
@@ -266,7 +300,10 @@ function JobHistoryBody() {
                   {
                     key: "kind",
                     header: t("jobs.col.job"),
-                    render: (run) => run.kind,
+                    render: (run) => {
+                      const key = jobKindNameKey(run.kind);
+                      return key ? t(key) : run.kind;
+                    },
                   },
                   {
                     key: "reason",
