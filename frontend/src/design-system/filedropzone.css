@@ -51,6 +51,17 @@
   cursor: pointer;
 }
 
+/* Inert like the prompt beside it, so a drag across it keeps the highlight. */
+.fdz-icon {
+  display: inline-flex;
+  color: var(--textSecondary);
+  pointer-events: none;
+}
+.fdz:hover .fdz-icon,
+.fdz.dragover .fdz-icon {
+  color: var(--accentText);
+}
+
 .fdz-label {
   /* The zone's prompt is a question until it is answered, so it asks in
      secondary ink and the answer below takes the reader's own. At one ink a
