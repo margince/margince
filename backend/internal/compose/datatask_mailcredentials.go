@@ -28,10 +28,8 @@ const storedMailCredentialScope = `FROM activity a WHERE a.kind = 'email'`
 // repaired in place, and the activity.updated each one emits rebuilds what was
 // derived from the old text.
 //
-// The audit images of a body edit and the original provider payload hold the
-// same credentials and are not in scope here. Reaching the images needs a
-// narrow exception to an append-only trigger, which is a guardrail change with
-// its own release sequence.
+// The audit images and the stored provider payload hold the same credentials,
+// and neither is in scope here.
 func storedCredentialsMaskedDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793640000_stored_credentials_masked", Version: 1,
@@ -53,8 +51,8 @@ func estimateStoredMailCredentials(
 
 // maskStoredMailCredentials walks the mail by id and masks a page of it.
 //
-// The cursor advances over every row read, not only the changed ones, so mail
-// that holds no credential is not read again on the next pass.
+// The cursor advances over every row read, not only the changed ones. Mail
+// holding no credential is then not read again on the next pass.
 func maskStoredMailCredentials(
 	ctx context.Context, tx pgx.Tx, in datatask.BatchIn,
 ) (datatask.BatchOut, error) {

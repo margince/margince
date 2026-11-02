@@ -64,7 +64,8 @@ func TestTheRepairMasksACredentialAlreadyStoredInMail(t *testing.T) {
 	runMailCredentialTask(t, e)
 
 	if body := e.WsScalar(t, `SELECT coalesce(body, '') FROM activity WHERE id = $1`, mail); strings.Contains(
-		body, storedSecret) {
+		body, storedSecret,
+	) {
 		t.Errorf("the stored password is still in the mail's body: %q", body)
 	}
 	// Read before the assertion below, so a repair that emptied every mail

@@ -33,13 +33,10 @@ type maskedMail struct {
 
 // MaskMailCredentialsTx masks the credentials stored in one page of mail text.
 //
-// Mail captured or sent before the capture-side mask still holds passwords and
-// access keys in clear, where a reader of the record or a search over it finds
-// them. Every kind='email' row is in scope, because the capture path and the
-// send path both wrote text this way.
-//
-// The audit row carries no text, as at capture. An image of the body would
-// write the credential into a row that nothing can take it out of.
+// Mail captured or sent before the capture-side mask still holds passwords
+// and access keys in clear. A reader of the record finds them, and so does a
+// search over it. Every kind='email' row is in scope, because the capture and
+// the send path both wrote text this way.
 func MaskMailCredentialsTx(
 	ctx context.Context, tx pgx.Tx, after ids.UUID, limit int,
 ) (MailMaskPage, error) {
@@ -59,8 +56,8 @@ func MaskMailCredentialsTx(
 	return page, nil
 }
 
-// readMailToMask keeps only the rows a mask would change, and advances the
-// cursor over every row it read: a page of clean mail must not be read again.
+// readMailToMask keeps only the rows a mask would change. The cursor advances
+// over every row it read, so a page of clean mail is not read again.
 func readMailToMask(
 	ctx context.Context, tx pgx.Tx, after ids.UUID, limit int,
 ) (MailMaskPage, []maskedMail, error) {
@@ -107,9 +104,9 @@ func maskOneMail(ctx context.Context, tx pgx.Tx, row maskedMail) (bool, error) {
 	if tag.RowsAffected() == 0 {
 		return false, nil
 	}
-	// AuditEvent, not Audit: the before-image of these fields IS the credential
-	// this removes, and audit_log is append-only, so recording it would put the
-	// value somewhere nothing can take it out of again.
+	// AuditEvent, not Audit. The before-image of these fields is the credential
+	// being removed, and audit_log keeps what it is given. Recording it would
+	// put the value beyond this repair's reach.
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", "activity", row.id,
 		map[string]any{"stored_credentials_masked": true})
 	if err != nil {

@@ -84,7 +84,8 @@ var activityReadLiteral = gatekit.TableReadPattern("activity")
 // Both orders, because a projection may sit either side of its FROM.
 var auditImageRead = regexp.MustCompile(
 	`(?is)\b(?:from|join)\s+audit_log\b.{0,300}?\b(?:before|after)\b` +
-		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`)
+		`|\b(?:before|after)\b.{0,300}?\b(?:from|join)\s+audit_log\b`,
+)
 
 // auditImageEntity is a record type a statement pins its audit rows to with a
 // LITERAL, and auditImageEntityMention is any test of that column at all.
