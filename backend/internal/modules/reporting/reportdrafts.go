@@ -112,13 +112,13 @@ func (s *Service) SaveReportDraft(ctx context.Context, id ids.UUID, version int6
 		draft := before.Revision + 1
 		staged := before
 		staged.Revision, staged.Selection = draft, in.Selection
-		if err := s.saveReportRevision(ctx, tx, staged); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &staged); err != nil {
 			return err
 		}
 		out = before
 		out.DraftRevision = &draft
 		out.Version++
-		return s.writeDraftState(ctx, tx, reportImage{before, replaced}, reportImage{out, &in.Selection}, "update")
+		return s.writeDraftState(ctx, tx, reportImage{before, replaced}, reportImage{out, &staged.Selection}, "update")
 	})
 	return out, err
 }
@@ -216,7 +216,7 @@ func (s *Service) RestoreReportRevision(ctx context.Context, id ids.UUID, versio
 		out.Revision++
 		out.Selection = selection
 		out.Version++
-		if err := s.saveReportRevision(ctx, tx, out); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
 		return s.writeDraftState(ctx, tx, reportImage{before, nil}, reportImage{out, nil}, "restore")

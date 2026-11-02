@@ -17,6 +17,7 @@ import { useScrollMemory } from "../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
+import { CaptureHealthBanner } from "./capturehealthbanner";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
@@ -266,6 +267,7 @@ export function Shell({
                 onOpenSearch={onOpenSearch}
               />
             )}
+            <CaptureHealthBanner />
             <ConnectivityBanner />
             <EconomyBanner />
             <EmbedReindexBanner />

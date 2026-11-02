@@ -21,11 +21,8 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 	before.Context.Interval.StartAt = before.Context.Interval.StartAt.In(zone)
 	before.Context.Interval.EndAt = before.Context.Interval.EndAt.In(zone)
 	before.Context.EvaluatedAt = before.Context.EvaluatedAt.In(zone)
-	if before.Context.TargetInterval != nil {
-		target := *before.Context.TargetInterval
-		target.StartAt, target.EndAt = target.StartAt.In(zone), target.EndAt.In(zone)
-		before.Context.TargetInterval = &target
-	}
+	before.Context.TargetInterval = windowIn(before.Context.TargetInterval, zone)
+	before.Context.Horizon = windowIn(before.Context.Horizon, zone)
 	out := reporting.Evaluation{Result: before, Facts: facts}
 	out.Result.Metrics = []crmcontracts.ReportingMetric{}
 	out.Result.Charts = []crmcontracts.ReportingChart{}
@@ -70,6 +67,14 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 	}
 	restrictFrozenCharts(out.Result.Charts)
 	return out.Result, nil
+}
+
+func windowIn(window *crmcontracts.ReportingWindow, zone *time.Location) *crmcontracts.ReportingWindow {
+	if window == nil {
+		return nil
+	}
+	out := crmcontracts.ReportingWindow{StartAt: window.StartAt.In(zone), EndAt: window.EndAt.In(zone)}
+	return &out
 }
 
 func restrictFrozenCharts(charts []crmcontracts.ReportingChart) {

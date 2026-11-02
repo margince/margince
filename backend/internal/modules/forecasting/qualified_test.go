@@ -32,7 +32,7 @@ func TestTheQualifiedReadingsLeaveOutAReviewedDealAndCountTheUnknownApart(t *tes
 		t.Fatalf("baseline evidence %d weighted %d, want 520000 and 260000", got.EvidenceMinor, got.WeightedMinor)
 	}
 	want := QualifiedReadings{
-		EvidenceMinor: 100_000, BestCaseMinor: 100_000, WeightedMinor: 50_000,
+		OpenMinor: 100_000, EvidenceMinor: 100_000, BestCaseMinor: 100_000, WeightedMinor: 50_000,
 		ExcludedMinor: 400_000, UnknownMinor: 20_000, ExcludedCount: 1, UnknownCount: 1,
 	}
 	if got.Qualified == nil || *got.Qualified != want {

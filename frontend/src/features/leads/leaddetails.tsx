@@ -39,6 +39,7 @@ import { useRecordTags } from "../../lib/tags.queries";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
+import { useLeadPartnerRow } from "./leadpartner";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -65,7 +66,10 @@ function isBlank(value: string | null | undefined): boolean {
 export function useFieldSave(lead: Lead) {
   const t = useT();
   const queryClient = useQueryClient();
-  return (key: TextKey | "origin" | "industry", required = false) =>
+  return (
+    key: TextKey | "origin" | "industry" | "partner_company_id",
+    required = false,
+  ) =>
     async (next: string) => {
       if (required && !next.trim()) {
         throw new ProblemError({ detail: t("record.fieldRequired") });
@@ -156,6 +160,11 @@ function useAboutRows(
   const save = useFieldSave(lead);
   const canEdit = !writer.readOnly;
   const reason = writer.readOnlyReason;
+  const partnerRow = useLeadPartnerRow(
+    lead,
+    writer,
+    save("partner_company_id"),
+  );
   const text = (
     key: TextKey,
     label: MessageKey,
@@ -258,6 +267,7 @@ function useAboutRows(
       ),
     },
     text("origin_detail", "lead.originDetail"),
+    ...(partnerRow ? [partnerRow] : []),
     {
       key: "added_via",
       term: t("lead.addedVia"),

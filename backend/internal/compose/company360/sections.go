@@ -89,7 +89,7 @@ func edgeScope(ctx context.Context, arg func(any) int) (string, error) {
 // linkScope resolves "this activity_link row points at a record the caller
 // can read" for one table alias, answering scopeAll for an unbounded caller.
 func linkScope(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	clause, err := auth.LinkTargetVisibleClause(ctx, alias, arg)
+	clause, err := auth.LinkTargetReadableClause(ctx, alias, arg)
 	if err != nil {
 		return "", err
 	}

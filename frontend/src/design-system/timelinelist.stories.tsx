@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import { LocaleProvider, useLocale, useT } from "../i18n";
@@ -157,6 +157,49 @@ export const Grouped: Story = {
       ]}
     />
   ),
+};
+
+// A run of newsletters the account sent the team folds into one row, whatever
+// their subjects and days. The grouping is the real one, from groupChronology.
+function newsletterRun() {
+  return groupChronology(
+    [
+      "October issue",
+      "Webinar next week",
+      "September issue",
+      "Product update",
+    ].map((title, week) =>
+      entry(
+        `n${week}`,
+        `2026-10-${String(28 - 7 * week).padStart(2, "0")}T08:00:00Z`,
+        {
+          title,
+          direction: "inbound",
+          bulkAttested: true,
+          counterparts: "Brandt Automotive news",
+        },
+      ),
+    ),
+  );
+}
+
+export const NewsletterRun: Story = {
+  render: () => <GroupedTimelineList zone={ZONE} groups={newsletterRun()} />,
+};
+
+export const NewsletterRunOpen: Story = {
+  render: () => <GroupedTimelineList zone={ZONE} groups={newsletterRun()} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("4 newsletters")).toBeTruthy();
+    await userEvent.click(canvas.getByRole("button", { name: "Open" }));
+    await expect(canvas.getByText("Product update")).toBeTruthy();
+  },
+};
+
+export const NewsletterRunOpenDark: Story = {
+  ...NewsletterRunOpen,
+  globals: { theme: "dark" },
 };
 
 // `activityTimeline` adapts the contract's activities to the rows above, and a
@@ -537,5 +580,61 @@ export const SentByMarginceForYou: Story = {
       await canvas.findByText("Sent by Margince for you"),
     ).toBeVisible();
     await expect(canvas.getByText("From privacy@kps.test")).toBeVisible();
+  },
+};
+
+const PASSPORT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+
+function agentNote(
+  id: string,
+  body: string,
+  createdBy: Activity["created_by"],
+): Activity {
+  return {
+    offers_email: false,
+    id,
+    kind: "note",
+    body,
+    occurred_at: "2026-10-21T10:00:00Z",
+    occurred_precision: "instant",
+    is_done: false,
+    source: "manual",
+    captured_by: PASSPORT,
+    created_at: "2026-10-21T10:00:00Z",
+    updated_at: "2026-10-21T10:00:00Z",
+    created_by: createdBy,
+  };
+}
+
+// A note a colleague logged through their agent names the colleague and the
+// tool; a background agent with nobody behind it keeps the unnamed tag.
+export const NotesAnAgentLogged: Story = {
+  render: () => (
+    <StoryProviders>
+      <GroupedTimelineList
+        zone={ZONE}
+        groups={groupChronology(
+          activityTimeline([
+            agentNote("for-anna", "Asked for the renewal terms.", {
+              actor_type: "agent",
+              actor_id: PASSPORT,
+              on_behalf_of_name: "Anna Weber",
+              agent_client: "Claude",
+            }),
+            agentNote("background", "Matched the signature to the contact.", {
+              actor_type: "agent",
+              actor_id: PASSPORT,
+            }),
+          ]),
+        )}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText("Made by Claude for Anna Weber"),
+    ).toBeVisible();
+    await expect(canvas.getByText("Automated by an agent")).toBeVisible();
   },
 };

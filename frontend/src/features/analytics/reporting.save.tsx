@@ -28,26 +28,26 @@ import {
   type ReportingLayout,
 } from "./reporting.layout";
 import { LayoutEditor } from "./reporting.layouteditor";
-import {
-  metricLabel,
-  type ReportingReport,
-  type ReportingSelection,
-} from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+import type { ReportingReport, ReportingSelection } from "./reporting.model";
+import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 import { reportRevisionsKey } from "./reporting.versions";
 
 export function SaveReportingDialog({
   selection: initialSelection,
   report,
+  note,
   onClose,
   onSaved,
 }: Readonly<{
   selection: ReportingSelection;
   report?: ReportingReport;
+  // What saving does not change, said where the reader decides to save.
+  note?: string;
   onClose: () => void;
   onSaved: (report: ReportingReport) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const [selection, setSelection] = useState(initialSelection);
   const title = useId();
   const formId = useId();
@@ -153,6 +153,7 @@ export function SaveReportingDialog({
         {t(report ? "reporting.edit" : "reporting.save")}
       </Heading>
       {draftOpen && <p className="t-caption">{t("reporting.draftEditNote")}</p>}
+      {note && <p className="t-caption">{note}</p>}
       <form
         id={formId}
         className="form-stack"
@@ -240,7 +241,7 @@ export function SaveReportingDialog({
               ).map((metric) => (
                 <Checkbox
                   key={metric}
-                  label={metricLabel(metric, t)}
+                  label={metricName(metric)}
                   // Which charts a metric brings is in the catalog, so the
                   // choice waits for it rather than keep cards it cannot judge.
                   disabled={catalog.data === undefined}

@@ -83,6 +83,14 @@ func (s *Service) worklistIn(
 	if err != nil {
 		return crmcontracts.Worklist{}, err
 	}
+	// What this reader put at the top. Read before the day, so a pinned
+	// reconnection keeps its lane, and before the projection, which returns no
+	// error. On a COPY of the service: pins on the shared one would follow one
+	// reader's page onto another's.
+	if reader, err = reader.readingPins(ctx); err != nil {
+		return crmcontracts.Worklist{}, err
+	}
+	reader.omitDecay = reader.omitDecay && !reader.relationshipsChosen()
 	// The day AND what the night knows about each deal — its finding and its
 	// score — from one read of the brief lane. Both travel as values rather than
 	// on the service: feed.go's assembleDay states why a field there would carry
@@ -120,19 +128,8 @@ func (s *Service) worklistIn(
 	// the readings, so a rep refused the who-is-waiting lane was shown "0
 	// customers waiting on an answer" as an exact figure — above the warning
 	// that contradicted it.
-	// What this reader put at the top, read BEFORE the projection because the
-	// projection returns no error: it is the pure part, and a failure here has
-	// to reach the caller rather than be swallowed into a page that quietly
-	// ignores the override the reader asked for.
-	//
-	// Carried on a COPY of the service, the way the narrowed reader above is:
-	// one Service serves every request, so pins set on it would follow one
-	// reader's page onto another's.
-	withPins, err := reader.readingPins(ctx)
+	withPins, err := reader.readingDone(ctx, day)
 	if err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	if withPins, err = withPins.readingDone(ctx, day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	withPins = withPins.readingWalk(walk, walking)
@@ -145,18 +142,20 @@ func (s *Service) worklistIn(
 	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
-	withPins, adviceErr := withPins.readingDealMoves(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, adviceErr}, awaitingErrs...), beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
+	if withPins.omitDecay {
+		out.OptionalRelationships, out.OptionalRelationshipsMoreAvailable = nil, nil
+	}
 	out.PlanCoverage = withPins.planCoverage
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	out.TeamWeek = new(identity.TeamWeekOf(ctx))
 	defer timeStage(ctx, "row_names")()
-	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings); err != nil {
+	if err := withPins.nameWorklistRows(ctx, &out, beside.night.findings, day); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
 	return out, nil
@@ -206,9 +205,9 @@ func (s *Service) worklistFrom(
 	// the fold so the surviving row can inherit a score even where the night's
 	// own row is the one that goes.
 	rows = stampOpportunity(rows, s.briefScores)
-	// One unanswered message is one row: the deal it belongs to does not also
-	// appear as drifting.
-	rows = dropDealsAlreadyWaiting(rows)
+	// One job is one row: a deal with a waiting customer or a near task does
+	// not also appear as drifting.
+	rows = dropDealsAlreadyInHand(rows, day.AsOf)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -296,7 +295,7 @@ func (s *Service) worklistFrom(
 	}
 	// A Done being checked asks which rows this day draws, not for a page.
 	if s.marked.probe != nil {
-		s.marked.probe(rows)
+		s.marked.probe(slices.Concat(rows, s.riskInTail(ctx, day.AsOf, bounded, rows), s.waitingInTail(ctx, day.AsOf, bounded)))
 		return crmcontracts.Worklist{}
 	}
 	// Cut to the page BEFORE explaining and counting. Ranking the whole set and
@@ -333,7 +332,7 @@ func (s *Service) worklistFrom(
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
 		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)
-	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == ""}, shown, more, limit, cursor.Rest, rows)
+	shown, rest, tailFailed := s.withTail(ctx, tailPage{scope, filter, day, bounded, cursor.Params == "", nil}, shown, more, limit, cursor.Rest, rows)
 	// A walk this reader named and cannot continue — expired, somebody else's,
 	// or minted under another question. It cannot be answered with a page: an
 	// empty queue on this surface means the day is clear, so an expired walk

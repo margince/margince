@@ -67,7 +67,7 @@ func refreshApprovalNotice(
 	if current.RequestedDeciderId == nil || ids.UUID(*current.RequestedDeciderId) != attempt.Recipient.UUID {
 		return attempt, facts, false, nil
 	}
-	if approvals.PreviewRefusal(current.Preview) != nil {
+	if approvals.PreviewRefusal(current.Preview) != nil && !awaitsWiderSight(current.Preview) {
 		return attempt, facts, false, nil //nolint:nilerr // A refused preview suppresses mail; delivery itself has not failed.
 	}
 	return withApprovalWords(ctx, pool, attempt, current, approval.ExpiresAt, use)
@@ -75,13 +75,15 @@ func refreshApprovalNotice(
 
 // withApprovalWords writes the notice's subject and digest line for the
 // recipient, and the facts its single email adds. A commitment has its own;
-// any other approval lists the changes its ready preview shows.
+// any other approval says what its preview shows.
 func withApprovalWords(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, current crmcontracts.Approval, expires time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
-	if current.Summary != nil && *current.Summary != "" {
-		attempt.Notice.Subject = *current.Summary
+	// A digest line is all its reader gets, so it keeps the values; the single
+	// email lists them under the sentence.
+	if line := digestOrSubjectLine(current, use); line != "" {
+		attempt.Notice.Subject = line
 	}
 	if current.TargetLabel != nil {
 		attempt.Notice.Body = mailcopy.OneLine(*current.TargetLabel)
@@ -95,7 +97,7 @@ func withApprovalWords(
 		if facts, err = newApprovalPreviewReader(InstallationDB(pool)).commitmentMailFacts(ctx, current, words, local); err != nil {
 			return attempt, facts, false, err
 		}
-	case current.Preview != nil && current.Preview.State == previewReadyState:
+	case current.Preview != nil:
 		facts = changeMailFacts(current, words)
 	}
 	if !approvals.ExpiresNever(current.Kind) {
@@ -105,9 +107,28 @@ func withApprovalWords(
 	return attempt, facts, true, nil
 }
 
+// awaitsWiderSight is a preview the recipient cannot decide because its effect
+// touches records they cannot open. The card tells them who must decide it, and
+// so does the email, rather than leave the request unannounced.
+func awaitsWiderSight(preview *crmcontracts.ApprovalPreview) bool {
+	return preview != nil && preview.State == approvals.PreviewNeedsWiderSight
+}
+
 func mailNow(clock func() time.Time) time.Time {
 	if clock != nil {
 		return clock()
 	}
 	return time.Now()
+}
+
+// digestOrSubjectLine is the joined summary for a digest line and the sentence
+// alone for the single email's subject.
+func digestOrSubjectLine(approval crmcontracts.Approval, use approvalNoticeUse) string {
+	if use == forSingleEmail {
+		return approvalSentence(approval)
+	}
+	if approval.Summary != nil {
+		return *approval.Summary
+	}
+	return ""
 }

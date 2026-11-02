@@ -9,7 +9,7 @@ model called and what it said. The results go to
 
 This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own
 credentials. The Go tests pin payloads and errors for free. This lane answers
-the question they cannot: whether a model can use the surface.
+the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
 
 > **Start free.** `make test-e2e-llm-check` needs no key, network or stack. It
 > runs the checker, the recorded verdicts of the judge and the unit tests of the bridge,

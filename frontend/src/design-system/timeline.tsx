@@ -92,8 +92,8 @@ export function GroupedTimelineList({
   );
 }
 
-// BulkGroupRow is one send to several contacts, folded. While closed, the
-// newest copy stands for the send. Opening it lists every copy through the
+// BulkGroupRow is one send to several contacts, or a run of newsletters the
+// team received, folded. While closed, the newest message stands for the group. Opening it lists every copy through the
 // ordinary row. A thread is not drawn here: it is a conversation, and
 // ThreadRow draws it open, as one card of messages.
 function BulkGroupRow({
@@ -125,9 +125,9 @@ function BulkGroupRow({
         </span>
       </span>
       <div className="tl-body">
-        {/* What the send is, while it is closed. No whose-move flag: a bulk
-            group is one outbound send with no reply expected, so it carries
-            no claim.
+        {/* What the group is, while it is closed. No whose-move flag: a
+            mailing expects no reply, whichever way it went, so it carries no
+            claim.
 
             The newest copy stands for the send, and that copy is drawn by
             the SAME component a lone one is — subject, who, the preview the

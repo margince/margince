@@ -38,7 +38,7 @@ Mail questions and company enrichment wait, and try again at the next check, wit
 That holds for the call that first finds the credit gone, the key refused or the host out of reach too.
 
 Requests you make yourself fail at once, with a message to contact your system administrator.
-Your administrator sees why under **Settings**, **System health**, in **AI provider status**.
+Your administrator sees why under **Settings**, **System health**, **Diagnostics**, then **AI availability**.
 Also called: AI outage, no credit, mail stuck unsure, enrichment stopped.
 
 ## What the AI does for you
@@ -107,10 +107,10 @@ Where Margince can say who put a value there, it does. The trust marks are:
   name
 - "Automated by {agent}", or "Automated by an agent" when the passport has no
   name to show
-- "Made by {agent} for {colleague}" on a contact an agent made. It names the
-  tool, such as Claude, and the colleague the agent worked for. It reads "Made
-  by an agent for {colleague}" when the tool is not recorded. Without the
-  colleague it reads "Automated by {agent}" or "Automated by an agent".
+- "Made by {agent} for {colleague}" on a contact, company, deal or activity an
+  agent made. It names the tool, such as Claude, and the colleague the agent
+  worked for. It reads "Made by an agent for {colleague}" when the tool is not
+  recorded. Without the colleague it reads "Automated by {agent}" or "Automated by an agent".
 - "System task: {job}", naming the job in words such as "Mail participant
   fill-in", or plain "System task" when the job has no name to show.
   This is the installation's own work, such as a planned sweep or a run that

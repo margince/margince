@@ -14,7 +14,15 @@ import { askAssistant, callServerTool, canCallTools } from "./actions";
 import { badge } from "./badge";
 import { el, heading } from "./bridge";
 import { button, eyebrow } from "./parts";
-import { type Change, changesOf, changeTable, inWords } from "./summary";
+import {
+  type Change,
+  changesOf,
+  changeTable,
+  detailsOf,
+  inWords,
+  type SummaryParts,
+  summaryPartsOf,
+} from "./summary";
 import { asList, asRecord, asText } from "./types";
 import { day } from "./values";
 
@@ -25,11 +33,20 @@ export type Proposal = {
   kind: string;
   status: string;
   summary: string;
+  /** The summary taken apart, or null on a summary that is a sentence alone. */
+  parts: SummaryParts | null;
   target: string;
   proposedBy: string;
   byAssistant: boolean;
   expiresAt: string;
   changes: Change[];
+  details: Change[];
+  /** The further effects approving releases, in the server's sentences. */
+  effects: string[];
+  /** The preview's state; "" when the answer carries none, as a listing. */
+  previewState: string;
+  /** The server's sentence for a preview that is not ready. */
+  previewNote: string;
   evidence: string[];
 };
 
@@ -63,21 +80,35 @@ export function proposalOf(raw: unknown): Proposal | null {
     kind: asText(a.kind),
     status: asText(a.status),
     summary: asText(a.summary),
+    parts: summaryPartsOf(a.summary_parts),
     target: asText(a.target_label),
     proposedBy: proposerOf(proposedBy, a.on_behalf_of),
     byAssistant: proposedBy.startsWith("agent:"),
     expiresAt: asText(a.expires_at),
     changes: changesOf(a.changes),
+    details: detailsOf(a.details),
+    effects: asList(a.effects)
+      .map((e) => asText(asRecord(e).label))
+      .filter((label) => label !== ""),
+    previewState: asText(a.preview_state),
+    previewNote: asText(a.preview_note),
     evidence: asList(a.evidence)
       .map((e) => asText(asRecord(e).evidence_snippet))
       .filter((snippet) => snippet !== ""),
   };
 }
 
+/** previewBlocks reports a preview the server will not let anyone approve
+ *  from, such as one touching records the reader cannot open. */
+function previewBlocks(p: Proposal): boolean {
+  return p.previewState !== "" && p.previewState !== "ready";
+}
+
 /** isOpen reports whether a proposal can still be answered at `now`. */
 export function isOpen(p: Proposal, now: number): boolean {
   return (
     p.status === "pending" &&
+    !previewBlocks(p) &&
     !decisionLapsed({ status: p.status, expires_at: p.expiresAt }, now)
   );
 }
@@ -187,6 +218,34 @@ function statusBadge(p: Proposal): HTMLElement | null {
   return badge(word, tone);
 }
 
+/** proposalBody is what approving does: the changes, the operands and the
+ *  further effects. It answers null when the answer names none of them. */
+function proposalBody(p: Proposal): HTMLElement | null {
+  const body = el("div", "dcard-body");
+  for (const table of [
+    changeTable(p.changes, { before: true }),
+    changeTable(p.details, { before: false }),
+  ]) {
+    if (table !== null) body.appendChild(table);
+  }
+  // The summary's own values the preview does not name, so none is listed
+  // twice and none the preview leaves out goes missing.
+  if (p.parts !== null) {
+    const named = new Set([...p.changes, ...p.details].map((c) => c.field));
+    const rest = p.parts.fields.filter((f) => !named.has(f.field));
+    const table = changeTable(rest, { before: false });
+    if (table !== null) body.appendChild(table);
+    if (p.parts.more > 0)
+      body.appendChild(el("p", "meta", `${p.parts.more} more not shown`));
+  }
+  if (p.effects.length > 0) {
+    const list = el("ul", "evidence-list");
+    for (const effect of p.effects) list.appendChild(el("li", "meta", effect));
+    body.append(eyebrow("Also changes"), list);
+  }
+  return body.childElementCount > 0 ? body : null;
+}
+
 /**
  * decisionCard mirrors `DecisionCard`: the staged ground and the deadline band.
  * Over the headline sit the kind and target; under it, the change, its
@@ -215,7 +274,7 @@ export function decisionCard(
     if (chip !== null) meta.appendChild(chip);
   }
   // The one card of a deck is the document's heading; a row is one of many.
-  const words = p.summary || inWords(p.kind);
+  const words = p.parts?.sentence || p.summary || inWords(p.kind);
   const headline =
     opts.layout === "deck"
       ? heading("large", words, { as: "h1", className: "approval-headline" })
@@ -223,12 +282,8 @@ export function decisionCard(
   headline.id = `decision-headline-${nextHeadlineID++}`;
   card.setAttribute("aria-labelledby", headline.id);
   card.append(meta, headline, el("p", "meta", `Proposed by ${p.proposedBy}`));
-  const change = changeTable(p.changes, { before: true });
-  if (change !== null) {
-    const body = el("div", "dcard-body");
-    body.appendChild(change);
-    card.appendChild(body);
-  }
+  const body = proposalBody(p);
+  if (body !== null) card.appendChild(body);
   if (p.evidence.length > 0) {
     const evidence = el("div", "dcard-evidence");
     const list = el("ul", "evidence-list");
@@ -261,6 +316,11 @@ function verbs(
   }
   if (outcome?.kind === "failed" && outcome.unknown === true) {
     return settledLine(outcome.reason);
+  }
+  if (previewBlocks(p)) {
+    return settledLine(
+      p.previewNote || "This can no longer be approved as it stands.",
+    );
   }
   if (!open)
     return settledLine("This ran out of time and can no longer be answered.");

@@ -267,7 +267,7 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	linkVisible, err := auth.LinkTargetReadableClause(ctx, "wl", arg)
 	if err != nil {
 		return "", err
 	}
@@ -319,7 +319,7 @@ func (s *Store) waitingStatement(
 	if err != nil {
 		return "", err
 	}
-	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg)
+	responsibility := personalMailResponsibilitySQL(&relax.reader, identities, arg, "")
 	return fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),

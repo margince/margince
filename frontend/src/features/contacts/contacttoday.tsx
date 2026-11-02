@@ -113,6 +113,7 @@ export function ContactToday({
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
 
 const URGENT_RULES: ReadonlySet<ContactMoment["rule"]> = new Set([
+  "privacy_notice_due",
   "meeting_prep",
   "overdue_promise",
 ]);
@@ -179,7 +180,7 @@ function MomentBar({
       // The may-be-done verbs carry their own "Not yet", which is this same
       // dismissal, so a snooze beside them would offer one act twice.
       snooze={
-        moment.may_be_done
+        moment.may_be_done || moment.rule === "privacy_notice_due"
           ? undefined
           : { onSnooze: defer.onDefer, pending: defer.pending }
       }
@@ -333,6 +334,11 @@ function momentTask(
 
 // The due date of what the move says is owed: a claim's or a listed task's.
 function owedDue(moment: ContactMoment, view: Contact360): string | undefined {
+  if (moment.rule === "privacy_notice_due") {
+    return view.privacy_notice_duties?.find(
+      (duty) => duty.id === moment.recommended_action.destination?.entity_id,
+    )?.due_at;
+  }
   for (const { id } of owedRecords(moment)) {
     const due =
       view.claims?.find((claim) => claim.id === id)?.due_at ??

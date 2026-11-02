@@ -100,13 +100,7 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	t.Cleanup(func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	})
+	t.Cleanup(integration.StartedJobRunner(t, runner))
 
 	if err := runner.Enqueue(ctx, fanOutProbeArgs{}, nil); err != nil {
 		t.Fatalf("enqueueing the probe dispatcher: %v", err)

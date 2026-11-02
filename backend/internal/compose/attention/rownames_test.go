@@ -49,7 +49,7 @@ func TestAPageIsNamedInOneBatchAcrossItsThreeLists(t *testing.T) {
 		OptionalRelationships: &optional,
 	}
 
-	if err := svc.nameWorklistRows(pageReader(), &page, nil); err != nil {
+	if err := svc.nameWorklistRows(pageReader(), &page, nil, crmcontracts.Attention{}); err != nil {
 		t.Fatalf("naming: %v", err)
 	}
 	if reads != 1 {

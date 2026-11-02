@@ -81,7 +81,9 @@ func TestTheSalesArmFindsAWorkingLeadByIndexAlone(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	arms, err := customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	arms, err := customerArms(ctx, arg, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +93,7 @@ func TestTheSalesArmFindsAWorkingLeadByIndexAlone(t *testing.T) {
 		INSERT INTO lead (full_name, status, source, captured_by)
 		  SELECT 'Lead '||g, 'new', 'manual', 'human:seed' FROM generate_series(1, 5000) g;
 		ANALYZE lead`,
-		`SELECT 1 FROM activity_link sales WHERE `+arms)
+		`SELECT 1 FROM activity_link sales WHERE `+arms, args...)
 	var leadReads, promotedLookups int
 	plan.walk(func(n planNode) {
 		if planCopySuffix.ReplaceAllString(n.Alias, "") == "ld" {

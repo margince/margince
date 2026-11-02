@@ -31,12 +31,12 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
-	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // noReplyDays is how long an unanswered outbound message waits before it is
@@ -366,7 +366,7 @@ func lifecycleConflict(
 	companyID ids.CompanyID, in suggestionInputs,
 ) *crmcontracts.Company360Suggestion {
 	said := suggestionCopyFor(in.language)
-	if !in.contractEnded || !lifecyclereview.LiveStage(in.lifecycle) {
+	if !in.contractEnded || !values.EngagedLifecycle(in.lifecycle) {
 		return nil
 	}
 	evidence := []crmcontracts.CompanyBriefEvidence{{

@@ -99,6 +99,7 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 	// is its own primary key rather than a caller-supplied reference. Waived
 	// because the name heuristic above cannot tell the two apart, and narrowing
 	// the heuristic to exclude it would risk excluding a real body.
+	"OwnershipRequest":   "not a request body — a handover request as the server answers it; every id is read from the stored request",
 	"DataSubjectRequest": "not a request body — the DSR entity; `id` is its own key, not a caller-supplied reference",
 	// Multipart never decodes into this generated type. The handler
 	// (activities/handlers_attachment.go) calls ParseMultipartForm and

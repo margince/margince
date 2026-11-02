@@ -535,6 +535,24 @@ describe("a mail whose text could not be read", () => {
     ).toBeNull();
   });
 
+  // A mail whose original is gone will never be checked, so its notice says so
+  // and promises no check.
+  it("says a mail with no original left can no longer be checked", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unverifiable",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText("This mail’s text can no longer be checked"),
+    ).toBeTruthy();
+    expect(screen.getByText(/Its stored original is gone/)).toBeTruthy();
+    expect(screen.queryByText("Email text not verified")).toBeNull();
+  });
+
   // A hostile fixture: the server sends no completeness on a withheld mail,
   // so the drawer's own check is what must refuse it.
   it("says nothing of a withheld mail's text", async () => {

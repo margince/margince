@@ -69,21 +69,19 @@ type Frame = {
   extra?: RouteMap;
 };
 
-// Every lane and caveat list is required by the contract, so the fallback list
-// page would crash Home on a receipt no server sends.
-function quietReceipt(asOf: string): Response {
-  return jsonResponse({
-    as_of: asOf,
-    since: asOf,
-    done: [],
-    needs_you: [],
-    could_not_complete: [],
-    watching: [],
-    totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
-    not_shown: [],
-    sources_unavailable: [],
-  });
-}
+// Home judges its own completeness from the overnight receipt, so the list
+// fallback's envelope would crash every frame.
+const quietNight = {
+  as_of: "2026-09-13T08:00:00Z",
+  since: "2026-09-12T08:00:00Z",
+  done: [],
+  needs_you: [],
+  could_not_complete: [],
+  watching: [],
+  totals: { done: 0, needs_you: 0, could_not_complete: 0, watching: 0 },
+  not_shown: [],
+  sources_unavailable: [],
+};
 
 function brief({
   approvals,
@@ -166,7 +164,7 @@ function brief({
           truncated: false,
         }),
       "POST /reports/deals-by-stage": () => pipeline(),
-      "GET /magic": () => quietReceipt(morning().as_of),
+      "GET /magic": () => jsonResponse(quietNight),
       // The plan's week is required by the contract, which the fallback list
       // page lacks.
       "GET /weekly-plans/current": () =>
@@ -497,6 +495,7 @@ export const WorkingMorning: Story = {
         "GET /brief": () =>
           jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
         "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
+        "GET /magic": () => jsonResponse(quietNight),
         "GET /worklist/handled": () =>
           jsonResponse({
             as_of: day.as_of,
@@ -507,7 +506,6 @@ export const WorkingMorning: Story = {
           jsonResponse({ id: dealID, name: "PIM Rollout phase 2" }),
         "POST /reports/deals-by-stage": () =>
           jsonResponse({ rows: [], columns: [] }),
-        "GET /magic": () => quietReceipt(day.as_of),
       },
       { deal: ["read", "update"], activity: ["read", "update"] },
     );

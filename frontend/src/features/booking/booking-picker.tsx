@@ -25,6 +25,24 @@ import { minutesOf, type useWorkingHours } from "./working-hours";
 export type BookingMode = "propose" | "invite" | "link";
 export type BookingSlot = { start: string; end: string };
 
+/**
+ * Whether a slot shares minutes with a pick other than itself. One that ends
+ * where a pick starts does not, as on the server.
+ */
+export function overlapsAPick(
+  picks: readonly BookingSlot[],
+  slot: BookingSlot,
+): boolean {
+  const start = Date.parse(slot.start);
+  const end = Date.parse(slot.end);
+  return picks.some(
+    (pick) =>
+      pick.start !== slot.start &&
+      start < Date.parse(pick.end) &&
+      Date.parse(pick.start) < end,
+  );
+}
+
 const DAY = 86400000;
 const LENGTHS = ["15", "30", "45", "60"];
 
@@ -205,6 +223,13 @@ export function BookingPicker({
                   )}
                   selected={
                     mode === "link" ? [] : picks.map((pick) => pick.start)
+                  }
+                  blocked={
+                    mode === "propose"
+                      ? value.slots
+                          .filter((slot) => overlapsAPick(picks, slot))
+                          .map((slot) => slot.start)
+                      : []
                   }
                   onSelect={mode === "link" ? undefined : onPick}
                   emptyDay={t("scheduling.noFreeTime")}

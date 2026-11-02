@@ -158,6 +158,10 @@ const (
 	// BodyForwarded is a mail that said nothing of its own, whose Body is the
 	// text of the original it forwarded. Those are not its sender's words.
 	BodyForwarded BodyCompleteness = "forwarded"
+	// BodyUnverifiable is a captured mail stored before completeness was
+	// recorded, whose original is gone or no longer decodes. Nothing is left
+	// to check its text against.
+	BodyUnverifiable BodyCompleteness = "unverifiable"
 )
 
 func (c BodyCompleteness) stored() BodyCompleteness {

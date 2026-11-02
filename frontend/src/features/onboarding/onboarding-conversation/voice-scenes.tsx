@@ -1,9 +1,10 @@
-import { Check, FileText, Mail, Mic } from "lucide-react";
+import { Check } from "lucide-react";
 import type { ChangeEvent, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
+import { VoiceKinds } from "../../../components/voicekinds";
 import { Voiceprint } from "../../../components/voiceprint";
-import { Badge, Button, Disclosure, Radio } from "../../../design-system/atoms";
+import { Button, Disclosure, Radio } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Meter } from "../../../design-system/readings";
@@ -136,50 +137,6 @@ function VoicePrintCard({
       />
       <VoiceCorpusFloorMeter words={words} ready={ready} />
     </section>
-  );
-}
-
-// What to bring, before the drop target asks for it. A guide, not three more
-// buttons: every kind arrives through the same browse, paste or drop below.
-const VOICE_KINDS = [
-  {
-    key: "mail",
-    icon: Mail,
-    title: "ob.conv.voice.kindMail",
-    body: "ob.conv.voice.kindMailBody",
-    best: true,
-  },
-  {
-    key: "call",
-    icon: Mic,
-    title: "ob.conv.voice.kindCall",
-    body: "ob.conv.voice.kindCallBody",
-    best: false,
-  },
-  {
-    key: "doc",
-    icon: FileText,
-    title: "ob.conv.voice.kindDoc",
-    body: "ob.conv.voice.kindDocBody",
-    best: false,
-  },
-] as const;
-
-function VoiceKinds() {
-  const t = useT();
-  return (
-    <ul className="ob-voice-kinds" aria-label={t("ob.conv.voice.kindsLabel")}>
-      {VOICE_KINDS.map(({ key, icon: Icon, title, body, best }) => (
-        <li key={key} className="ob-voice-kind">
-          <span className="ob-voice-kind-icon">
-            <Icon aria-hidden />
-          </span>
-          <b>{t(title)}</b>
-          <span className="t-caption">{t(body)}</span>
-          {best && <Badge tone="accent">{t("ob.conv.voice.kindBest")}</Badge>}
-        </li>
-      ))}
-    </ul>
   );
 }
 

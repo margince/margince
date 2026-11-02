@@ -50,7 +50,7 @@ type Story = StoryObj<typeof StatCard>;
 // over the door's stretched target: pressing the chip has to open the working
 // and leave the page where it is, and only a card carrying both can show that.
 export const ReadingsWithADoor: Story = {
-  name: "Readings — with a door and without",
+  name: "Readings — with a door, with View records, and without",
   render: () => (
     <div style={row}>
       <StatCard
@@ -83,6 +83,13 @@ export const ReadingsWithADoor: Story = {
         value="7"
         tone="warning"
         detail="across every lane this morning"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Meetings held"
+        value="6"
+        detail="this week"
+        opens="records"
         onOpen={() => {}}
       />
       <StatCard label="Owner" value="Carol Wagner" detail="since 14 March" />

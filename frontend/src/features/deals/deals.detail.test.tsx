@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
@@ -339,7 +340,7 @@ describe("DealScreen — edit, archive (A3)", () => {
 
   it("archive confirms then DELETEs", async () => {
     let deleted = false;
-    const d = deal({ id: "x", version: 1 });
+    const d = { ...deal({ id: "x", version: 1 }), archivable: true };
     vi.stubGlobal(
       "fetch",
       stubBackend([d], {
@@ -485,17 +486,28 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     render(<DealScreen id="x" />);
 
     await user.click(await screen.findByRole("button", { name: "Lost" }));
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Why was it lost?" }),
+      "Price",
+    );
     await user.type(
-      screen.getByRole("textbox", { name: "Lost reason" }),
+      screen.getByRole("textbox", { name: "Note (optional)" }),
       "typed then abandoned",
     );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     await user.click(await screen.findByRole("button", { name: "Lost" }));
     expect(
-      (screen.getByRole("textbox", { name: "Lost reason" }) as HTMLInputElement)
-        .value,
+      (
+        screen.getByRole("textbox", {
+          name: "Note (optional)",
+        }) as HTMLInputElement
+      ).value,
     ).toBe("");
+    expect(
+      screen.getByRole("combobox", { name: "Why was it lost?" }).textContent,
+    ).not.toContain("Price");
   });
 
   it("the stage the deal is already in is not a control", async () => {
@@ -549,16 +561,26 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     const confirm = screen.getByRole("button", { name: "Confirm" });
     expect(confirm.hasAttribute("disabled")).toBe(true);
 
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Why was it lost?" }),
+      "Chose a competitor",
+    );
     await user.type(
-      screen.getByRole("textbox", { name: "Lost reason" }),
-      "went with a competitor",
+      screen.getByRole("textbox", { name: "Note (optional)" }),
+      "went with the incumbent",
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => expect(advances.length).toBe(1));
-    const body = advances[0].body as { status: string; lost_reason: string };
+    const body = advances[0].body as {
+      status: string;
+      lost_reason: string;
+      lost_reason_code: string;
+    };
     expect(body.status).toBe("lost");
-    expect(body.lost_reason).toBe("went with a competitor");
+    expect(body.lost_reason_code).toBe("competitor");
+    expect(body.lost_reason).toBe("went with the incumbent");
   });
 });
 

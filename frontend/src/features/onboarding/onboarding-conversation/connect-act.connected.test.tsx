@@ -122,6 +122,22 @@ describe("a live Google mailbox", () => {
     expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
   });
 
+  // Setup asks whether the mailbox is connected at all. A sync the sweep keeps
+  // retrying does not send the member back to the account chooser.
+  it("keeps a mailbox whose sync is failing connected", async () => {
+    stub({
+      "GET /connectors": roster(
+        row("gmail", { status: "error", backfill: { state: "none" } }),
+        row("gcal"),
+      ),
+      "POST /connectors/gmail/backfill/preview": preview,
+    });
+    renderConnectAct();
+
+    expect(await screen.findByText("Google is connected")).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
+  });
+
   it("imports the chosen window, then records the step as connected", async () => {
     const starts: unknown[] = [];
     stub({

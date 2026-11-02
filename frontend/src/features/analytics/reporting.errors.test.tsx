@@ -243,7 +243,6 @@ it("shows a refused reporting setup instead of an empty editor", async () => {
 });
 
 it("does not describe an old snapshot with the current ownership rule", async () => {
-  const user = userEvent.setup({ delay: null });
   const evaluation = {
     ...reportingStoryEvaluation,
     metrics: reportingStoryEvaluation.metrics.map((metric) => ({
@@ -267,9 +266,6 @@ it("does not describe an old snapshot with the current ownership rule", async ()
     </StoryProviders>,
   );
   await screen.findByText("Northstar rollout");
-  await user.click(
-    screen.getByRole("button", { name: "How this is measured" }),
-  );
   expect(
     await screen.findByText(
       "This snapshot uses an earlier metric definition. Its saved figures have not been recalculated.",

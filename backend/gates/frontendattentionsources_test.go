@@ -42,7 +42,7 @@ import (
 
 const (
 	attentionContract    = "api/crm.yaml"
-	frontendAttentionMap = "../frontend/src/features/worklist/worklist.copy.ts"
+	frontendAttentionMap = "../frontend/src/lib/worklistcopy.ts"
 )
 
 // focusSurfaceEntry reads one `source: "surface"` pair out of the map.

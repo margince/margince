@@ -188,6 +188,9 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
 	src, tgt, err := mergePair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err

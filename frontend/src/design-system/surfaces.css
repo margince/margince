@@ -50,7 +50,6 @@
   .board-doc,
   .board-doc-stage,
   .filter-group-box,
-  .compose-reasons,
   .change,
   .share-ceiling,
   .pref-row,
@@ -85,10 +84,11 @@
   .jumpbar,
   .vdna-hero,
   .vdna-sharpen,
-  .ob-voice-kind,
   .ob-voice-print,
   .ob-voice-result-hero,
   .ob-voice-building,
+  .voicekind,
+  .compose-reasons-card,
   .page-pane
 ) {
   --ground: var(--ladder1Solid);
@@ -147,7 +147,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -182,10 +181,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -229,7 +229,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -264,10 +263,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   --ground: var(--ladder2);
@@ -326,7 +326,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -361,10 +360,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -408,7 +408,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -443,10 +442,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -490,7 +490,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -525,10 +524,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   --ground: var(--ladder3);
@@ -587,7 +587,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -622,10 +621,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -669,7 +669,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -704,10 +703,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -751,7 +751,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -786,10 +785,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -833,7 +833,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -868,10 +867,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   --ground: var(--ladder4);
@@ -985,7 +985,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1020,10 +1019,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   --ground: var(--ladder2);
@@ -1102,7 +1102,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1137,10 +1136,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -1184,7 +1184,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1219,10 +1218,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   --ground: var(--ladder3);
@@ -1301,7 +1301,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1336,10 +1335,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -1383,7 +1383,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1418,10 +1417,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   )
   :where(
@@ -1465,7 +1465,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1500,10 +1499,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   --ground: var(--ladder4);
@@ -1601,7 +1601,6 @@
     .board-doc,
     .board-doc-stage,
     .filter-group-box,
-    .compose-reasons,
     .change,
     .share-ceiling,
     .pref-row,
@@ -1636,10 +1635,11 @@
     .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
-    .ob-voice-kind,
     .ob-voice-print,
     .ob-voice-result-hero,
     .ob-voice-building,
+    .voicekind,
+    .compose-reasons-card,
     .page-pane
   ) {
   background-color: var(--ground);

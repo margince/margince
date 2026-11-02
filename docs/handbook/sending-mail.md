@@ -1,12 +1,6 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts -->
 # Writing and sending mail
-
-[Capture](capture.md) is how mail comes **in**. This page is how it goes **out**: the composer,
-what Margince checks before a send goes out, and setting a send for later.
-
-Who may then read what you sent is a separate question, answered in
-[Who can see an email](who-can-see-an-email.md).
 
 ### How do I send an email to a contact?
 To send an email to a contact in Margince, open the contact's page and choose **Email** in its header. Fill in the composer and press **Send**.
@@ -16,8 +10,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 4. Pick a **Reason for contact**.
 5. Read the warning bar above **Send**, if there is one. Then press **Send** once.
 
-"No address and no thread to reply to." means the contact has no address to write to.
-Also called: write an email, email a customer, message a client.
+"No address and no thread to reply to." means the contact has no address to write to. Also called: write an email, email a customer, message a client.
 
 ### Where can I start writing an email?
 To start an email in Margince, use any of these:
@@ -30,20 +23,21 @@ To start an email in Margince, use any of these:
 
 Every one of these opens the same composer, so the fields, checks and send times are the same from each.
 From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
-A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first."
-Also called: compose, new message, reply to an email.
+A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
 
 ### How do I send a follow-up email?
 To send a follow-up email in Margince, open the contact's **History** tab and press **Reply** on the message. Or press the button on its Worklist row.
-1. On the record, press **Reply** on the email. After your own email, the composer reads "Following up on your email “{subject}”"; after theirs, "Replying to “{subject}”".
+1. On the record, press **Reply** on the email. After your own email, the composer reads "Following up on “{subject}”"; after theirs, "Replying to “{subject}”".
 2. From **Home** → **Show Worklist**, press **Read and reply**, **Draft reply** or **Write email** on the row.
 3. Pick a **Reason for contact** and press **Send**, or set a time. A reply to their own message needs no reason.
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
 ### How do I reply to one particular message in a thread?
 To reply to one message in Margince, open the email reader and press **Reply** below that message. Select an older message first to show its text and **Reply**. The newest message appears first and opens with the one you came from. Close the composer to return to the thread.
-You can also pick a message under **Threads** in the composer. The line above the recipients says which message you answer.
 
+The **…** button below your reply shows only the message you are answering. **Draft reply** answers that selected message, even when newer mail is in the thread. Mail on the thread helps choose the language and form of address.
+
+Pick a message under **Threads** in the composer too. The line above the recipients names it.
 Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 
 ### How do I file an email I send under a project?
@@ -124,9 +118,9 @@ Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
 
-**Draft email** writes an email from what the record holds, in your voice. It
-tells you what it read ("Based on: {inputs}"), and **Why this draft?** shows
-why it wrote what it did.
+**Draft email** writes an email from what the record holds, in your voice.
+**Why this draft**, closed until you open it, shows what it read
+("Based on: {inputs}"), with a link to each record it read.
 
 Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
@@ -283,9 +277,9 @@ To cancel or move a scheduled email in Margince, press the clock beside the bell
 4. To cancel it, press **Withdraw**, then **Withdraw message** in "Withdraw this message?".
 Also called: unschedule, delete a scheduled email, change send time.
 
-The **Scheduled messages** page lists your messages that are set for later and
-not sent yet. Only you can see them. It has no sidebar row. The toast after you
-set a send time links there, and so does the command palette (⌘K or Ctrl+K).
+The **Scheduled messages** page lists the messages you set for later. Only you can see them.
+It has no sidebar row. With none and a mailbox connected, **Write a message** opens Contacts.
+The toast after you set a send time links there, and so does the command palette (⌘K or Ctrl+K).
 
 Waiting messages sit on a timeline, one block for each day. A line above them
 counts down to the next one. **All**, **Held** and **Today** narrow the list.
@@ -353,13 +347,19 @@ Margince first shows you the mail as it will go out, and sends nothing until you
 Also called: double opt-in, consent request, GDPR confirmation.
 
 ### How do I send a privacy notice to a contact?
-To send a privacy notice in Margince, open the **Privacy notice owed** item on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
+Mail from the contact does not create an Article 14 task. If a duty is still owed, open **Privacy notice owed** on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
 1. Open the **Privacy notice owed** item.
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
 3. If they already know, or the law lets you skip it, press **End the duty…** and record why.
 
 Before it goes, Margince shows you the notice and lets you pick its language, as it does for the confirmation request. The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
+
+### Why does a contact say “Review source”?
+The record does not say where the contact's details come from, so no notice deadline is set.
+In **Settings → Privacy**, a user with privacy access can check the source and its proof.
+If the details come from the contact, the review ends. Data from someone else may still need a notice.
+**Due no later than** is the last possible date. The duty may already be due.
 
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.

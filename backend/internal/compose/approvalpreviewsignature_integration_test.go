@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -29,7 +30,14 @@ func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
 			}
 			proposer := ctx
 			if mode == "agent" {
-				agent, _ := principal.Actor(e.AgentCtx())
+				// A live passport granted by the reviewer, since the preview
+				// is built as the agent that spends it.
+				passport := ids.NewV7()
+				e.WsExec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
+				             VALUES ($1, $2, $2, 'signature', ARRAY['read','write']::text[], $3, now() + interval '1 day')`,
+					passport, e.AdminUser, "hash-"+passport.String())
+				e.GrantRole(t, e.AdminUser, "admin")
+				agent, _ := principal.Actor(e.AgentCtxWithPassport(passport))
 				agent.OnBehalfOf = e.AdminUser
 				proposer = principal.WithActor(e.AgentCtx(), agent)
 			}

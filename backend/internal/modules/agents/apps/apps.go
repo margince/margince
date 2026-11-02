@@ -59,6 +59,14 @@ const ApprovalQueueURI = "ui://margince/approval-queue.html"
 // at risk or open promises, ranked, each with a way to ask about it.
 const AttentionURI = "ui://margince/attention.html"
 
+// ForecastURI is the card read_forecast offers: the period's figures as bars,
+// or how the forecast moved between two snapshots, cause by cause.
+const ForecastURI = "ui://margince/forecast.html"
+
+// ContextURI is the card read_context offers: who a meeting brings and what is
+// open with them, or the story so far on one record.
+const ContextURI = "ui://margince/context.html"
+
 // UpdateURI is the card update_record offers: what the call changed, field by
 // field, or why it changed nothing.
 const UpdateURI = "ui://margince/update.html"
@@ -100,6 +108,18 @@ var catalog = []view{
 		name:        "attention_view",
 		title:       "What needs attention",
 		description: "Deals slipping this week, relationships at risk or promises still open, ranked, with the reason for each and a way to ask about it.",
+	},
+	{
+		uri:         ForecastURI,
+		name:        "forecast_view",
+		title:       "The forecast",
+		description: "What a period is expected to close, as bars from won to weighted, or what moved the forecast between two snapshots.",
+	},
+	{
+		uri:         ContextURI,
+		name:        "context_view",
+		title:       "The story so far",
+		description: "Who is coming to a meeting, the open threads and what was promised, what has been happening on one record, or this morning's brief.",
 	},
 	{
 		uri:         UpdateURI,

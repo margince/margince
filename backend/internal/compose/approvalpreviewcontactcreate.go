@@ -90,7 +90,7 @@ func (r approvalPreviewReader) contactCreationDetails(ctx context.Context, plan 
 	}
 	maps.Copy(fields, plan.CustomFields)
 	maps.Copy(fields, creationAddressFields(in.Address))
-	if err := creationFieldsVisible(ctx, string(recordTypeContact), map[string]any{addressField: in.Address, previewFieldSocial: in.Social, previewFieldEmails: in.Emails, "phones": in.Phones, "acquisition": plan.Acquisition}); err != nil {
+	if err := creationFieldsVisible(ctx, string(recordTypeContact), map[string]any{addressField: in.Address, previewFieldSocial: in.Social, previewFieldEmails: in.Emails, previewFieldPhones: in.Phones, "acquisition": plan.Acquisition}); err != nil {
 		return nil, nil, err
 	}
 	details, err := r.creationFieldDetails(ctx, string(recordTypeContact), fields)

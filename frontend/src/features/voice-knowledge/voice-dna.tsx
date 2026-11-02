@@ -1,9 +1,14 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
+import { VoiceKinds } from "../../components/voicekinds";
 import { Badge, Button, Disclosure, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { JumpBar, type JumpTarget } from "../../design-system/jumpbar";
@@ -20,8 +25,14 @@ import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useVoiceProfile } from "../../lib/voice-profile";
+import { useVoiceIntake, type VoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
-import { SharpenStrip, VOICE_SECTIONS, VoiceHero } from "./voice-hero";
+import {
+  SharpenStrip,
+  VOICE_SECTIONS,
+  VoiceHero,
+  VoiceStart,
+} from "./voice-hero";
 import {
   DraftShowcase,
   parseVoiceInsights,
@@ -33,6 +44,7 @@ import {
 import { useVoiceSources, VoiceSamples } from "./voice-samples";
 import {
   CandidateBanner,
+  CandidateReview,
   loadedVersions,
   useVoiceLearning,
   useVoiceVersions,
@@ -48,43 +60,59 @@ export type VoiceProfile = components["schemas"]["VoiceProfile"];
 // owner's own profile, its corpus, and its builds. A profile that does not
 // exist yet is ONE card, because a heading over an empty body describes a
 // surface the owner does not have.
+// Every read a corpus change moves, by key prefix. An owner has one profile,
+// so the prefix reaches the new profile's reads as well as the old one's.
+function invalidateVoiceCorpus(qc: QueryClient) {
+  for (const key of [
+    "voice-profile",
+    "voice-sources",
+    "voice-versions",
+    "voice-deltas",
+    "voice-learning",
+  ]) {
+    qc.invalidateQueries({ queryKey: [key] });
+  }
+}
+
 export function VoiceDnaCard() {
   const t = useT();
   const canCreate = useCanWrite("voice_profile", "create");
   const qc = useQueryClient();
   const profile = useVoiceProfile();
+  // Owned above the empty and profile branches. The first sample mints the
+  // profile and swaps one branch for the other. The files still in flight then
+  // belong to the card that remains.
+  const intake = useVoiceIntake({
+    profileId: profile.data?.id ?? null,
+    onChanged: () => invalidateVoiceCorpus(qc),
+  });
   return (
     <QueryGate query={profile} pendingLabel={t("settings.voice.title")}>
       {(data) =>
         data ? (
-          <VoiceDnaBody profile={data} />
+          <VoiceDnaBody profile={data} intake={intake} />
         ) : (
           // A profile is minted by the first add rather than by a step of
           // its own, so the add control renders here too. Without it an owner
           // who skipped the onboarding voice step could never start a Voice
-          // DNA at all, and everything the profile unlocks (corpus, builds,
-          // sample drafts) stayed unreachable. There is no empty-state box
-          // above it: the card's one job here is to take the first sample,
-          // and a box saying there is nothing yet only pushes that job down.
-          <Panel tone="ai" title={t("settings.voice.title")}>
-            <PanelBody>
-              <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-              {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
-            </PanelBody>
-            {/* The first sample mints the profile, so adding it takes the
-                create grant rather than the update one. */}
-            {canCreate && (
-              <SettingList bleed="settings">
-                <VoiceCorpusIntake
-                  first
-                  profileId={null}
-                  onChanged={() =>
-                    qc.invalidateQueries({ queryKey: ["voice-profile"] })
-                  }
-                />
-              </SettingList>
-            )}
-          </Panel>
+          // DNA at all, and everything the profile unlocks stayed unreachable.
+          <div className="vdna-page">
+            <VoiceStart />
+            <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
+              <PanelBody>
+                <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
+                <VoiceKinds />
+                {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
+              </PanelBody>
+              {/* The first sample mints the profile, so adding it takes the
+                  create grant rather than the update one. */}
+              {canCreate && (
+                <SettingList bleed="settings">
+                  <VoiceCorpusIntake first intake={intake} />
+                </SettingList>
+              )}
+            </Panel>
+          </div>
         )
       }
     </QueryGate>
@@ -160,7 +188,10 @@ function VoiceProof({ insights }: Readonly<{ insights: VoiceInsightsData }>) {
 
 // A profile that exists is one long page about the voice. It runs from who the
 // writer is to the builds behind it, and the jump bar reaches each section.
-function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
+function VoiceDnaBody({
+  profile,
+  intake,
+}: Readonly<{ profile: VoiceProfile; intake: VoiceIntake }>) {
   const t = useT();
   // useCanWrite, not useCan: every affordance these children hold issues a
   // mutation, and the seat ceiling has to fold in — a read seat holding the
@@ -171,17 +202,14 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
   // a sample is still arriving has to be held by the parent they share.
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [deltasAsked, setDeltasAsked] = useState(false);
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["voice-profile"] });
-    qc.invalidateQueries({ queryKey: ["voice-sources", profile.id] });
-    qc.invalidateQueries({ queryKey: ["voice-versions", profile.id] });
-    qc.invalidateQueries({ queryKey: ["voice-deltas", profile.id] });
-    qc.invalidateQueries({ queryKey: ["voice-learning", profile.id] });
-  };
+  const invalidate = () => invalidateVoiceCorpus(qc);
   const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
-  const insights = active ? parseVoiceInsights(active) : null;
+  // A first version awaiting review is the only voice there is. The page draws
+  // it in full while the hero asks whether to use it.
+  const shown = active ?? candidate;
+  const insights = shown ? parseVoiceInsights(shown) : null;
   const summary = useVoiceSources(profile.id).data?.summary;
   const learning = useVoiceLearning(profile.id).data;
   const next = useNextBestLine(insights);
@@ -202,9 +230,31 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
       {!canEdit && (
         <p className="vdna-readonly">{t("settings.voice.readOnly")}</p>
       )}
-      {/* First when it is there: a review waiting on a human is the most
-          actionable thing on the page, in every profile state. */}
-      {candidate && (
+      <VoiceHero
+        profile={profile}
+        insights={insights}
+        profileVersion={shown?.profile_version ?? 0}
+        summary={summary}
+        hasDrafts={hasDrafts}
+        canEdit={canEdit}
+        intakeBusy={intakeBusy}
+        onBuilt={invalidate}
+        review={
+          candidate &&
+          !active && (
+            <CandidateReview
+              profileId={profile.id}
+              candidate={candidate}
+              canEdit={canEdit}
+              onChanged={invalidate}
+              replacing={false}
+            />
+          )
+        }
+      />
+      {/* Straight under the voice it would replace: a review waiting on a
+          human is the most actionable thing below the hero. */}
+      {candidate && active && (
         <CandidateBanner
           profileId={profile.id}
           candidate={candidate}
@@ -212,14 +262,9 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
           onChanged={invalidate}
         />
       )}
-      <VoiceHero
-        profile={profile}
-        insights={insights}
-        profileVersion={active?.profile_version ?? 0}
-        summary={summary}
-        hasDrafts={hasDrafts}
-      />
-      {summary && (
+      {/* Before the first build the hero itself guides the writer, so the
+          strip would only say the same thing twice. */}
+      {summary && insights && (
         <SharpenStrip summary={summary} next={next} canEdit={canEdit} />
       )}
       {insights && <VoiceFigures data={insights} learning={learning} />}
@@ -241,11 +286,7 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
           />
           {canEdit && (
             <SettingList bleed="settings">
-              <VoiceCorpusIntake
-                profileId={profile.id}
-                onChanged={invalidate}
-                onBusyChange={setIntakeBusy}
-              />
+              <VoiceCorpusIntake intake={intake} onBusyChange={setIntakeBusy} />
             </SettingList>
           )}
         </Panel>
@@ -285,15 +326,17 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
         <VoiceSection id={VOICE_SECTIONS.builds}>
           <Panel tone="ai" title={t("settings.voice.buildsTitle")}>
             <SettingList bleed="settings">
-              {/* A build started while a sample is still arriving would
-                  describe a corpus that no longer exists by the time it
-                  finishes. */}
-              <BuildControls
-                profile={profile}
-                canEdit={canEdit}
-                onBuilt={invalidate}
-                intakeBusy={intakeBusy}
-              />
+              {/* The first build starts in the hero, where the writer is
+                  guided to it; from then on rebuilds live with the history.
+                  intakeBusy holds a build back while a sample is arriving. */}
+              {(profile.profile_version ?? 0) > 0 && (
+                <BuildControls
+                  profile={profile}
+                  canEdit={canEdit}
+                  onBuilt={invalidate}
+                  intakeBusy={intakeBusy}
+                />
+              )}
             </SettingList>
             <VoiceHistory
               profileId={profile.id}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go -->
+<!-- describes: backend/internal/platform/auth backend/internal/shared/kernel/principal backend/internal/compose/agentgate.go backend/internal/modules/identity/passport.go backend/internal/platform/database/database.go backend/internal/compose/dbrole.go scripts/check-rls-store-path.sh backend/api/crm.yaml backend/internal/modules/contacts/contactcasedecide.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Authorization & access control
 
 How Margince decides who may do what, and where that decision is made. You may look for the auth check in
@@ -115,11 +115,32 @@ covers capture-privacy row scope and nothing else. A connector still answers to
 the object RBAC and the grants in its passport. That is why a provider run
 declares the grant set it needs, rather than reading past every gate.
 
-### A contact case merge, and the one write check it lets pass
+### A merge of duplicates, and the one write check it lets pass
 
 A contact case is a group of contacts that may be duplicates of each other. Its members often have different
 owners. A rep with `own` scope cannot change a colleague's contact, so without help no single owner
 could merge the case.
+
+The same holds for one pair the dedupe queue filed. The rule for who may merge two records is
+`contacts.MayMergePair` (`modules/contacts/duplicatepairmerge.go`). It needs write authority over
+both, or over the source alone when the pair is filed. So the one-sided merge only gives the
+caller's own record away, and the record they cannot change stays with its owner. A rep who copies a
+colleague's record, or meets a pair an earlier merge moved, still cannot archive the colleague's
+record. The other direction answers 403 `merge_direction`.
+
+A pair is filed while a live `dedupe_candidate` row names those two records with the disposition
+`open`. A `merged` row counts only when this transaction marked it (`disposed_at = now()`). The
+queue and the case merge mark their pair that way before the merge runs.
+
+The merge code calls `admitDuplicatePairMerge` after it takes its row locks. When only the filed
+pair admits the caller, that function puts `auth.WithDuplicatePairAdmission` on the context. It
+names the two records and no owner. Both records must still be live and visible to the caller. The
+consent, introduction and grant carriers that the merge calls then pass the same check. Of the
+three checks below, the pair admission changes the first two and never `EnsureAssignee`.
+
+`contacts.OfferMerge` asks the rule of both directions for a reader. The queue's `can_merge`, the
+case's `merge_mode` `pair` and the Worklist card read it. Their `keep_id` names the record that must
+stay.
 
 `auth.WithContactCaseAdmission` (`platform/auth/contactcaseadmission.go`) puts a case admission on
 the context. It names the selected contacts and the live owners of those contacts. It changes three
@@ -146,7 +167,10 @@ only when all of these hold:
 
 Otherwise the merge is refused. The decision reads the setting in its own transaction, under a
 shared lock, so a change to the setting waits for a merge in flight. The audit row of the merge
-records the mode (`ordinary` or `delegated`) and the setting.
+records the mode (`ordinary`, `delegated` or `pair`) and the setting. The mode is `pair` when the
+two picked contacts are the ends of one open pair and `MayMergePair` admits the caller. The kept
+record must then be the end the caller cannot change. `owner_id` must be its current owner, so the
+owner never changes.
 
 `auth.WithIndividualPerformance` (`platform/auth/individualperformance.go`) puts the installation
 setting `installation.individual_performance` on the context. The session and passport checks in

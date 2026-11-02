@@ -561,60 +561,6 @@
 }
 
 /* What to bring: three kinds as a guide above the drop target. */
-.ob-voice-kinds {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ob-voice-kind {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-md);
-}
-
-.ob-voice-kind b {
-  color: var(--textPrimary);
-}
-
-.ob-voice-kind-icon {
-  display: grid;
-  place-items: center;
-  width: var(--space-8);
-  height: var(--space-8);
-  border-radius: var(--r-md);
-  background: var(--aiLight);
-  color: var(--aiText);
-}
-
-.ob-voice-kind-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* On a narrow pane the guide reads as three short rows, so the drop target
-   stays in the first screen. */
-@container ob-scene (max-width: 44rem) {
-  .ob-voice-kinds {
-    grid-template-columns: 1fr;
-    gap: var(--space-2);
-  }
-
-  .ob-voice-kind {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    padding: var(--space-2) var(--space-3);
-  }
-}
-
 /* ---- the distilling panel ---- */
 
 .ob-distill {

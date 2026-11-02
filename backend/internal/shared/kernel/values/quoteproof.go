@@ -14,6 +14,9 @@ type QuoteProof struct {
 	Start  int    `json:"start"`
 	End    int    `json:"end"`
 	SHA256 string `json:"sha256"`
+	// Cut names how the source text was cut before it was hashed. Zero is the
+	// cut a proof stored before cuts were named was made with.
+	Cut int `json:"cut,omitempty"`
 }
 
 // ProveQuote binds a quote to normalized source content without retaining its words.

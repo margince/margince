@@ -1,0 +1,1122 @@
+{
+  "version": "forecast_evaluation_dataset_v3",
+  "definition_version": "forecast_v3",
+  "outcomes_as_of": "2027-05-18T09:00:00Z",
+  "outcomes_day": "2027-05-18T00:00:00Z",
+  "train_end": "2027-02-07T00:00:00Z",
+  "cohort_floor": 5,
+  "truncated": false,
+  "left_out": [
+    {
+      "reason": "below_cohort_floor",
+      "vintages": 1
+    },
+    {
+      "reason": "scope_not_evaluated",
+      "vintages": 2
+    }
+  ],
+  "vintages": [
+    {
+      "id": "a1",
+      "context": "workspace::",
+      "period_start": "2026-10-30T00:00:00Z",
+      "period_end": "2027-01-27T00:00:00Z",
+      "local_day": "2026-11-09T00:00:00Z",
+      "taken_at": "2026-11-09T06:00:00Z",
+      "trigger": "daily",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 10000,
+      "evidence_minor": 30000,
+      "weighted_minor": 40000,
+      "open_minor": 100000,
+      "self_correcting": true,
+      "typed_weighted_minor": 44000,
+      "range_low_minor": 30000,
+      "range_high_minor": 100000,
+      "evidence_sufficiency": "none",
+      "outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    },
+    {
+      "id": "a2",
+      "context": "workspace::",
+      "period_start": "2026-10-30T00:00:00Z",
+      "period_end": "2027-01-27T00:00:00Z",
+      "local_day": "2027-01-08T00:00:00Z",
+      "taken_at": "2027-01-08T06:00:00Z",
+      "trigger": "daily",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 30000,
+      "evidence_minor": 20000,
+      "weighted_minor": 40000,
+      "open_minor": 60000,
+      "self_correcting": true,
+      "typed_weighted_minor": 44000,
+      "range_low_minor": 50000,
+      "range_high_minor": 84000,
+      "evidence_sufficiency": "none",
+      "outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    },
+    {
+      "id": "b1",
+      "context": "workspace::",
+      "period_start": "2027-01-28T00:00:00Z",
+      "period_end": "2027-04-27T00:00:00Z",
+      "local_day": "2027-02-02T00:00:00Z",
+      "taken_at": "2027-02-02T06:00:00Z",
+      "trigger": "daily",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 0,
+      "evidence_minor": 10000,
+      "weighted_minor": 25000,
+      "open_minor": 80000,
+      "self_correcting": true,
+      "typed_weighted_minor": 27500,
+      "range_low_minor": 12500,
+      "range_high_minor": 72000,
+      "evidence_sufficiency": "thin",
+      "outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    },
+    {
+      "id": "b2",
+      "context": "workspace::",
+      "period_start": "2027-01-28T00:00:00Z",
+      "period_end": "2027-04-27T00:00:00Z",
+      "local_day": "2027-03-29T00:00:00Z",
+      "taken_at": "2027-03-29T06:00:00Z",
+      "trigger": "daily",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 20000,
+      "evidence_minor": 25000,
+      "weighted_minor": 20000,
+      "open_minor": 50000,
+      "self_correcting": true,
+      "typed_weighted_minor": 22000,
+      "range_low_minor": 30000,
+      "range_high_minor": 65000,
+      "evidence_sufficiency": "thin",
+      "outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    },
+    {
+      "id": "b3",
+      "context": "workspace::",
+      "period_start": "2027-01-28T00:00:00Z",
+      "period_end": "2027-04-27T00:00:00Z",
+      "local_day": "2027-04-23T00:00:00Z",
+      "taken_at": "2027-04-23T06:00:00Z",
+      "trigger": "daily",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 40000,
+      "evidence_minor": 6000,
+      "weighted_minor": 5000,
+      "open_minor": 10000,
+      "self_correcting": true,
+      "typed_weighted_minor": 5500,
+      "range_low_minor": 42500,
+      "range_high_minor": 49000,
+      "evidence_sufficiency": "thin",
+      "outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 50000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    },
+    {
+      "id": "q3-pending",
+      "context": "workspace::",
+      "period_start": "2027-04-28T00:00:00Z",
+      "period_end": "2027-07-26T00:00:00Z",
+      "local_day": "2027-05-08T00:00:00Z",
+      "taken_at": "2027-05-08T06:00:00Z",
+      "trigger": "daily",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 0,
+      "evidence_minor": 0,
+      "weighted_minor": 1000,
+      "open_minor": 5000,
+      "self_correcting": true,
+      "typed_weighted_minor": 1100,
+      "range_low_minor": 500,
+      "range_high_minor": 4500,
+      "evidence_sufficiency": "thin",
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    },
+    {
+      "id": "q1-close",
+      "context": "workspace::",
+      "period_start": "2026-10-30T00:00:00Z",
+      "period_end": "2027-01-27T00:00:00Z",
+      "local_day": "2027-01-27T00:00:00Z",
+      "taken_at": "2027-01-27T06:00:00Z",
+      "trigger": "period_close",
+      "definition_version": "forecast_v3",
+      "base_currency": "EUR",
+      "population_fingerprint": "",
+      "eligible_count": 6,
+      "priced_count": 6,
+      "fx_missing_count": 0,
+      "contribution_count": 6,
+      "won_minor": 90000,
+      "evidence_minor": 0,
+      "weighted_minor": 0,
+      "open_minor": 0,
+      "self_correcting": true,
+      "typed_weighted_minor": 0,
+      "range_low_minor": 90000,
+      "range_high_minor": 90000,
+      "evidence_sufficiency": "thin",
+      "outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "train_outcome": {
+        "won_minor": 90000,
+        "fx_missing_count": 0
+      },
+      "tallies": {
+        "labelled": 2,
+        "no_probability": 0,
+        "commit": [
+          {
+            "deals": 1,
+            "won": 0,
+            "percent_sum": 0
+          },
+          {
+            "deals": 1,
+            "won": 1,
+            "percent_sum": 0
+          }
+        ],
+        "typed": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        },
+        "applied": {
+          "bins": [
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 0,
+              "percent_sum": 10
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 1,
+              "won": 1,
+              "percent_sum": 60
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            },
+            {
+              "deals": 0,
+              "won": 0,
+              "percent_sum": 0
+            }
+          ],
+          "brier_sum": 1700
+        }
+      }
+    }
+  ]
+}

@@ -112,6 +112,9 @@ Records, deals and mail in Margince, by page:
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the
   projected landing. The pipeline needed figure, which is not a target.
+- [How the forecast learns](forecast-learning.md): how each stage's probability
+  moves with the deals that closed from it. The risks marked on a deal, and the
+  switch that turns it off.
 - [Deals the customer still supports](deals-the-customer-supports.md): the review
   a deal gets when its customer stops answering. The switch that leaves such deals
   out of the forecast.

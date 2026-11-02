@@ -30,6 +30,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "captureConcern.title",
   "companyReach.functionCount",
   "deal.committee.seatSub",
   "lead.card.askedQuote",
@@ -216,6 +217,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // surface over.
   "provider.profile.linkedin",
   "contact.page.linkedin",
+  "contactCase.field.linkedin",
   "ob.ai.speakerName",
   "auth.title",
 
@@ -244,6 +246,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.library.records.lead_one",
   "leadSources.leads_one",
   "acqSources.deals_one",
+  "lossReasons.deals_one",
   "users.handover.leads_one",
   "brief.agenda.leads_one",
   "users.handover.deals_one",
@@ -270,6 +273,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.action.email",
   "contact.memory.channelEmail",
   "history.field.email",
+  "activity.webForm.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
   "compose.cc",

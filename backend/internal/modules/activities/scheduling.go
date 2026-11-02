@@ -95,6 +95,12 @@ var (
 		Field: "end", Code: "invalid_date_range",
 		Message: "`end` must be later than `start`",
 	}
+	// Two proposed times that share minutes are one time offered twice, not a
+	// choice. The picker refuses the second; this holds every other door.
+	errProposalTimesOverlap = &SchedulingArgumentError{
+		Field: "options", Code: "times_overlap",
+		Message: "two proposed times overlap; offer times that share no minutes",
+	}
 	// `links` carries minItems: 1 in crm.yaml, and nothing generated enforces
 	// it: the decoder fills the slice and asks no question about its length. So
 	// this is where the contract's bound becomes true, on every door — REST,

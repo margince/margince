@@ -710,7 +710,7 @@
       }
     },
     "connector_state_key": {
-      "description": "HMAC key of at least 32 bytes signing the OAuth connect state; required for the Gmail and Graph connect flows.",
+      "description": "HMAC key of at least 32 bytes signing the OAuth connect state and the questions an MCP tool asks in the chat; required for the Gmail and Graph connect flows.",
       "type": [
         "string",
         "null"
@@ -1300,6 +1300,14 @@
             "null"
           ],
           "default": "commit_evidence"
+        },
+        "forecast_self_correcting": {
+          "description": "Let the forecast correct itself: each stage's rate moves with the outcome of the deals recorded from it, and a risk signal counts once frozen forecasts show its effect. Off, the forecast uses the rate set on each stage.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         },
         "geocode_backfill_interval_seconds": {
           "description": "Seconds between the sweeps that add missing map points, or 0 for off.",

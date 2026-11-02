@@ -1,35 +1,31 @@
-import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { problemCodeOf, unwrap } from "../../lib/problem";
+import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
-import type { AnalyticsScope } from "./analytics.context";
+import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
+import type { ReportingSelection } from "./reporting.model";
 import {
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingPeriodIsEmpty,
-  reportingQuery,
-} from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+  useReportingCatalog,
+  useReportingEvaluation,
+} from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 import { type ReportingView, VIEW_SHAPE, viewRequest } from "./reporting.views";
 
@@ -54,29 +50,41 @@ export function ReportingOverview({
 }>) {
   const t = useT();
   const catalog = useReportingCatalog();
-  const pipelines = usePipelines();
+  // Only deal figures take a pipeline, so the other views never wait on one.
+  const dealFilters = VIEW_SHAPE[view].dealFilters;
+  const pipelines = usePipelines(dealFilters);
+  const body = (
+    catalog: Catalog,
+    pipelines: readonly components["schemas"]["Pipeline"][],
+  ) => (
+    <OverviewBody
+      view={view}
+      scope={scope}
+      scopeControl={scopeControl}
+      emptyNotice={emptyNotice}
+      catalog={catalog}
+      pipelines={pipelines}
+    />
+  );
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.performance")}>
-      {(catalog) => (
-        <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
-          {(pipelines) => (
-            <OverviewBody
-              view={view}
-              scope={scope}
-              scopeControl={scopeControl}
-              emptyNotice={emptyNotice}
-              catalog={catalog}
-              pipelines={pipelines}
-            />
-          )}
-        </QueryGate>
-      )}
+      {(catalog) =>
+        dealFilters ? (
+          <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
+            {(pipelines) => body(catalog, pipelines)}
+          </QueryGate>
+        ) : (
+          body(catalog, [])
+        )
+      }
     </QueryGate>
   );
 }
 
-function useOverviewFilters(
+/** The page's dials, read from the address; `defaultPeriod` is the view's own. */
+export function useOverviewFilters(
   pipelines: readonly components["schemas"]["Pipeline"][],
+  defaultPeriod: ReportingSelection["period"] = "this_month",
 ) {
   const [params] = useUrlParams();
   const from = params.get("from") ?? "";
@@ -87,7 +95,7 @@ function useOverviewFilters(
   const setEnd = (value: string) => replaceDial("through", value);
   const period =
     REPORTING_PERIODS.find((value) => value === params.get("period")) ??
-    "this_month";
+    defaultPeriod;
   const setPeriod = (value: string) => replaceDial("period", value);
   const defaultPipeline =
     pipelines.find((pipeline) => pipeline.is_default)?.id ??
@@ -156,7 +164,6 @@ function OverviewBody({
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
   const shape = VIEW_SHAPE[view];
   const { metrics, blocks } = viewRequest(view, catalog, period);
   const selection: ReportingSelection = {
@@ -167,25 +174,17 @@ function OverviewBody({
     target_basis: targetBasis,
     // The contract asks for a close window on every selection. Only deal
     // figures read it, so other views keep the default and never the address's.
-    close_window: shape.dealFilters ? closeWindow : "all_open",
+    close_window: shape.closeWindow ? closeWindow : "all_open",
     metrics,
     blocks,
   };
   const validDates = validDateRange(period, start, end);
   // A seat whose catalog holds none of the view's metrics has nothing to ask.
   const validPeriod = validDates && metrics.length > 0;
-  const query = useQuery({
-    enabled: validPeriod,
-    queryKey: ["reporting-evaluation", selection],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/analytics/evaluate", {
-          params: { query: reportingQuery(selection) },
-        }),
-      );
-    },
-  });
+  const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
+  const { evidence, openEvidence, closeEvidence } =
+    useSelectionEvidence(contextKey);
   const invalidSelection =
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
@@ -207,7 +206,7 @@ function OverviewBody({
         }
         caption={
           validDates
-            ? resultsThrough(query.data, locale, t)
+            ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
       >
@@ -215,7 +214,7 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={shape.dealFilters}
+          showCloseWindow={shape.closeWindow}
           showPipeline={shape.dealFilters}
           showTargets={false}
           dates={{
@@ -224,7 +223,6 @@ function OverviewBody({
             onChange: (from, through) => {
               setStart(from);
               setEnd(through);
-              setEvidence(null);
             },
           }}
           onChange={(next) => {
@@ -240,7 +238,6 @@ function OverviewBody({
               setTargetBasis(next.target_basis);
             if (next.close_window !== closeWindow)
               setCloseWindow(next.close_window);
-            setEvidence(null);
           }}
         />
       </FilterBar>
@@ -259,14 +256,23 @@ function OverviewBody({
               <ReportingCharts
                 evaluation={evaluation}
                 afterSummary={<AnalyticsAttention scope={scope} />}
-                onEvidence={setEvidence}
+                onEvidence={openEvidence}
+                onApplySelection={(next) => {
+                  // The server named the selection; the page only moves its
+                  // dials to it.
+                  if (next.period !== period) setPeriod(next.period);
+                  if (next.pipeline_id !== selection.pipeline_id)
+                    setPipelineId(next.pipeline_id ?? "");
+                  if (scopeKey(next.scope) !== scopeKey(scope))
+                    replaceDial("scope", scopeKey(next.scope));
+                }}
               />
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={`${contextKey}:${JSON.stringify(evidence)}`}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
                 />
               )}
               {saving && (
@@ -291,7 +297,7 @@ function OverviewBody({
   );
 }
 
-function customInterval(
+export function customInterval(
   period: string,
   start: ISODate | "",
   end: ISODate | "",
@@ -304,38 +310,10 @@ function customInterval(
   };
 }
 
-function validDateRange(period: string, start: string, end: string): boolean {
+export function validDateRange(
+  period: string,
+  start: string,
+  end: string,
+): boolean {
   return period !== "custom" || !!(start && end);
-}
-
-// "Results through" only while the period is still running: a closed period
-// ends where it says it does, and the line would only repeat it. A period read
-// at its first instant holds no time, which is said rather than drawn as zeros.
-function resultsThrough(
-  evaluation: ReportingEvaluation | undefined,
-  locale: Locale,
-  t: Translator,
-): string | undefined {
-  if (
-    !evaluation ||
-    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
-  ) {
-    return undefined;
-  }
-  if (reportingPeriodIsEmpty(evaluation.context.interval)) {
-    return t("reporting.periodNotStarted", {
-      at: formatDateTime(
-        evaluation.context.interval.start_at,
-        locale,
-        evaluation.context.timezone,
-      ),
-    });
-  }
-  return t("reporting.resultsThrough", {
-    at: formatDateTime(
-      evaluation.context.interval.end_at,
-      locale,
-      evaluation.context.timezone,
-    ),
-  });
 }

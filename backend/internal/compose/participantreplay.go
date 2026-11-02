@@ -281,6 +281,10 @@ func decodeStoredOriginal(payload []byte) ([]byte, error) {
 
 // markReplayed records that this activity has been re-read, so no later pass
 // selects it again.
+//
+// The ledger retires with the pass. A full sweep that finds no candidate means
+// the work is done. Both then go in one migration, as ordinary cleanup: the
+// ledger holds nothing a reader needs.
 func markReplayed(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant_replay (activity_id, outcome)

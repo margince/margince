@@ -20,13 +20,29 @@ import (
 )
 
 func (s *Service) framework(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFramework, error) {
+	out, published, err := currentFramework(ctx, tx)
+	if err == nil && !published {
+		out.Definition.Reason = s.statusCopy(ctx, tx).Say(statusWords.Unconfigured)
+	}
+	return out, err
+}
+
+// currentFramework reads the framework in force, or the sales default where
+// none was ever published.
+func currentFramework(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFramework, bool, error) {
 	out := crmcontracts.ReportingFramework{Definition: crmcontracts.ReportingFrameworkInput{Template: reportingSales, Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{}}}
 	err := tx.QueryRow(ctx, "SELECT f.revision,f.version,r.definition,r.effective_at FROM reporting_framework f JOIN reporting_framework_revision r ON r.revision=f.revision").Scan(&out.Revision, &out.Version, &out.Definition, &out.EffectiveAt)
 	if errors.Is(err, pgx.ErrNoRows) {
-		out.Definition.Reason = s.statusCopy(ctx, tx).Say(statusWords.Unconfigured)
-		return out, nil
+		return out, false, nil
 	}
-	return out, err
+	return out, err == nil, err
+}
+
+// FrameworkTemplate is the template of the framework in force. It needs no
+// framework grant: which views a workspace is set up for discloses no figure.
+func FrameworkTemplate(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFrameworkInputTemplate, error) {
+	out, _, err := currentFramework(ctx, tx)
+	return out.Definition.Template, err
 }
 
 // GetFramework returns the current stage definitions used by metric evaluation.

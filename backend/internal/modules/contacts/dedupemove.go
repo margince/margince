@@ -65,7 +65,7 @@ func moveDedupeCandidates(ctx context.Context, tx pgx.Tx, entityType string, sou
 		 WHERE p.entity_type = @entity AND %[4]s AND %[3]s <> @target`,
 			side.left, side.right, otherEnd("p"), namesSource("p"))},
 	}
-	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, "entity": entityType}
+	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, mergeEntityKey: entityType}
 	for _, step := range steps {
 		if _, err := tx.Exec(ctx, step.stmt, args); err != nil {
 			return fmt.Errorf("contacts: %s: %w", step.what, err)
@@ -85,7 +85,7 @@ func settleOpenPairBetween(ctx context.Context, tx pgx.Tx, side dedupePairSide, 
 		 WHERE entity_type = @entity AND disposition = 'open'
 		   AND ((%[1]s = @source AND %[2]s = @target) OR (%[1]s = @target AND %[2]s = @source))`,
 		side.left, side.right),
-		pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, "entity": side.entity}).Scan(&pairID)
+		pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, mergeEntityKey: side.entity}).Scan(&pairID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

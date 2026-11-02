@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -25,6 +25,10 @@ CRM activity, and the public `/availability` API never returns titles, guests or
 
 A missing calendar, a wrong answer, a failed page, or a page count past its limit makes Margince
 refuse to answer with times. Times that may be taken would mislead a guest, so none are shown.
+
+An event that starts and ends at the same time blocks no time, even when the host keeps time
+free before and after meetings. An event that ends before it starts still makes Margince refuse
+to answer with times.
 
 Local holds, and moves still waiting on the provider, count as booked. The database rule that stops
 two holds sharing time counts each one as open at its end. So one meeting can start where another

@@ -290,6 +290,7 @@ target for that new build. The shipped sheet may not match it.
 | Role | Family | Where |
 |---|---|---|
 | Heading | **Outfit** | Every heading, and the one line that names a record: its name, the Brief welcome line, the title of a zone, the agent's verdict word, the word of a reading and its figure. |
+| Display figure | **Outfit**, tabular | The one figure a report view leads with, such as Sales won, at `--fontDisplayFigure`. It sits beside the line of how it was reached. It stays smaller than the greeting, so the readings and the first action fit the first screen. |
 | Body and UI | **Geist** | Everything else, prose included. |
 | Figures | **Geist**, tabular (`.t-num`) | Every amount, count, share in %, length of time and date in a row or a cell. An id is plain body type. |
 | Code | **Geist** `Mono` | `<pre>`, `<code>` and `<samp>` through one rule in `base.css`, and the `.code-block` surface; nothing else. A `<kbd>` is body type. |
@@ -866,6 +867,9 @@ and verbs with the more button. It has five readings where the page has figures,
   team board;
 - **Reports**: three reports, with "Explain this number" opening the plan and the rows on an indigo
   dashed pane;
+- **Analytics Overview**: four readings, not five, and this is the one exception to the count. The
+  context bar, the four readings, the sentences under them and the start of the list of what needs
+  you all fit at 1366×768. A fifth figure goes below them or into a saved view;
 - **Ask Margince**: the ask field, an answer as a pane like the 360 with its citations, the two-tier
   contract, and the passport steps;
 - the **Project 360**;

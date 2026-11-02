@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Card, Disclosure } from "../../design-system/atoms";
@@ -93,6 +93,49 @@ export function CandidateBanner({
   onChanged: () => void;
 }>) {
   const t = useT();
+  return (
+    // The design system's own inset card: a hand-rolled copy drifts the moment
+    // one of its chrome values moves.
+    <Card as="div" inset className="vdna-candidate">
+      <CandidateReview
+        profileId={profileId}
+        candidate={candidate}
+        canEdit={canEdit}
+        onChanged={onChanged}
+        replacing
+      >
+        {/* The decision cannot be taken without the thing it is about, so the
+            version is shown here with the view the active voice uses. */}
+        <Disclosure summary={t("voice.candidate.reviewLabel")} open>
+          <VoiceInsights
+            data={parseVoiceInsights(candidate)}
+            profileVersion={candidate.profile_version}
+          />
+        </Disclosure>
+      </CandidateReview>
+    </Card>
+  );
+}
+
+// The decision a candidate asks for: what it is, why it waits, and the two
+// verbs. The hero holds it for a first version, whose portrait the page draws.
+// The banner holds it when it would replace an active voice.
+export function CandidateReview({
+  profileId,
+  candidate,
+  canEdit,
+  onChanged,
+  replacing,
+  children,
+}: Readonly<{
+  profileId: string;
+  candidate: VoiceProfileVersion;
+  canEdit: boolean;
+  onChanged: () => void;
+  replacing: boolean;
+  children?: ReactNode;
+}>) {
+  const t = useT();
   const { locale } = useLocale();
   const [error, setError] = useState<string | null>(null);
   const transition = useMutation({
@@ -117,28 +160,14 @@ export function CandidateBanner({
     onError: (e: Error) => setError(problemMessageOf(e, t)),
   });
   return (
-    // The design system's own inset card, not a hand-rolled `<div className=
-    // "card">`: a copy of the card surface is a second card the moment one of
-    // its five chrome values moves, and the README forbids it by name.
-    <Card as="div" inset className="vdna-candidate">
+    <div className="vdna-review">
       <b>
         {t("voice.candidate.title", {
           n: identifierNumber(candidate.profile_version),
         })}
       </b>
       <p>{t("voice.candidate.whatItIs")}</p>
-      {/* The decision this card asks for cannot be taken without the thing it
-          is about. It used to show a title, the evaluator's raw sentences and
-          two buttons — so "Use this version" meant approving writing the
-          reader had never seen, and the only way to read it was to apply it
-          first. The version is already in hand here; the same insights view
-          the active voice uses renders it. */}
-      <Disclosure summary={t("voice.candidate.reviewLabel")} open>
-        <VoiceInsights
-          data={parseVoiceInsights(candidate)}
-          profileVersion={candidate.profile_version}
-        />
-      </Disclosure>
+      {children}
       {candidate.review_reasons.length > 0 && (
         <>
           <p className="vdna-label">{t("voice.candidate.concernsLabel")}</p>
@@ -159,7 +188,11 @@ export function CandidateBanner({
           </ul>
         </>
       )}
-      <p className="t-caption">{t("voice.candidate.applyHint")}</p>
+      <p className="t-caption">
+        {t(
+          replacing ? "voice.candidate.applyHint" : "voice.candidate.firstHint",
+        )}
+      </p>
       {error && <ErrorLine>{error}</ErrorLine>}
       {canEdit && (
         <div className="vdna-candidate-acts">
@@ -170,15 +203,19 @@ export function CandidateBanner({
           >
             {t("voice.candidate.apply")}
           </Button>
+          {/* With no active voice there is nothing to keep, only this
+              version to set aside. */}
           <Button
             disabled={transition.isPending}
             onClick={() => transition.mutate("reject")}
           >
-            {t("voice.candidate.reject")}
+            {t(
+              replacing ? "voice.candidate.reject" : "voice.candidate.discard",
+            )}
           </Button>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

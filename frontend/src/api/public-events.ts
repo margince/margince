@@ -443,6 +443,8 @@ export interface components {
             currency_at_change?: string;
             /** @description The target stage's win probability, frozen at the moment of the move. */
             win_probability: number;
+            /** @description The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when the loss names only a free note. */
+            lost_reason_code?: string;
             /**
              * Format: uuid
              * @description The partner the deal named at the moment of the move, when it named one. Frozen here for the same reason the amount is: the commission a win earns is priced on what was true that day, and re-reading the deal later would price it on an attribution somebody edited afterwards.
@@ -993,6 +995,8 @@ export interface components {
             automatic_task_repaired?: boolean;
             /** @description The source's recorded commitment decisions changed; fetch the source through its normal content access gate. */
             commitment_admissions_changed?: boolean;
+            /** @description The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate. */
+            request_settlement_changed?: boolean;
             /** @description The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried. */
             agenda_changed?: boolean;
             /** @description True when explicit request acceptance restores an archived unfinished reminder. */
@@ -1101,6 +1105,11 @@ export interface components {
             /** @description How many deals the run considered. A consumer comparing this against the previous run's count sees a pass that covered less of the pipeline. */
             eligible_deals: number;
             eligible_signals?: number;
+            /**
+             * Format: uuid
+             * @description Set on a pass over this one deal, queued because the deal changed. Its counts describe that deal alone and never the pipeline. Absent on a pass over every deal.
+             */
+            deal_id?: string;
         };
         /** @description Payload for forecast.exception_resolved. Somebody answered a finding from the nightly input check. The entity is the author, because an answer is attributable to whoever gave it. The `outcome` field says what kind of answer it was, and consumers must not treat the seven alike. The `value_correct` and `not_relevant` outcomes hide the finding from the screens a revenue commitment is made from. So a surface counting open findings has to drop them. The `remind_later` outcome leaves the finding open, and it comes back. The reason does not ride along. It is prose one user wrote for another, and a subscriber acting on it acts on text the author may edit. */
         PublicEventForecastExceptionResolved: {

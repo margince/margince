@@ -108,7 +108,7 @@ func activityReachArms(p principal.Principal, alias string, arg func(any) int) s
 	return fmt.Sprintf(`coalesce((SELECT bool_or(%[2]s)
 	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
 	   OR %[3]s`,
-		alias, linkTargetVisible(p, "l", arg), activityAttendanceArm(p, alias, arg))
+		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg))
 }
 
 // assignedCommitmentArm lets the holder of a promise's task find it. Every

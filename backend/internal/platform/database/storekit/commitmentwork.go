@@ -129,13 +129,21 @@ func taskSourcesOf(currency taskCurrency) []string {
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
- AND ` + sourceWithinHorizonSQL("current_source", asOf, arg) + `
+ AND ` + SourceWithinHorizonSQL("current_source", asOf, arg) + `
  AND ` + occurredday.BegunSQL("current_source", instant) + `)`
 }
 
-func sourceWithinHorizonSQL(alias string, asOf time.Time, arg func(any) int) string {
-	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
-	return alias + `.archived_at IS NULL AND ` + occurredday.FromSQL(alias, instant+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`)
+// SourceWithinHorizonSQL admits a live row whose own time falls inside the
+// waiting horizon. alias is a compile-time literal.
+func SourceWithinHorizonSQL(alias string, asOf time.Time, arg func(any) int) string {
+	return SourceWithinHorizonAtSQL(alias, fmt.Sprintf("$%d::timestamptz", arg(asOf)), asOf, arg)
+}
+
+// SourceWithinHorizonAtSQL is SourceWithinHorizonSQL judged at the instant
+// expression at, such as the row's own capture time. asOf picks the horizon
+// measurement in force; alias and at are compile-time literals.
+func SourceWithinHorizonAtSQL(alias, at string, asOf time.Time, arg func(any) int) string {
+	return alias + `.archived_at IS NULL AND ` + occurredday.FromSQL(alias, at+` - make_interval(days => `+WaitingHorizonSQL(asOf, arg)+`)`)
 }
 
 // UndatedTaskSources names current work that needs no invented deadline.

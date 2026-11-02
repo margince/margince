@@ -22,12 +22,12 @@ import { meetingsReading } from "./brief.readings.meetings";
 
 import "./brief.intro.css";
 
-/** How long the greeting stands before it lifts away. */
+/** How long the greeting stands when the page under it is never ready. */
 export const SHOW_MS = 4500;
 /** How long it takes to lift away and draw up off the page. */
 export const LEAVE_MS = 900;
-/** How long the day's figures stand when the read lands late in the greeting. */
-export const FIGURES_STAND_MS = 2000;
+/** How long the greeting stands at least, so its words arrive before it lifts. */
+export const GREETING_MS = 1500;
 // Where the choreography places the night's line and the first figure, from
 // the moment the curtain rises (brief.intro.css).
 const READ_AT_MS = 950;
@@ -74,17 +74,15 @@ export function BriefIntro({
     return () => globalThis.removeEventListener("keydown", end);
   }, [showing, today]);
 
-  // Left alone it lifts away after SHOW_MS. Figures that land late still stand
-  // long enough to be read; a read that never lands does not hold it up.
+  // The page under it is drawn once the day's read lands, so the greeting lifts
+  // then, never holding a ready page. A read that never lands lifts it at SHOW_MS.
+  const ready = day !== undefined;
   useEffect(() => {
     if (!showing || leaving) return;
-    const elapsed = Date.now() - startedAt;
-    const hold = fresh
-      ? Math.max(SHOW_MS - elapsed, FIGURES_STAND_MS)
-      : SHOW_MS - elapsed;
-    const lift = setTimeout(() => setLeaving(true), hold);
+    const hold = (ready ? GREETING_MS : SHOW_MS) - (Date.now() - startedAt);
+    const lift = setTimeout(() => setLeaving(true), Math.max(0, hold));
     return () => clearTimeout(lift);
-  }, [showing, leaving, fresh, startedAt]);
+  }, [showing, leaving, ready, startedAt]);
 
   useEffect(() => {
     if (!leaving) return;

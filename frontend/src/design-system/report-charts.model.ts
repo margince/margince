@@ -18,3 +18,24 @@ export type ChartProps = Readonly<{
   valueLabel: string;
   onSelect?: (key: string) => void;
 }>;
+
+export type GroupedBarsProps = ChartProps &
+  Readonly<{
+    comparisonLabel?: string;
+    /** `compact` is shorter columns, for weeks beside a lead figure. */
+    size?: "default" | "compact";
+  }>;
+
+// The top of a chart's axis: the largest value any reading draws, never below 1.
+export function readingScale(readings: readonly ChartReading[], reference = 0) {
+  return Math.max(
+    1,
+    reference,
+    ...readings.flatMap((reading) => [
+      reading.value ?? 0,
+      reading.comparison ?? 0,
+      reading.target ?? 0,
+      reading.upper ?? 0,
+    ]),
+  );
+}

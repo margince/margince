@@ -42,6 +42,7 @@ func render(records map[string]record) string {
 	renderTable(&b, records)
 	renderGaps(&b)
 	renderDaily(&b, records)
+	renderSystemHealth(&b, records)
 	renderStrictHome(&b, records)
 	renderMachines(&b, records)
 	return b.String()
@@ -154,9 +155,14 @@ func renderDaily(b *strings.Builder, records map[string]record) {
 	}
 	b.WriteString("The screens a rep and a manager open every day, timed over HTTP as the screen calls them.\n")
 	b.WriteString("A row with no data had nothing to time, and its note says why; a row not gated is reported without a budget.\n\n")
+	renderSeatMeasurements(b, r.Budgets)
+	renderAdvisories(b, r.Advisories)
+}
+
+func renderSeatMeasurements(b *strings.Builder, rows []measurement) {
 	b.WriteString("| measurement | seat | p50 | p95 | budget | samples | verdict | notes |\n")
 	b.WriteString("|---|---|---|---|---|---|---|---|\n")
-	for _, m := range r.Budgets {
+	for _, m := range rows {
 		p50 := millis(m.P50Ms)
 		if p95Cell(m) == "" {
 			p50 = ""
@@ -165,7 +171,25 @@ func renderDaily(b *strings.Builder, records map[string]record) {
 			m.Name, m.Seat, p50, p95Cell(m), millis(m.BudgetMs), m.Samples, verdict(m), dailyNotes(m))
 	}
 	b.WriteString("\n")
-	renderAdvisories(b, r.Advisories)
+}
+
+func renderSystemHealth(b *strings.Builder, records map[string]record) {
+	r, ok := records[healthTarget]
+	if !ok {
+		return
+	}
+	b.WriteString("## System health\n\n")
+	fmt.Fprintf(b, "Measured with `make %s`, as the admin seat.\n\n", benchmarkCommand(healthTarget))
+	renderCorpusFacts(b, r.Corpus)
+	b.WriteString("\n")
+	renderSeatMeasurements(b, r.Budgets)
+}
+
+func benchmarkCommand(target string) string {
+	if target == healthTarget {
+		return "bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets"
+	}
+	return target
 }
 
 // renderStrictHome prints the strict Home lane: the acceptance targets, with
@@ -259,7 +283,7 @@ func renderMachines(b *strings.Builder, records map[string]record) {
 }
 
 func renderMachine(b *strings.Builder, r record) {
-	fmt.Fprintf(b, "### `make %s` · measured %s\n\n", r.Target, r.MeasuredOn)
+	fmt.Fprintf(b, "### `make %s` · measured %s\n\n", benchmarkCommand(r.Target), r.MeasuredOn)
 	b.WriteString("| | |\n|---|---|\n")
 	m := r.Machine
 	fmt.Fprintf(b, "| os / arch | %s / %s |\n", m.OS, m.Arch)

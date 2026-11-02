@@ -79,7 +79,7 @@ To pause a rule, turn **Enabled** off; **Delete policy** removes it fully.
 Also called: data retention, retention period, auto-delete.
 
 ### How do I record a contact's consent?
-To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to mail the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
+To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to preview the mail and then send the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
 
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
 

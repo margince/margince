@@ -88,6 +88,7 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 		for name, field := range entity.Fields {
 			field.Domain = filterDomain(spec, field.Expr)
 			field.Currency = granted.perRowCurrency(name)
+			field.Period = periodFieldOf(name, field.Expr)
 			if custom, ok := spec.customFields[field.Expr]; ok {
 				field = custom.describe(field)
 			}

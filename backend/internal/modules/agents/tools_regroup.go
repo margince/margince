@@ -8,6 +8,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
+// The router names other parts of the server point a model to.
+const (
+	findRecordsToolName   = "find_records"
+	readAttentionToolName = "read_attention"
+	readContextToolName   = "read_context"
+)
+
 // The routers below each front one family of verbs under one listed name. A
 // call runs as the verb its action names, at that verb's tier and scope.
 
@@ -15,7 +22,7 @@ type findRecords struct{ routed }
 
 func (findRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "find_records", Title: "Find records", Version: toolVersionV1,
+		Name: findRecordsToolName, Title: "Find records", Version: toolVersionV1,
 		Description: findRecordsCopy.render(), Instead: findRecordsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"engine":{"description":"search: records ranked by how well their text matches your words; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is"},
@@ -37,10 +44,11 @@ type readContext struct{ routed }
 
 func (readContext) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_context", Title: "Get the story so far", Version: toolVersionV1,
+		Name: readContextToolName, Title: "Get the story so far", Version: toolVersionV1,
 		Description: readContextCopy.render(), Instead: readContextCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"about":{"description":"catch_up: what has been happening on one record; meeting: what to know before a meeting; brief: this morning's brief"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.ContextURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 
@@ -54,7 +62,7 @@ type readAttention struct{ routed }
 
 func (readAttention) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_attention", Title: "See what needs attention", Version: toolVersionV1,
+		Name: readAttentionToolName, Title: "See what needs attention", Version: toolVersionV1,
 		Description: readAttentionCopy.render(), Instead: readAttentionCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open"}}}`),

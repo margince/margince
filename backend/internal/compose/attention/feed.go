@@ -146,6 +146,9 @@ type Service struct {
 	// view is the work view this request answers, on a per-request copy.
 	// Empty on the shared service and on a read that named no view.
 	view string
+	// omitDecay skips the relationship decay lane for a Worklist read that did
+	// not ask for it, on a per-request copy. A pinned decay row still reads it.
+	omitDecay bool
 	// pinned is this request's reader's own pins, resolved once by readingPins
 	// onto a copy of the service. Nil on the shared service.
 	pinned map[RowRef]bool

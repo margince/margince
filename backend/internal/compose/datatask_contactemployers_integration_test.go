@@ -25,7 +25,7 @@ func legacyEmployerContact(t *testing.T, e *integration.Env) ids.UUID {
 	if err != nil {
 		t.Fatal(err)
 	}
-	promoted, err := e.Contacts.QualifyLead(e.Admin(), ids.From[ids.LeadKind](ids.UUID(lead.Id)), contacts.PromoteLeadInput{Trigger: "human_qualify"})
+	promoted, err := e.Contacts.QualifyLead(e.Admin(), ids.From[ids.LeadKind](ids.UUID(lead.Id)), contacts.PromoteLeadInput{Trigger: "human_qualify", CreateCompany: true})
 	if err != nil {
 		t.Fatal(err)
 	}

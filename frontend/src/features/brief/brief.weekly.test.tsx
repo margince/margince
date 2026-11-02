@@ -607,6 +607,25 @@ describe("BriefScreen — the week against the one before", () => {
     ]);
   });
 
+  // A seat that may not read activities gets meeting zeros that say nothing,
+  // so neither the headline nor the table draws a meetings figure.
+  it("draws no meetings figure when the review withholds them", async () => {
+    const strip = await mount({
+      ...withPrior,
+      meetings_withheld: true,
+      counts: { ...counts, meetings_held: 0, meetings_with_next_step: 0 },
+    });
+
+    expect(strip.textContent).not.toContain(en["brief.weekly.meetingsHeld"]);
+    const table = screen.getByRole("table", {
+      name: en["brief.report.chapter.figures"],
+    });
+    expect(
+      within(table).queryByText(en["brief.weekly.meetingsHeld"]),
+    ).toBeNull();
+    expect(within(table).getByText(en["brief.weekly.dealsWon"])).toBeTruthy();
+  });
+
   // One fact, one surface. Deals that moved without closing are a working, and
   // the list under the table reports them.
   it("reports the deals that moved in the workings and not in the headline", async () => {

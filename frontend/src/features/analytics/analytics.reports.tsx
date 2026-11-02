@@ -63,6 +63,8 @@ const CARD_TITLE: Partial<Record<CardKey, MessageKey>> = {
 // and the bodies both read this, so a section cannot come to list a report it
 // does not draw.
 export const SECTION_REPORTS = {
+  // The opening view composes its own readings, like the forecast.
+  overview: [],
   reports: [],
   targets: [],
   definitions: [],
@@ -83,6 +85,7 @@ export const SECTION_REPORTS = {
   sdr: [],
   leads: [],
   partners: [],
+  conversion: [],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
   // Source health: an ops view over the nightly check's own coverage rows.

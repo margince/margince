@@ -20,6 +20,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { borrowedRows, useAiModelCatalogue } from "../../lib/ai-models";
+import { providerName } from "../../lib/ai-provider-names";
 import type { ProviderUse } from "../../lib/ai-routing-query";
 import { useCan, useCanUpsert } from "../../lib/capability";
 import { ProviderRefreshLine } from "../settings/rate-catalogue-refresh";
@@ -27,7 +28,6 @@ import { type BoundModel, PriceForm } from "../settings/rate-manual";
 import { RemovePriceDialog } from "../settings/rate-remove";
 import { usePriceSync } from "./ai-price-sync";
 import { pricingPageFor } from "./ai-provider-links";
-import { providerName } from "./ai-provider-names";
 import { TierChips } from "./ai-terms";
 import "./ai-settings.css";
 

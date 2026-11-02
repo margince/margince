@@ -64,6 +64,8 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	out.ProseLanguage = &language
 	out.Timezone = calendar.Timezone
 	out.Currency = calendar.Currency
+	fiscalStart := calendar.FiscalStartMonth
+	out.FiscalYearStartMonth = &fiscalStart
 	out.Scope, err = (reportingAuthority{}).Scope(ctx, tx, selection.Scope, false)
 	if err != nil {
 		return out, err
@@ -85,6 +87,11 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		return out, err
 	}
 	out.TargetInterval = &target
+	horizon, err := reporting.Horizon(selection, calendar, out.Interval)
+	if err != nil {
+		return out, err
+	}
+	out.Horizon = &horizon
 	switch selection.CloseWindow {
 	case "all_open":
 	case "fiscal_quarter":

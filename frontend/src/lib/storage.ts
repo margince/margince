@@ -88,6 +88,12 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  // When this tab last reloaded onto a newer build, so it reloads once per deploy.
+  staleBuildReloadedAt: {
+    name: "margince.staleBuildReloadedAt",
+    area: "session",
+    lifetime: "device",
+  },
   // "Hide until next sign-in": local so a new tab keeps it, seat so the end of
   // the session brings the reminder back.
   setupReminderHidden: {
@@ -107,6 +113,26 @@ export const STORAGE_KEYS = {
   aiRevealSeen: {
     name: "margince.aiReveal.seen",
     area: "local",
+    lifetime: "seat",
+  },
+  // The Overview view a reader chose before choices were kept per account.
+  // Read once as a fallback and removed by the next choice.
+  analyticsOverviewView: {
+    name: "margince.analytics.overviewView",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The Overview view and each view's dials a reader chose, per account id.
+  analyticsOverview: {
+    prefix: "margince.analytics.overview:",
+    area: "local",
+    lifetime: "seat",
+  },
+  // Each Overview view's dials as this tab last showed them, per account id.
+  // A shared link lands here and never in the account's own choice above.
+  analyticsOverviewTab: {
+    prefix: "margince.analytics.overviewTab:",
+    area: "session",
     lifetime: "seat",
   },
 } as const satisfies Record<string, Declared>;

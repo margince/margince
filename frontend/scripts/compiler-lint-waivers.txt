@@ -50,7 +50,7 @@
 1 react-hooks/set-state-in-effect src/design-system/waited.ts
 1 react-hooks/set-state-in-effect src/features/contacts/addemploymentmodal.tsx
 1 react-hooks/set-state-in-effect src/features/ai/ai-routing-fields.tsx
-1 react-hooks/refs src/features/analytics/analytics.forecast.review.tsx
+1 react-hooks/refs src/features/analytics/analytics.forecast.checktable.tsx
 1 react-hooks/set-state-in-effect src/features/automations/automations.instances.tsx
 1 react-hooks/set-state-in-effect src/features/automations/automations.tsx
 1 react-hooks/set-state-in-effect src/lib/backfill-run.ts
@@ -103,7 +103,7 @@
 2 react-hooks/refs src/features/onboarding/onboarding-gate.ticker.tsx
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-ignition.tsx
 1 react-hooks/set-state-in-effect src/features/settings/preferences.tsx
-1 react-hooks/refs src/features/privacy/privacy.caselink.ts
+1 react-hooks/refs src/lib/privacycaselink.ts
 1 react-hooks/refs src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/settings/rate-manual.tsx

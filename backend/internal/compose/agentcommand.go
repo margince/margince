@@ -12,7 +12,7 @@ package compose
 // contract states a tier outright, the generated policy answers it. Where the
 // tier turns on the record's own state, the command answers that too
 // (agents.DynamicTierInput). The inbox line is the resolver's too, with the body
-// fields the command erased appended (stagedSentence).
+// fields the command erased appended (stagedParts).
 
 import (
 	"context"

@@ -18,7 +18,15 @@ import { useT } from "../../i18n";
 type InstallationSettings = components["schemas"]["InstallationSettings"];
 type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 
-const KEY = "individual_performance";
+type SwitchKey = "individual_performance" | "forecast_self_correcting";
+
+type SwitchCopy = Readonly<{
+  title: string;
+  name: string;
+  hint: string;
+  on: string;
+  off: string;
+}>;
 
 type IndividualPerformanceUpdate = Readonly<{
   mutate: (patch: Patch) => void;
@@ -27,39 +35,73 @@ type IndividualPerformanceUpdate = Readonly<{
   error: unknown;
 }>;
 
-/** The works-council switch: whether anyone sees a colleague's figures. */
-export function IndividualPerformanceRows({
-  settings,
-  canManage,
-  denialId,
-  update,
-}: Readonly<{
+type SwitchRowsProps = Readonly<{
   settings: InstallationSettings;
   canManage: boolean;
   /** The panel's sentence that refuses every change to a reader who may not. */
   denialId: string;
   update: IndividualPerformanceUpdate;
-}>) {
+}>;
+
+/** The works-council switch: whether anyone sees a colleague's figures. */
+export function IndividualPerformanceRows(props: SwitchRowsProps) {
+  const t = useT();
+  return (
+    <InstallationSwitchRows
+      {...props}
+      settingKey="individual_performance"
+      copy={{
+        title: t("installationSettings.individualTitle"),
+        name: t("installationSettings.individualPerformance"),
+        hint: t("installationSettings.individualHint"),
+        on: t("installationSettings.individualOn"),
+        off: t("installationSettings.individualOff"),
+      }}
+    />
+  );
+}
+
+/** Whether the forecast moves each stage's chance with recorded outcomes. */
+export function ForecastSelfCorrectingRows(props: SwitchRowsProps) {
+  const t = useT();
+  return (
+    <InstallationSwitchRows
+      {...props}
+      settingKey="forecast_self_correcting"
+      copy={{
+        title: t("installationSettings.selfCorrectingTitle"),
+        name: t("installationSettings.selfCorrecting"),
+        hint: t("installationSettings.selfCorrectingHint"),
+        on: t("installationSettings.selfCorrectingOn"),
+        off: t("installationSettings.selfCorrectingOff"),
+      }}
+    />
+  );
+}
+
+/** One installation-wide switch that writes when turned. */
+function InstallationSwitchRows({
+  settings,
+  canManage,
+  denialId,
+  update,
+  settingKey,
+  copy,
+}: SwitchRowsProps & Readonly<{ settingKey: SwitchKey; copy: SwitchCopy }>) {
   const t = useT();
   const refusalId = useId();
-  const name = t("installationSettings.individualPerformance");
+  const name = copy.name;
+  const checked = settings[settingKey];
   return (
     <>
-      <PanelGroupHead
-        title={t("installationSettings.individualTitle")}
-        level="h3"
-      />
+      <PanelGroupHead title={copy.title} level="h3" />
       <PanelBody>
-        <PanelIntro>{t("installationSettings.individualHint")}</PanelIntro>
+        <PanelIntro>{copy.hint}</PanelIntro>
       </PanelBody>
       <SettingList bleed="settings">
         <SettingRow
           label={name}
-          description={t(
-            settings.individual_performance
-              ? "installationSettings.individualOn"
-              : "installationSettings.individualOff",
-          )}
+          description={checked ? copy.on : copy.off}
           control={(control) => (
             <Switch
               describedBy={describedByIds(
@@ -69,16 +111,16 @@ export function IndividualPerformanceRows({
               )}
               label={name}
               labelHidden
-              checked={settings.individual_performance}
+              checked={checked}
               disabled={!canManage}
               pending={update.isPending}
               reason={lockReasonOr(
                 settings.locks,
-                `installation.${KEY}`,
+                `installation.${settingKey}`,
                 t,
                 undefined,
               )}
-              onChange={(next) => update.mutate({ [KEY]: next })}
+              onChange={(next) => update.mutate({ [settingKey]: next })}
             />
           )}
         />

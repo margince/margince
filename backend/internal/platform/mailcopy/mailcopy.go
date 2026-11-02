@@ -141,6 +141,8 @@ type Copy struct {
 	MailPromisedBy      string
 	MailInTheirWords    string
 	MailWhyYou          string
+	MailAlsoChanges     string
+	MailPreviewStatus   string
 	MailTranscriptOf    string
 	MailReasonRequested string
 	MailReasonOnBehalf  string

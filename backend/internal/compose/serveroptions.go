@@ -81,6 +81,12 @@ func WithMCPResource(resource string) Option {
 	}
 }
 
+// WithMCPInputStateKey lets a tool ask the user in the chat, signing each
+// question with the deployment's HMAC key. Without one no tool asks.
+func WithMCPInputStateKey(key string) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpInputStateKey = key }
+}
+
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
 // the OAuth authorization server and both discovery documents are mounted
 // together. Without it none of those routes exists — an installation that

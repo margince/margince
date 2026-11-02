@@ -57,7 +57,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `digits` | `smallint` | yes |  |
 
 **Rules**
@@ -206,7 +206,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `confidence` | `real` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `evidence_ref` | `text` |  |  |
 | `field_name` | `text` | yes |  |
 | `object_id` | `uuid` | yes |  |
@@ -216,7 +216,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `field_provenance_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
+- `field_provenance_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `field_provenance_object_type_check`: `CHECK ((object_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])))`
 
 **Indexes**

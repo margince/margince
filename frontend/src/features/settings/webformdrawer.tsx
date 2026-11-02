@@ -37,6 +37,7 @@ import {
 } from "./webformkinds";
 import "./webforms.css";
 import { OwnerField } from "./webformowner";
+import { PrivacyNoticeFields } from "./webformprivacy";
 import { SenderField } from "./webformsender";
 
 export type WebFormDraft = Readonly<{
@@ -48,6 +49,8 @@ export type WebFormDraft = Readonly<{
   consentRequired: boolean;
   consentWording: string;
   consentPolicyVersion: string;
+  privacyNotice: string;
+  privacyNoticeUrl: string;
   redirectUrl: string;
   successMessage: string;
 }>;
@@ -62,6 +65,8 @@ export function draftFor(form?: WebForm): WebFormDraft {
     consentRequired: form?.consent_required ?? false,
     consentWording: form?.consent_wording ?? "",
     consentPolicyVersion: form?.consent_policy_version ?? "",
+    privacyNotice: form?.privacy_notice ?? "",
+    privacyNoticeUrl: form?.privacy_notice_url ?? "",
     redirectUrl: form?.redirect_url ?? "",
     successMessage: form?.success_message ?? "",
   };
@@ -143,6 +148,8 @@ export function webFormBodyOf(draft: WebFormDraft, form?: WebForm) {
     consent_required: draft.consentRequired,
     consent_wording: optional(draft.consentWording),
     consent_policy_version: optional(draft.consentPolicyVersion),
+    privacy_notice: optional(draft.privacyNotice),
+    privacy_notice_url: optional(draft.privacyNoticeUrl),
     redirect_url: optional(draft.redirectUrl),
     success_message: optional(draft.successMessage),
   };
@@ -177,6 +184,8 @@ const FIELDS_WITH_A_SLOT = new Set([
   "owner_id",
   "consent_wording",
   "consent_policy_version",
+  "privacy_notice",
+  "privacy_notice_url",
   "redirect_url",
   "success_message",
 ]);
@@ -384,6 +393,12 @@ export function WebFormDrawer({
             </>
           )}
         </div>
+        <PrivacyNoticeFields
+          notice={draft.privacyNotice}
+          policy={draft.privacyNoticeUrl}
+          errors={fieldErrors}
+          onChange={set}
+        />
         <div className="form-stack webform-part">
           {draft.sender === "browser" && (
             <Field

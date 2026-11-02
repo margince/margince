@@ -119,6 +119,21 @@ export function offer(overrides: Partial<Offer>): Offer {
   } as Offer;
 }
 
+// The loss reasons the close dialog offers.
+const LOSS_REASONS = [
+  { key: "competitor", label: "Chose a competitor" },
+  { key: "price", label: "Price" },
+].map((reason) => ({
+  ...reason,
+  id: `reason-${reason.key}`,
+  active: true,
+  sort_order: 10,
+  system: true,
+  version: 1,
+  created_at: "2026-10-01T08:00:00Z",
+  updated_at: "2026-10-01T08:00:00Z",
+}));
+
 export function stubBackend(
   deals: Deal[],
   opts: {
@@ -168,6 +183,9 @@ export function stubBackend(
     const method = request ? request.method : (init?.method ?? "GET");
     if (method === "GET" && url.includes("/commitments")) {
       return jsonResponse({ complete: true, has_more: false, data: [] });
+    }
+    if (method === "GET" && url.includes("/loss-reasons")) {
+      return jsonResponse({ data: LOSS_REASONS });
     }
     if (method === "GET" && url.includes("/win-evidence")) {
       if (opts.winEvidenceRead === "unreadable") {

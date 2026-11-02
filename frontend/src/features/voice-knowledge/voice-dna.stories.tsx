@@ -228,9 +228,9 @@ export default meta;
 
 type Story = StoryObj;
 
-// No profile yet: listVoiceProfiles answers an empty page and the card offers
-// the empty state together with the add control that mints the profile — the
-// state an owner who skipped the onboarding voice step lands on.
+// No profile yet: the page promises a voice, walks through the three steps and
+// takes the first sample, which mints the profile. An owner who skipped the
+// onboarding voice step lands here.
 export const Empty: Story = {
   render: voiceStory({
     "GET /voice-profiles": () => jsonResponse(emptyPage),
@@ -277,6 +277,76 @@ export const Collecting: Story = {
         summary: COLLECTING_SUMMARY,
       }),
   }),
+};
+
+// Past the floor with nothing built yet: the hero ticks the first step and
+// offers the first build where the writer is already looking.
+export const ReadyToBuild: Story = {
+  render: voiceStory({
+    "GET /voice-profiles": () =>
+      jsonResponse({
+        data: [{ ...COLLECTING_PROFILE, maturity: "provisional" }],
+        page: emptyPage.page,
+      }),
+    "GET /voice-profiles/vp-1/sources": () =>
+      jsonResponse({
+        data: [COLLECTING_SOURCE],
+        summary: {
+          ...COLLECTING_SUMMARY,
+          total_words: 2400,
+          maturity: "provisional",
+          register_words: { general: 2400 },
+        },
+      }),
+  }),
+};
+
+// A first build waiting on the owner: the page draws what it learned, and the
+// hero's last step asks whether to use it.
+export const FirstReview: Story = {
+  render: voiceStory(
+    {
+      "GET /voice-profiles": () =>
+        jsonResponse({
+          data: [{ ...COLLECTING_PROFILE, maturity: "provisional" }],
+          page: emptyPage.page,
+        }),
+      "GET /voice-profiles/vp-1/sources": () =>
+        jsonResponse({ data: [SOURCE, SPOKEN_SOURCE], summary: SUMMARY }),
+    },
+    "full",
+    [
+      {
+        ...ACTIVE_VERSION,
+        id: "vv-1",
+        profile_version: 1,
+        status: "candidate",
+      },
+    ],
+  ),
+};
+
+// A rebuild waiting on the owner: the active voice keeps the hero, and the
+// newer version is reviewed right under it.
+export const NewerReview: Story = {
+  render: voiceStory(
+    {
+      "GET /voice-profiles": () =>
+        jsonResponse({ data: [PROFILE], page: emptyPage.page }),
+      "GET /voice-profiles/vp-1/sources": () =>
+        jsonResponse({ data: [SOURCE, SPOKEN_SOURCE], summary: SUMMARY }),
+    },
+    "full",
+    [
+      {
+        ...ACTIVE_VERSION,
+        id: "vv-4",
+        profile_version: 4,
+        status: "candidate",
+      },
+      ACTIVE_VERSION,
+    ],
+  ),
 };
 
 // Dark below the 800-word floor. The corpus meter and the floor meter stand

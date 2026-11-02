@@ -216,7 +216,7 @@ func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (jso
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) Check(context.Context, ids.UUID) error { return errSeamReached }
+func (seamProbeLifecycle) Check(context.Context, ids.UUID, *string) error { return errSeamReached }
 
 func (seamProbeLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
 	return nil, errSeamReached
@@ -324,7 +324,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterIntentTools(r, inertRetriever{}, nil, nil, seamProbeLifecycle{})
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, seamProbeLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },

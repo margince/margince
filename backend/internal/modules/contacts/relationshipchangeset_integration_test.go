@@ -126,3 +126,51 @@ func sameChangeInputs(got, want relstrength.ChangeInputs) bool {
 	}
 	return sameWindow(got.Current, want.Current) && sameWindow(got.Previous, want.Previous)
 }
+
+// A colleague's reply on the contact's thread reaches the contact and counts as
+// an interaction, and it is not the contact writing. The fold asks
+// relstrength's rule, which admits only what the contact sent, so the reply
+// raises the count without raising their inbound.
+func TestAColleaguesReplyOnTheirThreadIsNotTheContactWriting(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
+	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
+	contact := e.seedVisibleContact(t, "Threaded Fold Contact")
+	colleague := e.seedVisibleContact(t, "Replying Colleague")
+	e.seedInteraction(t, contact, day(5), "inbound")
+
+	// Linked to the contact, inbound, and sent by somebody else.
+	ctx := e.as()
+	reply := ids.New[ids.ActivityKind]()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, subject, direction, occurred_at, source_system, source_id, source, captured_by)
+			VALUES ($1, 'email', 'Hallo', 'inbound', $2, 'gmail', $3, 'gmail:seed', 'connector:gmail')`,
+			reply, day(4), reply.String()); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+			reply, contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'from', $2)`,
+			reply, colleague)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding a colleague's reply: %v", err)
+	}
+
+	var got map[ids.ContactID]relstrength.ChangeInputs
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		got, err = changeInputsFor(ctx, tx, []ids.ContactID{contact}, now, nil)
+		return err
+	}); err != nil {
+		t.Fatalf("folding the change inputs: %v", err)
+	}
+	if in := got[contact].Current; in.Count90d != 2 || in.Inbound90d != 1 {
+		t.Fatalf("the fold read %d interactions and %d inbound, want 2 and 1", in.Count90d, in.Inbound90d)
+	}
+}

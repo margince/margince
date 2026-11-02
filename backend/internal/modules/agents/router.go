@@ -76,7 +76,9 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		}
 		// Each action is admitted at its own verb's tier once routed. The
 		// router is listed as decided per call when its actions differ.
-		spec.Actions = append(spec.Actions, mcp.ToolAction{Action: choices[i], Verb: target.Name, Tier: target.Tier})
+		spec.Actions = append(spec.Actions, mcp.ToolAction{
+			Action: choices[i], Verb: target.Name, Tier: target.Tier, AskUserFirst: target.AskUserFirst,
+		})
 		if target.Tier != first.Tier {
 			spec.Tier = mcp.TierDynamic
 		}

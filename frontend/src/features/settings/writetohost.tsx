@@ -2,23 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useCallback, useState } from "react";
-import { isMailbox } from "../../format/connectorprovider";
-import { useConnectors } from "../../lib/connectors";
+import { useMailboxConnected } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
 import { ComposeModal } from "../mail/compose";
-
-/**
- * Whether this reader has a mailbox the product can send from: a connected
- * mail connection, not a calendar. Unanswered reads as none, because a drawer
- * offered on a guess would open onto a refusal.
- */
-export function useMailboxConnected(): boolean {
-  const connectors = useConnectors();
-  return (connectors.data?.data ?? []).some(
-    (connection) =>
-      connection.status === "connected" && isMailbox(connection.provider),
-  );
-}
 
 /**
  * The shell's composer for an address pressed anywhere under it. It opens the

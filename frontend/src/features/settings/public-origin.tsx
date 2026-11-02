@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
-import { useConnectors } from "../../lib/connectors";
 
 /**
  * The address this installation puts in the links it emails, and whether it
@@ -16,10 +16,10 @@ import { useConnectors } from "../../lib/connectors";
  * links open nothing. Reported, never enforced: a probe from inside the
  * deployment cannot show a recipient's client can reach the address.
  */
-export function PublicOriginCard() {
+export function PublicOriginCard({
+  status,
+}: Readonly<{ status?: components["schemas"]["PublicOriginStatus"] }>) {
   const t = useT();
-  // GET /connectors carries the origin, so this shares the roster's cache entry.
-  const status = useConnectors().data?.publicOrigin;
   // No origin configured is not a broken origin: there is nothing to report.
   if (!status) {
     return null;

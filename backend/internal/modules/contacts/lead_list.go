@@ -196,6 +196,8 @@ type ListLeadsInput struct {
 	MemberOf *ids.UUID
 	// CompanyFacts narrows by what the linked company records (leadcompanyfacts.go).
 	CompanyFacts LeadCompanyFactFilters
+	// Partner narrows to the leads a partner referred.
+	Partner LeadPartnerFilter
 }
 
 // leadListWhere builds a lead list read's `WHERE`: the shared chain, then the lead's own
@@ -229,6 +231,11 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	if err != nil {
 		return nil, err
 	}
+	partner, err := in.Partner.clauses(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	where = append(where, partner...)
 	if in.Membership != nil {
 		member, err := in.Membership(leadEntity+".id", arg)
 		if err != nil {

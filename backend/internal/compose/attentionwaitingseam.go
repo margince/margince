@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -22,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -199,32 +201,16 @@ const waitingRefillRounds = 3
 // runs out, or the round ceiling is reached. It answers what survived and
 // whether anything was left unread.
 //
-// The refill exists because the filter runs AFTER the scan cap. The store's own
-// machine rule is a coarse subset — six patterns against an address — while
-// keepWaitingCustomers asks capture.IsMachineAddress, which reads a registrable
-// domain against the transactional baseline. An address like hello@sendgrid.net
-// matches none of the six, fills a slot under the cap, and is discarded here.
-// Two hundred of those and a genuinely waiting customer never appears at all.
-//
-// `cut` still means what it meant: something was left unread. It is now true
-// only when the LAST page was also full, so a refill that reached the end of
-// the matching rows reports a complete scan rather than inheriting the first
-// page's truncation.
+// The filter runs after the scan cap: the store's machine rule is six address
+// patterns, and keepWaitingCustomers asks the whole rule (sentBySendingSystem). Two
+// hundred relay mails would fill the cap, so the refill asks for another page.
+// `cut` is true only when the last page was also full.
 func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, narrow attention.WaitingFor) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
 	var before activities.WaitingPosition
 	cut := false
 	for range waitingRefillRounds {
-		var rows []activities.WaitingReply
-		var err error
-		switch {
-		case narrow.Owner != nil:
-			rows, err = w.store.WaitingRepliesForOwnerBefore(ctx, asOf, before, *narrow.Owner)
-		case narrow.Team:
-			rows, err = w.store.WaitingRepliesAnsweredByBefore(ctx, asOf, before, narrow.Seats)
-		default:
-			rows, err = w.store.WaitingRepliesBefore(ctx, asOf, before)
-		}
+		rows, err := w.store.WaitingRepliesNarrowedBefore(ctx, asOf, before, waitingNarrow(narrow))
 		if err != nil {
 			return nil, false, err
 		}
@@ -252,9 +238,18 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, narr
 	return keepWaitingCustomers(kept), cut, nil
 }
 
+// sentBySendingSystem is a message a sending system wrote that asks us nothing.
+// The stamp covers mail captured since capture wrote it. The rule itself
+// covers the rest, chat included, while the data task stamps older mail.
+func sentBySendingSystem(row activities.WaitingReply) bool {
+	machine := row.SenderIsMachine || capture.IsMachineAddress(row.Sender)
+	return machine && row.OwedVerdict != activities.OwedVerdictAsksUs
+}
+
 // keepWaitingCustomers removes repetitive incidental mail, and shows one card
 // per conversation: a conversation's unanswered requests fold into its newest,
 // which carries how many earlier ones there are and when the first arrived.
+// The store's card tail folds alike (TestTheWaitingTailIsTheFoldOfTheScan).
 // Folding is presentation only. Each request keeps its own identity and
 // settles on its own; a set-aside on the card reaches the earlier ones too
 // (activities.setReaderState).
@@ -263,7 +258,7 @@ func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingRe
 	seen := make(map[string]bool, len(rows))
 	cardOf := make(map[string]int, len(rows))
 	for _, row := range rows {
-		if capture.IsMachineAddress(row.Sender) && row.OwedVerdict != activities.OwedVerdictAsksUs {
+		if sentBySendingSystem(row) {
 			continue
 		}
 		if row.OwedVerdict == activities.OwedVerdictAsksUs && row.ThreadKey != "" {
@@ -355,4 +350,88 @@ func emailSummariesReusingPlans(
 		return err
 	})
 	return summaries, err
+}
+
+// waitingNarrow carries the lane's narrowing across in the store's vocabulary.
+func waitingNarrow(narrow attention.WaitingFor) activities.WaitingNarrow {
+	return activities.WaitingNarrow{Owner: narrow.Owner, Team: narrow.Team, Seats: narrow.Seats, Unowned: narrow.Unowned}
+}
+
+// WaitingAfter judges the next messages past a position, oldest first, and
+// draws the cards among them as the lane draws them.
+func (w attentionWaiting) WaitingAfter(
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor, after string, judge int,
+) (attention.WaitingTail, error) {
+	var from activities.WaitingPosition
+	if after != "" {
+		position, err := storekit.DecodeOpaque[activities.WaitingPosition](after)
+		if err != nil {
+			return attention.WaitingTail{}, err
+		}
+		from = position
+	}
+	read, err := w.store.WaitingCardsAfter(ctx, asOf, waitingNarrow(narrow), from, judge)
+	if err != nil {
+		return attention.WaitingTail{}, err
+	}
+	// The store drops stamped mail before its fold. Mail from before the stamp
+	// is dropped here; one sender's machine mail folds only with itself.
+	read.Cards = slices.DeleteFunc(read.Cards, sentBySendingSystem)
+	summaries, err := w.emailRows(ctx, read.Cards)
+	if err != nil {
+		return attention.WaitingTail{}, err
+	}
+	rows, err := w.asWaitingCustomers(ctx, read.Cards, summaries)
+	if err != nil {
+		return attention.WaitingTail{}, err
+	}
+	tail := attention.WaitingTail{More: read.More, Cards: make([]attention.Positioned[attention.WaitingCustomer], len(rows))}
+	for i, row := range rows {
+		position, err := storekit.EncodeOpaque(activities.WaitingPosition{At: read.Cards[i].OccurredAt, ID: read.Cards[i].ActivityID})
+		if err != nil {
+			return attention.WaitingTail{}, err
+		}
+		tail.Cards[i] = attention.Positioned[attention.WaitingCustomer]{Row: row, After: position}
+	}
+	if !read.Through.At.IsZero() {
+		if tail.Through, err = storekit.EncodeOpaque(read.Through); err != nil {
+			return attention.WaitingTail{}, err
+		}
+		tail.ThroughAt = read.Through.At
+	}
+	return tail, nil
+}
+
+// DealsWaiting names which of these deals a waiting card names, judged as the
+// tail judges its cards, machine senders included.
+func (w attentionWaiting) DealsWaiting(
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor, deals []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	cards, err := w.store.WaitingCardsOnDeals(ctx, asOf, waitingNarrow(narrow), deals)
+	if err != nil {
+		return nil, err
+	}
+	named := map[ids.UUID]bool{}
+	for _, card := range slices.DeleteFunc(cards, sentBySendingSystem) {
+		if !card.DealID.IsZero() {
+			named[card.DealID] = true
+		}
+	}
+	return named, nil
+}
+
+// CardsAmong names which of these messages are waiting cards the tail serves
+// under the narrowing, machine senders left out as the tail leaves them.
+func (w attentionWaiting) CardsAmong(
+	ctx context.Context, asOf time.Time, narrow attention.WaitingFor, messages []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	cards, err := w.store.WaitingCardsAmong(ctx, asOf, waitingNarrow(narrow), messages)
+	if err != nil {
+		return nil, err
+	}
+	served := map[ids.UUID]bool{}
+	for _, card := range slices.DeleteFunc(cards, sentBySendingSystem) {
+		served[card.ActivityID] = true
+	}
+	return served, nil
 }

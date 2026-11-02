@@ -20,13 +20,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -71,42 +67,38 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			if err != nil {
 				return err
 			}
-			deals, resolved, limited, err := ForecastDeals(ctx, tx, period, scope, at, baseCurrency)
+			assembly, err := ForecastAssemble(ctx, tx, period, scope, at, baseCurrency)
 			if err != nil {
 				return err
 			}
-			readings, err := forecasting.Compute(period, period.LocalDay(at), deals)
-			if err != nil {
-				return err
-			}
+			resolved := assembly.Scope
 			// The RESOLVED scope, so an agent is told which population the
 			// number covers rather than the blank it asked with.
-			out = forecastToolResult(period, resolved, readings, baseCurrency, at, limited)
-			mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
+			out = forecastToolResult(period, resolved, assembly.Readings, baseCurrency, at, assembly.Limited)
+			out.SelfCorrecting = &assembly.SelfCorrecting
+			if req.Contributions {
+				visible, limited, err := ForecastReaderContributions(ctx, tx, assembly.Readings.Contributions)
+				if err != nil {
+					return err
+				}
+				out.ContributionsLimited = &limited
+				if out.Contributions, err = forecastContributionsToTool(visible); err != nil {
+					return err
+				}
+			}
+			called, err := addForecastAssertions(ctx, tx, store, period, resolved, baseCurrency, &out)
 			if err != nil {
 				return err
 			}
-			if !mayAssert {
+			// The endpoint answers managed teams before it projects a landing.
+			if resolved.Kind == forecasting.ScopeManagedTeams {
 				return nil
 			}
-			refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
+			landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, called)
 			if err != nil {
 				return err
 			}
-			out.Snapshots = forecastSnapshotRefsToTool(refs)
-			call, err := store.CurrentCallTx(ctx, tx, period, resolved)
-			switch {
-			case err == nil:
-				encoded, err := json.Marshal(forecastCallToTool(call))
-				if err != nil {
-					return fmt.Errorf("compose: rendering the standing call: %w", err)
-				}
-				out.CurrentCall = encoded
-			case forecasting.IsNoStandingCall(err):
-				// Nobody has called this period. A real answer, left absent.
-			default:
-				return err
-			}
+			out.Landing = forecastLandingToTool(landing)
 			return nil
 		})
 		if err != nil {
@@ -114,6 +106,51 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 		}
 		return json.Marshal(out)
 	}
+}
+
+// addForecastAssertions adds the snapshots and the standing call, which only a
+// seat that may assert about the population sees. called is the call's amount,
+// nil when this seat sees none, as the endpoint's landing takes it.
+func addForecastAssertions(
+	ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period,
+	resolved forecasting.Scope, baseCurrency string, out *agents.ForecastReadingsResult,
+) (called *int64, err error) {
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
+	if err != nil || !mayAssert {
+		return nil, err
+	}
+	refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
+	if err != nil {
+		return nil, err
+	}
+	out.Snapshots = forecastSnapshotRefsToTool(refs)
+	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, resolved)
+	if err != nil || !seen {
+		return nil, err
+	}
+	rendered := forecastCallToTool(call)
+	if err := addCallReview(ctx, tx, rendered, call); err != nil {
+		return nil, err
+	}
+	encoded, err := json.Marshal(rendered)
+	if err != nil {
+		return nil, fmt.Errorf("compose: rendering the standing call: %w", err)
+	}
+	out.CurrentCall = encoded
+	return &call.AmountMinor, nil
+}
+
+// forecastLandingToTool is the endpoint's landing in the tool's shape.
+func forecastLandingToTool(in crmcontracts.ForecastLanding) *agents.ForecastLandingResult {
+	out := &agents.ForecastLandingResult{
+		AmountMinor: in.AmountMinor, Measure: string(in.Measure),
+		WonMinor: in.WonMinor, RemainingMinor: in.RemainingMinor, SystemMinor: in.SystemMinor,
+	}
+	if in.Caveat != nil {
+		caveat := string(*in.Caveat)
+		out.Caveat = &caveat
+	}
+	return out
 }
 
 // forecastAsOf reads the day to answer for, refusing a malformed one by name
@@ -180,6 +217,9 @@ func forecastToolResult(
 		id := scope.ID.String()
 		out.ScopeID = &id
 	}
+	if in.Range != nil {
+		out.RangeLowMinor, out.RangeHighMinor = &in.Range.LowMinor, &in.Range.HighMinor
+	}
 	if q := in.Qualified; q != nil {
 		out.Qualified = &agents.ForecastQualifiedResult{
 			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
@@ -220,6 +260,36 @@ func forecastCallToTool(call forecasting.Call) map[string]any {
 	}
 	if call.SupersedesID != nil {
 		out[fieldSupersedesID] = call.SupersedesID.String()
+	}
+	out["baseline"] = string(crmcontracts.ForecastCallBaselineUnavailable)
+	if call.HasBaseline {
+		out["baseline"] = string(crmcontracts.ForecastCallBaselineCaptured)
+	}
+	return out
+}
+
+// addCallReview adds the call's open input-check finding, read through the
+// list the review panel reads. So a model is told what a manager is told:
+// whether the pipeline moved away from the call since it was made.
+func addCallReview(ctx context.Context, tx pgx.Tx, rendered map[string]any, call forecasting.Call) error {
+	found, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: call.Scope.Kind, ID: call.Scope.ID})
+	if err != nil {
+		return err
+	}
+	for _, f := range found {
+		if f.SubjectID == call.ID {
+			rendered["review"] = map[string]any{"type": f.Type, "severity": f.Severity, "observed": decodeObserved(f.Observed)}
+		}
+	}
+	return nil
+}
+
+// decodeObserved renders a finding's stored slots for the tool, empty when
+// they do not decode.
+func decodeObserved(raw []byte) map[string]any {
+	out := map[string]any{}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return map[string]any{}
 	}
 	return out
 }
@@ -272,140 +342,6 @@ func movementToolResult(reading forecasting.Reading, in forecasting.Movement) ag
 		out.Deals = append(out.Deals, deal)
 	}
 	return out
-}
-
-// assuranceToolReader answers forecast_input_checks, through the same store the
-// endpoint reads.
-func assuranceToolReader(pool *pgxpool.Pool) agents.AssuranceReader {
-	store := assurance.NewStore(InstallationDB(pool))
-	return func(ctx context.Context) (json.RawMessage, error) {
-		run, err := store.LatestRun(ctx)
-		if err != nil {
-			return nil, err
-		}
-		coverage, err := store.CoverageFor(ctx, run.ID)
-		if err != nil {
-			return nil, err
-		}
-		out := agents.ForecastAssuranceResult{
-			RunID:         run.ID.String(),
-			AsOf:          run.AsOf.UTC().Format(time.RFC3339),
-			Status:        run.Status,
-			EligibleDeals: run.EligibleDeals,
-			// Empty, never nil: a run that recorded no coverage is a real
-			// answer, and null reads as "unknown" to a model.
-			Sources: []agents.ForecastAssuranceSourceResult{},
-		}
-		if run.Readiness != nil {
-			out.Readiness = *run.Readiness
-		}
-		if run.EligibleSignals > 0 {
-			out.EligibleSignals = run.EligibleSignals
-		}
-		for _, c := range coverage {
-			source := agents.ForecastAssuranceSourceResult{Source: c.Source, State: c.State}
-			// Only a source actually read carries a date.
-			if c.State == assurance.CoverageChecked && c.CheckedThrough != nil {
-				source.CheckedThrough = c.CheckedThrough.UTC().Format(time.RFC3339)
-			}
-			out.Sources = append(out.Sources, source)
-		}
-		return json.Marshal(out)
-	}
-}
-
-// inputChecksToolReader answers list_input_checks, through the same scoped read
-// the endpoint uses.
-//
-// The scope is what makes this safe to hand a model: the read goes through the
-// deal's own visibility, so a finding about a deal the caller cannot open never
-// reaches the tool's answer either.
-func inputChecksToolReader(pool *pgxpool.Pool) agents.InputChecksReader {
-	store := assurance.NewStore(InstallationDB(pool))
-	return func(ctx context.Context, args agents.InputChecksArgs) (json.RawMessage, error) {
-		population := assurance.Population{Kind: args.ScopeKind}
-		if args.ScopeID != "" {
-			id, err := ids.Parse(args.ScopeID)
-			if err != nil {
-				return nil, fmt.Errorf("scope_id is not a valid id: %w", apperrors.ErrInvalidArgument)
-			}
-			population.ID = &id
-		}
-		var found []assurance.Exception
-		if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-			var err error
-			found, err = AssuranceExceptionsIn(ctx, tx, population)
-			return err
-		}); err != nil {
-			return nil, err
-		}
-		// Empty, never nil: "nothing to check" is a real answer, and null reads
-		// as "unknown" to a model — which on this surface is the difference
-		// between a clean pipeline and an unread one.
-		out := agents.InputChecksResult{Data: []agents.InputCheckResult{}}
-		for _, e := range found {
-			check := agents.InputCheckResult{
-				ID: e.ID.String(), Type: e.Type, SubjectKind: e.SubjectKind,
-				SubjectID: e.SubjectID.String(), Severity: e.Severity,
-				AffectedMinor: e.AffectedMinor, Currency: e.Currency,
-				Claim:       storedSlots(e.Claim),
-				Observed:    storedSlots(e.Observed),
-				FirstSeenAt: e.FirstSeenAt.UTC().Format(time.RFC3339),
-				LastSeenAt:  e.LastSeenAt.UTC().Format(time.RFC3339),
-			}
-			out.Data = append(out.Data, check)
-		}
-		return json.Marshal(out)
-	}
-}
-
-// storedSlots passes a stored jsonb object through as it was written.
-//
-// An absent or malformed value becomes an empty OBJECT rather than null: null
-// on this surface reads as "unknown", and a model told the claim is unknown
-// would report something different from a check that recorded nothing. One
-// malformed row must also not take down a list a model is reading — the row
-// still says which deal and which check it is about.
-func storedSlots(raw []byte) json.RawMessage {
-	if len(raw) == 0 || !json.Valid(raw) {
-		return json.RawMessage(`{}`)
-	}
-	return json.RawMessage(raw)
-}
-
-// coverageToolReader answers data_coverage, through the same store the endpoint
-// reads. The grant is checked in the store's own read, so a seller reaching
-// this tool is refused by the same boundary the screen uses.
-func coverageToolReader(pool *pgxpool.Pool) agents.SourceCoverageReader {
-	store := assurance.NewStore(InstallationDB(pool))
-	return func(ctx context.Context) (json.RawMessage, error) {
-		if err := auth.Require(ctx, "data_coverage", principal.ActionRead); err != nil {
-			return nil, err
-		}
-		run, err := store.LatestRun(ctx)
-		if err != nil {
-			return nil, err
-		}
-		coverage, err := store.CoverageFor(ctx, run.ID)
-		if err != nil {
-			return nil, err
-		}
-		out := agents.DataCoverageResult{
-			RunID: run.ID.String(),
-			AsOf:  run.AsOf.UTC().Format(time.RFC3339),
-			// Empty, never nil: null reads as "unknown" to a model, which here
-			// is a different claim from "nothing was tried".
-			Sources: []agents.ForecastAssuranceSourceResult{},
-		}
-		for _, c := range coverage {
-			source := agents.ForecastAssuranceSourceResult{Source: c.Source, State: c.State}
-			if c.State == assurance.CoverageChecked && c.CheckedThrough != nil {
-				source.CheckedThrough = c.CheckedThrough.UTC().Format(time.RFC3339)
-			}
-			out.Sources = append(out.Sources, source)
-		}
-		return json.Marshal(out)
-	}
 }
 
 // forecastPeriodKind reads the window length a caller asked for.

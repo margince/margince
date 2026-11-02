@@ -214,19 +214,25 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // sits behind the grant that reads the thing being shared. Splitting them
 // across the literal and here would put half of that seam out of sight of the
 // other half.
+// newForecastHandlers is the forecast surface over its seams, every call
+// recorded through it keeping its baseline.
+func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.Handlers {
+	return forecasting.NewHandlers(
+		newForecastStoreFor(pool),
+		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
+		WithReaderRows(ForecastReaderContributions)
+}
+
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
-	s.reportingHandlers = reporting.NewHandlers(reportingService)
+	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
 	s.reportingExportHandlers = reportingExportHandlers{service: reportingService}
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
 		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
 	}
-	s.forecastHandlers = forecasting.NewHandlers(
-		newForecastStoreFor(pool),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
-		func() time.Time { return time.Now().UTC() },
-	)
+	s.forecastHandlers = newForecastHandlers(pool, func() time.Time { return time.Now().UTC() })
 	// The floor comes from the constant rather than a setting for now: one
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
@@ -235,6 +241,8 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportMetrics = reportingService
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+	s.sdrSummaryHandlers = newSdrSummaryHandlers(
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() }).withTargets(reportingService)
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),
@@ -380,6 +388,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom

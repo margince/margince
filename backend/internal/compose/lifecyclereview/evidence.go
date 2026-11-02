@@ -6,7 +6,6 @@ package lifecyclereview
 import (
 	"context"
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,12 +42,6 @@ type Finding struct {
 	Scope       string `json:"scope"`
 	Workstream  string `json:"-"`
 }
-
-// LiveStages keeps conflict cards and proposal scans on the same account boundary.
-func LiveStages() []string { return []string{"prospect", "opportunity", "customer"} }
-
-// LiveStage includes accounts whose ending still needs review.
-func LiveStage(stage string) bool { return slices.Contains(LiveStages(), stage) }
 
 // Revalidate refuses changed evidence before a lifecycle decision commits.
 func Revalidate(ctx context.Context, tx pgx.Tx, company ids.CompanyID, signalID ids.UUID, shown *Finding, now time.Time) error {
@@ -117,8 +110,8 @@ func readSignalSources(ctx context.Context, tx pgx.Tx, signal crmcontracts.Signa
 		if activity.Body == nil {
 			continue
 		}
-		proof := values.QuoteProof{Start: evidence.SourceQuote.Start, End: evidence.SourceQuote.End, SHA256: evidence.SourceQuote.Sha256}
-		quote, verified := values.VerifyQuote(textlang.CurrentMessage(*activity.Body), proof)
+		proof := QuoteProofOf(*evidence.SourceQuote)
+		quote, verified := textlang.VerifySenderQuote(*activity.Body, proof)
 		if !verified {
 			continue
 		}
@@ -137,4 +130,14 @@ func readSignalSources(ctx context.Context, tx pgx.Tx, signal crmcontracts.Signa
 		return finding, nil
 	}
 	return finding, nil
+}
+
+// QuoteProofOf is a stored quote proof as the verifier reads it. A proof with
+// no cut names the zero cut, which VerifySenderQuote reads it against.
+func QuoteProofOf(stored crmcontracts.SourceQuoteProof) values.QuoteProof {
+	proof := values.QuoteProof{Start: stored.Start, End: stored.End, SHA256: stored.Sha256}
+	if stored.Cut != nil {
+		proof.Cut = *stored.Cut
+	}
+	return proof
 }

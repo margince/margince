@@ -103,6 +103,7 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/activitycontenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/erasure.go",
 	// The per-reader brief cache, which both acts purge: the row holds
 	// generated prose about the subject and no cascade reaches it while the
@@ -238,6 +239,7 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",

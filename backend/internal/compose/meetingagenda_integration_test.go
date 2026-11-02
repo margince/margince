@@ -86,3 +86,48 @@ func TestOnlyTheInvitesOwnDescriptionAsksTheAttendeeToConfirmAgain(t *testing.T)
 		t.Errorf("the organizer's change announced %d agenda events, want one", n)
 	}
 }
+
+// captureOccurrence captures one occurrence of the weekly series the rep
+// organizes. Both syncs expand a series, so each occurrence is its own event.
+func captureOccurrence(t *testing.T, e *integration.Env, eventID string, start time.Time) ids.UUID {
+	t.Helper()
+	organizer := seatEmail(t, e.Rep1)
+	ev := meetingmap.Event{
+		ID: eventID, ICalUID: "weekly-pricing@calendar.test", Subject: "Weekly pricing", Description: "Agenda: pricing",
+		StartsAt: start, EndsAt: start.Add(time.Hour),
+		Organizer: meetingmap.Actor{Email: organizer}, Attendees: []meetingmap.Actor{{Email: "buyer@customer.test"}},
+	}
+	record := meetingmap.Classify(ev, organizer).ToRecord(integration.CalendarSystem, []byte(`{"id":"`+eventID+`"}`))
+	if _, err := movingCalendarSink(e).Upsert(calendarOwnerCtx(e, e.Rep1), record); err != nil {
+		t.Fatalf("capturing occurrence %s: %v", eventID, err)
+	}
+	var id ids.UUID
+	if err := integration.OwnerConn(t).QueryRow(context.Background(),
+		`SELECT id FROM activity WHERE source_id = $1`, eventID).Scan(&id); err != nil {
+		t.Fatalf("finding occurrence %s: %v", eventID, err)
+	}
+	return id
+}
+
+func TestTwoOccurrencesOfOneSeriesNeverShareReadiness(t *testing.T) {
+	e := integration.Setup(t)
+	thisWeek := captureOccurrence(t, e, "evt-weekly-1", laneDay.Add(2*time.Hour))
+	nextWeek := captureOccurrence(t, e, "evt-weekly-2", laneDay.AddDate(0, 0, 7).Add(2*time.Hour))
+	rep := e.As(e.Rep1, nil, integration.AdminPerms)
+	store := activities.NewStore(InstallationDB(e.Pool))
+
+	ready := agendaPreparation(rep, t, store, thisWeek)
+	if _, err := store.ConfirmMeetingReady(rep, ids.From[ids.ActivityKind](thisWeek), ready.Revision); err != nil {
+		t.Fatalf("confirming this week's occurrence: %v", err)
+	}
+
+	if got := agendaPreparation(rep, t, store, thisWeek); !got.Ready {
+		t.Errorf("this week's occurrence reads %+v after the rep confirmed it", got)
+	}
+	if got := agendaPreparation(rep, t, store, nextWeek); got.Ready || len(got.Changed) != 0 {
+		t.Errorf("next week's occurrence reads %+v, want never confirmed with nothing changed", got)
+	}
+	if _, err := store.ConfirmMeetingReady(rep, ids.From[ids.ActivityKind](nextWeek), ready.Revision); err == nil {
+		t.Error("this week's revision confirmed next week's occurrence")
+	}
+}

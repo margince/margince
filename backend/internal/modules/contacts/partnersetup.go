@@ -33,12 +33,17 @@ func (e *PartnerAlreadySetUpError) MessageFault() (code, message string) {
 }
 
 // CheckPartnerSetUp answers whether the caller could set up a partner program
-// on the company now. The agent path asks it before staging an approval.
-// UpsertPartner asks it again under the company lock. A program set up by a
-// human while the approval waited is then refused at the write.
-func (s *Store) CheckPartnerSetUp(ctx context.Context, companyID ids.CompanyID) error {
+// on the company now, starting on stage (nil for the first candidate stage).
+// The agent path asks it before staging an approval. UpsertPartner asks it
+// again under the company lock. A program set up by a human while the approval
+// waited, or a stage retired meanwhile, is then refused at the write.
+func (s *Store) CheckPartnerSetUp(ctx context.Context, companyID ids.CompanyID, stage *string) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return checkPartnerSetUp(ctx, tx, companyID)
+		if err := checkPartnerSetUp(ctx, tx, companyID); err != nil {
+			return err
+		}
+		_, err := resolvePartnerStage(ctx, tx, UpsertPartnerInput{CompanyID: companyID, RelationshipStage: stage, MustCreate: true})
+		return err
 	})
 }
 
@@ -79,7 +84,8 @@ func requireMarginTierGrant(ctx context.Context, in UpsertPartnerInput) error {
 // asFreshProgram makes a set-up start from the column defaults even when it
 // revives an archived row. That means no margin tier, no gate metrics, no
 // served segments and certification "applied". Terms the caller sent stay.
-// The rest must not carry over from a program a human once approved.
+// The rest must not carry over from a program a human once approved. The
+// stage is resolvePartnerStage's: without one, the first active candidate stage.
 func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
 	cleared := slices.Clone(in.Cleared)
 	cleared = append(cleared, partnerFieldMarginTier)
@@ -98,9 +104,6 @@ func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
 	in.Cleared = cleared
 	if in.CertStatus == nil {
 		in.CertStatus = new("applied")
-	}
-	if in.RelationshipStage == nil {
-		in.RelationshipStage = new("research")
 	}
 	return in
 }

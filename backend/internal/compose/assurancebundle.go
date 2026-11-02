@@ -175,8 +175,8 @@ func bundleableFindings(
 		   AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
 		                    WHERE r.exception_id = e.id
 		                      AND r.outcome = $2
-		                      AND r.remind_at > now())
-		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater)
+		                      AND `+assurance.LiveRemindAtSQL("r", "$3")+` > now())
+		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater, assurance.MaxSuppressionDays())
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the findings to bundle: %w", err)
 	}

@@ -83,6 +83,9 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err
@@ -324,7 +327,7 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 func readCompanyMergeState(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (crmcontracts.Company, *ids.UUID, error) {
 	// A merge-state read feeds the resolution decision, never the wire —
 	// core columns suffice.
-	o, err := readCompany(ctx, tx, id, storekit.IncludeArchived, nil)
+	o, err := readCompanyRow(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
 		return crmcontracts.Company{}, nil, err
 	}

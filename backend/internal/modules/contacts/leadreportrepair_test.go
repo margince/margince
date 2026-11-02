@@ -13,7 +13,7 @@ func TestStepDownFollowsTheRemainingTouchesAndOnlyForASystemPlacedStatus(t *test
 	system, human := "system", "human"
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	outbound := leadResponseTouch{direction: "outbound", capturedBy: "human:rep", occurredAt: at}
-	reply := leadResponseTouch{direction: "inbound", occurredAt: at}
+	reply := leadResponseTouch{direction: "inbound", occurredAt: at, currentWhenCaptured: true}
 
 	for _, c := range []struct {
 		name    string

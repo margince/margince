@@ -162,7 +162,7 @@ func (s *Service) liveApprovalForCallInTx(ctx context.Context, tx pgx.Tx, in Sta
 	var undecided ids.ApprovalID
 	for _, c := range candidates {
 		if c.Status == statusPending {
-			stale, err := withdrawStalePendingInTx(ctx, tx, c.ID)
+			stale, err := s.withdrawStalePendingInTx(ctx, tx, c.ID)
 			if err != nil {
 				return liveAuthority{}, false, err
 			}
@@ -216,7 +216,7 @@ func (s *Service) redeemableNowInTx(ctx context.Context, tx pgx.Tx, a row, p pri
 		}
 		return false, err
 	}
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
 		}

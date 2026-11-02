@@ -34,9 +34,11 @@ type SARPackage struct {
 	// ReportingQuestionAnswers are the kept question answer rows a record
 	// about the subject was counted in.
 	ReportingQuestionAnswers []map[string]any `json:"reporting_question_answers"`
-	Subject                  map[string]any   `json:"subject"`
-	Emails                   []map[string]any `json:"emails"`
-	Phones                   []map[string]any `json:"phones"`
+	// ReportingQuestionBindings are kept report card filters naming the subject.
+	ReportingQuestionBindings []map[string]any `json:"reporting_question_bindings"`
+	Subject                   map[string]any   `json:"subject"`
+	Emails                    []map[string]any `json:"emails"`
+	Phones                    []map[string]any `json:"phones"`
 	// The messaging-channel accounts bound to the subject: which provider
 	// identity writes as them, the handle it carries, whether they have blocked
 	// this installation's bot, and whether the binding is still live.

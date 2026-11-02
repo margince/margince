@@ -269,6 +269,7 @@ function reportSections(
           <ScorecardPanel
             scorecard={review.scorecard}
             weekStart={review.local_week_start}
+            meetingsWithheld={review.meetings_withheld}
           />
           <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
         </>

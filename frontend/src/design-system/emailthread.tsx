@@ -299,6 +299,14 @@ const TEXT_NOTICES = {
   unreadable: "email.thread.textUnreadable",
   forwarded: "email.thread.textForwarded",
   unassessed: "email.thread.textUnassessed",
+  unverifiable: "email.thread.textUnverifiable",
+} as const;
+
+const TEXT_HINTS = {
+  partial: "email.thread.textUnreadableHint",
+  unreadable: "email.thread.textUnreadableHint",
+  unassessed: "email.thread.textUnassessedHint",
+  unverifiable: "email.thread.textUnverifiableHint",
 } as const;
 
 function TextNotice({
@@ -311,17 +319,14 @@ function TextNotice({
   if (
     completeness !== "partial" &&
     completeness !== "unreadable" &&
-    completeness !== "unassessed"
+    completeness !== "unassessed" &&
+    completeness !== "unverifiable"
   ) {
     return null;
   }
   return (
     <Callout kind="standing" title={t(TEXT_NOTICES[completeness])}>
-      {t(
-        completeness === "unassessed"
-          ? "email.thread.textUnassessedHint"
-          : "email.thread.textUnreadableHint",
-      )}
+      {t(TEXT_HINTS[completeness])}
     </Callout>
   );
 }

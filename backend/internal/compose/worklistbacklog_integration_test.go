@@ -33,6 +33,10 @@ func backlogTasks(t *testing.T, r reminderEnv) {
 	write(&r.e.Rep2, "Rep2 due", plannedCapForTest+3, overdue)
 	write(&r.e.Rep3, "Rep3 due", 5, overdue)
 	write(nil, "Nobody due", 3, overdue)
+	finished := r.task(t, "Rep2 finished", overdue(0), nil, &r.e.Rep2)
+	if done, err := r.e.Activities.CompleteTask(r.e.Admin(), finished, time.Now()); err != nil || !done {
+		t.Fatalf("completing a task: done %v, %v", done, err)
+	}
 	// Due in a week, reminded now: today's work on Rep1's own page only.
 	remind := r.now.Add(-time.Hour)
 	r.task(t, "Rep1 reminded", r.now.AddDate(0, 0, 5), &remind, &r.e.Rep1)
@@ -93,8 +97,8 @@ func totalOf(day crmcontracts.Worklist, category crmcontracts.WorklistCountCateg
 }
 
 // Each task category's exact total is the number of task rows the list holds
-// when walked to its end. The walk reaches every task in every scope. A team
-// page and the all scope state no task total, and say so as a floor.
+// when walked to its end. The walk reaches every task in every scope. The all
+// scope states no today total, and says so as a floor.
 func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 	r := setupReminders(t)
 	backlogTasks(t, r)
@@ -105,13 +109,14 @@ func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 		owner           ids.UUID
 		tasks, upcoming int
 		// stated says which totals the page states. The all scope withholds
-		// the weekly plans, whose rows are tasks too; a team page counts nothing.
+		// the weekly plans, whose rows are tasks too. A team page counts its
+		// roster and nobody's tasks, without Rep3 on Team2.
 		tasksStated, upcomingStated bool
 	}{
 		// The reminded task is today's work for its holder alone.
 		{"mine", "mine", rep1, ids.Nil, 21, 8, true, true},
 		{"named owner", "mine", r.e.Admin(), r.e.Rep1, 20, 9, true, true},
-		{"team", "team", rep1, ids.Nil, 38, 9, false, false},
+		{"team", "team", rep1, ids.Nil, 38, 9, true, true},
 		{"all", "all", r.e.Admin(), ids.Nil, 43, 9, false, true},
 	}
 	for _, check := range checks {

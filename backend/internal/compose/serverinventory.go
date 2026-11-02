@@ -120,6 +120,7 @@ type Server struct {
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
 	claimHandlers
+	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
 	importHandlers
@@ -197,6 +198,7 @@ type Server struct {
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
 	analyticsContextHandlers
+	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and
@@ -237,6 +239,8 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
+	// mcpInputStateKey signs the questions a tool asks in the chat.
+	mcpInputStateKey string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no

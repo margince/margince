@@ -21,6 +21,7 @@ import { formatCountdown, useNow } from "../../format/now";
 import type { Locale, Translator } from "../../i18n";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { editedCommercialPreview } from "../../lib/approvalpreview";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import {
   type Approval,
   invalidateApprovalViews,
@@ -136,6 +137,7 @@ function rowLabels(t: Translator): DecisionCardLabels {
     draftBody: t("decision.draftBody"),
     noContent: t("common.empty"),
     loading: t("decision.detailLoading"),
+    summaryWords: summaryWords(t),
   };
 }
 

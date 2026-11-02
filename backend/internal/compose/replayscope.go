@@ -262,13 +262,14 @@ var replayableOperations = map[string]replayTarget{
 	},
 	// The reopen answers the lead it put back, keyed on the same row the
 	// disqualify it reverses was keyed on.
-	"POST /v1/leads/{id}/reopen":        {object: tableLead, table: tableLead, idPath: "id"},
-	"POST /v1/activities":               {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/tasks":                    {object: tableActivity, table: tableActivity, idPath: "id"},
-	"PATCH /v1/activities/{id}":         {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/activities/{id}/relink":   {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/activities/relink-thread": {object: tableActivity, rowNote: "the response is a count, not a record: every row moved was gated on the caller's write authority when it ran, and a replay hands back the number alone"},
-	"POST /v1/activities/relink-bulk":   {object: tableActivity, rowNote: "the response is a count, not a record: every named row was gated on the caller's sight and write authority when it ran, or nothing moved at all"},
+	"POST /v1/leads/{id}/reopen":             {object: tableLead, table: tableLead, idPath: "id"},
+	"POST /v1/leads/{id}/partner-acceptance": {object: tableLead, table: tableLead, idPath: "id"},
+	"POST /v1/activities":                    {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/tasks":                         {object: tableActivity, table: tableActivity, idPath: "id"},
+	"PATCH /v1/activities/{id}":              {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/activities/{id}/relink":        {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/activities/relink-thread":      {object: tableActivity, rowNote: "the response is a count, not a record: every row moved was gated on the caller's write authority when it ran, and a replay hands back the number alone"},
+	"POST /v1/activities/relink-bulk":        {object: tableActivity, rowNote: "the response is a count, not a record: every named row was gated on the caller's sight and write authority when it ran, or nothing moved at all"},
 	// A send answers its outbound ACTIVITY when it went now, and its SCHEDULED
 	// SEND when the caller asked for it later — different tables behind the
 	// same "id". scheduled_at is the discriminator because only the second
@@ -394,6 +395,16 @@ var replayableOperations = map[string]replayTarget{
 		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on company/deal/project",
 		tableField: "record_type", idPath: "record_id",
 	},
+	// A handover request answers the request and names the record it asks for,
+	// so a replay re-probes that record as the assignment routes do.
+	"POST /v1/records/{record_type}/{id}/ownership-request": {
+		objectNote: "authority is the record's own — auth.Require update plus auth.EnsureVisibleLive when the request is filed",
+		tableField: "record_type", idPath: "record_id",
+	},
+	"POST /v1/records/{record_type}/{id}/ownership-offer": {
+		objectNote: "authority is the record's own — auth.HoldWritableLive and the caller as owner when the offer is filed",
+		tableField: "record_type", idPath: "record_id",
+	},
 	"PATCH /v1/assignments/{id}": {
 		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on the stored parent",
 		tableField: "record_type", idPath: "record_id",
@@ -410,7 +421,14 @@ var replayableOperations = map[string]replayTarget{
 	"PATCH /v1/lead-sources/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
-	"POST /v1/record-roles":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/loss-reasons":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"POST /v1/partner-stages":            {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/partner-stages/{id}":      {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/loss-reasons/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PUT /v1/loss-reasons/legacy/{text_hash}": {
+		object: objectCustomField, rowNote: "a mapping is workspace config keyed by a note's hash: it names no deal and has no owner column",
+	},
+	"POST /v1/record-roles": {object: objectCustomField, rowNote: noOwnerCatalog},
 	// A health assessment hangs on the project and has no owner of its own, so
 	// the row a replay must re-probe is the PROJECT: telling somebody how a
 	// delivery is going is something to say only to a caller who may still open

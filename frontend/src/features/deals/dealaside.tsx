@@ -14,7 +14,7 @@ import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { provenanceLabel } from "../../design-system/provenance";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -22,7 +22,7 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
-import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -311,12 +311,15 @@ function registrationRows(
       "source",
       "deal.recordedBy",
       provenanceLabel(
-        provenanceOf(
-          deal.captured_by,
-          reads.viewerId,
-          deal.author,
-          deal.source,
-          deal.imported_from,
+        withCreator(
+          provenanceOf(
+            deal.captured_by,
+            reads.viewerId,
+            deal.author,
+            deal.source,
+            deal.imported_from,
+          ),
+          deal.created_by,
         ),
         t,
         undefined,
@@ -423,7 +426,7 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const name = company?.display_name;
   const stage =
     company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(COMPANY_LIFECYCLE_LABELS[company.lifecycle])
+      ? t(LIFECYCLE_LABELS[company.lifecycle])
       : undefined;
   const facts = [
     stage,

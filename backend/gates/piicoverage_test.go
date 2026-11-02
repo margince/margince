@@ -116,10 +116,14 @@ type piiHandling struct {
 var piiTables = map[string]piiHandling{
 	"report_edition":              {erasureWrite: true, sarRead: true},
 	"report_edition_contribution": {erasureWrite: true, sarRead: true},
-	"contact":                     {erasureWrite: true, sarRead: true},
-	"contact_email":               {erasureWrite: true, sarRead: true},
-	"contact_social":              {erasureWrite: true, sarRead: true},
-	"contact_phone":               {erasureWrite: true, sarRead: true},
+	// A report card's kept question holds its filters, and a filter value can
+	// be a subject's id or address. Erasure removes the kept question that
+	// names one; Art. 15 hands back the filters that name the subject.
+	"report_definition_revision": {erasureWrite: true, sarRead: true},
+	"contact":                    {erasureWrite: true, sarRead: true},
+	"contact_email":              {erasureWrite: true, sarRead: true},
+	"contact_social":             {erasureWrite: true, sarRead: true},
+	"contact_phone":              {erasureWrite: true, sarRead: true},
 	// The channel identity binds a human to their Telegram account: the
 	// provider's user id for them plus the @username they message under. Both
 	// identify the subject as directly as an address does, and the id is the
@@ -502,6 +506,7 @@ var piiTables = map[string]piiHandling{
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
 	// What this installation CONCLUDED about the subject's correspondence —

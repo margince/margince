@@ -192,7 +192,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterAssuranceTool(r, nil)
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
-	RegisterIntentTools(r, inertRetriever{}, nil, nil, inertLifecycle{})
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, inertLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
@@ -287,7 +287,7 @@ func (inertLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.Ra
 	return nil, nil
 }
 
-func (inertLifecycle) Check(context.Context, ids.UUID) error { return nil }
+func (inertLifecycle) Check(context.Context, ids.UUID, *string) error { return nil }
 
 func (inertLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
 	return nil, nil

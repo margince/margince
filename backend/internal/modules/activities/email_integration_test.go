@@ -177,6 +177,9 @@ func (e *sendEnv) as(scope principal.RowScope) context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
 				"contact":  {Read: true},
+				// A send started from an account page is read back with its
+				// company link, which a caller is told only under company read.
+				"company": {Read: true},
 			},
 			RowScope: scope,
 		},

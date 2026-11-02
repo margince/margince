@@ -13,7 +13,10 @@
 
 import { type ReactNode, useState } from "react";
 
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
 import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
@@ -23,7 +26,7 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
+import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
   AUDIENCE_CHOICES,
@@ -158,6 +161,12 @@ export function TimelineActions(props: RowVerbProps) {
             entityId={entityId}
           />
         )}
+        {/* Last, farthest from the press that opened the menu. */}
+        <ActivityArchiveAction
+          activity={activity}
+          entityType={entityType}
+          entityId={entityId}
+        />
       </OverflowMenu>
     </>
   );
@@ -195,6 +204,43 @@ function RelinkAction({
         onClose={() => setOpen(false)}
       />
     </>
+  );
+}
+
+// ActivityArchiveAction takes one row off the History. The server says per row
+// whether this reader may: a delete grant, or a note or task they wrote.
+function ActivityArchiveAction({
+  activity,
+  entityType,
+  entityId,
+}: Readonly<{
+  activity: Activity;
+  entityType: RelinkKind;
+  entityId: string;
+}>) {
+  const t = useT();
+  return (
+    <ArchiveAction
+      requires={{ object: "activity", action: "delete" }}
+      archivable={activity.archivable ?? false}
+      refusedReason={t("activity.archiveRefused")}
+      label={t("activity.archive")}
+      confirmText={t("activity.archiveConfirm")}
+      archivedMessage={t("activity.archiveDone")}
+      archive={async () =>
+        unwrap(
+          await api.DELETE("/activities/{id}", {
+            params: {
+              path: { id: activity.id },
+              ...ifMatch(requireVersion(activity.version)),
+            },
+          }),
+        )
+      }
+      invalidate={entityTimelineKeys(entityType, entityId)}
+      recordKey="activity"
+      onArchived={() => undefined}
+    />
   );
 }
 

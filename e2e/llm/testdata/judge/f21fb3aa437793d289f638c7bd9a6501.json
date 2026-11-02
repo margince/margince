@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer provides a link to a deal page (/#/deals/...) and explicitly identifies it as the Körber Sensorik Rollout deal.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer gives a link whose path is a deal's page in the app and says it is the Körber Sensorik Rollout deal. Answer no if it gives no link, gives a link that is not a deal page, or names a different deal.",
+  "answer": "The Körber Sensorik Rollout deal is here: http://localhost:8084/#/deals/3f2b8c1e-5a7d-4e90-9b1c-2d4f6a8e0c13"
+}

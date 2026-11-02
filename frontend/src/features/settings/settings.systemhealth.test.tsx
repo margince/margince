@@ -3,235 +3,322 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { stubClipboard } from "../../design-system/clipboard-testing";
+import { meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SystemHealthPage } from "./settings.systemhealth";
+import { attentionReport, healthReport } from "./systemhealth.fixtures";
 
-const OPERATOR: GrantSpec = {
-  job_health: ["read"],
-  ai_diagnostics: ["read"],
-  embedding_reindex: ["read", "update"],
-  installation_settings: ["read", "update"],
-};
-
-const CLEAN: Record<string, unknown> = {
-  "/me": meFixture({ roles: ["admin"], allow: OPERATOR }),
-  "/embeddings/reindex/status": {
-    status: "idle",
-    reindex_needed: false,
-    entities_pending: 0,
-    configured_identity: "embed-v1",
-    populated_identity: "embed-v1",
-    updated_at: "2026-10-14T09:00:00Z",
-  },
-  "/admin/job-health": {
-    generated_at: "2026-10-14T09:31:00Z",
-    dead_window_hours: 24,
-    kinds: [],
-    recent_failures: [],
-  },
-  "/admin/extension-ingest-health": {
-    generated_at: "2026-10-14T09:30:00Z",
-    window_days: 7,
-    units: [],
-  },
-  "/ai/provider-health": { providers: [], configured: ["anthropic"] },
-  "/admin/capture-health": {
-    generated_at: "2026-10-14T09:32:00Z",
-    mailboxes: [],
-    classifier: { pending: 0, unsure: 0, exhausted: 0 },
-    held_meetings: { count: 0 },
-    sweeps: [],
-  },
-  "/admin/automatic-work-health": {
-    generated_at: "2026-10-14T09:33:00Z",
-    days: 7,
-    first_day: "2026-10-08",
-    last_day: "2026-10-14",
-    share_threshold: 0.1,
-    small_sample_below: 10,
-    kinds: [],
-    colleagues: [],
-    unattributed: 0,
-  },
-  "/admin/recovery-health": {
-    generated_at: "2026-10-14T09:33:00Z",
-    recovery_target_seconds: 14_400,
-    data_loss_target_seconds: 3_600,
-    last_drill: null,
-  },
-  "/installation/settings": { operations: defaultOperations },
-};
-
-function stubRoutes(overrides: Record<string, unknown> = {}) {
-  const routes = { ...CLEAN, ...overrides };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = new URL(
+type Report = components["schemas"]["SystemHealth"];
+function stub(report: Report = healthReport) {
+  const fetcher = vi.fn(
+    async (input: RequestInfo | URL, _init?: RequestInit) => {
+      const path = new URL(
         input instanceof Request ? input.url : String(input),
         "https://test.local",
-      );
-      const path = url.pathname.replace(/^\/v1/, "");
-      return jsonResponse(routes[path] ?? {});
-    }),
+      ).pathname.replace(/^\/v1/, "");
+      if (path === "/me")
+        return jsonResponse(
+          meFixture({
+            roles: ["admin"],
+            allow: {
+              job_health: ["read"],
+              embedding_reindex: ["read"],
+              data_task: ["read"],
+              installation_settings: ["read", "update"],
+            },
+          }),
+        );
+      if (path === "/admin/system-health") return jsonResponse(report);
+      if (path === "/admin/job-health")
+        return jsonResponse({ generated_at: report.generated_at, kinds: [] });
+      if (path === "/admin/job-health/history")
+        return jsonResponse({
+          coverage: "retained_only",
+          groups: [],
+          runs: [
+            {
+              job_id: 4711,
+              kind: "capture_classify",
+              state: "discarded",
+              attempt: 3,
+              max_attempts: 3,
+              failure_class: "provider_unavailable",
+              reason: "Provider unavailable",
+            },
+          ],
+          has_more: false,
+        });
+      if (path === "/installation/settings")
+        return jsonResponse({ operations: defaultOperations });
+      return jsonResponse({});
+    },
   );
+  vi.stubGlobal("fetch", fetcher);
+  return fetcher;
 }
-
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-10-14T10:00:00Z"));
-});
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  vi.useRealTimers();
 });
 
-const strip = () => screen.findByRole("region", { name: "Status" });
-
-it("answers each clean reading in its slot and draws no card for it", async () => {
-  stubRoutes();
+it("loads only the compact overview and leaves detail reads lazy", async () => {
+  const fetcher = stub();
   render(<SystemHealthPage />);
-
-  const row = await strip();
-  expect(await within(row).findByText("Up to date")).toBeInTheDocument();
-  expect(await within(row).findByText("Idle")).toBeInTheDocument();
-  expect(await within(row).findByText("None")).toBeInTheDocument();
-  expect(await within(row).findByText("Answering")).toBeInTheDocument();
-  for (const title of [
-    "Search index",
-    "Background jobs",
-    "Refused connector records",
-    "AI provider status",
-  ]) {
-    expect(screen.queryByRole("heading", { name: title })).toBeNull();
-  }
-  // The reports without a slot keep their cards.
   expect(
-    screen.getByRole("heading", { name: "Mail capture checks" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole("heading", { name: "Restore drills" }),
-  ).toBeInTheDocument();
-});
-
-it("dates the page once, by the stalest report it read", async () => {
-  stubRoutes();
-  render(<SystemHealthPage />);
-
-  await strip();
-  const stalest = formatDateTime("2026-10-14T09:30:00Z", "en", viewerZone());
-  expect(await screen.findByText(`As of ${stalest}`)).toBeInTheDocument();
-  expect(screen.getAllByText(/^As of /)).toHaveLength(1);
-});
-
-it("dates a report that carries no stamp by when it was read", async () => {
-  vi.setSystemTime(new Date("2026-10-14T09:00:00Z"));
-  stubRoutes();
-  render(<SystemHealthPage />);
-
-  await strip();
-  const read = formatDateTime("2026-10-14T09:00:00Z", "en", viewerZone());
-  expect(await screen.findByText(`As of ${read}`)).toBeInTheDocument();
-});
-
-it("says a malformed provider report could not be checked, and keeps the page", async () => {
-  stubRoutes({ "/ai/provider-health": { providers: null } });
-  render(<SystemHealthPage />);
-
-  const row = await strip();
-  expect(await within(row).findByText("Could not check")).toBeInTheDocument();
-  expect(within(row).getByText("Up to date")).toBeInTheDocument();
-  expect(
-    await screen.findByRole("region", { name: "AI provider status" }),
-  ).toBeInTheDocument();
-});
-
-it("brings a reading's card back under the row once it finds something", async () => {
-  stubRoutes({
-    "/admin/job-health": {
-      generated_at: "2026-10-14T09:31:00Z",
-      dead_window_hours: 24,
-      kinds: [
-        {
-          kind: "webhook_retry",
-          queue: "default",
-          fleet_wide: false,
-          waiting: 0,
-          running: 0,
-          retrying: 0,
-          dead: 2,
-          dead_recent: 2,
-          oldest_waiting_age_seconds: null,
-        },
-      ],
-      recent_failures: [],
-    },
-  });
-  render(<SystemHealthPage />);
-
-  expect(await within(await strip()).findByText("2 dead")).toBeInTheDocument();
-  expect(
-    await screen.findByRole("heading", { name: "Background jobs" }),
-  ).toBeInTheDocument();
-});
-
-it("gives a withheld report no slot and keeps its card saying why", async () => {
-  stubRoutes({
-    "/me": meFixture({
-      roles: ["ops"],
-      allow: { embedding_reindex: ["read"], ai_diagnostics: ["read"] },
+    await screen.findByRole("heading", {
+      name: "Health could not be fully checked",
     }),
+  ).toBeInTheDocument();
+  const paths = fetcher.mock.calls.map(([request]) =>
+    String(request instanceof Request ? request.url : request),
+  );
+  expect(paths.some((path) => path.includes("/admin/system-health"))).toBe(
+    true,
+  );
+  expect(
+    paths.some((path) =>
+      /job-health|capture-health|automatic-work|recovery-health|installation\/settings/.test(
+        path,
+      ),
+    ),
+  ).toBe(false);
+});
+
+it("shows actionable findings and keeps supporting facts behind a click", async () => {
+  const user = userEvent.setup();
+  stub(attentionReport);
+  render(<SystemHealthPage />);
+  expect(
+    await screen.findByRole("heading", { name: "Attention needed" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Some evidence is missing/)).toBeNull();
+  const panel = screen
+    .getByRole("heading", {
+      name: "Background work is delayed",
+    })
+    .closest("section");
+  expect(panel).not.toBeNull();
+  if (!panel) throw new Error("finding panel missing");
+  expect(within(panel).queryByText("12 runs")).not.toBeVisible();
+  await user.click(within(panel).getByText("Technical details"));
+  expect(within(panel).getByText("12 runs")).toBeInTheDocument();
+  expect(within(panel).getByText("Technical operator")).toBeInTheDocument();
+  expect(
+    within(panel).getByRole("button", { name: "Copy technical report" }),
+  ).toBeInTheDocument();
+});
+
+it("opens configuration without requesting a health report", async () => {
+  const fetcher = stub();
+  render(<SystemHealthPage view="configuration" />);
+  expect(
+    await screen.findByRole("heading", { name: "Background schedules" }),
+  ).toBeInTheDocument();
+  expect(
+    fetcher.mock.calls.some(([r]) =>
+      String(r instanceof Request ? r.url : r).includes("/admin/system-health"),
+    ),
+  ).toBe(false);
+});
+
+it("copies safe evidence without sending a message", async () => {
+  const user = userEvent.setup();
+  const clipboard = stubClipboard("accepts");
+  const fetcher = stub(attentionReport);
+  render(<SystemHealthPage />);
+  await user.click(await screen.findByText("Technical details"));
+  await user.click(
+    screen.getByRole("button", { name: "Copy technical report" }),
+  );
+  await waitFor(() => expect(clipboard.written).toHaveLength(1));
+  const copied = JSON.parse(clipboard.written[0]);
+  expect(copied.source).toBe("jobs");
+  expect(copied.queues).toEqual([]);
+  expect(copied.history.runs[0]).toMatchObject({
+    job_id: 4711,
+    attempt: 3,
+    failure_class: "provider_unavailable",
+  });
+  expect(
+    fetcher.mock.calls.every(
+      ([, init]) => !init?.method || init.method === "GET",
+    ),
+  ).toBe(true);
+});
+
+it("withholds source conditions and counts without permission", async () => {
+  const user = userEvent.setup();
+  stub({
+    ...healthReport,
+    sources: [
+      {
+        id: "jobs",
+        permission: "job_health:read",
+        scope: "workspace",
+        condition: "unknown",
+        code: "withheld",
+        availability: "withheld",
+      },
+    ],
   });
   render(<SystemHealthPage />);
+  await screen.findByRole("heading", {
+    name: "Health could not be fully checked",
+  });
+  await user.click(screen.getByText("All checks"));
+  expect(screen.queryByText(/Permission required/)).toBeNull();
+  expect(screen.queryByText(/Background jobs/)).toBeNull();
+});
 
-  const row = await strip();
-  expect(await within(row).findByText("Up to date")).toBeInTheDocument();
-  expect(within(row).queryByText("Background jobs")).toBeNull();
+it("leaves automatic retries out of the action list", async () => {
+  stub({
+    ...healthReport,
+    findings: [
+      {
+        ...attentionReport.findings[0],
+        id: "normal-retry",
+        source: "jobs",
+        code: "queue_retrying",
+        condition: "retrying",
+        requires_action: false,
+      },
+    ],
+  });
+  render(<SystemHealthPage />);
+  await screen.findByRole("heading", {
+    name: "Health could not be fully checked",
+  });
+  expect(
+    screen.queryByRole("heading", {
+      name: "Failed work is waiting for another attempt",
+    }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "See problem and next step" }),
+  ).toBeNull();
+});
+
+it("explains the installation effect of stopped mail sorting without claiming mail delivery stopped", async () => {
+  stub({
+    ...attentionReport,
+    findings: [
+      {
+        ...attentionReport.findings[0],
+        id: "sorting",
+        source: "jobs",
+        code: "queue_unverified",
+        condition: "unverified",
+        requires_action: true,
+        job_kinds: ["capture_classify"],
+      },
+    ],
+  });
+  render(<SystemHealthPage />);
+  await screen.findByRole("heading", {
+    name: "Mail sorting: failed runs need review",
+  });
+  expect(
+    screen.getByText(
+      /In Worklist, emails that need a reply or a meeting follow-up/,
+    ),
+  ).toBeVisible();
+  expect(screen.getByText(/Check your inbox manually/)).toBeVisible();
+  expect(
+    screen.getByText(/You can still receive and read email/),
+  ).toBeVisible();
+});
+it("names the missing check instead of a vague evidence status", async () => {
+  const user = userEvent.setup();
+  stub();
+  render(<SystemHealthPage />);
+  await user.click(await screen.findByText("All checks"));
+  expect(screen.getAllByText("No restore test recorded")[0]).toBeVisible();
+  expect(screen.queryByText("Not enough evidence")).toBeNull();
+});
+
+it("limits a partial capture check to the categories it actually read", async () => {
+  const user = userEvent.setup();
+  stub({
+    ...healthReport,
+    sources: [
+      {
+        id: "capture",
+        permission: "job_health:read",
+        scope: "workspace",
+        availability: "unknown",
+        condition: "clear",
+        code: "capture_checked",
+        observed_at: healthReport.generated_at,
+      },
+    ],
+  });
+  render(<SystemHealthPage />);
+  await user.click(await screen.findByText("All checks"));
+  expect(screen.getByText(/Mail capture/)).toHaveTextContent(
+    "No capture backlog detected in checked categories",
+  );
+  expect(screen.queryByText("Working normally")).toBeNull();
+});
+
+it("shows what a successful refusal check established about connector activity", async () => {
+  const user = userEvent.setup();
+  stub({
+    ...healthReport,
+    sources: [
+      {
+        id: "intake",
+        permission: "job_health:read",
+        scope: "workspace",
+        availability: "available",
+        condition: "clear",
+        code: "intake_no_refusals",
+        observed_at: healthReport.generated_at,
+      },
+    ],
+  });
+  render(<SystemHealthPage />);
+  await user.click(await screen.findByText("All checks"));
+  expect(screen.getByText(/Connector intake/)).toHaveTextContent(
+    "activity is not verified",
+  );
+  expect(screen.queryByText("Working normally")).toBeNull();
+});
+
+it("does not assume rejected imports are still missing after a possible later success", async () => {
+  stub({
+    ...attentionReport,
+    action_count: 1,
+    sources: healthReport.sources.map((source) =>
+      source.id === "intake"
+        ? { ...source, condition: "technical", code: "intake_refused" }
+        : source,
+    ),
+    findings: [
+      {
+        ...attentionReport.findings[0],
+        id: "intake:refused",
+        source: "intake",
+        code: "intake_refused",
+        condition: "technical",
+        requires_action: true,
+        count: 3,
+        unit: "records",
+      },
+    ],
+  });
+  render(<SystemHealthPage />);
   expect(
     await screen.findByText(
-      /background job health covers the whole installation/i,
+      /CRM records and reports may be missing information/,
     ),
-  ).toBeInTheDocument();
-  // Dated by the reads this reader holds, never by a withheld report.
-  const read = formatDateTime("2026-10-14T10:00:00Z", "en", viewerZone());
-  expect(await screen.findByText(`As of ${read}`)).toBeInTheDocument();
-});
-
-it("keeps a failed reading's card in place while it asks again", async () => {
-  stubRoutes();
-  const answered = vi.mocked(fetch).getMockImplementation();
-  const intakeCalls = vi.fn();
-  vi.mocked(fetch).mockImplementation(async (input, init) => {
-    const url = input instanceof Request ? input.url : String(input);
-    if (url.includes("/admin/extension-ingest-health")) {
-      intakeCalls();
-      return jsonResponse({ code: "internal", message: "Down." }, 500);
-    }
-    return answered ? answered(input, init) : jsonResponse({});
-  });
-  render(<SystemHealthPage />);
-
+  ).toBeVisible();
   expect(
-    await within(await strip()).findByText("Could not check"),
-  ).toBeInTheDocument();
-  const card = await screen.findByRole("region", {
-    name: "Refused connector records",
-  });
-  expect(
-    await within(card).findByRole("button", { name: /retry/i }),
-  ).toBeInTheDocument();
-  // The card's mount asks once more. A card that hid during that read would
-  // mount again and ask forever.
-  await waitFor(() => expect(intakeCalls).toHaveBeenCalledTimes(2));
-  await act(async () => {});
-  expect(intakeCalls).toHaveBeenCalledTimes(2);
+    screen.getByText(/imported successfully later before resubmitting/),
+  ).toBeVisible();
 });

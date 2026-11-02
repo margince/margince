@@ -22,6 +22,9 @@ func reportingDealFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "amount_minor", reportingCurrency)
 	case reportingStageAge:
 		fields = append(fields, "created_at", "expected_close_date")
+	case reportingStageConversion:
+		// The cohort serves and groups by the fields above and reads no
+		// amount, currency or date of the deal.
 	case reportingPartnerPipeline:
 		fields = append(fields, fieldCreatedAt, reportingAmountField, reportingCurrency, reportingPartnerField, "partner_attribution")
 	case reportingPartnerWon:

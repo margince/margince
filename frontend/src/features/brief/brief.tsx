@@ -20,6 +20,7 @@ import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
 import {
@@ -86,7 +87,8 @@ export function BriefScreen() {
   const t = useT();
   const nowMs = useNow(60_000);
   const me = useMe();
-  const query = useWorklist("mine", "all");
+  // The drawer's default queue, so an open drawer joins this read.
+  const query = useWorklist("mine", "all", undefined, true, DEFAULT_VIEW);
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);

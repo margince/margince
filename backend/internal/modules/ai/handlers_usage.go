@@ -12,6 +12,7 @@ package ai
 // fabricated 0 (global constraint: cost is transparency, never a gate).
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -229,7 +230,20 @@ func (h Handlers) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	entries := h.providers.report(r.Context())
+	out, err := h.ReadProviderHealth(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// ReadProviderHealth shares recorded provider faults without testing credentials or calling providers.
+func (h Handlers) ReadProviderHealth(ctx context.Context) (crmcontracts.AiProviderHealth, error) {
+	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
+		return crmcontracts.AiProviderHealth{}, err
+	}
+	entries := h.providers.report(ctx)
 	out := crmcontracts.AiProviderHealth{
 		Providers:  make([]crmcontracts.AiProviderHealthEntry, 0, len(entries)),
 		Configured: h.configuredProviders(),
@@ -246,7 +260,7 @@ func (h Handlers) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Providers = append(out.Providers, wire)
 	}
-	httperr.WriteJSON(w, http.StatusOK, out)
+	return out, nil
 }
 
 // configuredProviders names every provider the lanes bind now. Read from the

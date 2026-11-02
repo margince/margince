@@ -273,6 +273,10 @@ var identShape = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)
 const (
 	// reportZoneToken stands in for the installation timezone's bind position.
 	reportZoneToken = "<<installation-timezone>>"
+	// reportChanceToken stands in for the chance a deal aliased t in stage s is
+	// weighted by. It is the forecast's chance in use, or the typed one while
+	// self-correction is off (forecastchancetable.go).
+	reportChanceToken = "<<forecast-chance:t,s>>"
 	// reportBaseCurrencyToken stands in for the installation base currency's
 	// bind position.
 	reportBaseCurrencyToken = "<<installation-base-currency>>"
@@ -355,6 +359,12 @@ func bindReportTokens(
 		}
 		sql = strings.ReplaceAll(sql, token, clause)
 		return nil
+	}
+	if err := bindScope(reportChanceToken, func() (string, error) {
+		table, err := readForecastChanceTable(ctx, tx, frame.AsOf)
+		return table.sqlExpr("t", "s", arg), err
+	}); err != nil {
+		return "", nil, err
 	}
 	if err := bindScope(reportDealScopeToken, func() (string, error) { return auth.ScopeClauseFor(ctx, tableDeal, "d", arg) }); err != nil {
 		return "", nil, err

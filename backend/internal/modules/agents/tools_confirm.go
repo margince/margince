@@ -39,20 +39,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// --- archive_record (🟡 write — visibility change, hard to undo) ---
+// --- archive_record (write: runs at once unless a tier floor stages it; hard to undo) ---
 
 // archivableRecordTypes is what SystemOfRecordProvider.Archive actually routes
-// (compose/provider.go) — narrower than datasource.EntityTypes(), which is the
-// whole seam vocabulary and includes `lead`, a type Archive does not serve.
+// (compose/provider.go). It is narrower than datasource.EntityTypes(), which
+// includes `lead`, a type Archive does not serve.
 //
-// Stage-time truth has to equal execute-time truth here: this tool stages a
-// confirmation FIRST and archives on the approved retry, so a type admitted at
-// staging and refused at execution spends a human's approval on a call that
-// could never run. That is what happened to `activity` — the contract declared
-// archiveActivity as this tool's, the seam had no branch for it, and the
-// refusal arrived only after a human had said yes. The list is stated here
-// rather than derived so adding a branch to Archive is a deliberate edit in
-// both places.
+// Where a tier floor stages this tool, it archives only on the approved retry.
+// A type admitted at staging and refused at execution then spends a human's
+// approval on a call that could never run. The list is stated rather than
+// derived, so a new Archive branch is edited in both.
 var archivableRecordTypes = []string{
 	string(datasource.EntityContact), string(datasource.EntityCompany),
 	string(datasource.EntityDeal), string(datasource.EntityProject),
@@ -109,6 +105,7 @@ type archiveRecord struct {
 func (t archiveRecord) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_record", Title: "Archive a record", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   archiveRecordCopy.render(),
 		Instead:       archiveRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
@@ -362,6 +359,7 @@ func decodeMerge(in json.RawMessage) (mergeArgs, *ContactCaseCommand, error) {
 func (t mergeRecords) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_records", Title: "Merge two records", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   mergeRecordsCopy.render(),
 		Instead:       mergeRecordsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,

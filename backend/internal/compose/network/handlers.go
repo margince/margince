@@ -203,6 +203,7 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 		DisplayName:     name,
 		StrengthBucket:  crmcontracts.ContactNetworkColleagueStrengthBucket(score.Bucket),
 		Interactions90d: e.Count90d,
+		TwoWay:          new(twoWay(&e.InCount90d, &e.OutCount90d)),
 		// The direction split, from the same projection the score reads.
 		// Without it a surface can say "6 exchanges" but not "6 two-way
 		// exchanges" or "replied 2 days ago", and cannot tell a live

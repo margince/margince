@@ -43,6 +43,8 @@ type ListActivitiesInput struct {
 	// note: EntityType+EntityID is the polymorphic activity_link filter —
 	// the target is ANY entity kind, so the id stays untyped (rule 6).
 	EntityID *ids.UUID
+	// LinkedToDeals keeps the rows filed under any of these deals.
+	LinkedToDeals []ids.UUID
 	// Query is the contract's `q`: a substring match over the subject and
 	// body a human would recognize the item by.
 	Query *string
@@ -181,6 +183,9 @@ type ListActivitiesInput struct {
 	RequestCurrentAsOf *time.Time
 	// RequestReviewAsOf reads request evidence independently of current-work admission.
 	RequestReviewAsOf *time.Time
+	// positions, set by ListActivitiesPositioned, receives the cursor that
+	// resumes the list after each row it returns.
+	positions *[]string
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
 	// against. Unexported and set by the store beside the transaction it reads
 	// in, never by a caller: it is one read's snapshot, not a request parameter,

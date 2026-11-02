@@ -9,6 +9,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { useVoiceIntake } from "./use-voice-intake";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
 
 // Where a writing sample arrives: dropped on the zone, or chosen through it.
@@ -19,6 +20,20 @@ import { VoiceCorpusIntake } from "./voice-corpus-settings";
 // A file drop cannot be performed from a story, so what is catalogued is the
 // resting state of both: the zone, what teaches the voice, and the reason
 // behind the ask.
+// The intake as its caller owns it: the real hook feeding the real zone.
+function Intake({
+  profileId,
+  onChanged,
+  first,
+}: Readonly<{
+  profileId: string | null;
+  onChanged: () => void;
+  first?: boolean;
+}>) {
+  const intake = useVoiceIntake({ profileId, onChanged });
+  return <VoiceCorpusIntake intake={intake} first={first} />;
+}
+
 function story(first: boolean) {
   return () => {
     installFetchStub({
@@ -32,7 +47,7 @@ function story(first: boolean) {
         <Panel title="Writing samples">
           <PanelBody>
             <SettingList>
-              <VoiceCorpusIntake
+              <Intake
                 first={first}
                 profileId={first ? null : "vp-1"}
                 onChanged={() => undefined}

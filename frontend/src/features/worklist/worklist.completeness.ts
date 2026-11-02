@@ -8,9 +8,9 @@
 import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural } from "../../i18n";
+import type { T } from "../../lib/worklistcopy";
 import { exactCount, unreadSources } from "../../lib/worklistcounts";
 import type { WorklistView } from "../../lib/worklistviews";
-import type { T } from "./worklist.copy";
 import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,

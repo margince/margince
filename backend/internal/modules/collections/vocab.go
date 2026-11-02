@@ -205,7 +205,7 @@ func customerField(
 // carry no null and the gate compares against the document minus it.
 var (
 	lifecycleValues = []string{
-		"unknown", "target", "prospect", "opportunity",
+		"unknown", "target", "prospect", "opportunity", "onboarding", "live",
 		"customer", "former_customer", "disqualified",
 	}
 	sizeBandValues = []string{
