@@ -13,12 +13,14 @@ import { useSettledValue } from "../design-system/debouncedsearch";
 import { activityDay } from "../format/activitywhen";
 import { foldForSearch } from "../format/collate";
 import { useLocale, useT } from "../i18n";
+import { SCREEN_ENTITY } from "../lib/entity";
 import {
   problemFieldErrors,
   problemMessageOf,
   throwProblem,
 } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
+import type { Route } from "../lib/router";
 import {
   bestIdentifierMatch,
   groupSearchHits,
@@ -183,6 +185,8 @@ export function useSearchCommands(query: string): SearchArm {
             group: t(SEARCH_GROUP_KEY[group]),
             type: "record",
             route,
+            executedQuery: answer?.q,
+            searchedRecord: recentRecord(hit, route),
           },
         ];
       }),
@@ -207,5 +211,19 @@ export function useSearchCommands(query: string): SearchArm {
     pending: enabled && result.isFetching,
     failed,
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
+  };
+}
+
+function recentRecord(
+  hit: SearchResult,
+  route: Route,
+): Command["searchedRecord"] {
+  const kind = SCREEN_ENTITY[route.screen];
+  if (!kind || route.id !== hit.id) return undefined;
+  return {
+    kind: "record",
+    entity_type: kind,
+    id: hit.id,
+    label: hit.title ?? hit.id,
   };
 }

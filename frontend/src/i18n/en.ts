@@ -2623,6 +2623,8 @@ export const en = {
   "palette.aria": "Command palette",
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
+  "palette.recent": "Recent",
+  "palette.clearRecent": "Clear",
   "palette.typeScreen": "Screen",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",

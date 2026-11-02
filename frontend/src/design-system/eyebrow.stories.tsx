@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { LocaleProvider } from "../i18n";
+import { Button } from "./atoms";
 import { Eyebrow } from "./eyebrow";
 import { Heading } from "./heading";
 
@@ -81,3 +82,16 @@ function OverATitleDemo() {
 }
 
 export const OverAPageTitle: Story = { render: () => <OverATitleDemo /> };
+
+export const WithAction: Story = {
+  args: {
+    as: "h2",
+    size: "xxsmall",
+    children: "Recent",
+    action: <Button variant="ghost">Clear</Button>,
+  },
+};
+export const WithActionDark: Story = {
+  ...WithAction,
+  globals: { theme: "dark" },
+};
