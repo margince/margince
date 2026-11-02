@@ -1,0 +1,9 @@
+.eyebrow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.eyebrow-head > .t-eyebrow {
+  min-width: 0;
+}

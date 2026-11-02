@@ -64,6 +64,9 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
+	if err := s.holdPromotionDeal(ctx, tx, lead, employer, candidate, in.ExistingDealID); err != nil {
+		return PromoteOutcome{}, err
+	}
 	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, employer, by, candidate, lanes, in.intoCandidate, &out.Merged)
 	if err != nil {
 		return PromoteOutcome{}, err
@@ -101,7 +104,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	out.DealID, err = s.openQualifiedDeal(ctx, tx, id, lead, contactID, in.Deal)
+	out.DealID, err = s.qualifiedDeal(ctx, tx, id, lead, contactID, in)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}

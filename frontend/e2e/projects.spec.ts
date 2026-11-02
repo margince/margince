@@ -107,26 +107,13 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   );
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
-  // Close the saved drawer before the page behind it is used again. Escape
-  // asks first while an unsaved claim is held, and a claim can outlive its
-  // Save button because the release runs on unmount. Nothing needs
-  // discarding, so take the ask when it comes. The product gap is #9931.
+  // Close the saved drawer before the page behind it is used again. The claim
+  // is released with the Save button, so Escape closes without an ask.
   await expect(
     page.getByRole("button", { name: "Speichern", exact: true }),
   ).toBeHidden();
   await page.keyboard.press("Escape");
-  const discardAsk = page.getByRole("button", {
-    name: "Änderungen verwerfen",
-    exact: true,
-  });
-  await expect(async () => {
-    if (await discardAsk.isVisible()) await discardAsk.click();
-    // Read the count rather than asserting on the locator. An assertion here
-    // would retry on its own, spending the expect budget before the outer
-    // loop can click an ask that arrived late. Counting also keeps two
-    // dialogs a state problem instead of a strict-mode violation.
-    expect(await page.getByRole("dialog").count()).toBe(0);
-  }).toPass({ timeout: 10_000 });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
 

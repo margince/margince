@@ -1976,6 +1976,42 @@ public.capture_owner_identity_withdrawn.withdrawn_by text NOT NULL gen=- def=-
 public.capture_owner_identity_withdrawn_at_idx CREATE INDEX capture_owner_identity_withdrawn_at_idx ON public.capture_owner_identity_withdrawn USING btree (withdrawn_at)
 public.capture_owner_identity_withdrawn_pkey CREATE UNIQUE INDEX capture_owner_identity_withdrawn_pkey ON public.capture_owner_identity_withdrawn USING btree (id)
 public.capture_owner_identity_withdrawn_user_idx CREATE INDEX capture_owner_identity_withdrawn_user_idx ON public.capture_owner_identity_withdrawn USING btree (user_id)
+public.capture_party_admission_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_party_admission_cursor.after_activity uuid NOT NULL gen=- def=-
+public.capture_party_admission_cursor.after_user uuid NOT NULL gen=- def=-
+public.capture_party_admission_cursor.capture_party_admission_cursor_pkey PRIMARY KEY (singleton)
+public.capture_party_admission_cursor.capture_party_admission_cursor_singleton_check CHECK (singleton)
+public.capture_party_admission_cursor.ceiling uuid NOT NULL gen=- def=-
+public.capture_party_admission_cursor.singleton boolean NOT NULL gen=- def=true
+public.capture_party_admission_cursor_pkey CREATE UNIQUE INDEX capture_party_admission_cursor_pkey ON public.capture_party_admission_cursor USING btree (singleton)
+public.capture_party_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_party_source.activity_id uuid NOT NULL gen=- def=-
+public.capture_party_source.admission_blocked boolean NOT NULL gen=- def=-
+public.capture_party_source.admission_generation bigint NOT NULL gen=- def=1
+public.capture_party_source.admission_pending boolean NOT NULL gen=- def=true
+public.capture_party_source.capture_party_source_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_party_source.capture_party_source_pkey PRIMARY KEY (activity_id, user_id, provider)
+public.capture_party_source.capture_party_source_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES raw_capture(id) ON DELETE SET NULL
+public.capture_party_source.capture_party_source_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.capture_party_source.containers text[] NOT NULL gen=- def=-
+public.capture_party_source.containers_known boolean NOT NULL gen=- def=-
+public.capture_party_source.policy_addresses text[] NOT NULL gen=- def=-
+public.capture_party_source.provider text NOT NULL gen=- def=-
+public.capture_party_source.raw_capture_id uuid gen=- def=-
+public.capture_party_source.recipients text[] NOT NULL gen=- def=-
+public.capture_party_source.sent_by_owner boolean NOT NULL gen=- def=-
+public.capture_party_source.user_id uuid NOT NULL gen=- def=-
+public.capture_party_source_original CREATE INDEX capture_party_source_original ON public.capture_party_source USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)
+public.capture_party_source_pending CREATE INDEX capture_party_source_pending ON public.capture_party_source USING btree (activity_id, user_id) WHERE admission_pending
+public.capture_party_source_pkey CREATE UNIQUE INDEX capture_party_source_pkey ON public.capture_party_source USING btree (activity_id, user_id, provider)
+public.capture_party_source_recipients CREATE INDEX capture_party_source_recipients ON public.capture_party_source USING gin (recipients) WHERE sent_by_owner
+public.capture_party_source_replay acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_party_source_replay.activity_id uuid NOT NULL gen=- def=-
+public.capture_party_source_replay.capture_party_source_replay_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_party_source_replay.capture_party_source_replay_pkey PRIMARY KEY (activity_id)
+public.capture_party_source_replay.outcome text NOT NULL gen=- def=-
+public.capture_party_source_replay_pkey CREATE UNIQUE INDEX capture_party_source_replay_pkey ON public.capture_party_source_replay USING btree (activity_id)
+public.capture_party_source_user CREATE INDEX capture_party_source_user ON public.capture_party_source USING btree (user_id)
 public.capture_pending_counterparty acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_pending_counterparty.activity_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.attempts integer NOT NULL gen=- def=0
@@ -2290,6 +2326,7 @@ public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
 public.comms_outbound.message_id text gen=- def=-
 public.comms_outbound.parked_at timestamp with time zone gen=- def=-
+public.comms_outbound.party_admission_pending boolean NOT NULL gen=- def=true
 public.comms_outbound.payload_expires_at timestamp with time zone gen=- def=-
 public.comms_outbound.payload_ref text gen=- def=-
 public.comms_outbound.provider text NOT NULL gen=- def=-
@@ -2321,6 +2358,7 @@ public.comms_outbound_due CREATE INDEX comms_outbound_due ON public.comms_outbou
 public.comms_outbound_link_ix CREATE INDEX comms_outbound_link_ix ON public.comms_outbound USING btree (link_id) WHERE (link_id IS NOT NULL)
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_one_delivery_per_instruction CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL)
+public.comms_outbound_party_admission CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL))
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
 public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -4335,6 +4373,7 @@ public.email_signature.email_signature_owner_id_fkey FOREIGN KEY (owner_id) REFE
 public.email_signature.email_signature_owner_id_key UNIQUE (owner_id)
 public.email_signature.email_signature_pkey PRIMARY KEY (id)
 public.email_signature.email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.email_signature.html text NOT NULL gen=- def=''::text
 public.email_signature.id uuid NOT NULL gen=- def=uuidv7()
 public.email_signature.owner_id uuid NOT NULL gen=- def=-
 public.email_signature.phone text NOT NULL gen=- def=''::text

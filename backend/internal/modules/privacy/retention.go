@@ -173,6 +173,9 @@ type RetentionService struct {
 // of what it reports erasing, and there is no configuration in which that is
 // the intended behaviour. compose.NewRetentionServiceFor supplies capture's.
 func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger, purge RawCapturePurger) *RetentionService {
+	if rawCapturePurgerMissing(purge) {
+		purge = nil
+	}
 	return &RetentionService{
 		db:               db,
 		eraser:           NewEraser(db).WithBlobstore(blob).WithRawCapturePurger(purge),
@@ -227,7 +230,10 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 // to time). So an unwired purger is not a degraded mode. It is a constructor
 // argument, and EvaluateInstallation refuses the whole pass if one arrives nil
 // anyway — before a single record is touched.
-type RawCapturePurger func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error
+type RawCapturePurger interface {
+	PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error
+	PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error
+}
 
 // ErrRetentionSeamMissing is the refusal a pass makes when it was built without
 // a dependency one of its destructive actions cannot finish without. A sentinel

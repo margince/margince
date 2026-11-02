@@ -5,14 +5,7 @@
 
 package gates
 
-// Every exported method on a module's *Store or *Service (the seam both the
-// HTTP handlers and the MCP tool surface call through) references the platform
-// auth gate (object RBAC and/or the row-scope spellings), directly or through a
-// same-package helper. A store method without one
-// is an ungoverned door into tenant data: reachable by any transport
-// wired to it, invisible to review. Row-scope composition itself stays
-// a call-site obligation until it moves into the database (the ADR
-// direction); this gate pins the half that is statically checkable.
+// Store and Service entry points must reach an auth gate or carry a ratified reason.
 //
 // Gatedness is resolved transitively over same-package calls, matched
 // by name within the RECEIVER the entry point is declared on, plus the
@@ -69,6 +62,7 @@ import (
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
 	"internal/modules/contacts:TellContactOwnerOfLead":    "the follow-up to a refusal the caller's own gated lead write produced: it acts only on a ContactHoldsIdentityError that a create behind auth.Require(lead, create) returned, and files a task for the contact's owner as the system. It reads and returns no record; the caller learns only whether the owner was told",
 	"internal/modules/contacts:TellContactOwnerOfArrival": "the same follow-up for a door that found the contact itself: the capture sink after its lead create was gated by auth.Require(lead, create), and TellContactOwnerOfLead. It reads only the contact's owner, to address the task, and returns no record",
 	"internal/modules/contacts:AskHolderToShare":          "the follow-up to a refusal the caller's own gated write produced: it acts only on a ContactHeldByColleagueError that a create, replace or promotion behind auth.Require returned, and files a share request for the contact's owner to decide. It reads and returns no record; the caller learns only whether a request is open",

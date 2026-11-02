@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -236,17 +236,10 @@ are in total. It may also limit how long the text under them is. When a message 
 composer names the limit and the number before you send.
 
 ### How do I set my email signature?
-To set your email signature in Margince, open the account menu, choose **Settings**, then **Account**, and use **Edit signature** under **Email signature**.
-1. Open the account menu at the top right and choose **Settings**.
-2. Open **Account**.
-3. Under **Email signature**, press **Edit signature**, type plain text and save.
-
-Leave it empty and a send ends with a short sign-off and your name, such as
-"Best regards". The sign-off follows the message's language. If a message is too
-short to tell, Margince uses the installation's language, then English. The
-composer shows the sign-off under the body before you send. The AI never writes
-a sign-off; this signature is the one that goes out. A message an agent sends
-carries no sign-off.
+Open **Settings → Account → Edit signature** to choose plain text or HTML.
+Your own HTML comes before the company template. With neither set, Margince uses
+your plain text or a short greeting. See [Your email signature](email-signatures.md)
+for the preview, clearing HTML and what a formatted signature keeps.
 
 A sent message reads, in this order: your message, your signature, any notice
 the law needs, then the unsubscribe footer. The copy on your timeline leaves out

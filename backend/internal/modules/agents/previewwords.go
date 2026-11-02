@@ -352,6 +352,11 @@ var effectSentences = map[string]cardWords{
 		de: "Verschiebt die aufgeführten Abmeldelinks und Kommunikationsgrundlagen zum Kontakt. Geltungsbereich, Ablauf und Widerruf bleiben unverändert.",
 		vi: "Chuyển các liên kết hủy đăng ký và căn cứ liên lạc đã liệt kê sang liên hệ. Giữ nguyên phạm vi, thời hạn và trạng thái thu hồi.",
 	},
+	"promote_seat_contact_on_existing_deal": {
+		en: "Adds the contact as a stakeholder on the displayed existing deal. The lead links to this deal.",
+		de: "Fügt den Kontakt als Beteiligten zum angezeigten bestehenden Deal hinzu. Der Lead wird mit diesem Deal verknüpft.",
+		vi: "Thêm liên hệ làm bên liên quan vào cơ hội hiện có đã hiển thị. Lead được liên kết với cơ hội này.",
+	},
 	"promote_open_deal_seat_contact": {
 		en: "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
 		de: "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",

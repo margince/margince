@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-34 columns · primary key `(id)` · referenced by 149 foreign keys
+34 columns · primary key `(id)` · referenced by 150 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

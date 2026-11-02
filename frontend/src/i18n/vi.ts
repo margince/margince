@@ -792,6 +792,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionCreate": "Tạo liên hệ với thông tin đã hiển thị.",
   "approval.preview.promotionFill":
     "Bổ sung thông tin còn thiếu đã hiển thị vào liên hệ hiện có. Giữ tên, chức danh và số điện thoại chính hiện có.",
+  "approval.preview.promotionExistingDeal": "Cơ hội hiện có",
+  "approval.preview.promotionExistingDealEffect":
+    "Thêm liên hệ làm bên liên quan vào cơ hội hiện có đã hiển thị. Lead được liên kết với cơ hội này.",
   "approval.preview.promotionDeal":
     "Mở cơ hội đã hiển thị và thêm liên hệ làm bên liên quan. Lead được liên kết với cơ hội này.",
   "approval.preview.promotionFillIndustry":
@@ -1763,6 +1766,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.suggestedTimes": "Giờ đề xuất",
   "scheduling.noTimesDay": "Ngày này không còn giờ trống. Chọn ngày khác.",
   "scheduling.noTimesMonth": "Tháng này không còn giờ trống. Thử tháng sau.",
+  "conversationSuggestions.title":
+    "Trong cuộc trò chuyện, chưa có trong Margince",
+  "conversationSuggestions.add": "Thêm làm liên hệ",
+  "conversationSuggestions.limited":
+    "Tin nhắn cũ hơn có thể có địa chỉ nhận khác.",
   "contact.meetings.copyBookingLink": "Sao chép liên kết đặt lịch",
   "contact.meetings.join": "Tham gia {app}",
   "contact.meetings.joinCall": "Tham gia cuộc gọi video",
@@ -2531,7 +2539,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
-  "shell.beta": "Beta",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
   "shell.back": "Quay lại",
@@ -2546,6 +2553,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",
   "shell.theme": "Giao diện",
+  "shell.helpMenu": "Trợ giúp và phản hồi",
+  "shell.help.report": "Báo cáo sự cố",
+  "shell.help.request": "Đề xuất tính năng",
+  "shell.help.resources": "Trợ giúp và tài liệu",
+  "shell.help.shortcuts": "Phím tắt",
+  "shell.help.releaseNotes": "Ghi chú phát hành",
+  "shell.help.devBuild": "Bản dựng phát triển",
+  "shell.shortcuts.anywhere": "Mọi nơi",
+  "shell.shortcuts.search": "Mở tìm kiếm",
+  "shell.shortcuts.sidebar": "Hiện hoặc ẩn thanh bên",
+  "shell.shortcuts.dismiss": "Đóng hộp thoại hoặc menu",
+  "shell.shortcuts.editing": "Chỉnh sửa",
+  "shell.shortcuts.paragraphSave": "Lưu trường nhiều dòng",
+  "shell.shortcuts.deckHint":
+    "Trên Trang chủ, phím mũi tên chọn một quyết định. Enter gửi các quyết định đã chọn.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
@@ -2613,6 +2635,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.aria": "Bảng lệnh",
   "palette.placeholder": "Tìm kiếm hoặc hỏi Margince",
   "palette.empty": "Không có kết quả.",
+  "palette.recent": "Gần đây",
+  "palette.clearRecent": "Xóa",
   "palette.typeScreen": "Màn hình",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Hồ sơ",
@@ -2634,6 +2658,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
+  "common.opensNewTab": "(Mở trong tab mới)",
   "common.expand": "Mở rộng",
   "common.collapse": "Thu gọn",
   "common.minimize": "Thu nhỏ",
@@ -5166,7 +5191,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.ladder.byHand": "{label} · đặt thủ công",
   "lead.qualify.title": "Xác nhận đủ điều kiện cho {name}",
   "lead.qualify.contact": "Liên hệ",
-  "lead.qualify.alsoDeal": "Mở thêm một deal",
+  "lead.qualify.withoutDeal": "Đánh dấu đủ điều kiện mà không liên kết cơ hội",
+  "lead.qualify.dealChoice": "Cơ hội",
+  "lead.qualify.newDeal": "Mở cơ hội mới",
+  "lead.qualify.existingDealPicker": "Cơ hội hiện có",
+  "lead.qualify.unnamedDeal": "Cơ hội chưa có tên",
+  "lead.qualify.existingDeal": "Thêm vào cơ hội hiện có",
+  "lead.qualify.confirmExisting": "Đủ điều kiện và thêm vào cơ hội",
+  "lead.qualify.moreDeals": "Xem thêm cơ hội",
+  "lead.qualify.dealUnavailable":
+    "Cơ hội này không còn khả dụng. Chọn cơ hội khác hoặc đánh dấu đủ điều kiện mà không liên kết cơ hội.",
   "lead.qualify.company": "Công ty",
   "lead.qualify.companyUnresolved":
     "Email của lead này không cho biết {company} là công ty nào, nên không có công ty nào được tự động thêm.",
@@ -7849,6 +7883,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
     "Dùng {name}, {title}, {phone} và {logo} (logo công ty nhúng trong thư). Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, cùng màu chữ và cỡ chữ theo pixel trên span. Để trống sẽ tắt mẫu.",
+  "settings.signatureFormat": "Định dạng",
+  "settings.signatureFormatText": "Văn bản thuần",
+  "settings.signatureFormatHtml": "Mã HTML",
+  "settings.signatureHtmlLabel": "Chữ ký HTML",
+  "settings.signatureHtmlHintTemplate":
+    "Chữ ký này thay thế mẫu của công ty. Để trống để dùng lại mẫu của công ty. Hình ảnh từ xa và mã script sẽ bị xóa.",
+  "settings.signatureHtmlHintPlain":
+    "Để trống để dùng lại chữ ký văn bản thuần. Hình ảnh từ xa và mã script sẽ bị xóa.",
+  "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",
@@ -17904,7 +17947,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.inactive": "Không hoạt động",
   "aiProviders.colUsedBy": "Dùng cho",
   "aiProviders.colStatus": "Trạng thái",
-  "aiProviders.opensNewTab": "(Mở trong tab mới)",
   "aiProviders.inUse": "Đang dùng",
   "aiProviders.unpriced": "{model} đang được dùng và chưa có giá.",
   "aiProviders.setPrice": "Nhập giá",
@@ -19232,6 +19274,32 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.filteredFinding_other": "Đang hiển thị 1 trong {count} vấn đề",
   "health.showAllFindings": "Hiển thị mọi vấn đề",
   "health.jobDelayed": "{kind}: bị chậm",
+  "health.checkNumbers": "Hiển thị số lần kiểm tra",
+  "health.checkResults": "Kết quả kiểm tra",
+  "health.checksFailed": "Kiểm tra có lỗi",
+  "health.checksReview": "Cần quyết định",
+  "health.checksPassing": "Kiểm tra đạt",
+  "health.checksPending": "Đang chờ kết quả",
+  "health.askOwner": "Hỏi chủ hộp thư",
+  "health.mailReviewOwners": "Quyết định hộp thư",
+  "health.reviewOwnersIntro":
+    "Xem xét lựa chọn trong hộp thư của bạn hoặc sao chép yêu cầu cho chủ hộp thư khác.",
+  "health.ownerReviewEmpty": "Không có quyết định hộp thư nào đang chờ.",
+  "health.copyReviewRequest": "Sao chép yêu cầu xem xét",
+  "health.copyReviewRequestFor": "Sao chép yêu cầu xem xét cho {name}",
+  "health.reviewSenderRequest":
+    "{name}, mở Danh sách công việc → Quyết định để chấp nhận hoặc từ chối các liên hệ được đề xuất: {url}",
+  "health.reviewThreadRequest":
+    "{name}, hãy xem xét các hội thoại bị giữ trong hộp thư: {url}",
+  "health.ownerNameUnknown": "Chủ hộp thư",
+  "health.ownerReviewUnavailable":
+    "Xem xét thư của bạn hoặc gửi liên kết xem xét cho chủ hộp thư.",
+  "health.openMyReviews": "Xem xét lựa chọn của tôi",
+  "health.copyRequestRemedy": "Chọn và sao chép yêu cầu xem xét bên dưới.",
+  "health.senderReviewCount_one": "{count} đề xuất liên hệ đang chờ",
+  "health.senderReviewCount_other": "{count} đề xuất liên hệ đang chờ",
+  "health.threadReviewCount_one": "{count} hội thoại đang chờ",
+  "health.threadReviewCount_other": "{count} hội thoại đang chờ",
   "health.views": "Chế độ xem tình trạng hệ thống",
   "health.overview": "Tổng quan",
   "health.diagnostics": "Chẩn đoán",
@@ -19244,16 +19312,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Gửi báo cáo lỗi cho người vận hành. Họ cần kiểm tra việc hoàn tất, sửa nguyên nhân và chỉ khởi động lại công việc chưa xong; các lượt chạy thất bại này không tự thử lại.",
   "health.readFailedNext":
     "Làm mới kiểm tra này. Nếu vẫn thất bại, gửi báo cáo kỹ thuật cho người vận hành.",
-  "health.jobStopped": "{kind}: cần xem xét lượt chạy bị lỗi",
-  "health.effectUntilFixed": "Trong khi chưa khắc phục:",
+  "health.jobStopped": "{kind}: lượt chạy bị lỗi",
   "health.effect.mailSorting":
     "Trong Danh sách công việc, thư cần trả lời hoặc theo dõi cuộc hẹn có thể bị thiếu hoặc xếp sai thứ tự. Hãy tự kiểm tra hộp thư đến cho đến khi phân loại bắt kịp. Bạn vẫn có thể nhận và đọc thư.",
   "health.effect.jobs":
     "Công việc nền được liệt kê có thể chưa hoàn tất. Số lượt chạy thất bại không phải số bản ghi thiếu hay số người bị ảnh hưởng; người vận hành cần kiểm tra các tác vụ đó.",
   "health.effect.senderReview":
-    "Liên hệ doanh nghiệp mới có thể chưa được tạo và đồng nghiệp có thể chưa xem được thư liên quan cho đến khi có quyết định về người gửi.",
+    "Các liên hệ mới và thư của họ có thể chưa xuất hiện trong mục Liên hệ.",
   "health.effect.heldMail":
-    "Các cuộc trao đổi liên quan vẫn bị ẩn với đồng nghiệp không có trong thư cho đến khi hoàn tất xét duyệt bảo mật.",
+    "Đồng nghiệp chỉ đọc được các hội thoại này sau khi chủ hộp thư chia sẻ.",
   "health.effect.unreadMail":
     "Thư trong khoảng thời gian được báo cáo có thể thiếu trong CRM. Thư mới hơn vẫn có thể đến; hãy khôi phục khoảng thời gian đó trước khi dựa vào lịch sử.",
   "health.effect.captureRepair":
@@ -19289,7 +19356,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.measure.items_one": "{count} mục",
   "health.measure.items_other": "{count} mục",
   "health.checked": "Không cần thao tác",
-  "health.incomplete": "Chưa thể kiểm tra đầy đủ tình trạng hệ thống",
+  "health.refreshNeeded": "Cần làm mới",
+  "health.unreadNext":
+    "Mở Kết nối để kiểm tra hộp thư này và kết nối lại nếu cần.",
+  "health.incomplete": "Một số kiểm tra chưa có kết quả",
   "health.refresh": "Làm mới",
   "health.prioritiesChanged":
     "Mức ưu tiên đã thay đổi. Làm mới để áp dụng thứ tự mới.",
@@ -19346,7 +19416,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
   "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
   "health.ownerHandoff":
-    "Chủ hộp thư: mở Kết nối để xem lại quyết định về thư của chính mình. Với hộp thư của người khác, yêu cầu chủ hộp thư xem xét; chỉ họ mới thấy thư riêng tư.",
+    "Chủ hộp thư chấp nhận hoặc từ chối liên hệ được đề xuất trong Danh sách công việc → Quyết định. Hội thoại bị giữ được xem xét trong Hoạt động thu thập.",
   "health.operatorHandoff":
     "Người vận hành kỹ thuật cần kiểm tra. Sao chép bản tóm tắt chẩn đoán để bàn giao.",
   "health.copy": "Sao chép báo cáo kỹ thuật",
@@ -19380,12 +19450,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.queue_expectation_unknown":
     "Công việc có thể chạy; chưa có thời gian chờ dự kiến",
   "health.code.capture_checked":
-    "Không phát hiện tồn đọng thư trong các loại đã kiểm tra",
+    "Không cần thao tác thu thập trong các mục đã kiểm tra",
   "health.code.capture_processing": "Đang phân loại người gửi",
-  "health.code.capture_uncertain": "Quyết định người gửi nào được đưa vào CRM",
+  "health.code.capture_uncertain": "Xem xét liên hệ được đề xuất",
   "health.code.capture_exhausted":
     "Phân loại người gửi đã hết số lần thử tự động",
-  "health.code.capture_owner_review": "Thư cần chủ hộp thư quyết định",
+  "health.code.capture_owner_review": "Xem xét quyết định hộp thư",
   "health.code.capture_unread": "Khoảng thư chưa đọc cần xác minh khôi phục",
   "health.code.capture_held": "Bản ghi đã lưu đang chờ lượt sửa chữa",
   "health.code.capture_repair_unverified":
@@ -19419,8 +19489,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mẫu đã kiểm tra chưa vượt ngưỡng cần xem lại phân công",
   "health.code.automatic_routing": "Cần xem lại phân công công việc tự động",
   "health.code.capture_thread_processing": "Đang phân loại chuỗi thư",
-  "health.code.capture_thread_uncertain":
-    "Quyết định đồng nghiệp được xem cuộc hội thoại nào",
+  "health.code.capture_thread_uncertain": "Xem xét hội thoại riêng",
   "health.queueCoverage":
     "Lịch sử hàng đợi chỉ được giữ trong thời gian giới hạn. Việc không còn lịch sử không chứng minh công việc từng lỗi đã hoàn tất.",
 

@@ -11932,6 +11932,13 @@ paths:
     get:
       tags: [Leads]
       operationId: previewLeadPromotion
+      parameters:
+        - name: create_company
+          in: query
+          schema: { type: boolean, default: false }
+        - name: deals_cursor
+          in: query
+          schema: { type: string }
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       # Human-only for now: this ships as the promote dialog's confirm step. The
       # governed read tool is a separate, additive decision (see the note on
@@ -17809,6 +17816,56 @@ paths:
               schema: { $ref: '#/components/schemas/WorkspaceEmailDomain' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listContactConversationSuggestions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |
+        Both the contact and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSuggestionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /leads/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listLeadConversationSuggestions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |
+        Both the lead and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSuggestionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /capture/exclusions:
@@ -32000,12 +32057,12 @@ paths:
       x-agent-access: human-only
       summary: Write or clear your own sign-off.
       description: |
-        An empty `body` CLEARS the signature — a member emptying the field means
-        "sign off with the plain closing", not "leave what was there".
+        An empty `body` clears the plain-text fallback. Personal HTML and the
+        workspace template retain their precedence until cleared separately.
 
-        Plain text only. The transport sends `text/plain` and the drafting
-        prompts forbid the model from writing a sign-off of its own, so what is
-        stored here is exactly what arrives under every message the caller sends.
+        `body` stores plain text. Optional `html` stores personal markup, sanitized
+        when rendered. Personal HTML takes precedence over the workspace template,
+        then plain text and the closing line. An agent sends without a sign-off.
       requestBody:
         required: true
         content:
@@ -38665,6 +38722,23 @@ components:
 
         It is its own word rather than `user` because a seat looking at an address they never typed
         is owed the difference — and, seeing it, may remove it like any other.
+    ConversationSuggestion:
+      type: object
+      required: [address, display_name, activity_id]
+      properties:
+        address: {type: string}
+        display_name: {type: string}
+        activity_id: {type: string, format: uuid}
+
+    ConversationSuggestionListResponse:
+      type: object
+      required: [data, scan_limited]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationSuggestion'}
+        scan_limited: {type: boolean}
+
     CaptureCounterpartyHold:
       type: object
       description: |
@@ -48052,14 +48126,19 @@ components:
 
     EmailSignature:
       type: object
-      required: [body, title, phone, template_active]
+      required: [body, html, title, phone, template_active]
       properties:
         body:
           type: string
           description: |
-            The sign-off appended below every message this member sends, plain text.
-            Empty means none written; a send then closes with a plain greeting and
-            the member's display name when one is on file.
+            Plain-text fallback after personal HTML and the company template.
+            With none set, a send closes with a greeting and the member's name.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           description: The member's title, filled into the workspace template's `{title}`.
@@ -48070,7 +48149,7 @@ components:
           type: boolean
           description: |
             The workspace has a signature template. Every send this member makes then signs
-            with the template, filled in with their name, title and phone, instead of `body`.
+            with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
             An agent's send carries no sign-off.
         updated_at: { type: [string, 'null'], format: date-time }
     EmailSignatureTemplate:
@@ -48086,7 +48165,7 @@ components:
             `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
             mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
-            none: each member signs with their own plain-text signature.
+            none: each member uses personal HTML, plain text or the closing line.
     EmailSignOffRequest:
       type: object
       required: [body]
@@ -48111,6 +48190,13 @@ components:
           type: string
           maxLength: 4000
           description: The workspace template as edited. Empty previews a workspace with none.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Personal HTML as typed. Empty clears it; omitted on a write or preview
+            leaves it unchanged. Rendering uses the signature sanitizer without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           maxLength: 120
@@ -48132,7 +48218,7 @@ components:
           type: string
           description: |
             The same block as the sanitized markup the HTML part carries. Present only when
-            `kind` is `template`.
+            `kind` is `template` or a personal HTML `signature`.
         kind:
           type: string
           enum: [signature, closing, template, none]
@@ -48152,6 +48238,13 @@ components:
             Plain text. Empty clears the signature. The cap is what a signature is
             FOR — a name, a role, a way to reach the sender — and past it a block
             is a document riding on every message.
+        html:
+          type: string
+          maxLength: 2000
+          description: |
+            Personal HTML as typed. Empty clears it; omitted on a write or preview
+            leaves it unchanged. Rendering uses the signature sanitizer without
+            expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
           maxLength: 120
@@ -53899,7 +53992,7 @@ components:
           x-enum-varnames: [LeadStatusSetByHuman, LeadStatusSetBySystem]
           readOnly: true
           description: 'Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.'
-        qualified_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal opened by the qualify call that promoted this lead, when one was asked for.' }
+        qualified_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal joined or opened by the qualify call that promoted this lead, when one was asked for.' }
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
@@ -54093,6 +54186,10 @@ components:
             note: { type: [string, 'null'] }
         deal:
           $ref: '#/components/schemas/QualifyDealRequest'
+        existing_deal_id:
+          type: string
+          format: uuid
+          description: Link an open, writable deal of the resolved employer instead of opening one. Mutually exclusive with deal.
         create_company:
           type: boolean
           default: false
@@ -54111,7 +54208,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset, also for a lead linked to a company. The deal's id lands
+        and its company is the contact's resolved employer when one exists. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: { type: [string, 'null'], format: uuid }
@@ -54153,7 +54250,7 @@ components:
           type: boolean
           description: True if promotion merged into an existing contact (no duplicate); false if a new contact was created.
         lead_id: { type: string, format: uuid }
-        deal_id: { type: [string, 'null'], format: uuid, description: 'The deal opened alongside, when the request asked for one.' }
+        deal_id: { type: [string, 'null'], format: uuid, description: 'The deal opened or linked alongside, when the request asked for one.' }
 
     PromoteLeadPreview:
       type: object
@@ -54161,6 +54258,12 @@ components:
         What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
       required: [outcome]
       properties:
+        company_id: { type: string, format: uuid, description: The visible employer this promotion resolves. }
+        existing_deals:
+          type: array
+          description: Open deals of the resolved employer the caller may read and change. Continue with existing_deals_cursor.
+          items: { $ref: '#/components/schemas/Deal' }
+        existing_deals_cursor: { type: string, description: Cursor for the next page of eligible deals; absent on the last page. }
         outcome:
           type: string
           enum: [create, merge]
@@ -60728,6 +60831,10 @@ components:
         what is waiting inside it is not named at all.
       required: [generated_at, mailboxes, classifier, held_meetings, sweeps, connection_concerns]
       properties:
+        owner_reviews:
+          type: array
+          description: Mailbox owners with decisions ready for human review. Counts and names only.
+          items: { $ref: '#/components/schemas/CaptureOwnerReview' }
         categories:
           $ref: '#/components/schemas/CaptureHealthCategories'
         connection_concerns:
@@ -60835,6 +60942,16 @@ components:
       properties:
         from: { type: string, format: date-time, description: The first moment nobody read. }
         to: { type: string, format: date-time, description: The moment reading resumed. }
+
+    CaptureOwnerReview:
+      type: object
+      additionalProperties: false
+      required: [user_id, sender_decisions, thread_decisions]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        sender_decisions: { type: integer, minimum: 0 }
+        thread_decisions: { type: integer, minimum: 0 }
 
     CaptureMailboxHealth:
       type: object

@@ -214,14 +214,13 @@ export const meetingBrief: Handler = ({ json }, { options }) => {
   switch (options.meetingBrief) {
     case "empty":
       return json(briefEmpty);
-    case "failed":
+    case "withheld":
       return json(
         {
           type: "about:blank",
           title: "Not found",
           status: 404,
           code: "not_found",
-          detail: "That meeting is filed under a different engagement.",
         },
         404,
       );

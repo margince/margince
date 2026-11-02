@@ -771,6 +771,9 @@ export const en = {
     "Creates a contact with the displayed details.",
   "approval.preview.promotionFill":
     "Adds the displayed missing details to the existing contact. Keeps its existing name, title and primary phone.",
+  "approval.preview.promotionExistingDeal": "Existing deal",
+  "approval.preview.promotionExistingDealEffect":
+    "Adds the contact as a stakeholder on the displayed existing deal. The lead links to this deal.",
   "approval.preview.promotionDeal":
     "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
   "approval.preview.promotionFillIndustry":
@@ -1730,6 +1733,10 @@ export const en = {
   "scheduling.suggestedTimes": "Suggested times",
   "scheduling.noTimesDay": "No free times on this day. Choose another day.",
   "scheduling.noTimesMonth": "No free times this month. Try the next month.",
+  "conversationSuggestions.title": "On this conversation, not in Margince yet",
+  "conversationSuggestions.add": "Add as contact",
+  "conversationSuggestions.limited":
+    "Older messages may name other recipients.",
   "contact.meetings.copyBookingLink": "Copy my booking link",
   "contact.meetings.join": "Join {app}",
   "contact.meetings.joinCall": "Join video call",
@@ -2508,7 +2515,6 @@ export const en = {
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
-  "shell.beta": "Beta",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
@@ -2523,6 +2529,21 @@ export const en = {
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
   "shell.theme": "Theme",
+  "shell.helpMenu": "Help and feedback",
+  "shell.help.report": "Report a problem",
+  "shell.help.request": "Request a feature",
+  "shell.help.resources": "Help and resources",
+  "shell.help.shortcuts": "Keyboard shortcuts",
+  "shell.help.releaseNotes": "Release notes",
+  "shell.help.devBuild": "Development build",
+  "shell.shortcuts.anywhere": "Anywhere",
+  "shell.shortcuts.search": "Open search",
+  "shell.shortcuts.sidebar": "Show or hide sidebar",
+  "shell.shortcuts.dismiss": "Close dialog or menu",
+  "shell.shortcuts.editing": "Editing",
+  "shell.shortcuts.paragraphSave": "Save multi-line field",
+  "shell.shortcuts.deckHint":
+    "On Home, arrow keys stage a decision. Enter sends what is staged.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
@@ -2609,6 +2630,8 @@ export const en = {
   "palette.aria": "Command palette",
   "palette.placeholder": "Search or ask Margince",
   "palette.empty": "No matches.",
+  "palette.recent": "Recent",
+  "palette.clearRecent": "Clear",
   "palette.typeScreen": "Screen",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
@@ -2630,6 +2653,7 @@ export const en = {
 
   "common.undo": "Undo",
   "common.close": "Close",
+  "common.opensNewTab": "(Opens in a new tab)",
   "common.expand": "Expand",
   "common.collapse": "Collapse",
   "common.minimize": "Minimize",
@@ -5258,7 +5282,16 @@ export const en = {
   "lead.ladder.byHand": "{label} · set manually",
   "lead.qualify.title": "Qualify {name}",
   "lead.qualify.contact": "Contact",
-  "lead.qualify.alsoDeal": "Also open a deal",
+  "lead.qualify.withoutDeal": "Qualify without a deal",
+  "lead.qualify.dealChoice": "Deal",
+  "lead.qualify.newDeal": "Open a new deal",
+  "lead.qualify.existingDealPicker": "Existing deal",
+  "lead.qualify.unnamedDeal": "Unnamed deal",
+  "lead.qualify.existingDeal": "Add to an existing deal",
+  "lead.qualify.confirmExisting": "Qualify and add to deal",
+  "lead.qualify.moreDeals": "Show more deals",
+  "lead.qualify.dealUnavailable":
+    "That deal is no longer available. Choose another deal or qualify without one.",
   "lead.qualify.company": "Company",
   "lead.qualify.companyUnresolved":
     "This lead’s email does not show which company {company} is, so no company is added on its own.",
@@ -8044,6 +8077,15 @@ export const en = {
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
     "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+  "settings.signatureFormat": "Format",
+  "settings.signatureFormatText": "Plain text",
+  "settings.signatureFormatHtml": "HTML",
+  "settings.signatureHtmlLabel": "HTML signature",
+  "settings.signatureHtmlHintTemplate":
+    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Remote images and scripts are removed.",
+  "settings.signatureHtmlHintPlain":
+    "Leave this empty to use your plain text again. Remote images and scripts are removed.",
+  "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
@@ -18227,7 +18269,6 @@ export const en = {
   "aiProviders.state.inactive": "Not active",
   "aiProviders.colUsedBy": "Used by",
   "aiProviders.colStatus": "Status",
-  "aiProviders.opensNewTab": "(Opens in a new tab)",
   "aiProviders.inUse": "In use",
   "aiProviders.unpriced": "{model} is in use and has no price.",
   "aiProviders.setPrice": "Set price",
@@ -19560,6 +19601,32 @@ export const en = {
   "health.filteredFinding_other": "Showing 1 of {count} problems",
   "health.showAllFindings": "Show all problems",
   "health.jobDelayed": "{kind}: delayed",
+  "health.checkNumbers": "Show check counts",
+  "health.checkResults": "Check results",
+  "health.checksFailed": "Failed checks",
+  "health.checksReview": "Need a decision",
+  "health.checksPassing": "Passing checks",
+  "health.checksPending": "Awaiting a result",
+  "health.askOwner": "Ask a mailbox owner",
+  "health.mailReviewOwners": "Mailbox decisions",
+  "health.reviewOwnersIntro":
+    "Review your own choices or copy a request for another mailbox owner.",
+  "health.ownerReviewEmpty": "No mailbox decisions are waiting.",
+  "health.copyReviewRequest": "Copy review request",
+  "health.copyReviewRequestFor": "Copy review request for {name}",
+  "health.reviewSenderRequest":
+    "{name}, open Worklist → Decisions and accept or decline the proposed contacts: {url}",
+  "health.reviewThreadRequest":
+    "{name}, review the held conversations in your mailbox: {url}",
+  "health.ownerNameUnknown": "Mailbox owner",
+  "health.ownerReviewUnavailable":
+    "Review your own mail or send a review link to its owner.",
+  "health.openMyReviews": "Review my choices",
+  "health.copyRequestRemedy": "Select and copy the review request below.",
+  "health.senderReviewCount_one": "{count} sender decision waiting",
+  "health.senderReviewCount_other": "{count} sender decisions waiting",
+  "health.threadReviewCount_one": "{count} conversation waiting",
+  "health.threadReviewCount_other": "{count} conversations waiting",
   "health.views": "System health views",
   "health.overview": "Overview",
   "health.diagnostics": "Diagnostics",
@@ -19572,16 +19639,15 @@ export const en = {
     "Send the error report to your system operator. They should check completion, fix the cause and restart only unfinished work; these failed runs will not retry.",
   "health.readFailedNext":
     "Refresh this check. If it still fails, send the technical report to your system operator.",
-  "health.jobStopped": "{kind}: failed runs need review",
-  "health.effectUntilFixed": "While unresolved:",
+  "health.jobStopped": "{kind}: failed runs",
   "health.effect.mailSorting":
     "In Worklist, emails that need a reply or a meeting follow-up may be missing or in the wrong order. Check your inbox manually until sorting catches up. You can still receive and read email.",
   "health.effect.jobs":
     "The listed background work may remain unfinished. The failed-run count is not a count of missing records or affected team members; the operator must check the listed jobs.",
   "health.effect.senderReview":
-    "New business contacts may not be created and related mail may stay unavailable to colleagues until the sender decision is resolved.",
+    "New contacts and their mail may be missing from Contacts.",
   "health.effect.heldMail":
-    "The affected conversations stay hidden from colleagues who were not on the mail until the confidentiality review is resolved.",
+    "Colleagues cannot read these conversations until their mailbox owner shares them.",
   "health.effect.unreadMail":
     "Mail from the reported period may be missing from the CRM. Later mail can still arrive; recover that period before relying on the history.",
   "health.effect.captureRepair":
@@ -19617,7 +19683,10 @@ export const en = {
   "health.measure.items_one": "{count} item",
   "health.measure.items_other": "{count} items",
   "health.checked": "No action needed",
-  "health.incomplete": "Health could not be fully checked",
+  "health.refreshNeeded": "Refresh needed",
+  "health.unreadNext":
+    "Open Connections to check this mailbox and reconnect it if needed.",
+  "health.incomplete": "Some checks have no result",
   "health.refresh": "Refresh",
   "health.prioritiesChanged":
     "Priorities changed. Refresh to apply the new order.",
@@ -19675,7 +19744,7 @@ export const en = {
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
   "health.ownerHandoff":
-    "Mailbox owners: open Connections to review your own mail decisions. For someone else’s mailbox, ask its owner to review; private mail is only visible to them.",
+    "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Capture activity.",
   "health.operatorHandoff":
     "A technical operator must investigate. Copy the diagnostic summary for the handoff.",
   "health.copy": "Copy technical report",
@@ -19708,12 +19777,12 @@ export const en = {
   "health.code.queue_expectation_unknown":
     "Work is runnable; no waiting-time expectation is declared",
   "health.code.capture_checked":
-    "No capture backlog detected in checked categories",
+    "No capture action needed in checked categories",
   "health.code.capture_processing": "Sender classification is processing",
-  "health.code.capture_uncertain": "Decide which senders belong in the CRM",
+  "health.code.capture_uncertain": "Review contact suggestions",
   "health.code.capture_exhausted":
     "Sender classification exhausted its automatic attempts",
-  "health.code.capture_owner_review": "Mail needs an owner decision",
+  "health.code.capture_owner_review": "Review mailbox decisions",
   "health.code.capture_unread":
     "Unread mailbox periods need recovery verification",
   "health.code.capture_held": "Filed records are waiting for a repair pass",
@@ -19747,8 +19816,7 @@ export const en = {
   "health.code.automatic_routing": "Automatic work routing needs review",
   "health.code.capture_thread_processing":
     "Thread classification is processing",
-  "health.code.capture_thread_uncertain":
-    "Decide which conversations colleagues may see",
+  "health.code.capture_thread_uncertain": "Review private conversations",
   "health.queueCoverage":
     "Queue history is retained for a limited time. Its absence cannot establish that previously failed work was completed.",
 

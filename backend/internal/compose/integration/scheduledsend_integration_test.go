@@ -299,7 +299,14 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 	activitiesBefore := p.countActivities(t, "true")
 	deliveriesBefore := p.countDeliveries(t)
 
+	if status := p.Call(t, "PUT", "/v1/me/email-signature", AnyMap{"body": "Plain fallback", "html": "<p>Old signature</p>"}, nil, nil); status != http.StatusOK {
+		t.Fatalf("save initial signature: %d", status)
+	}
 	id := p.scheduleFor(t, time.Now().Add(2*time.Hour))
+	const currentMarkup = "<p><b>Current personal signature</b></p>"
+	if status := p.Call(t, "PUT", "/v1/me/email-signature", AnyMap{"body": "Plain fallback", "html": currentMarkup}, nil, nil); status != http.StatusOK {
+		t.Fatalf("change signature before firing: %d", status)
+	}
 
 	// The whole point of the design: a message nobody has sent has no presence
 	// on the timeline and nothing queued to carry it.
@@ -318,6 +325,15 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 		t.Fatalf("firing a due message did not send it: %q/%q", status, reason)
 	}
 
+	var plain, markup string
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT c.body,c.html_body FROM comms_outbound c JOIN scheduled_send s ON s.activity_id=c.activity_id WHERE s.id=$1`, id).Scan(&plain, &markup)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(plain, "Current personal signature") || !strings.Contains(markup, currentMarkup) || strings.Contains(markup, "Old signature") || strings.Contains(plain, "Plain fallback") {
+		t.Fatalf("scheduled send did not render the current personal signature: plain=%q html=%q", plain, markup)
+	}
 	if got := p.countActivities(t, "true"); got != activitiesBefore+1 {
 		t.Fatalf("firing produced %d activities, want exactly 1", got-activitiesBefore)
 	}

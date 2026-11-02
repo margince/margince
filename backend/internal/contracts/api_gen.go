@@ -33727,6 +33727,9 @@ type CaptureHealth struct {
 	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
 	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
 
+	// OwnerReviews Mailbox owners with decisions ready for human review. Counts and names only.
+	OwnerReviews *[]CaptureOwnerReview `json:"owner_reviews,omitempty"`
+
 	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
 	// never run is listed with no `last_run`, not left out.
 	Sweeps []CaptureSweepHealth `json:"sweeps"`
@@ -33860,6 +33863,14 @@ type CaptureOwnerIdentityListResponse struct {
 // It is its own word rather than `user` because a seat looking at an address they never typed
 // is owed the difference — and, seeing it, may remove it like any other.
 type CaptureOwnerIdentitySource string
+
+// CaptureOwnerReview defines model for CaptureOwnerReview.
+type CaptureOwnerReview struct {
+	DisplayName     *string            `json:"display_name,omitempty"`
+	SenderDecisions int                `json:"sender_decisions"`
+	ThreadDecisions int                `json:"thread_decisions"`
+	UserId          openapi_types.UUID `json:"user_id"`
+}
 
 // CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
 // endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
@@ -39700,6 +39711,19 @@ type ConversationMemoryEntryDirection string
 // ConversationMemoryEntryStatus The state a reader acts on: `replied`, `unanswered`, `awaiting_them`, or null when the entry carries no such claim. Derived from direction and what followed it.
 type ConversationMemoryEntryStatus string
 
+// ConversationSuggestion defines model for ConversationSuggestion.
+type ConversationSuggestion struct {
+	ActivityId  openapi_types.UUID `json:"activity_id"`
+	Address     string             `json:"address"`
+	DisplayName string             `json:"display_name"`
+}
+
+// ConversationSuggestionListResponse defines model for ConversationSuggestionListResponse.
+type ConversationSuggestionListResponse struct {
+	Data        []ConversationSuggestion `json:"data"`
+	ScanLimited bool                     `json:"scan_limited"`
+}
+
 // CorrectDealCloseDayRequest defines model for CorrectDealCloseDayRequest.
 type CorrectDealCloseDayRequest struct {
 	// ClosedOn The calendar day the deal closed, in the installation's zone. Not after today.
@@ -42593,7 +42617,7 @@ type EmailPresentationLifecycle string
 // EmailSignOff defines model for EmailSignOff.
 type EmailSignOff struct {
 	// Html The same block as the sanitized markup the HTML part carries. Present only when
-	// `kind` is `template`.
+	// `kind` is `template` or a personal HTML `signature`.
 	Html *string `json:"html,omitempty"`
 
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
@@ -42629,16 +42653,19 @@ type EmailSignOffRequest struct {
 
 // EmailSignature defines model for EmailSignature.
 type EmailSignature struct {
-	// Body The sign-off appended below every message this member sends, plain text.
-	// Empty means none written; a send then closes with a plain greeting and
-	// the member's display name when one is on file.
+	// Body Plain-text fallback after personal HTML and the company template.
+	// With none set, a send closes with a greeting and the member's name.
 	Body string `json:"body"`
+
+	// Html Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html string `json:"html"`
 
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
 	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`.
+	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -42651,6 +42678,11 @@ type EmailSignature struct {
 // the stored one, so the preview shows what saving would produce. Writes nothing,
 // and a send never reads it.
 type EmailSignatureDraft struct {
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
+
 	// Phone The caller's phone as edited.
 	Phone *string `json:"phone,omitempty"`
 
@@ -42671,7 +42703,7 @@ type EmailSignatureTemplate struct {
 	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
 	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
-	// none: each member signs with their own plain-text signature.
+	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
 }
 
@@ -46821,7 +46853,7 @@ type Lead struct {
 	// `human_qualify`).
 	QualificationEvidence *LeadQualificationEvidence `json:"qualification_evidence,omitempty"`
 
-	// QualifiedDealId The deal opened by the qualify call that promoted this lead, when one was asked for.
+	// QualifiedDealId The deal joined or opened by the qualify call that promoted this lead, when one was asked for.
 	QualifiedDealId *openapi_types.UUID     `json:"qualified_deal_id,omitempty"`
 	Raw             *map[string]interface{} `json:"raw,omitempty"`
 
@@ -51646,6 +51678,9 @@ type PromiseTakeOver struct {
 
 // PromoteLeadPreview What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
 type PromoteLeadPreview struct {
+	// CompanyId The visible employer this promotion resolves.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
 	// Contact A contact. Mirrors the `contact` table.
 	Contact *Contact `json:"contact,omitempty"`
 
@@ -51654,6 +51689,12 @@ type PromoteLeadPreview struct {
 	// — a caller that reads the omission as `create` would tell the rep a duplicate is
 	// about to be created when the opposite is true.
 	ContactWithheld *bool `json:"contact_withheld,omitempty"`
+
+	// ExistingDeals Open deals of the resolved employer the caller may read and change. Continue with existing_deals_cursor.
+	ExistingDeals *[]Deal `json:"existing_deals,omitempty"`
+
+	// ExistingDealsCursor Cursor for the next page of eligible deals; absent on the last page.
+	ExistingDealsCursor *string `json:"existing_deals_cursor,omitempty"`
 
 	// Outcome merge = an existing live contact matches this lead's email and promotion would fold into it; create = promotion would make a new contact.
 	Outcome PromoteLeadPreviewOutcome `json:"outcome"`
@@ -51682,7 +51723,7 @@ type PromoteLeadRequest struct {
 	// Deal Open a deal in the same transaction as the promotion. Omit both ids to use the
 	// default pipeline's first open stage; a pipeline alone takes its first open stage; a
 	// stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-	// and its company is left unset, also for a lead linked to a company. The deal's id lands
+	// and its company is the contact's resolved employer when one exists. The deal's id lands
 	// on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 	Deal *QualifyDealRequest `json:"deal,omitempty"`
 
@@ -51691,6 +51732,9 @@ type PromoteLeadRequest struct {
 		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 		Note       *string             `json:"note,omitempty"`
 	} `json:"evidence,omitempty"`
+
+	// ExistingDealId Link an open, writable deal of the resolved employer instead of opening one. Mutually exclusive with deal.
+	ExistingDealId *openapi_types.UUID `json:"existing_deal_id,omitempty"`
 
 	// Trigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 	// rejected with 422 — promotion is engagement, not import or an outbound touch.
@@ -51710,7 +51754,7 @@ type PromoteLeadResponse struct {
 	// Contact A contact. Mirrors the `contact` table.
 	Contact Contact `json:"contact"`
 
-	// DealId The deal opened alongside, when the request asked for one.
+	// DealId The deal opened or linked alongside, when the request asked for one.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 	LeadId *openapi_types.UUID `json:"lead_id,omitempty"`
 
@@ -52147,7 +52191,7 @@ type PutOnboardingStateRequestStep string
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
 // stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-// and its company is left unset, also for a lead linked to a company. The deal's id lands
+// and its company is the contact's resolved employer when one exists. The deal's id lands
 // on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 type QualifyDealRequest struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -54728,6 +54772,11 @@ type SaveEmailSignatureRequest struct {
 	// FOR — a name, a role, a way to reach the sender — and past it a block
 	// is a document riding on every message.
 	Body string `json:"body"`
+
+	// Html Personal HTML as typed. Empty clears it; omitted on a write or preview
+	// leaves it unchanged. Rendering uses the signature sanitizer without
+	// expanding placeholders. Empty sanitized content uses the usual fallback.
+	Html *string `json:"html,omitempty"`
 
 	// Phone The member's phone number, for the workspace template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`
@@ -67105,6 +67154,12 @@ type PromoteLeadParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// PreviewLeadPromotionParams defines parameters for PreviewLeadPromotion.
+type PreviewLeadPromotionParams struct {
+	CreateCompany *bool   `form:"create_company,omitempty" json:"create_company,omitempty"`
+	DealsCursor   *string `form:"deals_cursor,omitempty" json:"deals_cursor,omitempty"`
 }
 
 // QualifyLeadParams defines parameters for QualifyLead.
@@ -84002,6 +84057,9 @@ type ServerInterface interface {
 	// Take back a stop, if you outrank the level that set it.
 	// (POST /contacts/{id}/consent/suppress/{suppressionId}/lift)
 	LiftSuppression(w http.ResponseWriter, r *http.Request, id Id, suppressionId openapi_types.UUID)
+	// Recipients copied on inbound correspondence who have no contact or live lead.
+	// (GET /contacts/{id}/conversation-suggestions)
+	ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft an email to this contact, grounded in their record.
 	// (POST /contacts/{id}/draft-email)
 	DraftContactEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -84704,6 +84762,9 @@ type ServerInterface interface {
 	// Update a lead (partial).
 	// (PATCH /leads/{id})
 	UpdateLead(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadParams)
+	// Recipients copied on inbound correspondence who have no contact or live lead.
+	// (GET /leads/{id}/conversation-suggestions)
+	ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id)
 	// Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
 	// (POST /leads/{id}/demote)
 	DemoteLead(w http.ResponseWriter, r *http.Request, id Id, params DemoteLeadParams)
@@ -84730,7 +84791,7 @@ type ServerInterface interface {
 	PromoteLead(w http.ResponseWriter, r *http.Request, id Id, params PromoteLeadParams)
 	// What promoting this lead would do — merge into an existing contact, or create one.
 	// (GET /leads/{id}/promote-preview)
-	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id)
+	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id, params PreviewLeadPromotionParams)
 	// Fill a lead's empty qualification fields that its own data settles, and name the rest.
 	// (POST /leads/{id}/qualify)
 	QualifyLead(w http.ResponseWriter, r *http.Request, id Id, params QualifyLeadParams)
@@ -88049,6 +88110,12 @@ func (_ Unimplemented) LiftSuppression(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Recipients copied on inbound correspondence who have no contact or live lead.
+// (GET /contacts/{id}/conversation-suggestions)
+func (_ Unimplemented) ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Draft an email to this contact, grounded in their record.
 // (POST /contacts/{id}/draft-email)
 func (_ Unimplemented) DraftContactEmail(w http.ResponseWriter, r *http.Request, id Id) {
@@ -89453,6 +89520,12 @@ func (_ Unimplemented) UpdateLead(w http.ResponseWriter, r *http.Request, id Id,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Recipients copied on inbound correspondence who have no contact or live lead.
+// (GET /leads/{id}/conversation-suggestions)
+func (_ Unimplemented) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Reverse a promotion (formulas §26) — the audited undo ADR-0008 §4 promises.
 // (POST /leads/{id}/demote)
 func (_ Unimplemented) DemoteLead(w http.ResponseWriter, r *http.Request, id Id, params DemoteLeadParams) {
@@ -89503,7 +89576,7 @@ func (_ Unimplemented) PromoteLead(w http.ResponseWriter, r *http.Request, id Id
 
 // What promoting this lead would do — merge into an existing contact, or create one.
 // (GET /leads/{id}/promote-preview)
-func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id, params PreviewLeadPromotionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107408,6 +107481,40 @@ func (siw *ServerInterfaceWrapper) LiftSuppression(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListContactConversationSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListContactConversationSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListContactConversationSuggestions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DraftContactEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftContactEmail(w http.ResponseWriter, r *http.Request) {
 
@@ -117244,6 +117351,40 @@ func (siw *ServerInterfaceWrapper) UpdateLead(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListLeadConversationSuggestions operation middleware
+func (siw *ServerInterfaceWrapper) ListLeadConversationSuggestions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListLeadConversationSuggestions(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DemoteLead operation middleware
 func (siw *ServerInterfaceWrapper) DemoteLead(w http.ResponseWriter, r *http.Request) {
 
@@ -117625,8 +117766,37 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewLeadPromotionParams
+
+	// ------------- Optional query parameter "create_company" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "create_company", r.URL.Query(), &params.CreateCompany, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "create_company"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "create_company", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "deals_cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deals_cursor", r.URL.Query(), &params.DealsCursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deals_cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deals_cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreviewLeadPromotion(w, r, id)
+		siw.Handler.PreviewLeadPromotion(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -134714,6 +134884,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/contacts/{id}/consent/suppress/{suppressionId}/lift", wrapper.LiftSuppression)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/conversation-suggestions", wrapper.ListContactConversationSuggestions)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/draft-email", wrapper.DraftContactEmail)
 	})
 	r.Group(func(r chi.Router) {
@@ -135414,6 +135587,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/leads/{id}", wrapper.UpdateLead)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/leads/{id}/conversation-suggestions", wrapper.ListLeadConversationSuggestions)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/leads/{id}/demote", wrapper.DemoteLead)

@@ -1128,12 +1128,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## email_signature
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `body` | `text` | yes | The sign-off appended below every message this member sends, plain text. |
+| `body` | `text` | yes | Plain-text fallback after personal HTML and the company template. |
+| `html` | `text`, default `''::text` | yes | Saved personal HTML, trimmed at both ends. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
 | `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |
@@ -1229,7 +1230,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
-| `qualified_deal_id` | `uuid` |  | The deal opened by the qualify call that promoted this lead, when one was asked for. |
+| `qualified_deal_id` | `uuid` |  | The deal joined or opened by the qualify call that promoted this lead, when one was asked for. |
 | `routed_at` | `timestamp with time zone` |  | When routing assigned an owner. |
 | `score` | `smallint`, default `0` | yes | Lead-local scoring; never reads the contact graph. |
 | `score_computed` | `smallint` |  | Server-derived. |

@@ -6,7 +6,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-43 columns · primary key `(id)` · referenced by 4 foreign keys
+44 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -36,6 +36,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `list_unsubscribe` | `text` |  |  |
 | `message_id` | `text` |  |  |
 | `parked_at` | `timestamp with time zone` |  |  |
+| `party_admission_pending` | `boolean`, default `true` | yes |  |
 | `payload_expires_at` | `timestamp with time zone` |  |  |
 | `payload_ref` | `text` |  |  |
 | `provider` | `text` | yes |  |
@@ -93,6 +94,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 - `comms_outbound_link_ix`: `btree (link_id) WHERE (link_id IS NOT NULL)`
 - `comms_outbound_message_unique`: `unique, btree (message_id)`
 - `comms_outbound_one_delivery_per_instruction`: `unique, btree (instruction_id) WHERE (instruction_id IS NOT NULL)`
+- `comms_outbound_party_admission`: `btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent') AND (sender_kind = 'user') AND (channel_user_id IS NULL))`
 - `comms_outbound_pkey`: `unique, btree (id)`
 - `comms_outbound_workspace_activity_ix`: `btree (activity_id)`
 - `idx_comms_outbound_parked`: `btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)`

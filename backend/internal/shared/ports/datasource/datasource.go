@@ -183,7 +183,7 @@ type SystemOfRecordProvider interface {
 	// shown is released with the approval, and a pin staged and never applied
 	// is a guarantee the approvals surface advertises and the write does not
 	// keep. Nil attaches no precondition.
-	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (ref EntityRef, merged bool, err error)
+	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64, choice PromotionDealChoice) (ref EntityRef, merged bool, err error)
 
 	// Freshness lets a 🟡 high-value action force a synchronous live
 	// read-through to the incumbent before acting (03e §2.3), bypassing
