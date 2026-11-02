@@ -167,17 +167,20 @@ cannot put real work on the list at all: it can only send a plain notice.
 ### 1.6 How a Home read grows
 
 The question: as mail keeps arriving, how long until a Home read takes more
-than 10 s on a database server with 4 GB of memory?
+than 10 s on a small cloud database server? The worst case comes first.
 
-The setup, built to look like a small cloud database:
+The setup, built to look like a small burstable cloud database:
 
 ```
  Postgres 16, 4 GB of memory (its file cache included), 2 CPUs
  shared_buffers 1 GB · effective_cache_size 2 GB · work_mem 4 MB · JIT off
  disk reads and writes capped at 3,000 per second
- a proxy in front that holds each request 1, 2 or 3 ms: one round trip each
+ "credits spent": the CPU cut to 0.4 of a core, the floor such a server falls to
+ a proxy in front that reads the Postgres protocol and holds each round trip
+   (each Sync or simple Query) for 1, 2 or 3 ms, and counts them
  the bench data at scale 0.1 (15 members, 42,500 emails a year), grown a year
- at a time for every mailbox; Home's read (Today, mine and team, pages 1 and 2)
+   at a time for every mailbox; Home's read (Today, mine and team, pages 1 and 2)
+ "cold": the server restarted and the file cache dropped, like a first open
 ```
 
 Older history was made two ways, because real history lies between them:
@@ -187,82 +190,142 @@ Older history was made two ways, because real history lies between them:
  shape B  "new people"   each old year goes to cloned contacts  (lower bound)
 ```
 
-The method is a loop: state a theory, predict a number before measuring it,
-then measure. A theory that misses is dropped.
+The method is a loop: state a theory, write a prediction to a file, then
+measure. A theory that misses is changed. An independent review checked the
+logs and the timestamps of the prediction files.
 
-Theory 1: once the data outgrows memory, reads fall off a cliff. Wrong.
-
-```
- shape B, warm      DB size   p50      p90      worst    worst, cold cache
- 1 year             0.7 GB   1.43 s   2.46 s   3.5 s    3.7 s
- 2 years            1.3 GB   1.49 s   2.38 s   3.4 s    4.3 s
- 4 years            2.4 GB   1.57 s   2.77 s   3.9 s    5.8 s
- 8 years            4.6 GB   1.66 s   3.44 s   4.4 s    8.7 s
- shape A, 4 years   2.4 GB   1.97 s   3.23 s   4.3 s
-```
-
-Eight times the mail adds 16% to p50 on shape B. Most lanes read by owner and
-time, so old mail is rarely read. Shape A grows faster, mostly in
-`relationship_decay` (441 ms against about 180 ms on shape B at 4 years).
-
-Theory 2: a read costs its database work plus one round trip per request.
-Held. Each read was fitted on 0, 1 and 3 ms and predicted at 2 ms before the
-2 ms run: over 30 reads the prediction was off by 4.2% on average, inside the
-noise of two identical runs.
+Theory 1: once the data outgrows memory, reads fall off a cliff. Held for cold
+reads, not for warm ones.
 
 ```
- Home read ≈ database work + round trip × round trips per read
-             (grows slowly with history)   (80 to 600 for a read with no open cases)
+ shape B, 2 CPUs   DB size   warm p50   warm p90   warm worst   cold worst
+ 1 year            0.7 GB    1.43 s     2.46 s     3.5 s        3.7 s
+ 2 years           1.3 GB    1.49 s     2.38 s     3.4 s        4.3 s
+ 4 years           2.4 GB    1.57 s     2.77 s     3.9 s        5.8 s
+ 8 years           4.6 GB    1.66 s     3.44 s     4.4 s        8.7 s
+ shape A, 4 years  2.4 GB    1.97 s     3.23 s     4.3 s
 ```
 
-Theory 3: each open duplicate case in a reader's view adds a fixed number of
-round trips, up to the 200 cases the lane reads (#9950). Held. Three reps were
-given 1,200, 450 and 300 open pairs, and two more 50 and 100, with the numbers
-predicted first:
+Warm p50 grows slowly (+16% over eight times the mail): most lanes read by owner
+and time. The cold worst read, a manager's team view, grows faster at each
+doubling (+0.6, +1.5, +2.9 s) as the data outgrows the server's memory. A team
+opening Home at 9:00 meets the cold column, not the warm one. Shape A grows
+faster than B, mostly in `relationship_decay`.
+
+Theory 2: a read costs its database work plus one wait per round trip. Held.
+With the counting proxy, each counted round trip costs 0.94 times the set
+delay (median over 30 reads), and an earlier fit on 0, 1 and 3 ms predicted
+the 2 ms run within 4% on average. A Home read with no open cases makes 294
+round trips at the median (112 to 434). That is more than the statements it
+runs: a statement sent in `QueryExecModeDescribeExec` (the waiting family)
+takes two round trips, and so does a statement's first use on a connection.
+
+Theory 3: each open duplicate case in a reader's view adds round trips and
+work, up to the 200 cases the lane reads (#9950). Held, with a cap.
 
 ```
-                         round trips per read
-                         predicted   measured
- rep with 50 open pairs     830         786
- rep with 100 open pairs  1,560       1,531
- any view with ≥ 200 cases   —     2,350 – 2,660   a manager's team view counts the team's
+                              round trips per Home read
+ no open case in view            112 – 434   (median 294)
+ rep with 50 open pairs          predicted 830 (fitted units), measured 786
+ rep with 100 open pairs         predicted 1,560, measured 1,531
+ any view with ≥ 200 cases       1,840 – 1,970 counted; 300, 450 and 1,200 pairs alike
 ```
 
-So each case costs about 10 round trips and about 20 ms of database work, and
-past 200 cases the cost stops growing. With 1,950 open pairs on 8 years of
-shape B:
+Each case adds about 8 round trips and 15 ms of database work; past 200 cases
+the cost stops growing. A manager's team view holds the team's cases.
+
+The worst case, 8 years of shape B with 1,950 open pairs, 3 ms round trip:
 
 ```
- round trip     p50      p90      worst
- none           1.95 s   6.20 s   7.2 s
- 1 ms           2.41 s   8.85 s  10.3 s
- 2 ms           2.98 s  11.48 s  12.3 s
- 3 ms           3.50 s  13.73 s  15.1 s
+                                         p50      p90      worst    reads over 10 s
+ 2 CPUs, warm                            3.68 s   11.8 s   12.9 s     —
+ credits spent (0.4 CPU), cold           5.43 s   17.4 s   20.9 s   11 of 30
+ credits spent (0.4 CPU), warm           5.55 s   15.8 s   18.4 s   11 of 30
+ 8 GB of memory, 0.6 CPU, cold           4.47 s   14.3 s   19.3 s   11 of 30
 ```
 
-The second pass of a long-running process, with every statement already
-prepared, makes 338 round trips at the median against 397 in a fresh process,
-and the same 600 at most. The round trips are not a test artefact.
+With the cases gone (#9950 simulated by archiving them), 3 ms, credits spent,
+cold:
 
-What crosses 10 s, then:
+```
+                                         p50      p90      worst    reads over 10 s
+ 4 GB, 0.4 CPU                           4.38 s   9.50 s   13.9 s    2 of 30
+ 4 GB, 0.4 CPU, + address+time, kept     2.66 s   6.26 s   10.1 s    1 of 30
+   plans (2.5)
+ 8 GB, 0.6 CPU                           3.24 s   6.31 s   10.6 s    1 of 30
+```
 
-- Open duplicate cases, now. At a 3 ms round trip each case costs about 50 ms.
-  A rep's read starts near 2.5 s, so about 150 open cases put it over 10 s. A
-  manager's team view starts near 5 s and adds the whole team's cases, so
-  about 100 do. How long that takes is how fast cases are left open: at one
-  case a day left in a manager's view, about 100 days.
-- History, slowly. With no open cases, at 3 ms the worst read was 5.6 s after
-  8 years on shape B and 6.0 s after 4 years on shape A: about 0.1 to 0.3 s a
-  year on the worst read. Ten seconds is past the 8 years and 4.6 GB measured,
-  so any date for it is an extrapolation; no cliff showed inside that range.
-- The address + time index with kept plans (2.5), at 8 years and 3 ms: p50
-  2.73–3.06 → 2.06 s, worst 5.6–8.6 → 3.9–4.1 s over two runs each. It buys
-  seconds on reads that were already under 10 s. Round trips set the 10 s
-  line, and that is what the baseline (2.15) budgets.
+Server CPU per Home read, 8 years, measured from the server's own CPU counter:
+1.68 s with no open cases, 2.39 s with them, 0.92 s with the address + time
+form and kept plans. A burstable server earns its floor of CPU per hour (0.4
+of a core is 1,440 CPU-seconds an hour); every Home read beyond what that
+floor pays for spends the balance, and a spent balance is the worst case
+above.
 
-Limits: synthetic history copies one year of bench mail; one machine; one
-thread, no concurrent readers; the proxy holds each chunk the client sends,
-which is one per request for these reads.
+Every member opening Home at once, through the app's pool of 16 connections:
+no read finished within a minute. 2.15 (B8) is the rule and the test that
+answer it.
+
+What this says about 10 s:
+
+- Open duplicate cases cross it now, on any server size: at 3 ms each case
+  costs about 40 ms (8 round trips and 15 ms of work), and a view with 200
+  cases pays about 8 s for them alone. #9950 comes first.
+- After #9950, a server out of credits still crosses it on cold manager views
+  (2 of 30 reads). Halving the CPU per read (address + time, kept plans) or
+  more memory brings it to the line, not clearly under it.
+- History alone, warm, moves slowly: 0.1 to 0.3 s a year on the worst read.
+  Cold, it moves faster and speeds up past the server's memory, so cold first
+  opens set the date, not warm reads.
+- The address + time form with kept plans helps most where CPU is short:
+  p50 −39% and p90 −34% on the throttled server, against −25 to −33% p50 with
+  2 CPUs (2.82–3.06 → 2.06 s, like-for-like runs with the index present).
+
+Limits: synthetic history copies one year of bench mail onto either the same
+or cloned contacts; mail grows, deals, tasks, approvals and meetings do not.
+One machine. The concurrent run is one burst. The "8 GB" server kept the 1 GB
+`shared_buffers` of the 4 GB one; the rest of its memory served as file cache.
+
+### 1.7 The projection model
+
+What the measurements above fit, per Home read:
+
+```
+ T  ≈  k × ( W(scope, history, temperature) + 15 ms × min(c, 200) )
+     + r × ( R0 + 8 × min(c, 200) )
+
+ T     the Home read, seconds
+ W     database work with no open cases, 2 CPUs, 8 years: p50 1.7 s, p90
+       3.4 s warm; the manager's team view the largest; cold adds most past memory
+ k     CPU stretch: 1 with 2 CPUs, about 2.2 when credits are spent (0.4 of a core)
+ c     open duplicate cases in the reader's view (a manager: the team's)
+ r     round trip between app and database
+ R0    round trips with no open case: 112–434, median 294
+```
+
+Data skew, the shapes that decide who crosses 10 s first:
+
+```
+ skew                             who pays                       where in T
+ open duplicate cases             their owners; a manager's      c (to the 200 cap)
+   on a few owners                team view; an admin's all
+ one large mailbox                its seat's waiting lane        W (seat mail, 2.5)
+ long contact histories           last-touch lanes               W (shape A)
+ a team opening Home together     everyone at 9:00               cold W, pool (2.15 B8)
+ a spent CPU balance              everyone, all day              cpu
+ bursts of new cases              owners after an import         c jumps, not drifts
+```
+
+Growth rate is the part to measure, not assume. History grows with mail per
+day. Open cases grow in bursts, when imports and duplicate scans
+(`contacts.ScanChangedForDuplicates`) file candidates faster than people
+review them. So the leading signals are the open cases per view and the CPU
+balance, not the days passed. Each is a number a dashboard can show before
+Home slows down:
+
+- open cases per owner and per team, against the 200 cap;
+- server CPU seconds per Home read, against the floor the server earns;
+- the cold p90 of the manager's team view.
 
 ---
 
@@ -868,25 +931,34 @@ The bench should send `view=today` there, or name the row for what it reads.
 
 ### 2.14 Order of work
 
-Ordered by what 1.6 measured and by the independent review (Part 3, Review): what crosses 10 s
-first, and what makes the rest safe to change.
+Ordered by what 1.6 measured, worst case first, and by the independent review
+(Part 3, Review).
 
 ```
- 1  identity check once            small, answers proven identical; ship alone
- 2  tail stage metrics, and the    three lines; makes the production stage metrics and
-    bench's home_worklist row      the bench tell the truth
- 3  #9950 contact cases (B1)       the one rule that crosses 10 s; owner assigned
- 4  round-trip budget (B3)         moves the 10 s line most; measure a batched read first
- 5  Home cache: trigger census,    guards code already shipped; then the capture link
+ 1  a read holds one connection    B8: the one-connection test, then the fix;
+                                   availability before speed
+ 2  #9950 contact cases (B1)       crosses 10 s on any server size; owner assigned
+ 3  identity check once            small, answers proven identical; ship alone
+ 4  tail stage metrics, the        three lines each; the production stage metrics and
+    bench's home_worklist row,     the bench then tell the truth; a round-trip counter
+    a round-trip counter           makes B3 measurable
+ 5  seat mail by address + time    measured: p50 −39% on a server out of credits;
+    + kept waiting plans (B2, B4)  one change, both sides of one wire; column, index,
+                                   data task, drift gate
+ 6  Home cache: trigger census,    guards code already shipped; then the capture link
     hit/miss counters (B6)         or a fence per reader
- 6  whole-read plan reuse (B4)     after the census of every statement and the memory
-                                   figures; behind a setting, read the stage metrics
- 7  seat mail by address + time    one change with the kept waiting plans: both sides of
-    + kept waiting plans (B2, B4)  one wire; column, index, data task, drift gate
- 8  last touch by contact + time   shape A in 1.6
- 9  a read that only reads         small parts (base currency, brief opened) when near
-10  kind catalog                   loader, generator and gate, without the push vocabulary
+ 7  whole-read plan reuse (B4)     after the census of every statement and the memory
+                                   figures; behind a setting
+ 8  round-trip budget (B3)         the plumbing fold first; batching after one batched
+                                   lane is measured
+ 9  last touch by contact + time   shape A in 1.6
+10  a read that only reads         small parts (base currency, brief opened) when near
+11  kind catalog                   loader, generator and gate, without the push vocabulary
 ```
+
+Server size: more memory moves the cold column; it does not remove the open
+case cost or the round trips (1.6). Measure the leading signals of 1.7 before
+and after any change of server.
 
 The ground-truth check runs before each step lands.
 
@@ -900,7 +972,7 @@ that a test holds, for every kind at once.
  today                                     baseline
  a lane reads items to count them          a lane reads its page; counts come from a count
  a lane may read a whole history           every read starts from (who, when) on an index
- 80 to 2,660 round trips per Home read     a budget of round trips per read, held by a test
+ 112 to 1,970 round trips per Home read    a budget of round trips per read, held by a test
  plans made on every call                  stable statement text, one plan per connection
  a lane past its budget drops silently     a lane past its budget is counted and named
  one shared fence ends every cached copy   only the readers a write narrows lose their copy
@@ -928,25 +1000,43 @@ never the history behind it:
  decisions            owner, open         created         to check
 ```
 
-Test: on the grown bench, each lane reads no more than a fixed multiple of
-the rows it returns (`EXPLAIN (ANALYZE)` rows read against rows returned).
+Test: on the grown bench (B7), not in `make check`, each lane reads no more
+than a fixed multiple of the rows it returns (`EXPLAIN (ANALYZE)` rows read
+against rows returned); a plan-dependent check would flap in CI. The table is
+per lane: a team or all scope starts from many owners, and the access clauses
+join the identity family and record grants on every lane.
 
-B3. A budget of round trips. A Home read sends its lanes' statements in
-batches: pgx sends a batch of queries in one round trip, inside the same
-snapshot. A lane that may fail keeps its savepoint inside the batch. Reads
-that name rows by id read the whole page in one statement per kind, not one
-per row. A target to argue: 50 round trips per Home read, against 80 to 2,660
-today. At a 3 ms round trip that is 0.15 s instead of up to 8 s. Test: the
-stage metrics already count statements; an integration test fails a read past
-the budget. Not built or measured yet: the largest change here, and the one
-that moves the 10 s line most.
+B3. A budget of round trips. A read with no open case makes 112 to 434 round
+trips, and each costs the network's round trip once more. Three ways down, in
+the order they are cheap:
+
+- Each degradable lane already sends its savepoint plumbing as two batches
+  (open, close). Folding the lane's first statement into the opening batch and
+  its last into the closing one saves about two round trips per lane, some 22
+  per read, with no new machinery.
+- Statements that run in `QueryExecModeDescribeExec` take two round trips per
+  call by protocol; kept plans (B4) make them one.
+- Independent statements of one lane go in one pgx batch, inside the same
+  snapshot. A batch ends at each lane boundary. After a failed query pgx
+  returns that error for every later query of the batch, so a savepoint cannot
+  rescue the rest; a failed lane loses its batch, as it loses its work
+  today. Steps that depend on the previous result (the waiting queue, then its
+  cards; names after the ranking) stay separate round trips.
+
+A floor after #9950 of roughly 60 to 100 round trips per read is what batching
+reaches with today's lanes; fewer needs fewer dependent steps. The test needs
+a round-trip counter (pgx's query and batch traces, aware of prepares), warm
+and cold, beside the stage metrics, which count statements, not round trips.
+Not built: measure one batched lane before planning more.
 
 B4. One plan per connection. Statement text stays the same between calls (no
 values written into the text, caps bound as values), so a prepared statement
 keeps its plan. Generic plans for a whole read only after a census of every
 statement of a full read finds none that loses an index (2.3, and the independent review).
 `PlanEachBind` stays only where a statement needs its values to stop early,
-and B2 removes most of those cases.
+and B2 removes most of those cases. B4 also stops sending the 110 to 200 KB
+waiting texts on every call, which is bandwidth and parse CPU as well as
+planning.
 
 B5. Budgets fail loud. A lane past its time budget is counted on `/metrics` and
 named on the page, and the ground-truth check refuses a run with a failed
@@ -958,9 +1048,27 @@ in its capture transaction, or the first link ends only the copies of readers
 who could see the mail (2.13). The fence triggers come from a census of the
 access rules, not a hand list.
 
-B7. Growth is tested, not met. The loop of 1.6 runs as a bench: grow history,
-add skew (open cases, a large mailbox), add a round trip, fit the model,
-predict the next step, and fail when the read that crosses 10 s comes closer.
+B7. Growth is tested, not met. The loop of 1.6 runs as a bench. It grows
+history, adds skew (open cases, a large mailbox), adds a round trip, spends
+the CPU, and reads cold and all at once. It then fits the model of 1.7,
+predicts the next step, and fails when the read that crosses 10 s comes
+closer. It grows mail today;
+deals, tasks, approvals and meetings should grow too.
+
+B8. A read holds one connection at a time. A composed read keeps its snapshot
+connection for its whole run; any step inside it that asks the pool for a
+second connection makes concurrent reads wait on each other once the pool is
+full. Test: a whole first-page read, every lane populated, `mine` and `team`,
+on a pool of one connection, with a short timeout. It must pass; today it does
+not.
+
+B9. Budgets for what a single read cannot show:
+
+- connections held and pool wait under a burst of opens;
+- the cold p90 of the manager's team view;
+- the statement text sent per call;
+- server CPU per read, against the floor a burstable server earns;
+- the Home cache's hit rate, which for repeat opens outweighs every other lever.
 
 How the kinds of 1.1 map onto the baseline: each keeps its lane and its rules,
 and gains a bound. Customers waiting needs B2 (address + time) and B4.
@@ -1151,7 +1259,7 @@ Files that matter:
 | `backend/internal/compose/worklisttail_poc_test.go` | The scroll tail's cost per stage (2.5); `POC_ALL_STAGES` prints every stage for one member |
 | `backend/internal/compose/integration/homefence_actions_poc_test.go` | How everyday actions and capture move the Home fence (2.13) |
 | `poc/growth/grow.sql` | The growth loop of 1.6: one more year of mail per call, in either shape |
-| `poc/growth/delayproxy.go` | A TCP proxy that holds each request for a set delay: the round trip of 1.6 |
+| `poc/growth/delayproxy.go` | A proxy that reads the Postgres protocol, holds each round trip for a set delay and counts them (1.6) |
 | `backend/internal/compose/worklist*_poc_test.go` | The other measurements |
 | `backend/internal/modules/worklist/store.go` | The push experiment's store (3.3) |
 
