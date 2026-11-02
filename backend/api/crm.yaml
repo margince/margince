@@ -60831,6 +60831,10 @@ components:
         what is waiting inside it is not named at all.
       required: [generated_at, mailboxes, classifier, held_meetings, sweeps, connection_concerns]
       properties:
+        owner_reviews:
+          type: array
+          description: Mailbox owners with decisions ready for human review. Counts and names only.
+          items: { $ref: '#/components/schemas/CaptureOwnerReview' }
         categories:
           $ref: '#/components/schemas/CaptureHealthCategories'
         connection_concerns:
@@ -60938,6 +60942,16 @@ components:
       properties:
         from: { type: string, format: date-time, description: The first moment nobody read. }
         to: { type: string, format: date-time, description: The moment reading resumed. }
+
+    CaptureOwnerReview:
+      type: object
+      additionalProperties: false
+      required: [user_id, sender_decisions, thread_decisions]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        sender_decisions: { type: integer, minimum: 0 }
+        thread_decisions: { type: integer, minimum: 0 }
 
     CaptureMailboxHealth:
       type: object

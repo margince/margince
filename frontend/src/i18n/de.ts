@@ -1819,7 +1819,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "In dieser Unterhaltung, noch nicht in Margince",
   "conversationSuggestions.add": "Als Kontakt hinzufügen",
   "conversationSuggestions.limited":
-    "Ältere Nachrichten können weitere Empfänger nennen.",
+    "Ältere Nachrichten können weitere E-Mail-Adressen enthalten.",
   "contact.meetings.copyBookingLink": "Meinen Buchungslink kopieren",
   "contact.meetings.join": "Mit {app} teilnehmen",
   "contact.meetings.joinCall": "Am Videoanruf teilnehmen",
@@ -14285,13 +14285,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.accountSettings": "Wer E-Mails von {account} sieht",
   "connectors.heldPointer.label": "Zurückgehaltene Threads und Absendeadressen",
   "connectors.heldPointer.some_one":
-    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
   "connectors.heldPointer.some_other":
-    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
   "connectors.heldPointer.none":
-    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
   "connectors.heldPointer.unknown":
-    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
   "connectors.heldPointer.review": "Prüfen",
   "connectors.advanced": "Erweitert",
   "connectors.advancedCount_one": "{count} Einstellung",
@@ -19807,6 +19807,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.filteredFinding_other": "1 von {count} Problemen angezeigt",
   "health.showAllFindings": "Alle Probleme anzeigen",
   "health.jobDelayed": "{kind}: verzögert",
+  "health.checkNumbers": "Prüfzahlen anzeigen",
+  "health.checkResults": "Prüfergebnisse",
+  "health.checksFailed": "Fehlgeschlagene Prüfungen",
+  "health.checksReview": "Entscheidung nötig",
+  "health.checksPassing": "Erfolgreiche Prüfungen",
+  "health.checksPending": "Ergebnis ausstehend",
+  "health.askOwner": "Postfachinhaber fragen",
+  "health.mailReviewOwners": "Postfachentscheidungen",
+  "health.reviewOwnersIntro":
+    "Prüfe deine Auswahl oder kopiere eine Prüfbitte für ein anderes Postfach.",
+  "health.ownerReviewEmpty": "Keine Postfachentscheidungen stehen aus.",
+  "health.copyReviewRequest": "Prüfbitte kopieren",
+  "health.copyReviewRequestFor": "Prüfbitte für {name} kopieren",
+  "health.reviewSenderRequest":
+    "{name}, öffne Worklist → Entscheidungen und nimm die vorgeschlagenen Kontakte an oder lehne sie ab: {url}",
+  "health.reviewThreadRequest":
+    "{name}, prüfe die zurückgehaltenen Gespräche deines Postfachs: {url}",
+  "health.ownerNameUnknown": "Postfachinhaber",
+  "health.ownerReviewUnavailable":
+    "Prüfe deine E-Mails oder kopiere eine Prüfbitte für das betroffene Postfach.",
+  "health.openMyReviews": "Meine Auswahl prüfen",
+  "health.copyRequestRemedy": "Markiere und kopiere die Prüfbitte unten.",
+  "health.senderReviewCount_one": "{count} Absenderentscheidung offen",
+  "health.senderReviewCount_other": "{count} Absenderentscheidungen offen",
+  "health.threadReviewCount_one": "{count} Gespräch wartet",
+  "health.threadReviewCount_other": "{count} Gespräche warten",
   "health.views": "Ansichten des Systemzustands",
   "health.overview": "Übersicht",
   "health.diagnostics": "Diagnose",
@@ -19819,16 +19845,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Sende den Fehlerbericht an den Systembetreiber. Er soll den Abschluss prüfen, die Ursache beheben und nur offene Arbeit neu starten; diese fehlgeschlagenen Läufe starten nicht automatisch neu.",
   "health.readFailedNext":
     "Aktualisiere diese Prüfung. Falls sie weiter fehlschlägt, sende den technischen Bericht an den Systembetreiber.",
-  "health.jobStopped": "{kind}: fehlgeschlagene Läufe prüfen",
-  "health.effectUntilFixed": "Bis zur Behebung:",
+  "health.jobStopped": "{kind}: fehlgeschlagene Läufe",
   "health.effect.mailSorting":
     "In der Worklist können E-Mails fehlen oder falsch eingeordnet sein, die eine Antwort oder eine Terminabsprache brauchen. Prüfe deinen Posteingang selbst, bis die Sortierung aufgeholt hat. Du kannst weiterhin E-Mails empfangen und lesen.",
   "health.effect.jobs":
     "Die aufgeführten Hintergrundaufgaben können unvollständig bleiben. Die Zahl fehlgeschlagener Läufe zählt weder fehlende Datensätze noch betroffene Teammitglieder; der Betreiber muss die Aufgaben prüfen.",
   "health.effect.senderReview":
-    "Neue Geschäftskontakte werden möglicherweise nicht angelegt und zugehörige E-Mails bleiben für Teammitglieder unzugänglich, bis die Absenderentscheidung geklärt ist.",
+    "Neue Kontakte und ihre E-Mails fehlen möglicherweise unter Kontakte.",
   "health.effect.heldMail":
-    "Die betroffenen Gespräche bleiben für Teammitglieder verborgen, die nicht an der E-Mail beteiligt waren, bis die Vertraulichkeitsprüfung geklärt ist.",
+    "Diese Gespräche sind im Team erst nach der Freigabe sichtbar.",
   "health.effect.unreadMail":
     "E-Mails aus dem gemeldeten Zeitraum fehlen möglicherweise im CRM. Spätere E-Mails können weiter ankommen; stelle den Zeitraum wieder her, bevor du dem Verlauf vertraust.",
   "health.effect.captureRepair":
@@ -19864,7 +19889,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.measure.items_one": "{count} Element",
   "health.measure.items_other": "{count} Elemente",
   "health.checked": "Keine Aktion nötig",
-  "health.incomplete": "Systemzustand konnte nicht vollständig geprüft werden",
+  "health.refreshNeeded": "Aktualisierung nötig",
+  "health.unreadNext":
+    "Öffne Verbindungen, prüfe dieses Postfach und verbinde es bei Bedarf erneut.",
+  "health.incomplete": "Für einige Prüfungen fehlt ein Ergebnis",
   "health.refresh": "Aktualisieren",
   "health.prioritiesChanged":
     "Die Prioritäten haben sich geändert. Aktualisieren, um die neue Reihenfolge zu übernehmen.",
@@ -19923,7 +19951,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
   "health.ownerHandoff":
-    "Eigene Mail-Entscheidungen unter Verbindungen prüfen. Bei anderen Postfächern die Zuständigen bitten; private Nachrichten sind nur für sie sichtbar.",
+    "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Capture-Aktivität geprüft.",
   "health.operatorHandoff":
     "Ein technischer Betreiber muss den Fall prüfen. Die Diagnoseübersicht für die Übergabe kopieren.",
   "health.copy": "Technischen Bericht kopieren",
@@ -19958,14 +19986,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.queue_expectation_unknown":
     "Arbeit ist ausführbar; eine erwartete Wartezeit ist nicht festgelegt",
   "health.code.capture_checked":
-    "Kein Erfassungsrückstand in den geprüften Kategorien erkannt",
+    "In den geprüften Kategorien ist keine Aktion zur Erfassung nötig",
   "health.code.capture_processing": "Absendeadressen werden eingeordnet",
-  "health.code.capture_uncertain":
-    "Festlegen, wessen Nachrichten ins CRM gehören",
+  "health.code.capture_uncertain": "Kontaktvorschläge prüfen",
   "health.code.capture_exhausted":
     "Automatische Versuche der Absendereinordnung sind ausgeschöpft",
-  "health.code.capture_owner_review":
-    "Für das Postfach steht eine Mail-Entscheidung aus",
+  "health.code.capture_owner_review": "Postfachentscheidungen prüfen",
   "health.code.capture_unread":
     "Ungelesene Postfachzeiträume brauchen einen Wiederherstellungsnachweis",
   "health.code.capture_held":
@@ -20005,8 +20031,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
-  "health.code.capture_thread_uncertain":
-    "Festlegen, welche Gespräche für das Team sichtbar sind",
+  "health.code.capture_thread_uncertain": "Private Gespräche prüfen",
   "health.queueCoverage":
     "Der Warteschlangenverlauf wird nur begrenzt aufbewahrt. Sein Fehlen belegt nicht, dass zuvor fehlgeschlagene Arbeit erledigt wurde.",
 

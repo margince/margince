@@ -33727,6 +33727,9 @@ type CaptureHealth struct {
 	// Mailboxes One row per mailbox owner with anything waiting. A mailbox with a clear queue is absent.
 	Mailboxes []CaptureMailboxHealth `json:"mailboxes"`
 
+	// OwnerReviews Mailbox owners with decisions ready for human review. Counts and names only.
+	OwnerReviews *[]CaptureOwnerReview `json:"owner_reviews,omitempty"`
+
 	// Sweeps One row per repair pass, always all of them, in a fixed order. A pass that has
 	// never run is listed with no `last_run`, not left out.
 	Sweeps []CaptureSweepHealth `json:"sweeps"`
@@ -33860,6 +33863,14 @@ type CaptureOwnerIdentityListResponse struct {
 // It is its own word rather than `user` because a seat looking at an address they never typed
 // is owed the difference — and, seeing it, may remove it like any other.
 type CaptureOwnerIdentitySource string
+
+// CaptureOwnerReview defines model for CaptureOwnerReview.
+type CaptureOwnerReview struct {
+	DisplayName     *string            `json:"display_name,omitempty"`
+	SenderDecisions int                `json:"sender_decisions"`
+	ThreadDecisions int                `json:"thread_decisions"`
+	UserId          openapi_types.UUID `json:"user_id"`
+}
 
 // CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
 // endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
