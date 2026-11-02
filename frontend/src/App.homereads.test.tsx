@@ -2,7 +2,12 @@
 import { focusManager } from "@tanstack/react-query";
 import { cleanup, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { readStored, STORAGE_KEYS, writeStored } from "./lib/storage";
+import {
+  readStored,
+  removeStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "./lib/storage";
 import { memoryStorage, renderApp, teardownApp } from "./testing/appharness";
 import { meFixture } from "./testing/mefixture";
 
@@ -126,4 +131,15 @@ it("forgets the session when a later probe is refused", async () => {
   focusManager.setFocused(true);
   await waitFor(() => expect(probes).toBeGreaterThan(1));
   await waitFor(() => expect(readStored(STORAGE_KEYS.sessionSeen)).toBeNull());
+});
+
+it("stops Home's reads when the session mark is erased, as a sign-out does", async () => {
+  writeStored(STORAGE_KEYS.sessionSeen, "1");
+  const { seen } = server({}, ["/me", "/worklist"]);
+  renderApp();
+  await waitFor(() => expect(asked(seen, "/worklist")).toBeDefined());
+  removeStored(STORAGE_KEYS.sessionSeen);
+  await waitFor(() =>
+    expect(asked(seen, "/worklist")?.signal?.aborted).toBe(true),
+  );
 });

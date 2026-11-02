@@ -1,5 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 // Route → screen. The table below is total over `Screen` (lib/router.tsx), so
 // every address the product answers has a view. An address it does not answer
 // is a not-found page rather than a surface that reads as unbuilt.
@@ -47,6 +53,7 @@ import {
   readStored,
   removeStored,
   STORAGE_KEYS,
+  watchStored,
   writeStored,
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
@@ -146,6 +153,11 @@ function UnavailableOrClaimable({
   }
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
+
+// Watched, so a sign-out here or in another tab ends Home's early reads at once.
+const watchSessionSeen = (changed: () => void) =>
+  watchStored(STORAGE_KEYS.sessionSeen, changed);
+const sessionSeenNow = () => readStored(STORAGE_KEYS.sessionSeen) === "1";
 
 // Marks whether this browser has a session, and answers whether the probe was
 // refused. A refused refetch keeps the last data beside its error.
@@ -269,8 +281,11 @@ function AuthedApp({
   }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
-  // Read on every render, so a sign-out's forgetSeat ends it at once.
-  const sessionSeen = readStored(STORAGE_KEYS.sessionSeen) === "1";
+  const sessionSeen = useSyncExternalStore(
+    watchSessionSeen,
+    sessionSeenNow,
+    sessionSeenNow,
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const gatesPending = companyPending || recordZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
