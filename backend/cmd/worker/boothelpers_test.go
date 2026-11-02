@@ -10,6 +10,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"path/filepath"
 	"strings"
@@ -46,7 +47,7 @@ func TestConfiguringTheWorkerFailsBeforeAnythingIsOpened(t *testing.T) {
 			// one would make the missing-dsn case boot successfully and this
 			// subtest fail for a reason that has nothing to do with the code.
 			t.Setenv("MARGINCE_DSN", "")
-			_, err := configureWorker(tc.args, io.Discard)
+			_, err := configureWorker(context.Background(), tc.args, io.Discard)
 			if err == nil {
 				t.Fatalf("configureWorker(%v) succeeded; a misconfigured deployment must be refused here", tc.args)
 			}
@@ -69,7 +70,7 @@ func TestConfiguringTheWorkerCarriesTheDeploymentPostureOntoTheConfig(t *testing
 	// A path with no file is a legitimate deployment: the docs say a missing
 	// config boots with defaults, so this exercises the whole chain rather
 	// than a fixture's contents.
-	boot, err := configureWorker([]string{
+	boot, err := configureWorker(context.Background(), []string{
 		"--dsn", "postgres://localhost/x",
 		"--config", filepath.Join(t.TempDir(), "absent.yaml"),
 	}, io.Discard)

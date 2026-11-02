@@ -38,6 +38,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
@@ -67,10 +69,18 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	boot, err := configureWorker(workerFlags(args), stdout)
+	boot, err := configureWorker(ctx, workerFlags(args), stdout)
 	if err != nil {
 		return err
 	}
+	// Registered before the pool, the bus, the observer, the lanes and the job
+	// runner, so LIFO runs it after every one of them has stopped: the last
+	// events a draining job or lane logs are still flushed.
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		instrument.Shutdown(flushCtx)
+	}()
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
 	pool, err := database.NewPool(ctx, cfg.dsn)
@@ -263,7 +273,7 @@ type workerBoot struct {
 // Grouped because they share one property the phases after them do not: none
 // of them opens a connection, so a deployment misconfigured in any of these
 // ways fails before a pool, a bus client or a listener exists to clean up.
-func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
+func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
 	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
@@ -277,6 +287,14 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	if err != nil {
 		return workerBoot{}, err
 	}
+	// Instrumentation starts before the process logger so the logger is built
+	// already wrapped; its boot logger sits on the bare handler so a unit's own
+	// diagnostics never pass through a unit's wrapper. run() defers the flush.
+	bootHandler, err := httpserver.LogHandler(stdout, cfg.logLevel, cfg.logFormat)
+	if err != nil {
+		return workerBoot{}, err
+	}
+	compose.StartInstrumentation(ctx, "worker", slog.New(bootHandler))
 	log, err := newWorkerLogger(cfg, stdout)
 	if err != nil {
 		return workerBoot{}, err

@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -70,6 +71,9 @@ func LogHandler(w io.Writer, level, format string) (slog.Handler, error) {
 // correlation_id whichever context it was given — which is why fault.go used
 // to attach the id by hand, and why it no longer has to.
 //
+// Extension instrumentation wraps the sink inside correlation, so a unit's
+// handler sees the correlation_id too.
+//
 // A role builds its logger ONCE, at boot, before anything serves. Nothing here
 // guards against a second call: the process default is a single value by
 // construction, and a role that installed two logs through whichever won.
@@ -78,7 +82,7 @@ func InstallProcessLogger(w io.Writer, level, format string) (*slog.Logger, erro
 	if err != nil {
 		return nil, err
 	}
-	logger := slog.New(WithCorrelation(handler))
+	logger := slog.New(WithCorrelation(instrument.LogHandler(handler)))
 	slog.SetDefault(logger)
 	return logger, nil
 }

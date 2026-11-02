@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
@@ -77,6 +78,23 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
 		return err
 	}
+
+	// Instrumentation starts after registration and BEFORE the process logger
+	// below, so the logger is built already wrapped by the units' handlers. It
+	// is handed a logger on the bare handler: a unit's own diagnostics must not
+	// pass through a unit's wrapper. The flush is deferred here, before the
+	// pool and the other closers, so LIFO runs it LAST — after the HTTP drain
+	// and every closer, and events logged while shutting down still leave.
+	bootHandler, err := httpserver.LogHandler(stdout, cfg.logLevel, cfg.logFormat)
+	if err != nil {
+		return err
+	}
+	compose.StartInstrumentation(ctx, "api", slog.New(bootHandler))
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		instrument.Shutdown(flushCtx)
+	}()
 
 	// INSTALLED as the process default, not merely built. Everything below is
 	// handed this logger explicitly, but the tree also logs through the
