@@ -29,12 +29,9 @@ const meetingOrganizerQuery = `
 	HAVING count(DISTINCT op.user_id) = 1`
 
 // MeetingOrganizers answers which colleague organized each of these meetings,
-// for THIS caller. A meeting organized by an outside party, by an address no
-// single seat proved, or one the caller may not read is absent from the map.
-//
-// It is a different fact from host_user_id, which records whose calendar the
-// row came off. A colleague's calendar can store a meeting before the
-// organizer's does, so the two differ for every invitation synced that way.
+// for this caller. Outside organizers and unreadable meetings are absent. This
+// differs from host_user_id, which names whose calendar synced the meeting
+// first: often an invited colleague's.
 func (s *Store) MeetingOrganizers(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]ids.UUID, error) {
 	out := make(map[ids.UUID]ids.UUID, len(meetingIDs))
 	if len(meetingIDs) == 0 {

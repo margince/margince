@@ -313,7 +313,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// Which account a meeting row's contact works for, from the employer
 		// read every contact page carries.
 		WithContactEmployers(newContactsStore(db)).
-		// Which colleague organized a meeting row's meeting, for its host.
 		WithMeetingOrganizers(activities.NewStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
