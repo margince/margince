@@ -198,6 +198,7 @@ cannot put real work on the list at all: it can only send a plain notice.
 | Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | Yes (switched on by the test; the production hook is next) |
 | Identity check once | The "who am I" list is computed once per statement, not once per row | Yes |
 | Scroll tail continues | Scrolling starts where each lane stopped instead of from the beginning | Next |
+| A read that only reads | The Worklist read stops writing, so it can be prepared ahead, cached safely and run on a replica | Next |
 | Ground-truth check | Proves a change gives today's answers, field by field | Yes |
 
 ### 2.2 Principles
@@ -419,7 +420,42 @@ into a separate store needs extra code for every line above, for every kind
   becomes an integration test that takes its views, scopes and filters from the
   API contract, so it fails if coverage shrinks.
 
-### 2.10 What we are not doing now
+### 2.10 A read that only reads (next)
+
+A Worklist read is not a pure read. Inside its snapshot it writes:
+
+```
+ brief snoozes that ran out come back        compose/briefs/briefstore.go     resurfaceExpiredSnoozes
+ the brief is logged as opened               compose/briefs/briefopened.go    emitBriefOpened
+ the base currency row is locked FOR SHARE   modules/identity/settingsentry.go BaseCurrencyOf
+                                             (settings.ReadForDecision)
+ the walk is frozen for scrolling            compose/attention/walk.go        freezeWalk (its own transaction)
+```
+
+Each has a reason, and each blocks something the system needs next:
+
+| A read that writes cannot | Why it matters |
+|---|---|
+| be prepared ahead of time | The cache in #9915 names a warm-up job (fill each member's answer before their morning) as its next step, and says it needs the read's side effects split out first. |
+| run on a read-only connection or a replica | Every Worklist read lands on the primary. |
+| run its lanes in parallel | The writes would have to stay on one connection while lanes run on others. |
+
+The change, one for every kind:
+
+- Snoozes come back when they run out: a scheduled job, or the time is judged
+  at read (like overdue), instead of the read rewriting the row.
+- "Brief opened" is recorded by the request that shows the brief, after the
+  read, not inside it.
+- The Worklist reads the base currency without the decision lock. It only
+  converts money to rank rows; it freezes nothing. `BaseCurrencyOf` takes the
+  lock for every caller, because its other callers freeze rates, so this needs
+  a read-only way to ask beside it.
+- The walk freeze already runs in its own transaction and may fail without
+  harm; it stays.
+
+The ground-truth check proves each step gives the same answers.
+
+### 2.11 What we are not doing now
 
 - **Running lanes in parallel.** It would turn "sum of all lanes" into
   "slowest lane", but it needs several database connections per request
@@ -427,12 +463,12 @@ into a separate store needs extra code for every line above, for every kind
   not enough.
 - **Pushing work into a precomputed list per kind.** Fast for expensive
   kinds, but it needs its own access, routing and freshness code per kind.
-  Parked. Caching the whole answer is being done separately (pull request
-  #9915, see 2.12), and it works alongside the changes above.
+  Parked. Caching the whole answer is now on `main` (pull request #9915,
+  see 2.13), and it works alongside the changes above.
 
 ---
 
-### 2.11 Server time and what the reader sees
+### 2.12 Server time and what the reader sees
 
 A reader feels two kinds of waiting, and they need different fixes:
 
@@ -463,15 +499,17 @@ A reader feels two kinds of waiting, and they need different fixes:
   the API contract and what a row discloses, so it is a question for the
   table, not part of this proposal.
 
-### 2.12 Related work in flight
+### 2.13 Related work in flight
 
 Other recent pull requests change how Home and the Worklist run. This is how
 each one fits with the system above.
 
 | Pull request | What it does | What it gives | Fit |
 |---|---|---|---|
-| #9915 (open) | Serves a member's first Worklist page and receipt from a stored copy while it is under 5 minutes old, no write anywhere has narrowed anyone's access, and the member has not written | A repeat open skips the engine | Works with this system: see below |
-| #9905 (merged) | Draws each part of Home at its final size while it loads | Layout shift 0.037 → 0.0002 on a desktop | Covers what the page does while it waits (2.11) |
+| #9915 (merged) | Serves a member's first Worklist page and receipt from a stored copy while it is under 5 minutes old, no write anywhere has narrowed anyone's access, and the member has not written. Only Home's own question is cached; a cache error falls back to a fresh read | A repeat open skips the engine | Works with this system: see below |
+| #9961 (merged) | The waiting scan for a named seat reads mail inside its horizon, not the seat's whole mail history | Fewer rows in one lane | A per-lane fix, beside the shared ones |
+| #9950 (issue, open) | Contact-duplicate cases are read one at a time, about 6 statements each, up to 200, to show one count | In its seeded test: 200 cases → 1,208 statements, 432 ms on a local database, against 2 statements for the count | The one per-kind cost the shared changes do not reach |
+| #9905 (merged) | Draws each part of Home at its final size while it loads | Layout shift 0.037 → 0.0002 on a desktop | Covers what the page does while it waits (2.12) |
 | #9909 (merged) | Home reads the day on change and every 5 minutes, not every minute | Less load from open tabs | Fewer reads; each read still costs what the engine costs |
 | #9910 (merged) | The receipt reads change images only where its sentence needs them | One receipt arm 130 → 30 ms (`EXPLAIN ANALYZE`) | The receipt, not the Worklist |
 | #9891, #9868, #9852 (merged) | One Worklist statement each made cheaper | Per statement | Plan reuse and the identity change do this for every statement at once |
@@ -505,8 +543,23 @@ Three things this system can add to the cache:
    minutes old when it arrives, so a colleague's new work can take about 10
    minutes to show. Counting from the answer's `as_of` would keep it at 5.
 
-The pull request does not yet give a hit rate or a time for a hit or a miss.
-A run of the daily bench with the cache on and off would answer both.
+The pull request does not give a hit rate or a time for a hit or a miss.
+A run of the daily bench with the cache on and off would answer both. The
+PoC branch now carries `main` with the cache, so the ground-truth check can
+be pointed at it.
+
+### 2.14 Order of work
+
+```
+ 1  plan reuse + identity once      proven: same answers; shared by every kind
+ 2  #9950 contact cases             the largest single cost for members with many duplicates
+ 3  scroll tail continues           most of the rank stage's statements
+ 4  a read that only reads          unlocks the cache warm-up, a replica, parallel lanes
+ 5  kind catalog: backend table,    growth and extensions; no speed effect
+    extension fragments
+```
+
+The ground-truth check runs before each step lands.
 
 ---
 
@@ -609,6 +662,7 @@ with wording fixes, which are applied.
  9d0c8e3b  the ground-truth check; plan reuse and identity change measured
  0c4126c3  PlanEachBind: the waiting scan keeps its own plans
  b551b735  the frontend kind table generated from the catalog
+ e86f3e3f  main merged in: the Home cache (#9915) and the waiting scan's bound (#9961)
  later     this proposal
 ```
 
@@ -643,15 +697,18 @@ The `poc` build tag keeps every PoC test out of `make check` and CI.
 
 ### 3.7 Questions for the table
 
-1. Do we agree to keep the engine and make the shared machinery cheaper first
-   (ground-truth check, plan reuse, identity check, scroll tail), then the kind
-   catalog, with push parked?
+1. Do we agree on the order in 2.14: shared engine changes first, #9950 beside
+   them, then the scroll tail and a read that only reads, then the kind
+   catalog, with per-kind push parked?
 2. The speed changes overlap the open Worklist speed issue (#4912), which has an owner. How
    do we hand over the check and the two proven changes?
 3. Is the additive `source: extension` contract change acceptable?
 4. Who runs the full-scale bench, and what number do we accept?
-5. How do the cache in #9915 and these engine changes land together: who adds
-   the trigger census and the cached-versus-fresh check?
-6. Should a Worklist row carry what its card's verbs need (a contact's email
+5. The cache in #9915 is merged. Who adds the trigger census and the
+   cached-versus-fresh check, and who measures its hit rate?
+6. Should the Worklist read stop writing (2.10): snoozes returned by a job or
+   judged at read, "brief opened" recorded after the read, and a base-currency
+   read without the decision lock?
+7. Should a Worklist row carry what its card's verbs need (a contact's email
    and phone), so the card makes no follow-up reads? It changes the contract
    and what a row discloses.
