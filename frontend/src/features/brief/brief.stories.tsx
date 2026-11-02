@@ -577,8 +577,8 @@ export const TodayBriefedPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A week nobody narrated: when it was frozen and its counted sentence share
-// the dial's line, and the stepper ends the line over the week's days.
+// A week nobody narrated: its frozen time and counted sentence share the dial's
+// line. The stepper ends the line over the week's days.
 export const WeekCounted: Story = {
   beforeEach: onWeekly,
   render: brief({
