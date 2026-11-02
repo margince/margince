@@ -87,7 +87,7 @@ test("Overview loads only summary evidence, then opens retained history and a sa
   await page.goto("/#/settings/system-health");
   await expect(
     page.getByRole("heading", {
-      name: "Background work is delayed",
+      name: "Mail sorting: delayed",
       exact: true,
     }),
   ).toBeVisible();
@@ -98,7 +98,7 @@ test("Overview loads only summary evidence, then opens retained history and a sa
   expect(reads).not.toContain("/v1/admin/job-health");
   expect(reads).not.toContain("/v1/admin/capture-health");
   await page
-    .getByRole("button", { name: "See problem and next step", exact: true })
+    .getByRole("button", { name: "Inspect background work", exact: true })
     .first()
     .click();
   await expect(

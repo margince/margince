@@ -34,6 +34,13 @@ export function findingEffectKey(finding: Finding): MessageKey {
     finding.job_kinds[0] === "capture_classify"
   )
     return "health.effect.mailSorting";
+  if (
+    finding.source === "jobs" &&
+    !finding.job_kinds_truncated &&
+    finding.job_kinds?.length === 1 &&
+    finding.job_kinds[0] === "technical_enrich_company"
+  )
+    return "health.effect.companyTechnical";
   return effects[finding.code] ?? "health.effect.unknown";
 }
 

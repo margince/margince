@@ -353,6 +353,8 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// A contact's captured mail finds them however late they arrive: the ensure
 	// links only the message it ran for, so every message captured before the
 	// contact existed needs the cohort repair this consumer runs.
+	dealRefiler := compose.NewDealRefileGen(pool, inserter, time.Now)
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:deal-refile", dealRefiler.HandleEvent, logger, 0) })
 	cohort := compose.NewCohortPromoteGen(pool, contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker repairing captured cohorts as contacts appear")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:cohort-promote", cohort.HandleEvent, logger, 0) })

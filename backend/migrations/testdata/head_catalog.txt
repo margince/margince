@@ -537,6 +537,15 @@ BEGIN
     RETURN NEW;
 END;
 
+public.activity_reminder_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.activity_reminder_delivery.activity_id uuid NOT NULL gen=- def=-
+public.activity_reminder_delivery.activity_reminder_delivery_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.activity_reminder_delivery.activity_reminder_delivery_delivered_to_fkey FOREIGN KEY (delivered_to) REFERENCES app_user(id) ON DELETE CASCADE
+public.activity_reminder_delivery.activity_reminder_delivery_pkey PRIMARY KEY (activity_id)
+public.activity_reminder_delivery.delivered_for timestamp with time zone NOT NULL gen=- def=-
+public.activity_reminder_delivery.delivered_to uuid NOT NULL gen=- def=-
+public.activity_reminder_delivery_delivered_to_idx CREATE INDEX activity_reminder_delivery_delivered_to_idx ON public.activity_reminder_delivery USING btree (delivered_to)
+public.activity_reminder_delivery_pkey CREATE UNIQUE INDEX activity_reminder_delivery_pkey ON public.activity_reminder_delivery USING btree (activity_id)
 public.activity_reply_verdict_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_reply_verdict_history.activity_id uuid NOT NULL gen=- def=-
 public.activity_reply_verdict_history.activity_reply_verdict_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
@@ -4805,6 +4814,7 @@ public.idx_activity_occurred_live CREATE INDEX idx_activity_occurred_live ON pub
 public.idx_activity_owed_ruleset CREATE INDEX idx_activity_owed_ruleset ON public.activity USING btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_participants_by_reason CREATE INDEX idx_activity_participants_by_reason ON public.activity USING btree (audience_reason, occurred_at DESC, id) WHERE ((audience = 'participants'::text) AND (restricted_at IS NULL) AND (archived_at IS NULL))
 public.idx_activity_raw_capture CREATE INDEX idx_activity_raw_capture ON public.activity USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)
+public.idx_activity_receipt_order CREATE INDEX idx_activity_receipt_order ON public.activity USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_activity_reminders CREATE INDEX idx_activity_reminders ON public.activity USING btree (remind_at) WHERE ((kind = 'task'::text) AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL))
 public.idx_activity_reply_verdict_history_activity CREATE INDEX idx_activity_reply_verdict_history_activity ON public.activity_reply_verdict_history USING btree (activity_id, decided_at DESC)
 public.idx_activity_request_settlement_judged_through_activity CREATE INDEX idx_activity_request_settlement_judged_through_activity ON public.activity_request_settlement USING btree (judged_through_activity_id)
