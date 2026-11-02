@@ -52,8 +52,8 @@ describe("DealsScreen", () => {
   });
 
   // The pipeline a list is scoped to arrives with the pipelines read. Asking
-  // for deals before it lands asks the wrong question: every deal, not this
-  // pipeline's, and the answer is thrown away when the real scope appears.
+  // before it lands asks the wrong question: every deal, not this pipeline's.
+  // That answer is thrown away when the real scope appears.
   it("asks for deals once, after it knows which pipeline it is showing", async () => {
     const fetchMock = stubBackend([deal({})]);
     vi.stubGlobal("fetch", fetchMock);

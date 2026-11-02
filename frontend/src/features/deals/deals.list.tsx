@@ -255,10 +255,11 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  // The pipeline this list is scoped to arrives with the pipelines read, so
-  // asking before it lands asks for every deal and throws the answer away.
-  // An installation with no pipelines answers `[]`, which is known: the list
-  // is then scoped to nothing and reads once, as it should.
+  // The pipeline this list is scoped to arrives with the pipelines read. Asking
+  // before it lands asks for every deal and throws the answer away.
+  //
+  // An installation with no pipelines answers `[]`, which is knowing. The list
+  // is then scoped to nothing and reads once.
   const scopeKnown = pipelinesQuery.data !== undefined;
   const dealsQuery = useDeals(dealFilters, !roleRefusal && scopeKnown);
   // A dial the role's mask refused, which a current snapshot would have
