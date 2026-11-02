@@ -175,6 +175,9 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 		Source:             in.Source,
 		CapturedBy:         in.CapturedBy,
 	})
+	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
+		return capture.EnsureOutcome{}, nil
+	}
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13 on the channel key: an erased subject stays dead — a deliberate
 		// no-op, not a fault for the reconcile queue, and nothing was created

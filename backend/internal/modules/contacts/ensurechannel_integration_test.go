@@ -331,3 +331,30 @@ func TestChannelUsernameRefreshesOnEveryInboundMessage(t *testing.T) {
 		t.Fatalf("%d handle audit rows after an unchanged handle, want still 1 — the trail records changes, not messages", n)
 	}
 }
+
+func TestEnsureChannelCounterpartyRefusesAProvenSeatAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.asChannelConnector()
+	e.declareSeatAddress(ctx, t, e.otherRep, "colleague.attested@gmail.test", "provider")
+	colleague := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880401", Username: "colleague"}
+	in := e.channelEnsureInput(ctx, t, colleague, "Colleague")
+	in.CorroboratingEmail = "Colleague.Attested@gmail.test"
+
+	if _, err := e.store.EnsureChannelCounterparty(ctx, in); !errors.Is(err, ErrCounterpartyIsSeat) {
+		t.Fatalf("ensure of a seat's address = %v, want ErrCounterpartyIsSeat", err)
+	}
+	if n := e.countInWorkspace(ctx, t,
+		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1`, colleague.ChannelUserID); n != 0 {
+		t.Fatalf("%d identity rows bound to a colleague, want 0", n)
+	}
+	if n := e.countContactsWithEmail(ctx, t, "colleague.attested@gmail.test"); n != 0 {
+		t.Fatalf("%d contacts minted for a seat address, want 0", n)
+	}
+
+	stranger := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880402", Username: "stranger"}
+	other := e.channelEnsureInput(ctx, t, stranger, "Stranger")
+	other.CorroboratingEmail = "stranger@elsewhere.test"
+	if _, err := e.store.EnsureChannelCounterparty(ctx, other); err != nil {
+		t.Fatalf("a real counterparty must still be created: %v", err)
+	}
+}
