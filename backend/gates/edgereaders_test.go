@@ -89,6 +89,7 @@ var relationshipGate = objectGate{
 // Acme" one page at a time, which is a STRONGER disclosure than the count on
 // the account. It carries the gate, and is not in this set.
 var predicateEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/capture/dealrefile.go:RefileCandidatesTx":                            "System-only candidate selection returns activity identities, never relationship endpoints; RefileTx recomputes employment evidence under the capturing seat through mailCompanies and its EdgeReadScope before any filing.",
 	"internal/modules/contacts/employerrepair.go:hasEmploymentHistory":                     "prevents inferred or repaired employment from overwriting employment history; only an internal existence predicate is returned, with no edge columns or endpoints",
 	"internal/modules/contacts/employerrepair.go:missingContactEmployer":                   "excludes contacts with any employment history from a system-only repair and a gated bounded estimate; no edge column or endpoint pair leaves the query",
 	"internal/modules/contacts/mergerelationshippreview.go:authorizeMergePrimaryWitnesses": "the edges a merge's primary flags rest on: ids only, read after its one caller asks auth.Require(ctx, \"relationship\", read). Each id is re-read through visibleRelationship under RelationshipEndpointScope, and one the caller may not see refuses the preview. No edge column leaves it",

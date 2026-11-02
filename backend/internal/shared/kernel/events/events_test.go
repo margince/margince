@@ -264,6 +264,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The captured-cohort repair: a contact's earlier mail is linked when the
 		// contact appears or gains an address. Its own group so a slow enrichment
 		// cannot delay a record becoming complete.
+		"cg:deal-refile":         {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal", "gw:events:crm:lead"},
 		"cg:cohort-promote":      {"gw:events:crm:contact"},
 		"cg:contact-auto-enrich": {"gw:events:crm:contact"},
 		// The prompt half of captured-company auto-enrich: an
