@@ -2,8 +2,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
@@ -118,10 +118,13 @@ export function useUnsavedGuard(
   // One token per mounting, so two rows of the same card are two claims.
   const token = useId();
 
-  useEffect(() => {
+  // Layout effects, so a claim changes before the browser paints the render
+  // that changed it. A passive effect leaves a frame in which the control that
+  // saved the draft is gone and the claim still asks the reader to discard it.
+  useLayoutEffect(() => {
     claim?.(token, dirty, scope, save);
   }, [claim, token, dirty, scope, save]);
 
   // A claim left after unmount would guard a draft that no longer exists.
-  useEffect(() => () => release?.(token), [release, token]);
+  useLayoutEffect(() => () => release?.(token), [release, token]);
 }
