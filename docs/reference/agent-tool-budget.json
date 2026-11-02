@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 38,
     "system_frame_tokens": 592,
-    "tokens": 24546,
+    "tokens": 24529,
     "median_tool_tokens": 532,
     "mean_tool_tokens": 645
   },
@@ -104,12 +104,12 @@
       "tokens": 1066
     },
     {
-      "name": "read_view",
-      "tokens": 1021
-    },
-    {
       "name": "send_outbound",
       "tokens": 1014
+    },
+    {
+      "name": "read_view",
+      "tokens": 1004
     },
     {
       "name": "preview_import",

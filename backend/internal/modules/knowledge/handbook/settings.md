@@ -309,7 +309,9 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 System health and Reset data sit in the **Governance** group, and Data import in **Data**.
 
 **System health** opens on **Overview**: what needs work, who can act and the next step.
-Only work that needs a person appears here, grouped by feature, with its effect until fixed. The status label says what to fix or review. **All checks** holds service status; **Diagnostics** shows the technical details.
+Only work that needs a person appears here, with its effect and an action button. The status label says what to fix or review. **Check results** compares the current counts. **All checks** holds service status; **Diagnostics** shows the technical details.
+
+**Review mailbox decisions** lists who has choices waiting. **Review my choices** opens your **Worklist → Decisions** for proposed contacts, or your held conversations in **Capture activity** for sharing choices. For another owner, copy a request with their personal review link. The request sends no message and gives you no access to their mail.
 
 **Diagnostics** shows each source and keeps the selected check in its address. Data updates shows open work first; completed updates and optional work open separately. Mail capture shows counts only; held meetings are counted across the whole installation. Filter background runs or open the next page; totals include all runs still kept in that window.
 
@@ -318,9 +320,7 @@ A canceled run is not a failed run. Deleted runs do not prove the work is done. 
 **System health > Schedules and sending** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
 Moving to another view asks you to save a draft first. **Search settings** opens the view with the control you asked for.
 
-- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
-  prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
-  Nothing is written until you check the test run.
+- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
 - **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.

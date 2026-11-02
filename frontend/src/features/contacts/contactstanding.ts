@@ -17,12 +17,17 @@ import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMomentRule = components["schemas"]["ContactMomentRule"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 
 /** The call How it stands draws. */
 export type ContactVerdict = Readonly<{
   word: string;
   sentence?: string;
   tone: ReadingTone;
+  /** The change the sentence was read under: the newest one that agrees with
+   *  the tone the sentence was chosen for. The ring's caption draws this one,
+   *  so the caption can never point the other way from the sentence. */
+  change?: RelationshipChange;
 }>;
 
 // The wire carries no tone for a rule. An owed thing that slipped is danger,
@@ -56,10 +61,13 @@ export function contactVerdict(
   if (moment && moment.rule !== "nothing_needed") {
     // The Next bar above already says why now, so the sentence here is the
     // relationship's own reading and the two never print one line twice.
+    const tone = MOMENT_TONE[moment.rule];
+    const change = changeUnder(view, tone);
     return {
       word: t(`contact.moment.rule.${moment.rule}`),
-      sentence: bandSentence(view, t),
-      tone: MOMENT_TONE[moment.rule],
+      sentence: bandSentence(view, t, change),
+      tone,
+      change,
     };
   }
   const strength = view.strength;
@@ -79,15 +87,62 @@ export function contactVerdict(
       tone: "neutral",
     };
   }
+  // A band-only reading is no judgement of direction, so its sentence takes
+  // the newest change either way, and the caption takes the same one.
+  const change = changeUnder(view, "neutral");
   return {
     word: bucketLabel(strength.bucket, t),
-    sentence: bandSentence(view, t),
+    sentence: bandSentence(view, t, change),
     tone: bandTone(strength.bucket),
+    change,
   };
 }
 
-function bandSentence(view: Contact360, t: Translator): string | undefined {
-  const change = view.relationship_changes?.[0];
+// Which way each change moved the relationship.
+const CHANGE_DIRECTION: Readonly<
+  Record<RelationshipChange["kind"], "better" | "worse">
+> = {
+  warmed: "better",
+  replied_after_gap: "better",
+  cooled: "worse",
+  went_quiet: "worse",
+};
+
+// A change may stand under a heading only when it points the same way. Under
+// "Gone quiet", a band that moved up is true and still reads as a
+// contradiction, so the newest change that agrees is used instead.
+function agreesWith(change: RelationshipChange, tone: ReadingTone): boolean {
+  const direction = CHANGE_DIRECTION[change.kind];
+  if (tone === "danger" || tone === "warning") return direction !== "better";
+  if (tone === "success") return direction !== "worse";
+  return true;
+}
+
+/** The newest change that may stand under a heading of this tone. The wire
+ *  orders changes by consequence, not by time, so the newest is picked by
+ *  `at`, not by position. */
+export function changeUnder(
+  view: Contact360,
+  tone: ReadingTone,
+): RelationshipChange | undefined {
+  let newest: RelationshipChange | undefined;
+  let newestAt = Number.NEGATIVE_INFINITY;
+  for (const candidate of view.relationship_changes ?? []) {
+    if (!agreesWith(candidate, tone)) continue;
+    const at = Date.parse(candidate.at);
+    if (newest === undefined || at > newestAt) {
+      newest = candidate;
+      newestAt = at;
+    }
+  }
+  return newest;
+}
+
+function bandSentence(
+  view: Contact360,
+  t: Translator,
+  change: RelationshipChange | undefined,
+): string | undefined {
   if (change) {
     return changeSentence(change, t);
   }

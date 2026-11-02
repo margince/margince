@@ -69,7 +69,8 @@ type ActivityFields struct {
 
 	// Envelope is what the mail parser read about addressing and links; nil
 	// for anything not parsed from a mail, and for list mail.
-	Envelope *MailEnvelope
+	ProviderPrivate bool
+	Envelope        *MailEnvelope
 
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.

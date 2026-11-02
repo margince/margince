@@ -7,7 +7,7 @@ import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import { StoryProviders } from "../../testing/story-utils";
 import { ContactHowItStands } from "./contacthowitstands";
-import { populated } from "./contactpage.fixtures";
+import { meetingPrepMoment, populated } from "./contactpage.fixtures";
 import "./contact360.css";
 
 const meta = {
@@ -64,5 +64,37 @@ export const DayOnlyVisit: Story = {
     const row = (await screen.findByText("Site visit")).closest("li");
     await expect(row?.textContent).toMatch(/13 Aug/);
     await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
+  },
+};
+
+// Gone quiet after the band moved up. The band move is true and points the
+// other way from the heading, so it is not printed anywhere on the card.
+const quietAfterWarming: Contact360 = {
+  ...populated,
+  moment: { ...meetingPrepMoment, rule: "gone_quiet" },
+  strength: {
+    score: 54,
+    bucket: "moderate",
+    factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
+    inbound_90d: 4,
+    outbound_90d: 6,
+  },
+  relationship_changes: [
+    {
+      kind: "warmed",
+      at: "2026-08-10T09:00:00Z",
+      from_bucket: "weak",
+      to_bucket: "moderate",
+    },
+  ],
+};
+
+export const GoneQuietAfterWarming: Story = {
+  render: render(quietAfterWarming),
+  play: async () => {
+    await screen.findByText(en["contact.moment.rule.gone_quiet"]);
+    await expect(
+      screen.queryByText("The relationship moved from weak to moderate."),
+    ).toBeNull();
   },
 };

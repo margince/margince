@@ -17818,6 +17818,56 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listContactConversationSuggestions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |
+        Both the contact and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSuggestionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /leads/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listLeadConversationSuggestions
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |
+        Both the lead and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationSuggestionListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/exclusions:
     get:
       tags: [Capture]
@@ -38672,6 +38722,23 @@ components:
 
         It is its own word rather than `user` because a seat looking at an address they never typed
         is owed the difference — and, seeing it, may remove it like any other.
+    ConversationSuggestion:
+      type: object
+      required: [address, display_name, activity_id]
+      properties:
+        address: {type: string}
+        display_name: {type: string}
+        activity_id: {type: string, format: uuid}
+
+    ConversationSuggestionListResponse:
+      type: object
+      required: [data, scan_limited]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationSuggestion'}
+        scan_limited: {type: boolean}
+
     CaptureCounterpartyHold:
       type: object
       description: |
@@ -51059,6 +51126,28 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Activity + link ----
+    ActivityEmailTarget:
+      type: object
+      additionalProperties: false
+      required: [entity_type, entity_id]
+      description: >-
+        The record an email about this call, meeting, note or task goes to. It is the
+        row's one linked contact. A task with no single contact goes on to its one live
+        linked lead, and then to its one linked company; two live leads name nobody. A task
+        whose only lead is closed and that names no company gets that lead, refused. Absent
+        where the row names no target, on the same rows `offers_email` is always false for,
+        and for a record this caller may not read. A client offers Write email or Draft
+        email when this is present without `refusal`, and says the refusal otherwise.
+      properties:
+        entity_type: { type: string, enum: [contact, lead, company] }
+        entity_id: { type: string, format: uuid }
+        refusal:
+          type: string
+          enum: [archived, no_address, lead_closed]
+          description: >-
+            Why no email goes to the target: `archived` for an archived contact,
+            `no_address` for a contact or lead with no address an email may use, and
+            `lead_closed` for a lead that was promoted or disqualified.
     ActivityLink:
       type: object
       required: [entity_type, entity_id]
@@ -51690,11 +51779,14 @@ components:
           description: >-
             Whether Write email on this row opens with a recipient filled in: true exactly when
             `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call,
-            meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`.
-            Always false for an email or a message, which are answered with Reply instead, for
-            an archived row, for a task the product filed itself (`automatic_kind` product),
-            and for a row whose content is withheld from the caller. A client offers Write email
-            only when this is true, and reads the address from reply-recipient.
+            meeting, note or task. Both are computed by one rule, the one `email_target`
+            states. Always false for an email or a message, which are answered with Reply
+            instead, for an archived row, for a task the product filed itself (`automatic_kind`
+            product), and for a row whose content is withheld from the caller. False for a
+            company target too, which has no single address: the composer asks which of the
+            company's contacts the mail is for.
+        email_target:
+          $ref: '#/components/schemas/ActivityEmailTarget'
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         imported_from:
@@ -60764,6 +60856,10 @@ components:
         what is waiting inside it is not named at all.
       required: [generated_at, mailboxes, classifier, held_meetings, sweeps, connection_concerns]
       properties:
+        owner_reviews:
+          type: array
+          description: Mailbox owners with decisions ready for human review. Counts and names only.
+          items: { $ref: '#/components/schemas/CaptureOwnerReview' }
         categories:
           $ref: '#/components/schemas/CaptureHealthCategories'
         connection_concerns:
@@ -60871,6 +60967,16 @@ components:
       properties:
         from: { type: string, format: date-time, description: The first moment nobody read. }
         to: { type: string, format: date-time, description: The moment reading resumed. }
+
+    CaptureOwnerReview:
+      type: object
+      additionalProperties: false
+      required: [user_id, sender_decisions, thread_decisions]
+      properties:
+        user_id: { type: string, format: uuid }
+        display_name: { type: string }
+        sender_decisions: { type: integer, minimum: 0 }
+        thread_decisions: { type: integer, minimum: 0 }
 
     CaptureMailboxHealth:
       type: object
@@ -71525,11 +71631,14 @@ components:
           allOf:
             - $ref: '#/components/schemas/WorklistOwner'
           description: |
-            Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
-            seat whose calendar it came off. `kind` is always `user`.
+            Who hosted the meeting a `meeting` or `meeting_outcome` row is about. That
+            is the colleague who organized it, where exactly one seat is bound to the
+            organizer. Otherwise it is the seat whose calendar the meeting came off.
+            `kind` is always `user`.
 
             A fact about the meeting, kept apart from `owner`, which says who answers
-            for the row. Absent where no calendar claims the meeting. `label` follows
+            for the row and stays the calendar's seat. Absent where no calendar claims
+            the meeting and no colleague organized it. `label` follows
             `WorklistOwner.label`: absent where this caller may not resolve the name.
         due_at: { type: string, format: date-time, description: 'When this is due, or when the meeting starts.' }
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }

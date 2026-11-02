@@ -11437,6 +11437,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/conversation-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Recipients copied on inbound correspondence who have no contact or live lead.
+         * @description Both the contact and the underlying message content must be readable. Current exclusions,
+         *     privacy decisions, erased identities and known counterparties are omitted. The read scans
+         *     recent messages in order until the visible list fills or its scan budget is spent.
+         *     `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+         *     ordinary contact create operation; this read changes nothing.
+         */
+        get: operations["listContactConversationSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/conversation-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Recipients copied on inbound correspondence who have no contact or live lead.
+         * @description Both the lead and the underlying message content must be readable. Current exclusions,
+         *     privacy decisions, erased identities and known counterparties are omitted. The read scans
+         *     recent messages in order until the visible list fills or its scan budget is spent.
+         *     `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+         *     ordinary contact create operation; this read changes nothing.
+         */
+        get: operations["listLeadConversationSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/exclusions": {
         parameters: {
             query?: never;
@@ -26450,6 +26504,16 @@ export interface components {
          * @enum {string}
          */
         CaptureOwnerIdentitySource: "user" | "provider" | "delivered_to";
+        ConversationSuggestion: {
+            address: string;
+            display_name: string;
+            /** Format: uuid */
+            activity_id: string;
+        };
+        ConversationSuggestionListResponse: {
+            data: components["schemas"]["ConversationSuggestion"][];
+            scan_limited: boolean;
+        };
         /**
          * @description One seat's decision that their mail with a party is nobody else's. Per user, never
          *     workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
@@ -36863,6 +36927,18 @@ export interface components {
             data: components["schemas"]["Pipeline"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise. */
+        ActivityEmailTarget: {
+            /** @enum {string} */
+            entity_type: "contact" | "lead" | "company";
+            /** Format: uuid */
+            entity_id: string;
+            /**
+             * @description Why no email goes to the target: `archived` for an archived contact, `no_address` for a contact or lead with no address an email may use, and `lead_closed` for a lead that was promoted or disqualified.
+             * @enum {string}
+             */
+            refusal?: "archived" | "no_address" | "lead_closed";
+        };
         ActivityLink: {
             /** Format: uuid */
             id?: string;
@@ -37369,8 +37445,9 @@ export interface components {
             readonly source_activity_id?: string | null;
             /** @description Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360. */
             links?: components["schemas"]["ActivityLink"][];
-            /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient. */
+            /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
+            email_target?: components["schemas"]["ActivityEmailTarget"];
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -44057,6 +44134,8 @@ export interface components {
          *     what is waiting inside it is not named at all.
          */
         CaptureHealth: {
+            /** @description Mailbox owners with decisions ready for human review. Counts and names only. */
+            owner_reviews?: components["schemas"]["CaptureOwnerReview"][];
             categories?: components["schemas"]["CaptureHealthCategories"];
             /** @description Active connection concerns for live members. Names account state, never correspondence. */
             connection_concerns: components["schemas"]["CaptureConnectionConcern"][];
@@ -44144,6 +44223,13 @@ export interface components {
              * @description The moment reading resumed.
              */
             to: string;
+        };
+        CaptureOwnerReview: {
+            /** Format: uuid */
+            user_id: string;
+            display_name?: string;
+            sender_decisions: number;
+            thread_decisions: number;
         };
         CaptureMailboxHealth: {
             /**
@@ -53474,11 +53560,14 @@ export interface components {
             recipients?: components["schemas"]["WorklistContactFacts"][];
             company?: components["schemas"]["WorklistCompanyFacts"];
             /**
-             * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
-             *     seat whose calendar it came off. `kind` is always `user`.
+             * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about. That
+             *     is the colleague who organized it, where exactly one seat is bound to the
+             *     organizer. Otherwise it is the seat whose calendar the meeting came off.
+             *     `kind` is always `user`.
              *
              *     A fact about the meeting, kept apart from `owner`, which says who answers
-             *     for the row. Absent where no calendar claims the meeting. `label` follows
+             *     for the row and stays the calendar's seat. Absent where no calendar claims
+             *     the meeting and no colleague organized it. `label` follows
              *     `WorklistOwner.label`: absent where this caller may not resolve the name.
              */
             host?: components["schemas"]["WorklistOwner"];
@@ -73963,6 +74052,60 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listContactConversationSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distinct copied addresses, newest correspondence first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSuggestionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLeadConversationSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distinct copied addresses, newest correspondence first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSuggestionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

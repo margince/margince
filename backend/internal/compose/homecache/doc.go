@@ -10,14 +10,15 @@
 //     made by colleagues and by background work;
 //   - the access fence has not moved since its own read began. Every write that
 //     can take a record out of somebody's reach advances home_read_fence through
-//     a trigger, so no writer can forget it (migration 1793594630);
+//     a trigger, so no writer can forget it. A write that only widens reach
+//     leaves it, because capture widens reach all day;
 //   - no record grant it was assembled under has expired, since expiry writes
 //     nothing;
-//   - the walk its first page started can still be resumed;
-//   - for the receipt, no machine has written an audit row since.
+//   - the walk its first page started can still be resumed.
 //
-// The reader's own writes drop their answers (Forget), so what they do shows at
-// once. That covers the writes that emit no event and no audit row.
+// An answer served in its last minute is read again behind it, so a reader who
+// keeps Home open does not wait on its expiry. The reader's own writes drop
+// their answers (Forget), so what they do shows at once. That covers the writes that emit no event and no audit row.
 //
 // UNLIKE worklistsnap, an answer holds display text. That is safe only because
 // the fence moves before a revocation commits a reader out of reach. A copy

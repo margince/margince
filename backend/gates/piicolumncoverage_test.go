@@ -58,6 +58,8 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// Provider is connector provenance from the installed adapter, never subject-authored text.
+	"capture_party_source": {"provider"},
 	// The hash identifies the promise; the version and actor identify its reader.
 	// Retained work needs this provenance after the summary and quotation are cleared.
 	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},

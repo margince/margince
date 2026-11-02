@@ -75,14 +75,14 @@ const documentFrom = `deal_room_document d
 // principal: the public download has none. The caller-bound half — may THIS
 // seller see a captured file — is asked once, at add (addDocumentTx).
 //
-// The deal's own Files read applies the same message link and inline-image
+// The deal's own Files read applies the same message link and listed-file
 // rule from storekit. A logo a rep never sees in the area is not shareable by id.
 //
 // Held by: TestRoomDocumentMembershipIsSpelledOnce (backend/internal/modules/dealrooms/documentmembership_test.go)
 var inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	AND ((a.entity_type = 'deal' AND a.entity_id = r.deal_id)
 	  OR (a.entity_type = 'activity' AND ` + storekit.MessageOnDealSQL("a.entity_id", "r.deal_id") + `
-	      AND ` + storekit.NotInlineMailImageSQL("a") + `
+	      AND ` + storekit.ListedMailFileSQL("a") + `
 	      AND EXISTS (
 	        SELECT 1 FROM activity m
 	         WHERE m.id = a.entity_id AND m.archived_at IS NULL

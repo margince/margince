@@ -1733,6 +1733,10 @@ export const en = {
   "scheduling.suggestedTimes": "Suggested times",
   "scheduling.noTimesDay": "No free times on this day. Choose another day.",
   "scheduling.noTimesMonth": "No free times this month. Try the next month.",
+  "conversationSuggestions.title": "On this conversation, not in Margince yet",
+  "conversationSuggestions.add": "Add as contact",
+  "conversationSuggestions.limited":
+    "Older messages may name other recipients.",
   "contact.meetings.copyBookingLink": "Copy my booking link",
   "contact.meetings.join": "Join {app}",
   "contact.meetings.joinCall": "Join video call",
@@ -6580,6 +6584,7 @@ export const en = {
   "task.next.draftEmail": "Draft email",
   "task.next.draftIntent": "write about this task",
   "task.next.noAddress": "No email address on this contact.",
+  "task.next.noLeadAddress": "No email address on this lead.",
   "today.withheld": "Not included: {sections}. You do not have access to them.",
   "today.source.moments": "Margince findings",
   "today.source.nextSteps": "open tasks",
@@ -17944,7 +17949,7 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
-  "worklist.verb.meetingUpdate": "Update",
+  "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
   "worklist.verb.meetingWhatHappened": "Meeting notes",
@@ -17957,7 +17962,8 @@ export const en = {
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
-  "worklist.verb.meetingUpdateFor": "Update {subject}",
+  "worklist.verb.meetingAddNotesFor": "Add notes to {subject}",
+  "worklist.verb.meetingHeldFor": "Held: {subject}",
   "worklist.verb.meetingCanceledFor": "Mark as canceled: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "The calendar invitation keeps this meeting. Cancel it through the invitation.",
@@ -19597,6 +19603,32 @@ export const en = {
   "health.filteredFinding_other": "Showing 1 of {count} problems",
   "health.showAllFindings": "Show all problems",
   "health.jobDelayed": "{kind}: delayed",
+  "health.checkNumbers": "Show check counts",
+  "health.checkResults": "Check results",
+  "health.checksFailed": "Failed checks",
+  "health.checksReview": "Need a decision",
+  "health.checksPassing": "Passing checks",
+  "health.checksPending": "Awaiting a result",
+  "health.askOwner": "Ask a mailbox owner",
+  "health.mailReviewOwners": "Mailbox decisions",
+  "health.reviewOwnersIntro":
+    "Review your own choices or copy a request for another mailbox owner.",
+  "health.ownerReviewEmpty": "No mailbox decisions are waiting.",
+  "health.copyReviewRequest": "Copy review request",
+  "health.copyReviewRequestFor": "Copy review request for {name}",
+  "health.reviewSenderRequest":
+    "{name}, open Worklist → Decisions and accept or decline the proposed contacts: {url}",
+  "health.reviewThreadRequest":
+    "{name}, review the held conversations in your mailbox: {url}",
+  "health.ownerNameUnknown": "Mailbox owner",
+  "health.ownerReviewUnavailable":
+    "Review your own mail or send a review link to its owner.",
+  "health.openMyReviews": "Review my choices",
+  "health.copyRequestRemedy": "Select and copy the review request below.",
+  "health.senderReviewCount_one": "{count} sender decision waiting",
+  "health.senderReviewCount_other": "{count} sender decisions waiting",
+  "health.threadReviewCount_one": "{count} conversation waiting",
+  "health.threadReviewCount_other": "{count} conversations waiting",
   "health.views": "System health views",
   "health.overview": "Overview",
   "health.diagnostics": "Diagnostics",
@@ -19609,16 +19641,15 @@ export const en = {
     "Send the error report to your system operator. They should check completion, fix the cause and restart only unfinished work; these failed runs will not retry.",
   "health.readFailedNext":
     "Refresh this check. If it still fails, send the technical report to your system operator.",
-  "health.jobStopped": "{kind}: failed runs need review",
-  "health.effectUntilFixed": "While unresolved:",
+  "health.jobStopped": "{kind}: failed runs",
   "health.effect.mailSorting":
     "In Worklist, emails that need a reply or a meeting follow-up may be missing or in the wrong order. Check your inbox manually until sorting catches up. You can still receive and read email.",
   "health.effect.jobs":
     "The listed background work may remain unfinished. The failed-run count is not a count of missing records or affected team members; the operator must check the listed jobs.",
   "health.effect.senderReview":
-    "New business contacts may not be created and related mail may stay unavailable to colleagues until the sender decision is resolved.",
+    "New contacts and their mail may be missing from Contacts.",
   "health.effect.heldMail":
-    "The affected conversations stay hidden from colleagues who were not on the mail until the confidentiality review is resolved.",
+    "Colleagues cannot read these conversations until their mailbox owner shares them.",
   "health.effect.unreadMail":
     "Mail from the reported period may be missing from the CRM. Later mail can still arrive; recover that period before relying on the history.",
   "health.effect.captureRepair":
@@ -19654,7 +19685,10 @@ export const en = {
   "health.measure.items_one": "{count} item",
   "health.measure.items_other": "{count} items",
   "health.checked": "No action needed",
-  "health.incomplete": "Health could not be fully checked",
+  "health.refreshNeeded": "Refresh needed",
+  "health.unreadNext":
+    "Open Connections to check this mailbox and reconnect it if needed.",
+  "health.incomplete": "Some checks have no result",
   "health.refresh": "Refresh",
   "health.prioritiesChanged":
     "Priorities changed. Refresh to apply the new order.",
@@ -19712,7 +19746,7 @@ export const en = {
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
   "health.ownerHandoff":
-    "Mailbox owners: open Connections to review your own mail decisions. For someone else’s mailbox, ask its owner to review; private mail is only visible to them.",
+    "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Capture activity.",
   "health.operatorHandoff":
     "A technical operator must investigate. Copy the diagnostic summary for the handoff.",
   "health.copy": "Copy technical report",
@@ -19745,12 +19779,12 @@ export const en = {
   "health.code.queue_expectation_unknown":
     "Work is runnable; no waiting-time expectation is declared",
   "health.code.capture_checked":
-    "No capture backlog detected in checked categories",
+    "No capture action needed in checked categories",
   "health.code.capture_processing": "Sender classification is processing",
-  "health.code.capture_uncertain": "Decide which senders belong in the CRM",
+  "health.code.capture_uncertain": "Review contact suggestions",
   "health.code.capture_exhausted":
     "Sender classification exhausted its automatic attempts",
-  "health.code.capture_owner_review": "Mail needs an owner decision",
+  "health.code.capture_owner_review": "Review mailbox decisions",
   "health.code.capture_unread":
     "Unread mailbox periods need recovery verification",
   "health.code.capture_held": "Filed records are waiting for a repair pass",
@@ -19784,8 +19818,7 @@ export const en = {
   "health.code.automatic_routing": "Automatic work routing needs review",
   "health.code.capture_thread_processing":
     "Thread classification is processing",
-  "health.code.capture_thread_uncertain":
-    "Decide which conversations colleagues may see",
+  "health.code.capture_thread_uncertain": "Review private conversations",
   "health.queueCoverage":
     "Queue history is retained for a limited time. Its absence cannot establish that previously failed work was completed.",
 

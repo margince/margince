@@ -25,6 +25,7 @@ import (
 // Sink is the one connector.Sink implementation — the chokepoint every
 // captured record passes on its way into the domain.
 type Sink struct {
+	partyReceiptSettlement PartyReceiptSettlement
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
 	stager MergeStager
@@ -32,6 +33,7 @@ type Sink struct {
 	// address is the contact's. Nil tells nobody, and the lead is still not made.
 	contactArrivals ContactArrivals
 	ensurer         CounterpartyEnsurer
+	partyAuthority  PartyAuthority
 	channelEnsurer  ChannelCounterpartyEnsurer
 	transactional   *TransactionalList
 	// files is the timeline module's attachment writer. Nil is a role that
@@ -75,7 +77,10 @@ type Sink struct {
 	cancelMeetingByID MeetingCloserByID
 	// moveMeeting moves a captured meeting the calendar rescheduled. Nil never
 	// moves one.
-	moveMeeting       MeetingMover
+	moveMeeting MeetingMover
+	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
+	// both.
+	foldMeeting       MeetingFolder
 	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
@@ -311,6 +316,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, decision)
 	}
+	s.admitCapturedParties(ctx, rec, ref)
 	// The project ladder runs on the same terms as the counterparty step —
 	// after the commit, in its own transaction, never failing the capture —
 	// and on EVERY capture of the activity rather than only the first.

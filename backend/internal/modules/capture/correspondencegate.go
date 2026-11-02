@@ -391,6 +391,7 @@ func metInPersonTx(
 		    FROM activity a
 		    JOIN activity_participant p ON p.activity_id = a.id AND NOT p.past_party_cap
 		   WHERE a.kind = 'meeting'
+ AND `+meetingPartyEligibleSQL("a", "p")+`
 		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'
 		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
