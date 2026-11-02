@@ -2,26 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactNode } from "react";
-import { userEvent, within } from "storybook/test";
-import type { components } from "../api/schema";
-import { meFixture } from "../testing/mefixture";
 import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../testing/story-utils";
+  AccountMenuFrame,
+  openMenu,
+  openThemeFlyout,
+  stubSession,
+} from "../testing/accountmenu-story";
 import { AccountMenu } from "./account";
-// The strip's own sheet, loaded because THIS file builds a `.topbar` by hand and
-// imports nothing that would pull it in. `.storybook/preview.tsx` loads the
-// chrome sheets a story reaches by class rather than by module — but its list was
-// written when `.topbar` still lived in shell.css, and the strip moved out into a
-// sheet of its own with the shell restructure. Without this line every frame
-// below drew an UNSTYLED strip: `display: block`, no height, no ground, no rule,
-// the trail at the left edge and the menu anchored to the viewport instead of to
-// the block. The frames still passed the render gate, because an unstyled
-// element renders perfectly well.
-import "./topbar.css";
 
 /**
  * Who is signed in, and the two things the product now offers nowhere else: the
@@ -54,75 +41,6 @@ const meta: Meta<typeof AccountMenu> = {
 export default meta;
 type Story = StoryObj<typeof AccountMenu>;
 
-type SessionUser = components["schemas"]["MeResponse"]["user"];
-
-/**
- * The session the block prints, routed explicitly.
- *
- * `GET /me` is the one route a story may not leave to the stub's fallback: an
- * unrouted probe reads as a malformed session, the block falls to its
- * unresolved branch, and the story's name is then the only thing still claiming
- * what it shows.
- */
-function stubSession(user: Partial<SessionUser> = {}) {
-  const me = meFixture();
-  installFetchStub({
-    "GET /me": () => jsonResponse({ ...me, user: { ...me.user, ...user } }),
-  });
-}
-
-/**
- * The block in the top bar's trail, which is where the product renders it.
- *
- * The strip is the real one, INSIDE the real frame: `.app`, the sidebar taking
- * its column, the bar as the first row of `<main>`. That is not ceremony. Both
- * numbers the strip is built from — `--topbarH` and `--pageGutter` — are declared
- * on `.app` (app/shell.css), so a bar rendered on the bare canvas resolves them
- * to nothing: `height` and `padding` are then invalid declarations, the strip
- * collapses to its content, loses its gutter, and puts the trigger hard against
- * the WINDOW instead of against the content column's edge. The account menu's own
- * drop offset is computed from `--topbarH` too, so it lands wrong in the same
- * breath.
- *
- * All THREE of the bar's tracks are rendered, and the middle one is why. The
- * search holds the middle track, so the trail stands at the bar's end edge.
- * That edge is what these frames are about. The slot is left empty: the trail
- * needs only its width. A live field would be a second component in a frame
- * about this one. Below 1100px, where `fe-uat` captures, the real slot is a
- * 36px glyph and this one is 0px. So the captured block sits about a glyph's
- * width right of where it really does.
- */
-function TopBarTrail({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="app railexpanded">
-      <div className="rail expanded" />
-      <main className="main">
-        <header className="topbar">
-          <div className="topbar-lead" />
-          <div className="topbar-searchslot" />
-          <div className="topbar-trail">{children}</div>
-        </header>
-        <div className="scroll" />
-      </main>
-    </div>
-  );
-}
-
-/** Open the menu, the way the reader does. The panel's state is component-local
- *  (there is no `startOpen` prop), so the open frames drive the real trigger. */
-async function openMenu({ canvasElement }: { canvasElement: HTMLElement }) {
-  const canvas = within(canvasElement);
-  await userEvent.click(canvas.getByRole("button", { name: /Account$/ }));
-}
-
-/** Open the menu and then the appearance flyout — two clicks, because that is
- *  what a reader spends to reach it. */
-async function openThemeFlyout(context: { canvasElement: HTMLElement }) {
-  await openMenu(context);
-  const canvas = within(context.canvasElement);
-  await userEvent.click(canvas.getByRole("menuitem", { name: "Theme" }));
-}
-
 /**
  * The top bar: the avatar alone, 32px, at the end of the trail.
  *
@@ -134,13 +52,7 @@ export const TopBar: Story = {
   name: "Top bar trigger",
   render: () => {
     stubSession();
-    return (
-      <StoryProviders>
-        <TopBarTrail>
-          <AccountMenu />
-        </TopBarTrail>
-      </StoryProviders>
-    );
+    return <AccountMenuFrame />;
   },
 };
 
@@ -164,13 +76,7 @@ export const TopBarMenu: Story = {
   play: openMenu,
   render: () => {
     stubSession();
-    return (
-      <StoryProviders>
-        <TopBarTrail>
-          <AccountMenu />
-        </TopBarTrail>
-      </StoryProviders>
-    );
+    return <AccountMenuFrame />;
   },
 };
 
@@ -187,13 +93,7 @@ export const TopBarThemeFlyout: Story = {
   play: openThemeFlyout,
   render: () => {
     stubSession();
-    return (
-      <StoryProviders>
-        <TopBarTrail>
-          <AccountMenu />
-        </TopBarTrail>
-      </StoryProviders>
-    );
+    return <AccountMenuFrame />;
   },
 };
 
@@ -208,56 +108,6 @@ export const TopBarThemeFlyoutDark: Story = {
   play: openThemeFlyout,
   render: () => {
     stubSession();
-    return (
-      <StoryProviders>
-        <TopBarTrail>
-          <AccountMenu />
-        </TopBarTrail>
-      </StoryProviders>
-    );
+    return <AccountMenuFrame />;
   },
-};
-
-/** Open the menu and then Help and feedback. */
-async function openHelpFlyout(context: { canvasElement: HTMLElement }) {
-  await openMenu(context);
-  const canvas = within(context.canvasElement);
-  await userEvent.click(
-    canvas.getByRole("menuitem", { name: "Help and feedback" }),
-  );
-}
-
-/**
- * Help and feedback, open, opening LEFT like the theme flyout. Its rows are
- * menu items: four places off the app, each marked as a new tab, and the
- * shortcuts dialog. The build sits under its own rule as a statement, and a
- * local build says "Development build" rather than nothing.
- */
-export const TopBarHelpFlyout: Story = {
-  name: "Top bar help flyout",
-  play: openHelpFlyout,
-  render: () => {
-    stubSession();
-    return (
-      <StoryProviders>
-        <TopBarTrail>
-          <AccountMenu />
-        </TopBarTrail>
-      </StoryProviders>
-    );
-  },
-};
-
-export const TopBarHelpFlyoutDark: Story = {
-  ...TopBarHelpFlyout,
-  name: "Top bar help flyout (dark)",
-  globals: { theme: "dark" },
-};
-
-/** At phone width the flyout folds into the menu as an indented group. */
-export const TopBarHelpFlyoutPhone: Story = {
-  ...TopBarHelpFlyout,
-  name: "Top bar help flyout (phone)",
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
 };
