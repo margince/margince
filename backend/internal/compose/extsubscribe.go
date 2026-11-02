@@ -156,7 +156,7 @@ func (c ComposedSubscription) handlerOver(db *database.DB, log *slog.Logger) fun
 		return instrument.Work(ctx, extension.Work{Kind: extension.WorkSubscription, Name: c.Sub.Name, Unit: string(c.Unit)},
 			func(ctx context.Context) error {
 				// Reported inside the Work hooks, so a unit's Work context
-				// reaches Panic, then re-raised for the recovery above, which
+				// reaches Panic. Then re-raised for the recovery above. That
 				// converts it to an error and logs it once.
 				defer func() {
 					if r := recover(); r != nil {

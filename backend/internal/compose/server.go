@@ -148,9 +148,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// webhooks, the extension inbound routes — keys on the one address it
 	// decided rather than on whichever proxy the request happened to arrive by.
 	//
-	// instrument.HTTP wraps everything inside the panic guard, so a unit's HTTP
-	// hook runs with no correlation id or principal on the context, with
-	// r.RemoteAddr still the proxy (before ResolveClientIP), and with the body
+	// instrument.HTTP wraps everything inside the panic guard. A unit's HTTP
+	// hook therefore sees no correlation id or principal on the context.
+	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
 	return httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,

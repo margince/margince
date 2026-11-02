@@ -53,23 +53,23 @@ type Instruments struct {
 	// correlation wrapper, so it sees the correlation id.
 	LogHandler func(slog.Handler) slog.Handler
 	// HTTP wraps the whole request router, once, in the api. It sits inside
-	// the panic catch and outside everything else, so no correlation id or
-	// principal is on the context yet, r.RemoteAddr is still the proxy (before
-	// the client address is resolved), and the body is not yet capped.
+	// the panic catch and outside everything else. So no correlation id or
+	// principal is on the context yet. r.RemoteAddr is still the proxy, before
+	// the client address is resolved. The body is not yet capped.
 	HTTP func(http.Handler) http.Handler
 	// Work wraps every job and every extension subscription delivery. It must
 	// call run on the calling goroutine. If the work panics, run re-raises that
 	// panic there, and the work's panic passes through the hook unchanged. The
 	// work runs once even if the hook never calls run, or panics before it.
 	Work func(ctx context.Context, w Work, run func(context.Context) error) error
-	// Panic is told of a panic the core has caught. It is called at four
-	// places: RecoverPanics (an api request, and the worker's event listener),
-	// jobs.Govern (any River job that panics out of its work), the extension job
-	// tick, and an extension subscription delivery. A panic that other code
-	// recovers by itself reaches a unit only through its LogHandler, at Error
-	// level. Every site also logs the panic at Error with a "panic" attribute.
-	// A log record that carries a "panic" attribute describes a panic already
-	// handed to Panic, so a unit must not report it twice.
+	// Panic is told of a panic the core has caught, at four places.
+	// RecoverPanics reports an api request and the worker's event listener.
+	// jobs.Govern reports any River job that panics out of its work. The
+	// extension job tick and an extension subscription delivery report too.
+	// A panic that other code recovers by itself reaches a unit only through
+	// its LogHandler, at Error level. Every site also logs its panic at Error
+	// with a "panic" attribute. A record with that attribute describes a
+	// panic already handed to Panic, so a unit must not report it twice.
 	Panic func(ctx context.Context, value any, stack []byte)
 	// Shutdown runs when the process exits, so a unit can send what it still
 	// holds. It gets a window of 2 seconds.

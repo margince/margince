@@ -234,9 +234,10 @@ export function routeIdentity(route: Route): string {
 /**
  * The route as a pattern an observer may record: the screen, with each
  * record id replaced by a placeholder. A unit's screen keeps the unit's
- * name only when it is a composed unit, and a fork screen is always
- * `x/:key` (lib cannot see the fork registry). Any other id, which anyone can
- * type into an address, becomes a placeholder. Never carries the query.
+ * name only when it is a composed unit. A fork screen is always `x/:key`,
+ * because lib cannot see the fork registry. Any other id becomes a
+ * placeholder, since anyone can type one into an address. Never carries the
+ * query.
  */
 export function routePattern(
   route: Route,
