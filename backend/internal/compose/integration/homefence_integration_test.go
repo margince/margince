@@ -24,17 +24,18 @@ import (
 
 // fenceFixture is one case's own records, so no case moves another's fence.
 type fenceFixture struct {
-	contact, company, linked, unlinked, task ids.UUID
+	contact, company, linked, unlinked, task, unassignedTask ids.UUID
 }
 
 func seedFenceFixture(t *testing.T, e *Env) fenceFixture {
 	t.Helper()
 	f := fenceFixture{
-		contact:  e.SeedContact(t, "Fence Contact", &e.Rep1),
-		company:  e.SeedCompany(t, "Fence Company", &e.Rep1),
-		linked:   ids.NewV7(),
-		unlinked: ids.NewV7(),
-		task:     ids.NewV7(),
+		contact:        e.SeedContact(t, "Fence Contact", &e.Rep1),
+		company:        e.SeedCompany(t, "Fence Company", &e.Rep1),
+		linked:         ids.NewV7(),
+		unlinked:       ids.NewV7(),
+		task:           ids.NewV7(),
+		unassignedTask: ids.NewV7(),
 	}
 	for _, id := range []ids.UUID{f.linked, f.unlinked} {
 		e.WsExec(t, `INSERT INTO activity (id, kind, subject, source, captured_by)
@@ -42,6 +43,8 @@ func seedFenceFixture(t *testing.T, e *Env) fenceFixture {
 	}
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, assignee_id, source, captured_by)
 		VALUES ($1, 'task', 'Fence task', $2, 'manual', 'human:fence')`, f.task, e.Rep1)
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, source, captured_by)
+		VALUES ($1, 'task', 'Unassigned fence task', 'manual', 'human:fence')`, f.unassignedTask)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
 		f.linked, f.contact)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id) VALUES ($1, 'to', 'fence@example.test', $2)`,
@@ -111,6 +114,9 @@ func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T)
 		},
 		"a task changes assignee": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET assignee_id = $1 WHERE id = $2`, []any{e.Rep2, f.task}}}
+		},
+		"an unassigned task is assigned": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`UPDATE activity SET assignee_id = $1 WHERE id = $2`, []any{e.Rep2, f.unassignedTask}}}
 		},
 		"a message is archived": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET archived_at = now() WHERE id = $1`, []any{f.linked}}}

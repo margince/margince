@@ -222,7 +222,8 @@ func Store[A Answer](
 			ON CONFLICT (reader_id, read, request_key) DO UPDATE
 			   SET fence = EXCLUDED.fence, computed_at = EXCLUDED.computed_at,
 			       valid_until = EXCLUDED.valid_until, walk_id = EXCLUDED.walk_id,
-			       payload = EXCLUDED.payload`,
+			       payload = EXCLUDED.payload
+			 WHERE home_read_cache.computed_at <= EXCLUDED.computed_at`,
 			reader, string(read), key, stamp.fence, stamp.at, stamp.validUntil, walk, payload)
 		return err
 	})

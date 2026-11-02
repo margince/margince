@@ -63,7 +63,7 @@ CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON activity FOR EACH 
   WHEN (OLD.audience IS DISTINCT FROM NEW.audience
         OR (OLD.restricted_at IS NULL AND NEW.restricted_at IS NOT NULL)
         OR (OLD.archived_at IS NULL AND NEW.archived_at IS NOT NULL)
-        OR (OLD.assignee_id IS NOT NULL AND OLD.assignee_id IS DISTINCT FROM NEW.assignee_id)
+        OR OLD.assignee_id IS DISTINCT FROM NEW.assignee_id
         OR (OLD.sent_by_colleague IS NOT NULL AND OLD.sent_by_colleague IS DISTINCT FROM NEW.sent_by_colleague)
         OR OLD.captured_by IS DISTINCT FROM NEW.captured_by
         OR OLD.source_system IS DISTINCT FROM NEW.source_system
@@ -99,13 +99,14 @@ CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON capture_im
   FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence();
 
 -- These rows withhold content (auth.CommitmentContentRetainedClause and the
--- renewal arm), so an unavailable or renewed admission narrows and a removed one
--- only widens.
+-- renewal arm), so becoming unavailable or renewed narrows. Recovering, losing
+-- a renewal, or being removed only widens.
 CREATE TRIGGER home_read_fence_commitment_admission AFTER INSERT ON activity_commitment_admission FOR EACH ROW
   WHEN (NEW.outcome = 'source_unavailable' OR NEW.renewed_by IS NOT NULL)
   EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_commitment_admission_change AFTER UPDATE ON activity_commitment_admission FOR EACH ROW
-  WHEN (OLD.outcome IS DISTINCT FROM NEW.outcome OR OLD.renewed_by IS DISTINCT FROM NEW.renewed_by
+  WHEN ((NEW.outcome = 'source_unavailable' AND OLD.outcome IS DISTINCT FROM NEW.outcome)
+        OR (NEW.renewed_by IS NOT NULL AND OLD.renewed_by IS DISTINCT FROM NEW.renewed_by)
         OR OLD.source_activity_id IS DISTINCT FROM NEW.source_activity_id OR OLD.locator IS DISTINCT FROM NEW.locator)
   EXECUTE FUNCTION advance_home_read_fence();
 

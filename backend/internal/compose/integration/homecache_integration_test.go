@@ -171,6 +171,27 @@ func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
 	}
 }
 
+// A background refresh that began before a reader's miss must not replace the
+// newer answer that miss kept.
+func TestAnOlderAnswerNeverReplacesANewerOne(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	older, err := c.Stamp(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	if err := homecache.Store(ctx, c, e.Rep1, homecache.Worklist, "home", older, nil,
+		crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}); err != nil {
+		t.Fatal(err)
+	}
+	got, _, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home")
+	if err != nil || !hit || got.View == nil || *got.View != "decisions" {
+		t.Errorf("kept answer = %+v (hit %v, err %v), want the newer one", got, hit, err)
+	}
+}
+
 // The cache only saves work. A kept answer this build cannot read, written by an
 // older one, is passed over for the fresh read, which is kept in its place.
 func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
