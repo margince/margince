@@ -128,7 +128,7 @@ describe("the meeting brief drawer", () => {
 
   it("keeps the server's reason when a named project is not the meeting's", async () => {
     let reads = 0;
-    seen({
+    const urls = seen({
       "GET /activities/a-1/meeting-brief": () => {
         reads += 1;
         return reads === 1
@@ -169,7 +169,9 @@ describe("the meeting brief drawer", () => {
         "That meeting is filed under a different engagement.",
       ),
     ).toBeTruthy();
+    expect(urls[1]).toBe("/activities/a-1/meeting-brief?project_id=p-erp");
     expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
   it.each([

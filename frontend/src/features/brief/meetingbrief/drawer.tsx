@@ -109,6 +109,9 @@ export function ContactMeetingBrief({
     isWithheld(problemStatus(brief.error), projectId)
   ) {
     state = { kind: "withheld" };
+  } else if (brief.isError && problemStatus(brief.error) === 404) {
+    // The meeting is filed under another project: the picker is the way out.
+    state = { kind: "failed", message: problemMessageOf(brief.error, t) };
   } else if (brief.isError) {
     state = {
       kind: "failed",
