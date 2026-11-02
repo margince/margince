@@ -104,7 +104,7 @@ func TestACachedFirstPageKeepsTheWalkItsDefaultSpellingStarted(t *testing.T) {
 		t.Fatalf("the cached first page → %d", status)
 	}
 	if again.NextCursor == nil || *again.NextCursor != *first.NextCursor {
-		t.Errorf("the second read did not serve the cached page and its walk")
+		t.Fatalf("the second read did not serve the cached page and its walk")
 	}
 	var next json.RawMessage
 	if status := e.Call(t, "GET", onePage+"&cursor="+*again.NextCursor, nil, nil, &next); status != http.StatusOK {

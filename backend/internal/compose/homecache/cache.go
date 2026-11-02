@@ -165,7 +165,7 @@ func (c *Cache) Forget(ctx context.Context, readers []ids.UUID) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO home_read_forgotten (reader_id, at)
 			SELECT r, clock_timestamp() FROM unnest($1::uuid[]) r
-			ON CONFLICT (reader_id) DO UPDATE SET at = EXCLUDED.at`, readers)
+			ON CONFLICT (reader_id) DO UPDATE SET at = greatest(home_read_forgotten.at, EXCLUDED.at)`, readers)
 		return err
 	})
 	if err != nil {

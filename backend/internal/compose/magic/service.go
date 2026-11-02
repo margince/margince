@@ -250,16 +250,22 @@ func (s *Service) windowStart(
 	return ResolveWindow(ctx, s.brief, since, asOf)
 }
 
-// windowKey names the window a receipt with no since covers: the reader's
-// brief cutoff once their brief has run, or the rolling day before it.
+// windowKey names the window a receipt with no since covers. It is the
+// reader's brief cutoff once their brief has run, and otherwise the rolling day
+// or the lookback floor.
 func (s *Service) windowKey(ctx context.Context) (string, error) {
 	asOf := s.now().UTC()
 	from, err := s.windowStart(ctx, nil, asOf)
 	if err != nil {
 		return "", err
 	}
-	if from.Equal(asOf.Add(-defaultWindow)) {
+	// The two windows that move with the clock are named, not dated, so the key
+	// holds still while the answer does.
+	switch {
+	case from.Equal(asOf.Add(-defaultWindow)):
 		return "day", nil
+	case from.Equal(asOf.Add(-maxLookback)):
+		return "floor", nil
 	}
 	return from.Format(time.RFC3339Nano), nil
 }

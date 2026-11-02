@@ -30,4 +30,9 @@ func TestTheReceiptWindowKeyFollowsTheReadersBrief(t *testing.T) {
 	if err != nil || after != cutoff.Format(time.RFC3339Nano) {
 		t.Fatalf("after the brief: key %q (err %v), want its cutoff", after, err)
 	}
+	stale := briefAt{cutoff: now.AddDate(0, -3, 0), ran: true}
+	floored, err := NewService(nil, stale, clock).windowKey(context.Background())
+	if err != nil || floored != "floor" {
+		t.Fatalf("a brief older than the lookback: key %q (err %v), want the floor named", floored, err)
+	}
 }
