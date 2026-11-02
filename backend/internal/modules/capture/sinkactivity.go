@@ -142,7 +142,8 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		}
 		if asserted && alreadyFiled && s.takeOverAsserted != nil {
 			err := s.takeOverAsserted(
-				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields))
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields),
+			)
 			// Archived under us between the resolve and here — an erasure racing
 			// this capture. Skipping advances the watermark; propagating would
 			// stall this mailbox on this message on every pass forever.
@@ -181,6 +182,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		if err := s.settleMeetingReplay(ctx, tx, id, rec, alreadyFiled); err != nil {
+			return datasource.EntityRef{}, false, counterpartyDecision{}, err
+		}
+		if err := s.adoptWithheldParts(ctx, tx, id, rec, fields); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil

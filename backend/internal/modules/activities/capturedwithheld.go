@@ -7,10 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,6 +35,10 @@ type WithheldFile struct {
 	ContentType  string
 	DeclaredType string
 	ByteSize     int
+	// Checksum fingerprints the bytes that were not kept, so a later arrival
+	// can be proven to carry the same file. Empty for a private thread, whose
+	// row states nothing about its contents.
+	Checksum string
 }
 
 // RecordWithheldFiles writes an attachment row for each file a private message
@@ -63,6 +69,7 @@ func (s *Store) RecordWithheldFiles(
 				ContentType: file.ContentType, DeclaredType: file.DeclaredType,
 			},
 			byteSize: file.ByteSize,
+			checksum: nullIfEmpty(file.Checksum),
 			withheld: true,
 		}
 		if err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
@@ -87,4 +94,113 @@ func refuseWithheldBytes(ctx context.Context, tx pgx.Tx, attachmentID ids.UUID) 
 		return ErrBytesWithheld
 	}
 	return nil
+}
+
+// AdoptWithheldFiles gives rows that name a file without bytes the bytes a
+// later capture carried, and reports how many it gave.
+//
+// One message reaching a copied seat and an addressed seat arrives twice. The
+// copied arrival withholds its bytes; the addressed one carries them. Files are
+// staged for a new activity only, so without this the addressed seat joins the
+// existing row and never receives them.
+func (s *Store) AdoptWithheldFiles(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from CapturedFileSource, files []CapturedFile,
+) (int, error) {
+	// Create, not update, and the row existing does not change that. What is
+	// recorded is a file arriving with a message. That is the act the capture
+	// principal is admitted for, as StageCapturedFiles argues too. No seat's
+	// own edit passes here, so update would name an unused authority.
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return 0, err
+	}
+	if len(files) == 0 {
+		return 0, nil
+	}
+	// Staged only where a row is still waiting for bytes. The ordinary replay of
+	// a message that already has them stages nothing, so a join never leaves an
+	// object no row points at.
+	waiting, err := s.partsAwaitingBytes(ctx, tx, from)
+	if err != nil || len(waiting) == 0 {
+		return 0, err
+	}
+	carried := make([]CapturedFile, 0, len(files))
+	for _, file := range files {
+		if slices.Contains(waiting, file.PartID) {
+			carried = append(carried, file)
+		}
+	}
+	staged, err := s.StageCapturedFiles(ctx, carried)
+	if err != nil {
+		return 0, err
+	}
+	return s.giveWithheldBytes(ctx, tx, activityID, from, staged)
+}
+
+// partsAwaitingBytes names this message's parts whose row has none yet.
+func (s *Store) partsAwaitingBytes(
+	ctx context.Context, tx pgx.Tx, from CapturedFileSource,
+) ([]string, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT external_part_id
+		  FROM attachment
+		 WHERE external_source_id = $1 AND bytes_withheld`,
+		providerMessageKey(from))
+	if err != nil {
+		return nil, fmt.Errorf("read the files still awaiting bytes: %w", err)
+	}
+	defer rows.Close()
+	var parts []string
+	for rows.Next() {
+		var part string
+		if err := rows.Scan(&part); err != nil {
+			return nil, fmt.Errorf("read a file awaiting bytes: %w", err)
+		}
+		parts = append(parts, part)
+	}
+	return parts, rows.Err()
+}
+
+// giveWithheldBytes points each waiting row at the object now holding its file.
+//
+// The guard on bytes_withheld makes a repeat a no-op rather than a second
+// object under a key the row already points at.
+func (s *Store) giveWithheldBytes(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from CapturedFileSource, staged []StagedFile,
+) (int, error) {
+	adopted := 0
+	for _, file := range staged {
+		var id ids.UUID
+		var size int
+		// byte_size is left alone: the withheld row recorded the sender's size
+		// when it named the file, and these are that file's bytes.
+		err := tx.QueryRow(
+			ctx, `
+			UPDATE attachment
+			   SET storage_key = $3, checksum = $4, bytes_withheld = false
+			 WHERE external_source_id = $1 AND external_part_id = $2
+			   AND bytes_withheld
+			RETURNING id, byte_size`,
+			providerMessageKey(from), file.file.PartID, file.key, file.checksum,
+		).Scan(&id, &size)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return adopted, fmt.Errorf("give a withheld file its bytes: %w", err)
+		}
+		// The row's own image builder, so the before and after cannot drift from
+		// the one the create path audits.
+		row := capturedFileRow{byteSize: size, withheld: true}
+		before := row.auditImage(activityID, from)
+		row.withheld = false
+		if _, err := storekit.Audit(
+			ctx, tx, "update", "attachment", id, before, row.auditImage(activityID, from),
+		); err != nil {
+			return adopted, fmt.Errorf("audit a file given its bytes: %w", err)
+		}
+		adopted++
+	}
+	return adopted, nil
 }

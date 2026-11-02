@@ -143,7 +143,7 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 // read from. Raw capture is append-once, so a private message's files leave the
 // original here, before its only write.
 func storeOriginalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (connector.NormalizedRecord, error) {
-	rec, err := withholdPrivateOriginalTx(ctx, tx, rec)
+	rec, err := withholdOriginalPartsTx(ctx, tx, rec)
 	if err != nil {
 		return rec, err
 	}
@@ -155,9 +155,13 @@ func storeOriginalTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	return rec, nil
 }
 
-// withholdPrivateOriginalTx is the record raw_capture should store: a private
+// withholdOriginalPartsTx is the record raw_capture should store: a withholding
 // message's original without its attachment bytes, anything else unchanged.
-func withholdPrivateOriginalTx(
+//
+// Both reasons strip the original, not just the rows. Bytes left here would
+// keep a copy of the file whose row says it has none, and a restore would hand
+// it back.
+func withholdOriginalPartsTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 ) (connector.NormalizedRecord, error) {
 	fields, ok := rec.Fields.(ActivityFields)
@@ -165,8 +169,14 @@ func withholdPrivateOriginalTx(
 		return rec, nil
 	}
 	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
-	if err != nil || !private {
+	if err != nil {
 		return rec, err
+	}
+	if !private {
+		copied, err := copiedOnlyTx(ctx, tx, fields)
+		if err != nil || !copied {
+			return rec, err
+		}
 	}
 	return withholdRawParts(rec), nil
 }
@@ -196,15 +206,10 @@ func withholdRawParts(rec connector.NormalizedRecord) connector.NormalizedRecord
 // reading, or the seat's own hand.
 const fieldVerdict = "verdict"
 
-// stripPersonalParts takes a private message's files out of the record before
-// anything stores them, and returns the parts it took so the caller can name
-// them on rows without bytes.
-//
-// The parts are REMOVED rather than emptied. Staging writes each body to the
-// object store unconditionally, so an emptied part would put a zero-length
-// object there — storing something, under a key the message then points at,
-// which is worse than either keeping the file or keeping nothing.
-func stripPersonalParts(rec connector.NormalizedRecord) (connector.NormalizedRecord, []connector.Part) {
+// stripParts takes a withholding message's files off the record and returns
+// them for naming on rows without bytes. Removed rather than emptied: staging
+// writes every body, so an emptied part would store a zero-length object.
+func stripParts(rec connector.NormalizedRecord) (connector.NormalizedRecord, []connector.Part) {
 	taken := rec.Parts
 	rec.Parts = nil
 	return rec, taken

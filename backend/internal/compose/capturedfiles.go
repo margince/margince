@@ -12,6 +12,8 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 
 	"github.com/jackc/pgx/v5"
@@ -24,7 +26,8 @@ import (
 // errStagedFileNotOurs marks a staged file that did not come from this
 // adapter's own Stage call — a wiring mistake, never a runtime condition.
 var errStagedFileNotOurs = errors.New(
-	"compose: a captured file was staged by something other than the timeline store")
+	"compose: a captured file was staged by something other than the timeline store",
+)
 
 // capturedFileKeeper adapts the timeline store to capture's seam.
 type capturedFileKeeper struct {
@@ -81,6 +84,55 @@ func (k capturedFileKeeper) Record(
 		CapturedBy: from.CapturedBy,
 		Category:   from.Category,
 	}, owned)
+}
+
+func (k capturedFileKeeper) RecordCopiedWithheld(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, files []capture.CapturedFile,
+) error {
+	// The size and a fingerprint cross, never the body. The fingerprint is what
+	// lets a later addressed arrival be proven the same file, which is how its
+	// bytes reach this row at all.
+	withheld := make([]activities.WithheldFile, 0, len(files))
+	for _, file := range files {
+		sum := sha256.Sum256(file.Body)
+		withheld = append(withheld, activities.WithheldFile{
+			PartID:       file.PartID,
+			Filename:     file.Filename,
+			ContentType:  file.ContentType,
+			DeclaredType: file.DeclaredType,
+			ByteSize:     len(file.Body),
+			Checksum:     hex.EncodeToString(sum[:]),
+		})
+	}
+	return k.store.RecordWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
+		System:     from.System,
+		MessageID:  from.MessageID,
+		CapturedBy: from.CapturedBy,
+		Category:   from.Category,
+	}, withheld)
+}
+
+func (k capturedFileKeeper) AdoptWithheld(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, files []capture.CapturedFile,
+) (int, error) {
+	carried := make([]activities.CapturedFile, 0, len(files))
+	for _, file := range files {
+		carried = append(carried, activities.CapturedFile{
+			PartID:       file.PartID,
+			Filename:     file.Filename,
+			ContentType:  file.ContentType,
+			DeclaredType: file.DeclaredType,
+			Body:         file.Body,
+		})
+	}
+	return k.store.AdoptWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
+		System:     from.System,
+		MessageID:  from.MessageID,
+		CapturedBy: from.CapturedBy,
+		Category:   from.Category,
+	}, carried)
 }
 
 func (k capturedFileKeeper) RecordWithheld(
