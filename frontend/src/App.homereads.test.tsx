@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { focusManager } from "@tanstack/react-query";
 import { cleanup, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { readStored, STORAGE_KEYS, writeStored } from "./lib/storage";
@@ -104,5 +105,25 @@ it("forgets the session it saw once the probe is refused", async () => {
   writeStored(STORAGE_KEYS.sessionSeen, "1");
   server({ "/me": () => json({ title: "unauthorized" }, 401) }, []);
   renderApp();
+  await waitFor(() => expect(readStored(STORAGE_KEYS.sessionSeen)).toBeNull());
+});
+
+it("forgets the session when a later probe is refused", async () => {
+  let probes = 0;
+  server(
+    {
+      "/me": () =>
+        ++probes === 1
+          ? json(meFixture({ roles: ["rep"] }))
+          : json({ title: "unauthorized" }, 401),
+    },
+    [],
+  );
+  renderApp();
+  await waitFor(() => expect(readStored(STORAGE_KEYS.sessionSeen)).toBe("1"));
+  // The reader comes back to the tab, and the probe is asked again.
+  focusManager.setFocused(false);
+  focusManager.setFocused(true);
+  await waitFor(() => expect(probes).toBeGreaterThan(1));
   await waitFor(() => expect(readStored(STORAGE_KEYS.sessionSeen)).toBeNull());
 });

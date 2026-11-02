@@ -147,6 +147,19 @@ function UnavailableOrClaimable({
   return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
+// Marks whether this browser has a session, and answers whether the probe was
+// refused. A refused refetch keeps the last data beside its error.
+function noteSessionSeen(data: unknown, error: unknown): boolean {
+  const refused =
+    error instanceof AuthProbeError && error.kind === "unauthorized";
+  if (refused) {
+    removeStored(STORAGE_KEYS.sessionSeen);
+  } else if (data && !error) {
+    writeStored(STORAGE_KEYS.sessionSeen, "1");
+  }
+  return refused;
+}
+
 // On a browser that had a session, Home's reads start with the session probe.
 // Waiting for the gates it opens costs two round trips. An answer that sends the
 // reader elsewhere stops them, and the cleanup aborts them.
@@ -199,18 +212,14 @@ function AuthedApp({
     }
   }, [me.data, adoptLocale]);
   useEffect(() => {
+    const refused = noteSessionSeen(me.data, me.error);
     if (me.data) {
       hadSession.current = true;
-      writeStored(STORAGE_KEYS.sessionSeen, "1");
       setNotice(null);
       markJourney("session");
       return;
     }
-    if (
-      me.error instanceof AuthProbeError &&
-      me.error.kind === "unauthorized"
-    ) {
-      removeStored(STORAGE_KEYS.sessionSeen);
+    if (refused) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -260,9 +269,8 @@ function AuthedApp({
   }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
-  const [sessionSeen] = useState(
-    () => readStored(STORAGE_KEYS.sessionSeen) === "1",
-  );
+  // Read on every render, so a sign-out's forgetSeat ends it at once.
+  const sessionSeen = readStored(STORAGE_KEYS.sessionSeen) === "1";
   const [paletteOpen, setPaletteOpen] = useState(false);
   const gatesPending = companyPending || recordZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
