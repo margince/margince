@@ -126,7 +126,7 @@ func toneInk(tone Tone) token {
 }
 
 // badge is a status as a small coloured dot and a grey label, so a row of
-// them stays calm; a neutral line has no dot.
+// them stays calm. A neutral line has no dot.
 func badge(line Line) string {
 	dot := ""
 	if ink := toneInk(line.Tone); ink != noToken {
