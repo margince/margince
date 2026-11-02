@@ -15,9 +15,8 @@ import (
 )
 
 // meetingsAhead is the meetings lane: what starts between asOf and the day's
-// end, and the day meetings dated today, which the zone says. Only meetings
-// with somebody from outside stay. more says a meeting was read and cut, or a
-// read filled its ceiling.
+// end, and the day meetings dated today, which the zone says. more says a
+// meeting was read and cut, or a read filled its ceiling.
 func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kept []Meeting, more bool, err error) {
 	loc, err := s.location(ctx)
 	if err != nil {
@@ -29,23 +28,8 @@ func (s *Service) meetingsAhead(ctx context.Context, asOf, until time.Time) (kep
 	if err != nil {
 		return nil, false, err
 	}
-	read = withOutsideParty(read)
 	kept = plannedAndUnprepared(read)
 	return kept, full || len(kept) < len(read), nil
-}
-
-// withOutsideParty drops the meetings with nobody from outside on them. A
-// meeting among colleagues is not a customer meeting, so it asks for no
-// preparation here; Today's schedule still shows it. A dropped meeting was not
-// cut, so it does not count toward more.
-func withOutsideParty(read []Meeting) []Meeting {
-	kept := make([]Meeting, 0, len(read))
-	for _, meeting := range read {
-		if !meeting.NoOutsideParty {
-			kept = append(kept, meeting)
-		}
-	}
-	return kept
 }
 
 // meetingsPrepCeiling is how many of today's day meetings, and of its timed

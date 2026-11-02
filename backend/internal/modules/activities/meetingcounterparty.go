@@ -24,5 +24,5 @@ func HeldMeetingCounterparties() string {
 		  JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		    AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		  JOIN company co ON co.id = emp.company_id AND NOT co.is_anchor AND co.archived_at IS NULL
-		 WHERE ap.user_id IS NULL AND NOT ` + colleagueParticipantSQL("")
+		 WHERE ap.user_id IS NULL AND NOT ` + colleagueParticipantSQL("", scopeUnbounded)
 }

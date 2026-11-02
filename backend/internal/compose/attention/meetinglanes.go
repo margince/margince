@@ -94,14 +94,8 @@ type Meeting struct {
 	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
 	// id names the meeting and says nothing about where to read it. Zero when
 	// the outside party is withheld or is no contact. The row then offers no
-	// verb. NoOutsideParty says the meeting has no outside party at all.
+	// verb. A meeting with no outside party never reaches this lane.
 	ContactID ids.UUID
-
-	// NoOutsideParty says every participant is a seat, a colleague or works
-	// for the own company. Such a meeting leaves the lane. It is read without
-	// the reader's row scope, so a hidden guest never sets it. The zero value
-	// keeps the row.
-	NoOutsideParty bool
 
 	// The reader's own preparation for the meeting. Nil when the reader does
 	// not attend it or may not read its content. A rep cannot act on a meeting

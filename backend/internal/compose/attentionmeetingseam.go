@@ -56,7 +56,7 @@ func (m attentionMeetings) openIn(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window), Limit: &limit,
-		OpenStatusOnly: true, Sort: &soonestFirst, ReadableOnly: true,
+		OpenStatusOnly: true, Sort: &soonestFirst, ReadableOnly: true, WithOutsideParty: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -65,8 +65,8 @@ func (m attentionMeetings) openIn(
 	return rows, err
 }
 
-// named turns the lane's rows into meetings. Each says who it is with, whether
-// anybody from outside is on it, and the reader's own preparation for it.
+// named turns the lane's rows into meetings, each with who it is with and the
+// reader's own preparation for it.
 func (m attentionMeetings) named(ctx context.Context, rows []crmcontracts.Activity) ([]attention.Meeting, error) {
 	ahead := make([]attention.Meeting, 0, len(rows))
 	for _, row := range rows {
@@ -83,17 +83,12 @@ func (m attentionMeetings) named(ctx context.Context, rows []crmcontracts.Activi
 	if err != nil {
 		return nil, err
 	}
-	internal, err := m.store.MeetingsWithoutOutsideParty(ctx, meetings)
-	if err != nil {
-		return nil, err
-	}
 	prepared, err := m.store.MeetingPreparations(ctx, meetings)
 	if err != nil {
 		return nil, err
 	}
 	for i := range ahead {
 		ahead[i].ContactID = with[ahead[i].ID]
-		ahead[i].NoOutsideParty = internal[ahead[i].ID]
 		if own, attends := prepared[ahead[i].ID]; attends {
 			wire := wirePreparation(own)
 			ahead[i].Preparation = &wire

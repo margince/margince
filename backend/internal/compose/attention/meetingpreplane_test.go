@@ -119,26 +119,3 @@ func ownPreparation(ready bool) *crmcontracts.MeetingPreparation {
 	}
 	return &crmcontracts.MeetingPreparation{State: state, Revision: "r1", Changed: []crmcontracts.MeetingPreparationChanged{}}
 }
-
-// A meeting with no outside party is not a customer meeting and leaves the
-// lane without counting as cut. A meeting whose outside party this reader may
-// not see has a zero ContactID too, and it stays.
-func TestAnInternalMeetingIsDroppedFromTheLane(t *testing.T) {
-	soon := readInstant.Add(30 * time.Minute)
-	internal, withheld := ids.NewV7(), ids.NewV7()
-	svc := meetingPrepService([]Meeting{
-		{ID: internal, Subject: "colleagues only", StartsAt: soon, Preparation: ownPreparation(false), NoOutsideParty: true},
-		{ID: withheld, Subject: "hidden guest", StartsAt: soon, Preparation: ownPreparation(false)},
-	})
-
-	kept, more, err := svc.meetingsAhead(meetingPrepReader(), readInstant, readInstant.Add(8*time.Hour))
-	if err != nil {
-		t.Fatalf("reading the meetings lane: %v", err)
-	}
-	if len(kept) != 1 || kept[0].ID != withheld {
-		t.Fatalf("the lane kept %+v, want only the meeting whose guest is withheld", kept)
-	}
-	if more {
-		t.Error("dropping a meeting among colleagues reads as a meeting cut from the lane")
-	}
-}

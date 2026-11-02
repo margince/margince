@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"maps"
 	"testing"
 	"time"
@@ -291,9 +292,26 @@ func TestAReaderWhoMayNotReadActivitiesIsToldTheMeetingWasWithNobody(t *testing.
 const colleagueTestDomain = "authz.test"
 
 // bookedMeeting writes a booked meeting an hour after journeyMorning, as
-// calendar capture stores it. Rep1 attends by login address. Each guest
-// address gets a participant row with the contact given beside it.
+// calendar capture stores it. Each guest address gets a participant row with
+// the contact given beside it.
 func bookedMeeting(t *testing.T, e *integration.Env, subject string, guests map[string]ids.UUID) ids.UUID {
+	t.Helper()
+	list := make([]meetingGuest, 0, len(guests))
+	for address, contact := range guests {
+		list = append(list, meetingGuest{address: address, contact: contact})
+	}
+	return bookedMeetingAt(t, e, subject, journeyMorning.Add(time.Hour), list...)
+}
+
+// meetingGuest is one participant row: an address, a contact, or both.
+type meetingGuest struct {
+	address string
+	contact ids.UUID
+}
+
+// bookedMeetingAt writes a booked meeting at start that Rep1 attends by login
+// address, with one participant row per guest.
+func bookedMeetingAt(t *testing.T, e *integration.Env, subject string, start time.Time, guests ...meetingGuest) ids.UUID {
 	t.Helper()
 	seat, seatAddress := e.Rep1, "a@"+colleagueTestDomain
 	var id ids.UUID
@@ -301,20 +319,24 @@ func bookedMeeting(t *testing.T, e *integration.Env, subject string, guests map[
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `INSERT INTO activity (kind, subject, meeting_status, occurred_at, source, captured_by)
 			VALUES ('meeting', $1, 'booked', $2, 'gcal:seed', $3) RETURNING id`,
-			subject, journeyMorning.Add(time.Hour), "connector:gcal:"+seat.String()).Scan(&id); err != nil {
+			subject, start, "connector:gcal:"+seat.String()).Scan(&id); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, user_id, address, address_domain_folded, role)
 			VALUES ($1, $2, $3, $4, 'attendee')`, id, seat, seatAddress, owndomain.StoredOfAddress(seatAddress)); err != nil {
 			return err
 		}
-		for address, contact := range guests {
+		for _, guest := range guests {
 			var contactID *ids.UUID
-			if !contact.IsZero() {
-				contactID = &contact
+			if !guest.contact.IsZero() {
+				contactID = &guest.contact
+			}
+			var address *string
+			if guest.address != "" {
+				address = &guest.address
 			}
 			if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, contact_id, address, address_domain_folded, role)
-				VALUES ($1, $2, $3, $4, 'attendee')`, id, contactID, address, owndomain.StoredOfAddress(address)); err != nil {
+				VALUES ($1, $2, $3, $4, 'attendee')`, id, contactID, address, owndomain.StoredOfAddress(guest.address)); err != nil {
 				return err
 			}
 		}
@@ -471,4 +493,90 @@ func TestHeldMeetingAmongColleaguesReachesNoCompany(t *testing.T) {
 func ptrContact(id ids.UUID) *ids.ContactID {
 	contact := ids.From[ids.ContactKind](id)
 	return &contact
+}
+
+// The invited address decides. A customer whose contact also carries an
+// address on the own domain is still the customer at this meeting.
+func TestAContactsOtherOwnDomainAddressDoesNotMakeTheGuestAColleague(t *testing.T) {
+	e := integration.Setup(t)
+	trustOwnDomain(t, e)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Ines Buyer", Emails: []contacts.ContactEmailInput{
+			{Email: "ines@customer.test", EmailType: "work", IsPrimary: true},
+			{Email: "ines.b@" + colleagueTestDomain, EmailType: "other", Position: 1},
+		},
+	})
+	if err != nil {
+		t.Fatalf("creating the customer: %v", err)
+	}
+	customer := ids.UUID(contact.Id)
+	meeting := bookedMeeting(t, e, "Pricing review", map[string]ids.UUID{"ines@customer.test": customer})
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	row, at := meetingRow(readJourneyDay(rep, t, e), meeting)
+	if at < 0 {
+		t.Fatal("the customer meeting left the lane because the contact has an own-domain address too")
+	}
+	if row.Contact == nil || ids.UUID(row.Contact.Id) != customer {
+		t.Errorf("the meeting names %+v, want the customer %v", row.Contact, customer)
+	}
+}
+
+// Meetings among colleagues are left out before the lane's read limit, so a
+// full morning of them never pushes a customer meeting off the lane.
+func TestACustomerMeetingAfterAFullCeilingOfInternalOnesIsOnTheLane(t *testing.T) {
+	e := integration.Setup(t)
+	trustOwnDomain(t, e)
+	for i := range 48 {
+		bookedMeetingAt(t, e, fmt.Sprintf("Sync %d", i), journeyMorning.Add(time.Duration(i+1)*time.Minute),
+			meetingGuest{address: "dev@" + colleagueTestDomain})
+	}
+	customer := addressedContact(t, e, "Ines Buyer", "ines@customer.test")
+	meeting := bookedMeetingAt(t, e, "Pricing review", journeyMorning.Add(90*time.Minute),
+		meetingGuest{address: "ines@customer.test", contact: customer})
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	if _, at := meetingRow(readJourneyDay(rep, t, e), meeting); at < 0 {
+		t.Error("a customer meeting after a ceiling of internal meetings is not on the lane")
+	}
+}
+
+// A guest the reader may not see counts as outside, whatever a hidden record
+// says. The lane then tells the reader nothing about the guest.
+func TestHiddenEvidenceAboutAGuestDoesNotMoveTheMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	trustOwnDomain(t, e)
+	anchor, err := e.Contacts.SaveCompany(e.Admin(), contacts.SaveCompanyInput{DisplayName: "Ourselves GmbH"})
+	if err != nil {
+		t.Fatalf("saving the installation's own company: %v", err)
+	}
+	hide := func(contact ids.UUID) {
+		owner := ids.From[ids.UserKind](e.Rep3)
+		visibility := "owner"
+		if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact),
+			contacts.UpdateContactInput{OwnerID: &owner, Visibility: &visibility}); err != nil {
+			t.Fatalf("making a guest private to another seat: %v", err)
+		}
+	}
+	insider := addressedContact(t, e, "Inside Guest", "guest@"+colleagueTestDomain)
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: ptrContact(insider), CompanyID: &anchor.CompanyID, Source: "manual",
+	}); err != nil {
+		t.Fatalf("employing the guest at the own company: %v", err)
+	}
+	outsider := addressedContact(t, e, "Outside Guest", "guest@customer.test")
+	hide(insider)
+	hide(outsider)
+	withInsider := bookedMeeting(t, e, "Review A", map[string]ids.UUID{})
+	withOutsider := bookedMeeting(t, e, "Review B", map[string]ids.UUID{})
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee'), ($3, $4, 'attendee')`,
+		withInsider, insider, withOutsider, outsider)
+
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	day := readJourneyDay(rep, t, e)
+	for name, meeting := range map[string]ids.UUID{"hidden insider": withInsider, "hidden outsider": withOutsider} {
+		if _, at := meetingRow(day, meeting); at < 0 {
+			t.Errorf("the meeting with a %s left the lane", name)
+		}
+	}
 }
