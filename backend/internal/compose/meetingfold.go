@@ -29,7 +29,7 @@ func foldMeetingDuplicateTx(
 	ctx context.Context, tx pgx.Tx, meetings *activities.Store,
 	duplicate, survivor ids.ActivityID, seat ids.UUID, calendar string,
 ) (bool, error) {
-	live, err := lockLiveSurvivor(ctx, tx, survivor)
+	live, err := lockFoldPair(ctx, tx, duplicate, survivor)
 	if err != nil || !live {
 		return false, err
 	}
@@ -47,25 +47,32 @@ func foldMeetingDuplicateTx(
 	return true, activities.RecomputeAudiencesTx(ctx, tx, []ids.ActivityID{survivor})
 }
 
-// lockLiveSurvivor locks the meeting a copy binds to and answers whether it is
-// still live and unrestricted. Nothing is carried onto a row erased or held
-// since the binding rule answered.
-func lockLiveSurvivor(ctx context.Context, tx pgx.Tx, survivor ids.ActivityID) (bool, error) {
-	var open bool
-	err := tx.QueryRow(ctx, `SELECT restricted_at IS NULL FROM activity WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, survivor).Scan(&open)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
+// lockFoldPair locks both rows in id order, so two folds of one pair cannot
+// deadlock, and answers whether both are still live and unrestricted. The
+// checks after it judge rows that stay as read until the fold commits.
+func lockFoldPair(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) (bool, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT archived_at IS NULL AND restricted_at IS NULL FROM activity
+		 WHERE id IN ($1, $2) ORDER BY id FOR UPDATE`, duplicate, survivor)
 	if err != nil {
-		return false, fmt.Errorf("compose: locking the meeting a calendar copy binds to: %w", err)
+		return false, fmt.Errorf("compose: locking a meeting stored twice: %w", err)
 	}
-	return open, nil
+	open, err := pgx.CollectRows(rows, pgx.RowTo[bool])
+	if err != nil {
+		return false, fmt.Errorf("compose: reading a meeting stored twice: %w", err)
+	}
+	return len(open) == 2 && open[0] && open[1], nil
 }
+
+// sameImportAccess compares the import fields that decide who may read a
+// meeting: the posture and the verdict.
+const sameImportAccess = `(kept.posture_at_import, kept.verdict_status, kept.verdict_reason, kept.verdict_reasons)
+	IS NOT DISTINCT FROM (other.posture_at_import, other.verdict_status, other.verdict_reason, other.verdict_reasons)`
 
 // copyRetiresCleanly answers whether archiving the copy loses nothing.
 //   - The seat still has the copy's calendar connected.
 //   - Every other importer of the copy imports the survivor with the same
-//     posture, and the seat's own posture matches where it has both.
+//     posture and verdict, and so does the seat where it has both.
 //   - No human changed the copy, and no booking stands behind it.
 //   - Every record the copy is filed under is the survivor's too.
 func copyRetiresCleanly(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID, seat ids.UUID, calendar string) (bool, error) {
@@ -78,11 +85,11 @@ func copyRetiresCleanly(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.
 		                    WHERE other.activity_id = $1 AND other.user_id <> $3
 		                      AND NOT EXISTS (SELECT 1 FROM capture_import kept
 		                                       WHERE kept.activity_id = $2 AND kept.user_id = other.user_id
-		                                         AND kept.posture_at_import IS NOT DISTINCT FROM other.posture_at_import))
+		                                         AND `+sameImportAccess+`))
 		   AND NOT EXISTS (SELECT 1 FROM capture_import kept
-		                    JOIN capture_import copied ON copied.activity_id = $1 AND copied.user_id = kept.user_id
+		                    JOIN capture_import other ON other.activity_id = $1 AND other.user_id = kept.user_id
 		                   WHERE kept.activity_id = $2 AND kept.user_id = $3
-		                     AND kept.posture_at_import IS DISTINCT FROM copied.posture_at_import)
+		                     AND NOT `+sameImportAccess+`)
 		   AND NOT EXISTS (SELECT 1 FROM audit_log worked
 		                    WHERE worked.entity_type = 'activity' AND worked.entity_id = $1 AND worked.actor_type = 'human')
 		   AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = $1)

@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -32,6 +33,9 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := TransferIdentities(ctx, tx, duplicate, survivor); err != nil {
 		return err
 	}
+	if err := carryMissingParticipantsTx(ctx, tx, duplicate, survivor); err != nil {
+		return err
+	}
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, s.now().UTC())
 	lock, err := storekit.LockRow(ctx, tx, "activity", duplicate.UUID, storekit.LiveOnly)
@@ -49,4 +53,38 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	archived := crmcontracts.PublicEventActivityArchived{}
 	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
 	return storekit.EmitEvent(ctx, tx, auditID, duplicate.UUID, archived)
+}
+
+// carryMissingParticipantsTx copies onto the survivor each party of the copy
+// it does not list yet. A party is matched by address, else seat, else contact.
+// The survivor's guest list and the seats it holds busy stay whole.
+func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
+		                                  role, display_name, roster_seat, response, past_party_cap)
+		SELECT $2, d.user_id, d.contact_id, d.address, d.address_domain_folded, d.channel_user_id,
+		       d.role, d.display_name, d.roster_seat, d.response, d.past_party_cap
+		  FROM activity_participant d
+		 WHERE d.activity_id = $1
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant s WHERE s.activity_id = $2 AND CASE
+		         WHEN d.address IS NOT NULL THEN lower(s.address) = lower(d.address)
+		         WHEN d.user_id IS NOT NULL THEN s.user_id = d.user_id
+		         WHEN d.contact_id IS NOT NULL THEN s.contact_id = d.contact_id
+		         ELSE s.channel_user_id = d.channel_user_id END)
+		ON CONFLICT DO NOTHING`, duplicate, survivor); err != nil {
+		return fmt.Errorf("activities: carrying a meeting copy's guests: %w", err)
+	}
+	return nil
+}
+
+// IsMeetingCopyArchive reports whether an archive's audit evidence records a
+// meeting copy folded into another row. Its identities and guests moved to
+// that row, so unarchiving it alone would bring back a second, hollow meeting.
+func IsMeetingCopyArchive(evidence []byte) bool {
+	var recorded map[string]any
+	if json.Unmarshal(evidence, &recorded) != nil {
+		return false
+	}
+	reason, ok := recorded[archiveReasonKey].(string)
+	return ok && reason == meetingCopyReason
 }

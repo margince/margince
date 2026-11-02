@@ -287,3 +287,35 @@ func TestAPairNeitherSideCanRetireStaysTwo(t *testing.T) {
 		t.Errorf("%d live meetings, want both worked rows kept", got)
 	}
 }
+
+// After a live fold both seats see the meeting's hour as busy. The survivor
+// lists the guest only the folded row named.
+func TestALiveFoldKeepsBothSeatsBusyAndEveryGuest(t *testing.T) {
+	p := newPairEnv(t)
+	start := captureNow.AddDate(0, 0, -3).Truncate(24 * time.Hour).Add(10 * time.Hour)
+	organiser, guest := p.loseRace(t, start)
+	p.exec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'extra@client-co.example', 'attendee')`, guest)
+
+	p.sync(t, "b")
+
+	if survivor := p.wantOneMeeting(t, start); survivor != organiser {
+		t.Fatalf("the surviving row is %v, want the organiser's %v", survivor, organiser)
+	}
+	if got := countRows(t, p.env.e, `SELECT count(*) FROM activity_participant WHERE activity_id = '`+organiser.String()+`'
+		AND address = 'extra@client-co.example'`); got != 1 {
+		t.Errorf("the survivor lists the folded row's extra guest %d times, want once", got)
+	}
+	for name, seat := range map[string]ids.UUID{"the organiser": p.env.e.Rep1, "the guest seat": p.guestSeat} {
+		own := humanWithScopes(p.env.e, seat, []principal.Scope{principal.ScopeRead})
+		slots, _, err := activities.NewStore(p.env.e.DB()).Availability(own, ids.From[ids.UserKind](seat),
+			start.Add(-time.Hour), start.Add(3*time.Hour), time.Hour)
+		if err != nil {
+			t.Fatalf("availability: %v", err)
+		}
+		for _, s := range slots {
+			if s.Start.Equal(start) {
+				t.Errorf("%s shows the folded meeting's hour as free", name)
+			}
+		}
+	}
+}
