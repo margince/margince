@@ -104,19 +104,21 @@ type Face struct {
 }
 
 var (
-	headingXLarge  = Face{"fontHeadingXLarge", 700, 28, 32, "Outfit", headingStack}
-	headingSmall   = Face{"fontHeadingSmall", 700, 16, 20, "Outfit", headingStack}
-	headingXXSmall = Face{"fontHeadingXXSmall", 700, 12, 16, "Outfit", headingStack}
-	bodyLarge      = Face{"fontBodyLarge", 400, 16, 24, "Geist", bodyStack}
-	body           = Face{"fontBody", 400, 14, 20, "Geist", bodyStack}
-	bodySmall      = Face{"fontBodySmall", 400, 12, 16, "Geist", bodyStack}
+	headingXLarge  = Face{"fontHeadingXLarge", 700, 28, 32, headingFamily, headingStack}
+	headingSmall   = Face{"fontHeadingSmall", 700, 16, 20, headingFamily, headingStack}
+	headingXXSmall = Face{"fontHeadingXXSmall", 700, 12, 16, headingFamily, headingStack}
+	bodyLarge      = Face{"fontBodyLarge", 400, 16, 24, bodyFamily, bodyStack}
+	body           = Face{"fontBody", 400, 14, 20, bodyFamily, bodyStack}
+	bodySmall      = Face{"fontBodySmall", 400, 12, 16, bodyFamily, bodyStack}
 )
 
 // The product stacks end in system-ui, which older mail clients drop; Arial
 // keeps the measure close where the web fonts are blocked.
 const (
-	headingStack = "'Outfit',system-ui,Arial,sans-serif"
-	bodyStack    = "'Geist',system-ui,Arial,sans-serif"
+	headingFamily = "Outfit"
+	bodyFamily    = "Geist"
+	headingStack  = "'" + headingFamily + "',system-ui,Arial,sans-serif"
+	bodyStack     = "'" + bodyFamily + "',system-ui,Arial,sans-serif"
 )
 
 // TypeScale lists the type rungs the mail layout uses.

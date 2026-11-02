@@ -17,14 +17,7 @@ func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *tim
 	if item.Source == crmcontracts.WorklistItemSourceApproval && !slices.Contains(item.Actions, crmcontracts.WorklistItemActions("decide")) {
 		return emailview.Item{}, false
 	}
-	label := ""
-	if item.Subject != nil && item.Subject.Label != nil {
-		label = *item.Subject.Label
-	}
-	if item.Title != nil && *item.Title != "" {
-		label = *item.Title
-	}
-	row := emailview.Item{Title: mailcopy.OneLine(label), Verb: mailWorkAction(item, words)}
+	row := emailview.Item{Title: mailcopy.OneLine(mailWorkLabel(item)), Verb: mailWorkAction(item, words)}
 	if strings.TrimSpace(row.Title) == "" {
 		return emailview.Item{}, false
 	}
@@ -38,17 +31,31 @@ func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *tim
 		row.Lines = append(row.Lines, emailview.Line{Text: words.MailOwner + ": " + mailcopy.OneLine(*item.Owner.Label)})
 	}
 	if item.DueAt != nil {
-		at := *item.DueAt
-		if zone != nil {
-			at = at.In(zone)
-		}
-		due := words.Instant(at)
-		if item.Source == crmcontracts.WorklistItemSourceWeeklyCommitment {
-			due = words.Date(*item.DueAt)
-		}
-		row.Lines = append(row.Lines, emailview.Line{Text: words.MailDue + ": " + due, Tone: emailview.Info})
+		row.Lines = append(row.Lines, emailview.Line{Text: words.MailDue + ": " + mailWorkDue(item, *item.DueAt, words, zone), Tone: emailview.Info})
 	}
 	return row, true
+}
+
+// mailWorkLabel prefers the item's own title over its subject's label.
+func mailWorkLabel(item crmcontracts.WorklistItem) string {
+	if item.Title != nil && *item.Title != "" {
+		return *item.Title
+	}
+	if item.Subject != nil && item.Subject.Label != nil {
+		return *item.Subject.Label
+	}
+	return ""
+}
+
+// mailWorkDue names a weekly commitment's day, which has no clock time.
+func mailWorkDue(item crmcontracts.WorklistItem, dueAt time.Time, words mailcopy.Copy, zone *time.Location) string {
+	if item.Source == crmcontracts.WorklistItemSourceWeeklyCommitment {
+		return words.Date(dueAt)
+	}
+	if zone != nil {
+		dueAt = dueAt.In(zone)
+	}
+	return words.Instant(dueAt)
 }
 
 func routineFooterContent(base string, words mailcopy.Copy) emailview.Content {
