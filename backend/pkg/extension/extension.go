@@ -436,6 +436,10 @@ type Extension struct {
 	// Panels are the unit's components drawn inline on core pages, such as a
 	// deal page's side column. See Panel.
 	Panels []Panel
+
+	// Instrumentation observes the whole process and the browser: logs,
+	// requests, jobs, panics, errors and navigation. See Instrumentation.
+	Instrumentation *Instrumentation
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's
