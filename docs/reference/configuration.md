@@ -534,6 +534,40 @@ nobody. The log then warns with the key and the source of the setting.
 A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a boot-set
 `privacy.retain_only` wins over `seeds.retention.default_policy`.
 
+## Time-zone data
+
+Which day an instant falls on is answered twice: in Go, for the runs that sweep
+by date, and in SQL, for the reports that bucket by date. Each answer comes
+from its own copy of the IANA time-zone database, and the two copies update
+separately.
+
+The `api` and `worker` binaries embed a copy, because both import
+`time/tzdata`. Postgres carries its own, which arrives with its image.
+`cmd/migrate` embeds none.
+
+Go reads `ZONEINFO` first, then the zone files of the host, then its embedded
+copy. So the embedded copy is what answers where the host has no zone files,
+and it is fixed at the vintage the binary was built with. Two ways to serve a
+newer vintage without building again:
+
+- set `ZONEINFO` to a zone file archive, or
+- give the host current zone files, which the binaries then prefer.
+
+An image built from scratch holds no zone files of its own, so it reads the
+embedded copy and stays at its build vintage until it is built again.
+
+The pair that matters is Go against Postgres. A government moves a daylight
+saving change and one copy learns of it before the other. From then on one
+instant falls on two different days. The sweep and the report disagree about
+which day it is, and neither reports a fault.
+`TestGoAndPostgresBucketAnInstantAlike` in
+`backend/internal/compose/tzdataskew_integration_test.go` asks both engines for
+every hour of the next fourteen months, in zones whose rules have moved, and
+fails naming the first instant they place differently.
+
+What a browser holds is its own third copy. It decides only what a reader is
+shown, never what is stored or counted.
+
 ## The files of a dev stack
 
 The **deployment config** (`--config`, default `margince.yaml`) is set up the same way for local
