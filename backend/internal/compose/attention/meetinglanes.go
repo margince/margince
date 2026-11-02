@@ -70,7 +70,8 @@ type MeetingAwaitingOutcome struct {
 	HostUserID ids.UUID
 
 	// Who the meeting was with: the same counterparty Meeting.ContactID names.
-	// Zero for an internal meeting, or one whose outside attendees are withheld.
+	// Zero for a meeting with no outside party, or one whose outside party is
+	// withheld from this reader or is no contact.
 	ContactID ids.UUID
 
 	// A live calendar invitation holds the meeting, so it is canceled there.
@@ -91,10 +92,18 @@ type Meeting struct {
 
 	// Who the meeting is with, and so whose page the brief is read on. The
 	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
-	// id names the meeting and says nothing about where to read it. Zero for an
-	// internal meeting, or one whose outside attendees are withheld: the row
-	// then offers no verb rather than a link to a page picked at random.
+	// id names the meeting and says nothing about where to read it. Zero when
+	// the outside party is withheld from this reader or is no contact: the row
+	// then offers no verb rather than a link to a page picked at random. A
+	// meeting with no outside party at all says so in NoOutsideParty.
 	ContactID ids.UUID
+
+	// NoOutsideParty says every participant is a seat, a colleague or works
+	// for the installation's own company. Such a meeting is not a customer
+	// meeting and leaves the lane. It is read without the reader's row scope,
+	// so a guest the reader may not see never sets it. The zero value keeps
+	// the row.
+	NoOutsideParty bool
 
 	// The reader's own preparation for the meeting. Nil when the reader does
 	// not attend it or may not read its content. A rep cannot act on a meeting

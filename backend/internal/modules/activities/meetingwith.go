@@ -12,23 +12,27 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // meetingWithQuery picks, per meeting, the first participant by name who holds
-// no seat and is not employed by the installation's own company: the same
-// "outside" HeldMeetingCounterparties means, without needing an employer. By
-// name, because participant rows carry no reliable order of their own, and two
-// reads of an unchanged meeting must name the same contact.
+// no seat, is not a colleague (colleagueParticipantSQL) and is not employed by
+// the installation's own company: the same "outside" HeldMeetingCounterparties
+// means, without needing an employer. By name, because participant rows carry
+// no reliable order of their own, and two reads of an unchanged meeting must
+// name the same contact.
 const meetingWithQuery = `
 	SELECT DISTINCT ON (ap.activity_id) ap.activity_id, ap.contact_id
 	  FROM activity_participant ap
 	  JOIN activity a ON a.id = ap.activity_id AND a.kind = 'meeting' AND ` + activityLive + ` AND %s
 	  JOIN contact c ON c.id = ap.contact_id AND c.archived_at IS NULL
 	 WHERE ap.activity_id = ANY($%d) AND ap.user_id IS NULL AND %s
+	   AND NOT %s
 	   AND NOT EXISTS (
 	       SELECT 1 FROM relationship emp
 	         JOIN company co ON co.id = emp.company_id AND co.is_anchor AND %s
@@ -38,9 +42,12 @@ const meetingWithQuery = `
 
 // MeetingCounterparties answers who each of these meetings was with, for THIS
 // caller: the first outside participant, by name, who is a contact the caller
-// may see. A meeting with no such participant is absent from the map. The
-// own-company test reads only employment edges and companies the caller may
-// read, so which contact is named discloses no edge they may not see.
+// may see. A meeting with no such participant is absent from the map. A
+// colleague is never outside: a contact whose address is on a trusted own
+// domain, is a live member's login or a mailbox a provider proved for a seat
+// (colleagueParticipantSQL). The own-company test reads only employment edges
+// and companies the caller may read, so which contact is named discloses no
+// edge they may not see.
 //
 // Participants and not activity links: a link says what a meeting is filed
 // under, and a meeting filed under a deal or a colleague's record is still with
@@ -77,9 +84,13 @@ func (s *Store) MeetingCounterparties(ctx context.Context, meetingIDs []ids.UUID
 	if err != nil {
 		return nil, err
 	}
-	query := storekit.SQLf(meetingWithQuery, orUnbounded(activityScope), meetings, orUnbounded(contactScope),
-		companyScope, employment.IsCurrentSQL("emp.ended_at"), edgeScope)
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		proved, err := storekit.ProvedMailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return fmt.Errorf("activities: reading the seats' proved mailboxes: %w", err)
+		}
+		query := storekit.SQLf(meetingWithQuery, orUnbounded(activityScope), meetings, orUnbounded(contactScope),
+			colleagueParticipantSQL(proved), companyScope, employment.IsCurrentSQL("emp.ended_at"), edgeScope)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("activities: reading who the meetings were with: %w", err)
@@ -131,4 +142,109 @@ func orUnbounded(clause string) string {
 		return scopeUnbounded
 	}
 	return clause
+}
+
+// colleagueParticipantSQL is the condition that the participant row aliased ap
+// is a colleague, though it holds no seat: its address, or a live address of
+// its contact, is on a trusted own domain (auth.TrustedOwnDomainsFoldedSQL), is
+// a live member's login, or is a mailbox a provider proved for a live seat.
+// provedIdentities is the binding storekit.ProvedMailSeatIdentitiesSQL wrote,
+// or empty where no transaction can read it; the proved arm is then absent.
+//
+// Every arm compares the domain folds the writers store. A row whose fold is
+// not written yet fails open: it counts as outside, as it did before the rule.
+// The alias is fixed because the own-domain gate reads CoversSQL's literal
+// column names.
+func colleagueParticipantSQL(provedIdentities string) string {
+	const address = "lower(ap.address)"
+	ownAddress := owndomain.CoversSQL("ap.address_domain_folded", "own_domain.domain")
+	seatAddress := storekit.SeatLoginIsSQL("u", address, "ap.address_domain_folded")
+	ownContact := owndomain.CoversSQL("ce.email_domain_folded", "own_domain.domain")
+	seatContact := storekit.SeatLoginIsSQL("u", "ce.email", "ce.email_domain_folded")
+	if provedIdentities != "" {
+		seatAddress = "(" + seatAddress + " OR (" + provedIdentities + " -> u.id::text) ? " + address + ")"
+		seatContact = "(" + seatContact + " OR (" + provedIdentities + " -> u.id::text) ? ce.email)"
+	}
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM (%[1]s) own_domain(domain) WHERE %[2]s)
+	   OR EXISTS (SELECT 1 FROM app_user u WHERE %[3]s AND %[4]s)
+	   OR EXISTS (SELECT 1 FROM contact_email ce
+	               WHERE ce.contact_id = ap.contact_id AND ce.archived_at IS NULL
+	                 AND (EXISTS (SELECT 1 FROM (%[1]s) own_domain(domain) WHERE %[5]s)
+	                   OR EXISTS (SELECT 1 FROM app_user u WHERE %[3]s AND %[6]s))))`,
+		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.LiveMemberSQL("u"), seatAddress, ownContact, seatContact)
+}
+
+// meetingsWithoutOutsidePartyQuery selects the meetings on which every
+// participant holds a seat, is a colleague or is employed by the
+// installation's own company. A participant with an address and no contact, or
+// with neither, counts as outside: nothing says it is one of us.
+const meetingsWithoutOutsidePartyQuery = `
+	SELECT a.id FROM activity a
+	 WHERE a.id = ANY($%d) AND a.kind = 'meeting' AND ` + activityLive + ` AND %s
+	   AND NOT EXISTS (
+	       SELECT 1 FROM activity_participant ap
+	        WHERE ap.activity_id = a.id AND ap.user_id IS NULL
+	          AND NOT %s
+	          AND NOT EXISTS (
+	              SELECT 1 FROM relationship emp
+	                JOIN company co ON co.id = emp.company_id AND co.is_anchor AND co.archived_at IS NULL
+	               WHERE emp.contact_id = ap.contact_id AND emp.kind = 'employment' AND emp.archived_at IS NULL
+	                 AND %s))`
+
+// MeetingsWithoutOutsideParty answers which of these meetings have nobody from
+// outside on them: every participant holds a seat, is a colleague
+// (colleagueParticipantSQL) or works for the installation's own company. Such a
+// meeting is not a customer meeting.
+//
+// The answer must not depend on what this reader may see, or a customer meeting
+// would vanish because its guest is outside the reader's row scope. So the
+// participants, their contacts and the employment edges are read without row
+// scope. Only the activity gates apply: the reader may read the meeting's
+// content, which already shows its participants. The answer names nobody.
+//
+// A reader who may not read activities is told nothing, so every meeting keeps
+// whatever place it has.
+func (s *Store) MeetingsWithoutOutsideParty(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	out := make(map[ids.UUID]bool, len(meetingIDs))
+	if len(meetingIDs) == 0 {
+		return out, nil
+	}
+	if err := auth.Require(ctx, linkEntityActivity, principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return out, nil
+		}
+		return nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	meetings := arg(meetingIDs)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		proved, err := storekit.ProvedMailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return fmt.Errorf("activities: reading the seats' proved mailboxes: %w", err)
+		}
+		query := storekit.SQLf(meetingsWithoutOutsidePartyQuery, meetings, orUnbounded(activityScope),
+			colleagueParticipantSQL(proved), employment.IsCurrentSQL("emp.ended_at"))
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("activities: reading which meetings have an outside party: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var meeting ids.UUID
+			if err := rows.Scan(&meeting); err != nil {
+				return fmt.Errorf("activities: reading a meeting without an outside party: %w", err)
+			}
+			out[meeting] = true
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

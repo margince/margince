@@ -20,9 +20,13 @@ import (
 // employer is a claim nobody made. A meeting is different: the contacts who
 // sat in it are the counterparty.
 //
-// "Outside" means a contact who is not a seat (user_id IS NULL) and whose
-// employer is not the installation's own company. A meeting among colleagues
-// reaches no company here.
+// "Outside" means a contact who is not a seat (user_id IS NULL), is not a
+// colleague and whose employer is not the installation's own company. A
+// colleague is a participant whose address or contact address is on a trusted
+// own domain or is a live member's login (colleagueParticipantSQL). This is a
+// static string with no transaction, so it cannot bind the mailboxes providers
+// proved for seats; that arm of the rule is absent here. A meeting among
+// colleagues reaches no company here.
 func HeldMeetingCounterparties() string {
 	return `SELECT DISTINCT ap.activity_id, emp.company_id
 		  FROM activity_participant ap
@@ -32,5 +36,5 @@ func HeldMeetingCounterparties() string {
 		  JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		    AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		  JOIN company co ON co.id = emp.company_id AND NOT co.is_anchor AND co.archived_at IS NULL
-		 WHERE ap.user_id IS NULL`
+		 WHERE ap.user_id IS NULL AND NOT ` + colleagueParticipantSQL("")
 }
