@@ -1,4 +1,8 @@
-import { type ExtensionPanelProps, useT } from "@margince/frontend/app";
+import {
+  type BrowserInstrument,
+  type ExtensionPanelProps,
+  useT,
+} from "@margince/frontend/app";
 import { Card, Panel, PanelBody } from "@margince/frontend/design-system";
 
 // The smallest frontend layer: the screen every unit package's main exports,
@@ -24,3 +28,6 @@ export function DealHello({ record }: ExtensionPanelProps) {
     </Panel>
   );
 }
+
+/** The smoke fixture's browser instrument: starts, observes nothing. */
+export const instrument: BrowserInstrument = () => ({});

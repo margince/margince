@@ -8,6 +8,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -101,5 +103,56 @@ func TestAGoneDealIsHandledAndAFailedReadIsRetried(t *testing.T) {
 	failed := readerRuntime{deals: &dealReader{err: errors.New("the core could not answer")}}
 	if err := handle(context.Background(), failed, delivery); err == nil {
 		t.Error("a failed read was marked handled, so the bus never delivers it again")
+	}
+}
+
+func TestTheFixtureDeclaresAValidInstrumentation(t *testing.T) {
+	in := New().Instrumentation
+	if in == nil {
+		t.Fatal("Instrumentation is nil — the census needs a live declaring unit")
+	}
+	if err := in.Validate(); err != nil {
+		t.Fatalf("Validate() = %v, want nil", err)
+	}
+	if in.Browser != "instrument" {
+		t.Fatalf("Browser = %q, want the frontend export instrument", in.Browser)
+	}
+}
+
+func TestTheInstrumentsWorkHookRunsTheWorkOnceAndReturnsItsError(t *testing.T) {
+	proc := extension.Process{
+		Role:       "api",
+		Logger:     slog.New(slog.DiscardHandler),
+		RedactPath: func(s string) string { return s },
+	}
+	ins, err := New().Instrumentation.Start(context.Background(), proc)
+	if err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+	if ins.Work == nil {
+		t.Fatal("Start returned no Work hook")
+	}
+	want := errors.New("the job failed")
+	calls := 0
+	got := ins.Work(context.Background(), extension.Work{Kind: extension.WorkJob, Name: "x"}, func(context.Context) error {
+		calls++
+		return want
+	})
+	if calls != 1 {
+		t.Fatalf("run called %d times, want exactly once", calls)
+	}
+	if !errors.Is(got, want) {
+		t.Fatalf("Work returned %v, want the run's error unchanged", got)
+	}
+}
+
+func TestTheInstrumentationEdgeAnswersGetPingAndRefusesPost(t *testing.T) {
+	edge := New().Instrumentation.Edge
+	for method, want := range map[string]int{http.MethodGet: http.StatusNoContent, http.MethodPost: http.StatusMethodNotAllowed} {
+		rec := httptest.NewRecorder()
+		edge.ServeHTTP(rec, httptest.NewRequest(method, "/ping", nil))
+		if rec.Code != want {
+			t.Errorf("%s /ping = %d, want %d", method, rec.Code, want)
+		}
 	}
 }
