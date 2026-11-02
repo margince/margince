@@ -149,6 +149,7 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_owed_ruleset`: `btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_participants_by_reason`: `btree (audience_reason, occurred_at DESC, id) WHERE ((audience = 'participants') AND (restricted_at IS NULL) AND (archived_at IS NULL))`
 - `idx_activity_raw_capture`: `btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL)`
+- `idx_activity_receipt_order`: `btree (created_at, id) WHERE (archived_at IS NULL)`
 - `idx_activity_reminders`: `btree (remind_at) WHERE ((kind = 'task') AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL))`
 - `idx_activity_restricted_until`: `btree (restricted_until) WHERE (restricted_at IS NOT NULL)`
 - `idx_activity_search`: `gin (search_tsv)`

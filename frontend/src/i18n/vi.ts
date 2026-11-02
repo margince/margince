@@ -2100,6 +2100,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.auto_apply": "Duyệt tự động",
   "systemJob.automation": "Tự động hóa",
   "systemJob.brief_overnight": "Tóm tắt qua đêm",
+  "systemJob.captured_deal_refile": "Gắn cuộc trò chuyện đã thu thập",
   "systemJob.capture": "Thu thập thư",
   "systemJob.capture_auto_enrich": "Bổ sung dữ liệu công ty từ thư",
   "systemJob.capture_classify": "Phân loại thư",
@@ -9005,6 +9006,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
   "jobs.kind.capture_digest": "Bản tổng hợp thư buổi sáng",
   "jobs.kind.capture_enrich": "Lấy thông tin liên hệ từ chữ ký thư",
+  "jobs.kind.captured_deal_refile": "Gắn hoạt động đã thu thập vào cơ hội",
+  "jobs.kind.captured_deal_refile_sweep":
+    "Khôi phục việc gắn hoạt động đã thu thập",
   "jobs.kind.capture_part_slim": "Dọn dẹp dữ liệu thư đã lưu",
   "jobs.kind.capture_sync": "Đồng bộ hộp thư",
   "jobs.kind.check_company_vat": "Kiểm tra mã số VAT",
