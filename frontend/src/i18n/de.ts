@@ -16224,13 +16224,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strength.sentence.weakStale":
     "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.weakFew":
-    "Schwach: es gab kürzlich Kontakt, aber nur wenige geteilte Interaktionen in 90 Tagen.",
+    "Schwach: es gab kürzlich Kontakt, aber in den letzten 90 Tagen wenige Interaktionen.",
   "contact.strength.sentence.weakLopsided":
-    "Schwach: es gab kürzlich Kontakt, aber der geteilte Austausch läuft meist in eine Richtung.",
+    "Schwach: es gab kürzlich Kontakt, aber der Austausch läuft meist in eine Richtung.",
   "contact.strength.sentence.weakNoReply":
-    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Antwort dieses Kontakts wurde gezählt.",
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Antwort dieses Kontakts zählte.",
   "contact.strength.sentence.weakOnlyThem":
-    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Nachricht deines Teams wurde gezählt.",
+    "Schwach: es gab kürzlich Kontakt, aber keine geteilte Nachricht deines Teams zählte.",
   "contact.strength.sentence.weakUndirected":
     "Schwach: es gab kürzlich Kontakt, aber keine geteilte Interaktion zählte als Nachricht.",
   "contact.strength.sentence.moderate":
