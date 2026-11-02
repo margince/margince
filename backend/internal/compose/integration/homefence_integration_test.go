@@ -207,7 +207,7 @@ func receiptFence(t *testing.T, e *Env) int64 {
 }
 
 // The receipt reports what the machinery wrote, so every actor it reports must
-// end its cached answer, and a person's own change must not.
+// end its cached answer, and a colleague's own change must not.
 func TestEveryMachineActorTheReceiptReportsAdvancesItsFence(t *testing.T) {
 	e := Setup(t)
 	write := func(actor string) {
@@ -224,6 +224,6 @@ func TestEveryMachineActorTheReceiptReportsAdvancesItsFence(t *testing.T) {
 	before := receiptFence(t, e)
 	write("human")
 	if after := receiptFence(t, e); after != before {
-		t.Errorf("a person's audit row moved the receipt fence %d → %d", before, after)
+		t.Errorf("a colleague's audit row moved the receipt fence %d → %d", before, after)
 	}
 }
