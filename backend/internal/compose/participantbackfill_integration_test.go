@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -320,27 +321,41 @@ func setSourceAuthorName(t *testing.T, e *integration.Env, activityID ids.UUID, 
 	}
 }
 
-// participantAddresses returns the outside addresses recorded on one activity.
-func participantAddresses(t *testing.T, e *integration.Env, activityID ids.UUID) []string {
+// outsideParties returns the contacts and addresses recorded on one activity.
+func outsideParties(t *testing.T, e *integration.Env, activityID ids.UUID) (contactIDs []ids.UUID, addresses []string) {
 	t.Helper()
-	var out []string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(context.Background(),
-			`SELECT address FROM activity_participant WHERE activity_id = $1 AND address IS NOT NULL ORDER BY address`, activityID)
+		rows, err := tx.Query(context.Background(), `
+			SELECT contact_id, coalesce(address, '') FROM activity_participant
+			 WHERE activity_id = $1 AND user_id IS NULL ORDER BY address`, activityID)
 		if err != nil {
 			return err
 		}
-		out, err = pgx.CollectRows(rows, pgx.RowTo[string])
-		return err
+		defer rows.Close()
+		for rows.Next() {
+			var contact *ids.UUID
+			var address string
+			if err := rows.Scan(&contact, &address); err != nil {
+				return err
+			}
+			if contact != nil {
+				contactIDs = append(contactIDs, *contact)
+			}
+			if address != "" {
+				addresses = append(addresses, address)
+			}
+		}
+		return rows.Err()
 	}); err != nil {
-		t.Fatalf("reading the addresses of %s: %v", activityID, err)
+		t.Fatalf("reading the outside parties of %s: %v", activityID, err)
 	}
-	return out
+	return contactIDs, addresses
 }
 
 // The backfill decides "is this address ours" the way live capture does. A
-// colleague's proven mailbox and the owner's own alias are not outside parties.
-// An alias another seat typed speaks for that seat alone.
+// colleague's proven mailbox and the owner's own alias are not outside parties,
+// and neither is a contact the timeline links to such a mail. An alias another
+// seat typed speaks for that seat alone. Our side is written in every case.
 func TestTheBackfillWritesNoSeatAddressAsAnOutsideParty(t *testing.T) {
 	e := integration.Setup(t)
 	seedConnection(t, e, e.Rep1)
@@ -349,26 +364,39 @@ func TestTheBackfillWritesNoSeatAddressAsAnOutsideParty(t *testing.T) {
 		capture.IdentityKindAddress, "rep1@private.test"); err != nil {
 		t.Fatal(err)
 	}
-	owner, colleague := "connector:gmail:"+e.Rep1.String(), "connector:gmail:"+e.Rep2.String()
+	linked, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Linked", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	cases := []struct {
-		name, capturedBy, counterparty string
-		want                           []string
+		name, counterparty string
+		holder             ids.UUID
+		linked             bool
+		wantAddresses      []string
 	}{
-		{"a colleague's proven mailbox, in its punycode spelling", owner, "rep2@xn--bcher-kva.example", nil},
-		{"the owner's own alias", owner, "rep1@private.test", nil},
-		{"another seat's typed alias", colleague, "rep1@private.test", []string{"rep1@private.test"}},
-		{"an outside party", owner, "pat@counterparty.test", []string{"pat@counterparty.test"}},
+		{"a colleague's proven mailbox, in its punycode spelling", "rep2@xn--bcher-kva.example", e.Rep1, false, nil},
+		{"a contact linked to mail with a colleague", "rep2@bücher.example", e.Rep1, true, nil},
+		{"the owner's own alias", "rep1@private.test", e.Rep1, false, nil},
+		{"another seat's typed alias", "rep1@private.test", e.Rep2, false, []string{"rep1@private.test"}},
+		{"an outside party", "pat@counterparty.test", e.Rep1, false, []string{"pat@counterparty.test"}},
 	}
 	seeded := make([]ids.UUID, len(cases))
 	for i, c := range cases {
-		seeded[i] = seedLegacyActivity(t, e, "bf-seat-"+strconv.Itoa(i), c.capturedBy, "inbound", c.counterparty)
+		seeded[i] = seedLegacyActivity(t, e, "bf-seat-"+strconv.Itoa(i), "connector:gmail:"+c.holder.String(), "inbound", c.counterparty)
+		if c.linked {
+			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, seeded[i], linked.Id)
+		}
 	}
 
 	runBackfill(t, e)
 
 	for i, c := range cases {
-		if got := participantAddresses(t, e, seeded[i]); !slices.Equal(got, c.want) {
-			t.Errorf("%s: outside parties %v, want %v", c.name, got, c.want)
+		if got := participantUsers(t, e, seeded[i]); !slices.Equal(got, []ids.UUID{c.holder}) {
+			t.Errorf("%s: our side %v, want the mailbox owner %s", c.name, got, c.holder)
+		}
+		contactIDs, addresses := outsideParties(t, e, seeded[i])
+		if len(contactIDs) != 0 || !slices.Equal(addresses, c.wantAddresses) {
+			t.Errorf("%s: outside contacts %v and addresses %v, want none and %v", c.name, contactIDs, addresses, c.wantAddresses)
 		}
 	}
 }
