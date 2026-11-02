@@ -12,7 +12,11 @@ import { meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { SystemHealthPage } from "./settings.systemhealth";
-import { attentionReport, healthReport } from "./systemhealth.fixtures";
+import {
+  attentionReport,
+  healthReport,
+  overdueFinding,
+} from "./systemhealth.fixtures";
 
 type Report = components["schemas"]["SystemHealth"];
 function stub(report: Report = healthReport) {
@@ -64,6 +68,7 @@ function stub(report: Report = healthReport) {
 }
 afterEach(() => {
   cleanup();
+  window.location.hash = "";
   vi.unstubAllGlobals();
 });
 
@@ -100,15 +105,17 @@ it("shows actionable findings and keeps supporting facts behind a click", async 
   expect(screen.queryByText(/Some evidence is missing/)).toBeNull();
   const panel = screen
     .getByRole("heading", {
-      name: "Background work is delayed",
+      name: "Mail sorting: delayed",
     })
     .closest("section");
   expect(panel).not.toBeNull();
   if (!panel) throw new Error("finding panel missing");
-  expect(within(panel).queryByText("12 runs")).not.toBeVisible();
+  expect(within(panel).getByText(/12 runs · Technical operator/)).toBeVisible();
   await user.click(within(panel).getByText("Technical details"));
-  expect(within(panel).getByText("12 runs")).toBeInTheDocument();
-  expect(within(panel).getByText("Technical operator")).toBeInTheDocument();
+  expect(within(panel).getByText(/12 runs · Technical operator/)).toBeVisible();
+  expect(within(panel).getByText("Needs fixing").closest(".badge")).toHaveClass(
+    "badge-danger",
+  );
   expect(
     within(panel).getByRole("button", { name: "Copy technical report" }),
   ).toBeInTheDocument();
@@ -320,5 +327,107 @@ it("does not assume rejected imports are still missing after a possible later su
   ).toBeVisible();
   expect(
     screen.getByText(/imported successfully later before resubmitting/),
+  ).toBeVisible();
+});
+
+it("groups overlapping mail findings and shows one handoff", async () => {
+  const report: Report = {
+    ...attentionReport,
+    action_count: 2,
+    findings: ["capture_owner_review", "capture_uncertain"].map(
+      (code, index) => ({
+        ...overdueFinding,
+        id: `capture:${code}`,
+        source: "capture",
+        code,
+        condition: "waiting_human",
+        responsible: "mailbox_owner",
+        count: index + 1,
+        unit: index === 0 ? "mailboxes" : "records",
+        job_kinds: undefined,
+      }),
+    ),
+  };
+  stub(report);
+  render(<SystemHealthPage />);
+  const group = await screen.findByRole("region", { name: "Mail capture" });
+  expect(within(group).getAllByRole("heading", { level: 3 })).toHaveLength(2);
+  expect(
+    within(group).getAllByText(/Mailbox owners: open Connections/),
+  ).toHaveLength(1);
+  expect(within(group).getByText(/1 mailbox · Mailbox owner/)).toBeVisible();
+  expect(within(group).getByText(/2 records · Mailbox owner/)).toBeVisible();
+  expect(
+    within(group).getAllByRole("button", { name: "Copy technical report" }),
+  ).toHaveLength(1);
+});
+
+it("records diagnostics category changes and clears the previous finding", async () => {
+  const user = userEvent.setup();
+  window.location.hash =
+    "#/settings/system-health/diagnostics?section=settings.jobs&finding=jobs%3Aqueue_overdue&kind=capture_classify&state=discarded";
+  stub(attentionReport);
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await screen.findByRole("button", { name: "Data updates" }));
+  await waitFor(() =>
+    expect(window.location.hash).toContain("section=dataTasks.title"),
+  );
+  expect(window.location.hash).not.toMatch(/finding=|kind=|state=/);
+  window.location.hash = "";
+});
+
+it("makes a focused diagnostics filter visible and removable", async () => {
+  const user = userEvent.setup();
+  const second = {
+    ...overdueFinding,
+    id: "jobs:second",
+    code: "queue_unverified",
+    condition: "unverified",
+  } satisfies Report["findings"][number];
+  stub({
+    ...attentionReport,
+    action_count: 2,
+    findings: [overdueFinding, second],
+  });
+  window.location.hash =
+    "#/settings/system-health/diagnostics?section=settings.jobs&finding=jobs%3Aqueue_overdue";
+  render(<SystemHealthPage view="diagnostics" />);
+  expect(await screen.findByText("Showing 1 of 2 problems")).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: /failed runs need review/ }),
+  ).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Show all problems" }));
+  expect(
+    await screen.findByRole("heading", { name: /failed runs need review/ }),
+  ).toBeVisible();
+  expect(window.location.hash).not.toMatch(/finding=|kind=|state=/);
+});
+
+it("keeps the outgoing-link check discoverable under All checks", async () => {
+  const user = userEvent.setup();
+  stub({
+    ...healthReport,
+    public_origin: { origin: "https://crm.example.test", reachable: true },
+  });
+  render(<SystemHealthPage />);
+  await user.click(await screen.findByText("All checks"));
+  expect(
+    screen.getByText("Reachable from this server").closest(".badge"),
+  ).not.toHaveClass("badge-success");
+});
+
+it("explains which company-page details a failed lookup can leave outdated", async () => {
+  stub({
+    ...attentionReport,
+    findings: [{ ...overdueFinding, job_kinds: ["technical_enrich_company"] }],
+  });
+  render(<SystemHealthPage />);
+  expect(
+    await screen.findByText(
+      /On company pages, automatically collected mail provider, email security and hosting details/,
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Inspect background work" }),
   ).toBeVisible();
 });

@@ -25,7 +25,7 @@ export function PublicOriginCard({
     return null;
   }
   const checked = status.reachable !== null && status.reachable !== undefined;
-  const tone = checked ? (status.reachable ? "success" : "warning") : undefined;
+  const tone = checked ? (status.reachable ? "default" : "danger") : undefined;
   const stateLabel = checked
     ? t(
         status.reachable
