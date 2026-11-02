@@ -13,7 +13,7 @@ import {
   reportUnreached,
   watchConnectivity,
 } from "../lib/connectivity";
-import { ProblemError, throwProblem } from "../lib/problem";
+import { EmptySuccessError, ProblemError, throwProblem } from "../lib/problem";
 import {
   createQueryClient,
   liveInterval,
@@ -47,6 +47,18 @@ describe("the query retry policy", () => {
     expect(retryQuery(0, unavailable)).toBe(true);
     expect(retryQuery(1, unavailable)).toBe(true);
     expect(retryQuery(2, unavailable)).toBe(false);
+  });
+
+  // An intermediary can answer an API read with a challenge carrying a success
+  // status, which `unwrap` raises as an EmptySuccessError.
+  //
+  // It cannot loop: the policy retries a fault the SERVER reported, and this
+  // one carries no status, having been raised in the query function. A standing
+  // challenge costs one request.
+  it("never retries a challenge an intermediary answered with", () => {
+    const challenged = new EmptySuccessError(200);
+    expect(retryQuery(0, challenged)).toBe(false);
+    expect(retryQuery(1, challenged)).toBe(false);
   });
 
   it("never retries a refusal the server has settled, however early", () => {
