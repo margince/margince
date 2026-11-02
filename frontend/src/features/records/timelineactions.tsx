@@ -66,7 +66,7 @@ type RowVerbProps = Readonly<{
 // answer what came in, not where it is filed.
 //
 // rowAnswer picks the verb: Reply on mail, Write email on any other row the
-// server says it can address (`offers_email`).
+// server names a target for (`email_target`).
 export function RowAnswerActions({
   activity,
   entityType,
@@ -89,7 +89,7 @@ export function RowAnswerActions({
       <ChannelReplyAction
         activityId={activity.id}
         kind={activity.kind}
-        offersEmail={activity.offers_email}
+        emailTarget={activity.email_target}
         channelProvider={activity.channel_provider ?? undefined}
         entityType={entityType}
         entityId={entityId}
