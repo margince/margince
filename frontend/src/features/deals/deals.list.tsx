@@ -255,7 +255,12 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  const dealsQuery = useDeals(dealFilters, !roleRefusal);
+  // The pipeline this list is scoped to arrives with the pipelines read, so
+  // asking before it lands asks for every deal and throws the answer away.
+  // An installation with no pipelines answers `[]`, which is known: the list
+  // is then scoped to nothing and reads once, as it should.
+  const scopeKnown = pipelinesQuery.data !== undefined;
+  const dealsQuery = useDeals(dealFilters, !roleRefusal && scopeKnown);
   // A dial the role's mask refused, which a current snapshot would have
   // withheld. Reading /me again withholds it and the list reloads without it.
   const maskRefused = maskRefusedDialOf(dealsQuery.error);
@@ -264,7 +269,10 @@ export function DealsScreen({
   // The board's column totals: a per-stage server aggregate over every
   // matching deal, not only the capped page useDeals fetches. Built from the
   // same filter dials, so cards and totals agree on which deals are in view.
-  const stageTotalsQuery = useStageTotals(dealFilters, !roleRefusal);
+  const stageTotalsQuery = useStageTotals(
+    dealFilters,
+    !roleRefusal && scopeKnown,
+  );
   // The same answer the query keys its `enabled` on, so the column explains the
   // absence by the rule that caused it.
   const totalsWithheld =
