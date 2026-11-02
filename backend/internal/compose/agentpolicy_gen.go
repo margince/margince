@@ -545,7 +545,6 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/roles":                                                         {Op: "listRoles", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/scheduled-sends":                                               {Op: "listScheduledSends", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/scheduled-sends/{id}":                                          {Op: "getScheduledSend", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
-	"GET /v1/scheduling/calendar-health":                                    {Op: "getSchedulingCalendarHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/scheduling/calendars":                                          {Op: "getSchedulingCalendars", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/scheduling/invitations/{id}":                                   {Op: "getMeetingInvitation", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/scheduling/invitations/{id}/availability":                      {Op: "getMeetingAvailability", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

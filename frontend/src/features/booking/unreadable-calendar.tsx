@@ -6,7 +6,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { ProblemError, unwrap } from "../../lib/problem";
+import { ProblemError } from "../../lib/problem";
 import { problemCode, problemDetails } from "../../lib/problembody";
 import { useBookingCalendar } from "./booking-calendar-state";
 
@@ -26,10 +26,14 @@ export function unreadableCalendarOf(error: unknown): string | null {
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
+// A day past the notice: the read starts where bookings may start, so the
+// notice never refuses it before the calendars are read.
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
- * Asks the server once which saved calendar it could not read. The check skips
- * the booking window, so a notice period never hides the answer. A save, a
- * reconnect or coming back to the tab asks again.
+ * Reads the host's own availability once, to learn which saved calendar the
+ * server could not read. A save, a reconnect or coming back to the tab asks
+ * again.
  */
 export function useUnreadableCalendar(saved: Profile, connection: string) {
   const check = useQuery({
@@ -38,14 +42,29 @@ export function useUnreadableCalendar(saved: Profile, connection: string) {
       saved.provider,
       saved.calendar_id,
       saved.blocking_calendars ?? [],
+      saved.notice_minutes,
       connection,
     ],
     enabled: saved.provider !== "" && connection !== "",
     retry: false,
     refetchOnWindowFocus: "always",
-    queryFn: async () => unwrap(await api.GET("/scheduling/calendar-health")),
+    queryFn: async () => {
+      const from = Date.now();
+      const to = from + saved.notice_minutes * 60 * 1000 + DAY_MS;
+      const { data, error } = await api.GET("/availability", {
+        params: {
+          query: {
+            from: new Date(from).toISOString(),
+            to: new Date(to).toISOString(),
+            reliable: true,
+          },
+        },
+      });
+      if (error) throw new ProblemError(error);
+      return data;
+    },
   });
-  return check.data?.unreadable_calendar ?? null;
+  return unreadableCalendarOf(check.error);
 }
 
 /** Names the calendar that could not be read, by the name its provider lists. */

@@ -59,8 +59,6 @@ function routes(extra = {}) {
     "GET /scheduling/profile": () => jsonResponse(profile),
     "GET /scheduling/calendars": () => jsonResponse(calendars),
     "GET /availability": () => unreadable(),
-    "GET /scheduling/calendar-health": () =>
-      jsonResponse({ unreadable_calendar: holidays }),
     ...extra,
   };
 }
@@ -91,8 +89,7 @@ it("says a saved calendar could not be read when the list no longer has it", asy
     routes({
       "GET /scheduling/profile": () =>
         jsonResponse({ ...profile, blocking_calendars: [gone] }),
-      "GET /scheduling/calendar-health": () =>
-        jsonResponse({ unreadable_calendar: gone }),
+      "GET /availability": () => unreadable({ calendar: gone }),
     }),
   );
   mountSettings();

@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -166,9 +167,9 @@ func TestOnlyTheHostIsToldWhichCalendarCouldNotBeRead(t *testing.T) {
 	}
 }
 
-// The settings page asks once, outside the booking window. With the default
-// two hours' notice, a window starting now would be refused for its notice
-// before any calendar is read.
+// The settings page reads the host's own availability from now to a day past
+// the saved notice, which is the request it sends. Under the default two
+// hours' notice that window still reaches the calendars, so they are named.
 func TestTheSettingsCheckNamesTheUnreadableCalendarUnderTheDefaultNotice(t *testing.T) {
 	const unreadable = "team-holidays@group.calendar.test"
 	f := newInvitationFixture(t)
@@ -179,25 +180,13 @@ func TestTheSettingsCheckNamesTheUnreadableCalendarUnderTheDefaultNotice(t *test
 	}
 	f.calendar.busyErr = connector.NewCalendarUnavailable(unreadable, "notFound", nil)
 	h := Handlers{store: f.store}
-	host, ok := principal.Actor(f.ctx)
-	if !ok {
-		t.Fatal("the fixture reads as nobody")
-	}
-	agent := host
-	agent.Type, agent.ID, agent.PassportID, agent.OnBehalfOf = principal.PrincipalAgent, "agent:passport", ids.NewV7(), host.UserID
-	check := func(ctx context.Context) *httptest.ResponseRecorder {
-		rec := httptest.NewRecorder()
-		h.GetSchedulingCalendarHealth(rec, httptest.NewRequest(http.MethodGet, "/scheduling/calendar-health", nil).WithContext(ctx))
-		return rec
-	}
-	if rec := check(f.ctx); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"unreadable_calendar":"`+unreadable+`"`) {
-		t.Errorf("the host's check answered %d %s, want the unreadable calendar named", rec.Code, rec.Body.String())
-	}
-	if rec := check(principal.WithActor(f.ctx, agent)); rec.Code == http.StatusOK || strings.Contains(rec.Body.String(), unreadable) {
-		t.Errorf("an agent acting for the host answered %d %s, want a refusal", rec.Code, rec.Body.String())
-	}
-	f.calendar.busyErr = nil
-	if rec := check(f.ctx); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"unreadable_calendar":null`) {
-		t.Errorf("a readable calendar answered %d %s, want null", rec.Code, rec.Body.String())
+	reliable := true
+	from := f.now
+	to := from.Add(time.Duration(profile.NoticeMinutes)*time.Minute + 24*time.Hour)
+	rec := httptest.NewRecorder()
+	h.GetAvailability(rec, httptest.NewRequest(http.MethodGet, "/availability", nil).WithContext(f.ctx),
+		crmcontracts.GetAvailabilityParams{From: from, To: to, Reliable: &reliable})
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), `"calendar":"`+unreadable+`"`) {
+		t.Errorf("the settings check answered %d %s, want the unreadable calendar named", rec.Code, rec.Body.String())
 	}
 }

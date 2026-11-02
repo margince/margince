@@ -8,7 +8,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -65,35 +64,4 @@ func calendarNamedToItsHost(err error, actor principal.Principal, host ids.UserI
 // passport carries its granting human's id, so the type decides too.
 func isTheHostInPerson(actor principal.Principal, host ids.UserID) bool {
 	return actor.Type == principal.PrincipalHuman && !actor.UserID.IsZero() && actor.UserID == host.UUID
-}
-
-// UnreadableCalendar reads each calendar the signed-in host selected once,
-// over the next hour and without the booking window. It answers the first one
-// the provider could not report. Empty means every calendar was read, or the
-// host has none selected yet. Only the host in person may ask.
-func (s *Store) UnreadableCalendar(ctx context.Context) (string, error) {
-	host, err := schedulingHost(ctx)
-	if err != nil {
-		return "", err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || !isTheHostInPerson(actor, host) {
-		return "", apperrors.ErrPermissionDenied
-	}
-	profile, err := s.hostSchedulingProfile(ctx, host)
-	if err != nil {
-		return "", err
-	}
-	if profile.Provider == "" || s.calendar == nil {
-		return "", nil
-	}
-	if err := s.calendar.Check(ctx, host, string(profile.Provider)); err != nil {
-		return "", err
-	}
-	now := s.now()
-	_, err = s.calendarBusy(ctx, host, profile, now, now.Add(time.Hour), "")
-	if unavailable, ok := errors.AsType[*connector.CalendarUnavailableError](err); ok {
-		return unavailable.Calendar, nil
-	}
-	return "", err
 }
