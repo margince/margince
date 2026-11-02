@@ -3089,6 +3089,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
     "Die Anfrage wurde abgelehnt, da dieser Platz nur Lesezugriff hat. Lass den Platz von einem Admin hochstufen.",
+  "writeRefusal.seatReadOnly":
+    "Dein Platz hat nur Lesezugriff. Du kannst Datensätze ansehen, aber nicht ändern. Frage einen Admin nach einem vollen Platz.",
+  "writeRefusal.role":
+    "Deine Rolle darf Datensätze dieser Art nicht ändern. Frage einen Admin, deine Rolle anzupassen.",
+  "writeRefusal.unowned":
+    "Dieser Datensatz ist noch niemandem zugewiesen. Übernimm ihn, um ihn zu ändern.",
+  "field.lockedWhy": "Warum {field} gesperrt ist",
   "common.versionSkew":
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
   "common.duplicate.email":

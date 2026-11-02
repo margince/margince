@@ -2,9 +2,9 @@ import { useMutation } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import type { Lead, UpdateLeadRequest } from "./leads";
 
 /**
@@ -29,10 +29,7 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   // refuses every control here by one fact, derived once. A per-control test
   // misses the control that had to remember on its own. The sentence travels
   // with the answer, so each refused control can say which fact it was.
-  const readOnlyReason = useRecordWriteRefusal("lead", lead, {
-    archived: t("lead.terminalReadOnly"),
-    notYours: t("lead.notYoursToChange"),
-  });
+  const readOnlyReason = useRecordWriteRefusal("lead", lead);
   const readOnly = Boolean(readOnlyReason);
   const patch = useMutation({
     mutationKey: ["lead-edit", id],

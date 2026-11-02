@@ -26,6 +26,7 @@ import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import { useProjectVerbRefusal } from "./project360.refusal";
 import { useProjectEdit } from "./projectedit";
 import { PHASE_LABEL, type Project } from "./projects.form";
 import { timeUsed } from "./projectstanding";
@@ -189,6 +190,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     date ? formatDateAbbrev(date, locale, zone) : unset;
   const closed = project.phase === "closed";
   const edit = useProjectEdit(project);
+  const refusal = useProjectVerbRefusal(project);
   const about: DetailRow[] = [
     {
       key: "company",
@@ -293,6 +295,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
           rows: ownership,
         },
       ]}
+      lockedBy={refusal}
       footnote={closed ? undefined : t("project.aside.closeNote")}
     />
   );

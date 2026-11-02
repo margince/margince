@@ -24,14 +24,11 @@ import { countryBeyondCity } from "../../format/address";
 import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCanWriteRecord } from "../../lib/capability";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
+import { HandoverRequest } from "../records/handoverrequest";
 import { CompanyContactCard } from "./companycontactcard";
-import {
-  companyWebsite,
-  displayHost,
-  useCompanyReadOnlyReason,
-} from "./companyheader";
+import { companyWebsite, displayHost } from "./companyheader";
 import {
   type CompoundField,
   CompoundFieldValue,
@@ -124,7 +121,12 @@ function RailBody({
   return (
     <RecordDetails
       sections={sections}
-      footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+      refusal={
+        refusal && {
+          ...refusal,
+          action: <HandoverRequest kind="company" record={company} />,
+        }
+      }
     />
   );
 }
@@ -133,13 +135,8 @@ export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
 
 /** Whether this reader may change the account's own fields, and if not, why. */
 function useCompanyEditGate(company: Company): Edit {
-  const t = useT();
-  const writable = useCanWriteRecord("company", company);
-  const reason = useCompanyReadOnlyReason(company);
-  return {
-    canEdit: writable && !reason,
-    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
-  };
+  const reason = useRecordWriteRefusal("company", company);
+  return { canEdit: !reason, reason };
 }
 
 /** The account's name as the record's head renames it, with the rail's gate. */

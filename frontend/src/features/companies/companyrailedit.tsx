@@ -18,6 +18,7 @@ import { prefillRowsFromRecord } from "../../components/edit.prefill";
 import { useEntityName } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
 import { Button } from "../../design-system/atoms";
+import { LockedValue } from "../../design-system/lockedvalue";
 import { useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { problemMessageOf } from "../../lib/problem";
@@ -153,7 +154,11 @@ export function CompoundFieldValue({
   });
   const shown = reading ?? t("field.unset");
   if (!canEdit) {
-    return <span title={readOnlyReason}>{shown}</span>;
+    return (
+      <LockedValue label={label} reason={readOnlyReason}>
+        {shown}
+      </LockedValue>
+    );
   }
   return (
     <>

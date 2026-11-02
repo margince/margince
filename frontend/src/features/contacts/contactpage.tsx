@@ -16,11 +16,11 @@ import {
   type RecordViewProps,
 } from "../../design-system/recordview";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { contactPageState, contactQuery } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
@@ -65,27 +65,16 @@ type Contact = components["schemas"]["Contact"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 
-// The refusals the left card's footnote states, or nothing while the record
-// and the activity gate refuse nothing.
-function refusalsOf(
-  readOnlyReason: string | undefined,
-  readOnlyReasonId: string,
+// The activity refusal the left card's footnote states, or nothing while the
+// activity gate refuses nothing. The record's own refusal is its banner.
+function activityRefusalOf(
   activity: ActivityGate,
   t: ReturnType<typeof useT>,
 ): ReactNode {
-  const activityRefused = activity.refusedId !== undefined;
-  if (!readOnlyReason && !activityRefused) {
+  if (activity.refusedId === undefined) {
     return undefined;
   }
-  return (
-    <>
-      {readOnlyReason && <span id={readOnlyReasonId}>{readOnlyReason}</span>}
-      {readOnlyReason && activityRefused && " "}
-      {activityRefused && (
-        <span id={activity.sentenceId}>{t("record.logActivityRefused")}</span>
-      )}
-    </>
-  );
+  return <span id={activity.sentenceId}>{t("record.logActivityRefused")}</span>;
 }
 
 export function ContactPageV2({
@@ -154,10 +143,7 @@ export function ContactPageV2({
   const readOnlyReasonId = useId();
   // A 360 cached from before the archive would not say the row is archived.
   const shownRow = record.data?.archived_at ? record.data : view.data?.contact;
-  const readOnlyReason = useRecordWriteRefusal("contact", shownRow, {
-    archived: t("contact.rail.archivedReadOnly"),
-    notYours: t("contact.notYoursToChange"),
-  });
+  const readOnlyReason = useRecordWriteRefusal("contact", shownRow);
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
   // A live contact states its read-only sentence in the left card's
   // footnote; the archived page has no such card, so its band states it.
@@ -204,10 +190,9 @@ export function ContactPageV2({
       nextMeetingId: view.data.next_meeting?.activity_id ?? null,
     });
 
-  // What the record refuses this reader, stated once at the foot of the left
-  // card: every refused verb points at its sentence by id. The rail adds the
-  // Email verb's own refusal, which it reads from the same transports.
-  const refusals = refusalsOf(readOnlyReason, readOnlyReasonId, activity, t);
+  // What the record refuses this reader, stated once in the left card's
+  // banner: every refused verb points at its sentence by id.
+  const refusals = activityRefusalOf(activity, t);
   const contactDetails = (
     <ContactRail
       view={view.data}
@@ -219,6 +204,11 @@ export function ContactPageV2({
           void guard.refetch();
         },
       }}
+      recordRefusal={
+        readOnlyReason
+          ? { id: readOnlyReasonId, text: readOnlyReason }
+          : undefined
+      }
       refusals={refusals}
       writeRefusalId={writeRefusalId}
     />

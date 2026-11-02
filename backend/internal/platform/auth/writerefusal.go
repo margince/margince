@@ -14,8 +14,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// WriteRefusal names why a caller may not change a row, so a client can say
-// why and point at the fix instead of hiding the edit without a word.
+// WriteRefusal names why a caller may not change a row. A client says it and
+// points at the fix, instead of hiding the edit without a word.
 type WriteRefusal string
 
 // The refusals, most general first: a read seat outranks a role, which
@@ -57,10 +57,9 @@ func callerRefusal(p principal.Principal, table string) WriteRefusal {
 	return ""
 }
 
-// rowRefusals answers each row: archived for a row the caller could otherwise
-// change, unowned for an ownerless one (it is claimed before it is written),
-// and not_yours for the rest. Each of the two probes runs only when a row
-// needs it, so a page the caller owns whole costs the one archive probe.
+// rowRefusals answers each row. Archived is for a row the caller could
+// otherwise change, unowned for an ownerless one (claimed before it is
+// written), not_yours for the rest. The owner probe runs only on refused rows.
 func rowRefusals(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UUID,
 	writable map[ids.UUID]bool,
 ) (map[ids.UUID]RowWrite, error) {

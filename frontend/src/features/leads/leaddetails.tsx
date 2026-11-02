@@ -420,6 +420,12 @@ function LeadDetailsBody({
     { key: "lists", label: t("lists.record.title"), children: lists || null },
   ];
   return (
-    <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+    <RecordDetails
+      sections={sections}
+      refusal={
+        writer.readOnlyReason ? { text: writer.readOnlyReason } : undefined
+      }
+      footnote={t("lead.aside.footnote")}
+    />
   );
 }

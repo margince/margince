@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Button } from "./atoms";
 import { FactList } from "./factlist";
 import { Heading } from "./heading";
+import { RecordRefusalContext } from "./lockedvalue";
 import "./recorddetails.css";
 
 /**
@@ -36,14 +37,19 @@ export type DetailSection = Readonly<{
  * The details under a record's head, as flat groups: a small label, then
  * label/value rows with no card around them, a hairline between groups. The
  * empty rows of every group fold behind one link, and a group with nothing
- * left to show draws no label. The `footnote` is what the record says about itself (who
- * may change it, what a verb will ask), in a grey box at the foot.
+ * left to show draws no label. A `refusal` says once, above the fields, why
+ * the record is locked, and its fields draw no lock of their own. A page with
+ * its own band passes that sentence as `lockedBy`. The `footnote` sits last.
  */
 export function RecordDetails({
   sections,
+  refusal,
+  lockedBy,
   footnote,
 }: Readonly<{
   sections: readonly DetailSection[];
+  refusal?: Readonly<{ id?: string; text: string; action?: ReactNode }>;
+  lockedBy?: string;
   footnote?: ReactNode;
 }>) {
   const t = useT();
@@ -56,13 +62,22 @@ export function RecordDetails({
   );
   return (
     <div className="recorddetails">
-      {sections.map((section) => (
-        <DetailGroup
-          key={section.key}
-          section={section}
-          showEmpty={showEmpty}
-        />
-      ))}
+      {refusal && (
+        <div className="recorddetails-locked" role="note">
+          <Lock size={16} aria-hidden="true" />
+          <p id={refusal.id}>{refusal.text}</p>
+          {refusal.action}
+        </div>
+      )}
+      <RecordRefusalContext.Provider value={refusal?.text ?? lockedBy}>
+        {sections.map((section) => (
+          <DetailGroup
+            key={section.key}
+            section={section}
+            showEmpty={showEmpty}
+          />
+        ))}
+      </RecordRefusalContext.Provider>
       {empties > 0 && (
         <div className="recorddetails-foot">
           <Button

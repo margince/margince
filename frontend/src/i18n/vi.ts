@@ -3000,6 +3000,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
     "Tài khoản này chỉ có quyền xem. Liên hệ quản trị viên để nâng cấp tài khoản.",
+  "writeRefusal.seatReadOnly":
+    "Tài khoản của bạn chỉ có quyền xem, nên bạn không thể sửa hồ sơ. Liên hệ quản trị viên để có tài khoản đầy đủ.",
+  "writeRefusal.role":
+    "Vai trò của bạn không được sửa loại hồ sơ này. Liên hệ quản trị viên để đổi vai trò.",
+  "writeRefusal.unowned":
+    "Hồ sơ này chưa được ai phụ trách. Hãy nhận phụ trách để sửa.",
+  "field.lockedWhy": "Vì sao {field} bị khóa",
   "common.versionSkew":
     "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",
   "common.duplicate.email":

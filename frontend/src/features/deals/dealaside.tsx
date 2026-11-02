@@ -31,6 +31,7 @@ import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
@@ -77,6 +78,7 @@ function DealAsideBody({
   lists,
 }: AsideProps & Readonly<{ lists: readonly { id: string; name: string }[] }>) {
   const t = useT();
+  const refusal = useRecordWriteRefusal("deal", deal);
   const { locale } = useLocale();
   const viewerId = useViewerId();
   const edit = useDealEdit(deal, viewerId ?? "");
@@ -144,6 +146,7 @@ function DealAsideBody({
   return (
     <RecordDetails
       sections={sections}
+      lockedBy={refusal}
       footnote={t("deal.details.closingFootnote")}
     />
   );

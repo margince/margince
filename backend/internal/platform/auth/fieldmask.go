@@ -157,25 +157,13 @@ func rowWriteSubset(ctx context.Context, tx pgx.Tx, p principal.Principal, table
 	return out, rows.Err()
 }
 
-// StampWritable answers, for a page of rows of one shareable table, which of
-// them the caller may CHANGE and why not — the contract's `writable` and
-// `write_refusal` — with a fixed number of statements for the whole page.
+// StampWritable tells a client, per row of a page, whether the caller may
+// change it and which arm refused (`writable`, `write_refusal`). The authority
+// question stays WritableSubset's, and EnsureWritable alone gates a mutation.
 //
-// It is WritableSubset plus the id-collection and write-back loop that five
-// record types would otherwise each spell. The authority question is
-// WritableSubset's; the refusal only names which arm said no.
-//
-// What it produces is what a CLIENT is told, never what the server enforces.
-// EnsureWritable is the authority and stays the only gate a mutation passes; a
-// caller that ignored this flag and sent the write anyway is refused exactly as
-// before.
-// It returns the subset it computed, so a caller that needs the same answer for
-// something else — the field masks conditioned on write authority are the case —
-// reads it rather than asking the database the same question twice. The RETURN
-// is the authority answer and the FLAG is the edit affordance, and they differ
-// on an archived row: reading the return for an affordance offers an edit every
-// mutation refuses, reading the flag for a mask hides an owner's own figure the
-// moment they archive the record.
+// It returns the authority answer, which the field masks reuse. That answer and
+// the flag differ on an archived row: the owner keeps authority for the masks,
+// and the flag still says no edit.
 func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	rows []T, id func(T) ids.UUID, set func(*T, RowWrite),
 ) (map[ids.UUID]bool, error) {
@@ -195,7 +183,7 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 		return nil, err
 	}
 	// A read seat may own rows, and the authority answer keeps them for the
-	// masks; the flag says no, because the seat ceiling refuses every write.
+	// masks. The flag says no, because the seat ceiling refuses every write.
 	if refusal := callerRefusal(p, table); refusal != "" {
 		for i := range rows {
 			set(&rows[i], RowWrite{Refusal: refusal})

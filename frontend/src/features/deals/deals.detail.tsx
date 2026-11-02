@@ -21,11 +21,11 @@ import {
 } from "../../design-system/recordview";
 import { useLocale, useT } from "../../i18n";
 import { useTargetApprovals } from "../../lib/approvals.queries";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
@@ -190,10 +190,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // archived deal takes no changes, and one this caller cannot write takes
   // none from them. Asking only the first half would offer a rep Edit on a
   // colleague's deal, then refuse the save with a 403.
-  const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data, {
-    archived: t("deal.archivedReadOnly"),
-    notYours: t("deal.notYoursToChange"),
-  });
+  const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data);
   const readOnly = Boolean(readOnlyReason);
   // The id every refused control points at, or nothing while the deal takes
   // changes, resolved once here so the render below reads one name.

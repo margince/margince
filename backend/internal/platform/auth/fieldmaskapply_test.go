@@ -242,8 +242,8 @@ func TestANameTheModuleCollectedWithholdsItsGroupToo(t *testing.T) {
 	}
 }
 
-// Each refused row names the arm that refused it, and a row the caller may
-// change names none: the refusal is what a client turns into the reason.
+// Each refused row names the arm that refused it. A row the caller may change
+// names none, since the refusal is what a client turns into the reason.
 func TestARefusedRowSaysWhichArmRefusedIt(t *testing.T) {
 	t.Parallel()
 	ctx := maskedActor()

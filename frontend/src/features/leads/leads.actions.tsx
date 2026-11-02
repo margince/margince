@@ -8,6 +8,7 @@ import { Button, OverflowMenu } from "../../design-system/atoms";
 import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
+import { useRecordWriteRefusalCode } from "../../lib/capability";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
 import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
@@ -82,6 +83,11 @@ export function LeadActions({
   // is refused for this reason, not that one.
   const activity = useActivityGate();
   const archived = lead.archived_at ? terminalReasonId : undefined;
+  // A seat or role that can never change a lead is never offered Qualify. A
+  // colleague's lead keeps it, with the reason on the control.
+  const neverQualifies = ["seat_read_only", "role"].includes(
+    useRecordWriteRefusalCode("lead", lead) ?? "",
+  );
   const logRefused = archived ?? activity.refusedId;
   const logPending = !archived && activity.pending;
   // The verb the reader arrived to perform, named by the address rather than
@@ -109,7 +115,7 @@ export function LeadActions({
           where a reader looks for the verb (ADR-0108). Ineligibility is stated
           on the control itself: a disabled button whose reason is elsewhere is
           a dead button. */}
-      {!lead.archived_at && (
+      {!lead.archived_at && !neverQualifies && (
         <Button
           variant="primary"
           data-testid="lead-qualify"

@@ -694,13 +694,13 @@ describe("RecordAccess — a reader who may not change it", () => {
         seat_type: "full",
         objects: { contact: { read: true, update: false } },
       },
-      en["contact.notYoursToChange"],
+      en["writeRefusal.role"],
     ],
     [
       "a read seat",
       { writable: true, owner_id: "u1" },
       { ...mayWrite, seat_type: "read" },
-      en["contact.notYoursToChange"],
+      en["writeRefusal.seatReadOnly"],
     ],
     [
       "an archived contact",

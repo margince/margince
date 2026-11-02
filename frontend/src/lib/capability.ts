@@ -160,54 +160,45 @@ export function useCanWriteRecord(
 }
 
 /**
- * A record whose write verbs a page draws: the server's per-row answer and
- * the lifecycle stamp, which is the pair every refusal below reads.
+ * A record whose write verbs a page draws: the server's per-row answer, why it
+ * said no, and the lifecycle stamp.
  */
 export type WritableRecord = {
   readonly writable?: boolean;
+  readonly write_refusal?: WriteRefusal;
   readonly archived_at?: string | null;
 };
 
+export type WriteRefusal = components["schemas"]["WriteRefusal"];
+
 /**
- * Why this caller may not change THIS record, or undefined when they may.
+ * Why this caller may not change this record, as a refusal code, or undefined
+ * when they may. Every verb on a record page asks it, so the page agrees with
+ * itself.
  *
- * The one answer a record page's verbs share — edit, archive, share, the
- * upload, the inline fields — so the page cannot disagree with itself about
- * whether the record takes changes. Before this each page asked only whether
- * the record was archived and left the grant, the seat and the row to the
- * server: a rep opened a colleague's deal, was offered Edit, filled the form
- * in, and learned from the 403 that it was never theirs to save.
- *
- * Archived comes first because it is the reason a reader can act on. The
- * other sentence covers everything `useCanWriteRecord` refuses — no object
- * grant, a read seat, a row that is somebody else's — because the reader's
- * remedy is the same for all three: ask the owner or the administrator. Naming
- * the axis would also name a fact the snapshot cannot always tell apart from
- * its neighbour (an extension object misspelled reads as a grant not made).
- *
- * The caller supplies the two sentences because they name the record's KIND —
- * "this deal", "this contact" — and a sentence that said "this record" on
- * every page would be the first line on the page not to know what it was
- * about.
- *
- * UX honesty, never enforcement, like every predicate in this file: the
- * server refuses whatever this returns.
+ * The seat and the role come from this client's own snapshot. The rest is the
+ * server's code. A record without one reads as not_yours, failing closed.
  */
-export function useRecordWriteRefusal(
+export function useRecordWriteRefusalCode(
   object: RbacObject,
   record: WritableRecord | undefined,
-  reasons: Readonly<{ archived: string; notYours: string }>,
-): string | undefined {
-  // Runs unconditionally: the number of hooks a render performs must not
-  // depend on the record's state.
-  const canWrite = useCanWriteRecord(object, record);
+): WriteRefusal | undefined {
+  // Asked unconditionally: the number of hooks a render performs must not
+  // depend on the record's state. Until /me answers, no seat or role is blamed.
+  const me = useMe().data;
+  if (me && me.authorization?.seat_type !== "full") {
+    return "seat_read_only";
+  }
+  if (me && !grants(me, object, "update")) {
+    return "role";
+  }
   if (record?.archived_at) {
-    return reasons.archived;
+    return "archived";
   }
-  if (!canWrite) {
-    return reasons.notYours;
+  if (record?.writable) {
+    return undefined;
   }
-  return undefined;
+  return record?.write_refusal ?? "not_yours";
 }
 
 /**

@@ -218,9 +218,9 @@ func companyWriterPermsFor(t *testing.T) principal.Permissions {
 	return perms
 }
 
-// A refused row says which arm refused it, because each arm has its own fix:
-// a colleague's record needs its owner, an archived one needs a restore, and a
-// read seat needs a full seat. A writable row carries no refusal at all.
+// A refused row says which arm refused it, because each arm has its own fix.
+// A colleague's record needs its owner, an archived one a restore, a read seat
+// a full seat. A writable row carries no refusal at all.
 func TestARefusedRecordSaysWhy(t *testing.T) {
 	e := Setup(t)
 	mine := e.SeedContact(t, "Mine, then archived", &e.Rep1)

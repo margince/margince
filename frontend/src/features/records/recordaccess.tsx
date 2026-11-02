@@ -26,9 +26,9 @@ import { useToast } from "../../design-system/toast";
 import { VisibilityBadge } from "../../design-system/visibility";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import { invalidateRecord, recordWriteKeys } from "../../lib/recordwritekeys";
 import { navigate, navigateReplacing } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
@@ -55,10 +55,8 @@ type Audience = "workspace" | "owner";
 // invalidate a cache nobody watches and leave the header stale after a write.
 type RecordKind = "contact" | "company";
 
-// The sentences, per record: "this contact" and "this company", because a
-// shared "this record" reads as system language on a page that names somebody
-// by their own name. The two refusals are the ones each page already states
-// for its other writes, so the header cannot give a reason the page does not.
+// The sentences, per record: "this contact" and "this company". A shared
+// "this record" reads as system language on a page that names somebody.
 const COPY = {
   contact: {
     title: "recordAccess.contact.title",
@@ -69,8 +67,6 @@ const COPY = {
     published: "recordAccess.contact.published",
     madePrivate: "recordAccess.contact.madePrivate",
     leftYourAccess: "recordAccess.contact.leftYourAccess",
-    archived: "contact.rail.archivedReadOnly",
-    notYours: "contact.notYoursToChange",
   },
   company: {
     title: "recordAccess.company.title",
@@ -81,8 +77,6 @@ const COPY = {
     published: "recordAccess.company.published",
     madePrivate: "recordAccess.company.madePrivate",
     leftYourAccess: "recordAccess.company.leftYourAccess",
-    archived: "record.archivedReadOnly",
-    notYours: "record.notYoursToChange",
   },
 } as const satisfies Record<RecordKind, Record<string, MessageKey>>;
 
@@ -109,10 +103,7 @@ export function RecordAccess({
   const copy = COPY[kind];
   // The page's own write rule (grant, seat, row, archive) rather than the
   // row's `writable` alone, which offered a read seat a switch it cannot use.
-  const refusal = useRecordWriteRefusal(kind, record, {
-    archived: t(copy.archived),
-    notYours: t(copy.notYours),
-  });
+  const refusal = useRecordWriteRefusal(kind, record);
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
   const failure = (error: unknown) => problemMessageOf(error, t);

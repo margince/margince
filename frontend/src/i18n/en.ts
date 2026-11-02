@@ -3013,6 +3013,15 @@ export const en = {
   // (VOICE-RULE-5).
   "common.seatReadOnly":
     "This seat is read-only, so the request was refused. Ask an administrator to upgrade the seat.",
+  // Why a record is not the reader's to change, for the refusals that hold for
+  // every kind of record. The kind-specific ones live with each record.
+  "writeRefusal.seatReadOnly":
+    "Your seat is read-only, so you can view records but not change them. Ask an administrator for a full seat.",
+  "writeRefusal.role":
+    "Your role cannot change records of this kind. Ask an administrator to change your role.",
+  "writeRefusal.unowned":
+    "Nobody owns this record yet. Make yourself its owner to change it.",
+  "field.lockedWhy": "Why {field} is locked",
   "common.versionSkew":
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
   "common.duplicate.email":

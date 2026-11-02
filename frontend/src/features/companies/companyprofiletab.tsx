@@ -10,12 +10,11 @@ import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import { useCanWriteRecord } from "../../lib/capability";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import type { OpenReceipt } from "../records/record360";
 import { profileFieldLabel } from "./companies";
 import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
-import { useCompanyReadOnlyReason } from "./companyheader";
 import { CompanyProfileDetails } from "./companyprofiledetails";
 import { SidecarFieldRow } from "./companyraildetails";
 import { useCompanyFieldSave } from "./companyrailedit";
@@ -60,14 +59,9 @@ const NARRATIVE_FIELDS = [
  * genuinely editable ones lived in the record rail two tabs away. A record's
  * own fields belong in one place that can be read top to bottom.
  *
- * WRITE STATE IS DERIVED ONCE, HERE. `useCanWriteRecord` folds the three
- * independent axes — the object grant, the seat ceiling, and the server's own
- * per-row `writable` — where the tab previously consulted only the first.
- * A rep who cannot write a colleague's account was still shown every verb,
- * and found out at the save. The reason sentence is rendered ONCE at the top
- * and every refused control points at it by id, rather than each control
- * carrying its own copy: withholding twelve buttons individually is noise,
- * and withholding the page's one explanation is the defect.
+ * Write state is derived once, here, by `useRecordWriteRefusal`. The reason
+ * sentence is rendered once at the top, and every refused control points at
+ * it by id instead of carrying its own copy.
  */
 export function CompanyProfileForm({
   company,
@@ -97,19 +91,10 @@ export function CompanyProfileForm({
 }>): ReactNode {
   const t = useT();
   const reasonId = useId();
-  const writable = useCanWriteRecord("company", company);
-  // The archived/not-yours sentence, when there is one. It is the
-  // more specific answer, so it wins over the generic refusal below whenever
-  // it applies.
-  const specificReason = useCompanyReadOnlyReason(company);
-  // Every denial owes the reader a sentence. `useCanWriteRecord` also refuses
-  // a read seat and a missing grant, neither of which the specific reason
-  // knows about, and a control pointing at an id that renders nothing is a
-  // refusal the reader cannot resolve.
-  const reason = writable
-    ? undefined
-    : (specificReason ?? t("record.notYoursToChange"));
-  const canEdit = writable && !specificReason;
+  // One refusal for the seat, the role and the row. The fields then agree
+  // with the record's banner.
+  const reason = useRecordWriteRefusal("company", company);
+  const canEdit = !reason;
   const profileQuery = useCompanyProfileFields(company.id);
   const fields = profileQuery.data ?? [];
   const save = useCompanyFieldSave(company);

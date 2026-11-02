@@ -63,3 +63,28 @@
   color: var(--textPrimary);
   text-wrap: pretty;
 }
+/* The record's one lock, above its fields: why the reader may not change it
+   and the step that helps, so no row repeats it. */
+.recorddetails-locked {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-2);
+  align-items: start;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-control);
+  font: var(--fontBodySmall);
+  color: var(--textPrimary);
+}
+.recorddetails-locked > svg {
+  margin-block-start: 2px;
+  color: var(--textSecondary);
+}
+.recorddetails-locked > p {
+  margin: 0;
+  text-wrap: pretty;
+}
+.recorddetails-locked > :nth-child(n + 3) {
+  grid-column: 2;
+  justify-self: start;
+}

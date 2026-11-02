@@ -13,6 +13,7 @@ import { problemMessageOf } from "../lib/problem";
 import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
 import { DateInput, type DateInputProps, isoOrBlank } from "./dateinput";
 import { panelsOpenedFrom } from "./dialogfocus";
+import { LockedValue } from "./lockedvalue";
 import "./inlinechoice.css";
 
 // Edits a value where it is read, under InlineChoice's save and refusal rules.
@@ -146,11 +147,13 @@ function InlineDate({
 // empty field never reads as an invitation this viewer cannot act on or a
 // blank the row forgot to fill.
 function ReadOnlyText({
+  label,
   value,
   display,
   suggested,
   readOnlyReason,
 }: Readonly<{
+  label: string;
   value: string;
   display?: string;
   suggested?: string;
@@ -158,14 +161,15 @@ function ReadOnlyText({
 }>) {
   const t = useT();
   return (
-    <span
+    <LockedValue
+      label={label}
+      reason={readOnlyReason}
       className={
         !value && suggested ? "inlinetext inlinetext-suggested" : "inlinetext"
       }
-      title={readOnlyReason}
     >
       {(value && display) || value || suggested || t("field.unset")}
-    </span>
+    </LockedValue>
   );
 }
 
@@ -335,6 +339,7 @@ export function InlineText({
     if (!canEdit) {
       return held(
         <ReadOnlyText
+          label={label}
           value={value}
           display={display}
           suggested={suggested}

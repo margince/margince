@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Badge } from "../../design-system/atoms";
@@ -12,6 +12,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
+import { HandoverRequest } from "../records/handoverrequest";
 import { useWriteRefusal } from "./contactactions";
 import { type ConsentRead, useConsentRows } from "./contactconsentpanel";
 import { useContactAboutSections } from "./contactdetails";
@@ -75,11 +76,14 @@ export function bodyState(withheld: boolean, count: number): SectionState {
 export function ContactRail({
   view,
   consent,
+  recordRefusal,
   refusals,
   writeRefusalId,
 }: Readonly<{
   view: Contact360;
   consent: ConsentRead;
+  // Why the reader may not change the contact, drawn once above its fields.
+  recordRefusal?: Readonly<{ id: string; text: string }>;
   // What the page refuses this reader, each sentence under the id its verbs
   // point at. The Email verb's own refusal joins them here.
   refusals?: ReactNode;
@@ -101,6 +105,10 @@ export function ContactRail({
     ...about,
     { key: "consent", label: t("contact.aside.consent"), rows: consentRows },
   ];
+  const refusal = recordRefusal && {
+    ...recordRefusal,
+    action: <HandoverRequest kind="contact" record={view.contact} />,
+  };
   // The lists read answers 404 while lists are switched off, so it is asked
   // only where they are on.
   if (listsOn && !view.contact.archived_at) {
@@ -108,20 +116,25 @@ export function ContactRail({
       <ContactRailWithLists
         contactId={view.contact.id}
         sections={sections}
+        refusal={refusal}
         footnote={footnote}
       />
     );
   }
-  return <RecordDetails sections={sections} footnote={footnote} />;
+  return (
+    <RecordDetails sections={sections} refusal={refusal} footnote={footnote} />
+  );
 }
 
 function ContactRailWithLists({
   contactId,
   sections,
+  refusal,
   footnote,
 }: Readonly<{
   contactId: string;
   sections: readonly DetailSection[];
+  refusal?: ComponentProps<typeof RecordDetails>["refusal"];
   footnote?: ReactNode;
 }>) {
   const t = useT();
@@ -151,7 +164,9 @@ function ContactRailWithLists({
             ),
           },
         ];
-  return <RecordDetails sections={withLists} footnote={footnote} />;
+  return (
+    <RecordDetails sections={withLists} refusal={refusal} footnote={footnote} />
+  );
 }
 
 // --- Keeping this correspondence private -------------------------------

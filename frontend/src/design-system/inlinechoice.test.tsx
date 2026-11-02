@@ -14,6 +14,7 @@ import { en } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { InlineChoice } from "./inlinechoice";
 import { InlineText } from "./inlinetext";
+import { RecordRefusalContext } from "./lockedvalue";
 
 // The rules this control keeps are failure modes, not polish. Each one here
 // is a way a reader gets told something untrue about their own edit.
@@ -52,9 +53,39 @@ describe("editing a value where it is read", () => {
       readOnlyReason: "This company is archived.",
     });
     // A disabled control says "you could do this" and then refuses. Plain text
-    // says what is true.
-    expect(screen.queryByRole("button")).toBeNull();
+    // says what is true; the only control is the lock that says why.
+    expect(screen.queryByRole("button", { name: /Change/ })).toBeNull();
     expect(screen.getByText("prospect")).toBeTruthy();
+  });
+
+  it("explains a field's own lock on press, so touch and keyboard reach it", async () => {
+    renderChoice({
+      canEdit: false,
+      readOnlyReason: "Only an admin sets this.",
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Why Account lifecycle is locked" }),
+    );
+    expect(screen.getByText("Only an admin sets this.")).toBeTruthy();
+  });
+
+  it("draws no lock where the record's banner already says why", () => {
+    render(
+      <LocaleProvider initial="en">
+        <RecordRefusalContext.Provider value="This company is archived.">
+          <InlineChoice
+            label="Account lifecycle"
+            value="prospect"
+            options={OPTIONS}
+            canEdit={false}
+            readOnlyReason="This company is archived."
+            render={(v) => <>{v}</>}
+            onSave={vi.fn(async () => {})}
+          />
+        </RecordRefusalContext.Provider>
+      </LocaleProvider>,
+    );
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("names the field on the trigger rather than reading out the value alone", async () => {

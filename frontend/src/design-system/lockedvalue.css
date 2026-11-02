@@ -1,0 +1,17 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* SPDX-FileCopyrightText: 2026 Gradion */
+
+/* A locked value keeps the plain value's face, with its lock trailing at the
+   column's end where an editable value draws its pencil. */
+.locked-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--textSecondary);
+}
+.locked-value > .locked-value-mark {
+  flex: none;
+  padding: 2px;
+  color: var(--textSecondary);
+}

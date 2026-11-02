@@ -20,15 +20,11 @@ import { MergeAction } from "../../components/merge";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { useT } from "../../i18n";
-import {
-  useCan,
-  useCanWrite,
-  useCanWriteRecord,
-  useRecordWriteRefusal,
-} from "../../lib/capability";
+import { useCan, useCanWrite, useCanWriteRecord } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
+import { useRecordWriteRefusal } from "../../lib/recordrefusal";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
@@ -247,11 +243,7 @@ export function CompanyOwnerControl({
 // its claim door on its own predicate (CompanyOwnerControl), and that is the
 // verb an unowned account offers.
 export function useCompanyVerbRefusal(company: Company): string | undefined {
-  const t = useT();
-  return useRecordWriteRefusal("company", company, {
-    archived: t("record.archivedReadOnly"),
-    notYours: t("record.notYoursToChange"),
-  });
+  return useRecordWriteRefusal("company", company);
 }
 
 export function CompanyActionBadges({

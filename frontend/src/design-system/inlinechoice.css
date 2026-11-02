@@ -1,15 +1,11 @@
 /* SPDX-License-Identifier: BUSL-1.1 */
 /* SPDX-FileCopyrightText: 2026 Gradion */
 
-/* The resting face of an editable value (InlineText/InlineChoice's closed
- * button): a fact, not a control. No box, no accent colour — that would say
- * "click me" before the reader has asked whether this can be changed at all.
- * A hover or a keyboard focus is the only thing that reveals it: the
- * underline appears, and a chooser's caret fades in beside it. Padding and
- * its matching negative margin cancel exactly, on purpose — the visible TEXT
- * has to land on the same left edge whether the field beside it is this
- * button or a plain read-only span (fieldgrid.css's own shared-edge rule),
- * and a click target smaller than the padded box would be would feel mean. */
+/* The editable value's trigger outside a record's details, where it stays a
+ * fact in a line of text: no box, revealed by a soft fill on hover or focus.
+ * Padding and its matching negative margin cancel, so the text keeps the
+ * left edge a plain value beside it has. A record's details box it at rest
+ * instead (below). */
 .inline-editable {
   display: inline-flex;
   align-items: center;
@@ -65,9 +61,8 @@
   margin-block-end: 0;
 }
 
-/* The caret only a chooser draws, and only once the reader has already
- * noticed the underline — two affordances at once would be one more thing to
- * read than free text needs. */
+/* A chooser's caret, shown on hover or focus where the value stays a fact in a
+ * line; a record's details show it at rest. */
 .inline-editable-caret {
   opacity: 0;
   transition: opacity var(--dur-state);
@@ -112,5 +107,49 @@
    (fieldgrid.css). Carried only on the unset case, so a real value is never
    dimmed by the same rule. */
 .inlinechoice-unset {
+  color: var(--textSecondary);
+}
+
+/* At rest an editable value sits in a soft field box with its verb mark: a
+   pencil to type, a chevron to choose. Read-only values keep no box, so a
+   glance down the column tells the two apart on every device. */
+:is(.factlist-value, .fieldgrid-value) .inline-editable {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 3px 8px;
+  margin: -4px 0;
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--bgInset) 40%, transparent);
+  color: var(--textPrimary);
+  font-weight: inherit;
+}
+:is(.factlist-value, .fieldgrid-value) .inline-editable:hover {
+  border-color: var(--borderControl);
+}
+:is(.factlist-value, .fieldgrid-value) .inline-editable[data-empty="true"] {
+  color: var(--accentText);
+}
+:is(.factlist-value, .fieldgrid-value)
+  .inline-editable:not(.inline-editable-choice)::after {
+  content: "";
+  flex: none;
+  margin-inline-start: auto;
+  inline-size: 12px;
+  aspect-ratio: 1;
+  align-self: center;
+  background: var(--textSecondary);
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+:is(.factlist-value, .fieldgrid-value) .inline-editable-caret {
+  opacity: 1;
+  flex: none;
+  margin-inline-start: auto;
+  align-self: center;
   color: var(--textSecondary);
 }

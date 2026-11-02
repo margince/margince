@@ -9,6 +9,7 @@ import {
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { BusyMark, Field } from "./atoms";
+import { LockedValue } from "./lockedvalue";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
 
@@ -267,13 +268,14 @@ function ChoiceReading({
   const shown = value ? render(value) : t("field.unset");
   if (!canEdit) {
     return (
-      <span
+      <LockedValue
+        label={label}
+        reason={readOnlyReason}
         className={value ? undefined : "inlinechoice-unset"}
-        title={readOnlyReason}
-        data-testid={testId}
+        testId={testId}
       >
         {shown}
-      </span>
+      </LockedValue>
     );
   }
   return (

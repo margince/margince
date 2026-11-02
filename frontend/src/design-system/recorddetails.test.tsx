@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { LockedValue } from "./lockedvalue";
 import { RecordDetails } from "./recorddetails";
 
 afterEach(cleanup);
@@ -64,5 +65,52 @@ describe("Record details", () => {
     expect(
       screen.getByText("Closing a project asks for a reason."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Record details — a record the reader may not change", () => {
+  const archived = "This company is archived and takes no changes.";
+  const lockedRows = (reason: string) => [
+    {
+      key: "about",
+      label: "About",
+      rows: [
+        {
+          key: "domain",
+          term: "Domain",
+          value: (
+            <LockedValue label="Domain" reason={reason}>
+              brandt.example
+            </LockedValue>
+          ),
+        },
+      ],
+    },
+  ];
+
+  it("says why once, above the fields, and locks no row a second time", () => {
+    render(
+      <RecordDetails
+        sections={lockedRows(archived)}
+        refusal={{ text: archived }}
+      />,
+    );
+    expect(screen.getByRole("note")).toHaveTextContent(archived);
+    expect(screen.queryByRole("button", { name: /locked/ })).toBeNull();
+  });
+
+  it("locks the one field whose reason is its own", () => {
+    render(<RecordDetails sections={lockedRows("Only an admin sets this.")} />);
+    expect(
+      screen.getByRole("button", { name: "Why Domain is locked" }),
+    ).toBeInTheDocument();
+  });
+
+  it("draws no banner where the page's own band already says why", () => {
+    render(
+      <RecordDetails sections={lockedRows(archived)} lockedBy={archived} />,
+    );
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.queryByRole("button", { name: /locked/ })).toBeNull();
   });
 });
