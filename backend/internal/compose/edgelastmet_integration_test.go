@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -45,7 +46,7 @@ func TestTheColleagueEdgeKnowsWhenThePairLastMet(t *testing.T) {
 // A meeting the contact declined gives the pair no last meeting.
 func TestADeclinedMeetingGivesThePairNoLastMeeting(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Second)
+	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	dana := contactWithEmail(t, e, "Dana Declined", "dana@declined.example")
 	parties := []connector.MessageParticipant{
 		{Email: "dana@declined.example", Role: connector.ParticipantRoleAttendee, Response: connector.ResponseDeclined},

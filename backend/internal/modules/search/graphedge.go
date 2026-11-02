@@ -185,7 +185,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(user_id, contact_id)
 		),
 		counted AS (
-		    SELECT t.user_id AS edge_user, t.contact_id AS edge_contact, a.*, `+graphMet+` AS met
+		    SELECT t.user_id AS edge_user, t.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met
 		      FROM target t
 		      JOIN activity_participant up
 		        ON up.user_id = t.user_id AND up.role IN `+interactionRoles+`
@@ -407,7 +407,7 @@ var graphEngagedRows = `SELECT c.*, max(c.occurred_at) FILTER (WHERE ` + relstre
 
 // graphFoldColumns are one pair's folded facts, over graphEngagedRows aliased a.
 func graphFoldColumns(window string) string {
-	late := ` AND (a.engaged_at IS NULL OR a.occurred_at > a.engaged_at)`
+	late := ` AND ` + relstrength.AfterEngagedSQL("a", "engaged_at")
 	inWindow := occurredday.FromSQL("a", window)
 	return `max(a.occurred_at) AS last_at,
 		       max(a.occurred_at) FILTER (WHERE ` + relstrength.TheyWroteSQL("a.edge_contact", "a") + `) AS last_inbound_at,
@@ -438,7 +438,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 	}
 	if _, err := tx.Exec(ctx, `
 		WITH counted AS (
-		    SELECT up.user_id AS edge_user, pp.contact_id AS edge_contact, a.*, `+graphMet+` AS met
+		    SELECT up.user_id AS edge_user, pp.contact_id AS edge_contact, `+relstrength.FoldColumnsSQL("a")+`, `+graphMet+` AS met
 		      FROM activity_participant up
 		      JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		      JOIN activity a ON a.id = up.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+audienceWorkspaceOnly+`

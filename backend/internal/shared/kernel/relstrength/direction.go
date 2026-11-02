@@ -3,7 +3,10 @@
 
 package relstrength
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Which way a relationship runs. The contact page, the company roll-up, the
 // strength fold and the colleague graph ask "did they write" here. One contact
@@ -79,4 +82,22 @@ const contactWasInSQL = `(EXISTS (SELECT 1 FROM activity_participant tp
 // caller's walk, because reaching someone is not authorship.
 func WeWroteSQL(activity string) string {
 	return "(" + activity + ".direction = 'outbound')"
+}
+
+// FoldColumnsSQL lists the activity columns a fold over a derived row set reads:
+// what TheyWroteSQL, InteractionUnitSQL and the occurredday predicates ask of
+// the activity. A derived table projects these, never a whole row.
+func FoldColumnsSQL(activity string) string {
+	columns := []string{"id", "kind", "thread_key", "occurred_at", "occurred_precision", "direction", "counterparty_email"}
+	for i, column := range columns {
+		columns[i] = activity + "." + column
+	}
+	return strings.Join(columns, ", ")
+}
+
+// AfterEngagedSQL admits an interaction of a fold row after the moment in
+// column engaged, or any one when that is NULL. Both sides are stored
+// occurred_at values of the same rows, so they compare as stored.
+func AfterEngagedSQL(activity, engaged string) string {
+	return "(" + activity + "." + engaged + " IS NULL OR " + activity + ".occurred_at > " + activity + "." + engaged + " -- occurred_at raw: two stored stamps of one fold, ordered\n)"
 }

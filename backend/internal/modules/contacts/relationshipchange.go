@@ -244,7 +244,7 @@ func changeInputsFor(
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+afterEngagedBefore+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+afterEngagedBefore+` AND `+relstrength.WeWroteSQL("a")+`)
-		  FROM (SELECT a.*, l.contact_id AS link_contact,
+		  FROM (SELECT `+foldColumns+`, l.contact_id AS link_contact,
 		               max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
 		                 OVER (PARTITION BY l.contact_id) AS engaged_at,
 		               max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+` AND `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
@@ -280,4 +280,4 @@ func changeInputsFor(
 
 // afterEngagedBefore is afterEngaged for the earlier window: after the
 // contact's last part before asOf.
-const afterEngagedBefore = `(a.engaged_before IS NULL OR a.occurred_at > a.engaged_before)`
+var afterEngagedBefore = relstrength.AfterEngagedSQL("a", "engaged_before")

@@ -114,7 +114,10 @@ func strengthCitedCountsAt(nowPos int) string {
 // afterEngaged admits an interaction of a fold row `a` after the contact last
 // took part, or any one when they never did. The fold's derived table carries
 // engaged_at for it.
-const afterEngaged = `(a.engaged_at IS NULL OR a.occurred_at > a.engaged_at)`
+var afterEngaged = relstrength.AfterEngagedSQL("a", "engaged_at")
+
+// foldColumns are the activity columns the folds' derived tables project.
+var foldColumns = relstrength.FoldColumnsSQL("a")
 
 // strengthDirectionPrecisions reads the precision behind each direction's last
 // date for the contact, empty where that date is null.
@@ -313,7 +316,7 @@ func contactStrengths(
 		           AND (i.archived_at IS NULL AND activity_thread_available(i.thread_key)) AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
-		FROM (SELECT a.*, l.contact_id AS link_contact,
+		FROM (SELECT `+foldColumns+`, l.contact_id AS link_contact,
 		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
 		               OVER (PARTITION BY l.contact_id) AS engaged_at
 		        FROM activity a
@@ -390,7 +393,7 @@ func strengthInputs(
 		           AND (i.archived_at IS NULL AND activity_thread_available(i.thread_key)) AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
-		FROM (SELECT a.*,
+		FROM (SELECT `+foldColumns+`,
 		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("$1", "a")+`) OVER () AS engaged_at
 		        FROM activity a
 		        JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
