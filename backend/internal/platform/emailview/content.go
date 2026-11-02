@@ -29,12 +29,11 @@ type Line struct {
 }
 
 // Item is one record a message asks the reader to look at. An ItemAction
-// that directly follows it becomes its link.
+// added right after it becomes its link.
 type Item struct {
 	Title string
 	Lines []Line
-	// Verb is what the reader does with it, as the link's words. Its plain
-	// text is the following ItemAction's own line.
+	// Verb is what the reader does with it, as the link's words.
 	Verb string
 	// OneLine keeps the plain alternative to one dash-joined line, for lists
 	// a reader scans line by line.
@@ -106,9 +105,10 @@ func (c *Content) Action(label, target string) {
 	}
 }
 
-// ItemAction links the item just added. It never becomes the message's button.
+// ItemAction links the item just added. Without one, as when Item dropped an
+// untitled row, it adds nothing, so no other record takes its link.
 func (c *Content) ItemAction(label, target string) {
-	if label != "" && target != "" {
+	if label != "" && target != "" && len(c.Blocks) > 0 && c.Blocks[len(c.Blocks)-1].Item != nil {
 		c.Blocks = append(c.Blocks, Block{ActionLabel: label, ActionURL: target, ItemLink: true})
 	}
 }
@@ -177,6 +177,9 @@ func (i Item) text() string {
 		if strings.TrimSpace(line.Text) != "" {
 			lines = append(lines, line.Text)
 		}
+	}
+	if i.Verb != "" {
+		lines = append(lines, i.Verb)
 	}
 	if i.OneLine {
 		return strings.Join(lines, " — ")

@@ -24,7 +24,7 @@ func TestAnItemTakesOnlyItsOwnLinkAndTheMessageKeepsItsButton(t *testing.T) {
 	if !strings.Contains(main, `href="https://example.test/#deal/1"`) || !strings.Contains(main, "Reply →") {
 		t.Fatal("the item lost its own link or verb")
 	}
-	button := regexp.MustCompile(`class="c-textOnAccentControl"[^>]*>Open the week<`)
+	button := regexp.MustCompile(`<a href="https://example.test/#weekly" class="c-textOnAccentControl"[^>]*>Open the week<`)
 	if !button.MatchString(main) {
 		t.Fatal("the closing action following an item must stay the primary button")
 	}
@@ -55,14 +55,41 @@ func TestNoElementCarriesTwoClassAttributes(t *testing.T) {
 	}
 }
 
-func TestThePlainAlternativeKeepsEveryWordOnce(t *testing.T) {
-	text := weekWithItems().String()
-	for _, want := range []string{"Fleet renewal\nNordwind\nDue today", "Review\nhttps://example.test/#deal/1", "Studio licences\nLost", "Open the week\nhttps://example.test/#weekly"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("plain text lost %q:\n%s", want, text)
-		}
+func TestThePlainAlternativeKeepsEveryWord(t *testing.T) {
+	want := "Fleet renewal\nNordwind\nDue today\nReply\n\n" +
+		"Review\nhttps://example.test/#deal/1\n\n" +
+		"Studio licences\nLost\n\n" +
+		"Open the week\nhttps://example.test/#weekly\n\n" +
+		"You get this because the weekly mail is on."
+	if got := weekWithItems().String(); got != want {
+		t.Fatalf("plain text =\n%s\nwant\n%s", got, want)
 	}
-	if strings.Contains(text, "Reply") {
-		t.Fatal("the verb repeats what the link line already says")
+}
+
+func TestADroppedItemLeavesNoLinkForTheRecordBefore(t *testing.T) {
+	var body Content
+	body.Item(Item{Title: "Fleet renewal"})
+	body.ItemAction("Review", "https://example.test/#deal/1")
+	body.Item(Item{Title: "  "})
+	body.ItemAction("Review", "https://example.test/#deal/2")
+	if strings.Contains(body.String(), "#deal/2") {
+		t.Fatal("the link of a dropped item was kept and would attach to another record")
+	}
+}
+
+func TestATrailingActionWithoutALinkLeavesTheButtonToTheLastLinkedOne(t *testing.T) {
+	var body Content
+	body.Action("Open the week", "https://example.test/#weekly")
+	body.Action("Confirm", "javascript:confirm()")
+	main, _ := renderBlocks(body.Blocks, "")
+	if !strings.Contains(main, `<a href="https://example.test/#weekly" class="c-textOnAccentControl"`) {
+		t.Fatal("an action that renders as text took the primary button from a linked one")
+	}
+}
+
+func TestDarkReadersGetTheDarkShadow(t *testing.T) {
+	rendered := Render(weekWithItems().Message("Week", "en", ""))
+	if !strings.Contains(rendered, ".sh-shadow-rest{box-shadow:"+tokens[shadowRest].Dark) || !strings.Contains(rendered, `class="bg-pane bd-paneEdge sh-shadow-rest"`) {
+		t.Fatal("the card's shadow keeps its light value in dark mode")
 	}
 }

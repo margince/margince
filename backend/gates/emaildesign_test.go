@@ -38,7 +38,7 @@ func TestEmailTypeFollowsTheProductScale(t *testing.T) {
 	light, _ := productTokenThemes(t)
 	shorthand := regexp.MustCompile(`^(\d+) ([\d.]+)rem / ([\d.]+)rem (.+)$`)
 	for _, face := range emailview.TypeScale() {
-		resolved, err := light.resolve("--" + face.Name)
+		resolved, _, err := light.resolve("--" + face.Name)
 		if err != nil {
 			t.Errorf("type %s: %v", face.Name, err)
 			continue
@@ -58,7 +58,7 @@ func TestEmailTypeFollowsTheProductScale(t *testing.T) {
 
 func assertTokenValue(t *testing.T, theme cssTheme, name, written, label string) {
 	t.Helper()
-	resolved, err := theme.resolve("--" + name)
+	resolved, mixed, err := theme.resolve("--" + name)
 	if err != nil {
 		t.Errorf("%s %s: %v", label, name, err)
 		return
@@ -75,7 +75,7 @@ func assertTokenValue(t *testing.T, theme cssTheme, name, written, label string)
 		t.Errorf("%s %s: product value %q is not a colour: %v", label, name, resolved, err)
 		return
 	}
-	if !got.near(want) {
+	if mixed && !got.near(want) || !mixed && got != want {
 		t.Errorf("%s %s = %s, product resolves to %s", label, name, written, want)
 	}
 }
@@ -141,23 +141,35 @@ var (
 	cssMix = regexp.MustCompile(`^color-mix\(in srgb, (.+) (\d+)%, (.+)\)$`)
 )
 
-func (theme cssTheme) resolve(name string) (string, error) {
+// resolve follows var() references to a value. mixed reports a color-mix,
+// whose rounding is the only drift the gate allows.
+func (theme cssTheme) resolve(name string) (value string, mixed bool, err error) {
 	value, ok := theme[name]
 	if !ok {
-		return "", fmt.Errorf("tokens.css does not declare %s", name)
+		return "", false, fmt.Errorf("tokens.css does not declare %s", name)
 	}
 	for depth := 0; strings.Contains(value, "var("); depth++ {
 		if depth > 8 {
-			return "", fmt.Errorf("%s does not resolve", name)
+			return "", false, fmt.Errorf("%s does not resolve", name)
 		}
+		var missing string
 		value = cssVar.ReplaceAllStringFunc(value, func(ref string) string {
-			return theme[cssVar.FindStringSubmatch(ref)[1]]
+			target := cssVar.FindStringSubmatch(ref)[1]
+			found, declared := theme[target]
+			if !declared {
+				missing = target
+			}
+			return found
 		})
+		if missing != "" {
+			return "", false, fmt.Errorf("%s refers to %s, which tokens.css does not declare", name, missing)
+		}
 	}
 	if mix := cssMix.FindStringSubmatch(value); mix != nil {
-		return mixColors(mix[1], mix[2], mix[3])
+		mixedValue, err := mixColors(mix[1], mix[2], mix[3])
+		return mixedValue, true, err
 	}
-	return value, nil
+	return value, false, nil
 }
 
 type rgba struct{ r, g, b, a float64 }

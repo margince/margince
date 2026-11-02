@@ -12,12 +12,12 @@ import (
 // panel, and an ItemAction right after an item is its link. The last Action
 // is the message's one primary button.
 func renderBlocks(blocks []Block, placeholder string) (string, string) {
-	primary := lastAction(blocks)
+	primary := lastAction(blocks, placeholder)
 	var main, footer strings.Builder
 	var rows []string
 	flush := func() {
 		if len(rows) > 0 {
-			main.WriteString(panel(strings.Join(rows, ""), "items"))
+			main.WriteString(panel(strings.Join(rows, ""), "items", false))
 			rows = nil
 		}
 	}
@@ -43,10 +43,11 @@ func renderBlocks(blocks []Block, placeholder string) (string, string) {
 	return main.String(), footer.String()
 }
 
-// lastAction is the index of the last action that stands on its own.
-func lastAction(blocks []Block) int {
+// lastAction is the index of the last action that stands on its own and
+// renders as a link.
+func lastAction(blocks []Block, placeholder string) int {
 	for i := len(blocks) - 1; i >= 0; i-- {
-		if blocks[i].ActionURL != "" && !blocks[i].Footnote && !blocks[i].ItemLink {
+		if blocks[i].ActionURL != "" && !blocks[i].Footnote && !blocks[i].ItemLink && actionURL(blocks[i].ActionURL, placeholder) {
 			return i
 		}
 	}
@@ -95,6 +96,8 @@ func itemRow(item Item, target, label string, first bool) string {
 	link := ""
 	if target != "" {
 		link = `<a href="` + html.EscapeString(target) + `"` + look{ink: accentText}.attrs("font:"+body.medium()+";text-decoration:none;white-space:nowrap") + `>` + html.EscapeString(verb) + ` →</a>`
+	} else if verb != "" {
+		meta = append(meta, html.EscapeString(verb))
 	}
 	text := `<div` + look{ink: textPrimary}.attrs("font:"+body.medium()) + `>` + html.EscapeString(item.Title) + `</div>`
 	if len(meta) > 0 {

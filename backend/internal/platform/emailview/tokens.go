@@ -134,16 +134,19 @@ func (f Face) medium() string {
 	return strings.Replace(f.font(), fmt.Sprint(f.Weight), fontWeightMedium.light(), 1)
 }
 
-// darkSheet re-colours every role class for a dark reader. Inline styles carry
+// darkSheet repaints every role class for a dark reader. Inline styles carry
 // the light theme, which is what a client that strips <style> shows.
 func darkSheet(scope string) string {
 	var sheet strings.Builder
 	for _, value := range tokens[bgPage:] {
-		if value.Dark == value.Light || !isColor(value.Light) {
-			continue
-		}
 		name := value.Name
-		fmt.Fprintf(&sheet, "%[1]s .c-%[2]s{color:%[3]s!important}%[1]s .bg-%[2]s{background:%[3]s!important}%[1]s .bd-%[2]s{border-color:%[3]s!important}", scope, name, value.Dark)
+		switch {
+		case value.Dark == value.Light:
+		case isColor(value.Light):
+			fmt.Fprintf(&sheet, "%[1]s .c-%[2]s{color:%[3]s!important}%[1]s .bg-%[2]s{background:%[3]s!important}%[1]s .bd-%[2]s{border-color:%[3]s!important}", scope, name, value.Dark)
+		case strings.HasPrefix(name, "shadow-"):
+			fmt.Fprintf(&sheet, "%s .sh-%s{box-shadow:%s!important}", scope, name, value.Dark)
+		}
 	}
 	return sheet.String()
 }

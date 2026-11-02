@@ -74,7 +74,7 @@ func document(language, preheader, card string) string {
 		`<div style="display:none;max-height:0;overflow:hidden" aria-hidden="true">` + html.EscapeString(preheader) + `</div>` +
 		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: bgPage}.attrs("") + `><tr><td align="center" style="padding:32px 12px">` +
 		`<!--[if mso]><table role="presentation" width="600" cellspacing="0" cellpadding="0"><tr><td><![endif]-->` +
-		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: pane, edge: paneEdge}.attrs("table-layout:fixed;max-width:600px;border:1px solid;border-radius:"+rLg.light()+";box-shadow:"+shadowRest.light()) + `>` +
+		`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` + look{fill: pane, edge: paneEdge, shadow: shadowRest}.attrs("table-layout:fixed;max-width:600px;border:1px solid;border-radius:"+rLg.light()) + `>` +
 		card + `</table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
 }
 

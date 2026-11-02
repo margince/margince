@@ -6,6 +6,7 @@ package weekly
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -84,7 +85,7 @@ func mailHeadline(facts []emailview.Fact, words mailcopy.Copy) ([]emailview.Stat
 	var rest []emailview.Fact
 	for _, fact := range facts {
 		tone, lifted := tones[fact.Label]
-		if lifted && len(headline) < 3 && utf8.RuneCountInString(fact.Value) <= headlineFigureRunes {
+		if lifted && len(headline) < 3 && isHeadlineFigure(fact.Value) {
 			headline = append(headline, emailview.Stat{Label: fact.Label, Value: fact.Value, Tone: tone})
 			continue
 		}
@@ -93,6 +94,10 @@ func mailHeadline(facts []emailview.Fact, words mailcopy.Copy) ([]emailview.Stat
 	return headline, rest
 }
 
-// headlineFigureRunes keeps a coverage caption, which runs long, in the list
-// where it reads as a sentence rather than as a figure.
+// isHeadlineFigure keeps a coverage caption in the list, where it reads as a
+// sentence. A caption with no digit, such as Unavailable, is no figure at all.
+func isHeadlineFigure(value string) bool {
+	return utf8.RuneCountInString(value) <= headlineFigureRunes && strings.ContainsAny(value, "0123456789")
+}
+
 const headlineFigureRunes = 14

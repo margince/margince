@@ -12,7 +12,7 @@ import (
 // the dark sheet repaints. A border's width and style come from css; look
 // only adds its colour, after css, so it wins over a shorthand there. Layout
 // classes share the one class attribute, which a second one would void.
-type look struct{ ink, fill, edge token }
+type look struct{ ink, fill, edge, shadow token }
 
 func (l look) attrs(css string, layout ...string) string {
 	classes := append([]string(nil), layout...)
@@ -30,6 +30,7 @@ func (l look) attrs(css string, layout ...string) string {
 	add(l.ink, "c-", "color")
 	add(l.fill, "bg-", "background")
 	add(l.edge, "bd-", "border-color")
+	add(l.shadow, "sh-", "box-shadow")
 	out := ""
 	if len(classes) > 0 {
 		out = ` class="` + strings.Join(classes, " ") + `"`
@@ -51,19 +52,24 @@ func sectionHeading(text string) string {
 // button is the design system's Button: primary for the message's one main
 // action, ghost for every other.
 func button(label, target string, primary bool) string {
-	paint := look{ink: textPrimary, fill: pane, edge: borderSubtle}
+	paint := look{ink: textPrimary, fill: pane, edge: borderSubtle, shadow: shadowRest}
 	if primary {
-		paint = look{ink: textOnAccentControl, fill: accent, edge: accent}
+		paint = look{ink: textOnAccentControl, fill: accent, edge: accent, shadow: shadowRest}
 	}
 	return `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:8px 0 16px"><tr><td` +
-		paint.attrs("border:1px solid;border-radius:"+rControl.light()+";box-shadow:"+shadowRest.light()) +
+		paint.attrs("border:1px solid;border-radius:"+rControl.light()) +
 		`><a href="` + html.EscapeString(target) + `"` + look{ink: paint.ink}.attrs("display:inline-block;padding:9px 16px;font:"+body.medium()+";text-decoration:none;overflow-wrap:anywhere") +
 		`>` + html.EscapeString(label) + `</a></td></tr></table>`
 }
 
-// panel is the design system's Panel: the pane fill, its edge and the middle radius.
-func panel(inner, class string) string {
-	return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0"` +
+// panel is the design system's Panel. A list of records is layout; a fact or
+// stat panel stays a data table, so its header cells keep their scope.
+func panel(inner, class string, data bool) string {
+	role := ` role="presentation"`
+	if data {
+		role = ""
+	}
+	return `<table` + role + ` width="100%" cellspacing="0" cellpadding="0"` +
 		look{fill: pane, edge: paneEdge}.attrs("border:1px solid;border-radius:"+rMd.light()+";border-collapse:separate;margin:0 0 20px", class) + `>` + inner + `</table>`
 }
 
@@ -82,7 +88,7 @@ func renderFacts(facts []Fact) string {
 		rows.WriteString(`<tr><th scope="row" align="left" valign="top"` + edge.attrs(hairline(i == 0)+"padding:10px 16px;font:"+body.font()+";width:40%") + `>` + html.EscapeString(fact.Label) +
 			`</th><td valign="top"` + look{ink: textPrimary, edge: borderSubtle}.attrs(hairline(i == 0)+"padding:10px 16px 10px 0;font:"+body.medium()) + `>` + html.EscapeString(fact.Value) + `</td></tr>`)
 	}
-	return panel(rows.String(), "facts")
+	return panel(rows.String(), "facts", true)
 }
 
 // renderStats is the StatStrip at its plate density: figures over labels,
@@ -101,7 +107,7 @@ func renderStats(stats []Stat) string {
 		values.WriteString(`<td valign="bottom"` + look{ink: ink, edge: borderSubtle}.attrs(side+"padding:14px 16px 2px;font:"+headingXLarge.font()) + `>` + html.EscapeString(stat.Value) + `</td>`)
 		labels.WriteString(`<th scope="col" align="left" valign="top"` + look{ink: textSecondary, edge: borderSubtle}.attrs(side+"padding:0 16px 14px;font:"+bodySmall.font()) + `>` + html.EscapeString(stat.Label) + `</th>`)
 	}
-	return panel(`<tr>`+values.String()+`</tr><tr>`+labels.String()+`</tr>`, "stats")
+	return panel(`<tr>`+values.String()+`</tr><tr>`+labels.String()+`</tr>`, "stats", true)
 }
 
 func toneInk(tone Tone) token {

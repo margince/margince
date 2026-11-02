@@ -5,6 +5,7 @@ package compose
 
 import (
 	"slices"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -23,10 +24,10 @@ func mailWorkItem(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *tim
 	if item.Title != nil && *item.Title != "" {
 		label = *item.Title
 	}
-	if label == "" {
+	row := emailview.Item{Title: mailcopy.OneLine(label), Verb: mailWorkAction(item, words)}
+	if strings.TrimSpace(row.Title) == "" {
 		return emailview.Item{}, false
 	}
-	row := emailview.Item{Title: mailcopy.OneLine(label), Verb: mailWorkAction(item, words)}
 	if item.Detail != nil && *item.Detail != "" {
 		row.Lines = append(row.Lines, emailview.Line{Text: mailcopy.OneLine(*item.Detail)})
 	}
