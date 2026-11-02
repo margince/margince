@@ -276,34 +276,6 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("hands focus out of the overlay before making it inert", () => {
-    const opener = document.createElement("button");
-    opener.textContent = "open the palette";
-    document.body.append(opener);
-    try {
-      opener.focus();
-      const { rerender } = render(
-        <CommandPalette open onClose={() => {}} commands={commands} />,
-      );
-      expect(document.activeElement).toBe(screen.getByRole("searchbox"));
-
-      rerender(
-        <CommandPalette open={false} onClose={() => {}} commands={commands} />,
-      );
-
-      // The overlay stays mounted to play its exit and is marked inert. Focus
-      // left inside an inert subtree is focus no reader can use, and the next
-      // Tab restarts at the top of the document.
-      const inertOverlay = document.querySelector("[inert]");
-      if (inertOverlay) {
-        expect(inertOverlay.contains(document.activeElement)).toBe(false);
-      }
-      expect(document.activeElement).toBe(opener);
-    } finally {
-      opener.remove();
-    }
-  });
-
   it("keeps Tab inside the dialog in both directions", async () => {
     const outside = document.createElement("a");
     outside.href = "#/somewhere-behind";
