@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// "Cancelled" writes the status from the card; "Update" opens a dialog that PATCHES
-// the existing meeting, because a second activity would leave the original unanswered.
+// "Held" and "Mark as canceled" write the status from the card. "Add notes"
+// opens a dialog that PATCHES the existing meeting, because a second activity
+// would leave the original unanswered.
 
 import {
   type QueryKey,
@@ -10,9 +11,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useId, useState } from "react";
-import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { ifMatch, requireVersion } from "../api/version";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
@@ -34,11 +33,12 @@ import { useT } from "../i18n";
 import { outgoingBody } from "../lib/activitybody";
 import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
-import { problemFieldErrorsOf, unwrap } from "../lib/problem";
+import { problemFieldErrorsOf } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
 import { useMeetingOutcome } from "./taskactions";
+import { writeMeetingOutcome } from "./taskactions.rowwrites";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -131,10 +131,12 @@ function heldDays(
 }
 
 /**
- * MeetingOutcome is the row's answer: cancel it, or say what came of it.
+ * MeetingOutcome is the row's answer: it was held, it was cancelled, or say
+ * more about what came of it.
  *
- * A cancelled meeting is a fact with nothing to add, so Cancel writes it at once.
- * A meeting that happened has an outcome to record, so Update opens a dialog.
+ * "Held" is the commonest answer and a fact with nothing to add, so it writes
+ * at once, as Cancel does. "Add notes" opens the dialog, which also offers
+ * No-show and moves the date.
  */
 export function MeetingOutcome({
   id,
@@ -158,18 +160,54 @@ export function MeetingOutcome({
   // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
+  const answer = (status: "held" | "canceled") =>
+    record.mutate(
+      { id, version, status },
+      {
+        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        // A refused write leaves the row as it was, which looks like a
+        // click that did nothing.
+        onError: (error) => {
+          const managed =
+            status === "canceled" &&
+            problemFieldErrorsOf(error).some(
+              (fault) => fault.code === "calendar_managed",
+            );
+          if (status === "canceled") setRefusedAsManaged(managed);
+          toast.show(
+            t(
+              managed
+                ? "worklist.verb.meetingCancelInCalendar"
+                : "worklist.verb.meetingOutcomeFailed",
+            ),
+            { tone: "danger" },
+          );
+        },
+      },
+    );
   return (
     <>
       <Button
         pending={record.isPending}
         aria-label={
           title
-            ? t("worklist.verb.meetingUpdateFor", { subject: title })
+            ? t("worklist.verb.meetingHeldFor", { subject: title })
+            : undefined
+        }
+        onClick={() => answer("held")}
+      >
+        {t("worklist.verb.meetingHeld")}
+      </Button>
+      <Button
+        pending={record.isPending}
+        aria-label={
+          title
+            ? t("worklist.verb.meetingAddNotesFor", { subject: title })
             : undefined
         }
         onClick={() => setOpen(true)}
       >
-        {t("worklist.verb.meetingUpdate")}
+        {t("worklist.verb.meetingAddNotes")}
       </Button>
       {cancellable && !refusedAsManaged && (
         <Button
@@ -179,31 +217,7 @@ export function MeetingOutcome({
               ? t("worklist.verb.meetingCanceledFor", { subject: title })
               : undefined
           }
-          onClick={() =>
-            record.mutate(
-              { id, version, status: "canceled" },
-              {
-                onSuccess: () =>
-                  toast.show(t("worklist.verb.meetingOutcomeRecorded")),
-                // A refused write leaves the row as it was, which looks like a
-                // click that did nothing.
-                onError: (error) => {
-                  const managed = problemFieldErrorsOf(error).some(
-                    (fault) => fault.code === "calendar_managed",
-                  );
-                  setRefusedAsManaged(managed);
-                  toast.show(
-                    t(
-                      managed
-                        ? "worklist.verb.meetingCancelInCalendar"
-                        : "worklist.verb.meetingOutcomeFailed",
-                    ),
-                    { tone: "danger" },
-                  );
-                },
-              },
-            )
-          }
+          onClick={() => answer("canceled")}
         >
           {t("worklist.verb.meetingCanceled")}
         </Button>
@@ -285,23 +299,23 @@ function MeetingOutcomeDialog({
       transcript: boolean;
       managed: boolean;
     }) => {
-      unwrap(
-        await api.PATCH("/activities/{id}", {
-          params: {
-            path: { id },
-            ...ifMatch(requireVersion(input.seed.version)),
-          },
-          body: input.managed
-            ? { meeting_status: input.draft.status }
+      await writeMeetingOutcome(
+        {
+          id,
+          version: input.seed.version,
+          status: input.draft.status,
+          // A calendar-managed meeting keeps the calendar's subject, notes
+          // and start; only its outcome is written.
+          ...(input.managed
+            ? {}
             : {
-                meeting_status: input.draft.status,
                 subject: input.draft.subject.trim(),
-                // An emptied box clears the note rather than storing "": null is what
-                // the column holds for a meeting nobody has written about.
+                // An emptied box clears the note rather than storing "": null
+                // is what the column holds for a meeting nobody wrote about.
                 body: outgoingBody(input.draft.body, input.transcript),
-                ...input.moved,
-              },
-        }),
+                start: input.moved,
+              }),
+        },
         t,
       );
     },

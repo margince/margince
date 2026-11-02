@@ -180,34 +180,49 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 		source.Condition, source.Code = crmcontracts.HealthSourceCondition(condition), code
 	}
 	add("capture_processing", healthProcessing, classifier.Pending, "records", "operator")
-	add("capture_uncertain", healthWaitingHuman, classifier.Unsure, "records", "mailbox_owner")
+	add("capture_uncertain", healthWaitingHuman, categories.SenderReviews, "records", "mailbox_owner")
 	add("capture_exhausted", healthTechnical, classifier.Exhausted, "records", "operator")
 	add("capture_thread_processing", healthProcessing, categories.MachineThreads, "threads", "operator")
 	add("capture_thread_uncertain", healthWaitingHuman, categories.UncertainThreads, "threads", "mailbox_owner")
-	add("capture_owner_review", healthWaitingHuman, categories.OwnerReviewMailboxes, "mailboxes", "mailbox_owner")
 	add("capture_unread", healthUnverified, categories.UnreadMailboxes, "mailboxes", "mailbox_owner")
 	add("capture_held", healthProcessing, held.Count, "records", "operator")
-	repairUnverified := false
-	for _, sweep := range sweeps {
-		if sweep.LastRun == nil {
-			source.Availability = healthUnobserved
-			continue
-		}
-		if sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeFailed || sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeSkipped {
-			repairUnverified = true
-		}
+	unobserved, repairCondition, repairFailures := captureRepairSummary(sweeps, categories.QuarantinedRepairs)
+	if unobserved {
+		source.Availability = healthUnobserved
 	}
-	if repairUnverified {
-		add("capture_repair_unverified", healthUnverified, 1, "runs", "operator")
-	}
+	add("capture_repair_unverified", repairCondition, repairFailures, "runs", "operator")
 	for _, kind := range capture.ConcernKinds {
 		condition := captureConcernCondition(kind)
 		add("capture_connection_"+kind, condition, concerns[kind], "items", "mailbox_owner")
 	}
 	if classifier.Exhausted > 0 {
 		source.Condition, source.Code = healthTechnical, "capture_exhausted"
+	} else if categories.QuarantinedRepairs > 0 {
+		source.Condition, source.Code = healthTechnical, "capture_repair_unverified"
 	}
 	return source, findings, nil
+}
+
+func captureRepairSummary(sweeps []crmcontracts.CaptureSweepHealth, quarantined int) (bool, crmcontracts.HealthSourceCondition, int) {
+	unobserved, failed := false, false
+	for _, sweep := range sweeps {
+		if sweep.LastRun == nil {
+			unobserved = true
+			continue
+		}
+		if sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeFailed || sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeSkipped {
+			failed = true
+		}
+	}
+	count := quarantined
+	if failed {
+		count++
+	}
+	condition := healthUnverified
+	if quarantined > 0 {
+		condition = healthTechnical
+	}
+	return unobserved, condition, count
 }
 
 func (s Server) intakeSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {

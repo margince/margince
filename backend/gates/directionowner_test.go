@@ -36,6 +36,8 @@ var literalDirection = regexp.MustCompile(`direction\s*(=|<>|IS DISTINCT FROM|IS
 // messageStateReaders read a direction to answer a question about one message
 // or thread, not which sides of a relationship have written.
 var messageStateReaders = gatekit.Waive(map[string]string{
+	"internal/modules/activities/threadedge.go":           "proves that the human who sent one manual outbound message also received the linked message before its provider echo exists; this is per-message ownership evidence, not a count of which side of a relationship wrote",
+	"internal/modules/capture/conversationsuggestions.go": "Selects copied recipients of one stored outbound message under its content gate. It asks about that message, never counts which side of a relationship wrote.",
 	"internal/compose/signalscan.go": "asks whether the account's newest message is ours; a colleague's reply " +
 		"at the account answers us there by design",
 	"internal/modules/activities/awaitingreply.go": "asks whether our message on a thread is still waiting for any answer",

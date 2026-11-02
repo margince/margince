@@ -46,6 +46,11 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Mailboxes = mailboxes
+	owners, err := captureOwnerReviews(ctx, tx)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.OwnerReviews = &owners
 	classifier, err := captureClassifierHealth(ctx, tx, now)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
@@ -83,7 +88,7 @@ func captureHeldMeetings(
 	query := `
 		SELECT count(*), min(a.created_at)
 		  FROM activity a
-		 WHERE ` + filedMeetingHeldClause("a", arg)
+		 WHERE activity_thread_available(a.thread_key) AND ` + filedMeetingHeldClause("a", arg)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&out.Count, &oldest); err != nil {
 		return crmcontracts.CaptureHeldMeetings{}, fmt.Errorf(
 			"compose: counting the filed meetings still held: %w", err)
@@ -266,4 +271,22 @@ func ageSeconds(now time.Time, since *time.Time) *int {
 	}
 	seconds := max(int(now.UTC().Sub(since.UTC()).Seconds()), 0)
 	return &seconds
+}
+
+func captureOwnerReviews(ctx context.Context, tx pgx.Tx) ([]crmcontracts.CaptureOwnerReview, error) {
+	rows, err := tx.Query(ctx, `SELECT r.user_id, u.display_name, r.sender_decisions, r.thread_decisions
+ FROM (`+capture.OwnerReviewCountsSQL()+`) r LEFT JOIN app_user u ON u.id=r.user_id ORDER BY (r.sender_decisions+r.thread_decisions) DESC, u.display_name, r.user_id`)
+	if err != nil {
+		return nil, fmt.Errorf("read mailbox decision owners: %w", err)
+	}
+	defer rows.Close()
+	out := []crmcontracts.CaptureOwnerReview{}
+	for rows.Next() {
+		var owner crmcontracts.CaptureOwnerReview
+		if err := rows.Scan(&owner.UserId, &owner.DisplayName, &owner.SenderDecisions, &owner.ThreadDecisions); err != nil {
+			return nil, fmt.Errorf("reading mailbox review owner: %w", err)
+		}
+		out = append(out, owner)
+	}
+	return out, rows.Err()
 }

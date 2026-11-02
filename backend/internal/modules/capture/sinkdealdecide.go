@@ -45,7 +45,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 		SELECT a.kind, a.channel_provider,
 		       EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'deal'),
 		       (SELECT l.project_id FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project')
-		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project)
+		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project)
 	if err != nil {
 		return facts, fmt.Errorf("capture: reading the mail the deal rule files: %w", err)
 	}

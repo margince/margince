@@ -424,6 +424,7 @@ const danaWrote: components["schemas"]["Activity"] = {
   occurred_at: twoHoursAgo,
   occurred_precision: "instant",
   offers_email: true,
+  email_target: { entity_type: "contact", entity_id: "p-1" },
   is_done: false,
   source: "email",
   captured_by: "connector:email",

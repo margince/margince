@@ -235,7 +235,7 @@ describe("a row's verbs are one line with the row's menu last", () => {
     );
 
     const update = await screen.findByRole("button", {
-      name: en["worklist.verb.meetingUpdateFor"].replace(
+      name: en["worklist.verb.meetingAddNotesFor"].replace(
         "{subject}",
         "Quarterly review with Turbinenbau",
       ),

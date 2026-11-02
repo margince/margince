@@ -176,11 +176,11 @@ var waitingSelectSQL = `
 	             AND lower(addressed.address) = ANY(%[16]s::text[]))),
 	       EXISTS (
 	         SELECT 1 FROM activity ours
-	          WHERE ours.thread_key = a.thread_key
+	          WHERE activity_thread_available(ours.thread_key) AND ours.thread_key = a.thread_key
 	            AND ours.kind = a.kind
 	            AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	            AND ours.direction = 'outbound'
-	            AND ours.archived_at IS NULL
+	            AND (ours.archived_at IS NULL AND activity_thread_available(ours.thread_key))
 	            AND (ours.occurred_at, ours.id) < (a.occurred_at, a.id)),
 	       COALESCE(
 	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.id::text)
@@ -244,9 +244,9 @@ var waitingEligibleSQL = `SELECT a.id ` + waitingEligibleFromSQL
 // waitingEligibleFromSQL is waitingEligibleSQL past its select list, so a
 // caller can draw other columns of the same messages.
 var waitingEligibleFromSQL = `FROM activity a
-	 WHERE a.kind IN ('email', 'message')
+	 WHERE activity_thread_available(a.thread_key) AND a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
-	   AND a.archived_at IS NULL
+	   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 	   AND ` + occurredday.BegunSQL("a", "$%[1]d::timestamptz") + `
 	   AND %[2]s
 	   -- Entity narrowing goes HERE, before WaitingScanCap's LIMIT below: a
@@ -272,9 +272,9 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- them; the machine and colleague rules sit above the scan cap and still
 	   -- apply.
 	   AND NOT EXISTS (SELECT 1 FROM activity request_task
-	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
+	     WHERE activity_thread_available(request_task.thread_key) AND request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id
-       AND (request_task.is_done OR (request_task.archived_at IS NULL
+       AND (request_task.is_done OR ((request_task.archived_at IS NULL AND activity_thread_available(request_task.thread_key))
          AND (request_task.assignee_id = $%[9]d OR $%[9]d = '00000000-0000-0000-0000-000000000000'::uuid
           -- A reminder with the mail's whole reach that this reader can find
           -- stands in for the mail: they see who holds it instead.
@@ -443,7 +443,7 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 		-- the sender has nothing to do with.
 		WHEN 'reply' THEN EXISTS (
 			SELECT 1 FROM activity back
-			WHERE %[6]s
+			WHERE activity_thread_available(back.thread_key) AND %[6]s
 			  AND %[3]s
 			  AND back.direction = 'inbound'
 			  AND back.occurred_at > mine.set_at -- occurred_at raw: since the item was set down, a window's lower edge
@@ -453,7 +453,7 @@ func messageSnoozeLiftedSQL(asOf, backContent string) string {
 		-- any activity id.
 		WHEN 'meeting' THEN EXISTS (
 			SELECT 1 FROM activity m
-			WHERE m.id = mine.reopen_ref AND m.kind = '%[2]s'
+			WHERE activity_thread_available(m.thread_key) AND m.id = mine.reopen_ref AND m.kind = '%[2]s'
 			  AND %[4]s)
 		ELSE false
 	END)`, asOf, KindMeeting, backContent, storekit.MeetingIsOverSQL("m", asOf), occurredday.BegunSQL("back", asOf),

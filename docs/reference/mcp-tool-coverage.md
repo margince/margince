@@ -98,7 +98,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 10 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 4393 |
+| Prompt tokens spent on tools no case requires | 4376 |
 | Use cases | 37 |
 | Acceptance criteria the cases declare, each with a statement | 76 |
 
@@ -327,8 +327,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `find_records` | 1.00 | 8 | `case4_use_the_moment`, `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_activities` | 1.00 | 10 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case9_filed_in_the_wrong_place` |
 | `change_state` | 1.00 | 11 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list` |
+| `change_activities` | 1.00 | 10 | `case1_log_it`, `case42_can_i_answer_on_whatsapp`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case9_filed_in_the_wrong_place` |
 | `read_analytics` | 1.00 | 3 | `case20_put_it_in_the_board_pack` |
 | `send_outbound` | 1.00 | 6 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
@@ -444,7 +444,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 1021 | - | - | - |
+| `read_view` | 1004 | - | - | - |
 | `change_reports` | 664 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

@@ -192,6 +192,10 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		return "", nil, err
 	}
 	current := storekit.CurrentTaskClause("t", now, identities, arg)
+	noStep, err := NoOpenNextStepSQL(ctx, "d.id", "$3", current, arg)
+	if err != nil {
+		return "", nil, err
+	}
 	return fmt.Sprintf(`
 		SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
 		FROM deal d
@@ -200,7 +204,7 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 			WHERE a.kind IN ('call','email','meeting')
-			  AND a.archived_at IS NULL
+			  AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 			  -- The subject lands in an approval every decider of the
 			  -- deal reads, so only a message the whole workspace may
 			  -- read is evidence here; a limited one is its audience's.
@@ -216,11 +220,11 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			LIMIT 1
 		) ev ON true
 		WHERE d.status = 'open' AND d.archived_at IS NULL
-		  AND NOT %[2]s
+		  AND %[2]s
 		ORDER BY d.id
 		LIMIT $2`,
 		storekit.MeetingIsOverSQL("a", "$3"),
-		OpenNextStepSQL("d.id", "$3", current),
+		noStep,
 		relstrength.MeetingCountsSQL("a"),
 		occurredday.BegunSQL("a", "$3"),
 		occurredday.FromSQL("a", "$1")), args, nil

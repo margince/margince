@@ -48,6 +48,9 @@ func (s *Store) Load(ctx context.Context, id ids.UUID) (Delivery, error) {
 	var linkID *ids.UUID
 	var instructionID *ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := ensureDeliveryThreadAvailableTx(ctx, tx, id); err != nil {
+			return err
+		}
 		return tx.QueryRow(ctx, `
 			UPDATE comms_outbound
 			   SET attempts = attempts + 1
@@ -69,7 +72,7 @@ func (s *Store) Load(ctx context.Context, id ids.UUID) (Delivery, error) {
 			&files, &d.SenderKind, &d.TemplateKey, &d.TemplateVersion, &d.PayloadRef,
 			&d.PayloadExpiresAt, &linkID, &d.ExecutionAuthority, &instructionID, &d.InlineLogoKey, &d.DueAt)
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || errors.Is(err, ErrTerminal) {
 		return Delivery{}, ErrTerminal
 	}
 	if err != nil {

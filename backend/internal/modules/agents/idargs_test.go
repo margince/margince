@@ -144,7 +144,7 @@ func (seamProbeProvider) Merge(context.Context, datasource.MergeInput) (datasour
 	return datasource.EntityRef{}, errSeamReached
 }
 
-func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
+func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64, datasource.PromotionDealChoice) (datasource.EntityRef, bool, error) {
 	return datasource.EntityRef{}, false, errSeamReached
 }
 

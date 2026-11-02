@@ -75,17 +75,17 @@ const documentFrom = `deal_room_document d
 // principal: the public download has none. The caller-bound half — may THIS
 // seller see a captured file — is asked once, at add (addDocumentTx).
 //
-// The deal's own Files read applies the same message link and inline-image
+// The deal's own Files read applies the same message link and listed-file
 // rule from storekit. A logo a rep never sees in the area is not shareable by id.
 //
 // Held by: TestRoomDocumentMembershipIsSpelledOnce (backend/internal/modules/dealrooms/documentmembership_test.go)
 var inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	AND ((a.entity_type = 'deal' AND a.entity_id = r.deal_id)
 	  OR (a.entity_type = 'activity' AND ` + storekit.MessageOnDealSQL("a.entity_id", "r.deal_id") + `
-	      AND ` + storekit.NotInlineMailImageSQL("a") + `
+	      AND ` + storekit.ListedMailFileSQL("a") + `
 	      AND EXISTS (
 	        SELECT 1 FROM activity m
-	         WHERE m.id = a.entity_id AND m.archived_at IS NULL
+	         WHERE activity_thread_available(m.thread_key) AND m.id = a.entity_id AND (m.archived_at IS NULL AND activity_thread_available(m.thread_key))
 	           AND m.restricted_at IS NULL AND m.audience = 'workspace')))
 	AND NOT EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = r.deal_id AND h.attachment_id = a.id)`
 
@@ -107,7 +107,7 @@ func sellerReadsTheCarrier(ctx context.Context, arg func(any) int) (string, erro
 		return "", err
 	}
 	return ` AND (a.entity_type <> 'activity' OR EXISTS (
-	        SELECT 1 FROM activity carrier WHERE carrier.id = a.entity_id AND ` + content + `))`, nil
+	        SELECT 1 FROM activity carrier WHERE activity_thread_available(carrier.thread_key) AND carrier.id = a.entity_id AND ` + content + `))`, nil
 }
 
 // ListDocuments returns a room's documents in group-then-position order.

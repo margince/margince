@@ -29,6 +29,7 @@ import {
 import { findingNextStepKey } from "./systemhealth.effect";
 import { useSystemHealth } from "./systemhealth.queries";
 import { FindingPanel } from "./systemhealthfinding";
+import { HealthReadings } from "./systemhealthreadings";
 import { healthTone } from "./systemhealthstatus";
 
 const Diagnostics = lazy(() => import("./systemhealthdiagnostics"));
@@ -120,9 +121,9 @@ function Overview({
 }>) {
   const t = useT();
   const [order, setOrder] = useState<readonly string[]>(
-    report.findings.filter((f) => f.requires_action).map((f) => f.id),
+    actionableFindings(report.findings).map((f) => f.id),
   );
-  const actionable = report.findings.filter((f) => f.requires_action);
+  const actionable = actionableFindings(report.findings);
   const remainingOrder = order.filter((id) =>
     actionable.some((f) => f.id === id),
   );
@@ -133,7 +134,7 @@ function Overview({
     return (ai < 0 ? order.length : ai) - (bi < 0 ? order.length : bi);
   });
   const title = stale
-    ? t("health.incomplete")
+    ? t("health.refreshNeeded")
     : actionable.length
       ? t("health.attention")
       : report.complete
@@ -145,17 +146,13 @@ function Overview({
         <Heading size="small" as="h2">
           {title}
         </Heading>
-        <OverviewStatus report={report} stale={stale} />
+        <OverviewStatus findings={actionable} />
         <Button
           pending={refreshing}
           onClick={async () => {
             const refreshed = await refresh();
             if (refreshed)
-              setOrder(
-                refreshed.findings
-                  .filter((f) => f.requires_action)
-                  .map((f) => f.id),
-              );
+              setOrder(actionableFindings(refreshed.findings).map((f) => f.id));
           }}
         >
           {t("health.refresh")}
@@ -163,6 +160,9 @@ function Overview({
       </ActionRow>
       {changed && <p role="status">{t("health.prioritiesChanged")}</p>}
       <OverviewFindings findings={shown} />
+      {!stale && (
+        <HealthReadings sources={report.sources} findings={report.findings} />
+      )}
       <Disclosure summary={t("health.capabilities")}>
         {report.sources
           .filter((source) => source.availability !== "withheld")
@@ -181,7 +181,7 @@ function OverviewFindings({
   const groups = new Map<string, Report["findings"]>();
   for (const finding of findings) {
     const key =
-      finding.source === "capture"
+      finding.source === "capture" && finding.responsible !== "mailbox_owner"
         ? JSON.stringify([
             finding.source,
             finding.responsible,
@@ -191,32 +191,44 @@ function OverviewFindings({
         : finding.id;
     groups.set(key, [...(groups.get(key) ?? []), finding]);
   }
-  return Array.from(groups, ([key, entries]) =>
+  return Array.from(groups, ([key, entries], index) =>
     entries[0] ? (
       <FindingPanel
         key={key}
         finding={entries[0]}
+        lead={index === 0}
         related={entries.length > 1 ? entries : undefined}
       />
     ) : null,
   );
 }
 
+// Older servers emit the mailbox total alongside the same sender and thread choices.
+function actionableFindings(findings: Report["findings"]) {
+  const actionable = findings.filter((finding) => finding.requires_action);
+  const specificMailReview = actionable.some((finding) =>
+    ["capture_uncertain", "capture_thread_uncertain"].includes(finding.code),
+  );
+  return actionable.filter(
+    (finding) => finding.code !== "capture_owner_review" || !specificMailReview,
+  );
+}
+
 function OverviewStatus({
-  report,
-}: Readonly<{ report: Report; stale: boolean }>) {
+  findings,
+}: Readonly<{ findings: Report["findings"] }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  if (!report.action_count) return null;
-  const tone = report.findings.some(
+  if (!findings.length) return null;
+  const tone = findings.some(
     (f) => f.requires_action && healthTone(f) === "danger",
   )
     ? "danger"
     : "warning";
   return (
     <Badge tone={tone}>
-      {plural("health.actionsNeeded", report.action_count, {
-        count: formatNumber(report.action_count, locale),
+      {plural("health.actionsNeeded", findings.length, {
+        count: formatNumber(findings.length, locale),
       })}
     </Badge>
   );

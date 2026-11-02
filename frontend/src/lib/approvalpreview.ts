@@ -82,6 +82,8 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   promote_lead_archive_source: "approval.preview.promotionArchive",
   promote_create_contact: "approval.preview.promotionCreate",
   promote_fill_contact: "approval.preview.promotionFill",
+  promote_seat_contact_on_existing_deal:
+    "approval.preview.promotionExistingDealEffect",
   promote_open_deal_seat_contact: "approval.preview.promotionDeal",
   promote_queue_duplicate_review: "approval.preview.promotionReview",
   promote_fill_company_industry: "approval.preview.promotionFillIndustry",

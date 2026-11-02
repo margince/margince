@@ -76,6 +76,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	if err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
+	if known, err = s.foldOwnDuplicate(ctx, tx, known, alreadyFiled, rec); err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
 	// The row the other door filed IS the row this capture is about, so the
 	// insert is never attempted. Skipping it rather than inserting and
 	// discarding matters: upsertActivity's ON CONFLICT only covers this

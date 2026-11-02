@@ -319,6 +319,9 @@ func (e Evaluator) createStands(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 // archived by THIS entry: un-archived since, or archived again later, the
 // un-archive would reverse a different archive than the one on screen.
 func (e Evaluator) archiveStands(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, bool, error) {
+	if row.EntityType == entityTypeActivity && activities.IsMeetingCopyArchive(row.Evidence) {
+		return refuse(ReasonNotRestorableByThisPath, "a meeting folded into the copy that stayed"), true, nil
+	}
 	if e.Archived != nil {
 		archived, err := e.Archived(ctx, tx, row.EntityType, row.EntityID)
 		if err != nil {

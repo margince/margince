@@ -209,6 +209,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
+		err = eraser.purgePartyProjections(ctx, tx, subjectEmails)
+	}
+	if err == nil {
 		// The duplicate-pair snapshot, which no cascade reaches because this is
 		// an anonymize: it holds the address and phone number cleared above.
 		err = scrubDedupeEvidence(ctx, tx, []ids.UUID{id}, nil)

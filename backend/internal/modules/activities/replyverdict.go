@@ -88,7 +88,7 @@ func (s *Store) SetReplyVerdict(ctx context.Context, id ids.UUID, verdict, class
 			UPDATE activity
 			   SET reply_verdict = $2, reply_verdict_at = now(), reply_verdict_by = $3
 			 WHERE id = $1 AND reply_verdict IS NULL AND direction = 'inbound'
-			   AND archived_at IS NULL AND audience = 'workspace' AND restricted_at IS NULL`,
+			   AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND audience = 'workspace' AND restricted_at IS NULL`,
 			id, verdict, classifier)
 		if err != nil {
 			return fmt.Errorf("activities: setting reply verdict: %w", err)
@@ -161,7 +161,7 @@ func (s *Store) CorrectReplyVerdict(ctx context.Context, id ids.UUID, verdict *s
 			       reply_verdict_at = CASE WHEN $2::text IS NULL THEN NULL ELSE now() END,
 			       reply_verdict_by = CASE WHEN $2::text IS NULL THEN NULL ELSE $3::text END
 			 WHERE id = $1 AND direction = 'inbound'
-			   AND archived_at IS NULL AND audience = 'workspace' AND restricted_at IS NULL`,
+			   AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND audience = 'workspace' AND restricted_at IS NULL`,
 			id, verdict, who)
 		if err != nil {
 			return fmt.Errorf("activities: correcting reply verdict: %w", err)

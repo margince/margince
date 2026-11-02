@@ -86,7 +86,7 @@ const clearedSenderWidenDue = `EXISTS (
 			   AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending'))
 	   AND i.verdict_reasons = ARRAY['posture']
 	   AND a.counterparty_email = $1
-	   AND a.restricted_at IS NULL`
+	   AND a.restricted_at IS NULL AND activity_thread_available(a.thread_key)`
 
 // ClearedSenderRemainingTx counts what a further pass would still claim, so a
 // caller can prove each pass made progress rather than trusting that it did.

@@ -32,6 +32,6 @@ func citedActivities(evidence, newest string) string {
 	 THEN ` + newest + ` END
 	 FROM jsonb_array_elements(` + evidence + `) source_cite
 	 LEFT JOIN activity source_activity ON source_activity.id = ` + CitedActivityID("source_cite") + `
-	   AND source_activity.archived_at IS NULL
+	   AND (source_activity.archived_at IS NULL AND activity_thread_available(source_activity.thread_key))
 	 WHERE source_cite->>'source_type' = 'activity')`
 }

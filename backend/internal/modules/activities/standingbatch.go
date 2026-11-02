@@ -106,7 +106,7 @@ func citedActivitiesAdmittedBy(
 	}
 
 	rows, err := tx.Query(ctx,
-		"SELECT a.id FROM activity a WHERE "+strings.Join(where, " AND "), args...)
+		"SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND "+strings.Join(where, " AND "), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading %s: %w", asking, err)
 	}

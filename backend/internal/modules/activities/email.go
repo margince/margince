@@ -438,7 +438,7 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	err := tx.QueryRow(ctx,
 		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, '')
 		   FROM activity
-		  WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
+		  WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key)) AND archived_at IS NULL`,
 		id).Scan(&kind, &parent, &root)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return threading{}, apperrors.ErrNotFound

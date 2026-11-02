@@ -11,7 +11,7 @@ func LiveLeadInquiryClause(alias string) string {
 	return "NOT starts_with(COALESCE(" + alias + ".source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "') AND EXISTS (SELECT 1 FROM activity_link incoming" +
 		" JOIN activity request ON request.id = incoming.activity_id WHERE incoming.lead_id = " + alias + ".id" +
 		" AND request.kind = 'email' AND request.direction = 'inbound'" +
-		" AND request.archived_at IS NULL AND request.restricted_at IS NULL" +
+		" AND (request.archived_at IS NULL AND activity_thread_available(request.thread_key)) AND request.restricted_at IS NULL" +
 		" AND NOT starts_with(COALESCE(request.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "'))"
 }
 

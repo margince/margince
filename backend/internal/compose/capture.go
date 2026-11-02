@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -137,16 +138,6 @@ func (c CaptureConfig) logger() *slog.Logger {
 		return c.Logger
 	}
 	return slog.Default()
-}
-
-// WithCaptureConfig records the deployment's capture suppression-list config on
-// the Server so EVERY registry construction — the Gmail one, the vault-rebuilt
-// IMAP/fallback one (WithKeyvault), and the graph-only one (WithGraphCapture) —
-// applies the transactional/free-mail additions, not only the Gmail path. Apply
-// it before WithKeyvault/WithGraphCapture in the option list; omitting it keeps
-// the pinned baselines.
-func WithCaptureConfig(cfg CaptureConfig) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.captureConfig = cfg }
 }
 
 // WarnStaleRates says once, at boot, which `rates:` settings the file still
@@ -266,6 +257,8 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		purgeRemoved = purger.PurgeRemoved
 	}
 	return capture.NewSink(InstallationDB(pool)).
+		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
+		WithPartyReceiptSettlement(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).SettlePartyAdmission).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
@@ -341,6 +334,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 			activities.CancelMeetingByIDTx,
 		).
 		WithMeetingMover(activities.MoveCapturedMeetingFor(capture.SeatHoldsActivityTx)).
+		WithMeetingFolder(foldCapturedMeeting(activities.NewStore(InstallationDB(pool)))).
 		WithCalendarInvitations(resolveCapturedInvitation).
 		// Writing a connector's own reading of a message over a row an importer
 		// ASSERTED. From the module that owns `activity`, for the reason every
@@ -383,7 +377,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// One conversation under one thread key, however a mail program
 		// shortened the References chain and whichever door filed each
 		// message (threadmerge.go).
-		WithThreadJoin(threadJoiner()).
+		WithThreadJoin(threadJoiner(pool)).
 		// The 24-hour trace's payload posture. It rides the Sink because the
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.

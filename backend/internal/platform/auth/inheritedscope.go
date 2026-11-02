@@ -35,8 +35,10 @@ import (
 // aggregate, a capture-side gate) and must still exclude what is held.
 // alias names the activity table in the outer query.
 func ActivityAvailableClause(alias string) string {
-	return alias + ".restricted_at IS NULL"
+	return activityUnrestrictedClause(alias) + " AND activity_thread_available(" + alias + ".thread_key)"
 }
+
+func activityUnrestrictedClause(alias string) string { return alias + ".restricted_at IS NULL" }
 
 // ActivityDiscoverClause is the activity analogue of ScopeClause, and the
 // weaker of the two activity gates: it answers whether the caller may learn
@@ -100,7 +102,7 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
 	return fmt.Sprintf(`%[1]s AND (%[2]s OR %[3]s)`,
-		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg))
+		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg, ActivityAvailableClause("assigned_source")))
 }
 
 // activityReachArms is discovery through the row's own links or its attendance.
@@ -116,13 +118,13 @@ func activityReachArms(p principal.Principal, alias string, arg func(any) int) s
 // thread whose message the holder sent. The holder must still find that source
 // message, so the task tells nobody else that it exists. Its content still
 // needs the source's own content gate (activityContentAudienceArm).
-func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) int) string {
+func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) int, sourceAvailable string) string {
 	source := "assigned_source"
 	return fmt.Sprintf(`(%[1]s.source_system = '%[2]s' AND %[1]s.assignee_id = $%[3]d AND EXISTS (
 	   SELECT 1 FROM activity %[4]s WHERE %[4]s.id = %[1]s.source_activity_id
 	      AND %[5]s AND (%[6]s)))`,
 		alias, provenance.CommitmentTaskSource, arg(p.UserID), source,
-		ActivityAvailableClause(source), activityReachArms(p, source, arg))
+		sourceAvailable, activityReachArms(p, source, arg))
 }
 
 // activityAttendanceArm is the discovery half of membership: the caller was on
@@ -363,7 +365,7 @@ func ensureActivity(ctx context.Context, tx pgx.Tx, id ids.UUID, clauseFor activ
 	}
 	var visible bool
 	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id = $%d AND %s)`, idPos, clause),
+		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND %s)`, idPos, clause),
 		args...).Scan(&visible)
 	if err != nil {
 		return err

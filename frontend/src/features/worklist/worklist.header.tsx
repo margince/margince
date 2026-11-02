@@ -14,9 +14,8 @@ import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { SegmentedControl } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { useLocale, useT } from "../../i18n";
-import { routeHash } from "../../lib/router";
-import { hashWithParams } from "../../lib/urlstate";
-import { viewOfFilter, type WorklistView } from "../../lib/worklistviews";
+import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
+import type { WorklistView } from "../../lib/worklistviews";
 import { completenessText, pillCount } from "./worklist.completeness";
 import { OwnerPicker } from "./worklist.manager";
 import type {
@@ -64,11 +63,12 @@ type LinkedOnlyFilter = (typeof LINKED_ONLY)[number];
 /** Every filter this build can be addressed with — the pills and the links. */
 const ADDRESSABLE: readonly WorklistFilter[] = [...FILTERS, ...LINKED_ONLY];
 
-/** The dial's name in the address. One spelling, read and written. */
-export const WORKLIST_FILTER_PARAM = "filter";
+export {
+  WORKLIST_VIEW_PARAM,
+  worklistLaneHref,
+} from "../../lib/worklistrouting";
 
-/** The view's name in the drawer's address, beside the Brief's own `view`. */
-export const WORKLIST_VIEW_PARAM = "queue_view";
+export { WORKLIST_FILTER_PARAM };
 
 /**
  * The lane the address asks for, or the default.
@@ -100,36 +100,6 @@ export function isLinkedOnlyFilter(
   filter: WorklistFilter,
 ): filter is LinkedOnlyFilter {
   return (LINKED_ONLY as readonly WorklistFilter[]).includes(filter);
-}
-
-/**
- * The address that opens the queue on one narrowing.
- *
- * ONE spelling, because the surfaces that link here count a population first and
- * the count is only true if the door applies the same filter. Two hand-written
- * `#/worklist?filter=…` strings are two chances to typo a value that then falls
- * through to `all` — silently, since an unknown filter is deliberately not an
- * error — and the reader lands on the whole queue under a number describing part
- * of it. That is the defect this function exists to make unrepeatable.
- *
- * Built from the router's own two halves rather than by hand, so an address
- * written here and one the dial on the screen writes are byte-identical — which
- * is what lets the reader arrive by link, press a pill, and press Back.
- */
-export function worklistLaneHref(
-  filter: WorklistFilter,
-  scope: WorklistScope = "mine",
-): string {
-  // A decisions or system link opens its view; new links name the view.
-  const view = viewOfFilter(filter);
-  const params = new Map<string, string>(
-    view === "decisions" || view === "system"
-      ? [[WORKLIST_VIEW_PARAM, view]]
-      : [[WORKLIST_FILTER_PARAM, filter]],
-  );
-  params.set("queue", "1");
-  if (scope !== "mine") params.set("queue_scope", scope);
-  return hashWithParams(routeHash({ screen: "home" }), params);
 }
 
 /**

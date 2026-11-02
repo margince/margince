@@ -58,6 +58,12 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 		}
 		return err
 	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
 	// A zero project is the caller saying it has nothing to propose because the
 	// activity is already filed. Everything below the insert still runs: the
 	// STAMP may be owed even when the filing is not.

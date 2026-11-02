@@ -40,7 +40,7 @@ func ClearCounterpartyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.A
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity
 		   SET audience_reason = NULL
-		 WHERE id = ANY($1) AND audience_reason = $2`,
+		 WHERE activity_thread_available(thread_key) AND id = ANY($1) AND audience_reason = $2`,
 		activityIDs, ReasonCounterparty); err != nil {
 		return fmt.Errorf("activities: clearing the counterparty hold from re-opened rows: %w", err)
 	}
@@ -93,7 +93,7 @@ func ClearConfidentialityVerdictHoldTx(
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity
 		   SET audience_reason = NULL
-		 WHERE id = ANY($1) AND audience_reason = $2`,
+		 WHERE activity_thread_available(thread_key) AND id = ANY($1) AND audience_reason = $2`,
 		activityIDs, ReasonConfidentialMarker); err != nil {
 		return fmt.Errorf("activities: clearing a confidentiality verdict the owner has shared past: %w", err)
 	}
@@ -112,7 +112,7 @@ func ClearMembersOnlyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.Ac
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity
 		   SET audience_reason = NULL
-		 WHERE id = ANY($1) AND audience_reason = $2`,
+		 WHERE activity_thread_available(thread_key) AND id = ANY($1) AND audience_reason = $2`,
 		activityIDs, ReasonMembersOnly); err != nil {
 		return fmt.Errorf("activities: clearing the members-only hold from shared mail: %w", err)
 	}

@@ -8,8 +8,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,7 +44,7 @@ func qualifiedDealCreate(ctx context.Context, tx pgx.Tx, in contacts.QualifyDeal
 		return deals.CreateDealInput{}, err
 	}
 	return deals.CreateDealInput{
-		Name: in.Name, AmountMinor: in.AmountMinor, Currency: in.Currency,
+		Name: in.Name, AmountMinor: in.AmountMinor, Currency: in.Currency, CompanyID: in.CompanyID,
 		PipelineID: pipelineID, StageID: stageID, Source: in.Source, OwnerID: in.OwnerID, OwnerExact: true,
 	}, nil
 }
@@ -57,7 +59,15 @@ func (o leadDealOpener) PreviewDealForLead(ctx context.Context, tx pgx.Tx, in co
 		return contacts.QualifyDealInput{}, err
 	}
 	return contacts.QualifyDealInput{
-		Name: ready.Name, AmountMinor: ready.AmountMinor, Currency: ready.Currency,
+		Name: ready.Name, AmountMinor: ready.AmountMinor, Currency: ready.Currency, CompanyID: ready.CompanyID,
 		PipelineID: new(ready.PipelineID.UUID), StageID: new(ready.StageID.UUID), OwnerID: ready.OwnerID, Source: ready.Source,
 	}, nil
+}
+
+func (o leadDealOpener) QualificationDeals(ctx context.Context, tx pgx.Tx, company ids.CompanyID, cursor *string) ([]crmcontracts.Deal, storekit.Page, error) {
+	return o.deals.ListDealsTx(ctx, tx, deals.ListDealsInput{CompanyID: &company, Status: new("open"), WritableOnly: true, Limit: new(25), Cursor: cursor}, deals.CustomColumns{})
+}
+
+func (o leadDealOpener) HoldQualificationDeal(ctx context.Context, tx pgx.Tx, company ids.CompanyID, deal ids.UUID) error {
+	return deals.LockOpenMatchingDealTx(ctx, tx, company.UUID, deal)
 }

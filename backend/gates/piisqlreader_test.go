@@ -88,15 +88,22 @@ func sqlLiterals(t *testing.T, path string) []string {
 	return out
 }
 
-// erasureCascadeFiles are the sources that make up the Art. 17 cascade — the
-// files EraseContact's own transaction executes SQL from. It is a LIST because
-// the cascade spans more than one file, and a gate pinned to a single path
-// silently stops covering a table the moment its scrub is extracted to a
-// neighbour. It is deliberately NOT the whole privacy
-// package: retention.go also writes subject tables, and letting a retention
-// sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
-// exists to prevent.
+// Erasure spans privacy and its durable owner drains. Enumerating those files
+// catches extracted scrubs without letting retention writes count as erasure.
 var erasureCascadeFiles = []string{
+	// Erasure invalidates immediately; the durable worker clears inaccessible staged projections in bounded units.
+	"internal/modules/capture/activitypurge.go",
+	"internal/modules/capture/threadprivacy.go",
+	"internal/modules/capture/threadinvalidation.go",
+	"internal/modules/capture/threadrepairrefresh.go",
+	"internal/modules/capture/threadinvalidationfault.go",
+	"internal/modules/capture/threadrepair.go",
+	"internal/modules/capture/threadrepairapply.go",
+	"internal/modules/capture/threadrepairload.go",
+	"internal/modules/capture/threadtopiccache.go",
+	// Capture owns the projection purge reached through privacy.RawCapturePurger.
+	"internal/modules/capture/partysourceerase.go",
+	"internal/modules/privacy/partyprojections.go",
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",

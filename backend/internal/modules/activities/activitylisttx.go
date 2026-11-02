@@ -27,6 +27,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.WithOutsideParty {
+		in.outsideParty = outsidePartyClause(ctx, tx)
+	}
 	limit := storekit.ClampLimit(in.Limit)
 	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
 	if err != nil {
@@ -48,7 +51,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	err = perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
 		rows, err := tx.Query(ctx,
 			`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
-				` FROM activity a WHERE `+strings.Join(where, " AND ")+
+				` FROM activity a WHERE activity_thread_available(a.thread_key) AND `+strings.Join(where, " AND ")+
 				order+sprintf(" LIMIT %d", limit+1),
 			waitingListArgs(in, args)...)
 		if err != nil {

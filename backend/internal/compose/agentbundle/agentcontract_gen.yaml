@@ -6155,6 +6155,52 @@ paths:
                     page: {next_cursor: null, has_more: false}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listContactConversationSuggestions
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |-
+        Both the contact and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConversationSuggestionListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listLeadConversationSuggestions
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |-
+        Both the lead and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConversationSuggestionListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /worklist/ready:
     put:
       tags: [Brief]
@@ -8906,9 +8952,11 @@ components:
       description: |-
         The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
         no times and a write changes nothing, because either would rest on a partial picture of the
-        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
-        calendar and the provider's reason are in the server log only. It clears once the host
-        repairs the calendar or the provider answers again.
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings. When
+        the host, signed in themselves, reads their own availability, `details.calendar` names the
+        calendar id that failed; an agent, any other reader and every public page get no calendar.
+        The provider's reason is in the server log only. It clears once the host repairs the calendar
+        or the provider answers again.
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
@@ -9369,6 +9417,21 @@ components:
         version:
           allOf: [{$ref: '#/components/schemas/RowVersion'}]
           description: The activity's version, for the If-Match its own actions send.
+    ConversationSuggestion:
+      type: object
+      required: [address, display_name, activity_id]
+      properties:
+        address: {type: string}
+        display_name: {type: string}
+        activity_id: {type: string, format: uuid}
+    ConversationSuggestionListResponse:
+      type: object
+      required: [data, scan_limited]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationSuggestion'}
+        scan_limited: {type: boolean}
     DedupeCandidate:
       type: object
       required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide, can_merge, keep_id]
@@ -10252,6 +10315,11 @@ components:
           items: {$ref: '#/components/schemas/ActivityReference'}
         computed_at: {type: string, format: date-time, description: When this value was last recomputed (fixed-clock reproducible).}
         last_interaction: {type: [string, 'null'], format: date-time, description: Timestamp of the most recent qualifying interaction; null when there are none.}
+        last_engaged:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
         inbound_90d: {type: integer, minimum: 0, description: Count of qualifying inbound interactions in the trailing 90-day window.}
         outbound_90d: {type: integer, minimum: 0, description: Count of qualifying outbound interactions in the trailing 90-day window.}
     ActivityReference:
@@ -13236,7 +13304,8 @@ components:
         two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
-        outbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where this colleague wrote to them.}
+        outbound_90d: {type: integer, minimum: 0, description: "Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent."}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d."}
         last_inbound_at: {type: [string, 'null'], format: date-time, description: When they last replied to this colleague. Null means they never have.}
         last_outbound_at: {type: [string, 'null'], format: date-time, description: When this colleague last wrote to them.}
     ContactNetwork:
@@ -16029,6 +16098,20 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Pipeline'}}
         page: {$ref: '#/components/schemas/PageInfo'}
+    ActivityEmailTarget:
+      type: object
+      additionalProperties: false
+      required: [entity_type, entity_id]
+      description: >-
+        The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
+      properties:
+        entity_type: {type: string, enum: [contact, lead, company]}
+        entity_id: {type: string, format: uuid}
+        refusal:
+          type: string
+          enum: [archived, no_address, lead_closed]
+          description: >-
+            Why no email goes to the target: `archived` for an archived contact, `no_address` for a contact or lead with no address an email may use, and `lead_closed` for a lead that was promoted or disqualified.
     ActivityLink:
       type: object
       required: [entity_type, entity_id]
@@ -16386,7 +16469,9 @@ components:
         offers_email:
           type: boolean
           description: >-
-            Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, described on `ReplyRecipient`. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. A client offers Write email only when this is true, and reads the address from reply-recipient.
+            Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for.
+        email_target:
+          $ref: '#/components/schemas/ActivityEmailTarget'
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         imported_from:
@@ -17501,7 +17586,7 @@ components:
           enum: [human, system]
           readOnly: true
           description: 'Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.'
-        qualified_deal_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal opened by the qualify call that promoted this lead, when one was asked for.'}
+        qualified_deal_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal joined or opened by the qualify call that promoted this lead, when one was asked for.'}
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
@@ -17639,6 +17724,10 @@ components:
             note: {type: [string, 'null']}
         deal:
           $ref: '#/components/schemas/QualifyDealRequest'
+        existing_deal_id:
+          type: string
+          format: uuid
+          description: Link an open, writable deal of the resolved employer instead of opening one. Mutually exclusive with deal.
         create_company:
           type: boolean
           default: false
@@ -17656,7 +17745,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset, also for a lead linked to a company. The deal's id lands
+        and its company is the contact's resolved employer when one exists. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: {type: [string, 'null'], format: uuid}
@@ -17695,7 +17784,7 @@ components:
           type: boolean
           description: True if promotion merged into an existing contact (no duplicate); false if a new contact was created.
         lead_id: {type: string, format: uuid}
-        deal_id: {type: [string, 'null'], format: uuid, description: 'The deal opened alongside, when the request asked for one.'}
+        deal_id: {type: [string, 'null'], format: uuid, description: 'The deal opened or linked alongside, when the request asked for one.'}
     DemoteLeadRequest:
       type: object
       required: [reason]

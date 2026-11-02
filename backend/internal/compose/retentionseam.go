@@ -64,7 +64,7 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 // copy of it in privacy would be a second answer to the same question, and the
 // half that drifted would leave originals behind while reporting success.
 func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
-	return capture.NewPendingStore(db).PurgeRawCaptureTx
+	return capture.NewPendingStore(db)
 }
 
 //nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.

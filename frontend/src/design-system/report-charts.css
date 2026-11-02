@@ -187,6 +187,21 @@
   width: 2px;
   background: var(--textPrimary);
 }
+.report-chart-row[data-tone="success"] .report-chart-bullet-fill {
+  background: var(--success);
+}
+.report-chart-row[data-tone="warning"] .report-chart-bullet-fill {
+  background: var(--warning);
+}
+.report-chart-row[data-tone="danger"] .report-chart-bullet-fill {
+  background: var(--danger);
+}
+.report-chart-row[data-tone="neutral"] .report-chart-bullet-fill {
+  background: var(--textSecondary);
+}
+.report-chart .btn.report-chart-row:disabled {
+  opacity: 1;
+}
 .report-chart-range {
   background: transparent;
   border-bottom: 1px solid var(--borderSubtle);

@@ -126,7 +126,6 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
-	"internal/modules/privacy:deleteNoticeActivities":   "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
 	"internal/modules/privacy:deleteLeadRecordsTx":      "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
 	"internal/modules/contacts:RestoreContactTx":        "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
 	"internal/modules/contacts:RestoreCompanyTx":        "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
@@ -188,7 +187,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// MACHINE ATTRIBUTION AND DERIVED STATE. None of these carries anything a
 	// reader is shown as the record's own content, and each is chosen by a pass
 	// with its own selection rather than by a caller naming a row.
-	"internal/modules/activities:writeDerivedAudienceTx":        "narrowing a message to its participants, pinned on the audience the caller read under FOR UPDATE. Narrowing an archived message is not a change to what anybody may see of a live one, and refusing it would leave the derivation half-applied",
 	"internal/modules/activities:reKeyActivity":                 "restating the provider identity of a captured message so a later delivery folds into it rather than duplicating it. An absorbed echo is archived by design and is exactly the row whose identity has to be re-keyed",
 	"internal/modules/activities:StampCorrespondenceForProject": "the retention CLASSIFICATION, which decides how long a message must be kept. An archived message still has a statutory window, and the stamp only ever fills a class nobody has set",
 	"internal/modules/signals:dropUnattributable":               "the resolver recording that a market signal matched no company. The row is one the resolution pass selected, and the write moves resolution_state alone — no content, no link",

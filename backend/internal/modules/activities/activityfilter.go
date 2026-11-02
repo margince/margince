@@ -28,6 +28,19 @@ import (
 // the write uses. A second list here drifted from linkTargets and silently
 // dropped two kinds: an activity could be linked to a lead or a project and
 // then be unfindable by filtering on the very link that was just written.
+// appendEntityLinkClauses narrows the read to one record's activities, when
+// the input names one.
+func appendEntityLinkClauses(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.EntityType == nil || in.EntityID == nil {
+		return where, nil
+	}
+	entityWhere, err := entityLinkFilter(in, arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, entityWhere...), nil
+}
+
 func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string, err error) {
 	column := linkColumn(*in.EntityType)
 	if column == "" {
@@ -111,12 +124,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		return nil, "", nil, nil, err
 	}
 	where = append(where, timelineNarrowings(in, reminders, arg)...)
-	if in.EntityType != nil && in.EntityID != nil {
-		entityWhere, entityErr := entityLinkFilter(in, arg)
-		if entityErr != nil {
-			return nil, "", nil, nil, entityErr
-		}
-		where = append(where, entityWhere...)
+	if where, err = appendOutsidePartyClause(in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
+	if where, err = appendEntityLinkClauses(in, arg, where); err != nil {
+		return nil, "", nil, nil, err
 	}
 	if in.LinkedToDeals != nil {
 		where = append(where, sprintf(
@@ -285,7 +297,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	if in.ConversationOf != nil {
 		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity conversation_anchor
-		          WHERE conversation_anchor.id = $%d AND %s)`,
+		          WHERE activity_thread_available(conversation_anchor.thread_key) AND conversation_anchor.id = $%d AND %s)`,
 			arg(*in.ConversationOf), SameCorrespondenceSQL("a", "conversation_anchor", sprintf("$%d::text", arg(in.conversationDomain)), deliveredToSQL(in.ConversationDeliveredTo, arg))))
 	}
 	if in.Query != nil && *in.Query != "" {

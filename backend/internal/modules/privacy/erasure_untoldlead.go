@@ -43,7 +43,7 @@ type UntoldLead struct {
 // EraseUntoldLeadTx deletes the lead and the records that carry its details,
 // on the caller's transaction, so the deletion commits with the failure that
 // caused it.
-func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
+func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead, purgers ...RawCapturePurger) error {
 	if err := refuseAnythingButAnUntoldLead(ctx, tx, in); err != nil {
 		return err
 	}
@@ -65,7 +65,11 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	if in.LeadID.IsZero() {
 		return nil
 	}
-	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID)
+	var purge RawCapturePurger
+	if len(purgers) > 0 {
+		purge = purgers[0]
+	}
+	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID, purge)
 	if err != nil {
 		return err
 	}
@@ -91,23 +95,30 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 // deleteNoticeActivities deletes the timeline row of the notice mail, which
 // takes the delivery and its decisions by cascade: the delivery holds the
 // recipient address. A row under a statutory hold stays where it is.
-func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID ids.UUID) ([]ids.UUID, error) {
+func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID ids.UUID, purge RawCapturePurger) ([]ids.UUID, error) {
 	if deliveryID.IsZero() {
 		return nil, nil
 	}
 	// Only a delivery filed under this lead: a delivery id naming somebody
 	// else's mail deletes nothing.
-	rows, err := tx.Query(ctx, `
-		DELETE FROM activity
-		 WHERE id IN (SELECT o.activity_id FROM comms_outbound o
-		                JOIN activity_link al ON al.activity_id = o.activity_id AND al.lead_id = $2
-		               WHERE o.id = $1)
-		   AND restricted_at IS NULL
-		RETURNING id`, deliveryID, leadID)
+	rows, err := tx.Query(ctx, `SELECT id FROM activity
+ WHERE id IN (SELECT o.activity_id FROM comms_outbound o
+ JOIN activity_link al ON al.activity_id=o.activity_id AND al.lead_id=@lead
+ WHERE o.id=@delivery) AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"lead": leadID, "delivery": deliveryID})
 	if err != nil {
+		return nil, fmt.Errorf("locking the untold lead's notice mail: %w", err)
+	}
+	notices, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, err
+	}
+	if err := purgeErasedActivityProjectionsTx(ctx, tx, notices, purge); err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM activity WHERE id=ANY(@notices::uuid[])`, pgx.NamedArgs{"notices": notices}); err != nil {
 		return nil, fmt.Errorf("deleting the untold lead's notice mail: %w", err)
 	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	return notices, nil
 }
 
 // deleteLeadRecordsTx deletes the lead row and the records no foreign key

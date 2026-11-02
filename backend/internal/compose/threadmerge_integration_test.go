@@ -123,7 +123,8 @@ func threadKeyOfMessage(t *testing.T, e *integration.Env, messageID string) stri
 // Every table with a thread_key column is one the merge rewrites. A table
 // added later with such a column and left out would keep the retired key, and
 // its rows would silently stop belonging to their conversation.
-func TestEveryThreadKeyedTableIsMerged(t *testing.T) {
+func threadKeyedTables(t *testing.T) []string {
+	t.Helper()
 	e := integration.Setup(t)
 	var tables []string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -142,11 +143,14 @@ func TestEveryThreadKeyedTableIsMerged(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the schema: %v", err)
 	}
+	return tables
+}
+
+func TestEveryThreadKeyedTableIsMerged(t *testing.T) {
+	tables := threadKeyedTables(t)
 	merged := slices.Sorted(slices.Values(threadMergedTables))
 	if !slices.Equal(tables, merged) {
-		t.Fatalf("tables with a thread_key column: %v\nmergeThreadsTx rewrites: %v\n"+
-			"add the missing table to mergeThreadsTx (compose/threadmerge.go) through the module that owns it",
-			tables, merged)
+		t.Fatalf("tables with a thread_key column: %v; mergeThreadsTx covers: %v", tables, merged)
 	}
 }
 
@@ -183,16 +187,16 @@ func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
 	// Rep2's conversation, rooted on a message Rep1 never received.
 	captureThreadMail(t, e, e.Rep2, threadMail(seatAddress(t, e, e.Rep2), "private@counterparty.example",
 		"Mon, 01 Jun 2026 08:00:00 +0000", "private-root@counterparty.example", "private-root@counterparty.example"))
+	privateKey := threadKeyOfMessage(t, e, "private@counterparty.example")
 	// Rep1 receives mail claiming to reply to it.
 	captureThreadMail(t, e, e.Rep1, threadMail(seatAddress(t, e, e.Rep1), "forged@counterparty.example",
 		"Tue, 02 Jun 2026 08:00:00 +0000", "private@counterparty.example", "private@counterparty.example"))
 
-	if got := threadKeyOfMessage(t, e, "private@counterparty.example"); got != "private-root@counterparty.example" {
+	if got := threadKeyOfMessage(t, e, "private@counterparty.example"); got != privateKey {
 		t.Fatalf("the other seat's message moved to thread %q; a reference it never held must not reach it", got)
 	}
-	// Nor is the forged mail merged INTO that conversation: it keeps the root
-	// its own header gives it, which the private thread does not carry.
-	if got := threadKeyOfMessage(t, e, "forged@counterparty.example"); got == "private-root@counterparty.example" {
+	// Naming a private message is no proof that this mailbox holds it.
+	if got := threadKeyOfMessage(t, e, "forged@counterparty.example"); got == privateKey {
 		t.Fatal("a mail naming a message its seat never held was merged into that message's thread")
 	}
 }
@@ -290,10 +294,21 @@ func TestAMailboxTakingOverAnImportJoinsItsThread(t *testing.T) {
 	captureThreadMail(t, e, owner, threadMail(addr, "imported-two@counterparty.example",
 		"Tue, 02 Jun 2026 08:00:00 +0000", "imported-one@counterparty.example", "imported-one@counterparty.example"))
 
-	want := "hubspot-thread-root@counterparty.example"
-	for _, id := range []string{"imported-one@counterparty.example", "imported-two@counterparty.example", "mailbox-reply@counterparty.example"} {
-		if got := threadKeyOfMessage(t, e, id); got != want {
-			t.Errorf("%s is filed under thread %q, want the imported thread %q", id, got, want)
+	for messageID, want := range map[string]string{
+		"imported-one@counterparty.example":  "hubspot-thread-root@counterparty.example",
+		"imported-two@counterparty.example":  "imported-two@counterparty.example",
+		"mailbox-reply@counterparty.example": "imported-two@counterparty.example",
+	} {
+		if got := threadKeyOfMessage(t, e, messageID); got != want {
+			t.Errorf("%s is filed under %q, want %q before common mailbox proof", messageID, got, want)
+		}
+	}
+	captureThreadMail(t, e, owner, threadMail(addr, "imported-one@counterparty.example",
+		"Mon, 01 Jun 2026 08:00:00 +0000", ""))
+	finishThreadRepairs(t, e)
+	for _, messageID := range []string{"imported-one@counterparty.example", "imported-two@counterparty.example", "mailbox-reply@counterparty.example"} {
+		if got := threadKeyOfMessage(t, e, messageID); got != "imported-one@counterparty.example" {
+			t.Errorf("%s is filed under %q after both mailbox copies arrived", messageID, got)
 		}
 	}
 }

@@ -40,7 +40,7 @@ func TestEveryFactThePromotionDecidesOnMovesTheDigest(t *testing.T) {
 	asReviewed := func() reviewedPromotion { return reviewedPromotion{trigger: "meeting_booked", evidence: &evidence} }
 	reviewed := mustDigest(t, reviewedPromotionFacts(), asReviewed())
 	changes := map[string]func(f *promotionEmployerFacts, p *reviewedPromotion){
-		"format":           func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Format = "employer.v2" },
+		"format":           func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.Format += ".different" },
 		"linked company":   func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.LinkedCompany = new(ids.NewV7()) },
 		"create company":   func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.CreateCompany = true },
 		"typed name":       func(f *promotionEmployerFacts, _ *reviewedPromotion) { f.TypedName = "Northwind Ltd" },

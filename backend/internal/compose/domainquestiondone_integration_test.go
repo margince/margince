@@ -81,6 +81,7 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 		t.Helper()
 		captures++
 		captureStaffMail(t, e, staffMail{sourceID: fmt.Sprintf("fresh-question-%d", captures), from: "hello@" + domain, mailbox: e.Rep1, to: []string{rep1Email}, occurred: evidenceAt})
+		finishThreadRepairs(t, e)
 		if _, err := e.Contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{Domain: domain}); err != nil {
 			t.Fatal(err)
 		}

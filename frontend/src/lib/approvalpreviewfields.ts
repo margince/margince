@@ -115,6 +115,7 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_contact_owner: "approval.preview.promotionContactOwner",
   promotion_contact_email: "approval.preview.promotionContactEmail",
   promotion_contact_phone: "approval.preview.promotionContactPhone",
+  promotion_existing_deal: "approval.preview.promotionExistingDeal",
   promotion_existing_contact: "approval.preview.promotionExistingContact",
   promotion_set_origin: "approval.preview.promotionSetOrigin",
   promotion_company_industry: "approval.preview.promotionCompanyIndustry",

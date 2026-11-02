@@ -290,9 +290,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
-	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
+	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1`
 	if archived == storekit.LiveOnly {
-		q += ` AND a.archived_at IS NULL`
+		q += ` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
 	}
 	a, err := scanActivity(tx.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -456,6 +456,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 			return err
 		}
+		if in.WithOutsideParty {
+			in.outsideParty = outsidePartyClause(ctx, tx)
+		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err
@@ -468,7 +471,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		return perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
 			return tx.QueryRow(ctx,
 				`SELECT count(*) FROM (SELECT `+activityColumns(content)+
-					` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+					` FROM activity a WHERE activity_thread_available(a.thread_key) AND `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
 		})
 	})
 	return total, err

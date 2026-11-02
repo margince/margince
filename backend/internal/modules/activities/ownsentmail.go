@@ -41,8 +41,8 @@ func ClaimOwnSentMailTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityI
 	err := tx.QueryRow(ctx, `
 		UPDATE activity a
 		   SET direction = $4, counterparty_email = $3, counterparty_outbound_attested = true
-		  FROM (SELECT direction FROM activity WHERE id = $1) was
-		 WHERE a.id = $1 AND a.kind = 'email' AND a.archived_at IS NULL
+		  FROM (SELECT direction FROM activity WHERE activity_thread_available(thread_key) AND id = $1) was
+		 WHERE a.id = $1 AND a.kind = 'email' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND ((a.direction = $5 AND a.counterparty_email = $2)
 		     OR (a.direction = $4 AND a.counterparty_email = $3 AND NOT a.counterparty_outbound_attested))
 		RETURNING was.direction`,

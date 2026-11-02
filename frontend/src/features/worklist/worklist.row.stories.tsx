@@ -652,7 +652,8 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       title: "Quarterly review with Turbinenbau",
       occurred_at: "2026-09-02T09:00:00Z",
       because: [{ kind: "outcome_unrecorded" }],
-      actions: [],
+      // The seat may answer it, so the row draws Held, Add notes and Cancel.
+      actions: ["decide", "cancel"],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
     },
   },

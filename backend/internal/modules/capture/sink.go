@@ -25,6 +25,7 @@ import (
 // Sink is the one connector.Sink implementation — the chokepoint every
 // captured record passes on its way into the domain.
 type Sink struct {
+	partyReceiptSettlement PartyReceiptSettlement
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
 	stager MergeStager
@@ -32,6 +33,7 @@ type Sink struct {
 	// address is the contact's. Nil tells nobody, and the lead is still not made.
 	contactArrivals ContactArrivals
 	ensurer         CounterpartyEnsurer
+	partyAuthority  PartyAuthority
 	channelEnsurer  ChannelCounterpartyEnsurer
 	transactional   *TransactionalList
 	// files is the timeline module's attachment writer. Nil is a role that
@@ -75,7 +77,10 @@ type Sink struct {
 	cancelMeetingByID MeetingCloserByID
 	// moveMeeting moves a captured meeting the calendar rescheduled. Nil never
 	// moves one.
-	moveMeeting       MeetingMover
+	moveMeeting MeetingMover
+	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
+	// both.
+	foldMeeting       MeetingFolder
 	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is
@@ -207,10 +212,8 @@ var (
 	_ connector.MessageRemover   = (*Sink)(nil)
 )
 
-// Upsert lands one normalized record: raw original + domain row +
-// audit + captured event, one transaction, idempotent on the natural
-// key. Replays return the existing row and write NOTHING new — an
-// at-least-once sync loop costs no duplicate audit entries.
+// Upsert commits original evidence, domain state and its audit/event together.
+// A replay resolves the same natural identity and reconciles newly learned evidence.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
 	rec = maskCapturedCredentials(rec)
@@ -258,25 +261,18 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
-			// FIRST of everything that touches an activity row in this
-			// transaction, alias adoption included: adoption recomputes the
-			// audience of every message it adopts, which locks those rows, and a
-			// transaction holding one before it asks for the merge lock is the
-			// cycle takeMergeLockFirst exists to break.
-			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
-				return err
-			}
 			var err error
-			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
-				return err
-			}
-			// Stored only now, so the original's privacy question sees the record
-			// staging sees, after it was read against the seat's own addresses.
-			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
+			if rec, fields, err = s.prepareCapturedActivityTx(ctx, tx, actor.UserID, rec, fields); err != nil {
 				return err
 			}
 			ref, activityCreated, decision, err = s.captureActivity(ctx, tx, rec, fields)
-			return err
+			if err != nil {
+				return err
+			}
+			if ref.Type == datasource.EntityActivity {
+				return s.finishCapturedThreadTx(ctx, tx, ids.From[ids.ActivityKind](ref.ID), rec)
+			}
+			return nil
 		case LeadFields:
 			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
 				return err
@@ -311,6 +307,7 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 		// surfaced as a capture failure (the 60s p95 already delivered).
 		s.ensureCounterparty(ctx, rec, ref, decision)
 	}
+	s.admitCapturedParties(ctx, rec, ref)
 	// The project ladder runs on the same terms as the counterparty step —
 	// after the commit, in its own transaction, never failing the capture —
 	// and on EVERY capture of the activity rather than only the first.

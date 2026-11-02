@@ -48,8 +48,8 @@ type OverdueLoad struct {
 var overdueLoadSQL = `
 	SELECT COALESCE(a.assignee_id, '00000000-0000-0000-0000-000000000000'::uuid), count(*)
 	  FROM activity a
-	 WHERE a.kind = 'task' AND NOT a.is_done
-	   AND a.archived_at IS NULL
+	 WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND NOT a.is_done
+	   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 	   AND ` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` %[4]s $%[1]d
 	   AND %[2]s
 	   AND %[3]s

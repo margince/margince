@@ -213,7 +213,7 @@ const meetingQuery = `
 	                    SELECT json_build_object('at', pa.occurred_at, 'date_only', pa.occurred_precision = 'day')
 	                    FROM activity pa
 	                    JOIN activity_participant pp ON pp.activity_id = pa.id
-	                    WHERE pp.contact_id = p.id AND pa.archived_at IS NULL
+	                    WHERE pp.contact_id = p.id AND (pa.archived_at IS NULL AND activity_thread_available(pa.thread_key))
 	                      AND pa.id <> a.id AND pa.occurred_at <= a.occurred_at -- occurred_at raw: a touch before this meeting, an ordering of rows
 	                      AND %[9]s
 	                      AND pa.audience = 'workspace'
@@ -276,12 +276,15 @@ const meetingQuery = `
 	  -- account running two engagements carries two open deals, and picking by
 	  -- close date alone named whichever happened to land first — a header
 	  -- confidently about the other body of work. Nulls sort last, so an
-	  -- unattributed meeting keeps the old ordering exactly.
+	  -- unattributed meeting keeps the old ordering exactly. After the project,
+	  -- an open deal wins over a closed one: a meeting is prepared for the
+	  -- deal still in play, whatever the closed one's close date was.
 	  ORDER BY (pr.id IS NOT NULL AND dd.project_id = pr.id) DESC,
+	           (dd.status = 'open') DESC,
 	           dd.expected_close_date NULLS LAST, dd.id
 	  LIMIT 1
 	) d ON TRUE
-	WHERE a.id = $%[3]d AND a.kind = 'meeting' AND a.archived_at IS NULL`
+	WHERE a.id = $%[3]d AND a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`
 
 // roomScopes is every row-scope clause the meeting statement composes, each
 // deciding what the caller may be TOLD rather than filtering afterwards.

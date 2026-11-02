@@ -58,7 +58,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectPos := arg(id)
-	where := []string{"a.archived_at IS NULL"}
+	where := []string{"(a.archived_at IS NULL AND activity_thread_available(a.thread_key))"}
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return ProjectActivityFacts{}, err

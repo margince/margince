@@ -73,20 +73,22 @@ func (s *Service) UndismissedAdvice(
 	if !auth.ReadGranted(ctx, "company") {
 		return nil, nil
 	}
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+	err := database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+				return err
+			}
+			in, err := s.suggestionInputsFor(ctx, tx, companyID, now)
+			if err != nil {
+				return err
+			}
+			if !in.advisable() {
+				return nil
+			}
+			found := candidateSuggestions(companyID, now, in)
+			kept, err = s.withoutDismissed(ctx, tx, companyID, found)
 			return err
-		}
-		in, err := s.suggestionInputsFor(ctx, tx, companyID, now)
-		if err != nil {
-			return err
-		}
-		if !in.advisable() {
-			return nil
-		}
-		found := candidateSuggestions(companyID, now, in)
-		kept, err = s.withoutDismissed(ctx, tx, companyID, found)
-		return err
+		})
 	})
 	return kept, err
 }

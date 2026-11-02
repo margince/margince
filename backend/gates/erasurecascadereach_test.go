@@ -7,6 +7,7 @@ package gates
 
 import (
 	"go/ast"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,6 +36,26 @@ import (
 func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 	t.Parallel()
 	reached := filesReachableFrom(t, "internal/modules/privacy", "EraseContact")
+	delegated := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		delegated = delegated || gatekit.CallsAny(file, []string{"PurgePartySourcesForEmailsTx"})
+	}
+	if !delegated {
+		t.Fatal("subject erasure no longer calls the party-source owner's purge seam")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgePartySourcesForEmailsTx"))
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgeActivityProjectionsTx"))
+	batch := functionNamed(t, gatekit.ModuleRoot(t), "internal/modules/capture/threadrepair.go", "ThreadRepairBatchTx")
+	unit := functionNamed(t, gatekit.ModuleRoot(t), "internal/modules/capture/threadrepair.go", "threadRepairUnitTx")
+	if !gatekit.CallsAny(batch, []string{"invalidateThreadContentUnitTx"}) || !gatekit.CallsAny(unit, []string{"refreshThreadRepairUnitTx"}) {
+		t.Fatal("the durable repair drain must consume erased-source invalidations and refresh their staged projections")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "invalidateThreadContentUnitTx"))
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "refreshThreadRepairUnitTx"))
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {

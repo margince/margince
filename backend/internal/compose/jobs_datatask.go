@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -85,6 +86,10 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	more, err := runQueuedThreadRepairs(ctx, w.pool)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
 	outcome, err := engine.Execute(ctx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
@@ -95,7 +100,7 @@ func (w *dataTaskRunWorker) Work(ctx context.Context, _ *river.Job[DataTaskRunAr
 	if outcome.Busy {
 		return river.JobSnooze(dataTaskBusyWait)
 	}
-	if outcome.More {
+	if outcome.More || more {
 		return river.JobSnooze(w.pace)
 	}
 	return nil
@@ -112,6 +117,9 @@ func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTas
 		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.discardDeadRuns(ctx); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if err := enqueueThreadRepairRun(ctx, w.pool); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
 	return jobs.FaultContext(ctx, reconcileDataTasks(ctx, engine))
@@ -184,4 +192,30 @@ func dataTaskJobEngine(ctx context.Context, pool *pgxpool.Pool) (context.Context
 	}
 	engine, err := newDataTaskEngine(pool, buildinfo.ReleaseVersion, time.Now)
 	return ctx, engine, err
+}
+
+func runQueuedThreadRepairs(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
+	done := false
+	err := InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
+		_, _, complete, err := capture.ThreadRepairBatchTx(ctx, tx, 100, ids.NewV7(), threadRepairApplier(pool))
+		done = complete
+		return err
+	})
+	return !done, err
+}
+
+func enqueueThreadRepairRun(ctx context.Context, pool *pgxpool.Pool) error {
+	var pending bool
+	err := InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM capture_thread_pending) OR EXISTS(SELECT 1 FROM capture_thread_repair)`).Scan(&pending)
+	})
+	if err != nil || !pending {
+		return err
+	}
+	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
+	if err != nil {
+		return err
+	}
+	_, err = client.Insert(ctx, DataTaskRunArgs{}, dataTaskInsertOpts())
+	return err
 }

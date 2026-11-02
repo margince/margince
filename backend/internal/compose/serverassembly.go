@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -384,6 +386,10 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
+	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
+	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
+		return suggestionSink().ConversationSuggestions(ctx, anchor)
+	}}
 	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
 		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
 		recompute: activities.RecomputeAudienceTx,

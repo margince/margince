@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -112,6 +113,9 @@ func (s *Store) StageControllerTx(ctx context.Context, tx pgx.Tx, in StageContro
 	files, err := json.Marshal(orEmptyFiles(nil))
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("comms: encoding the attachment snapshot: %w", err)
+	}
+	if err := auth.EnsureActivityThreadAvailable(ctx, tx, in.ActivityID.UUID); err != nil {
+		return ids.Nil, err
 	}
 	id := ids.NewV7()
 	args := []any{id, in.ActivityID, ProviderOperatorRelay, in.MessageID, recipients, empty, empty, in.Subject, in.Body, in.HTMLBody, empty, "pending", s.now().UTC(), files, "controller", in.TemplateKey, in.TemplateVersion, nullableText(in.PayloadRef), in.PayloadExpiresAt, nullableID(in.LinkID), in.DueAt, nullableText(in.FromAddress)}

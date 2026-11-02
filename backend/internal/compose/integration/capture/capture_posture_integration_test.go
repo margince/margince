@@ -627,9 +627,9 @@ func TestAClearedThreadIsInheritedOnlyBySendersTheVerdictSaw(t *testing.T) {
 	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
 
 	// A thread the classifier cleared, having seen exactly one address on it.
-	// (Seeded directly: the engine that writes verdicts is a later change, and
-	// this is the rule it will have to satisfy.)
-	seedThreadVerdict(t, e, e.Rep1, "thread-root@acme.example", "cleared", []string{"buyer@acme.example"})
+	// The opener is a real message whose topic and parent identity can be inherited.
+	sync(t, email("buyer@acme.example", "Buyer", captureOwner, "thread-root@acme.example", ""))
+	clearThreadOf(t, e, e.Rep1, "thread-root@acme.example", "buyer@acme.example")
 
 	// A reply from the address the verdict saw takes its answer.
 	sync(t, email("buyer@acme.example", "Buyer", captureOwner,
@@ -652,21 +652,6 @@ func TestAClearedThreadIsInheritedOnlyBySendersTheVerdictSaw(t *testing.T) {
 	// than left carrying an answer this message just contradicted.
 	if got := threadVerdictStatus(t, e, e.Rep1, "thread-root@acme.example"); got != "pending" {
 		t.Fatalf("the ledger is %q after an unseen sender, want pending", got)
-	}
-}
-
-// seedThreadVerdict writes what a classifier concluded about one thread for one
-// seat. The engine that writes these lands with the classifier; this is the
-// shape it must produce, asserted now so that change inherits a spec.
-func seedThreadVerdict(t *testing.T, e *integration.SearchEnv, user ids.UUID, threadKey, status string, seen []string) {
-	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO capture_thread_verdict (thread_key, user_id, status, seen_addresses, resolved_at)
-			VALUES ($1, $2, $3, $4, now())`, threadKey, user, status, seen)
-		return err
-	}); err != nil {
-		t.Fatalf("seeding the thread verdict: %v", err)
 	}
 }
 

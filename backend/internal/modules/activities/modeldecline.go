@@ -100,7 +100,7 @@ func (s *Store) markDeclined(ctx context.Context, id ids.UUID, stamp declineStam
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET `+at+` = now(), `+rulesetCol+` = $2
 			WHERE id = $1 AND `+stamp.offeredSQL("", "$2")+`
-			  AND restricted_at IS NULL AND archived_at IS NULL`, id, ruleset)
+			  AND (restricted_at IS NULL AND activity_thread_available(thread_key)) AND archived_at IS NULL`, id, ruleset)
 		if err != nil {
 			return fmt.Errorf("activities: recording that the models declined the %s: %w", stamp.question, err)
 		}
