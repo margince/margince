@@ -357,4 +357,7 @@ func TestEnsureChannelCounterpartyRefusesAProvenSeatAddress(t *testing.T) {
 	if _, err := e.store.EnsureChannelCounterparty(ctx, other); err != nil {
 		t.Fatalf("a real counterparty must still be created: %v", err)
 	}
+	if n := e.countContactsWithEmail(ctx, t, "stranger@elsewhere.test"); n != 1 {
+		t.Fatalf("%d contacts for the stranger's address, want 1", n)
+	}
 }
