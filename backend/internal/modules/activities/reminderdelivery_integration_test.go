@@ -29,7 +29,7 @@ func asMember(e *sendEnv, member ids.UUID) context.Context {
 }
 
 // A member signed in on two browsers sees a due reminder once. The first tab
-// to claim it shows it; a moved reminder can be claimed again.
+// to claim it shows it; a moved or handed-on reminder can be claimed again.
 func TestADueReminderIsClaimedOncePerMemberAndAgainOnceMoved(t *testing.T) {
 	e := setupSend(t)
 	now := clocktest.Now(t)
@@ -72,5 +72,16 @@ func TestADueReminderIsClaimedOncePerMemberAndAgainOnceMoved(t *testing.T) {
 	}
 	if !claim(rep, moved) {
 		t.Error("the moved reminder could not be claimed again")
+	}
+
+	colleague := ids.From[ids.UserKind](e.other)
+	if _, err := store.UpdateActivity(rep, task, UpdateActivityInput{AssigneeID: &colleague}); err != nil {
+		t.Fatal(err)
+	}
+	if !claim(asMember(e, e.other), moved) {
+		t.Error("the new assignee could not claim a reminder its old assignee had shown")
+	}
+	if claim(rep, moved) {
+		t.Error("the old assignee claimed a reminder on a task handed away")
 	}
 }

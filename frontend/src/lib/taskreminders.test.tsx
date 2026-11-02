@@ -141,6 +141,7 @@ test("a reminder another browser already showed is not shown again", async () =>
   writeStored(STORAGE_KEYS.taskRemindersShown, "[]");
   const second = mount();
   await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(4));
+  await act(async () => {});
   expect(FakeNotification.shown).toHaveLength(1);
   second.unmount();
 });
@@ -158,6 +159,7 @@ test("a claim that fails shows the reminder, and one for a task now gone does no
   globalThis.fetch = failWith(404);
   const gone = mount();
   await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+  await act(async () => {});
   expect(FakeNotification.shown).toHaveLength(0);
   gone.unmount();
 

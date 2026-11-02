@@ -332,6 +332,11 @@ func (h Handlers) ClaimTaskReminderDelivery(w http.ResponseWriter, r *http.Reque
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	// A claim with no instant would answer false, which a tab reads as shown elsewhere.
+	if req.RemindAt.IsZero() {
+		httperr.Write(w, r, httperr.Validation("remind_at", codeRequired, "remind_at names the reminder instant being shown"))
+		return
+	}
 	claimed, err := h.store.ClaimReminderDelivery(r.Context(), pathID[ids.ActivityKind](id), req.RemindAt)
 	if err != nil {
 		writeStoreErr(w, r, err)

@@ -57139,7 +57139,7 @@ type TaggableEntityType string
 
 // TaskReminderClaim defines model for TaskReminderClaim.
 type TaskReminderClaim struct {
-	// Claimed True for the first claim at this instant, false for every later one.
+	// Claimed True for the first claim at this instant and assignee, false for every later one.
 	Claimed bool `json:"claimed"`
 }
 

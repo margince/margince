@@ -5789,11 +5789,12 @@ export interface paths {
          * @description A due reminder is shown as a browser notification while a Margince tab is open. A member
          *     signed in on two browsers would otherwise see it once in each. The first tab to claim a
          *     reminder at its `remind_at` gets `claimed: true` and shows it; every later claim for that
-         *     instant answers false. Moving `remind_at` arms it again.
+         *     instant answers false. Moving `remind_at`, or handing the task to someone else, arms it again.
          *
-         *     Only the task's assignee can claim it, and only while it is open and due at that instant.
-         *     Any other task, including one the caller cannot see, answers `claimed: false`, which says
-         *     nothing about it.
+         *     A claim admits the rows the `reminder_due` list returns: the caller's own open task, due at
+         *     that instant within the list's 30-day window, with content the caller may read. Any other
+         *     task, including one the caller cannot see, answers `claimed: false`, which says nothing
+         *     about it.
          */
         post: operations["claimTaskReminderDelivery"];
         delete?: never;
@@ -25926,7 +25927,7 @@ export interface components {
             remind_at: string;
         };
         TaskReminderClaim: {
-            /** @description True for the first claim at this instant, false for every later one. */
+            /** @description True for the first claim at this instant and assignee, false for every later one. */
             claimed: boolean;
         };
         WebFormValue: {
@@ -63817,6 +63818,8 @@ export interface operations {
                     "application/json": components["schemas"]["TaskReminderClaim"];
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

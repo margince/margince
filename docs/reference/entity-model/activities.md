@@ -502,18 +502,20 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_reminder_delivery
 
-2 columns · primary key `(activity_id)` · referenced by 0 foreign keys
+3 columns · primary key `(activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `delivered_for` | `timestamp with time zone` | yes |  |
+| `delivered_to` | `uuid` | yes | Points at `app_user.id`. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `delivered_to` | `app_user` | deleting the parent deletes this row |
 
 **Indexes**
 
