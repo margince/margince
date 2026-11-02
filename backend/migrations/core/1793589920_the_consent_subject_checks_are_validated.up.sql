@@ -7,9 +7,12 @@
 -- Unlike its siblings, this scan can fail. The columns are not new, so a row
 -- naming both a contact and a lead would refuse it.
 --
--- No writer in the tree can have made such a row. consentproof.go and
--- consentcarry.go each choose a single subject column at the call, and
--- communication_basis and sdr_handoff have always enforced the same rule.
+-- No writer in the tree can have made such a row. consentproof.go names one
+-- subject column per call. consentcarry.go rehomes proof rows by setting the
+-- target column and not clearing the source, which would leave both set. The
+-- only carry whose columns differ is a lead promotion, and its spec has
+-- rehomeProof false, so it skips that statement. communication_basis and
+-- sdr_handoff have always enforced the same rule.
 --
 -- An installation with one anyway, from a hand-run statement or an import,
 -- sees the scan refuse. That is the right answer for a table recording a legal
