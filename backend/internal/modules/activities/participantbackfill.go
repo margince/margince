@@ -58,6 +58,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -120,42 +122,24 @@ func (s *Store) BackfillParticipantsBatch(ctx context.Context, limit int) (int, 
 // rebuilt against them. The repair would appear to work and then silently come
 // undone.
 func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
+	// A seat's address on the other side is ours, not an outside party, as live
+	// capture decides it. The check locks are taken before the set is read.
+	batch, err := readParticipantBatch(ctx, tx, limit)
+	if err != nil || len(batch.ids) == 0 {
+		return 0, err
+	}
+	args := []any{limit}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	pinned := sprintf("AND a.id = ANY($%d)", arg(batch.ids))
+	outside, err := batch.seats.NotCoveredSQL("lower(trim(c.counterparty_email))", "c.user_id", arg)
+	if err != nil {
+		return 0, err
+	}
+	// The other side is a seat when its address is ours. Then no contact or
+	// address stands for it either.
+	theirs := "(nullif(trim(c.counterparty_email), '') IS NULL OR " + outside + ")"
 	rows, err := tx.Query(ctx, `
-		WITH candidate AS (
-		    SELECT a.id, a.direction, a.counterparty_email, o.user_id
-		      FROM activity a
-		      JOIN LATERAL (
-		           -- A row matches at most one arm: its stamp is either
-		           -- human or connector.
-		           SELECT u.id AS user_id
-		             FROM app_user u
-		            WHERE a.captured_by = 'human:' || u.id::text
-		            UNION ALL
-		           -- Class 2: the mailbox owner the connector stamp names.
-		           SELECT u.id
-		             FROM app_user u
-		            WHERE u.id::text = `+auth.ConnectorSeatSQL("a")+`
-		      ) o ON true
-		     WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
-		       -- The same set every other writer of a participant row accepts,
-		       -- rendered from one definition so the four cannot drift apart.
-		       AND a.kind IN (`+relstrength.ParticipantKindSQLList()+`)
-		       AND NOT EXISTS (
-		           SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id)
-		       -- Class 3: a row an importer landed with its author stated. Its
-		       -- captured_by names whoever ran the IMPORT, so class 1 would read
-		       -- that seat as the author and write an edge to the wrong human.
-		       -- Authorship stands in for import here, not for participant work
-		       -- having finished: the create that admits these columns writes
-		       -- the participants it could resolve in the same transaction, so a
-		       -- row with none of them has zero as its answer rather than work
-		       -- outstanding. A writer that stated an author and left the
-		       -- participants to this job would owe a marker of its own.
-		       AND a.source_author_id IS NULL
-		       AND a.source_author_name IS NULL
-		     ORDER BY a.id
-		     LIMIT $1
-		)
+		`+participantCandidatesSQL(pinned)+`
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role)
 		SELECT c.id, r.user_id, r.contact_id, r.address, r.role
 		  FROM candidate c
@@ -176,12 +160,90 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		                ORDER BY l.created_at LIMIT 1),
 		              lower(nullif(trim(c.counterparty_email), '')),
 		              CASE WHEN c.direction = 'inbound' THEN 'from' ELSE 'to' END
+		        WHERE `+theirs+`
   ) r
 		 WHERE r.user_id IS NOT NULL OR r.contact_id IS NOT NULL OR r.address IS NOT NULL
 		ON CONFLICT DO NOTHING
-		RETURNING id, coalesce(address, '')`, limit)
+		RETURNING id, coalesce(address, '')`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("activities: backfilling interaction participants: %w", err)
 	}
 	return foldInsertedParticipants(ctx, tx, rows)
+}
+
+// participantCandidatesSQL is the batch the backfill attributes, bound to $1 as
+// its limit. pinned narrows it further: the insert pins the rows the read locked.
+func participantCandidatesSQL(pinned string) string {
+	return `WITH candidate AS (
+		    SELECT a.id, a.direction, a.counterparty_email, o.user_id
+		      FROM activity a
+		      JOIN LATERAL (
+		           -- A row matches at most one arm: its stamp is either
+		           -- human or connector.
+		           SELECT u.id AS user_id
+		             FROM app_user u
+		            WHERE a.captured_by = 'human:' || u.id::text
+		            UNION ALL
+		           -- Class 2: the mailbox owner the connector stamp names.
+		           SELECT u.id
+		             FROM app_user u
+		            WHERE u.id::text = ` + auth.ConnectorSeatSQL("a") + `
+		      ) o ON true
+		     WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		       -- The same set every other writer of a participant row accepts,
+		       -- rendered from one definition so the four cannot drift apart.
+		       AND a.kind IN (` + relstrength.ParticipantKindSQLList() + `)
+		       AND NOT EXISTS (
+		           SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id)
+		       -- Class 3: a row an importer landed with its author stated. Its
+		       -- captured_by names whoever ran the IMPORT, so class 1 would read
+		       -- that seat as the author and write an edge to the wrong human.
+		       -- Authorship stands in for import here, not for participant work
+		       -- having finished: the create that admits these columns writes
+		       -- the participants it could resolve in the same transaction, so a
+		       -- row with none of them has zero as its answer rather than work
+		       -- outstanding. A writer that stated an author and left the
+		       -- participants to this job would owe a marker of its own.
+		       AND a.source_author_id IS NULL
+		       AND a.source_author_name IS NULL
+		       ` + pinned + `
+		     ORDER BY a.id
+		     LIMIT $1
+		)`
+}
+
+// participantBatch is the rows a backfill pass attributes, and the seat set
+// read after locking their counterparty addresses.
+type participantBatch struct {
+	ids   []ids.UUID
+	seats storekit.SeatAddresses
+}
+
+// readParticipantBatch selects the batch once and locks its addresses, so the
+// insert writes only rows whose addresses this read answered for.
+func readParticipantBatch(ctx context.Context, tx pgx.Tx, limit int) (participantBatch, error) {
+	rows, err := tx.Query(ctx, participantCandidatesSQL("")+`
+		SELECT id, coalesce(lower(nullif(trim(counterparty_email), '')), '') FROM candidate`, limit)
+	if err != nil {
+		return participantBatch{}, fmt.Errorf("activities: reading the backfill's batch: %w", err)
+	}
+	defer rows.Close()
+	var batch participantBatch
+	var addresses []string
+	for rows.Next() {
+		var id ids.UUID
+		var address string
+		if err := rows.Scan(&id, &address); err != nil {
+			return participantBatch{}, fmt.Errorf("activities: reading the backfill's batch: %w", err)
+		}
+		batch.ids = append(batch.ids, id)
+		if address != "" {
+			addresses = append(addresses, address)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return participantBatch{}, fmt.Errorf("activities: reading the backfill's batch: %w", err)
+	}
+	batch.seats, err = storekit.SeatAddressesFor(ctx, tx, addresses...)
+	return batch, err
 }
