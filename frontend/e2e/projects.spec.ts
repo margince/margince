@@ -121,10 +121,12 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   });
   await expect(async () => {
     if (await discardAsk.isVisible()) await discardAsk.click();
-    // Count rather than hidden: two dialogs make a strict-mode violation,
-    // which reports a locator problem for what is a state problem.
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-  }).toPass();
+    // Read the count rather than asserting on the locator. An assertion here
+    // would retry on its own, spending the expect budget before the outer
+    // loop can click an ask that arrived late. Counting also keeps two
+    // dialogs a state problem instead of a strict-mode violation.
+    expect(await page.getByRole("dialog").count()).toBe(0);
+  }).toPass({ timeout: 10_000 });
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
 
