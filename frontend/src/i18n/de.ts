@@ -16223,8 +16223,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strength.detail": "Letzter Kontakt {last}",
   "contact.strength.sentence.weakStale":
     "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
-  "contact.strength.sentence.weakRare":
-    "Schwach: ihr habt nur selten Kontakt. Letzter Kontakt war am {last}.",
+  "contact.strength.sentence.weakFew":
+    "Schwach: kürzlich Kontakt, aber nur wenige geteilte Interaktionen in den letzten 90 Tagen. Letzter Kontakt war am {last}.",
+  "contact.strength.sentence.weakLopsided":
+    "Schwach: kürzlich Kontakt, aber der geteilte Austausch läuft überwiegend in eine Richtung. Letzter Kontakt war am {last}.",
+  "contact.strength.sentence.weakNoReply":
+    "Schwach: kürzlich Kontakt, aber kaum Belege für einen Austausch in beide Richtungen. Letzter Kontakt war am {last}. Der Wert zählt nur geteilte Interaktionen, und darunter wurde keine Antwort dieses Kontakts gezählt.",
+  "contact.strength.sentence.weakOnlyThem":
+    "Schwach: kürzlich Kontakt, aber nur von der anderen Seite. Letzter Kontakt war am {last}. Der Wert zählt nur geteilte Interaktionen, und darunter wurde keine Nachricht deines Teams gezählt.",
+  "contact.strength.sentence.weakUndirected":
+    "Schwach: kürzlich Kontakt, aber die geteilten Interaktionen, etwa Termine, halten nicht fest, wer sich gemeldet hat. Daher zeigen sie keinen Austausch in beide Richtungen. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.moderate":
     "Mittel: ihr habt hin und wieder Kontakt. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.strong":
