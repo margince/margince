@@ -37347,6 +37347,9 @@ type CompanyStrength struct {
 	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
 	Inbound90d *int `json:"inbound_90d,omitempty"`
 
+	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
+	LastEngaged *time.Time `json:"last_engaged,omitempty"`
+
 	// LastInteraction Timestamp of the most recent qualifying interaction; null when there are none.
 	LastInteraction *time.Time `json:"last_interaction,omitempty"`
 
@@ -53097,6 +53100,9 @@ type RelationshipStrength struct {
 
 	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
 	Inbound90d *int `json:"inbound_90d,omitempty"`
+
+	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
+	LastEngaged *time.Time `json:"last_engaged,omitempty"`
 
 	// LastInteraction Timestamp of the most recent qualifying interaction; null when there are none.
 	LastInteraction *time.Time `json:"last_interaction,omitempty"`

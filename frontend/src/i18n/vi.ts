@@ -15852,7 +15852,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.band.strong": "mạnh",
   "contact.strength.detail": "Liên hệ gần nhất {last}",
   "contact.strength.sentence.weakStale":
-    "Yếu: đã khá lâu rồi. Lần liên hệ gần nhất là {last}.",
+    "Yếu: đã khá lâu rồi. Lần gần nhất họ viết cho bạn hoặc gặp bạn là {last}.",
   "contact.strength.sentence.weakFew":
     "Yếu: có liên hệ gần đây, nhưng ít tương tác được chia sẻ trong 90 ngày qua.",
   "contact.strength.sentence.weakLopsided":

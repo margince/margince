@@ -5017,7 +5017,10 @@ public.graph_interaction_edge.graph_interaction_edge_workspace_id_user_id_fkey F
 public.graph_interaction_edge.in_count_90d integer NOT NULL gen=- def=0
 public.graph_interaction_edge.last_at timestamp with time zone NOT NULL gen=- def=-
 public.graph_interaction_edge.last_inbound_at timestamp with time zone gen=- def=-
+public.graph_interaction_edge.last_met_at timestamp with time zone gen=- def=-
 public.graph_interaction_edge.last_outbound_at timestamp with time zone gen=- def=-
+public.graph_interaction_edge.late_count_90d integer gen=- def=-
+public.graph_interaction_edge.late_out_count_90d integer gen=- def=-
 public.graph_interaction_edge.out_count_90d integer NOT NULL gen=- def=0
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, contact_id)
