@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -144,46 +143,17 @@ func contactTagClause(ctx context.Context, tagIDs []ids.UUID, mode storekit.TagM
 	return storekit.TagFilterClause(ctx, contactEntity, "contact.id", tagIDs, mode, arg)
 }
 
-// contactEmployerClause narrows the page to the contacts who work at one account
-// today, or "" when the caller named none.
-//
-// CURRENT PRIMARY employment only. A contact's history carries every employer
-// they have had, and "who works there" is not "who has ever worked there" — a
-// list that answered the second would hand a rep the leavers alongside the
-// staff, which is the wrong answer wearing the right shape. The edge is the
-// one `uq_rel_current_primary_employer` keeps unique per contact, so this
-// matches at most one row per contact and cannot duplicate the page.
-//
-// EXISTS rather than a join, for the same reason the tag filter uses one: a
-// join multiplies a contact by their matching edges, and the keyset cursor
-// would page over those copies as though they were distinct contacts.
-//
-// It carries the EDGE grant, and the reason is worth stating because the edge
-// contributes nothing to the response: filtering by employer answers "who works
-// at Acme" one page at a time, which is a stronger disclosure than the contact
-// count on the account itself — a listing beats a count. A caller refused the
-// edge is refused the FILTER rather than handed an empty page: they asked a
-// question about the pairs, and an empty page would answer it with "nobody",
-// which is false.
+// contactEmployerClause shares current roster membership with the count and tab.
+// The subquery keeps one contact row even when several employment edges match.
 func contactEmployerClause(ctx context.Context, companyID *ids.CompanyID, arg func(any) int) (string, error) {
 	if companyID == nil {
 		return "", nil
 	}
-	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
+	roster, err := CompanyRosterSQL(ctx, storekit.SQLf("$%d", arg(*companyID)), arg)
 	if err != nil {
 		return "", err
 	}
-	if edgeBound == "" {
-		edgeBound = "TRUE"
-	}
-	return storekit.SQLf(`EXISTS (
-		SELECT 1 FROM relationship rel
-		WHERE rel.contact_id = contact.id
-		  AND rel.kind = 'employment'
-		  AND `+employment.CurrentPrimarySQL("rel")+`
-		  AND rel.archived_at IS NULL
-		  AND `+edgeBound+`
-		  AND rel.company_id = $%d)`, arg(*companyID)), nil
+	return "contact.id IN (" + roster + ")", nil
 }
 
 // contactCommonFilters is the shared filter chain a contact list narrows by,

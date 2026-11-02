@@ -1418,7 +1418,7 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: |
-            Contacts who work at this account, by their CURRENT PRIMARY employment edge
+            Contacts who work at this account, by a current employment edge, whether primary or secondary
             (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
@@ -8644,6 +8644,40 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EmailPresentation' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/{id}/reminder-delivery:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: claimTaskReminderDelivery
+      x-agent-access: human-only
+      summary: Claim the one browser notification a due task reminder gets.
+      description: |
+        A due reminder is shown as a browser notification while a Margince tab is open. A member
+        signed in on two browsers would otherwise see it once in each. The first tab to claim a
+        reminder at its `remind_at` gets `claimed: true` and shows it; every later claim for that
+        instant answers false. Moving `remind_at`, or handing the task to someone else, arms it again.
+
+        A claim admits the rows the `reminder_due` list returns: the caller's own open task, due at
+        that instant within the list's 30-day window, with content the caller may read. Any other
+        task, including one the caller cannot see, answers `claimed: false`, which says nothing
+        about it.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TaskReminderClaimRequest' }
+      responses:
+        '200':
+          description: Whether this caller is the one to show the notification.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskReminderClaim' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /activities/{id}/audience:
@@ -37963,6 +37997,22 @@ components:
           items: { $ref: '#/components/schemas/WebFormValue' }
         consent: { $ref: '#/components/schemas/WebFormConsent' }
 
+    TaskReminderClaimRequest:
+      type: object
+      required: [remind_at]
+      properties:
+        remind_at:
+          type: string
+          format: date-time
+          description: The reminder instant the tab is about to show, as the activity list returned it.
+    TaskReminderClaim:
+      type: object
+      required: [claimed]
+      properties:
+        claimed:
+          type: boolean
+          description: True for the first claim at this instant and assignee, false for every later one.
+
     WebFormValue:
       type: object
       required: [name, value]
@@ -42704,8 +42754,7 @@ components:
           readOnly: true
           minimum: 0
           description: >-
-            How many live contacts THE CALLER MAY SEE list this account as their current primary
-            employer (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's
+            How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's
             contact row scope, exactly as the contact list is: a count is a read, and a number that
             moved when a colleague captured a private contact would disclose that contact. Present,
             zero included, on `listCompanies` and `getCompany` — the reads that render the
@@ -44925,7 +44974,7 @@ components:
         key: { type: string, description: Episode key returned by the preview; required for resolve or dismiss. }
         company_id: { type: string, format: uuid, description: Existing company explicitly selected by the user. }
         domain: { type: string, description: Company website explicitly confirmed by the user; creates a missing company only after identity resolution. }
-        employment_status: { type: string, enum: [current, former, unknown], description: Explicit user correction of this episode status. }
+        employment_status: { type: string, enum: [current, former], description: Explicit user correction of this episode status. }
 
     EmploymentImportItem:
       type: object
@@ -48899,7 +48948,7 @@ components:
         # primary — so declaring a default would tell every generated client to
         # materialize `false` and state a decision its caller never made.
         is_current_primary: { type: boolean }
-        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        employment_status: { type: string, enum: [current, former], description: 'current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.' }
         started_precision: { type: string, enum: [day, month] }
         ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
@@ -48913,7 +48962,7 @@ components:
         clear_ended_at: { type: boolean, description: Remove an incorrect end date and its precision. }
         role: { type: [string, 'null'] }
         is_current_primary: { type: boolean }
-        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        employment_status: { type: string, enum: [current, former], description: 'current or former. Omit when you know nothing more: an employment with no status and no end date is current, the same as a link a member adds by hand.' }
         started_precision: { type: string, enum: [day, month] }
         ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }

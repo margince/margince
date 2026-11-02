@@ -7,13 +7,7 @@ import { StandingTimeline } from "../../design-system/standingtimeline";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
-import {
-  type Locale,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { contactTabRoute } from "../../lib/contacttab";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
@@ -27,6 +21,7 @@ import {
   contactTimelineEvents,
   type StandingWords,
 } from "./contactstandingfigures";
+import { strengthSentence } from "./contactstrengthsentence";
 import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -137,40 +132,11 @@ function StrengthHero({
             ? formatDayMonth(strength.last_interaction, locale, zone)
             : "",
         })}
-        explain={strengthExplanation(strength, t, locale, zone)}
+        explain={strengthSentence(strength, t, locale, zone)}
       />
       {caption && caption !== sentence && (
         <p className="pe-standing-caption t-caption">{caption}</p>
       )}
     </div>
   );
-}
-
-type Strength = NonNullable<Contact360["strength"]>;
-
-const STALE_BELOW = 1 / 3;
-
-// One sentence on where the relationship stands, from the band and how long
-// ago the last contact was. The formula behind the score stays out of the way.
-function strengthExplanation(
-  strength: Strength,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): string {
-  const last = strength.last_interaction
-    ? formatDayMonth(strength.last_interaction, locale, zone)
-    : "";
-  if (strength.bucket === "none") {
-    return t("standing.ring.noInteractions");
-  }
-  if (strength.bucket === "weak") {
-    return t(
-      strength.factors.recency < STALE_BELOW
-        ? "contact.strength.sentence.weakStale"
-        : "contact.strength.sentence.weakRare",
-      { last },
-    );
-  }
-  return t(`contact.strength.sentence.${strength.bucket}`, { last });
 }

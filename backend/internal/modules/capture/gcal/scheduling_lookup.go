@@ -132,8 +132,12 @@ func occupancyIntervals(events []occupancyEvent, zone *time.Location) ([]connect
 		if err != nil {
 			return nil, err
 		}
-		if !end.After(start) {
-			return nil, errors.New("calendar: invalid busy interval")
+		occupied, err := connector.CalendarOccupancy(start, end)
+		if err != nil {
+			return nil, err
+		}
+		if !occupied {
+			continue
 		}
 		busy = append(busy, connector.CalendarInterval{EventID: event.ID, Start: start, End: end})
 	}

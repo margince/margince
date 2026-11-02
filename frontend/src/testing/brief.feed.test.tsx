@@ -667,3 +667,37 @@ it("keeps an unlinked subject in the framed title", () => {
     }),
   ).toBeTruthy();
 });
+
+// The day lands under a reader who may already be reading the greeting. What
+// is still out holds the room it will take, so nothing pushes in later.
+it("waits for the day in the card's own frame", () => {
+  stubApi({});
+  const { container } = render(<BriefFeed day={undefined} state="loading" />);
+  const pending = container.querySelector(".brief-triage-pending");
+  expect(pending?.querySelector('[role="status"]')).not.toBeNull();
+  expect(screen.getByText(en["brief.feed.loading"])).toBeTruthy();
+});
+
+it("holds the opening sentence's line while the day is read, and only then", () => {
+  stubApi({});
+  const now = new Date(2026, 6, 5, 9, 30, 0);
+  const glance = (pending: boolean) =>
+    render(
+      <BriefGlance
+        view="morning"
+        firstName="Ada"
+        now={now}
+        day={undefined}
+        week={undefined}
+        pending={pending}
+      />,
+    );
+  const reading = glance(true);
+  expect(
+    reading.container.querySelector(".glance-sentence-pending"),
+  ).not.toBeNull();
+  reading.unmount();
+  // A day that failed to load says nothing rather than holding a grey line.
+  const failed = glance(false);
+  expect(failed.container.querySelector(".glance-sentence-pending")).toBeNull();
+});
