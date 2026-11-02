@@ -29,6 +29,10 @@ type UnlabeledEmail struct {
 	// but the same call also judges whether a REPLY was positive, and that
 	// question is only meaningful about a message somebody sent us.
 	Inbound bool
+	// Version is the row's version when it was read. SetCaptureLabel applies
+	// the verdict only to that version. Text that changed during the model
+	// call is classified again, not labelled from its previous text.
+	Version int64
 }
 
 // UnlabeledCaptureEmails reads the oldest connector-captured emails not
@@ -59,7 +63,7 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 			       -- which is the safe way round — the message is still labelled,
 			       -- and it is asked no reply question rather than having its
 			       -- direction guessed.
-			       coalesce(direction = 'inbound', false)
+			       coalesce(direction = 'inbound', false), version
 			FROM activity
 			WHERE activity_thread_available(thread_key) AND `+ClassifyBacklogPredicate("$3")+`
 			ORDER BY occurred_at
@@ -70,7 +74,7 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 		defer rows.Close()
 		for rows.Next() {
 			var m UnlabeledEmail
-			if err := rows.Scan(&m.ID, &m.Subject, &m.Body, &m.Inbound); err != nil {
+			if err := rows.Scan(&m.ID, &m.Subject, &m.Body, &m.Inbound, &m.Version); err != nil {
 				return err
 			}
 			out = append(out, m)
@@ -84,10 +88,11 @@ func (s *Store) UnlabeledCaptureEmails(ctx context.Context, ruleset string, limi
 }
 
 // SetCaptureLabel writes one verdict, reporting whether it applied. The
-// capture_label IS NULL predicate is the CAS: a concurrent pass that
-// labeled the row first wins and this write reports applied=false — the
-// earlier verdict stands, never an overwrite.
-func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) (applied bool, err error) {
+// capture_label IS NULL predicate is the CAS. A concurrent pass that labeled
+// the row first wins, and this write reports applied=false. The earlier verdict
+// stands, never an overwrite. A row whose version moved since readVersion also
+// reports applied=false, because the verdict is about old text.
+func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string, readVersion int64) (applied bool, err error) {
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// All THREE exclusions are re-tested at WRITE time, not only in the
 		// backlog that selected this row. The classifier reads a batch, spends a
@@ -114,7 +119,7 @@ func (s *Store) SetCaptureLabel(ctx context.Context, id ids.UUID, label string) 
 		tag, err := tx.Exec(ctx, `
 			UPDATE activity SET capture_label = $2, capture_labeled_at = now()
 			WHERE id = $1 AND capture_label IS NULL AND (archived_at IS NULL AND activity_thread_available(thread_key))
-			  AND audience = 'workspace' AND restricted_at IS NULL`, id, label)
+			  AND audience = 'workspace' AND restricted_at IS NULL AND version = $3`, id, label, readVersion)
 		if err != nil {
 			return fmt.Errorf("activities: setting capture label: %w", err)
 		}

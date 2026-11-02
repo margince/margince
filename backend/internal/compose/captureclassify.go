@@ -234,7 +234,7 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 
 // commitLabel writes one label and the reply verdict riding it.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
-	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label)
+	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	if err != nil {
 		return false, err
 	}
