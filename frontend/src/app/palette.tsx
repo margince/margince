@@ -327,10 +327,7 @@ export function CommandPalette({
               setPicked(null);
             }}
             onKeyDown={(event) => {
-              // No Escape arm here: `useDialogFocus` answers it for the whole
-              // dialog. It was wired to this input alone, so Escape pressed
-              // while focus sat on a result row — which is where the arrow keys
-              // put a reader — did nothing at all.
+              // No Escape arm here: `useDialogFocus` answers it for the whole dialog.
               if (event.key === "ArrowDown") {
                 event.preventDefault();
                 setPicked(clamp(selected + 1));
@@ -342,6 +339,9 @@ export function CommandPalette({
                 !isImeCommit(event) &&
                 rows[selected]
               ) {
+                // Closing returns focus to the opener, and Enter's keypress would
+                // then activate it: the top-bar search button reopens the palette.
+                event.preventDefault();
                 run(rows[selected]);
               }
             }}
