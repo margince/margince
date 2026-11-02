@@ -108,13 +108,27 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
   // The saved drawer stays open for more edits, so close it before the page
-  // behind it is used again. Escape while the save is in flight would ask to
-  // discard it, so wait for the group to leave its edit state first.
+  // behind it is used again.
+  //
+  // Escape asks before closing while any unsaved claim is still held, and a
+  // claim can outlive the Save button it belongs to: the claim is released in
+  // an unmount cleanup, and under load the ask wins the race often enough to
+  // red the lane. There is nothing to discard, since the save landed above, so
+  // take the ask when it comes rather than assuming it will not.
   await expect(
     page.getByRole("button", { name: "Speichern", exact: true }),
   ).toBeHidden();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+  const discardAsk = page.getByRole("button", {
+    name: "Änderungen verwerfen",
+    exact: true,
+  });
+  await expect(async () => {
+    if (await discardAsk.isVisible()) await discardAsk.click();
+    // Count rather than hidden: two dialogs make a strict-mode violation,
+    // which reports a locator problem for what is a state problem.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }).toPass();
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
 
