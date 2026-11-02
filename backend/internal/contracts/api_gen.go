@@ -61645,11 +61645,14 @@ type WorklistItem struct {
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
-	// Host Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
-	// seat whose calendar it came off. `kind` is always `user`.
+	// Host Who hosted the meeting a `meeting` or `meeting_outcome` row is about. That
+	// is the colleague who organized it, where exactly one seat is bound to the
+	// organizer. Otherwise it is the seat whose calendar the meeting came off.
+	// `kind` is always `user`.
 	//
 	// A fact about the meeting, kept apart from `owner`, which says who answers
-	// for the row. Absent where no calendar claims the meeting. `label` follows
+	// for the row and stays the calendar's seat. Absent where no calendar claims
+	// the meeting and no colleague organized it. `label` follows
 	// `WorklistOwner.label`: absent where this caller may not resolve the name.
 	Host *WorklistOwner `json:"host,omitempty"`
 
