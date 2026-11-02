@@ -92,8 +92,8 @@ func emailTargets(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUID
 	return out, nil
 }
 
-// liveFirst keeps the live contacts, or the archived ones when none is live:
-// a row on one live and one archived contact writes to the live one.
+// liveFirst keeps the live contacts, or the archived ones when none is live.
+// A row on one live and one archived contact writes to the live one.
 func liveFirst(contacts []emailCandidate) []emailCandidate {
 	var live []emailCandidate
 	for _, contact := range contacts {

@@ -5,8 +5,8 @@
 
 package integration
 
-// The record an email about a task goes to, read off the activity and off
-// reply-recipient for the same row, so the verb and the To cannot part.
+// The record an email about a task goes to. It is read off the activity and
+// off reply-recipient for the same row, so the verb and the To cannot part.
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func (s *standingEnv) leadAt(t *testing.T, name, address string) activities.Acti
 	return activities.ActivityLinkInput{EntityType: "lead", EntityID: lead}
 }
 
-// closeLead disqualifies a lead after a task was filed under it, which is how a
+// closeLead disqualifies a lead after a task was filed under it. That is how a
 // task comes to sit on a closed lead: a closed lead takes no new links.
 func (s *standingEnv) closeLead(t *testing.T, lead activities.ActivityLinkInput) {
 	t.Helper()
