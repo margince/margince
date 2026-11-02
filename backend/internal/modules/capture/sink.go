@@ -77,7 +77,10 @@ type Sink struct {
 	cancelMeetingByID MeetingCloserByID
 	// moveMeeting moves a captured meeting the calendar rescheduled. Nil never
 	// moves one.
-	moveMeeting       MeetingMover
+	moveMeeting MeetingMover
+	// foldMeeting retires one of two live rows holding one meeting. Nil keeps
+	// both.
+	foldMeeting       MeetingFolder
 	resolveInvitation CalendarInvitationResolver
 	// takeOverAsserted writes this connector's reading of a message over a row
 	// an importer asserted. Nil leaves an asserted incumbent alone, which is

@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -129,16 +130,27 @@ func (s *Sink) activityHoldingIdentity(
 	if key == "" || s.resolveIdentity == nil {
 		return ids.ActivityID{}, false, nil
 	}
+	if kind == s.meetingIdentityKind {
+		// Two seats' first syncs of one meeting would both find the key free
+		// and both insert. The lock makes the second wait for the first's
+		// claim, which READ COMMITTED then shows it.
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+			"activity_identity:"+kind+":"+key); err != nil {
+			return ids.ActivityID{}, false, fmt.Errorf("capture: waiting for a meeting's identity: %w", err)
+		}
+	}
 	return s.resolveIdentity(ctx, tx, kind, key)
 }
 
 // claimRecordIdentity files a newly captured row under the identity the other
 // door will look for.
 //
-// A LOSING claim is not an error, and the claim's own contract says so: a
-// racing arrival got there first and holds the identity, while this row keeps
-// its own natural key, its links and its content. Nothing is retried here —
-// the next sync of either door resolves onto whichever row won.
+// A LOSING claim is not an error, and the claim's own contract says so: an
+// arrival through another door got there first and holds the identity, while
+// this row keeps its own natural key, its links and its content. Two calendar
+// syncs of one meeting cannot race here, because activityHoldingIdentity locks
+// the key. A row that lost anyway is folded at its seat's next sync
+// (foldOwnDuplicate).
 func (s *Sink) claimRecordIdentity(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord,
 ) error {
