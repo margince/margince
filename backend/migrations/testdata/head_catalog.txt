@@ -544,6 +544,7 @@ public.activity_reminder_delivery.activity_reminder_delivery_delivered_to_fkey F
 public.activity_reminder_delivery.activity_reminder_delivery_pkey PRIMARY KEY (activity_id)
 public.activity_reminder_delivery.delivered_for timestamp with time zone NOT NULL gen=- def=-
 public.activity_reminder_delivery.delivered_to uuid NOT NULL gen=- def=-
+public.activity_reminder_delivery_delivered_to_idx CREATE INDEX activity_reminder_delivery_delivered_to_idx ON public.activity_reminder_delivery USING btree (delivered_to)
 public.activity_reminder_delivery_pkey CREATE UNIQUE INDEX activity_reminder_delivery_pkey ON public.activity_reminder_delivery USING btree (activity_id)
 public.activity_reply_verdict_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_reply_verdict_history.activity_id uuid NOT NULL gen=- def=-

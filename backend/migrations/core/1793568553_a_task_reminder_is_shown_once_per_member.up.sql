@@ -11,3 +11,5 @@ CREATE TABLE activity_reminder_delivery (
     delivered_for timestamptz NOT NULL,
     delivered_to  uuid NOT NULL REFERENCES app_user(id) ON DELETE CASCADE
 );
+
+CREATE INDEX activity_reminder_delivery_delivered_to_idx ON activity_reminder_delivery (delivered_to);

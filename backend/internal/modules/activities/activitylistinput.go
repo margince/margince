@@ -22,8 +22,11 @@ import (
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
 	mailIdentities   map[string][]string
-	Cursor           *string
-	Limit            *int
+	// onlyID narrows a read to one row, so a caller can ask whether this list
+	// returns it without a second spelling of the list's clauses.
+	onlyID *ids.ActivityID
+	Cursor *string
+	Limit  *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.

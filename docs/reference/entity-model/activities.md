@@ -519,6 +519,7 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `activity_reminder_delivery_delivered_to_idx`: `btree (delivered_to)`
 - `activity_reminder_delivery_pkey`: `unique, btree (activity_id)`
 
 ## activity_reply_verdict_history
