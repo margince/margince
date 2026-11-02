@@ -53547,11 +53547,14 @@ export interface components {
             recipients?: components["schemas"]["WorklistContactFacts"][];
             company?: components["schemas"]["WorklistCompanyFacts"];
             /**
-             * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about: the
-             *     seat whose calendar it came off. `kind` is always `user`.
+             * @description Who hosted the meeting a `meeting` or `meeting_outcome` row is about. That
+             *     is the colleague who organized it, where exactly one seat is bound to the
+             *     organizer. Otherwise it is the seat whose calendar the meeting came off.
+             *     `kind` is always `user`.
              *
              *     A fact about the meeting, kept apart from `owner`, which says who answers
-             *     for the row. Absent where no calendar claims the meeting. `label` follows
+             *     for the row and stays the calendar's seat. Absent where no calendar claims
+             *     the meeting and no colleague organized it. `label` follows
              *     `WorklistOwner.label`: absent where this caller may not resolve the name.
              */
             host?: components["schemas"]["WorklistOwner"];
