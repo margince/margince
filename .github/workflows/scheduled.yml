@@ -328,11 +328,17 @@ jobs:
         run: make tools
       - name: Gate binaries onto PATH
         run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
-      # Every step that needs the network has finished by here.
       - name: Start the dev infra stack (compose + app role)
         run: make db-up
       - name: Compile the suites at the real date
         run: make -C backend build
+      # `build` reads no `_test.go`, so a module only a tagged test imports is
+      # still missing here. It has to arrive while certificates verify: a runner
+      # 200 days ahead trusts none, and the fetch fails as `[setup failed]` on a
+      # package that reads as a finding about the tree.
+      - name: Fetch what only the tagged tests import
+        run: make -C backend fetch-test-deps
+      # Every step that needs the network has finished by here.
       # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
       # The restore below is the copy that matters: raising the skew here and
       # leaving a literal there hands the runner back with its clock in the
