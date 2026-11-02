@@ -19,15 +19,15 @@ import (
 // seat named it keeps every mail somebody answers for, so mail nobody owns
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
 //
-// A named seat's read starts from the mail its To line names, and keep drops
-// what the scan would refuse anyway (DirectMailActivitiesSQL).
-func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, keep string) string {
+// A named seat's read starts from its mail that the waiting horizon can still
+// admit (waitingMailKeptSQL), never from its whole history.
+func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, asOf, days string) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
 	seat := fmt.Sprintf("$%d::uuid", arg(*owner))
 	return fmt.Sprintf("(a.kind = 'email' AND a.id = ANY (%s) AND %s = %s)",
-		storekit.DirectMailActivitiesSQL(identities, seat, keep), soleDirectSeatSQL(identities), seat)
+		storekit.DirectMailActivitiesSQL(identities, seat, waitingMailKeptSQL(asOf, days)), soleDirectSeatSQL(identities), seat)
 }
 
 // mailSeats is whose mail one waiting scan reads before WaitingScanCap. It is
@@ -43,14 +43,14 @@ type mailSeats struct {
 }
 
 // responsibilitySQL keeps a set's share of the unnarrowed read. Mail that no
-// seat or several seats answer for is nobody's, so no set reaches it. keep is
-// personalMailResponsibilitySQL's.
-func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, keep string) string {
+// seat or several seats answer for is nobody's, so no set reaches it. asOf and
+// days are the scan's waiting horizon.
+func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, asOf, days string) string {
 	if m.unowned {
 		return "(a.kind <> 'email')"
 	}
 	if m.owner != nil || !m.bySeats {
-		return personalMailResponsibilitySQL(m.owner, identities, arg, keep)
+		return personalMailResponsibilitySQL(m.owner, identities, arg, asOf, days)
 	}
 	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
 }
