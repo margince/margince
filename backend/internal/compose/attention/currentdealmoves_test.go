@@ -9,42 +9,32 @@ import (
 	"slices"
 	"testing"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// laneDay is a day whose at-risk lane raised these deals.
-func laneDay(deals ...ids.UUID) crmcontracts.Attention {
-	risk := make([]crmcontracts.AttentionItem, 0, len(deals))
-	for _, id := range deals {
-		risk = append(risk, crmcontracts.AttentionItem{Subject: &crmcontracts.AttentionSubject{Type: subjectDeal, Id: openapi_types.UUID(id)}})
-	}
-	return crmcontracts.Attention{AtRisk: &risk}
-}
-
+// A deal the backlog tail reached is advised as a ranked one is, in the same
+// read as the rest of the page.
 func TestCurrentAdviceReadsThePageDealsOnceForQueueAndFocus(t *testing.T) {
 	first, second, tail := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	boundary := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{
-		first: cardMove("create_task", nil), second: cardMove("open_task", map[string]any{"activity_id": ids.NewV7()}),
+		first:  cardMove("create_task", nil),
+		second: cardMove("open_task", map[string]any{"activity_id": ids.NewV7()}),
+		tail:   cardMove("create_task", nil),
 	}}
 	svc := (&Service{}).WithDealMoves(boundary)
 	page := crmcontracts.Worklist{
 		Queue: []crmcontracts.WorklistItem{riskRow(first), riskRow(second), riskRow(tail)},
 		Focus: &crmcontracts.WorklistFocus{Items: []crmcontracts.WorklistItem{riskRow(first)}},
 	}
-	if err := svc.nameWorklistRows(context.Background(), &page, nil, laneDay(first, second)); err != nil {
+	if err := svc.nameWorklistRows(context.Background(), &page, nil); err != nil {
 		t.Fatalf("naming: %v", err)
 	}
-	if boundary.calls != 1 || !slices.Equal(boundary.asked, []ids.UUID{first, second}) {
-		t.Fatalf("advice asked = %v over %d calls, want the page's two lane deals in one", boundary.asked, boundary.calls)
+	if boundary.calls != 1 || !slices.Equal(boundary.asked, []ids.UUID{first, second, tail}) {
+		t.Fatalf("advice asked = %v over %d calls, want the page's three deals in one", boundary.asked, boundary.calls)
 	}
-	if page.Queue[2].Move != nil {
-		t.Fatalf("a deal only the backlog tail reached carries advice: %+v", page.Queue[2])
-	}
-	for _, row := range append(page.Queue[:2], page.Focus.Items...) {
+	for _, row := range append(page.Queue, page.Focus.Items...) {
 		if row.Move == nil {
 			t.Fatalf("a page row lost its current advice: %+v", row)
 		}
@@ -71,7 +61,7 @@ func TestUnavailableAdviceKeepsTheRiskLaneCompletenessSeparate(t *testing.T) {
 				SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{{Source: sourceAtRisk, Reason: "failed"}},
 			}
 			page.SourcesUnavailable = svc.stampSources(page.SourcesUnavailable)
-			if err := svc.nameWorklistRows(context.Background(), &page, nil, laneDay(deal)); err != nil {
+			if err := svc.nameWorklistRows(context.Background(), &page, nil); err != nil {
 				t.Fatalf("unavailable advice failed the page: %v", err)
 			}
 			if len(page.Queue) != 1 || page.Queue[0].Move != nil {
