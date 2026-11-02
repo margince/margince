@@ -27,11 +27,20 @@ func (s *Store) ClaimReminderDelivery(ctx context.Context, id ids.ActivityID, re
 	if err != nil || len(due) != 1 || due[0].RemindAt == nil || !due[0].RemindAt.Equal(remindAt) {
 		return false, err
 	}
+	return s.recordReminderClaim(ctx, id, remindAt)
+}
+
+// recordReminderClaim locks the task and re-reads what can change after the
+// list read. A completion, a moved reminder or a new assignee that commits
+// first leaves nothing to claim.
+func (s *Store) recordReminderClaim(ctx context.Context, id ids.ActivityID, remindAt time.Time) (bool, error) {
 	var claimed bool
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO activity_reminder_delivery (activity_id, delivered_for, delivered_to)
-			VALUES ($1, $2, $3)
+			SELECT id, remind_at, assignee_id FROM activity
+			 WHERE id = $1 AND remind_at = $2 AND assignee_id = $3 AND NOT is_done AND archived_at IS NULL
+			   FOR SHARE
 			ON CONFLICT (activity_id) DO UPDATE
 			   SET delivered_for = excluded.delivered_for, delivered_to = excluded.delivered_to
 			 WHERE (activity_reminder_delivery.delivered_for, activity_reminder_delivery.delivered_to)
