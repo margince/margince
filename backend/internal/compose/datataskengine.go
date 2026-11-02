@@ -57,6 +57,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		linkedInIdentityDataTask(),
+		storedCredentialsMaskedDataTask(),
 		leadContactPairsDataTask(pool),
 		addressDomainFoldDataTask(),
 		geocodePointsDataTask(),

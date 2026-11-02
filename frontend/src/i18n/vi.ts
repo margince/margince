@@ -2545,6 +2545,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.address": "Địa chỉ",
   "history.field.admission": "Kiểm tra đầu vào tên miền",
   "history.field.admission_reason_code": "Loại lý do tiếp nhận",
+  "history.field.stored_credentials_masked":
+    "Đã che thông tin đăng nhập đã lưu",
   "history.field.admission_sender_kind": "Loại người gửi",
   "history.field.admission_reason": "Lý do kiểm tra đầu vào",
   "history.field.admission_source": "Nguồn kiểm tra đầu vào",
