@@ -14,7 +14,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -277,18 +276,52 @@ func TestAPatchValidatesTheRowItHolds(t *testing.T) {
 		t.Fatalf("holding the request: %v", err)
 	}
 
-	bounded, cancel := context.WithTimeout(e.ctx, 250*time.Millisecond)
+	patching, cancel := context.WithCancel(e.ctx)
 	defer cancel()
-	// The deadline can land while the statement is still being sent, and the
-	// driver then reports the socket's timeout rather than the context's.
-	_, err = e.store.UpdateDSR(bounded, request.ID, UpdateDSRInput{ClearResolution: true})
-	if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
-		t.Fatalf("a patch beside a held key-share lock answered %v, want it to wait: "+
-			"its validating read took no row lock, so another close can land before its write", err)
+	finished := make(chan error, 1)
+	go func() {
+		_, err := e.store.UpdateDSR(patching, request.ID, UpdateDSRInput{ClearResolution: true})
+		finished <- err
+	}()
+	if !waitsOnARowLock(t, e, finished) {
+		t.Fatal("a patch beside a held key-share lock did not wait on it: " +
+			"its validating read took no row lock, so another close can land before its write")
 	}
+	cancel()
+	<-finished
 	release()
 	if _, err := e.store.UpdateDSR(e.ctx, request.ID, UpdateDSRInput{ClearResolution: true}); err != nil {
 		t.Fatalf("the patch once the lock is released: %v", err)
+	}
+}
+
+// waitsOnARowLock reports whether a statement on data_subject_request is seen
+// waiting on a lock before the patch behind finished ends. The server's own
+// wait state is the evidence; a client timeout cannot tell a wait from a send.
+func waitsOnARowLock(t *testing.T, e *dsrEnv, finished <-chan error) bool {
+	t.Helper()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	give := time.After(10 * time.Second)
+	for {
+		var waiting bool
+		if err := e.pool.QueryRow(context.Background(), `
+			SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+			                WHERE datname = current_database() AND wait_event_type = 'Lock'
+			                  AND query ILIKE '%data_subject_request%' AND pid <> pg_backend_pid())`).Scan(&waiting); err != nil {
+			t.Fatalf("reading the server's wait state: %v", err)
+		}
+		if waiting {
+			return true
+		}
+		select {
+		case err := <-finished:
+			t.Logf("the patch ended without waiting: %v", err)
+			return false
+		case <-give:
+			return false
+		case <-tick.C:
+		}
 	}
 }
 
