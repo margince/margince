@@ -14,6 +14,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -278,7 +279,10 @@ func TestAPatchValidatesTheRowItHolds(t *testing.T) {
 
 	bounded, cancel := context.WithTimeout(e.ctx, 250*time.Millisecond)
 	defer cancel()
-	if _, err := e.store.UpdateDSR(bounded, request.ID, UpdateDSRInput{ClearResolution: true}); !errors.Is(err, context.DeadlineExceeded) {
+	// The deadline can land while the statement is still being sent, and the
+	// driver then reports the socket's timeout rather than the context's.
+	_, err = e.store.UpdateDSR(bounded, request.ID, UpdateDSRInput{ClearResolution: true})
+	if !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, os.ErrDeadlineExceeded) {
 		t.Fatalf("a patch beside a held key-share lock answered %v, want it to wait: "+
 			"its validating read took no row lock, so another close can land before its write", err)
 	}
