@@ -16,3 +16,13 @@ func SeatLoginIsSQL(seat, address, domainFolded string) string {
 		" OR (" + seat + ".email_domain_folded = " + domainFolded +
 		" AND lower(regexp_replace(" + seat + ".email, '@[^@]*$', '')) = regexp_replace(" + address + ", '@[^@]*$', '')))"
 }
+
+// SeatLoginPrefersTypedSQL orders the seats SeatLoginIsSQL matched so the one
+// spelled as the caller typed it comes first, and takes that one.
+//
+// A unicode domain and its punycode form are two rows, because the login's
+// unique index reads the raw spelling. The folded arm matches both, and a
+// caller reading a single row would otherwise get either of them.
+func SeatLoginPrefersTypedSQL(seat, address string) string {
+	return "ORDER BY (lower(" + seat + ".email) = " + address + ") DESC, " + seat + ".id LIMIT 1"
+}

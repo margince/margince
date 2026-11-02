@@ -17,7 +17,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -102,8 +101,9 @@ func (s *Service) checkCredentials(ctx context.Context, tx pgx.Tx, email, plaint
 	err := tx.QueryRow(ctx,
 		`SELECT u.id, u.password_hash, u.display_name, u.seat_type, u.failed_login_count, u.locked_until, u.updated_at
 		 FROM app_user u
-		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+``,
-		mailidentity.FoldAddress(email), owndomain.OfAddress(email)).Scan(&account.UserID, &hash, &account.DisplayName, &account.SeatType,
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+`
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+``,
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&account.UserID, &hash, &account.DisplayName, &account.SeatType,
 		&lock.FailedCount, &lock.LockedUntil, &lock.LastFailure)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && hash == nil) {
 		//craft:ignore swallowed-errors the decoy verification exists only to equalize timing; its result is meaningless by design
@@ -205,8 +205,9 @@ func (s *Service) recordFailedLogin(ctx context.Context, email string) error {
 		err := tx.QueryRow(ctx,
 			`SELECT u.id, u.failed_login_count, u.locked_until, u.updated_at FROM app_user u
 			 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+LiveMemberSQL("u")+`
+			 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+`
 			 FOR UPDATE`,
-			mailidentity.FoldAddress(email), owndomain.OfAddress(email)).Scan(&userID, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
+			typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &state.FailedCount, &state.LockedUntil, &state.LastFailure)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 			// no account to count against; only the audit row lands

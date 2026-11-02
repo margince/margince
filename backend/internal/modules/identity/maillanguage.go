@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 )
 
@@ -27,7 +26,7 @@ func (h Handlers) mailCopy(ctx context.Context, recipient ...string) mailcopy.Co
 		}
 		if len(recipient) > 0 && recipient[0] != "" {
 			var chosen *string
-			args := []any{mailidentity.FoldAddress(recipient[0]), owndomain.OfAddress(recipient[0])}
+			args := []any{typedLoginAddress(recipient[0]), owndomain.OfAddress(recipient[0])}
 			err := tx.QueryRow(ctx, "SELECT locale FROM app_user u WHERE "+
 				storekit.SeatLoginIsSQL("u", "$1", "$2")+" AND "+ActivatableMemberSQL("u"), args...).Scan(&chosen)
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {

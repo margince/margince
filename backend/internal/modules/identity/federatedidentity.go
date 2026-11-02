@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -73,8 +72,9 @@ func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider,
 	err = tx.QueryRow(ctx,
 		`SELECT u.id FROM app_user u WHERE `+LiveMemberSQL("u")+`
 		 AND u.password_hash IS NOT NULL AND NOT u.is_agent
-		 AND `+storekit.SeatLoginIsSQL("u", "$1", "$2")+``,
-		mailidentity.FoldAddress(email), owndomain.OfAddress(email)).Scan(&byEmail)
+		 AND `+storekit.SeatLoginIsSQL("u", "$1", "$2")+`
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+``,
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&byEmail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UserID{}, false, ErrFederatedSignInRefused
 	}

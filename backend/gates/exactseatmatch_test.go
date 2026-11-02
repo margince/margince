@@ -117,8 +117,8 @@ func rawSeatMatches(t *testing.T) []seatMatchSite {
 	// A comparison that moves to storekit.SeatLoginIsSQL leaves this census. So
 	// the floor falls as the debt is paid, and it is not a tree-wide count.
 	// It catches the pattern recognising nothing, which reads as zero.
-	if operands < 30 {
-		t.Fatalf("this census judged %d compared email operand(s) and expects at least 30: "+
+	if operands < 33 {
+		t.Fatalf("this census judged %d compared email operand(s) and expects at least 33: "+
 			"it has stopped recognising them", operands)
 	}
 	return sites

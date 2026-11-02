@@ -6,11 +6,11 @@ package identity
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -59,11 +59,16 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 	return nil
 }
 
+// typedLoginAddress leaves the domain as typed. The raw arm is the only one
+// that answers for a seat whose email_domain_folded is unwritten, and
+// FoldLoginDomainsTx writes those a page at a time.
+func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
+
 // memberLoginArgs binds one typed address for a seat-login comparison: the
-// address folded, and its domain folded the way the column stores it.
+// address as typed, and its domain folded the way the column stores it.
 func memberLoginArgs(email string) pgx.StrictNamedArgs {
 	return pgx.StrictNamedArgs{
-		memberEmailField:  mailidentity.FoldAddress(email),
+		memberEmailField:  typedLoginAddress(email),
 		memberDomainField: owndomain.OfAddress(email),
 	}
 }
