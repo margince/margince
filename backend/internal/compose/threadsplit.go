@@ -47,7 +47,7 @@ func inheritThreadSeatTx(ctx context.Context, tx pgx.Tx, from, to string, seat i
 }
 
 func inheritThreadBasisTx(ctx context.Context, tx pgx.Tx, basisID ids.UUID, from, to string) error {
-	return consent.ThreadBasisCopyTx(ctx, tx, basisID, from, to)
+	return consent.ThreadBasisCopyTx(threadRepairContext(ctx), tx, basisID, from, to)
 }
 
 func repairThreadSeatTx(ctx context.Context, tx pgx.Tx, key string, seat ids.UUID) error {
