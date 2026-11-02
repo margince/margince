@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHash, routeHash, routeIdentity } from "./router";
+import { parseHash, routeHash, routeIdentity, routePattern } from "./router";
 
 // The hash router's parse/serialize round-trip, pinned so a 3rd path segment
 // (the share screen's #/share/<type>/<id>) can be added without silently
@@ -242,4 +242,19 @@ it("gives the old and new company contacts addresses one identity", () => {
   expect(routeIdentity(parseHash("#/companies/o-1/contacts"))).toBe(
     routeIdentity(parseHash("#/companies/o-1/contacts")),
   );
+});
+
+describe("routePattern", () => {
+  it("replaces record ids with placeholders", () => {
+    expect(routePattern(parseHash("#/contacts/01J9ZK"))).toBe("contacts/:id");
+    expect(routePattern(parseHash("#/deals"))).toBe("deals");
+  });
+  it("keeps a unit's name, which is not a record id", () => {
+    expect(routePattern(parseHash("#/ext/sentry"))).toBe("ext/sentry");
+  });
+  it("never carries the query", () => {
+    expect(
+      routePattern(parseHash("#/reset-password?token=secret")),
+    ).not.toContain("secret");
+  });
 });

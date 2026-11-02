@@ -231,6 +231,22 @@ export function routeIdentity(route: Route): string {
 }
 
 /**
+ * The route as a pattern an observer may record: the screen, with each
+ * record id replaced by a placeholder. A unit's screen keeps the unit's
+ * name, which is not a record. Never carries the query.
+ */
+export function routePattern(route: Route): string {
+  if (route.screen === "ext" || route.screen === "x") {
+    return route.id ? `${route.screen}/${route.id}` : route.screen;
+  }
+  const parts: string[] = [route.screen];
+  if (route.id) parts.push(":id");
+  if (route.id2) parts.push(":id2");
+  if (route.id3) parts.push(":id3");
+  return parts.join("/");
+}
+
+/**
  * Go to an address.
  *
  * `dials` is the QUERY half — which view of the screen, not which screen. It is

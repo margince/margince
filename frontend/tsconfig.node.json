@@ -34,6 +34,7 @@
       "@composition/extensions": ["./src/composition/extensions.gen"],
       "@composition/schema": ["./src/api/schema"],
       "@composition/screens": ["./src/composition/extscreens.gen"],
+      "@composition/instruments": ["./src/composition/extinstruments.gen"],
       "@composition/copy": ["./src/composition/extlocales.gen"]
     }
   },
