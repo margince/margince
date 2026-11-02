@@ -9,10 +9,12 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
+const employmentStatusField = "employment_status"
+
 func validEmploymentAssertion(kind string, status, startedPrecision, endedPrecision *string) error {
 	if status != nil {
 		if kind != employmentKind || (*status != employmentCurrent && *status != employmentFormer && *status != employmentUnknown) {
-			return &EmploymentImportError{Field: "employment_status", Message: "Choose current, former or unknown for an employment relationship."}
+			return &EmploymentImportError{Field: employmentStatusField, Message: "Choose current, former or unknown for an employment relationship."}
 		}
 	}
 	for _, field := range []struct {
