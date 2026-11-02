@@ -80,6 +80,19 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 			return err
 		}
 		id = ids.UUID(row.Id)
+		// Read the clock again before writing. Sealing the link and logging the
+		// activity take time, so a zero-notice option can clear the check above
+		// and be gone by now. The row would still satisfy its CHECK, which
+		// compares the expiry with the earlier created_at, while the link it
+		// returns cannot be resolved. The caller's own error path deletes the
+		// sealed link.
+		if !expires.After(s.now()) {
+			return &SchedulingArgumentError{
+				Field:   "options",
+				Code:    "no_usable_lifetime",
+				Message: "Offer a time far enough ahead that the link is still open when it arrives",
+			}
+		}
 		args := schedulingArgs{}
 		// created_at comes from the one clock read above, not from the database
 		// default. A row whose two timestamps come from two clocks can read as
