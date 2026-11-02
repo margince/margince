@@ -224,10 +224,25 @@ func (b *riskBacklog) assertTailAdvised(ctx context.Context, t *testing.T, serve
 		if !advised {
 			t.Fatalf("the status card names no step for tail deal %s, so the check proves nothing", deal)
 		}
-		if move == nil || !reflect.DeepEqual(move.Recommendation, card.Recommendation) {
-			t.Errorf("tail deal %s carries %+v, its card names %+v", deal, move, card.Recommendation)
+		if !sameMove(move, card) {
+			t.Errorf("tail deal %s carries %+v, its card names %+v", deal, move, card)
 		}
 	}
+}
+
+// sameMove is whether a row carries the card's move. The wire spells a card's
+// draft_email that names a message draft_reply, and copies everything else.
+func sameMove(move *crmcontracts.WorklistMove, card crmcontracts.DealStatusCardMove) bool {
+	if move == nil {
+		return false
+	}
+	action := string(move.Action)
+	if move.Action == crmcontracts.WorklistMoveActionDraftReply && move.ActivityId != nil {
+		action = string(crmcontracts.WorklistMoveActionDraftEmail)
+	}
+	return action == card.Action && reflect.DeepEqual(move.Arguments, card.Arguments) &&
+		reflect.DeepEqual(move.Basis, card.Basis) && reflect.DeepEqual(move.MailCoverage, card.MailCoverage) &&
+		reflect.DeepEqual(move.Recommendation, card.Recommendation)
 }
 
 // markDone has Rep1 mark two deals below the ranked top done, through the
