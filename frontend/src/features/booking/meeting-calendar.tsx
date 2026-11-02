@@ -29,6 +29,10 @@ import { navigate } from "../../lib/router";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { calendarName, useMeetingCalendar } from "./booking-calendar-state";
 import "./meeting-cards.css";
+import {
+  UnreadableCalendarLine,
+  useUnreadableCalendar,
+} from "./unreadable-calendar";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 type CaptureConnection = components["schemas"]["CaptureConnection"];
@@ -335,6 +339,11 @@ function CalendarChoices({
 }>) {
   const t = useT();
   const { calendarID, blocking } = calendar;
+  const unreadable = useUnreadableCalendar(
+    calendar.ready && calendar.provider !== "",
+  );
+  // The line sits under the row that holds the calendar it names.
+  const unreadableBlocks = unreadable !== null && blocking.includes(unreadable);
   return (
     <QueryGate query={calendar.calendars} pendingLabel={t("common.loading")}>
       {(calendars) =>
@@ -359,6 +368,12 @@ function CalendarChoices({
                 />
               )}
             />
+            {!unreadableBlocks && (
+              <UnreadableCalendarLine
+                calendar={unreadable}
+                provider={calendar.provider}
+              />
+            )}
             <SettingRow
               label={t("scheduling.blocking")}
               description={t("scheduling.blockingRowHelp")}
@@ -378,6 +393,12 @@ function CalendarChoices({
                 />
               )}
             />
+            {unreadableBlocks && (
+              <UnreadableCalendarLine
+                calendar={unreadable}
+                provider={calendar.provider}
+              />
+            )}
           </>
         ) : (
           <p>{t("scheduling.noWritableCalendar")}</p>

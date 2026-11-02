@@ -8952,9 +8952,11 @@ components:
       description: |-
         The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
         no times and a write changes nothing, because either would rest on a partial picture of the
-        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
-        calendar and the provider's reason are in the server log only. It clears once the host
-        repairs the calendar or the provider answers again.
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings. When
+        the signed-in host reads their own availability, `details.calendar` names the calendar id
+        that failed; every other reader, and every public page, gets no calendar. The provider's
+        reason is in the server log only. It clears once the host repairs the calendar or the
+        provider answers again.
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}

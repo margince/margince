@@ -1598,6 +1598,8 @@ export const en = {
     "The saved event calendar is unavailable. Choose another calendar before enabling bookings.",
   "scheduling.providerChanged":
     "Your saved calendar provider is unavailable. Saving will use the connected calendar shown here.",
+  "scheduling.calendarUnreadable":
+    "Your calendar “{name}” could not be read, so no times are offered. Fix it in your calendar app, or remove it here.",
   "scheduling.calendarUnavailable":
     "The host’s calendar could not be read, so nothing was offered or changed. The host can check the calendar chosen in meeting settings.",
   "scheduling.windowHorizon":

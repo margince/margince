@@ -1633,6 +1633,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lịch sự kiện đã lưu không khả dụng. Chọn lịch khác trước khi bật đặt lịch.",
   "scheduling.providerChanged":
     "Nhà cung cấp lịch đã lưu không khả dụng. Khi lưu sẽ dùng lịch đã kết nối hiển thị ở đây.",
+  "scheduling.calendarUnreadable":
+    "Không đọc được lịch “{name}” của bạn nên không có giờ nào được đề xuất. Hãy sửa trong ứng dụng lịch hoặc gỡ lịch đó ở đây.",
   "scheduling.calendarUnavailable":
     "Không đọc được lịch của người chủ trì nên chưa có gì được đề xuất hay thay đổi. Người chủ trì có thể kiểm tra lịch đã chọn trong cài đặt cuộc họp.",
   "scheduling.windowHorizon":

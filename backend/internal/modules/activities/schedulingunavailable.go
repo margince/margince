@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -39,4 +41,20 @@ func calendarReadFailure(ctx context.Context, host ids.UserID, provider, calenda
 		"host_id", host.UUID, "provider", provider, "calendar", calendar,
 		"reason", unavailable.Reason, "err", err)
 	return unavailable
+}
+
+// calendarNamedToItsHost adds the unreadable calendar's id to the refusal when
+// the caller asks about their own calendars, so their settings can mark it.
+// The id is the host's account, so any other caller, and every public door,
+// keeps the fixed sentence alone.
+func calendarNamedToItsHost(err error, actor ids.UUID, host ids.UserID) error {
+	unavailable, ok := errors.AsType[*connector.CalendarUnavailableError](err)
+	if !ok || actor.IsZero() || actor != host.UUID || unavailable.Calendar == "" {
+		return err
+	}
+	code, message := unavailable.MessageFault()
+	return &httperr.DetailedError{
+		Status: http.StatusBadGateway, Code: code, Detail: message,
+		Details: map[string]any{"calendar": unavailable.Calendar},
+	}
 }
