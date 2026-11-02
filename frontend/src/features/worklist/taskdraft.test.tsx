@@ -144,7 +144,11 @@ test.each([
     { ...LEAD, archived_at: "2026-09-01T00:00:00Z" },
     en["lead.terminalReadOnly"],
   ],
-  ["a lead with no address", { ...LEAD, email: null }, en["task.next.noLeadAddress"]],
+  [
+    "a lead with no address",
+    { ...LEAD, email: null },
+    en["task.next.noLeadAddress"],
+  ],
 ])("a task on %s is refused with the reason", async (_, lead, reason) => {
   stubTask([{ entity_type: "lead", entity_id: "l-1" }], lead);
   openTask(vi.fn());
