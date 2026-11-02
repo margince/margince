@@ -2455,7 +2455,7 @@ func (stubs) PromoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "PromoteLead")
 }
 
-func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewLeadPromotionParams) {
 	httperr.NotImplemented(w, r, "PreviewLeadPromotion")
 }
 

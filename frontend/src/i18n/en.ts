@@ -771,6 +771,9 @@ export const en = {
     "Creates a contact with the displayed details.",
   "approval.preview.promotionFill":
     "Adds the displayed missing details to the existing contact. Keeps its existing name, title and primary phone.",
+  "approval.preview.promotionExistingDeal": "Existing deal",
+  "approval.preview.promotionExistingDealEffect":
+    "Adds the contact as a stakeholder on the displayed existing deal. The lead links to this deal.",
   "approval.preview.promotionDeal":
     "Opens the displayed deal and adds the contact as a stakeholder. The lead links to this deal.",
   "approval.preview.promotionFillIndustry":
@@ -5275,7 +5278,16 @@ export const en = {
   "lead.ladder.byHand": "{label} · set manually",
   "lead.qualify.title": "Qualify {name}",
   "lead.qualify.contact": "Contact",
-  "lead.qualify.alsoDeal": "Also open a deal",
+  "lead.qualify.withoutDeal": "Qualify without a deal",
+  "lead.qualify.dealChoice": "Deal",
+  "lead.qualify.newDeal": "Open a new deal",
+  "lead.qualify.existingDealPicker": "Existing deal",
+  "lead.qualify.unnamedDeal": "Unnamed deal",
+  "lead.qualify.existingDeal": "Add to an existing deal",
+  "lead.qualify.confirmExisting": "Qualify and add to deal",
+  "lead.qualify.moreDeals": "Show more deals",
+  "lead.qualify.dealUnavailable":
+    "That deal is no longer available. Choose another deal or qualify without one.",
   "lead.qualify.company": "Company",
   "lead.qualify.companyUnresolved":
     "This lead’s email does not show which company {company} is, so no company is added on its own.",

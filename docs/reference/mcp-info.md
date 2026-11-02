@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.2 KB |
+| Tool catalog | 158.9 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41821 |
+| Approx. wire tokens | 41981 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
-| Input schemas | 65.5 KB | 41% | Yes, every step |
+| Input schemas | 66.1 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **100.5 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **101.1 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -70,7 +70,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 664 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1342 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1484 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 548 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
@@ -2219,6 +2219,36 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "format": "uuid",
       "type": "string"
     },
+    "create_company": {
+      "description": "promote only",
+      "type": "boolean"
+    },
+    "deal": {
+      "additionalProperties": false,
+      "description": "promote only",
+      "properties": {
+        "amount_minor": {
+          "type": "integer"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        },
+        "stage_id": {
+          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "deal_id": {
       "description": "move_deal only",
       "format": "uuid",
@@ -2226,6 +2256,11 @@ calling, unless they asked for this call themselves; requires passport scope "wr
     },
     "evidence_note": {
       "description": "promote only",
+      "type": "string"
+    },
+    "existing_deal_id": {
+      "description": "promote only",
+      "format": "uuid",
       "type": "string"
     },
     "idempotency_key": {
