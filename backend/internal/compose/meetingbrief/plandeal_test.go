@@ -68,25 +68,38 @@ func TestEveryPlanMessageSaysWhichDealItIsFiledUnder(t *testing.T) {
 	}
 }
 
-// A row the caller may not read, and a row on this meeting's deal, name no
-// other deal.
-func TestAWithheldRowNamesNoOtherDeal(t *testing.T) {
-	filed := FiledDeal{Name: "Deal A", State: "lost"}
-	for _, tc := range []struct {
-		name string
-		row  HistoryIn
-		want bool
+// Each history row is filed against the deal the brief settled on, which can
+// be the contact's leading deal chosen after history was read.
+func TestEachHistoryRowIsFiledAgainstTheBriefsDeal(t *testing.T) {
+	this := FiledDeal{ID: padID(10), Name: "Deal B", State: "open"}
+	lost := FiledDeal{ID: padID(11), Name: "Deal A", State: "lost"}
+	in := Input{Deal: &DealIn{ID: this.ID, Name: this.Name}, History: []HistoryIn{
+		{ID: "on another deal", Filed: []FiledDeal{lost}},
+		{ID: "withheld", Withheld: true},
+		{ID: "on both", Filed: []FiledDeal{this, lost}},
+		{ID: "on the chosen deal", Filed: []FiledDeal{this}},
+		{ID: "on no deal"},
+	}}
+	fileUnderDeal(&in)
+	want := map[string]struct {
+		onDeal bool
+		other  *FiledDeal
 	}{
-		{name: "readable, on another deal", row: HistoryIn{}, want: true},
-		{name: "withheld", row: HistoryIn{Withheld: true}},
-		{name: "also on this deal", row: HistoryIn{OnDeal: true}},
-	} {
-		if got := otherDealOf(tc.row, filed) != nil; got != tc.want {
-			t.Errorf("%s: names another deal = %v, want %v", tc.name, got, tc.want)
-		}
+		"on another deal":    {other: &lost},
+		"withheld":           {},
+		"on both":            {onDeal: true},
+		"on the chosen deal": {onDeal: true},
+		"on no deal":         {},
 	}
-	if otherDealOf(HistoryIn{}, FiledDeal{}) != nil {
-		t.Error("a row filed under no other deal named one")
+	for _, row := range in.History {
+		expected := want[row.ID]
+		if row.OnDeal != expected.onDeal {
+			t.Errorf("%s: on this deal = %v, want %v", row.ID, row.OnDeal, expected.onDeal)
+		}
+		if (row.OtherDeal == nil) != (expected.other == nil) ||
+			(row.OtherDeal != nil && *row.OtherDeal != *expected.other) {
+			t.Errorf("%s: other deal = %+v, want %+v", row.ID, row.OtherDeal, expected.other)
+		}
 	}
 }
 

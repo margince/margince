@@ -201,3 +201,39 @@ func TestHistoryNamesAnotherDealOnlyWhenTheReaderMaySeeIt(t *testing.T) {
 		t.Errorf("a reader with no deal grant was told the mail is on %+v", onLost.OtherDeal)
 	}
 }
+
+// A meeting filed under no deal is briefed on its contact's leading open deal.
+// Mail on that deal is on this meeting's deal, and names no other.
+func TestMailOnTheContactsLeadingDealIsOnAnUnlinkedMeetingsDeal(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
+	leading := seedDealInState(t, e, "Hangar booking", "open", roomFixedNow.AddDate(0, 2, 0))
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
+		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, attendee, leading)
+
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Discovery call', $2, 'manual', 'human:x')`, roomTomorrow)
+	mail := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'Hangar slots', 'Could hangar booking replace our spreadsheet?', 'inbound', $2, 'manual', 'human:x')`,
+		roomAgo(3*24*time.Hour))
+	for _, activity := range []ids.UUID{meeting, mail} {
+		LinkActivity(t, owner, activity, "contact", attendee)
+		seatInRoom(t, owner, e.WS, activity, attendee)
+	}
+	LinkActivity(t, owner, mail, "deal", leading)
+
+	lane := &planPromptLane{}
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+	if _, err := meetingBriefService(e).WithLane(lane).Get(rep, meeting); err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	prompt := lane.planPrompt(t)
+	if prompt.Deal == nil || prompt.Deal.Name != "Hangar booking" {
+		t.Fatalf("the brief is about deal %+v, want the contact's leading Hangar booking deal", prompt.Deal)
+	}
+	got := prompt.message(t, mail)
+	if got.OnThisDeal == nil || !*got.OnThisDeal || got.OtherDeal != nil {
+		t.Errorf("mail on the leading deal = %+v, want on_this_deal and no other deal", got)
+	}
+}
