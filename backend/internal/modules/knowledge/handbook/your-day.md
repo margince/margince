@@ -115,6 +115,8 @@ When the start time, the guests or the invite's agenda change, the row asks agai
 ### What can I do from a task?
 A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app.
 
+A task with no single contact still offers **Draft email**. It drafts to the lead the task is linked to, when that lead is still open. Otherwise it drafts to the linked company, and the composer asks which of the company's contacts the email is for. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason.
+
 It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**.
 
 ### How do I plan my week?

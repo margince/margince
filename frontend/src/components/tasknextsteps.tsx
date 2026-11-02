@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Sparkles } from "lucide-react";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
 import { CallAction, linkVerb } from "../design-system/callaction";
@@ -12,7 +12,12 @@ import { type Translator, useT } from "../i18n";
 import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
-import { useTaskContact } from "../lib/taskcontact";
+import {
+  type TaskDraftTarget,
+  useTaskContact,
+  useTaskDraftTarget,
+} from "../lib/taskcontact";
+import { useWriteTo } from "../lib/writeto";
 import "./tasknextsteps.css";
 
 // What a rep does next about the contact a task is owed to. Nothing here
@@ -42,8 +47,10 @@ export function TaskCallAction({
 
 /**
  * Call, Draft email and Open contact. A task owed to a contact is work for that
- * contact, so mail to them is drafted from the task rather than offered blank. `className` wraps them in a row of their own,
- * which is left out when there is no contact to act on.
+ * contact, so mail to them is drafted from the task rather than offered blank.
+ * A task with no single contact drafts to its live lead, else its company.
+ * `className` wraps the verbs in a row of their own, which is left out when
+ * there is nothing to act on.
  */
 export function TaskNextSteps({
   task,
@@ -51,26 +58,50 @@ export function TaskNextSteps({
   className,
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
   const t = useT();
-  const reasonId = useId();
   const { contact, fromCall, pending } = useTaskContact(task);
-  if (!contact) {
-    if (!pending) return null;
-    // In the row the verbs will stand in, so they land where it stood.
-    return className ? (
-      <div className={className}>
-        <TaskNextStepsPending />
-      </div>
-    ) : (
-      <TaskNextStepsPending />
+  const draft = useTaskDraftTarget(task, !contact && !pending);
+  const intent = intentAbout(t("task.next.draftIntent"), task.subject);
+  let steps: ReactNode;
+  if (contact) {
+    steps = (
+      <ContactSteps
+        contact={contact}
+        fromCall={fromCall}
+        intent={intent}
+        offerOpen={offerOpen}
+      />
     );
+  } else if (pending || draft.pending) {
+    // In the row the verbs will stand in, so they land where it stood.
+    steps = <TaskNextStepsPending />;
+  } else if (draft.target) {
+    steps = <RecordDraftStep target={draft.target} intent={intent} />;
+  } else {
+    return null;
   }
+  return className ? <div className={className}>{steps}</div> : steps;
+}
+
+function ContactSteps({
+  contact,
+  fromCall,
+  intent,
+  offerOpen,
+}: Readonly<{
+  contact: Contact;
+  fromCall: boolean;
+  intent: string;
+  offerOpen: boolean;
+}>) {
+  const t = useT();
+  const reasonId = useId();
   const refusal = emailRefusal(contact, t);
-  const steps = (
+  return (
     <>
       <CallVerb contact={contact} fromCall={fromCall} />
       <EmailVerb
         contact={contact}
-        intent={intentAbout(t("task.next.draftIntent"), task.subject)}
+        intent={intent}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
       {offerOpen &&
@@ -88,7 +119,75 @@ export function TaskNextSteps({
       )}
     </>
   );
-  return className ? <div className={className}>{steps}</div> : steps;
+}
+
+/**
+ * Draft email to a lead or a company. The lead is written to at its own
+ * address. The company's composer asks which of its contacts the mail is for.
+ */
+function RecordDraftStep({
+  target,
+  intent,
+}: Readonly<{ target: TaskDraftTarget; intent: string }>) {
+  const t = useT();
+  const reasonId = useId();
+  const writeTo = useWriteTo();
+  if (target.entityType === "company") {
+    // No composer to open, and no address a mail client could take instead.
+    if (!writeTo) return null;
+    return (
+      <Button
+        variant="ai"
+        onClick={() =>
+          writeTo({
+            entityType: "company",
+            entityId: target.entityId,
+            draftIntent: intent,
+          })
+        }
+      >
+        <Sparkles aria-hidden="true" />
+        {t("task.next.draftEmail")}
+      </Button>
+    );
+  }
+  const refusal = leadRefusal(target, t);
+  if (refusal !== undefined) {
+    return (
+      <>
+        <Button variant="ai" reasonId={reasonId}>
+          <Sparkles aria-hidden="true" />
+          {t("task.next.draftEmail")}
+        </Button>
+        <p id={reasonId} className="t-caption task-next-reason">
+          {refusal}
+        </p>
+      </>
+    );
+  }
+  if (target.entityType !== "lead") return null;
+  return (
+    <ContactLink
+      kind="email"
+      appearance="button"
+      label={t("record.verb.email")}
+      draft={{ label: t("task.next.draftEmail"), intent }}
+      address={target.lead.email ?? undefined}
+      record={{ entityType: "lead", entityId: target.entityId }}
+    />
+  );
+}
+
+/** Why a lead takes no draft: it is closed, or it has no address. */
+function leadRefusal(
+  target: TaskDraftTarget,
+  t: Translator,
+): string | undefined {
+  if (target.entityType === "closedLead") return t("lead.terminalReadOnly");
+  if (target.entityType === "lead" && !mailbox(target.lead.email ?? "")) {
+    return t("task.next.noLeadAddress");
+  }
+  return undefined;
 }
 
 /** Why Email is refused. `mailbox` is the test ContactLink applies. */

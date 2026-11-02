@@ -648,7 +648,7 @@ test("a refused Draft email is said once, after every verb in the row", async ()
 });
 
 test.each([
-  ["no contact", [{ entity_type: "company", entity_id: "co-1" }]],
+  ["no record", []],
   [
     "two contacts",
     [

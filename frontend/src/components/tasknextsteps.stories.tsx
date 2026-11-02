@@ -14,7 +14,7 @@ import {
 import { TaskNextSteps } from "./tasknextsteps";
 
 // Check: Call only on a task from a call, and a refused Email says why
-// beside it.
+// beside it. A task with no single contact drafts to its lead or company.
 
 const meta: Meta = {
   title: "Patterns/Task next steps",
@@ -48,12 +48,29 @@ const ALICE = {
   archived_at: null,
 };
 
+const LENA = {
+  id: "l-1",
+  full_name: "Lena Lead",
+  email: "lena@prospect.example",
+  status: "contacted",
+  archived_at: null,
+};
+
+const ON_LEAD = {
+  ...TASK,
+  subject: "Email Lena about the pilot",
+  source_activity_id: null,
+  links: [{ entity_type: "lead", entity_id: "l-1" }],
+};
+
 function Steps({
   task = TASK,
   contact = {},
+  lead = {},
 }: Readonly<{
   task?: components["schemas"]["Activity"];
   contact?: Record<string, unknown>;
+  lead?: Record<string, unknown>;
 }>) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
@@ -65,6 +82,7 @@ function Steps({
         occurred_at: "2026-09-08T08:00:00Z",
       }),
     "GET /contacts/c-1": () => jsonResponse({ ...ALICE, ...contact }),
+    "GET /leads/l-1": () => jsonResponse({ ...LENA, ...lead }),
   });
   return (
     <StoryProviders>
@@ -100,4 +118,18 @@ export const NoPhone: Story = {
 export const ArchivedContact: Story = {
   render: () => <Steps contact={{ archived_at: "2026-09-01T00:00:00Z" }} />,
   play: offers(en["task.next.openContact"]),
+};
+
+export const OnALead: Story = {
+  render: () => <Steps task={ON_LEAD} />,
+  play: offers(en["record.verb.email"]),
+};
+
+export const OnAClosedLead: Story = {
+  render: () => (
+    <Steps task={ON_LEAD} lead={{ archived_at: "2026-09-01T00:00:00Z" }} />
+  ),
+  play: async () => {
+    await within(document.body).findByText(en["lead.terminalReadOnly"]);
+  },
 };

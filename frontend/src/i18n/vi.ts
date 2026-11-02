@@ -6396,6 +6396,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "task.next.draftEmail": "Soạn email",
   "task.next.draftIntent": "viết về nhiệm vụ này",
   "task.next.noAddress": "Liên hệ này chưa có địa chỉ email.",
+  "task.next.noLeadAddress": "Lead này chưa có địa chỉ email.",
   "today.withheld":
     "Không bao gồm: {sections}. Bạn không có quyền truy cập các mục này.",
   "today.source.moments": "phát hiện của Margince",
