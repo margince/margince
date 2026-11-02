@@ -25,7 +25,7 @@ func TestEmailTokensFollowTheProductTokens(t *testing.T) {
 	t.Parallel()
 	light, dark := productTokenThemes(t)
 	tokens := emailview.Tokens()
-	if len(tokens) < 15 {
+	if len(tokens) < 19 {
 		t.Fatalf("emailview declares %d tokens; the census lost its source", len(tokens))
 	}
 	for _, token := range tokens {
