@@ -23,6 +23,8 @@ import { type BriefSentence, briefSentence } from "./brief.sentence";
 import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
 
+import "./brief.css";
+
 // Four greetings, and the boundaries are the reader's day rather than the
 // clock's quarters: work starts before noon, the afternoon runs to the end of
 // the working day, the evening to the end of the waking one, and what is left

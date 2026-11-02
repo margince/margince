@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../../design-system/heading";
 import { LocaleProvider } from "../../i18n";
 import {
   meetingRow,
@@ -139,9 +140,9 @@ describe("BriefGlance — the greeting stands over the reader's name", () => {
 
   it("keeps a line that does not hold the name whole, out of the accent", () => {
     rtlRender(
-      <h1>
+      <Heading size="large" as="h1" className="glance-greeting">
         <Greeting text="Welcome back" firstName="Ada" />
-      </h1>,
+      </Heading>,
     );
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading.querySelector(".glance-greeting-name")?.textContent).toBe(
