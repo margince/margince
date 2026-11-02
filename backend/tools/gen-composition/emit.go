@@ -256,13 +256,12 @@ func composedFiles(root string) (composition, error) {
 		return composition{}, err
 	}
 	files := map[string][]byte{
-		goWorkFile:                   work,
-		"backend/go.mod":             composedGoMod(goVersion),
-		"backend/extensions_gen.go":  wiring,
-		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
-		"frontend/extscreens.gen.ts": extScreensGen(units, manifestPanels(manifests)),
-		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
-
+		goWorkFile:                       work,
+		"backend/go.mod":                 composedGoMod(goVersion),
+		"backend/extensions_gen.go":      wiring,
+		"frontend/extensions.gen.ts":     frontendGen(manifests, verbs, mergedCopy),
+		"frontend/extscreens.gen.ts":     extScreensGen(units, manifestPanels(manifests)),
+		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy),
 		"frontend/extinstruments.gen.ts": extInstrumentsGen(units, manifestBrowserInstruments(manifests)),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With

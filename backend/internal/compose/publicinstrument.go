@@ -29,6 +29,11 @@ func newPublicInstrumentLimiter() *ratelimit.Limiter {
 	return ratelimit.New("public-instrument/per-ip", ratelimit.FailClosed, 600, time.Minute)
 }
 
+// publicInstrument serves each unit's Instrumentation.Edge under
+// publicInstrumentPrefix and passes every other path on. The unit name must be
+// followed by a slash: the bare unit path is a 404. A unit with no edge is a
+// 404, a method other than GET or POST is a 405 with Allow, a client past the
+// per-IP limit gets the budget error, and the body is capped at 1 MiB.
 func publicInstrument(exts []extension.Extension, perIP *ratelimit.Limiter) func(http.Handler) http.Handler {
 	edges := make(map[string]http.Handler)
 	for _, e := range exts {
@@ -43,9 +48,9 @@ func publicInstrument(exts []extension.Extension, perIP *ratelimit.Limiter) func
 				next.ServeHTTP(w, r)
 				return
 			}
-			unit, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicInstrumentPrefix), "/")
+			unit, _, hasSlash := strings.Cut(strings.TrimPrefix(r.URL.Path, publicInstrumentPrefix), "/")
 			edge, ok := edges[unit]
-			if !ok {
+			if !ok || !hasSlash {
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return
 			}

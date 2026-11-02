@@ -72,26 +72,26 @@ func fetch(t *testing.T, handler http.Handler) (status int, readErr error) {
 
 func TestRecoverPanicsReportsThePanicToTheInstruments(t *testing.T) {
 	t.Cleanup(instrument.Reset)
-	var got any
+	var got []any
 	var stack []byte
 	instrument.Install([]instrument.Started{{Unit: "u", Hooks: extension.Instruments{
-		Panic: func(_ context.Context, v any, s []byte) { got, stack = v, s },
+		Panic: func(_ context.Context, v any, s []byte) { got, stack = append(got, v), s },
 	}}}, slog.New(slog.DiscardHandler))
 	h := RecoverPanics(slog.New(slog.DiscardHandler), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("kaboom")
 	}))
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/v1/x", nil))
-	if rec.Code != http.StatusInternalServerError || got != "kaboom" || len(stack) == 0 {
+	if rec.Code != http.StatusInternalServerError || len(got) != 1 || got[0] != "kaboom" || len(stack) == 0 {
 		t.Fatalf("code=%d got=%v stack=%d", rec.Code, got, len(stack))
 	}
 }
 
 func TestRecoverPanicsDoesNotReportAnAbortedStream(t *testing.T) {
 	t.Cleanup(instrument.Reset)
-	reported := false
+	reports := 0
 	instrument.Install([]instrument.Started{{Unit: "u", Hooks: extension.Instruments{
-		Panic: func(context.Context, any, []byte) { reported = true },
+		Panic: func(context.Context, any, []byte) { reports++ },
 	}}}, slog.New(slog.DiscardHandler))
 	h := RecoverPanics(slog.New(slog.DiscardHandler), http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic(http.ErrAbortHandler)
@@ -101,7 +101,7 @@ func TestRecoverPanicsDoesNotReportAnAbortedStream(t *testing.T) {
 		defer func() { _ = recover() }()
 		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 	}()
-	if reported {
+	if reports != 0 {
 		t.Fatal("an aborted stream is not a fault and must not be reported")
 	}
 }

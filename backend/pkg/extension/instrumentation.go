@@ -26,7 +26,9 @@ type Instrumentation struct {
 	// the SPA calls before its first render. Empty means no browser part.
 	Browser string
 	// Edge is served without a session at /v1/public/instrument/<unit>/, with
-	// that prefix stripped. Nil means none.
+	// that prefix stripped. It takes GET and POST only, a body of at most
+	// 1 MiB, and is held to a per-IP limit. The unit sets its own caching
+	// headers. Nil means none.
 	Edge http.Handler
 }
 
@@ -41,19 +43,47 @@ type Process struct {
 }
 
 // Instruments are the hooks Start returns. Every one is optional.
+//
+// With several units, the first in the composed registry is outermost in every
+// chain. If Start returns an error, its hooks are discarded. A Start that
+// hangs blocks boot.
 type Instruments struct {
+	// LogHandler wraps the process's root log handler, once, as the logger is
+	// built. Every record from every package passes through it, inside the
+	// correlation wrapper, so it sees the correlation id.
 	LogHandler func(slog.Handler) slog.Handler
-	HTTP       func(http.Handler) http.Handler
-	Work       func(ctx context.Context, w Work, run func(context.Context) error) error
-	Panic      func(ctx context.Context, value any, stack []byte)
-	Shutdown   func(ctx context.Context) error
+	// HTTP wraps the whole request router, once, in the api. It sits inside
+	// the panic catch and outside everything else, so no correlation id or
+	// principal is on the context yet, r.RemoteAddr is still the proxy (before
+	// the client address is resolved), and the body is not yet capped.
+	HTTP func(http.Handler) http.Handler
+	// Work wraps every job and every extension subscription delivery. It must
+	// call run on the calling goroutine. If the work panics, run re-raises that
+	// panic there, and the work's panic passes through the hook unchanged. The
+	// work runs once even if the hook never calls run, or panics before it.
+	Work func(ctx context.Context, w Work, run func(context.Context) error) error
+	// Panic is told of a panic the core has caught. It is called at four
+	// places: RecoverPanics (an api request, and the worker's event listener),
+	// jobs.Govern (any River job that panics out of its work), the extension job
+	// tick, and an extension subscription delivery. A panic that other code
+	// recovers by itself reaches a unit only through its LogHandler, at Error
+	// level. Every site also logs the panic at Error with a "panic" attribute.
+	// A log record that carries a "panic" attribute describes a panic already
+	// handed to Panic, so a unit must not report it twice.
+	Panic func(ctx context.Context, value any, stack []byte)
+	// Shutdown runs when the process exits, so a unit can send what it still
+	// holds. It gets a window of 2 seconds.
+	Shutdown func(ctx context.Context) error
 }
 
 // Work names one unit of background work the core is about to run.
 type Work struct {
 	Kind string // WorkJob or WorkSubscription
 	Name string // the River kind, or the subscription's name
-	Unit string // the owning unit; empty for core work
+	// Unit is the owning unit. It is set only for an extension subscription
+	// delivery. jobs.Govern never sets it, so it is empty for every job, and an
+	// extension job's Name is its River kind.
+	Unit string
 }
 
 // The two kinds of Work. Every River job passes through jobs.Govern, so a job

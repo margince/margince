@@ -52,15 +52,28 @@ func TestExtensionSubscriptionDeliveryRunsInsideTheWorkInstruments(t *testing.T)
 	}
 }
 
-func TestExtensionSubscriptionPanicReachesTheInstruments(t *testing.T) {
-	var reported any
+func TestExtensionSubscriptionPanicReachesTheInstrumentsOnceWithTheWorkContext(t *testing.T) {
+	type ctxKey struct{}
+	var reports []any
+	var sawWorkCtx bool
 	err := instrumentedDelivery(t,
 		func(context.Context, extension.Runtime, extension.Delivery) error { panic("delivery blew up") },
-		extension.Instruments{Panic: func(_ context.Context, v any, _ []byte) { reported = v }})
+		extension.Instruments{
+			Work: func(ctx context.Context, _ extension.Work, run func(context.Context) error) error {
+				return run(context.WithValue(ctx, ctxKey{}, "work"))
+			},
+			Panic: func(ctx context.Context, v any, _ []byte) {
+				reports = append(reports, v)
+				sawWorkCtx = ctx.Value(ctxKey{}) == "work"
+			},
+		})
 	if err == nil {
 		t.Fatal("a panicking delivery was not turned into an error")
 	}
-	if reported != "delivery blew up" {
-		t.Fatalf("reported = %v", reported)
+	if len(reports) != 1 || reports[0] != "delivery blew up" {
+		t.Fatalf("reports = %v", reports)
+	}
+	if !sawWorkCtx {
+		t.Fatal("Panic did not get the context the Work hook passed to run")
 	}
 }

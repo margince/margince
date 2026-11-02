@@ -229,9 +229,9 @@ func writeTSRecord(b *strings.Builder, name, body string) {
 }
 
 // panelIdent is the local name a unit's panel export is imported under, so two
-// units exporting one component name cannot collide in the registry. Neither a
-// unit name nor an export holds "__", so the join is injective and never a
-// screenIdent.
+// units exporting one component name cannot collide in the registry. An export
+// may hold "__", but unitCamel never emits it, so the first "__" always ends
+// the unit part: the join is injective, and never a screenIdent.
 func panelIdent(unit, export string) string {
 	return unitCamel(unit) + "__" + export
 }

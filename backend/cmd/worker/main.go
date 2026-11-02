@@ -259,7 +259,8 @@ type workerBoot struct {
 // configureWorker runs the phases that can fail on configuration alone, in the
 // order they depend on each other: flags, then extensions (a failing
 // registration aborts the boot before anything is opened), then the deployment
-// file, then the logger — and the capture posture last, because it carries the
+// file, then the unit instrumentation (it starts here, which is why it takes
+// ctx, and the logger wraps what it returns), then the logger — and the capture posture last, because it carries the
 // logger into the Sink's post-commit steps, where a fault is reported rather
 // than returned.
 //

@@ -147,6 +147,11 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// else, so every per-IP limiter behind it — /v1, /oauth, /mcp, the
 	// webhooks, the extension inbound routes — keys on the one address it
 	// decided rather than on whichever proxy the request happened to arrive by.
+	//
+	// instrument.HTTP wraps everything inside the panic guard, so a unit's HTTP
+	// hook runs with no correlation id or principal on the context, with
+	// r.RemoteAddr still the proxy (before ResolveClientIP), and with the body
+	// not yet capped (before LimitBodies).
 	return httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(bodyCeilingFor(uploadCeilings(srv.uploadLimits)),

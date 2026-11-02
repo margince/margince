@@ -47,9 +47,9 @@ func TestGovernRunsEachJobInsideTheWorkInstruments(t *testing.T) {
 
 func TestGovernReportsAPanicAndStillLetsRiverRecoverIt(t *testing.T) {
 	t.Cleanup(instrument.Reset)
-	var reported any
+	var reports []any
 	instrument.Install([]instrument.Started{{Unit: "u", Hooks: extension.Instruments{
-		Panic: func(_ context.Context, v any, _ []byte) { reported = v },
+		Panic: func(_ context.Context, v any, _ []byte) { reports = append(reports, v) },
 	}}}, slog.New(slog.DiscardHandler))
 	w := governedWorker[probeArgs]{work: probeWork{panics: true}}
 	var repanicked any
@@ -58,7 +58,7 @@ func TestGovernReportsAPanicAndStillLetsRiverRecoverIt(t *testing.T) {
 		//craft:ignore swallowed-errors the work panics, so Work never returns a value
 		_ = w.Work(context.Background(), &river.Job[probeArgs]{})
 	}()
-	if reported != "job blew up" || repanicked != "job blew up" {
-		t.Fatalf("reported=%v repanicked=%v", reported, repanicked)
+	if len(reports) != 1 || reports[0] != "job blew up" || repanicked != "job blew up" {
+		t.Fatalf("reports=%v repanicked=%v", reports, repanicked)
 	}
 }

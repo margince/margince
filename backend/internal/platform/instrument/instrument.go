@@ -195,6 +195,11 @@ func wrapWork(log *slog.Logger, u Started, w extension.Work, inner func(context.
 
 // Panic tells every unit about a recovered panic. It never re-panics.
 //
+// Every site that calls it also logs the panic at Error with a "panic"
+// attribute. The stable rule: a log record that carries a "panic" attribute
+// describes a panic already handed to Panic. A panic that other code recovers
+// by itself reaches a unit only through its LogHandler.
+//
 //craft:ignore naked-any value mirrors recover(), whose result is any; extension.Instruments.Panic is published API
 func Panic(ctx context.Context, value any, stack []byte) {
 	units, log := installedUnits()
