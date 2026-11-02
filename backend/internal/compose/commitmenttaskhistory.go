@@ -36,7 +36,7 @@ func commitmentTaskHistoryTx(ctx context.Context, tx pgx.Tx, source ids.UUID) ([
 	// human edits. Current participants need not include that actor anymore.
 	unscrubbed := privacy.UnscrubbedImageSQL("h", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
 	query := fmt.Sprintf(`SELECT a.source_id, COALESCE((SELECT m.holder FROM (%s) m), a.assignee_id)
- FROM activity a WHERE a.source_activity_id=$%d AND a.source_system=$%d`,
+ FROM activity a WHERE activity_thread_available(a.thread_key) AND a.source_activity_id=$%d AND a.source_system=$%d`,
 		firstMoveSQL("activity", "a", "assignee_id", unscrubbed), arg(source), arg(activities.CommitmentTaskSource))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {

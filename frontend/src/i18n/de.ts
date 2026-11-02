@@ -2218,6 +2218,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.lead_replied": "Nachfassen bei Lead-Antworten",
   "systemJob.lead_router": "Lead-Zuweisung",
   "systemJob.lead_sla_scan": "Prüfung der Lead-Reaktionszeit",
+  "systemJob.thread_repair": "Zuordnung von Gesprächen",
+  "systemJob.thread_repair_wake": "Fortsetzung der Gesprächszuordnung",
+  "systemJob.vcard_ingest": "Import von Visitenkarten",
   "systemJob.link_reconcile": "Reparatur von Datensatzverknüpfungen",
   "systemJob.linkedin_match": "Zuordnung des LinkedIn-Imports",
   "systemJob.linkedin_rematch": "Zuordnung des LinkedIn-Imports",
@@ -2504,6 +2507,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.proposal_status": "Status des Terminvorschlags",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
+  "history.field.basis_id": "Datensatz der Rechtsgrundlage",
+  "history.field.source_activity_id": "Quellaktivität",
+  "history.field.derived_from_basis_id": "Ursprüngliche Rechtsgrundlage",
+  "history.field.thread_key": "Gespräch",
+  "history.field.matched_outbound_activity_id": "Früher gesendete Nachricht",
+  "history.field.communication_basis_status": "Status der Rechtsgrundlage",
   "history.field.communication_basis": "Rechtsgrundlage",
   "history.field.company_name": "Unternehmensname",
   "history.field.confirm_submission": "Typ der Bestätigung",
@@ -6735,6 +6744,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Aus deinem Videokonferenz-Tool einfügen, etwa Teams, Zoom oder Meet. Vorhandene Sprecherangaben bleiben erhalten.",
+  "log.recordOfMeeting": "Ist das der Eintrag zu {subject}, {time}?",
+  "log.recordOfMeetingUntitled": "dem Termin",
+  "log.recordOfMeetingYes":
+    "Ja, beim Termin speichern und als stattgefunden markieren",
+  "log.recordOfMeetingNo": "Nein, einen eigenen Termin erfassen",
+  "log.recordOfMeetingRecorded":
+    "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
+  "log.recordOfMeetingManaged":
+    "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",

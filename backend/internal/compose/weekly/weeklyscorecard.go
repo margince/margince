@@ -220,7 +220,7 @@ func scoreLeads(
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
 		     AND `+meetingIsTheirsSQL("$%[3]d")+`
-		     AND m.archived_at IS NULL
+		     AND (m.archived_at IS NULL AND activity_thread_available(m.thread_key))
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
 		     AND (%[6]s))
 		SELECT

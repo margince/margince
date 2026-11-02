@@ -17,7 +17,7 @@ import (
 
 var activityUnarchive = storekit.UnarchiveShape{
 	Table:    linkEntityActivity,
-	Lock:     `SELECT COALESCE(subject,''),archived_at,false,version FROM activity WHERE id=$1 AND restricted_at IS NULL FOR UPDATE`,
+	Lock:     `SELECT COALESCE(subject,''),archived_at,false,version FROM activity WHERE id=$1 AND restricted_at IS NULL AND activity_thread_available(thread_key) FOR UPDATE`,
 	Restored: crmcontracts.PublicEventActivityUpdated{ChangedFields: crmcontracts.PublicEventActivityChangedFields{Restored: new(true)}},
 }
 

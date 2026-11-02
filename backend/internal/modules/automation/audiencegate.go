@@ -164,7 +164,7 @@ func checkOwnerlessSubject(ctx context.Context, db *database.DB, ev workflow.Eve
 	var audience string
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT audience FROM activity WHERE id = $1`, ev.Entity.ID).Scan(&audience)
+			`SELECT audience FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, ev.Entity.ID).Scan(&audience)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A row that is not there is not one to derive from, and it reads as

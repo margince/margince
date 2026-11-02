@@ -24,11 +24,11 @@ func prepareRequestAcceptance(ctx context.Context, tx pgx.Tx, request *LogActivi
 	sourceID := *request.SourceActivityID
 	acceptedKey := sourceID.String() + "/accepted/" + userID.String()
 	var accepted bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM activity WHERE source_system=@system AND source_id=@key)`, pgx.NamedArgs{requestSystemArgument: EmailRequestTaskSource, "key": acceptedKey}).Scan(&accepted); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM activity WHERE activity_thread_available(thread_key) AND source_system=@system AND source_id=@key)`, pgx.NamedArgs{requestSystemArgument: EmailRequestTaskSource, "key": acceptedKey}).Scan(&accepted); err != nil {
 		return err
 	}
 	var held bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM activity sibling WHERE sibling.source_system=@system
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM activity sibling WHERE activity_thread_available(sibling.thread_key) AND sibling.source_system=@system
  AND sibling.source_activity_id=@source AND sibling.assignee_id IS DISTINCT FROM @reader
  AND `+storekit.HeldTaskClause("sibling")+`)`, pgx.NamedArgs{requestSystemArgument: EmailRequestTaskSource, requestSourceArgument: sourceID, "reader": userID}).Scan(&held); err != nil {
 		return err
@@ -44,7 +44,7 @@ func prepareRequestAcceptance(ctx context.Context, tx pgx.Tx, request *LogActivi
 		return nil
 	}
 	var original ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system=@system AND source_id=@key`, pgx.NamedArgs{requestSystemArgument: EmailRequestTaskSource, "key": *request.SourceID}).Scan(&original)
+	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE activity_thread_available(thread_key) AND source_system=@system AND source_id=@key`, pgx.NamedArgs{requestSystemArgument: EmailRequestTaskSource, "key": *request.SourceID}).Scan(&original)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -76,7 +76,7 @@ func requestAvailableForAcceptance(ctx context.Context, tx pgx.Tx, original, rea
 	var recoverable bool
 	query := fmt.Sprintf(`SELECT coalesce(%s AND %s, false)
  FROM activity reminder JOIN activity source ON source.id=reminder.source_activity_id
- WHERE reminder.id=$%d AND reminder.restricted_at IS NULL AND source.archived_at IS NULL AND source.restricted_at IS NULL`, `reminder.assignee_id IS DISTINCT FROM `+readerSQL+` AND reminder.kind='task' AND NOT reminder.is_done AND NOT `+storekit.HeldTaskClause("reminder")+` AND EXISTS(SELECT 1 FROM audit_log creation WHERE creation.entity_type='activity' AND creation.entity_id=reminder.id AND creation.action='create')`, recipient, arg(original))
+ WHERE reminder.id=$%d AND (reminder.restricted_at IS NULL AND activity_thread_available(reminder.thread_key)) AND (source.archived_at IS NULL AND activity_thread_available(source.thread_key)) AND source.restricted_at IS NULL`, `reminder.assignee_id IS DISTINCT FROM `+readerSQL+` AND reminder.kind='task' AND NOT reminder.is_done AND NOT `+storekit.HeldTaskClause("reminder")+` AND EXISTS(SELECT 1 FROM audit_log creation WHERE creation.entity_type='activity' AND creation.entity_id=reminder.id AND creation.action='create')`, recipient, arg(original))
 	err = tx.QueryRow(ctx, query, args...).Scan(&recoverable)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

@@ -41,7 +41,10 @@ func (s *Store) SettlePartyAdmission(ctx context.Context, delivery ids.UUID) err
 		if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activity); err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `UPDATE comms_outbound SET party_admission_pending=false WHERE id=@delivery AND status='sent'`, pgx.NamedArgs{"delivery": delivery})
+		_, err = tx.Exec(ctx, `UPDATE comms_outbound receipt SET party_admission_pending=false
+ WHERE id=@delivery AND status='sent' AND EXISTS(SELECT 1 FROM activity source
+ WHERE source.id=receipt.activity_id AND source.restricted_at IS NULL
+ AND activity_thread_available(source.thread_key))`, pgx.NamedArgs{"delivery": delivery})
 		return err
 	})
 }

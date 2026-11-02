@@ -18,12 +18,15 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,7 +38,7 @@ func TestAReplyPublishesAContactKeptOnlyBecauseNobodyHadAnswered(t *testing.T) {
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-cold"))
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
-	captureInboundThroughRealSink(t, e, e.Rep1, "reply-cold", email, "thr-cold")
+	captureCounterpartyReply(mailboxOwnerCtx(e, e.Rep1), t, e, e.Rep1, "a@authz.test", "reply-cold", email, "Intro")
 
 	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
 		t.Fatalf("after the address answered, the contact is %q, want workspace", visibility)
@@ -75,8 +78,7 @@ func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
 	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-colleague")
-	captureInboundThroughRealSinkAs(mailboxOwnerCtx(e, e.Rep2), t, e, "b@authz.test",
-		"reply-two-seats", email, "thr-colleague")
+	captureCounterpartyReply(mailboxOwnerCtx(e, e.Rep2), t, e, e.Rep2, "b@authz.test", "reply-two-seats", email, "Our offer")
 
 	if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
 		t.Fatalf("after the address answered a colleague, the contact is %q, want workspace", visibility)
@@ -91,8 +93,7 @@ func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testin
 	const email = "buyer@colleaguesreply.example"
 	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", "thr-col"))
 	seedThreadedMail(t, e, email, "Our offer", "outbound", "thr-col-b")
-	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep2)), t, e, "b@authz.test",
-		"reply-col", email, "thr-col-b")
+	captureCounterpartyReply(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep2)), t, e, e.Rep2, "b@authz.test", "reply-col", email, "Our offer")
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 
 	publishAnswered(t, e)
@@ -416,9 +417,28 @@ func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
 // gate and the contact is left owed publication.
 func loseTheLivePromotion(t *testing.T, e *integration.Env, email, thread string) {
 	t.Helper()
-	judge(t, e, email, capture.KindContact, seedThreadedMail(t, e, email, "Intro", "outbound", thread))
-	captureInboundThroughRealSinkAs(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), t, e, "a@authz.test",
-		"reply-"+thread, email, thread)
+	o := &owedEnv{e: e, owner: e.Rep1, seat: "a@authz.test", now: clocktest.Now(t)}
+	parent := thread + "@sender.example"
+	o.weWrite(t, owedMail{to: email, subject: "Angebot", messageID: parent, at: o.now.Add(-time.Hour)})
+	var disposition ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(t.Context(), `SELECT id FROM capture_pending_counterparty WHERE email=$1 AND status='pending'`, email).Scan(&disposition)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	runVerdict(t, e, &scriptedVerdictBrain{verdicts: map[string]string{disposition.String(): capture.KindContact}})
+	raw := (owedMail{
+		from: email, to: o.seat, subject: "Re: Angebot", messageID: "reply-" + parent,
+		inReplyTo: parent, at: o.now,
+	}).raw()
+	parsed, err := mailmap.Parse(raw, o.seat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := newCaptureSink(e.Pool, CaptureConfig{}).Upsert(withoutContactUpdate(mailboxOwnerCtx(e, e.Rep1)), parsed.ToRecord("gmail", raw)); err != nil {
+		t.Fatal(err)
+	}
+	finishThreadRepairs(t, e)
 	requireNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
 

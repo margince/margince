@@ -48,6 +48,14 @@ func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 		t.Fatal("subject erasure no longer calls the party-source owner's purge seam")
 	}
 	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgePartySourcesForEmailsTx"))
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgeActivityProjectionsTx"))
+	batch := functionNamed(t, gatekit.ModuleRoot(t), "internal/modules/capture/threadrepair.go", "ThreadRepairBatchTx")
+	unit := functionNamed(t, gatekit.ModuleRoot(t), "internal/modules/capture/threadrepair.go", "threadRepairUnitTx")
+	if !gatekit.CallsAny(batch, []string{"invalidateThreadContentUnitTx"}) || !gatekit.CallsAny(unit, []string{"refreshThreadRepairUnitTx"}) {
+		t.Fatal("the durable repair drain must consume erased-source invalidations and refresh their staged projections")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "invalidateThreadContentUnitTx"))
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "refreshThreadRepairUnitTx"))
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {

@@ -43,7 +43,7 @@ func deadAddressesSQL(ctx context.Context, addresses []string, args *[]any) (str
 		return "", err
 	}
 	if content == "" {
-		content = alwaysVisible
+		content = auth.ActivityAvailableClause("a")
 	}
 	return fmt.Sprintf(`
 SELECT went.addr,

@@ -58,6 +58,15 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// This pseudonymous routing key survives only the inaccessible bounded drain; completion deletes its entire inbox row.
+	"capture_thread_invalidation": {"source_key"},
+	// Message routing identities keep the barrier closed until bounded cleanup retires their rows.
+	"capture_thread_barrier": {"blocked_key"},
+	"capture_thread_pending": {"source_key"},
+	// Erased sources lose their cache row; surviving messages retain their own proven server-issued project keys.
+	"capture_thread_topic": {"recognized_keys"},
+	// Import holds and delivery routes remain mailbox provenance; the subject comparison fingerprint is destroyed.
+	"capture_import": {"posture_at_import", "verdict_status", "verdict_reason", "verdict_reasons", "delivered_by"},
 	// Provider is connector provenance from the installed adapter, never subject-authored text.
 	"capture_party_source": {"provider"},
 	// The hash identifies the promise; the version and actor identify its reader.
@@ -852,7 +861,7 @@ func TestAWriteIsPlacedByItsOwnTargetOrNotAtAll(t *testing.T) {
 func TestTheArt17RedactionAccountsForEveryTextColumn(t *testing.T) {
 	t.Parallel()
 	columns := catalogTextColumns(t)
-	consts := sqlConstants(t, "internal/modules/privacy", "internal/platform/database/storekit")
+	consts := sqlConstants(t, "internal/modules/privacy", "internal/platform/database/storekit", "internal/modules/capture")
 	statements := cascadeStatements(t, consts)
 	for _, statement := range statements {
 		for _, w := range statementWrites(statement) {

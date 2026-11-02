@@ -37,7 +37,7 @@ const sentHistorySQL = `EXISTS (
  WHERE (a.counterparty_email = ce.email OR (@expanded AND EXISTS (
  SELECT 1 FROM activity_participant p WHERE p.activity_id = a.id AND p.role IN ('to', 'cc') AND p.address = ce.email)))
  AND a.kind = 'email' AND a.direction = 'outbound'
- AND a.counterparty_outbound_attested AND a.archived_at IS NULL
+ AND a.counterparty_outbound_attested AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
  AND a.occurred_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id) -- occurred_at raw: mail sent before the mailbox connected, an instant
 )`
 
@@ -47,7 +47,7 @@ const receivedHistorySQL = `EXISTS (
  JOIN capture_import ci ON ci.activity_id = a.id
  WHERE p.address = ce.email AND p.role IN ('to', 'cc')
  AND a.kind = 'email' AND (a.direction = 'inbound' OR (@expanded AND a.sent_by_colleague IS NOT NULL))
- AND NOT a.bulk_mail_attested AND a.archived_at IS NULL
+ AND NOT a.bulk_mail_attested AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
  AND ci.provider_received_at < (SELECT min(cc.created_at) FROM capture_connection cc WHERE cc.user_id = ci.user_id))`
 
 const (

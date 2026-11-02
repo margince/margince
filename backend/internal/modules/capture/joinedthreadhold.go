@@ -46,7 +46,7 @@ func (s *Sink) holdFromJoinedThreadTx(ctx context.Context, tx pgx.Tx, id ids.Act
 		  JOIN capture_thread_verdict v
 		    ON v.thread_key = a.thread_key AND v.user_id = $2
 		 WHERE a.id = $1 AND a.audience = $3
-		   AND a.archived_at IS NULL AND a.restricted_at IS NULL`,
+		   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL`,
 		id, seat, audienceWorkspace).Scan(&status)
 	if err != nil {
 		// No verdict on the joined thread, or the message is not open anyway.

@@ -38,12 +38,14 @@ import (
 )
 
 const (
-	captureEntry    = "internal/modules/capture/sink.go"
-	captureJoin     = "internal/modules/capture/threadjoin.go"
-	captureLockFile = "internal/modules/capture/capturebeforethewrite.go"
-	lockTakerName   = "takeMergeLockFirst"
-	lockStatement   = "mergeLockStatement"
-	captureEntryFn  = "Upsert"
+	captureEntry       = "internal/modules/capture/sink.go"
+	capturePrepareFile = "internal/modules/capture/sinkactivityprepare.go"
+	capturePrepareFn   = "prepareCapturedActivityTx"
+	captureJoin        = "internal/modules/capture/threadjoin.go"
+	captureLockFile    = "internal/modules/capture/capturebeforethewrite.go"
+	lockTakerName      = "takeMergeLockFirst"
+	lockStatement      = "mergeLockStatement"
+	captureEntryFn     = "Upsert"
 	// The alias sighting sits one call down, behind the wrapper that settles what
 	// the seat's own addresses decide. The gate reads both halves: the wrapper's
 	// position inside Upsert, and the sighting's presence inside the wrapper.
@@ -65,7 +67,12 @@ const (
 func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 	t.Parallel()
 
-	entry := functionNamed(t, gatekit.ModuleRoot(t), captureEntry, captureEntryFn)
+	upsert := functionNamed(t, gatekit.ModuleRoot(t), captureEntry, captureEntryFn)
+	preparedAt, writtenAt := offsetOfCall(upsert, capturePrepareFn), offsetOfCall(upsert, "captureActivity")
+	if preparedAt < 0 || writtenAt < 0 || preparedAt > writtenAt {
+		t.Fatal("capture must prepare its lock and source evidence before writing an activity")
+	}
+	entry := functionNamed(t, gatekit.ModuleRoot(t), capturePrepareFile, capturePrepareFn)
 	lockAt := offsetOfCall(entry, lockTakerName)
 	if lockAt < 0 {
 		t.Fatalf("%s does not call %s — a capture that locks an activity row before the merge "+
@@ -80,7 +87,7 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 		t.Errorf("%s no longer calls %s, so the ordering below pins the wrapper and not the "+
 			"alias path it stands for", seatAddressFn, aliasSightingFn)
 	}
-	for _, reaches := range []string{seatAddressFn, "captureActivity"} {
+	for _, reaches := range []string{seatAddressFn, "rootThreadTx", "storeOriginalTx"} {
 		at := offsetOfCall(entry, reaches)
 		if at < 0 {
 			t.Errorf("%s no longer calls %s — this gate reads the order of the two, so a rename "+
@@ -112,6 +119,9 @@ func offsetOfCall(fn *ast.FuncDecl, name string) int {
 		if selector, ok := call.Fun.(*ast.SelectorExpr); ok && selector.Sel.Name == name {
 			found = int(call.Pos())
 		}
+		if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == name {
+			found = int(call.Pos())
+		}
 		return found < 0
 	})
 	return found
@@ -130,7 +140,7 @@ func TestTheMergeLockHasOneSpelling(t *testing.T) {
 	tree := gatekit.ModuleRoot(t)
 	for _, site := range []struct{ file, function string }{
 		{captureLockFile, lockTakerName},
-		{captureJoin, "mergeLinkedThreads"},
+		{"internal/modules/capture/threadrepair.go", "LockThreadMergesTx"},
 	} {
 		fn := functionNamed(t, tree, site.file, site.function)
 		if !bodyUses(fn, lockStatement) {

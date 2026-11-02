@@ -196,7 +196,7 @@ func (s *Store) waitingCandidates(
 	}
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	query := `SELECT a.id, a.occurred_at FROM activity a
-		 WHERE a.kind IN ('email', 'message') AND a.direction = 'inbound' AND a.archived_at IS NULL
+		 WHERE activity_thread_available(a.thread_key) AND a.kind IN ('email', 'message') AND a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND ` + content + `
 		   AND ` + occurredday.BegunSQL("a", instant) + `
 		   AND (` + waitingYoungSQL(instant, fmt.Sprint(horizon)) + ` OR ` + heldRequestSQL() + `)

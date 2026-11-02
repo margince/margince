@@ -129,16 +129,7 @@ var activityProjection = []activityColumn{
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.source_author_id", func(s *activityScan) any { return &s.sourceAuthorID }},
 	{"a.source_author_name", func(s *activityScan) any { return &s.sourceAuthorName }},
-	// The author's CURRENT display name: sourceAuthorSeatNameSQL, below the table.
-	// Three readers compose their own `FROM activity a WHERE …` around this
-	// projection, so a join would have to be added to each of them and to the
-	// next one somebody writes — which is precisely how the contact360 timeline
-	// came to be missing a column for a whole slice, twice. A column that
-	// carries its own source needs nothing of its callers.
-	//
-	// NO liveness filter, deliberately. Who wrote something in August is a fact
-	// about August: a colleague who has since left was still its author, and
-	// readEmailParties already refuses the same filter for the same reason.
+	// Author names remain meaningful after a colleague leaves.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
 	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
 	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
@@ -160,18 +151,8 @@ var activityProjection = []activityColumn{
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
-// sourceAuthorSeatNameSQL resolves the author's current display name, and it is
-// a SUBSELECT rather than a join.
-//
-// Three readers compose their own `FROM activity a WHERE …` around this
-// projection, so a join would have to be added to each of them and to the next
-// one somebody writes — which is precisely how the contact360 timeline came to
-// be missing a column for a whole slice, twice. A column that carries its own
-// source needs nothing of its callers.
-//
-// NO liveness filter, deliberately. Who wrote something in August is a fact
-// about August: a colleague who has since left was still its author, and
-// readEmailParties already refuses the same filter for the same reason.
+// sourceAuthorSeatNameSQL carries its lookup because projections have independent queries.
+// Departed colleagues remain the authors of their earlier work.
 //
 // ALIASED, and the alias is load-bearing even though no activity reader needs
 // it today. An unaliased subselect takes its output name from the column inside

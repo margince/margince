@@ -170,7 +170,7 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 		       `+stampedMailboxLabelSQL+`
 		  FROM activity a
 		  JOIN raw_capture rc ON `+storekit.StoredOriginalSQL("a", "rc")+`
-		 WHERE a.archived_at IS NULL
+		 WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND a.source_system <> ''
 		   AND a.captured_by LIKE 'connector:%'
 		   AND NOT EXISTS (

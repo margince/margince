@@ -157,7 +157,7 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
-		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
+		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.created_at > $%d AND %s AND (%s)%s`,
 		sincePos, activities.CompanyLinkedActivityExists(companyPos), activityScope, a.opts.projectScope(arg))
 	if err := tx.QueryRow(ctx, query, args...).Scan(&out.NewActivities); err != nil {
 		return out, fmt.Errorf("count new activities: %w", err)

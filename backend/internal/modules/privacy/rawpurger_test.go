@@ -16,6 +16,9 @@ import (
 
 type nilRawPurger struct{}
 
+func (*nilRawPurger) PurgeActivityProjectionsTx(context.Context, pgx.Tx, []ids.UUID) error {
+	return nil
+}
 func (*nilRawPurger) PurgeRawCaptureTx(context.Context, pgx.Tx, []ids.UUID) error { return nil }
 func (*nilRawPurger) PurgePartySourcesForEmailsTx(context.Context, pgx.Tx, []string) error {
 	return nil

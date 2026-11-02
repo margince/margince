@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,7 +36,7 @@ import (
 func activityRetentionHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, error) {
 	var held bool
 	err := tx.QueryRow(ctx,
-		`SELECT restricted_at IS NOT NULL FROM activity WHERE id = $1`, id).Scan(&held)
+		`SELECT restricted_at IS NOT NULL FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, id).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -65,6 +66,9 @@ func activityRetentionHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool, e
 // one, is what refuses it, as 423 rather than a 404 that denies the row is
 // even there.
 func lockActivityForWrite(ctx context.Context, tx pgx.Tx, id ids.UUID) (held bool, err error) {
+	if err := auth.EnsureActivityThreadAvailable(ctx, tx, id); err != nil {
+		return false, err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", id, storekit.LiveOnly); err == nil {
 		return false, nil
 	} else if !errors.Is(err, apperrors.ErrNotFound) {

@@ -189,7 +189,7 @@ func participantCandidatesSQL(pinned string) string {
 		             FROM app_user u
 		            WHERE u.id::text = ` + auth.ConnectorSeatSQL("a") + `
 		      ) o ON true
-		     WHERE a.archived_at IS NULL
+		     WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		       -- The same set every other writer of a participant row accepts,
 		       -- rendered from one definition so the four cannot drift apart.
 		       AND a.kind IN (` + relstrength.ParticipantKindSQLList() + `)

@@ -279,6 +279,7 @@ func assignmentTarget(assignment string) string {
 // dead assignment that arrives in the same function later. What the register
 // adds is the product claim the shape cannot carry: WHY this row has to move.
 var touchStatements = gatekit.Waive(map[string]string{
+	"internal/modules/activities/threadsplit.go:ThreadPublishedTx":                "publication changes the conversation readers can observe after the barrier lifts; the locked activity revision moves so subscribers retry the published partition and staged approvals cannot reuse its hidden revision",
 	"internal/modules/identity/memberretirement.go:recordMemberSurvivor":          "the survivor's merged aliases change its account editor and retirement preview, so its locked revision must move",
 	"internal/modules/identity/teams.go:recordTeamChange":                         "team membership is part of the member editor snapshot; the authorization lock serializes access changes and its revision must move",
 	"internal/modules/identity/userrole.go:changeUserRoleTx":                      "role assignments are part of the member editor snapshot; the authorization lock serializes role changes and its revision must move",

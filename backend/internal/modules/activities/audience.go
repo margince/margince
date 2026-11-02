@@ -179,7 +179,7 @@ func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[s
 	var audience string
 	var reason *string
 	if err := tx.QueryRow(ctx,
-		`SELECT audience, audience_reason FROM activity WHERE id = $1`, id).Scan(&audience, &reason); err != nil {
+		`SELECT audience, audience_reason FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, id).Scan(&audience, &reason); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx,
@@ -247,7 +247,7 @@ func ensureVersion(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVersion 
 		return nil
 	}
 	var current int64
-	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1`, id).Scan(&current); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT version FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, id).Scan(&current); err != nil {
 		return err
 	}
 	if current != *ifVersion {

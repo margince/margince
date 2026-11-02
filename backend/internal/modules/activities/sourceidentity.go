@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -419,7 +420,25 @@ func bindableIdentityUnder(
 	if err != nil || !live {
 		return ids.ActivityID{}, false, err
 	}
+	if err := bindingThreadAvailableTx(ctx, tx, incumbent); err != nil {
+		return ids.ActivityID{}, false, err
+	}
 	return incumbent, true, nil
+}
+
+func bindingThreadAvailableTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+	var available bool
+	err := tx.QueryRow(ctx, `SELECT activity_thread_available(thread_key) FROM activity WHERE id=@id`, pgx.NamedArgs{"id": id}).Scan(&available)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !available {
+		return fmt.Errorf("message is being repaired; retry the import: %w", apperrors.ErrConflict)
+	}
+	return nil
 }
 
 // identityHolderIsLive reports whether the row holding an identity is still a

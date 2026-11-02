@@ -322,7 +322,7 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 		SELECT d.status, d.created_at, d.last_activity_at, d.wait_until, d.stage_id, d.pipeline_id,
 		       (SELECT a.id FROM activity a
 		          JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-		         WHERE a.archived_at IS NULL AND `+relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", nowPos))+`
+		         WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND `+relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", nowPos))+`
 		           `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		         ORDER BY a.occurred_at DESC, a.id DESC
 		         LIMIT 1),
@@ -416,7 +416,7 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 	overdue, err := collectIDs(tx.Query(ctx, `
   SELECT a.id FROM activity a
   JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-  WHERE a.kind = 'task' AND a.is_done = false AND a.archived_at IS NULL
+  WHERE a.kind = 'task' AND a.is_done = false AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
    AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $2 AND `+current+`
   ORDER BY `+storekit.TaskDueSQL("a")+`, a.id`, args...))
 	if err != nil {
