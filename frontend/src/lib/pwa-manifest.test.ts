@@ -36,9 +36,9 @@ function purposeOf(icon: ManifestIcon): string {
   return icon.purpose ?? "any";
 }
 
-// The browser asks for whatever index.html names. A name that no file in
-// public/ answers falls through to the SPA's index.html, so the browser parses
-// a page as a manifest and reports it as invalid rather than as missing.
+// The browser asks for whatever index.html names. A name no file in public/
+// answers falls through to the SPA's index.html. The browser then parses a
+// page as a manifest and reports it invalid rather than missing.
 describe("the install manifest is where the page says it is", () => {
   const head = parse(readFileSync(join(frontendRoot, "index.html"), "utf8"));
   const href = head
