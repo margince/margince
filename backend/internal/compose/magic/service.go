@@ -264,6 +264,26 @@ func (s *Service) windowStart(
 	return ResolveWindow(ctx, s.brief, since, asOf)
 }
 
+// windowKey names the window a receipt with no since covers. It is the
+// reader's brief cutoff once their brief has run, and otherwise the rolling day
+// or the lookback floor.
+func (s *Service) windowKey(ctx context.Context) (string, error) {
+	asOf := s.now().UTC()
+	from, err := s.windowStart(ctx, nil, asOf)
+	if err != nil {
+		return "", err
+	}
+	// The two windows that move with the clock are named, not dated, so the key
+	// holds still while the answer does.
+	switch {
+	case from.Equal(asOf.Add(-defaultWindow)):
+		return "day", nil
+	case from.Equal(asOf.Add(-maxLookback)):
+		return "floor", nil
+	}
+	return from.Format(time.RFC3339Nano), nil
+}
+
 // ResolveWindow is the one answer to where Done for you starts. Home's lane
 // and the worklist's receipts both ask it, so the two never show two windows.
 func ResolveWindow(

@@ -42,7 +42,7 @@ var documentGroups = map[string]bool{
 // seller can tell rows apart and the manifest can be frozen from one read.
 // reaches_buyer is the buyer's own membership rule, so the seller sees which
 // entries the buyer no longer gets.
-const documentColumns = `d.id, d.room_id, d.attachment_id, d.group_key, d.title, d.position,
+var documentColumns = `d.id, d.room_id, d.attachment_id, d.group_key, d.title, d.position,
 	a.filename, a.content_type, a.byte_size, (` + inTheDealsFilesArea + `) AS reaches_buyer,
 	d.source, d.captured_by, d.version, d.created_at, d.updated_at, d.archived_at`
 
@@ -75,18 +75,14 @@ const documentFrom = `deal_room_document d
 // principal: the public download has none. The caller-bound half — may THIS
 // seller see a captured file — is asked once, at add (addDocumentTx).
 //
-// The activities module spells the same membership for the deal's own Files
-// read, inline-image ceiling included (a logo a rep never sees in the area
-// must not be shareable by id); it cannot be shared because a module never
-// imports a sibling, and
-// TestRoomDocumentMembershipIsSpelledOnce holds this module's three readers to
-// this one constant.
-const inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
+// The deal's own Files read applies the same message link and inline-image
+// rule from storekit. A logo a rep never sees in the area is not shareable by id.
+//
+// Held by: TestRoomDocumentMembershipIsSpelledOnce (backend/internal/modules/dealrooms/documentmembership_test.go)
+var inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	AND ((a.entity_type = 'deal' AND a.entity_id = r.deal_id)
-	  OR (a.entity_type = 'activity' AND EXISTS (
-	        SELECT 1 FROM activity_link l
-	         WHERE l.activity_id = a.entity_id AND l.entity_type = 'deal' AND l.deal_id = r.deal_id)
-	      AND NOT (COALESCE(a.content_type, '') LIKE 'image/%' AND COALESCE(a.byte_size, 0) < 65536)
+	  OR (a.entity_type = 'activity' AND ` + storekit.MessageOnDealSQL("a.entity_id", "r.deal_id") + `
+	      AND ` + storekit.NotInlineMailImageSQL("a") + `
 	      AND EXISTS (
 	        SELECT 1 FROM activity m
 	         WHERE m.id = a.entity_id AND m.archived_at IS NULL

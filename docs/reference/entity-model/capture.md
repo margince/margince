@@ -412,6 +412,10 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_import_pkey`: `unique, btree (id)`
 - `capture_import_user_idx`: `btree (user_id, activity_id)`
 
+**Triggers**
+
+- `home_read_fence_capture_import`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+
 ## capture_owner_identity
 
 7 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -823,3 +827,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `workspace_email_domain_pkey`: `unique, btree (domain)`
+
+**Triggers**
+
+- `home_read_fence_workspace_domain`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
