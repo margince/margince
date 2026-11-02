@@ -110,31 +110,57 @@
   color: var(--textSecondary);
 }
 
-/* At rest an editable value sits in a soft field box with its verb mark: a
-   pencil to type, a chevron to choose. Read-only values keep no box, so a
-   glance down the column tells the two apart on every device. A "Change"
-   verb beside a rendered link stays a link: the link is the value. */
+/* In a record's details an editable value is drawn as the field it opens
+   into: the input's ground, edge and well, 28px tall inside the 32px row.
+   Its text starts where a read-only value's does, so the column reads as one
+   line of values; the box takes the gap before it. A "Change" verb beside a
+   rendered link stays a link: the link is the value. */
+:is(.factlist-value, .fieldgrid-value) {
+  --field-inset: var(--space-2);
+}
+:is(.factlist-value, .fieldgrid-value):has(
+  .inline-editable:not(.inline-edit-verb),
+  .inlinetext-edit
+) {
+  overflow: visible;
+}
 :is(.factlist-value, .fieldgrid-value) .inline-editable:not(.inline-edit-verb) {
   display: flex;
-  box-sizing: border-box;
-  width: 100%;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-2);
-  padding: 3px 8px;
-  margin: -4px 0;
-  border: 1px solid var(--borderStrong);
+  box-sizing: border-box;
+  inline-size: calc(100% + var(--field-inset));
+  max-inline-size: none;
+  min-block-size: calc(var(--space-8) - var(--space-1));
+  margin: 0 0 0 calc(-1 * var(--field-inset));
+  /* ds:ignore 3px and the 1px edge hold one 20px line at 28px */
+  padding: 3px calc(var(--field-inset) - 1px);
+  border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  background: color-mix(in srgb, var(--bgInset) 40%, transparent);
+  background: var(--ground);
+  box-shadow: var(--shadow-well);
   color: var(--textPrimary);
   font-weight: inherit;
+  transition:
+    border-color var(--dur-state) var(--ease-out),
+    box-shadow var(--dur-state) var(--ease-out);
 }
 :is(.factlist-value, .fieldgrid-value)
   .inline-editable:not(.inline-edit-verb):hover {
   border-color: var(--borderControl);
+  background: var(--ground);
+  box-shadow: none;
+}
+:is(.factlist-value, .fieldgrid-value)
+  .inline-editable:not(.inline-edit-verb):focus-visible {
+  border-color: var(--accent);
+  background: var(--ground);
+  outline: none;
+  box-shadow: var(--focus-glow);
 }
 :is(.factlist-value, .fieldgrid-value)
   .inline-editable:not(.inline-edit-verb)[data-empty="true"] {
-  color: var(--accentText);
+  color: var(--textSecondary);
 }
 :is(.factlist-value, .fieldgrid-value)
   .inline-editable:not(.inline-editable-choice, .inline-edit-verb)::after {
@@ -143,16 +169,34 @@
   margin-inline-start: auto;
   inline-size: 12px;
   aspect-ratio: 1;
-  align-self: center;
   background: var(--textSecondary);
+  opacity: 0.7;
   mask:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z'/%3E%3C/svg%3E")
     center / contain no-repeat;
+  transition: opacity var(--dur-state) var(--ease-out);
 }
 :is(.factlist-value, .fieldgrid-value) .inline-editable-caret {
-  opacity: 1;
+  opacity: 0.7;
   flex: none;
   margin-inline-start: auto;
-  align-self: center;
   color: var(--textSecondary);
+}
+:is(.factlist-value, .fieldgrid-value)
+  .inline-editable:not(.inline-edit-verb):is(:hover, :focus-visible)::after,
+:is(.factlist-value, .fieldgrid-value)
+  .inline-editable:is(:hover, :focus-visible)
+  .inline-editable-caret {
+  opacity: 1;
+}
+/* The open field keeps the resting box's place and size, so a click changes
+   only the edge and the caret, never the line under the pointer. */
+:is(.factlist-value, .fieldgrid-value) .inlinetext-edit .input {
+  box-sizing: border-box;
+  inline-size: calc(100% + var(--field-inset));
+  min-block-size: calc(var(--space-8) - var(--space-1));
+  margin: 0 0 0 calc(-1 * var(--field-inset));
+  /* ds:ignore the resting box's own geometry */
+  padding: 3px calc(var(--field-inset) - 1px);
+  border-radius: var(--r-sm);
 }

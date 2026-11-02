@@ -201,6 +201,11 @@ const ACCEPTED = new Map<string, string>([
       "takes the field's box rather than the control's",
   ],
   [
+    "inline-editable",
+    "a record detail's value drawn as the field it opens into: one line in a " +
+      "28px box, so it fits the 32px fact row beside read-only values",
+  ],
+  [
     "topbar-search",
     "a button drawn as the FIELD the palette opens with, so it wears the " +
       "field's height too (app/topbar.css says so where it is drawn)",

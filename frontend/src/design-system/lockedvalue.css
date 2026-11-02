@@ -14,3 +14,7 @@
   padding: 2px;
   color: var(--textSecondary);
 }
+/* In a record's details the lock lines up with the editable boxes' marks. */
+:is(.factlist-value, .fieldgrid-value) .locked-value > .locked-value-mark {
+  margin-inline-end: var(--space-1);
+}
