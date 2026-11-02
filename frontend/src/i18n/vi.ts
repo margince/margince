@@ -7849,6 +7849,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
     "Dùng {name}, {title}, {phone} và {logo} (logo công ty nhúng trong thư). Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, cùng màu chữ và cỡ chữ theo pixel trên span. Để trống sẽ tắt mẫu.",
+  "settings.signatureFormat": "Định dạng",
+  "settings.signatureFormatText": "Văn bản thuần",
+  "settings.signatureFormatHtml": "Mã HTML",
+  "settings.signatureHtmlLabel": "Chữ ký HTML",
+  "settings.signatureHtmlHintTemplate":
+    "Chữ ký này thay thế mẫu của công ty. Để trống để dùng lại mẫu của công ty. Hình ảnh từ xa và mã script sẽ bị xóa.",
+  "settings.signatureHtmlHintPlain":
+    "Để trống để dùng lại chữ ký văn bản thuần. Hình ảnh từ xa và mã script sẽ bị xóa.",
+  "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",

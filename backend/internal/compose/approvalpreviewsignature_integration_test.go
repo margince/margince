@@ -25,7 +25,8 @@ func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
 			ctx := e.Admin()
 			company := e.SeedCompany(t, "Harbor account", &e.AdminUser)
 			const signature = "Dana Seller\nAccount Director"
-			if _, err := e.Contacts.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: signature}); err != nil {
+			markup := "<p><b>Dana Seller</b><br>Account Director</p>"
+			if _, err := e.Contacts.SaveMyEmailSignature(ctx, contacts.SaveSignatureInput{Body: "Plain fallback", HTML: &markup}); err != nil {
 				t.Fatal(err)
 			}
 			proposer := ctx
@@ -67,13 +68,16 @@ func TestMailApprovalSignsOnlyAsItsActualHumanSender(t *testing.T) {
 			if preview == nil || preview.State != "ready" || preview.Details == nil || preview.Effects == nil {
 				t.Fatalf("preview: %+v", preview)
 			}
-			signed := ""
+			signed, signedMarkup := "", ""
 			for _, detail := range *preview.Details {
+				if detail.Field == "signature_html" {
+					signedMarkup = detail.Value.Text
+				}
 				if detail.Field == "signature_text" {
 					signed = detail.Value.Text
 				}
 			}
-			if mode == "own" && signed != signature {
+			if mode == "own" && (signed != signature || signedMarkup != markup) {
 				t.Fatalf("own signature: %q", signed)
 			}
 			if mode == "agent" && (signed != "" || !slices.Contains(*preview.Effects, "send_without_human_signature")) {

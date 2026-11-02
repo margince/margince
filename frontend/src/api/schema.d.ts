@@ -21741,12 +21741,12 @@ export interface paths {
         get: operations["getMyEmailSignature"];
         /**
          * Write or clear your own sign-off.
-         * @description An empty `body` CLEARS the signature — a member emptying the field means
-         *     "sign off with the plain closing", not "leave what was there".
+         * @description An empty `body` clears the plain-text fallback. Personal HTML and the
+         *     workspace template retain their precedence until cleared separately.
          *
-         *     Plain text only. The transport sends `text/plain` and the drafting
-         *     prompts forbid the model from writing a sign-off of its own, so what is
-         *     stored here is exactly what arrives under every message the caller sends.
+         *     `body` stores plain text. Optional `html` stores personal markup, sanitized
+         *     when rendered. Personal HTML takes precedence over the workspace template,
+         *     then plain text and the closing line. An agent sends without a sign-off.
          */
         put: operations["saveMyEmailSignature"];
         post?: never;
@@ -34120,18 +34120,22 @@ export interface components {
         };
         EmailSignature: {
             /**
-             * @description The sign-off appended below every message this member sends, plain text.
-             *     Empty means none written; a send then closes with a plain greeting and
-             *     the member's display name when one is on file.
+             * @description Plain-text fallback after personal HTML and the company template.
+             *     With none set, a send closes with a greeting and the member's name.
              */
             body: string;
+            /**
+             * @description Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
+             *     expanding placeholders. Empty sanitized content uses the usual fallback.
+             */
+            html: string;
             /** @description The member's title, filled into the workspace template's `{title}`. */
             title: string;
             /** @description The member's phone number, filled into the workspace template's `{phone}`. */
             phone: string;
             /**
              * @description The workspace has a signature template. Every send this member makes then signs
-             *     with the template, filled in with their name, title and phone, instead of `body`.
+             *     with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
              *     An agent's send carries no sign-off.
              */
             template_active: boolean;
@@ -34145,7 +34149,7 @@ export interface components {
              *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
              *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
              *     and spans with a colour and a pixel size, and drops everything else. Empty means
-             *     none: each member signs with their own plain-text signature.
+             *     none: each member uses personal HTML, plain text or the closing line.
              */
             template: string;
         };
@@ -34164,6 +34168,12 @@ export interface components {
         EmailSignatureDraft: {
             /** @description The workspace template as edited. Empty previews a workspace with none. */
             template?: string;
+            /**
+             * @description Personal HTML as typed. Empty clears it; omitted on a write or preview
+             *     leaves it unchanged. Rendering uses the signature sanitizer without
+             *     expanding placeholders. Empty sanitized content uses the usual fallback.
+             */
+            html?: string;
             /** @description The caller's title as edited. */
             title?: string;
             /** @description The caller's phone as edited. */
@@ -34177,7 +34187,7 @@ export interface components {
             text: string;
             /**
              * @description The same block as the sanitized markup the HTML part carries. Present only when
-             *     `kind` is `template`.
+             *     `kind` is `template` or a personal HTML `signature`.
              */
             html?: string;
             /**
@@ -34196,6 +34206,12 @@ export interface components {
              *     is a document riding on every message.
              */
             body: string;
+            /**
+             * @description Personal HTML as typed. Empty clears it; omitted on a write or preview
+             *     leaves it unchanged. Rendering uses the signature sanitizer without
+             *     expanding placeholders. Empty sanitized content uses the usual fallback.
+             */
+            html?: string;
             /** @description The member's title, for the workspace template. Omitted leaves it as it is. */
             title?: string;
             /** @description The member's phone number, for the workspace template. Omitted leaves it as it is. */

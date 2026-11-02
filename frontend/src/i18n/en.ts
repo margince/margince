@@ -8044,6 +8044,15 @@ export const en = {
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
     "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+  "settings.signatureFormat": "Format",
+  "settings.signatureFormatText": "Plain text",
+  "settings.signatureFormatHtml": "HTML",
+  "settings.signatureHtmlLabel": "HTML signature",
+  "settings.signatureHtmlHintTemplate":
+    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Remote images and scripts are removed.",
+  "settings.signatureHtmlHintPlain":
+    "Leave this empty to use your plain text again. Remote images and scripts are removed.",
+  "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
