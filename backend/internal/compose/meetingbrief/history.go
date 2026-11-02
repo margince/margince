@@ -64,7 +64,7 @@ type HistoryIn struct {
 	// not this brief's, and only when the caller may see that deal. Both it and
 	// OnDeal are settled by fileUnderDeal once the brief's deal is chosen.
 	OtherDeal *FiledDeal
-	// Filed is every deal the caller may see that the conversation is filed
+	// Filed lists the deals the caller may see that the conversation is filed
 	// under, an open one first.
 	Filed []FiledDeal
 	// Withheld says this caller is outside the activity's audience: the row

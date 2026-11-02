@@ -10,6 +10,7 @@ package integration
 
 import (
 	"context"
+	"maps"
 	"net/http"
 	"slices"
 	"testing"
@@ -24,9 +25,7 @@ import (
 func (s *standingEnv) leadReader() context.Context {
 	perms := roomPerms
 	perms.Objects = map[string]principal.ObjectGrant{"lead": {Read: true}}
-	for object, grant := range roomPerms.Objects {
-		perms.Objects[object] = grant
-	}
+	maps.Copy(perms.Objects, roomPerms.Objects)
 	return s.As(s.Rep1, []ids.UUID{s.Team1}, perms)
 }
 
@@ -84,21 +83,42 @@ func TestATaskEmailsItsContactElseItsLiveLeadElseItsCompany(t *testing.T) {
 	}
 	var cases []taskCase
 	for _, tc := range []taskCase{
-		{"a contact", []activities.ActivityLinkInput{contact, live, company},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeContact, contact.EntityID, "", "anna@buyer.test"}},
-		{"one live lead", []activities.ActivityLinkInput{live},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, live.EntityID, "", "lena@prospect.test"}},
-		{"a live and a closed lead, and a company", []activities.ActivityLinkInput{live, closed, company},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, live.EntityID, "", "lena@prospect.test"}},
+		{
+			"a contact",
+			[]activities.ActivityLinkInput{contact, live, company},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeContact, contact.EntityID, "", "anna@buyer.test"},
+		},
+		{
+			"one live lead",
+			[]activities.ActivityLinkInput{live},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, live.EntityID, "", "lena@prospect.test"},
+		},
+		{
+			"a live and a closed lead, and a company",
+			[]activities.ActivityLinkInput{live, closed, company},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, live.EntityID, "", "lena@prospect.test"},
+		},
 		{"two live leads", []activities.ActivityLinkInput{live, other, company}, nil},
-		{"a closed lead and no company", []activities.ActivityLinkInput{closed},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, closed.EntityID, crmcontracts.ActivityEmailTargetRefusalLeadClosed, ""}},
-		{"a lead with no address", []activities.ActivityLinkInput{bare},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, bare.EntityID, crmcontracts.ActivityEmailTargetRefusalNoAddress, ""}},
-		{"a closed lead and a company", []activities.ActivityLinkInput{closed, company},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeCompany, company.EntityID, "", ""}},
-		{"a company", []activities.ActivityLinkInput{company},
-			&want{crmcontracts.ActivityEmailTargetEntityTypeCompany, company.EntityID, "", ""}},
+		{
+			"a closed lead and no company",
+			[]activities.ActivityLinkInput{closed},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, closed.EntityID, crmcontracts.ActivityEmailTargetRefusalLeadClosed, ""},
+		},
+		{
+			"a lead with no address",
+			[]activities.ActivityLinkInput{bare},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeLead, bare.EntityID, crmcontracts.ActivityEmailTargetRefusalNoAddress, ""},
+		},
+		{
+			"a closed lead and a company",
+			[]activities.ActivityLinkInput{closed, company},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeCompany, company.EntityID, "", ""},
+		},
+		{
+			"a company",
+			[]activities.ActivityLinkInput{company},
+			&want{crmcontracts.ActivityEmailTargetEntityTypeCompany, company.EntityID, "", ""},
+		},
 	} {
 		rows[tc.name] = s.writtenAbout(t, "task", tc.links...)
 		cases = append(cases, tc)
