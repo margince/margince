@@ -96,6 +96,7 @@ func TestAPanickingHTTPHookIsSkippedNotPropagated(t *testing.T) {
 func TestPanicAndShutdownReachEveryUnitAndSurviveAPanickingOne(t *testing.T) {
 	t.Cleanup(instrument.Reset)
 	var seen []string
+	var logged bytes.Buffer
 	instrument.Install([]instrument.Started{
 		{Unit: "bad", Hooks: extension.Instruments{
 			Panic:    func(context.Context, any, []byte) { panic("hook") },
@@ -105,11 +106,14 @@ func TestPanicAndShutdownReachEveryUnitAndSurviveAPanickingOne(t *testing.T) {
 			Panic:    func(_ context.Context, v any, _ []byte) { seen = append(seen, "panic:"+v.(string)) },
 			Shutdown: func(context.Context) error { seen = append(seen, "shutdown"); return nil },
 		}},
-	}, slog.New(slog.DiscardHandler))
+	}, slog.New(slog.NewTextHandler(&logged, nil)))
 	instrument.Panic(context.Background(), "x", nil)
 	instrument.Shutdown(context.Background())
 	if strings.Join(seen, ",") != "panic:x,shutdown" {
 		t.Fatalf("seen = %v", seen)
+	}
+	if n := strings.Count(logged.String(), "unit=bad"); n != 2 {
+		t.Fatalf("bad unit failures logged %d times, want 2: %q", n, logged.String())
 	}
 }
 
@@ -127,5 +131,130 @@ func TestLogHandlerWrapsInOrder(t *testing.T) {
 	// Built inside-out: b wraps the base first, then a wraps b, so a is outermost.
 	if strings.Join(order, ",") != "b,a" {
 		t.Fatalf("order = %v", order)
+	}
+}
+
+func passThrough(ctx context.Context, _ extension.Work, run func(context.Context) error) error {
+	return run(ctx)
+}
+
+func recovered(fn func()) (v any) {
+	defer func() { v = recover() }()
+	fn()
+	return nil
+}
+
+func installWork(t *testing.T, log *slog.Logger, hooks ...func(context.Context, extension.Work, func(context.Context) error) error) {
+	t.Helper()
+	t.Cleanup(instrument.Reset)
+	var units []instrument.Started
+	for i, h := range hooks {
+		units = append(units, instrument.Started{Unit: string(rune('a' + i)), Hooks: extension.Instruments{Work: h}})
+	}
+	instrument.Install(units, log)
+}
+
+func TestAWorkPanicReachesTheCallerThroughANonDeferringHook(t *testing.T) {
+	var logged bytes.Buffer
+	installWork(t, slog.New(slog.NewTextHandler(&logged, nil)), passThrough)
+	got := recovered(func() {
+		_ = instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { panic("work") })
+	})
+	if got != "work" {
+		t.Fatalf("recovered %v, want the work's own panic", got)
+	}
+	if strings.Contains(logged.String(), "instrumentation hook panicked") {
+		t.Fatalf("a work panic was logged as a hook panic: %q", logged.String())
+	}
+}
+
+func TestAWorkPanicIsObservableByADeferringHookAndStillReachesTheCaller(t *testing.T) {
+	var hookSaw any
+	installWork(t, slog.New(slog.DiscardHandler), func(ctx context.Context, _ extension.Work, run func(context.Context) error) error {
+		defer func() { hookSaw = recover(); panic(hookSaw) }()
+		return run(ctx)
+	})
+	got := recovered(func() {
+		_ = instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { panic("work") })
+	})
+	if hookSaw != "work" || got != "work" {
+		t.Fatalf("hook saw %v, caller saw %v, want the work's value for both", hookSaw, got)
+	}
+}
+
+func TestAWorkPanicThroughTwoNestedUnitsReachesTheCallerOnceWithItsOriginalValue(t *testing.T) {
+	var logged bytes.Buffer
+	installWork(t, slog.New(slog.NewTextHandler(&logged, nil)), passThrough, passThrough)
+	runs := 0
+	got := recovered(func() {
+		_ = instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { runs++; panic("work") })
+	})
+	if got != "work" || runs != 1 {
+		t.Fatalf("recovered %v after %d runs, want the original value after 1", got, runs)
+	}
+	if logged.Len() != 0 {
+		t.Fatalf("nothing should be logged for a work panic: %q", logged.String())
+	}
+}
+
+func TestAHookThatCallsRunTwiceRunsTheWorkOnce(t *testing.T) {
+	installWork(t, slog.New(slog.DiscardHandler), func(ctx context.Context, _ extension.Work, run func(context.Context) error) error {
+		_ = run(ctx)
+		return run(ctx)
+	})
+	runs := 0
+	_ = instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { runs++; return nil })
+	if runs != 1 {
+		t.Fatalf("runs = %d, want 1", runs)
+	}
+}
+
+func TestAHookThatPanicsAfterRunReturnsTheWorksErrorAndIsLogged(t *testing.T) {
+	var logged bytes.Buffer
+	installWork(t, slog.New(slog.NewTextHandler(&logged, nil)), func(ctx context.Context, _ extension.Work, run func(context.Context) error) error {
+		_ = run(ctx)
+		panic("late hook")
+	})
+	want := errors.New("work failed")
+	runs := 0
+	err := instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { runs++; return want })
+	if err != want || runs != 1 {
+		t.Fatalf("err=%v runs=%d, want the work's error and 1 run", err, runs)
+	}
+	if !strings.Contains(logged.String(), "instrumentation hook panicked") {
+		t.Fatalf("hook panic not logged: %q", logged.String())
+	}
+}
+
+func TestAHookThatReturnsWithoutCallingRunStillGetsTheWorkRunOnce(t *testing.T) {
+	installWork(t, slog.New(slog.DiscardHandler), func(context.Context, extension.Work, func(context.Context) error) error { return nil })
+	runs := 0
+	_ = instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { runs++; return nil })
+	if runs != 1 {
+		t.Fatalf("runs = %d, want 1", runs)
+	}
+}
+
+func TestALogHandlerHookThatPanicsOrReturnsNilLeavesTheInnerHandlerInUse(t *testing.T) {
+	t.Cleanup(instrument.Reset)
+	instrument.Install([]instrument.Started{
+		{Unit: "panics", Hooks: extension.Instruments{LogHandler: func(slog.Handler) slog.Handler { panic("hook") }}},
+		{Unit: "nils", Hooks: extension.Instruments{LogHandler: func(slog.Handler) slog.Handler { return nil }}},
+	}, slog.New(slog.DiscardHandler))
+	base := slog.NewTextHandler(&bytes.Buffer{}, nil)
+	if got := instrument.LogHandler(base); got != slog.Handler(base) {
+		t.Fatalf("handler = %v, want the inner handler", got)
+	}
+}
+
+func TestInstallCopiesTheCallersSlice(t *testing.T) {
+	t.Cleanup(instrument.Reset)
+	var trail []string
+	units := []instrument.Started{{Unit: "a", Hooks: tracing(&trail, "a")}}
+	instrument.Install(units, slog.New(slog.DiscardHandler))
+	units[0] = instrument.Started{Unit: "z"}
+	_ = instrument.Work(context.Background(), extension.Work{}, func(context.Context) error { return nil })
+	if strings.Join(trail, " ") != "a> <a" {
+		t.Fatalf("trail = %v, caller mutation leaked in", trail)
 	}
 }

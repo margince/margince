@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -40,7 +41,7 @@ var current atomic.Pointer[installed]
 // Install records the started units, in registry order. A role calls it once,
 // at boot, before it builds its logger or serves.
 func Install(started []Started, log *slog.Logger) {
-	current.Store(&installed{units: started, log: log})
+	current.Store(&installed{units: slices.Clone(started), log: log})
 }
 
 // Reset forgets every installed unit. Tests only.
@@ -57,10 +58,17 @@ func installedUnits() ([]Started, *slog.Logger) {
 // safely runs fn and reports whether it panicked. The panic is logged against
 // the unit and hook that raised it, and does not propagate.
 func safely(log *slog.Logger, unit, hook string, fn func()) (panicked bool) {
+	return guard(log, unit, hook, nil, fn)
+}
+
+// guard is safely with one exception: when quiet reports true, a panic is
+// contained but not logged, because it is the work's own panic passing through
+// the hook on its way to the caller, not a fault of the hook.
+func guard(log *slog.Logger, unit, hook string, quiet func() bool, fn func()) (panicked bool) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			panicked = true
-			if log != nil {
+			if log != nil && (quiet == nil || !quiet()) {
 				log.Error("instrumentation hook panicked",
 					"unit", unit, "hook", hook, "panic", rec, "stack", string(debug.Stack()))
 			}
@@ -120,28 +128,62 @@ func wrapWork(log *slog.Logger, u Started, w extension.Work, inner func(context.
 	}
 	return func(ctx context.Context) error {
 		var (
+			once    sync.Once
+			mu      sync.Mutex // guards the fields below; the hook may call run from another goroutine
 			ran     bool
 			runErr  error
-			hookErr error
+			workPan any
+			workBad bool
 		)
-		once := func(ctx context.Context) error {
-			if ran {
+		run := func(ctx context.Context) (err error) {
+			first := false
+			once.Do(func() {
+				first = true
+				mu.Lock()
+				ran = true
+				mu.Unlock()
+				defer func() {
+					if rec := recover(); rec != nil {
+						mu.Lock()
+						workPan, workBad = rec, true
+						mu.Unlock()
+						// Let the hook see the work's panic unwind through it.
+						panic(rec)
+					}
+				}()
+				e := inner(ctx)
+				mu.Lock()
+				runErr = e
+				mu.Unlock()
+			})
+			if !first {
 				return nil
 			}
-			ran = true
-			runErr = inner(ctx)
+			mu.Lock()
+			defer mu.Unlock()
 			return runErr
 		}
-		panicked := safely(log, u.Unit, "Work", func() {
-			hookErr = u.Hooks.Work(ctx, w, once)
+		var hookErr error
+		panicked := guard(log, u.Unit, "Work", func() bool {
+			mu.Lock()
+			defer mu.Unlock()
+			return workBad
+		}, func() {
+			hookErr = u.Hooks.Work(ctx, w, run)
 		})
+		mu.Lock()
+		didRun, err, bad, pan := ran, runErr, workBad, workPan
+		mu.Unlock()
 		switch {
-		case !ran:
+		case bad:
+			// The work panicked: it reaches the caller unchanged, whatever the hook did.
+			panic(pan)
+		case !didRun:
 			// The hook panicked or returned without calling run: the work still runs.
 			return inner(ctx)
 		case panicked:
 			// The hook panicked after the work ran: its outcome is the work's.
-			return runErr
+			return err
 		default:
 			return hookErr
 		}
