@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
 import { ConnectivityError } from "./connectivity";
 import {
+  EmptySuccessError,
   isConsentNotGranted,
   logUnexpectedError,
   ProblemError,
@@ -493,5 +494,32 @@ describe("logUnexpectedError", () => {
     logUnexpectedError(new ProblemError({ detail: "no seat" }));
 
     expect(logged).not.toHaveBeenCalled();
+  });
+});
+
+describe("a success that carried no body", () => {
+  it("throws rather than answering undefined, so the reader fails at the call", () => {
+    expect(() => unwrap({ response: { status: 200 } })).toThrow(
+      EmptySuccessError,
+    );
+  });
+
+  it("keeps the statuses whose body is absent by the contract", () => {
+    for (const status of [202, 204, 205, 304]) {
+      expect(unwrap({ response: { status } })).toBeUndefined();
+    }
+  });
+
+  it("leaves a result assembled by hand alone", () => {
+    // No response means nothing was received, so there is no server answer to
+    // judge. Fixtures and composed results read as they always did.
+    expect(unwrap({})).toBeUndefined();
+    expect(unwrap({ data: { id: "a" } })).toEqual({ id: "a" });
+  });
+
+  it("reports the problem first when a body carries one", () => {
+    expect(() =>
+      unwrap({ error: { title: "nope" }, response: { status: 500 } }),
+    ).toThrow(/nope/);
   });
 });
