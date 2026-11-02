@@ -318,7 +318,7 @@ Every script that needs these paths gets them from `scripts/lib-devstate.sh`. Do
 
 The Redis index isolates the stacks' events. The stream names and consumer groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index share one consumer group. Whichever worker reads an entry first consumes it, resolves it against its own Postgres, finds nothing, and acks. The other stack's event is lost, and the lost event looks like a broken feature.
 
-The instance serves 80 databases in three blocks. Block **0** is the stack of the primary worktree, **1–63** the parallel integration lane (one per package, each emptied by `FLUSHDB`), and **64–79** the per-worktree stacks. A stack takes the lowest free index in its block, claimed under a lock and recorded in the machine-global registry. Restarting reclaims its own index, and two stacks never share one. A `17th` concurrent stack is refused rather than doubled up.
+The instance serves 89 databases in three blocks. Block **0** is the stack of the primary worktree, **1–72** the parallel integration lane (one per package, each emptied by `FLUSHDB`), and **73–88** the per-worktree stacks. The lane's block grows with the number of packages, and the stack block's floor moves up with it. A stack takes the lowest free index in its block, claimed under a lock and recorded in the machine-global registry. Restarting reclaims its own index, and two stacks never share one. A `17th` concurrent stack is refused rather than doubled up.
 
 Ports are claimed the same way, from 8081–8179 (api at +10000). A claim also skips a port some unrelated process is listening on.
 

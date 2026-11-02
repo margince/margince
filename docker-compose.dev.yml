@@ -189,21 +189,22 @@ services:
     # family. renovate.json holds this image below 7.3; digest updates
     # within the 7.2 tag still flow, which is how patch releases arrive.
     image: redis:7.2@sha256:46f15cf64fdef63e483dcda99e74e3d51c017b1175547b6bb874152ee2391aad
-    # 64 logical dbs, not the default 16. The integration lane gives each package
+    # 72 logical dbs for the lane, not the default 16. It gives each package
     # its own db so two packages can never share one — several of them FLUSHDB
     # between tests, which makes a shared db a silent corruption rather than a
     # slowdown. The lane has more packages than 16 and keeps growing; keep this
     # in step with REDIS_DBS in scripts/test-integration-parallel.sh, which
     # refuses to run rather than wrap the mapping.
-    # 81 logical databases, in three blocks that must not overlap:
+    # 89 logical databases, in three blocks that must not overlap:
     #   0        bare `make dev`
-    #   1..64    the parallel integration lane, one per package
+    #   1..72    the parallel integration lane, one per package
     #            (REDIS_DBS in scripts/test-integration-parallel.sh,
     #             testdb.RedisDBs — the two must agree)
-    #   65..80   per-worktree dev stacks, one per slug (scripts/dev.sh)
+    #   73..88   per-worktree dev stacks, one per slug (scripts/dev.sh,
+    #            DEV_REDIS_DB_MIN/MAX — they move when the lane's block grows)
     # A slug sharing a db with a test package would have its streams FLUSHDB'd
     # mid-run, and the test would read a dev stack's events as its own.
-    command: ["redis-server", "--databases", "81"]
+    command: ["redis-server", "--databases", "89"]
     ports:
       - "16379:6379"
     healthcheck:

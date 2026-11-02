@@ -197,7 +197,7 @@ GO_DIRS=(backend)
 # It is one PER PACKAGE, not per concurrent job — a package's keys must survive
 # the whole package, and a slot freed by a finished package cannot be handed on
 # while its successor is still reading.
-REDIS_DBS=64
+REDIS_DBS=72
 
 # Candidate packages: every directory in the module that holds test files. Which
 # of them belong to THIS lane is decided by the build-constraint scan in
@@ -467,7 +467,7 @@ NPKGS=$(wc -l < "$WORK" | tr -d ' ')
 # reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
 # databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
 if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
+  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all FOUR together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), DEV_REDIS_DB_MIN/MAX in scripts/dev.sh (the block above this one, which moves up by as much), and --databases in docker-compose.dev.yml (one MORE than the highest, it counts the reserved db 0)"
   exit 1
 fi
 # Say what was left to the unit lane. An unreported exclusion and a broken

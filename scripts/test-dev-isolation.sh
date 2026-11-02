@@ -461,8 +461,12 @@ check "" "$(stack_server_pids "$theirs_dsn" "localhost:16379/0" | grep -x "$thei
 # one `make dev-stop` takes down every parallel session's stack.
 check "$mine" "$(stack_server_pids "$mine_dsn" | sort -u)" \
       "the primary worktree's cleanup finds ONLY its own — margince must not match margince_dev_band"
-# The same boundary on the Redis half: /6 is a prefix of /64, and the block runs
-# 64..79, so every two-digit logical database has a single-digit prefix.
+# The same boundary on the Redis half. The peer above was fabricated on db 64,
+# so /6 is a prefix of it and a substring matcher answers this stack's pid.
+#
+# The probe digit has to prefix the db the fixture actually used. A digit that
+# prefixes nothing would pass by reaching nothing, which is the vacuous form of
+# this check rather than the check.
 check "" "$(stack_server_pids "$theirs_dsn" "localhost:16379/6" | grep -x "$theirs" || true)" \
       "a logical database matches whole — /6 is not /64"
 kill "$mine" "$theirs" 2>/dev/null || true
