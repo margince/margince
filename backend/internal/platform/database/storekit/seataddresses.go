@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -113,6 +114,32 @@ func HoldsNoSeatAddressSQL(contactID string, seats []string, arg func(any) int) 
 	return fmt.Sprintf(`NOT EXISTS (SELECT 1 FROM contact_email seat_address
 		WHERE seat_address.contact_id = %s AND seat_address.archived_at IS NULL
 		  AND lower(seat_address.email) = ANY($%d))`, contactID, arg(spellings))
+}
+
+// NotCoveredSQL is true when address, a lowercased SQL expression, is none Covers
+// admits for asking, a uuid SQL expression. It is Covers for a statement whose
+// rows each ask for their own seat. Every key is bound in every spelling.
+func (s SeatAddresses) NotCoveredSQL(address, asking string, arg func(any) int) (string, error) {
+	proven := make([]string, 0, 2*len(s.proven))
+	for key := range s.proven {
+		proven = append(proven, mailidentity.AddressSpellings(key)...)
+	}
+	declared := map[string][]string{}
+	for key, seats := range s.declared {
+		if _, isProven := s.proven[key]; isProven {
+			continue
+		}
+		for seat := range seats {
+			declared[seat.String()] = append(declared[seat.String()], mailidentity.AddressSpellings(key)...)
+		}
+	}
+	encoded, err := json.Marshal(declared)
+	if err != nil {
+		return "", fmt.Errorf("binding the declared seat addresses: %w", err)
+	}
+	return fmt.Sprintf(`NOT (%[1]s = ANY($%[3]d) OR %[1]s IN (
+		SELECT jsonb_array_elements_text($%[4]d::jsonb -> (%[2]s)::text)))`,
+		address, asking, arg(proven), arg(string(encoded))), nil
 }
 
 func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {

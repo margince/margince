@@ -22,12 +22,15 @@ package compose
 
 import (
 	"context"
+	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -314,5 +317,58 @@ func setSourceAuthorName(t *testing.T, e *integration.Env, activityID ids.UUID, 
 		return err
 	}); err != nil {
 		t.Fatalf("recording the source author name of %s: %v", activityID, err)
+	}
+}
+
+// participantAddresses returns the outside addresses recorded on one activity.
+func participantAddresses(t *testing.T, e *integration.Env, activityID ids.UUID) []string {
+	t.Helper()
+	var out []string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		rows, err := tx.Query(context.Background(),
+			`SELECT address FROM activity_participant WHERE activity_id = $1 AND address IS NOT NULL ORDER BY address`, activityID)
+		if err != nil {
+			return err
+		}
+		out, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	}); err != nil {
+		t.Fatalf("reading the addresses of %s: %v", activityID, err)
+	}
+	return out
+}
+
+// The backfill decides "is this address ours" the way live capture does. A
+// colleague's proven mailbox and the owner's own alias are not outside parties.
+// An alias another seat typed speaks for that seat alone.
+func TestTheBackfillWritesNoSeatAddressAsAnOutsideParty(t *testing.T) {
+	e := integration.Setup(t)
+	seedConnection(t, e, e.Rep1)
+	connectMailbox(t, e, e.Rep2, "gmail", "rep2@bücher.example")
+	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
+		capture.IdentityKindAddress, "rep1@private.test"); err != nil {
+		t.Fatal(err)
+	}
+	owner, colleague := "connector:gmail:"+e.Rep1.String(), "connector:gmail:"+e.Rep2.String()
+	cases := []struct {
+		name, capturedBy, counterparty string
+		want                           []string
+	}{
+		{"a colleague's proven mailbox, in its punycode spelling", owner, "rep2@xn--bcher-kva.example", nil},
+		{"the owner's own alias", owner, "rep1@private.test", nil},
+		{"another seat's typed alias", colleague, "rep1@private.test", []string{"rep1@private.test"}},
+		{"an outside party", owner, "pat@counterparty.test", []string{"pat@counterparty.test"}},
+	}
+	seeded := make([]ids.UUID, len(cases))
+	for i, c := range cases {
+		seeded[i] = seedLegacyActivity(t, e, "bf-seat-"+strconv.Itoa(i), c.capturedBy, "inbound", c.counterparty)
+	}
+
+	runBackfill(t, e)
+
+	for i, c := range cases {
+		if got := participantAddresses(t, e, seeded[i]); !slices.Equal(got, c.want) {
+			t.Errorf("%s: outside parties %v, want %v", c.name, got, c.want)
+		}
 	}
 }
