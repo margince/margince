@@ -189,7 +189,7 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	rows, err := tx.Query(ctx, `SELECT `+openTaskColumns()+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id
-		WHERE `+joinAnd(where)+
+		WHERE activity_thread_available(a.thread_key) AND `+joinAnd(where)+
 		// NULLS LAST is the ascending default and is spelled anyway: an
 		// undated promise sorts after every dated one, and that is a product
 		// decision rather than a property of the index it happens to match.

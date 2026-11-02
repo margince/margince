@@ -32,7 +32,7 @@ type ColleagueStamp struct {
 // proven another way and stays. A held copy is read by nobody, so its stamp
 // opens nothing.
 const colleagueStampScope = `FROM activity a JOIN app_user u ON u.id = a.sent_by_colleague
-	 WHERE a.sent_by_colleague IS NOT NULL AND NOT a.counterparty_outbound_attested AND a.restricted_at IS NULL`
+	 WHERE a.sent_by_colleague IS NOT NULL AND NOT a.counterparty_outbound_attested AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))`
 
 // ColleagueStampsTx locks the next limit stamped copies after the cursor, in id order.
 func ColleagueStampsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ColleagueStamp, error) {
@@ -78,8 +78,8 @@ func TurnBackColleagueCopyTx(ctx context.Context, tx pgx.Tx, stamp ColleagueStam
 	err := tx.QueryRow(ctx, `
 		UPDATE activity a
 		   SET direction = 'inbound', counterparty_email = $3, sent_by_colleague = NULL
-		  FROM (SELECT counterparty_email FROM activity WHERE id = $1) was
-		 WHERE a.id = $1 AND a.sent_by_colleague = $2 AND NOT a.counterparty_outbound_attested AND a.restricted_at IS NULL
+		  FROM (SELECT counterparty_email FROM activity WHERE activity_thread_available(thread_key) AND id = $1) was
+		 WHERE a.id = $1 AND a.sent_by_colleague = $2 AND NOT a.counterparty_outbound_attested AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
 		RETURNING was.counterparty_email`, stamp.ID, stamp.Colleague, from).Scan(&wasCounterparty)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -128,7 +128,7 @@ func unjudgeThroughTx(ctx context.Context, tx pgx.Tx, copyID ids.UUID) ([]ids.UU
 		  FROM unjudged
 		 WHERE unjudged.verdict = 'settled'
 		   AND r.source_system = $2 AND r.source_activity_id = unjudged.request_activity_id
-		   AND r.is_done AND r.archived_at IS NULL
+		   AND r.is_done AND (r.archived_at IS NULL AND activity_thread_available(r.thread_key))
 		   AND NOT EXISTS (SELECT 1 FROM audit_log worked
 		         WHERE worked.entity_type = 'activity' AND worked.entity_id = r.id AND worked.actor_type = $3)
 		RETURNING r.id`, copyID, EmailRequestTaskSource, string(principal.PrincipalHuman))

@@ -5,7 +5,6 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -25,12 +24,10 @@ func joiningSink(t *testing.T) *Sink {
 	t.Helper()
 	return (&Sink{}).WithThreadJoin(ThreadJoiner{
 		RecordReferences: func(context.Context, pgx.Tx, ids.ActivityID, []string) error { return nil },
-		Neighbours: func(context.Context, pgx.Tx, ids.ActivityID, string, []string) ([]ids.ActivityID, error) {
-			t.Error("the neighbour probe ran for a record that cannot merge — it costs a query per capture")
-			return nil, nil
-		},
-		Earliest: func(context.Context, pgx.Tx, []string) (string, error) { return "", nil },
-		Merge:    func(context.Context, pgx.Tx, string, string) error { return nil },
+
+		Repair:       func(context.Context, pgx.Tx, int, ids.UUID, string) (int, int, bool, error) { return 0, 0, true, nil },
+		InheritSeat:  func(context.Context, pgx.Tx, string, string, ids.UUID) error { return nil },
+		InheritBasis: func(context.Context, pgx.Tx, ids.UUID, string, string) error { return nil },
 	})
 }
 
@@ -141,66 +138,13 @@ func (c countingTx) Exec(_ context.Context, sql string, _ ...any) (pgconn.Comman
 	return pgconn.NewCommandTag("SELECT 1"), nil
 }
 
-// probingSink answers the neighbour question with whatever a case needs, which is
-// what lets an EMAIL case reach the decision the source-system guard would
-// otherwise short-circuit.
-func probingSink(links []ids.ActivityID, probeErr error) *Sink {
-	return (&Sink{}).WithThreadJoin(ThreadJoiner{
-		RecordReferences: func(context.Context, pgx.Tx, ids.ActivityID, []string) error { return nil },
-		Neighbours: func(context.Context, pgx.Tx, ids.ActivityID, string, []string) ([]ids.ActivityID, error) {
-			return links, probeErr
-		},
-		Earliest: func(context.Context, pgx.Tx, []string) (string, error) { return "", nil },
-		Merge:    func(context.Context, pgx.Tx, string, string) error { return nil },
-	})
-}
-
-func anEmail() connector.NormalizedRecord {
-	return connector.NormalizedRecord{
-		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "m-probe"},
-	}
-}
-
-// The email branches the fix rests on, which the source-system guard cannot reach.
-//
-// An email with no stored link takes no lock — that is what keeps a workspace-wide
-// lock off the common path once the ReplyTo gate is gone, and it is the only thing
-// left doing so. An email WITH one takes it, before anything is written.
-func TestAnEmailTakesTheLockOnlyWhenSomethingStoredLinksToIt(t *testing.T) {
-	t.Parallel()
-
-	for name, c := range map[string]struct {
-		links []ids.ActivityID
-		want  int
-	}{
-		"nothing stored links to it": {links: nil, want: 0},
-		"one stored message does":    {links: []ids.ActivityID{{UUID: ids.NewV7()}}, want: 1},
-	} {
-		locks := 0
-		if err := probingSink(c.links, nil).takeMergeLockFirst(
-			context.Background(), countingTx{locks: &locks}, anEmail()); err != nil {
-			t.Fatalf("%s: %v", name, err)
-		}
-		if locks != c.want {
-			t.Errorf("%s: took the lock %d time(s), want %d", name, locks, c.want)
-		}
-	}
-}
-
-// And a probe that fails stops the capture rather than carrying on unlocked: a
-// capture that cannot tell whether it may merge must not proceed to write a row it
-// would then lock out of order.
-func TestAFailingNeighbourProbeStopsTheCaptureBeforeItLocks(t *testing.T) {
-	t.Parallel()
-
+func TestAnEmailTakesTheBoundaryLockBeforeWriting(t *testing.T) {
 	locks := 0
-	err := probingSink(nil, errors.New("the database refused")).takeMergeLockFirst(
-		context.Background(), countingTx{locks: &locks}, anEmail())
-	if err == nil {
-		t.Error("the neighbour probe failed and the capture carried on, so whether this message " +
-			"may merge was never established")
+	err := joiningSink(t).takeMergeLockFirst(context.Background(), countingTx{locks: &locks}, connector.NormalizedRecord{NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "message@example.test"}})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if locks != 0 {
-		t.Errorf("the lock was taken %d time(s) after the probe failed, want 0", locks)
+	if locks != 1 {
+		t.Fatalf("boundary locks=%d, want 1", locks)
 	}
 }

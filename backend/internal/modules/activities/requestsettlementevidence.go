@@ -32,7 +32,7 @@ const RequestSettlementActor = "system:request_settlement"
 func settlementEvidenceSQL() string {
 	return `SELECT string_agg(seen.id::text || ':' || seen.version, ',' ORDER BY seen.id)
    FROM activity seen
-  WHERE seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered)`
+  WHERE activity_thread_available(seen.thread_key) AND seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered)`
 }
 
 // reArmedSettlementSQL is a settled request whose verdict recorded the
@@ -68,7 +68,7 @@ func (s *Store) judgedThroughNewest(ctx context.Context, tx pgx.Tx, request Repl
 		bound = now
 	}
 	var newest *ids.UUID
-	if err := tx.QueryRow(ctx, `SELECT (`+newestAnswerSince+`) FROM activity a WHERE a.id = $2`,
+	if err := tx.QueryRow(ctx, `SELECT (`+newestAnswerSince+`) FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $2`,
 		bound, request.RequestID).Scan(&newest); err != nil {
 		return false, fmt.Errorf("activities: re-reading the newest answer before settling: %w", err)
 	}
@@ -79,7 +79,7 @@ func (s *Store) judgedThroughNewest(ctx context.Context, tx pgx.Tx, request Repl
 // verdict read. It reads under holdSettlementEvidenceTx, so the value holds.
 func evidenceUnchanged(ctx context.Context, tx pgx.Tx, request RepliedRequest) (bool, error) {
 	var now *string
-	if err := tx.QueryRow(ctx, `SELECT (`+settlementEvidenceSQL()+`) FROM activity a WHERE a.id = $2`,
+	if err := tx.QueryRow(ctx, `SELECT (`+settlementEvidenceSQL()+`) FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $2`,
 		request.AsOf, request.RequestID).Scan(&now); err != nil {
 		return false, fmt.Errorf("activities: re-reading the evidence before settling: %w", err)
 	}
@@ -100,7 +100,7 @@ func reopenSettledReminder(ctx context.Context, tx pgx.Tx, in RequestSettlementI
 		return err
 	}
 	var current bool
-	if err := tx.QueryRow(ctx, `SELECT `+occurredday.FromSQL("a", "$2")+` FROM activity a WHERE a.id = $1`,
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.FromSQL("a", "$2")+` FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1`,
 		in.Request.RequestID, cutoff).Scan(&current); err != nil {
 		return fmt.Errorf("activities: reading the request's age before reopening: %w", err)
 	}
@@ -113,4 +113,8 @@ func reopenSettledReminder(ctx context.Context, tx pgx.Tx, in RequestSettlementI
 		return nil
 	}
 	return err
+}
+
+func settlementEvidenceAvailableSQL() string {
+	return `activity_thread_available(a.thread_key) AND NOT ` + storekit.UnavailableAnswersSQL("a", "$1")
 }

@@ -52,8 +52,11 @@ type staffMail struct {
 func captureStaffMail(t *testing.T, e *integration.Env, mail staffMail) {
 	t.Helper()
 	authorizeCaptureMailbox(t, e, mail.mailbox, seatEmail(t, mail.mailbox))
-	thread := "thread-" + mail.sourceID
-	seedAttestedOutbound(t, e, "out-"+mail.sourceID+"-"+mail.mailbox.String(), mail.from, thread)
+	thread := "out-" + mail.sourceID + "@staff.fixture"
+	o := &owedEnv{e: e, owner: mail.mailbox, seat: seatEmail(t, mail.mailbox)}
+	if e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'email' AND source_id = $1`, thread) == 0 {
+		o.weWrite(t, owedMail{to: mail.from, subject: "Hosting", messageID: thread, at: mail.occurred.Add(-time.Hour)})
+	}
 	var participants []connector.MessageParticipant
 	for _, address := range mail.to {
 		participants = append(participants, connector.MessageParticipant{Email: address, Role: connector.ParticipantRoleTo})
@@ -74,6 +77,7 @@ func captureStaffMail(t *testing.T, e *integration.Env, mail staffMail) {
 			OccurredAt: mail.occurred,
 		},
 		ThreadKey:    thread,
+		ReplyTo:      []string{thread},
 		Participants: participants,
 		Addresses:    append(append([]string{mail.from}, mail.to...), mail.cc...),
 		Source:       "gmail:" + mail.sourceID, CapturedBy: "connector:gmail",

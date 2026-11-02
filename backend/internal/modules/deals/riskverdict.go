@@ -118,7 +118,7 @@ const sameDayNextStepSQL = `
 	         SELECT 1 FROM activity t
 	           JOIN activity_link tl ON tl.activity_id = t.id AND tl.deal_id = v.deal_id
 	          WHERE t.kind = 'task'
-	            AND t.archived_at IS NULL
+	            AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key))
 	            AND t.created_at >= rd.day_start
 	            AND t.created_at < rd.day_end))
 	  FROM deal_risk_day rd

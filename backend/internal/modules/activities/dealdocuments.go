@@ -97,7 +97,7 @@ func (s *Store) ListDealDocuments(
 			       EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = $%d AND h.attachment_id = at.id) AS hidden,
 			       a.id, a.kind, a.subject, a.occurred_at, a.occurred_precision, a.counterparty_email
 			  FROM attachment at
-			  LEFT JOIN activity a ON at.entity_type = '%s' AND a.id = at.entity_id AND a.archived_at IS NULL
+			  LEFT JOIN activity a ON at.entity_type = '%s' AND a.id = at.entity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 			 WHERE %s
 			 ORDER BY at.created_at DESC, at.id DESC
 			 LIMIT %d`,

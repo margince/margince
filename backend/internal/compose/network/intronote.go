@@ -318,7 +318,7 @@ func contactCorrespondence(
 		  FROM activity a
 		  JOIN activity_participant ap
 		    ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = $%d
-		 WHERE a.direction = 'inbound' AND a.archived_at IS NULL
+		 WHERE a.direction = 'inbound' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND %s AND %s AND (%s)
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT $%d`, contactPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", sincePos)), occurredday.BegunSQL("a", fmt.Sprintf("$%d", untilPos)), scope, capPos), args...)

@@ -341,7 +341,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.evidence, a.occurred_at, a.batch_id,
 			        `+auditattribution.ActorNameColumn+`, obo.display_name, oc.client_name,
 			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
-			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
+			          OR (`+auditActivityAlias+`.id IS NOT NULL AND activity_thread_available(`+auditActivityAlias+`.thread_key) AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+auditActivityJoin+`
 			 WHERE `+where+`

@@ -65,7 +65,7 @@ SELECT CASE a.source_system WHEN $%[1]d THEN '%[2]s' ELSE '%[3]s' END AS kind,
   LEFT JOIN LATERAL (SELECT x.actor_type, x.passport_id FROM audit_log x
                       WHERE x.entity_type = 'activity' AND x.entity_id = a.id AND x.action = 'archive'
                       ORDER BY x.occurred_at DESC, x.id DESC LIMIT 1) last_archive ON true
- WHERE a.kind = 'task' AND a.source_system = ANY($%[7]d)
+ WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND a.source_system = ANY($%[7]d)
    AND made.at >= $%[9]d AND made.at < $%[10]d
 UNION ALL
 SELECT '%[8]s', COALESCE(mv.holder, ap.requested_decider_id), made.at,

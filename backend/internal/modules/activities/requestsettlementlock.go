@@ -24,9 +24,9 @@ import (
 // Writers of activities, participants, links and contact addresses take the
 // same keys shared (the settlement_evidence_share triggers).
 const settlementEvidenceKeysSQL = `SELECT settlement_evidence_key('thread', a.thread_key) FROM activity a
-   WHERE a.id = $1 AND a.thread_key IS NOT NULL
+   WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND a.thread_key IS NOT NULL
  UNION SELECT settlement_evidence_key('address', lower(btrim(a.counterparty_email))) FROM activity a
-   WHERE a.id = $1 AND a.counterparty_email IS NOT NULL
+   WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND a.counterparty_email IS NOT NULL
  UNION SELECT settlement_evidence_key('address', lower(btrim(p.address))) FROM activity_participant p
    WHERE p.activity_id = $1 AND p.role = 'from' AND p.address IS NOT NULL
  UNION SELECT settlement_evidence_key('address', lower(btrim(e.email))) FROM activity_participant p
@@ -61,7 +61,7 @@ func holdSettlementEvidenceTx(ctx context.Context, tx pgx.Tx, request RepliedReq
 		// each is locked by its key. Beside seen, it made Postgres walk every
 		// activity and find the answers again for each one.
 		_, err = tx.Exec(ctx, `SELECT seen.id FROM activity seen
-		  WHERE seen.id IN (SELECT answered.id FROM activity a
+		  WHERE activity_thread_available(seen.thread_key) AND seen.id IN (SELECT answered.id FROM activity a
 		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+`) answered WHERE a.id = $2)
 		  FOR SHARE OF seen`, request.AsOf, request.RequestID)
 	}
@@ -74,7 +74,10 @@ func holdSettlementEvidenceTx(ctx context.Context, tx pgx.Tx, request RepliedReq
 	if _, err := tx.Exec(ctx, `SELECT set_config('lock_timeout', $1, true)`, restore); err != nil {
 		return false, fmt.Errorf("activities: restoring the lock wait after the verdict's locks: %w", err)
 	}
-	return live, nil
+	if live {
+		err = tx.QueryRow(ctx, `SELECT `+settlementEvidenceAvailableSQL()+` FROM activity a WHERE a.id=$2`, request.AsOf, request.RequestID).Scan(&live)
+	}
+	return live, err
 }
 
 // settlementWaitFailed names a lock wait the verdict gave up on as busy. A
@@ -98,7 +101,7 @@ func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (b
 	var live bool
 	err := tx.QueryRow(ctx, `
 		SELECT true FROM activity
-		 WHERE id = $1 AND archived_at IS NULL
+		 WHERE activity_thread_available(thread_key) AND id = $1 AND (archived_at IS NULL AND activity_thread_available(thread_key))
 		   AND audience = 'workspace' AND restricted_at IS NULL
 		   FOR NO KEY UPDATE`, requestID).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -113,6 +116,7 @@ func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (b
 // lostSettlementBasisSQL is a settled verdict that recorded its evidence and
 // has no answer left the pass may read: the evidence it rested on is gone.
 var lostSettlementBasisSQL = `judged.verdict = '` + RequestSettled + `' AND judged.judged_evidence IS NOT NULL
+ AND ` + settlementEvidenceAvailableSQL() + `
  AND NOT EXISTS (` + settlementAnswersSQL() + `)
  AND judged.judged_evidence IS DISTINCT FROM (` + settlementEvidenceSQL() + `)`
 
@@ -131,7 +135,7 @@ func (s *Store) WithdrawLostSettlements(ctx context.Context, asOf time.Time, lim
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT judged.request_activity_id, judged.judged_through_activity_id
 			  FROM activity_request_settlement judged JOIN activity a ON a.id = judged.request_activity_id
-			 WHERE a.restricted_at IS NULL AND `+lostSettlementBasisSQL+` ORDER BY judged.request_activity_id LIMIT $2`, asOf, limit)
+			 WHERE (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND `+lostSettlementBasisSQL+` ORDER BY judged.request_activity_id LIMIT $2`, asOf, limit)
 		if err != nil {
 			return fmt.Errorf("activities: reading settled verdicts that lost their evidence: %w", err)
 		}

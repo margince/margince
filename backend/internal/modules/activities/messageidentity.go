@@ -291,8 +291,8 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 		   AND echo.counterparty_email = survivor.counterparty_email
 		   -- A held row is nobody's echo: the guard would refuse the fold, and a
 		   -- restricted record must not be folded into a live one anyway.
-		   AND echo.restricted_at IS NULL
-		 WHERE survivor.id = $1 AND survivor.restricted_at IS NULL`, survivorID, stamped).Scan(&echoID)
+		   AND (echo.restricted_at IS NULL AND activity_thread_available(echo.thread_key))
+		 WHERE survivor.id = $1 AND (survivor.restricted_at IS NULL AND activity_thread_available(survivor.thread_key))`, survivorID, stamped).Scan(&echoID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("activities: the re-key collided on %s, but no row under that identity is a captured outbound echo of this send",
 			uqActivitySource)

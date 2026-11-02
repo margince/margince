@@ -55,6 +55,7 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:workflows":          {SkipImported, "an automation starts on a change somebody makes, never on a bulk import"},
 	"cg:flow-bridge":        {SkipImported, "hands live events to the flow engine, which acts on them as news"},
 	"cg:graph-edge":         {KeepImported, "the interaction graph is built from history, so imported activity belongs in it"},
+	"cg:thread-repair":      {KeepImported, "thread boundaries follow later edits of captured and imported correspondence"},
 	"cg:audience-rescope":   {KeepImported, "narrows derived signals when a message is limited, which is as true of an old message"},
 	"cg:intro-advance":      {SkipImported, "an old reply must not close an introduction asked for today"},
 	"cg:notice-case-open":   {SkipImported, "settles a duty on mail that arrives now, not on history"},

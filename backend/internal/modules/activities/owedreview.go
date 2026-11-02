@@ -70,20 +70,20 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	exactArg := arg(exact)
 	query := storekit.SQLf(`SELECT %s, prior.id, a.version,a.owed_verdict,coalesce(a.owed_verdict_ruleset,''),a.owed_verdict_at,
  encode(sha256(convert_to(jsonb_build_object('source',to_jsonb(a),'participants',jsonb_agg(to_jsonb(p) ORDER BY p.id),
- 'prior',(SELECT to_jsonb(full_prior) FROM activity full_prior WHERE full_prior.id=prior.id))::text,'UTF8')),'hex'),
+ 'prior',(SELECT to_jsonb(full_prior) FROM activity full_prior WHERE activity_thread_available(full_prior.thread_key) AND full_prior.id=prior.id))::text,'UTF8')),'hex'),
  -- The native verdict and its audit share the transaction's now().
  EXISTS(SELECT 1 FROM audit_log proof WHERE proof.entity_type='activity' AND proof.entity_id=a.id
  AND proof.actor_type IN ('system','agent') AND proof.occurred_at=a.owed_verdict_at
  AND proof.after->>'owed_verdict'=a.owed_verdict AND proof.after->>'owed_verdict_ruleset'=a.owed_verdict_ruleset)
  AND NOT EXISTS(SELECT 1 FROM audit_log human WHERE human.entity_type='activity' AND human.entity_id=a.id
  AND human.actor_type='human' AND human.occurred_at>=a.owed_verdict_at),
- NOT EXISTS(SELECT 1 FROM activity prior WHERE `+ourOutboundInThisThread("prior", "a")+`
+ NOT EXISTS(SELECT 1 FROM activity prior WHERE activity_thread_available(prior.thread_key) AND `+ourOutboundInThisThread("prior", "a")+`
  AND (prior.occurred_at,prior.id)<(a.occurred_at,a.id)
  AND (prior.audience<>'workspace' OR prior.restricted_at IS NOT NULL OR NOT (%s))),
  `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete+`
  FROM activity a LEFT JOIN activity_participant p ON p.activity_id=a.id %s
  WHERE a.direction='inbound' AND a.kind IN ('email','message') AND a.owed_verdict IS NOT NULL
- AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL AND a.audience='workspace' AND a.restricted_at IS NULL
+ AND a.owed_verdict_at IS NOT NULL AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.audience='workspace' AND a.restricted_at IS NULL
  AND (%s) AND a.id>$%d AND ($%d::uuid IS NULL OR a.id=$%d)
  AND NOT EXISTS(SELECT 1 FROM activity_sales_state dismissed WHERE dismissed.thread_key=a.thread_key
  AND dismissed.kind=a.kind AND dismissed.channel_provider=coalesce(a.channel_provider,''))
@@ -113,7 +113,7 @@ func ApplyReviewedOwedVerdictTx(ctx context.Context, tx pgx.Tx, expected OwedRev
 	if expected.PriorID != nil {
 		lockIDs = append(lockIDs, *expected.PriorID)
 	}
-	if _, err := tx.Exec(ctx, `SELECT id FROM activity WHERE id=ANY(@ids) ORDER BY id FOR UPDATE`, pgx.NamedArgs{"ids": lockIDs}); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT id FROM activity WHERE activity_thread_available(thread_key) AND id=ANY(@ids) ORDER BY id FOR UPDATE`, pgx.NamedArgs{"ids": lockIDs}); err != nil {
 		return false, err
 	}
 	if err := auth.EnsureActivityWritable(ctx, tx, expected.Candidate.ID); err != nil {

@@ -252,7 +252,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
 		       (coalesce(a.source_system, '') LIKE '%s%%'), a.occurred_precision = 'day'
 		FROM activity a %s
-		WHERE %s AND a.archived_at IS NULL`, provenance.ReservedSourceSystemPrefix, join, reach)
+		WHERE %s AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`, provenance.ReservedSourceSystemPrefix, join, reach)
 	if scope != "" {
 		activitySQL += " AND " + scope
 	}

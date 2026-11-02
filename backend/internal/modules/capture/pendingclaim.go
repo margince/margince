@@ -47,6 +47,7 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			WITH picked AS MATERIALIZED (
 			   SELECT id FROM capture_pending_counterparty
 			    WHERE status = 'pending'
+                      AND EXISTS (SELECT 1 FROM activity claim_source WHERE activity_thread_available(claim_source.thread_key) AND claim_source.id = activity_id AND activity_thread_available(claim_source.thread_key))
 			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			      -- The bound is a property of the ROW, not of a live worker.
@@ -66,16 +67,16 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			 WHERE p.id IN (SELECT id FROM picked)
 			RETURNING p.id, p.email, coalesce(p.domain, ''), coalesce(left(p.display_name, $5), ''),
 			          p.activity_id, p.owner_id,
-			          coalesce(left((SELECT a.subject FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $6), ''),
-			          coalesce(left((SELECT a.body FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $7), ''),
+			          coalesce(left((SELECT a.subject FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = p.activity_id AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))), $6), ''),
+			          coalesce(left((SELECT a.body FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = p.activity_id AND a.restricted_at IS NULL), $7), ''),
 			          coalesce((SELECT CASE
 			                      WHEN a.direction = 'outbound' AND a.counterparty_outbound_attested
 			                           THEN 'outbound'
 			                      WHEN a.direction = 'inbound' THEN 'inbound'
 			                      ELSE '' END
-			                      FROM activity a WHERE a.id = p.activity_id), ''),
+			                      FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = p.activity_id), ''),
 			          coalesce((SELECT a.inbound_sender_authenticated AND a.counterparty_email = p.email
-			                      FROM activity a WHERE a.id = p.activity_id), false)`,
+			                      FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = p.activity_id), false)`,
 			limit, pendingLease.Seconds(), PendingMaxAttempts, claim,
 			MaxCapturedNameChars, MaxCapturedSubjectChars, MaxCapturedBodyChars)
 		if err != nil {

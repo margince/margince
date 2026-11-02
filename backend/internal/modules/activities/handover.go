@@ -121,7 +121,7 @@ func recordTasksTx(ctx context.Context, tx pgx.Tx, record RecordLink, holder ids
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, NOT EXISTS (SELECT 1 FROM activity_link o WHERE o.activity_id = a.id		         AND (o.entity_type <> $2 OR o.%[1]s IS DISTINCT FROM $3))
 		  FROM activity a
-		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $1
+		 WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.assignee_id = $1
 		   AND EXISTS (SELECT 1 FROM activity_link l
 		                WHERE l.activity_id = a.id AND l.entity_type = $2 AND l.%[1]s = $3)
 		 ORDER BY a.id`, column), holder, record.EntityType, record.ID)
@@ -177,7 +177,7 @@ func openTasksAssignedTo(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
-		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
+		 WHERE activity_thread_available(a.thread_key) AND a.kind = 'task' AND NOT a.is_done AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		   AND a.assignee_id = $1 AND (%s)
 		 ORDER BY a.id`, content), args...)
 	if err != nil {

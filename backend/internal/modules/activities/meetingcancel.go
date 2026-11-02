@@ -101,8 +101,8 @@ func closeCapturedMeetingTx(
 	var status *string
 	err := tx.QueryRow(ctx, `
 		SELECT id, meeting_status FROM activity
-		 WHERE source_system = $1 AND source_id = $2
-		   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL
+		 WHERE activity_thread_available(thread_key) AND source_system = $1 AND source_id = $2
+		   AND kind = 'meeting' AND (restricted_at IS NULL AND activity_thread_available(thread_key)) AND archived_at IS NULL
 		 FOR UPDATE`,
 		key.SourceSystem, key.SourceID).Scan(&id, &status)
 	if err != nil {
@@ -174,7 +174,7 @@ func writeMeetingCancellationTx(
 	err := tx.QueryRow(ctx, `
 		UPDATE activity SET meeting_status = $2
 		 WHERE id = $1 AND meeting_status IS NOT DISTINCT FROM $3
-		   AND restricted_at IS NULL AND archived_at IS NULL
+		   AND (restricted_at IS NULL AND activity_thread_available(thread_key)) AND archived_at IS NULL
 		 RETURNING occurred_at, occurred_precision`,
 		id, cancelled, stored).Scan(&storedStart, &startPrecision)
 	if errors.Is(err, pgx.ErrNoRows) {

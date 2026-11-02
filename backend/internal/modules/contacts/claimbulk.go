@@ -145,7 +145,7 @@ func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UU
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id FROM conversation_claim c
-		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		  JOIN activity a ON a.id = c.source_activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE c.id = ANY($%d) AND c.archived_at IS NULL AND (%s) AND (%s)`,
 		idsPos, activityScope, contactScope), args...)

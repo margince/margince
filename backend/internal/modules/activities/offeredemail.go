@@ -32,7 +32,7 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 var eligibleRowsSQL = `
 	SELECT a.id, a.kind
 	  FROM activity a
-	 WHERE a.id = ANY($1) AND a.kind = ANY($2) AND a.archived_at IS NULL
+	 WHERE a.id = ANY($1) AND a.kind = ANY($2) AND a.archived_at IS NULL AND activity_thread_available(a.thread_key)
 	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `)`
 
 // contactCandidatesSQL reads the contacts a row is filed under, with the

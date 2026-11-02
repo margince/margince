@@ -59,7 +59,7 @@ func (s *Store) HideCapturedNoiseTx(ctx context.Context, tx pgx.Tx, activityIDs 
 	}
 	rows, err := tx.Query(ctx, `
 		UPDATE activity SET archived_at = now()
-		 WHERE id = ANY($1) AND archived_at IS NULL
+		 WHERE id = ANY($1) AND (archived_at IS NULL AND activity_thread_available(thread_key))
 		RETURNING id`, activityIDs)
 	if err != nil {
 		return 0, fmt.Errorf("activities: hiding noise-dispositioned mail: %w", err)
@@ -121,11 +121,11 @@ func (s *Store) RedactCapturedNoiseTx(
 		WITH target AS (
 		  SELECT id, (subject IS NOT NULL OR body IS NOT NULL OR raw IS NOT NULL%s) AS had_content
 		    FROM activity
-		   WHERE id = ANY($1) AND archived_at IS NOT NULL
+		   WHERE activity_thread_available(thread_key) AND id = ANY($1) AND archived_at IS NOT NULL
 		     -- A record held under a statutory obligation is out of reach of
 		     -- every destructive path: the data-layer guard refuses the write,
 		     -- and a refusal inside a sweep fails the whole run (A165/ADR-0114).
-		     AND restricted_at IS NULL
+		     AND (restricted_at IS NULL AND activity_thread_available(thread_key))
 		   FOR UPDATE
 		), stripped AS (
 		  UPDATE activity a
