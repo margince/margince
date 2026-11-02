@@ -214,15 +214,15 @@ export const meetingBrief: Handler = ({ json }, { options }) => {
   switch (options.meetingBrief) {
     case "empty":
       return json(briefEmpty);
-    case "failed":
+    case "withheld":
       return json(
         {
           type: "about:blank",
-          title: "Gateway timeout",
-          status: 504,
-          code: "gateway_unavailable",
+          title: "Not found",
+          status: 404,
+          code: "not_found",
         },
-        504,
+        404,
       );
     case "plan":
       return json(briefWithPlan);

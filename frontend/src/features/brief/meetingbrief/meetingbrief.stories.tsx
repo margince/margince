@@ -106,19 +106,19 @@ export const Loading: Story = {
   render: () => drawer(() => new Response(null, { status: 200 })),
 };
 
-// The read failed: the gateway gave up waiting on the brief. The generic
-// sentence carries a retry, and the code's own sentence sits under it.
+// The read failed: no model could write the brief. The generic sentence
+// carries a retry, and the code's own sentence sits under it.
 export const Failed: Story = {
   render: () =>
     drawer(() =>
       jsonResponse(
         {
           type: "about:blank",
-          title: "Gateway timeout",
-          status: 504,
-          code: "gateway_unavailable",
+          title: "Service unavailable",
+          status: 503,
+          code: "assistant_unavailable",
         },
-        504,
+        503,
       ),
     ),
 };
