@@ -186,6 +186,10 @@ Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
 in the session scratchpad. `.gitignore` already covers the files we know about; a new path of this
 kind is still yours to keep out, and to add there.
 
+**Paid lanes are optional in a PR.** Never run `make e2e-ai` or `make e2e-llm` to finish one, and
+never stop to ask if you may: a loop has no one to answer. Name the `stale` or `absent` records in
+the PR body instead. Run a paid lane only when the request asks for it.
+
 ## Layout
 
 The DAG is `shared → platform → modules → compose → cmd`, and three tools hold it (`depguard`,
