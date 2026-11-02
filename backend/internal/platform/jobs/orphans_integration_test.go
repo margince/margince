@@ -53,9 +53,9 @@ func timeoutOf(t *testing.T, kind string) time.Duration {
 	return spec.Timeout.Fixed
 }
 
-// A worker drops the lock before River records its snooze, so a row still
-// running inside its timeout plus the completion margin may be a live run. A
-// row past that cutoff, or with no attempt time at all, is closed.
+// A worker drops the lock before River records its snooze. So a row inside its
+// timeout plus the completion margin may be a live run. A row past that
+// cutoff, or with no attempt time at all, is closed.
 func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.T) {
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
