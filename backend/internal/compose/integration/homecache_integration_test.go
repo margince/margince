@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
-	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -40,7 +39,7 @@ func served(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UU
 
 func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 	e := Setup(t)
-	c := homecache.New(e.Pool, magic.MachineActors())
+	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	contact := e.SeedContact(t, "Fenced", &e.Rep1)
 
@@ -62,7 +61,7 @@ func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 // the reader the day as it was before they acted.
 func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
 	e := Setup(t)
-	c := homecache.New(e.Pool, magic.MachineActors())
+	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
 	stamp, err := c.Stamp(ctx)
@@ -88,7 +87,7 @@ func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServed(t *testing.T) {
 // Expiry writes nothing, so it bounds the answer's life instead.
 func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 	e := Setup(t)
-	c := homecache.New(e.Pool, magic.MachineActors())
+	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	contact := e.SeedContact(t, "Shared briefly", &e.Rep2)
 	e.WsExec(t, `INSERT INTO record_grant
@@ -109,7 +108,7 @@ func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 
 func TestACachedFirstPageEndsWithTheWalkItStarted(t *testing.T) {
 	e := Setup(t)
-	c := homecache.New(e.Pool, magic.MachineActors())
+	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	walk := ids.NewV7()
 	e.WsExec(t, `INSERT INTO worklist_snapshot (id, reader_id, params_fingerprint, as_of, created_at, expires_at, buckets, rows)
@@ -127,7 +126,7 @@ func TestACachedFirstPageEndsWithTheWalkItStarted(t *testing.T) {
 
 func TestAMachineWriteEndsTheCachedReceiptButNotTheWorklist(t *testing.T) {
 	e := Setup(t)
-	c := homecache.New(e.Pool, magic.MachineActors())
+	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	keep(ctx, t, c, e.Rep1, homecache.Magic, nil, "today")
 	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")

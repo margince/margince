@@ -36,22 +36,20 @@ const (
 // Cache holds the answers.
 type Cache struct {
 	pool *pgxpool.Pool
-	// machineActors are the audit actor types whose rows end a receipt's answer.
-	machineActors []string
 }
 
-// New binds the cache. machineActors names the audit actor types a receipt
-// reports, so a row any of them writes ends the receipt's cached answer.
-func New(pool *pgxpool.Pool, machineActors []string) *Cache {
-	return &Cache{pool: pool, machineActors: machineActors}
+// New binds the cache.
+func New(pool *pgxpool.Pool) *Cache {
+	return &Cache{pool: pool}
 }
 
-// Stamp is what a read records before it is assembled. It holds the fence
-// generation, when the read began, and the last instant it may be served.
+// Stamp is what a read records before it is assembled. It holds both fence
+// generations, when the read began, and the last instant it may be served.
 type Stamp struct {
-	fence      int64
-	at         time.Time
-	validUntil time.Time
+	fence        int64
+	receiptFence int64
+	at           time.Time
+	validUntil   time.Time
 }
 
 // ReaderOf answers the human whose answer this request may read or keep. Any
@@ -74,10 +72,6 @@ type Answer interface {
 // still valid.
 func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, bool, error) {
 	var out A
-	actors := []string{}
-	if read == Magic {
-		actors = c.machineActors
-	}
 	var payload []byte
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
@@ -92,10 +86,8 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 			   AND (c.walk_id IS NULL OR EXISTS (
 			         SELECT 1 FROM worklist_snapshot w
 			          WHERE w.id = c.walk_id AND w.reader_id = c.reader_id AND w.expires_at > now()))
-			   AND NOT EXISTS (
-			         SELECT 1 FROM audit_log a
-			          WHERE a.occurred_at >= c.computed_at AND a.actor_type = ANY($4))`,
-			reader, string(read), key, actors).Scan(&payload)
+			   AND (c.read <> $4 OR c.receipt_fence = f.receipt_generation)`,
+			reader, string(read), key, string(Magic)).Scan(&payload)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, false, nil
@@ -109,18 +101,25 @@ func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read,
 	return out, true, nil
 }
 
-// Stamp reads the fence before the answer is assembled. A revocation that
+// Stamp reads the fences before the answer is assembled. A revocation that
 // commits after this read moves the fence past the stamp, so the answer is
-// never served beside it. Grant expiry writes nothing, so it bounds the life.
+// never served beside it. Expiry writes nothing, so the next of the reader's
+// own grants to expire bounds the life.
 func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
+	actor, _ := principal.Actor(ctx)
 	var s Stamp
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT f.generation, now(),
+			SELECT f.generation, f.receipt_generation, now(),
 			       least(now() + make_interval(secs => $1),
-			             coalesce((SELECT min(g.expires_at) FROM record_grant g WHERE g.expires_at > now()),
+			             coalesce((SELECT min(g.expires_at) FROM record_grant g
+			                        WHERE g.expires_at > now()
+			                          AND ((g.subject_type = 'user'
+			                                AND g.subject_id IN (SELECT unnest(member_identity_family($2::uuid))))
+			                            OR (g.subject_type = 'team' AND g.subject_id = ANY($3)))),
 			                      'infinity'::timestamptz))
-			  FROM home_read_fence f`, Life.Seconds()).Scan(&s.fence, &s.at, &s.validUntil)
+			  FROM home_read_fence f`,
+			Life.Seconds(), actor.UserID, actor.TeamIDs).Scan(&s.fence, &s.receiptFence, &s.at, &s.validUntil)
 	})
 	if err != nil {
 		return Stamp{}, fmt.Errorf("homecache: reading the access fence: %w", err)
@@ -140,13 +139,13 @@ func Store[A Answer](
 	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO home_read_cache
-			       (reader_id, read, request_key, fence, computed_at, valid_until, walk_id, payload)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			       (reader_id, read, request_key, fence, receipt_fence, computed_at, valid_until, walk_id, payload)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			ON CONFLICT (reader_id, read, request_key) DO UPDATE
-			   SET fence = EXCLUDED.fence, computed_at = EXCLUDED.computed_at,
+			   SET fence = EXCLUDED.fence, receipt_fence = EXCLUDED.receipt_fence, computed_at = EXCLUDED.computed_at,
 			       valid_until = EXCLUDED.valid_until, walk_id = EXCLUDED.walk_id,
 			       payload = EXCLUDED.payload`,
-			reader, string(read), key, stamp.fence, stamp.at, stamp.validUntil, walk, payload)
+			reader, string(read), key, stamp.fence, stamp.receiptFence, stamp.at, stamp.validUntil, walk, payload)
 		return err
 	})
 	if err != nil {

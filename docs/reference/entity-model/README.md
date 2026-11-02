@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 344 |
-| Columns | 4088 |
+| Columns | 4091 |
 | Foreign keys | 563 |
 | Owning areas | 37 |
 
@@ -321,9 +321,9 @@ erDiagram
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 6 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 10 | 0 |
-| [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
-| [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
-| [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 1 | 0 |
+| [`home_read_cache`](compose.md#home_read_cache) | compose | 9 | 0 |
+| [`home_read_fence`](compose.md#home_read_fence) | compose | 3 | 0 |
+| [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |
 | [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |

@@ -1,4 +1,5 @@
 SET LOCAL lock_timeout = '3s';
+DROP TRIGGER home_read_receipt_fence ON audit_log;
 DROP TRIGGER home_read_fence_scrub ON audit_log;
 DROP TRIGGER home_read_fence_workspace_domain ON workspace_email_domain;
 DROP TRIGGER home_read_fence_company_domain ON company_domain;
@@ -19,7 +20,8 @@ DROP TRIGGER home_read_fence_identity ON app_user;
 DROP TRIGGER home_read_fence_authority ON report_projection_fence;
 DROP TRIGGER home_read_fence_at_commit ON home_read_fence_pending;
 DROP FUNCTION advance_home_read_fence_on_first_link();
-DROP FUNCTION advance_home_read_fence_now();
+DROP FUNCTION advance_home_receipt_fence();
+DROP FUNCTION advance_home_read_fence_now(text);
 DROP FUNCTION advance_home_read_fence();
 DROP FUNCTION commit_home_read_fence();
 DROP TABLE home_read_fence_pending;

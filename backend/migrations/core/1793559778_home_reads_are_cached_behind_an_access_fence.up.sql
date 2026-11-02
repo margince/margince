@@ -9,6 +9,7 @@ CREATE TABLE home_read_cache (
   fence       bigint      NOT NULL,
   computed_at timestamptz NOT NULL,
   valid_until timestamptz NOT NULL,
+  receipt_fence bigint    NOT NULL,
   walk_id     uuid,
   payload     jsonb       NOT NULL,
   PRIMARY KEY (reader_id, read, request_key)
@@ -24,9 +25,12 @@ CREATE TABLE home_read_forgotten (
 -- Advances on every write that can take a record out of somebody's reach. A
 -- cached answer records the generation its own snapshot read, so a change it
 -- could not see invalidates it once committed.
+-- receipt_generation advances on every transaction that writes a machine audit
+-- row, which is what the receipt reports.
 CREATE TABLE home_read_fence (
-  singleton  boolean PRIMARY KEY DEFAULT true CHECK (singleton),
-  generation bigint  NOT NULL DEFAULT 0
+  singleton          boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+  generation         bigint  NOT NULL DEFAULT 0,
+  receipt_generation bigint  NOT NULL DEFAULT 0
 );
 INSERT INTO home_read_fence DEFAULT VALUES;
 
@@ -35,29 +39,46 @@ INSERT INTO home_read_fence DEFAULT VALUES;
 -- before locks the writer takes later, and two writers could deadlock on it;
 -- taken last, at commit, it waits on nothing.
 CREATE TABLE home_read_fence_pending (
-  xact xid8 PRIMARY KEY
+  xact  xid8 NOT NULL,
+  fence text NOT NULL CHECK (fence IN ('access', 'receipt')),
+  PRIMARY KEY (xact, fence)
 );
 
-CREATE FUNCTION advance_home_read_fence_now() RETURNS void LANGUAGE plpgsql AS $$
+CREATE FUNCTION advance_home_read_fence_now(fence text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-  IF current_setting('margince.home_read_fence_advanced', true) IS DISTINCT FROM 'on' THEN
-    INSERT INTO home_read_fence_pending (xact) VALUES (pg_current_xact_id()) ON CONFLICT DO NOTHING;
-    PERFORM set_config('margince.home_read_fence_advanced', 'on', true);
+  IF current_setting('margince.home_read_fence_' || fence, true) IS DISTINCT FROM 'on' THEN
+    INSERT INTO home_read_fence_pending (xact, fence) VALUES (pg_current_xact_id(), fence) ON CONFLICT DO NOTHING;
+    PERFORM set_config('margince.home_read_fence_' || fence, 'on', true);
   END IF;
 END;
 $$;
 
 CREATE FUNCTION advance_home_read_fence() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  PERFORM advance_home_read_fence_now();
+  PERFORM advance_home_read_fence_now('access');
+  RETURN NULL;
+END;
+$$;
+
+-- A machine's audit row ends the receipt: it is a report of exactly those rows.
+-- Ordered by commit, so a job that began before a receipt was read and commits
+-- after it still ends it.
+CREATE FUNCTION advance_home_receipt_fence() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM added_audit WHERE actor_type IN ('agent', 'system', 'connector')) THEN
+    PERFORM advance_home_read_fence_now('receipt');
+  END IF;
   RETURN NULL;
 END;
 $$;
 
 CREATE FUNCTION commit_home_read_fence() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
-  DELETE FROM home_read_fence_pending WHERE xact = NEW.xact;
+  UPDATE home_read_fence
+     SET generation = generation + (NEW.fence = 'access')::int,
+         receipt_generation = receipt_generation + (NEW.fence = 'receipt')::int
+   WHERE singleton;
+  DELETE FROM home_read_fence_pending WHERE xact = NEW.xact AND fence = NEW.fence;
   RETURN NULL;
 END;
 $$;
@@ -77,7 +98,7 @@ BEGIN
      WHERE (SELECT count(*) FROM activity_link l WHERE l.activity_id = n.activity_id)
          = (SELECT count(*) FROM added_links al WHERE al.activity_id = n.activity_id)
   ) THEN
-    PERFORM advance_home_read_fence_now();
+    PERFORM advance_home_read_fence_now('access');
   END IF;
   RETURN NULL;
 END;
@@ -92,20 +113,25 @@ CREATE TRIGGER home_read_fence_record_grant AFTER INSERT OR UPDATE OR DELETE ON 
   FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence();
 
 CREATE TRIGGER home_read_fence_deal_owner AFTER UPDATE ON deal FOR EACH ROW
-  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id) EXECUTE FUNCTION advance_home_read_fence();
+  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id OR OLD.archived_at IS DISTINCT FROM NEW.archived_at)
+  EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_lead_owner AFTER UPDATE ON lead FOR EACH ROW
-  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id) EXECUTE FUNCTION advance_home_read_fence();
+  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id OR OLD.archived_at IS DISTINCT FROM NEW.archived_at)
+  EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_project_owner AFTER UPDATE ON project FOR EACH ROW
-  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id) EXECUTE FUNCTION advance_home_read_fence();
+  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id OR OLD.archived_at IS DISTINCT FROM NEW.archived_at)
+  EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_contact_reach AFTER UPDATE ON contact FOR EACH ROW
-  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id OR OLD.visibility IS DISTINCT FROM NEW.visibility)
+  WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id OR OLD.visibility IS DISTINCT FROM NEW.visibility
+        OR OLD.archived_at IS DISTINCT FROM NEW.archived_at)
   EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_company_reach AFTER UPDATE ON company FOR EACH ROW
   WHEN (OLD.owner_id IS DISTINCT FROM NEW.owner_id OR OLD.visibility IS DISTINCT FROM NEW.visibility
-        OR OLD.is_anchor IS DISTINCT FROM NEW.is_anchor)
+        OR OLD.is_anchor IS DISTINCT FROM NEW.is_anchor OR OLD.archived_at IS DISTINCT FROM NEW.archived_at)
   EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON activity FOR EACH ROW
   WHEN (OLD.audience IS DISTINCT FROM NEW.audience OR OLD.restricted_at IS DISTINCT FROM NEW.restricted_at
+        OR OLD.archived_at IS DISTINCT FROM NEW.archived_at
         OR OLD.assignee_id IS DISTINCT FROM NEW.assignee_id OR OLD.captured_by IS DISTINCT FROM NEW.captured_by
         OR OLD.sent_by_colleague IS DISTINCT FROM NEW.sent_by_colleague
         OR OLD.source_system IS DISTINCT FROM NEW.source_system
@@ -135,3 +161,6 @@ CREATE TRIGGER home_read_fence_workspace_domain AFTER INSERT OR UPDATE OR DELETE
 CREATE TRIGGER home_read_fence_scrub AFTER INSERT ON audit_log FOR EACH ROW
   WHEN (NEW.action = ANY (ARRAY['erase', 'anonymize', 'restrict']))
   EXECUTE FUNCTION advance_home_read_fence();
+CREATE TRIGGER home_read_receipt_fence AFTER INSERT ON audit_log
+  REFERENCING NEW TABLE AS added_audit
+  FOR EACH STATEMENT EXECUTE FUNCTION advance_home_receipt_fence();

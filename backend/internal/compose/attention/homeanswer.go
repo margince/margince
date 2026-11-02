@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -34,15 +35,17 @@ type worklistQuestion struct {
 // contact's queue is not this reader's answer, so both are read fresh.
 func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQuestion) (crmcontracts.Worklist, error) {
 	reader, cacheable := homecache.ReaderOf(ctx)
-	if h.home == nil || !cacheable || q.token != "" || !q.owner.IsZero() {
+	if h.home == nil || !cacheable || q.token != "" || (!q.owner.IsZero() && q.owner != reader) {
 		return svc.WorklistView(ctx, q.view, q.scope, q.filter, q.owner, q.limit, q.token)
 	}
 	// The read's own entry gate, asked before a cached answer is served.
 	if err := auth.RequireMember(ctx); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	key := fmt.Sprintf("view=%s&scope=%s&filter=%s&limit=%d&omit_relationships=%t",
-		q.view, q.scope, q.filter, q.limit, q.omitRelationships)
+	key, err := svc.homeKey(ctx, q)
+	if err != nil {
+		return crmcontracts.Worklist{}, err
+	}
 	if out, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, h.home, reader, homecache.Worklist, key); err != nil || hit {
 		return out, err
 	}
@@ -66,6 +69,25 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 		return crmcontracts.Worklist{}, err
 	}
 	return out, nil
+}
+
+// homeKey names q as the service answers it, so two spellings of one question
+// share one answer. It names the installation's day too, which no answer outlives.
+func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, error) {
+	view, err := resolveView(q.view, q.filter)
+	if err != nil {
+		return "", err
+	}
+	scope := q.scope
+	if scope == "" {
+		scope = scopeMine
+	}
+	day, err := s.startOfDay(ctx, s.now())
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("day=%s&view=%s&scope=%s&filter=%s&own_owner=%t&limit=%d&omit_relationships=%t",
+		day.Format(time.DateOnly), view, scope, q.filter, !q.owner.IsZero(), pageLimit(q.limit), q.omitRelationships), nil
 }
 
 // walkStartedBy is the walk a first page's cursor resumes, so a cached page is

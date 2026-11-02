@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -102,6 +103,12 @@ func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T)
 		"a task changes assignee": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET assignee_id = $1 WHERE id = $2`, []any{e.Rep2, f.task}}}
 		},
+		"a message is archived": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`UPDATE activity SET archived_at = now() WHERE id = $1`, []any{f.linked}}}
+		},
+		"a contact is archived": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`UPDATE contact SET archived_at = now() WHERE id = $1`, []any{f.contact}}}
+		},
 		"a message loses its link": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`DELETE FROM activity_link WHERE activity_id = $1`, []any{f.linked}}}
 		},
@@ -187,5 +194,36 @@ func TestAWriteThatOnlyWidensReachLeavesTheHomeFence(t *testing.T) {
 				t.Errorf("fence %d → %d, want it left where it was", before, after)
 			}
 		})
+	}
+}
+
+func receiptFence(t *testing.T, e *Env) int64 {
+	t.Helper()
+	n, err := strconv.ParseInt(e.WsScalar(t, `SELECT receipt_generation::text FROM home_read_fence`), 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// The receipt reports what the machinery wrote, so every actor it reports must
+// end its cached answer, and a person's own change must not.
+func TestEveryMachineActorTheReceiptReportsAdvancesItsFence(t *testing.T) {
+	e := Setup(t)
+	write := func(actor string) {
+		e.WsExec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
+			VALUES ($1, $1 || ':fence', 'update', 'deal', $2)`, actor, ids.NewV7())
+	}
+	for _, actor := range magic.MachineActors() {
+		before := receiptFence(t, e)
+		write(actor)
+		if after := receiptFence(t, e); after != before+1 {
+			t.Errorf("a %s audit row moved the receipt fence %d → %d, want one step", actor, before, after)
+		}
+	}
+	before := receiptFence(t, e)
+	write("human")
+	if after := receiptFence(t, e); after != before {
+		t.Errorf("a person's audit row moved the receipt fence %d → %d", before, after)
 	}
 }

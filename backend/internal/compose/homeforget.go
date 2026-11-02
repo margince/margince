@@ -41,7 +41,9 @@ func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.Mi
 // writersOf names the readers a mutating request writes for: the human, or the
 // human an agent acts for. A read writes for nobody.
 func writersOf(r *http.Request) []ids.UUID {
-	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
+	// The agent gate's own reading of which requests write, so the two never
+	// disagree about one route.
+	if !mutatingMethod(r.Method) {
 		return nil
 	}
 	actor, ok := principal.Actor(r.Context())

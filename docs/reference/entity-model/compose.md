@@ -691,7 +691,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## home_read_cache
 
-8 columns · primary key `(reader_id, read, request_key)` · referenced by 0 foreign keys
+9 columns · primary key `(reader_id, read, request_key)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -700,6 +700,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `payload` | `jsonb` | yes |  |
 | `read` | `text` | yes | One of `worklist`, `magic`. |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
+| `receipt_fence` | `bigint` | yes |  |
 | `request_key` | `text` | yes |  |
 | `valid_until` | `timestamp with time zone` | yes |  |
 | `walk_id` | `uuid` |  |  |
@@ -720,11 +721,12 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## home_read_fence
 
-2 columns · primary key `(singleton)` · referenced by 0 foreign keys
+3 columns · primary key `(singleton)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `generation` | `bigint`, default `0` | yes |  |
+| `receipt_generation` | `bigint`, default `0` | yes |  |
 | `singleton` | `boolean`, default `true` | yes |  |
 
 **Rules**
@@ -737,19 +739,21 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## home_read_fence_pending
 
-1 column · primary key `(xact)` · referenced by 0 foreign keys
+2 columns · primary key `(xact, fence)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `fence` | `text` | yes | One of `access`, `receipt`. |
 | `xact` | `xid8` | yes |  |
 
 **Rules**
 
 - `home_read_fence_at_commit`: `TRIGGER DEFERRABLE INITIALLY DEFERRED`
+- `home_read_fence_pending_fence_check`: `CHECK ((fence = ANY (ARRAY['access', 'receipt'])))`
 
 **Indexes**
 
-- `home_read_fence_pending_pkey`: `unique, btree (xact)`
+- `home_read_fence_pending_pkey`: `unique, btree (xact, fence)`
 
 **Triggers**
 

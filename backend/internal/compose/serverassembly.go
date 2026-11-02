@@ -199,7 +199,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 	staged := approvalsServiceWithEffects(pool)
-	s.homeCache = homecache.New(pool, magic.MachineActors())
+	s.homeCache = homecache.New(pool)
 	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
 	s.magicHandlers = magic.NewHandlers(s.magicService).WithHomeCache(s.homeCache)
