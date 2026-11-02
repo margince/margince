@@ -126,20 +126,17 @@ func receiptComputedAt(t *testing.T, e *apptest.AppEnv) string {
 	return at
 }
 
-func TestHomesReceiptIsServedFromCacheUntilAMachineWrites(t *testing.T) {
+func TestHomesReceiptIsServedFromCacheWhileAMachineWrites(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Receipt", "admin@homereceipt.test", "Admin")
 
 	first := receiptComputedAt(t, e)
-	if again := receiptComputedAt(t, e); again != first {
-		t.Fatalf("the second receipt was computed again (%s → %s), not served from cache", first, again)
-	}
 	if _, err := e.Owner.Exec(context.Background(), `
 		INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
 		VALUES ('agent', 'agent:enrich', 'update', 'deal', gen_random_uuid())`); err != nil {
 		t.Fatal(err)
 	}
-	if after := receiptComputedAt(t, e); after == first {
-		t.Error("a machine write left the receipt on its cached answer")
+	if again := receiptComputedAt(t, e); again != first {
+		t.Errorf("the receipt was computed again after a machine write (%s → %s), want the cached answer", first, again)
 	}
 }
