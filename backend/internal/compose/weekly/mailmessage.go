@@ -87,7 +87,7 @@ func mailHeadline(facts []emailview.Fact, words mailcopy.Copy) ([]emailview.Stat
 	for _, fact := range facts {
 		lifted := slices.Contains(headlined, fact.Label)
 		if lifted && len(headline) < 3 && isHeadlineFigure(fact.Value) {
-			headline = append(headline, emailview.Stat{Label: fact.Label, Value: fact.Value})
+			headline = append(headline, emailview.Stat(fact))
 			continue
 		}
 		rest = append(rest, fact)
