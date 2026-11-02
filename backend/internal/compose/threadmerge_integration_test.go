@@ -81,7 +81,7 @@ func threadConnectorCtx(e *integration.Env, owner ids.UUID) context.Context {
 // addressed to it.
 func seatAddress(t *testing.T, e *integration.Env, seat ids.UUID) string {
 	t.Helper()
-	addr := "seat-" + seat.String()[:8] + "@ws.example"
+	addr := "seat-" + seat.String() + "@ws.example"
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
