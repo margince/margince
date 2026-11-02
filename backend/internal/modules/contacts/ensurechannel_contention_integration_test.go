@@ -436,16 +436,8 @@ func waitUntilBlockedIn[T any](ctx context.Context, t *testing.T, probe pgx.Tx, 
 // bug hid: whenever the racer's connection happened to pre-date the first look,
 // its blocking state was reported correctly and the test passed.
 func probeForWaiter(ctx context.Context, probe pgx.Tx, pid int) (bool, error) {
-	if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		return false, err
-	}
-	var blocked bool
-	err := probe.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM pg_stat_activity a
-		   WHERE a.datname = current_database() AND $1 = ANY (pg_blocking_pids(a.pid)))`,
-		pid).Scan(&blocked)
-	return blocked, err
+	queued, err := testdb.QueuedBehind(ctx, probe, int32(pid))
+	return queued > 0, err
 }
 
 // racerFinished asks once more whether the racer has an answer waiting.
