@@ -31,6 +31,7 @@ type threadSQLPackage struct {
 	structs        map[string]*ast.StructType
 	resolvePackage func(string) threadSQLPackage
 	schema         *emSchema
+	parameterMemo  map[string]threadSQLSources
 }
 
 func (p threadSQLPackage) bindingsBefore(fn *ast.FuncDecl, before token.Pos) map[string][]ast.Expr {

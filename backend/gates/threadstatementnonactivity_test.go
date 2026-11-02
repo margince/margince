@@ -10,6 +10,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -233,7 +234,7 @@ func (p threadSQLPackage) closedImportedSQLSources(call *ast.CallExpr, bindings 
 	return targetPackage.returnSources(&substituted, target, nil, nil, reached, depth+1), true
 }
 
-func (p threadSQLPackage) parameterSQLSources(name string, target *ast.FuncDecl, reached map[string]bool, depth int) threadSQLSources {
+func (p threadSQLPackage) parameterSQLSources(name string, target *ast.FuncDecl, reached map[string]bool, depth int) (sources threadSQLSources) {
 	if target == nil {
 		return threadSQLSources{opaque: true}
 	}
@@ -254,8 +255,14 @@ func (p threadSQLPackage) parameterSQLSources(name string, target *ast.FuncDecl,
 	if position < 0 || reached[key+":"+name] {
 		return threadSQLSources{opaque: true}
 	}
+	// Every field of one parameter asks for its callers again, so the answer is
+	// kept per reach. Depth is left out: reach already ends every cycle.
+	memoKey := key + ":" + name + ":" + threadSQLReachKey(reached)
+	if sources, ok := p.parameterMemo[memoKey]; ok {
+		return sources
+	}
+	defer func() { p.parameterMemo[memoKey] = sources }()
 	next := cloneThreadSQLReach(reached, key+":"+name)
-	sources := threadSQLSources{}
 	found := false
 	for _, caller := range p.functions {
 		ast.Inspect(caller.Body, func(node ast.Node) bool {
@@ -273,7 +280,19 @@ func (p threadSQLPackage) parameterSQLSources(name string, target *ast.FuncDecl,
 		})
 	}
 	if !found {
-		return threadSQLSources{opaque: true}
+		sources = threadSQLSources{opaque: true}
 	}
 	return sources
+}
+
+// threadSQLReachKey names a reach set by its members, in order.
+func threadSQLReachKey(reached map[string]bool) string {
+	names := make([]string, 0, len(reached))
+	for name, on := range reached {
+		if on {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return strings.Join(names, "\x00")
 }

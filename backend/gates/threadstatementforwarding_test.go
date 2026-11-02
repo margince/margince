@@ -130,6 +130,25 @@ func (index *threadProducerIndex) sqlParameterSlots(directory, requested string,
 	return index.sqlSlots[directory+":"+requested]
 }
 
+// functionsOf keeps each package's functions by name. The slot derivation asks
+// for them once per function on every pass until no slot changes.
+func (index *threadProducerIndex) functionsOf(directory string, declarations map[string]threadProducerDeclaration) map[string]*ast.FuncDecl {
+	if functions, ok := index.functions[directory]; ok {
+		return functions
+	}
+	functions := map[string]*ast.FuncDecl{}
+	for name, declaration := range declarations {
+		if fn, ok := declaration.node.(*ast.FuncDecl); ok {
+			functions[name] = fn
+		}
+	}
+	if index.functions == nil {
+		index.functions = map[string]map[string]*ast.FuncDecl{}
+	}
+	index.functions[directory] = functions
+	return functions
+}
+
 func (index *threadProducerIndex) deriveSQLParameterSlots(directory, requested string) map[int]bool {
 	declarations := index.declarations(directory)
 	declaration := declarations[requested]
@@ -142,13 +161,7 @@ func (index *threadProducerIndex) deriveSQLParameterSlots(directory, requested s
 		positions[name] = position
 	}
 	slots := map[int]bool{}
-	functions := map[string]*ast.FuncDecl{}
-	for name, declaration := range declarations {
-		if fn, ok := declaration.node.(*ast.FuncDecl); ok {
-			functions[name] = fn
-		}
-	}
-	pkg := threadSQLPackage{functions: functions}
+	pkg := threadSQLPackage{functions: index.functionsOf(directory, declarations)}
 	ast.Inspect(target.Body, func(node ast.Node) bool {
 		call, ok := node.(*ast.CallExpr)
 		if !ok {

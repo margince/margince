@@ -38,6 +38,7 @@ type threadProducerIndex struct {
 	fragments            map[string]string
 	edges                map[string][]string
 	consumed             map[string]bool
+	functions            map[string]map[string]*ast.FuncDecl
 }
 
 func (index *threadProducerIndex) declarations(directory string) map[string]threadProducerDeclaration {

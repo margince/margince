@@ -20,7 +20,7 @@ import (
 )
 
 func threadSQLPackageOf(files []*ast.File) threadSQLPackage {
-	out := threadSQLPackage{bindings: map[string][]ast.Expr{}, functions: map[string]*ast.FuncDecl{}, imports: map[string]string{}, structs: map[string]*ast.StructType{}}
+	out := threadSQLPackage{bindings: map[string][]ast.Expr{}, functions: map[string]*ast.FuncDecl{}, imports: map[string]string{}, structs: map[string]*ast.StructType{}, parameterMemo: map[string]threadSQLSources{}}
 	for _, file := range files {
 		for _, spec := range file.Imports {
 			module, err := strconv.Unquote(spec.Path.Value)

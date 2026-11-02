@@ -10,6 +10,7 @@ package gates
 import (
 	"slices"
 	"strings"
+	"sync"
 )
 
 type threadQueryRegion struct {
@@ -300,13 +301,23 @@ func threadJoinCanGuard(tokens []string, region threadQueryRegion, on int, alias
 	return alias != name
 }
 
+// threadTokensOf keeps each statement's tokens, since the census asks for the
+// same text from every function that reaches it.
+var threadTokensOf sync.Map
+
 func threadStatementTokens(statement string) []string {
+	if kept, ok := threadTokensOf.Load(statement); ok {
+		if tokens, ok := kept.([]string); ok {
+			return slices.Clone(tokens)
+		}
+	}
 	tokens := sqlToken.FindAllString(strings.ToLower(stripNoise(statement)), -1)
 	for i, token := range tokens {
 		if isName(token) {
 			tokens[i] = strings.Join(identParts(token), ".")
 		}
 	}
+	threadTokensOf.Store(statement, slices.Clone(tokens))
 	return tokens
 }
 
