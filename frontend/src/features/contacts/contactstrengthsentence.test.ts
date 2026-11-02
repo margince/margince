@@ -75,9 +75,9 @@ describe("strengthSentence", () => {
     );
   });
 
-  it("says undirected interactions such as meetings cannot show two-way", () => {
+  it("says no shared interaction counted as a message either way", () => {
     expect(sentence(weak({ all: 2, inbound: 0, outbound: 0 }))).toContain(
-      "do not record who reached out",
+      "No shared interaction was counted as a message from this contact or from your team.",
     );
   });
 

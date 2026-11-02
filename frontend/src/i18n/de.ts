@@ -16232,7 +16232,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strength.sentence.weakOnlyThem":
     "Schwach: es gab kürzlich Kontakt, aber kaum Belege für einen Austausch in beide Richtungen. Letzter Kontakt war am {last}. Der Wert zählt nur geteilte Interaktionen, und darunter wurde keine Nachricht deines Teams gezählt.",
   "contact.strength.sentence.weakUndirected":
-    "Schwach: es gab kürzlich Kontakt, aber die geteilten Interaktionen, etwa Termine, halten nicht fest, wer sich gemeldet hat. Daher zeigen sie keinen Austausch in beide Richtungen. Letzter Kontakt war am {last}.",
+    "Schwach: es gab kürzlich Kontakt, aber kaum Belege für einen Austausch in beide Richtungen. Letzter Kontakt war am {last}. Keine geteilte Interaktion wurde als Nachricht dieses Kontakts oder deines Teams gezählt. Termine und Antworten anderer Kontakte zählen nicht so.",
   "contact.strength.sentence.moderate":
     "Mittel: ihr habt hin und wieder Kontakt. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.strong":

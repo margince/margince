@@ -42,8 +42,8 @@ function weakSentence(strength: Strength) {
   const inbound = strength.inbound_90d;
   const outbound = strength.outbound_90d;
   if (inbound !== undefined && outbound !== undefined) {
-    // Undirected interactions, such as a meeting with no recorded side, add
-    // to frequency but say nothing about who answered whom.
+    // Zero directed counts do not prove an interaction was undirected: a
+    // meeting or another contact's reply also lands here.
     if (inbound === 0 && outbound === 0) {
       return "contact.strength.sentence.weakUndirected";
     }

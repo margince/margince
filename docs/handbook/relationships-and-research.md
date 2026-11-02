@@ -38,7 +38,7 @@ A recent contact can still score **Weak**. The contact page then names what hold
 - few shared interactions in 90 days;
 - an exchange that goes mostly one way;
 - no reply from the contact among the shared interactions;
-- interactions, such as meetings, that do not record who reached out.
+- interactions, such as meetings or replies from other contacts, that count as no message either way.
 
 The score counts only interactions that everyone in Margince can see. So "no replies counted" does not mean the contact never replied.
 
