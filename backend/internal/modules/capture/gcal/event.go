@@ -26,7 +26,8 @@ import (
 // reads. Unknown fields are ignored — the raw original is stored verbatim as
 // evidence (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID string `json:"id"`
+	Visibility string `json:"visibility"`
+	ID         string `json:"id"`
 	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
 	// Google's own numbering, so the same meeting read from Google and from
 	// Graph carries two ids and would dedupe as two meetings.
@@ -130,6 +131,7 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 	}
 	return meetingmap.Event{
 		ID:            ev.ID,
+		Private:       ev.Visibility != "" && ev.Visibility != "default" && ev.Visibility != "public",
 		ICalUID:       strings.TrimSpace(ev.ICalUID),
 		Cancelled:     strings.EqualFold(strings.TrimSpace(ev.Status), calendarCanceled),
 		OwnerDeclined: ownerDeclined(ev.Attendees, owner),

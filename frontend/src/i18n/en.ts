@@ -1733,6 +1733,10 @@ export const en = {
   "scheduling.suggestedTimes": "Suggested times",
   "scheduling.noTimesDay": "No free times on this day. Choose another day.",
   "scheduling.noTimesMonth": "No free times this month. Try the next month.",
+  "conversationSuggestions.title": "On this conversation, not in Margince yet",
+  "conversationSuggestions.add": "Add as contact",
+  "conversationSuggestions.limited":
+    "Older messages may name other recipients.",
   "contact.meetings.copyBookingLink": "Copy my booking link",
   "contact.meetings.join": "Join {app}",
   "contact.meetings.joinCall": "Join video call",

@@ -98,7 +98,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 1 |
 | … **no case requires** | 10 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 4393 |
+| Prompt tokens spent on tools no case requires | 4376 |
 | Use cases | 37 |
 | Acceptance criteria the cases declare, each with a statement | 76 |
 
@@ -444,7 +444,7 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_view` | 1021 | - | - | - |
+| `read_view` | 1004 | - | - | - |
 | `change_reports` | 664 | - | - | - |
 | `change_record_parts` | 567 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

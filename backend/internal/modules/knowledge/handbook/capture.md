@@ -12,14 +12,12 @@ page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
 There is no address to forward to and no step to copy and paste. Mail between colleagues is never stored, and senders judged to be newsletters, automated tools or spam create no contact.
 For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Capture activity**.
-Also called: email logging, sync email to CRM, auto-log emails.
 
 ### How do I see emails I sent from Outlook or Gmail in Margince?
 Emails you send from Outlook or Gmail itself are captured into Margince too. A connected Gmail or Outlook mailbox is read in your inbox and your sent mail. So each sent message lands on the contact timelines of its recipients, marked **Sent**.
 1. Connect the mailbox at **Settings → Connections**; mail sent before that comes in with the **Past email** import.
 2. Open the contact's **History** tab and pick **Threads** or **All** to see what you sent beside their replies.
 Mail sent only to colleagues is never stored. An IMAP mailbox reads only the one **Mailbox** it was set up with.
-Also called: sent items, outgoing mail, outbox, log sent emails.
 
 ## What happens to one message
 
@@ -88,6 +86,8 @@ sorted them.
 Capture creates the contact but not their company. A step of its own reads the
 domain's website and proposes the company. So a personal domain such as
 `sebastian@kestner.example` does not become a company called "Kestner".
+
+Other recipients and meeting guests follow [the rules for other recipients on a conversation](recipients-on-conversations.md).
 
 ### A contact you added without an email
 

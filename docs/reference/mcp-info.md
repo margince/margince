@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 38 |
 | Resources | 13 |
-| Tool catalog | 158.9 KB |
+| Tool catalog | 158.8 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 41981 |
+| Approx. wire tokens | 41964 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 48.5 KB | 30% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 35.0 KB | 22% | Yes, every step |
-| Input schemas | 66.1 KB | 41% | Yes, every step |
+| Descriptions (incl. governance clause) | 34.8 KB | 21% | Yes, every step |
+| Input schemas | 66.2 KB | 41% | Yes, every step |
 | _Names, annotations, punctuation_ | 9.3 KB | 5% | Partly |
-| **Description + input schema** | **101.1 KB** | **63%** | **the recurring cost** |
+| **Description + input schema** | **101.0 KB** | **63%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -94,7 +94,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 1912 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1021 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 590 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
 | [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 479 |
@@ -9247,10 +9247,8 @@ which offers it without applying it.
 **Read a view**
 
 ```text
-Read what the record tools do not answer: a record's derived views (company_360,
-company_hierarchy_rollup), the workspace's reference lists and reporting objects. Each view answers
-what its REST route answers. Name the view, its id and any of its filters. A view refuses an
-argument it does not take and names the ones it does.
+Read derived record views, workspace reference lists and reporting objects through their REST
+routes. Name the view, its id and filters. Unknown arguments are refused with the accepted names.
 ```
 
 <details><summary>Input schema</summary>
@@ -9469,6 +9467,7 @@ argument it does not take and names the ones it does.
         "contact_360",
         "contact_case",
         "contact_cases",
+        "contact_conversation_suggestions",
         "contact_graph",
         "contact_strength",
         "custom_field_live_lists",
@@ -9493,6 +9492,7 @@ argument it does not take and names the ones it does.
         "latest_site_read",
         "latest_technical_enrich",
         "latest_transcript_read",
+        "lead_conversation_suggestions",
         "lead_disqualify_reasons",
         "lead_origins",
         "lead_settings",

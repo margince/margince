@@ -6155,6 +6155,52 @@ paths:
                     page: {next_cursor: null, has_more: false}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listContactConversationSuggestions
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |-
+        Both the contact and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConversationSuggestionListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /leads/{id}/conversation-suggestions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Capture]
+      operationId: listLeadConversationSuggestions
+      summary: Recipients copied on inbound correspondence who have no contact or live lead.
+      description: |-
+        Both the lead and the underlying message content must be readable. Current exclusions,
+        privacy decisions, erased identities and known counterparties are omitted. The read scans
+        recent messages in order until the visible list fills or its scan budget is spent.
+        `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+        ordinary contact create operation; this read changes nothing.
+      responses:
+        '200':
+          description: Distinct copied addresses, newest correspondence first.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ConversationSuggestionListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /worklist/ready:
     put:
       tags: [Brief]
@@ -9369,6 +9415,21 @@ components:
         version:
           allOf: [{$ref: '#/components/schemas/RowVersion'}]
           description: The activity's version, for the If-Match its own actions send.
+    ConversationSuggestion:
+      type: object
+      required: [address, display_name, activity_id]
+      properties:
+        address: {type: string}
+        display_name: {type: string}
+        activity_id: {type: string, format: uuid}
+    ConversationSuggestionListResponse:
+      type: object
+      required: [data, scan_limited]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/ConversationSuggestion'}
+        scan_limited: {type: boolean}
     DedupeCandidate:
       type: object
       required: [id, entity_type, left_id, right_id, confidence, evidence, status, created_at, can_decide, can_merge, keep_id]

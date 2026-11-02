@@ -460,3 +460,8 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 // would quietly never fire. An unparseable label is returned as it came: it is
 // then judged as an address, which is what it was before this.
 func bareAddress(label string) string { return mailidentity.BareAddress(label) }
+
+// AdmitActivityParties keeps receipt follow-up on this registry configured sink.
+func (r *Registry) AdmitActivityParties(ctx context.Context, activity ids.ActivityID) error {
+	return r.sink.AdmitActivityParties(ctx, activity)
+}

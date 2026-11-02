@@ -1815,6 +1815,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "An diesem Tag sind keine Zeiten frei. Wähle einen anderen Tag.",
   "scheduling.noTimesMonth":
     "In diesem Monat sind keine Zeiten frei. Wähle den nächsten Monat.",
+  "conversationSuggestions.title":
+    "In dieser Unterhaltung, noch nicht in Margince",
+  "conversationSuggestions.add": "Als Kontakt hinzufügen",
+  "conversationSuggestions.limited":
+    "Ältere Nachrichten können weitere Empfänger nennen.",
   "contact.meetings.copyBookingLink": "Meinen Buchungslink kopieren",
   "contact.meetings.join": "Mit {app} teilnehmen",
   "contact.meetings.joinCall": "Am Videoanruf teilnehmen",

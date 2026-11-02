@@ -11437,6 +11437,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/conversation-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Recipients copied on inbound correspondence who have no contact or live lead.
+         * @description Both the contact and the underlying message content must be readable. Current exclusions,
+         *     privacy decisions, erased identities and known counterparties are omitted. The read scans
+         *     recent messages in order until the visible list fills or its scan budget is spent.
+         *     `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+         *     ordinary contact create operation; this read changes nothing.
+         */
+        get: operations["listContactConversationSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/conversation-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Recipients copied on inbound correspondence who have no contact or live lead.
+         * @description Both the lead and the underlying message content must be readable. Current exclusions,
+         *     privacy decisions, erased identities and known counterparties are omitted. The read scans
+         *     recent messages in order until the visible list fills or its scan budget is spent.
+         *     `scan_limited` means older correspondence may name other recipients. Adding someone uses the
+         *     ordinary contact create operation; this read changes nothing.
+         */
+        get: operations["listLeadConversationSuggestions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/exclusions": {
         parameters: {
             query?: never;
@@ -26450,6 +26504,16 @@ export interface components {
          * @enum {string}
          */
         CaptureOwnerIdentitySource: "user" | "provider" | "delivered_to";
+        ConversationSuggestion: {
+            address: string;
+            display_name: string;
+            /** Format: uuid */
+            activity_id: string;
+        };
+        ConversationSuggestionListResponse: {
+            data: components["schemas"]["ConversationSuggestion"][];
+            scan_limited: boolean;
+        };
         /**
          * @description One seat's decision that their mail with a party is nobody else's. Per user, never
          *     workspace-wide: one seat's lawyer says nothing about another seat's, and a shared list
@@ -73963,6 +74027,60 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listContactConversationSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distinct copied addresses, newest correspondence first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSuggestionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLeadConversationSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Distinct copied addresses, newest correspondence first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSuggestionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
