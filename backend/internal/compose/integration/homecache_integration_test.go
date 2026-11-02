@@ -155,7 +155,7 @@ func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
 		reads++
 		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
 	}
-	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil }
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
 	if _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk); err != nil || reads != 1 {
 		t.Fatalf("serve over an unreadable answer: err %v after %d fresh reads, want the fresh read", err, reads)
 	}
