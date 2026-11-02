@@ -78,102 +78,90 @@
   }
 }
 
-/* ── The briefing ──────────────────────────────────────────────────────────
- * The head on the page ground, composed the way a record's head is: the
- * greeting where a record's name stands, the day over it as the one uppercase
- * line, the sentence under it where a record's subtitle goes, and the controls
- * on the far edge where a record's verbs stand. The readings line closes it,
- * the way the facts strip closes a record's head.
- *
- * The first line: the greeting takes the room, the controls sit at the far
- * edge on the greeting's own top line, and on a phone they drop under it. */
-.brief-head {
-  display: flex;
-  flex-wrap: wrap;
-  /* The controls sit on the greeting block's LAST line: the day, the greeting
-     and the day's sentence are read top to bottom, and the dials and the way
-     into the queue meet the eye at the end of that read rather than beside
-     its first line. */
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3) var(--space-5);
-  padding-block: var(--space-2) var(--space-4);
-}
-.brief-head > .glance {
-  flex: 1 1 32rem;
-  min-width: 0;
-}
-
+/* ── The briefing ────────────────────────────────────────────────────────── */
 .glance {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: 0;
 }
 
-/* The day, PAINTED over the greeting, with the page's controls on its line
-   where the view has them: a reader arriving at their desk asks what day it
-   is before anything else. `order` moves the paint and not the tree — the
-   greeting stays the block's first child and a screen reader meets it first. */
-.glance-topline {
-  order: -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-}
-.glance-date {
-  margin: 0;
-  color: var(--accentText);
-}
-.glance-frozen {
-  color: var(--textSecondary);
-}
-/* The title, with what acts on it (the weekly's stepper) at its line's end. */
+/* The heading spans both tracks, and its lead line keeps to the first. So the
+   weekly's stepper ends that line, outside the heading's text. */
 .glance-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-4);
+}
+.glance-greeting {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: subgrid;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+/* A rung under the line it leads to, and quieter in weight. It keeps its height
+   when empty, so the facts' line stands at one height in both views. */
+.glance-greeting-lead {
+  font: var(--fontHeadingMedium);
+  font-weight: var(--fontWeightRegular);
+  min-block-size: 1lh;
+}
+.glance-greeting-name {
+  grid-column: 1 / -1;
+  font: var(--fontDisplayLarge);
 }
 .greeting-name {
   color: var(--accentText);
 }
-
-/* THE LARGEST RUNG: this is the page a day opens on and the first thing anyone
- * sees after signing in, so the greeting is the one heading in the product
- * allowed a step over a record's name — which is `Heading size="xlarge"` at the
- * call site, in the same face, and nothing for this sheet to spell. */
-.glance-greeting {
-  margin: 0;
-  text-wrap: balance;
+/* Held to the lead line's height, so it never pushes the title down. */
+.glance-title > .brief-report-stepper {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  font: var(--fontHeadingMedium);
+  block-size: 1lh;
+  align-items: center;
 }
 
-/* The Brief's opening block: the greeting, then the day in one sentence. The
-   sentence is the LEAD rung rather than body — it is the thing the page is
-   FOR, the one sentence a reader takes away — and every figure it used to be
-   followed by is now drawn by the section that owns it. It is ONE face whether
-   the morning composed the sentence from the ranked queue or the view fell
-   back to its own standing line. */
-.glance-sentence {
+/* Baselines, not centres: the dial then stands at one height however many
+   lines the facts wrap to. */
+.glance-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+}
+/* The facts run as one line of text, so a long sentence wraps word by word
+   and a separator never starts a line. The sentence embeds user data of
+   unbounded length, so the line is clamped rather than pushing the panes down. */
+.glance-facts {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
   font: var(--fontBodyLarge);
-  margin: var(--space-1) 0 0;
-  max-width: 62ch;
-  /* TWO LINES, the same clamp `.stat-card-detail` takes. A row title is user
-     data of unbounded length and it is embedded in this sentence, so a long
-     one pushed the readings strip and everything under it down the page. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   overflow: hidden;
   text-wrap: pretty;
 }
-
-.glance-briefed {
-  margin: var(--space-1) 0 0;
+.glance-facts > p {
+  display: inline;
+  margin: 0;
+}
+.glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {
+  content: "\00a0·";
+  color: var(--textSecondary);
+}
+.glance-facts > * + *::before {
+  content: " ";
+}
+.glance-facts + * {
+  flex: none;
 }
 
 /* ── The readings band ─────────────────────────────────────────────────────
@@ -200,16 +188,6 @@
   margin: 0;
 }
 
-/* ── The work ──────────────────────────────────────────────────────────────
- * The Focus panel across the page, then the zones under it: what was done
- * for the reader and the notices as the work column, and the rail beside
- * them — the schedule as the day's line, and the night. `PageZones` draws the
- * grid. The interval over each is the register change from the block before
- * it, one rung wider than any gap inside either register. */
-.brief-head + #brief-weekly {
-  margin-top: var(--space-6);
-}
-
 /* ── The follow-through ────────────────────────────────────────────────────
  * The panels of the work column, in the order the day decides, and beside
  * them the context rail. The gap between blocks is wider than the gap between
@@ -220,61 +198,27 @@
   gap: var(--space-4);
 }
 
-/* ── The morning ───────────────────────────────────────────────────────────
- * The greeting, the day in one sentence, the card in hand and the rest of the
- * order in one column, read top to bottom with a section's air between each
- * block; beside it, the figures and the day's meetings. The two columns hold
- * a reading width rather than the window's, so a wide screen gets margins
- * instead of longer lines. */
-.brief-morning {
+/* ── The frame ─────────────────────────────────────────────────────────────
+ * Both views hold one reading width rather than the window's, so a wide
+ * screen gets margins instead of longer lines. */
+.brief-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
   max-width: 70rem;
   margin-inline: auto;
-  padding-block-start: var(--space-10);
-}
-@media (min-width: 1201px) {
-  .brief-morning {
-    column-gap: var(--space-16);
-  }
+  padding-block-start: var(--space-6);
 }
 .brief-morning > .brief-main {
   gap: var(--space-12);
 }
-.brief-morning .brief-head {
-  flex-direction: column;
-  /* One line: a wrapping column is as wide as its widest item, which pushed
-     the greeting past a phone's edge. */
-  flex-wrap: nowrap;
-  align-items: stretch;
-  padding-block: 0;
-}
-/* The head is a column here, so the row layout's basis would be a HEIGHT. */
-.brief-morning .brief-head > .glance {
-  flex: none;
-}
-.brief-morning .glance {
-  gap: var(--space-3);
-}
-.brief-morning .glance-greeting {
-  font: var(--fontDisplayLarge);
-}
-/* Held while the day is read: one line, two at phone width. Holding the
-   clamp's four would drop the page each time the agenda is short. */
+/* Held while the day is read, one line high. It is as wide as the shortest
+   agenda ("1 lead"), so it never starts a line the sentence would not. */
 .glance-sentence-pending {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  vertical-align: top;
   min-block-size: 1lh;
-}
-@media (max-width: 600px) {
-  .glance-sentence-pending {
-    min-block-size: 2lh;
-  }
-}
-.brief-morning .glance-sentence {
-  font: var(--fontLead);
-  max-width: none;
-  margin-block-start: var(--space-3);
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
 }
 .brief-morning .brief-overview {
   margin: 0;
@@ -289,20 +233,13 @@
   font-weight: var(--fontWeightMedium);
   color: var(--textSecondary);
 }
-/* A section on the page ground: its label, then its rows. With no box
-   around them, the rows and groups keep no gutter of their own either. */
+/* A section in its pane: its label, then its rows. With no box around them,
+   the rows and groups keep no gutter of their own either. */
 .brief-section {
   --padPanel: 0px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-}
-@media (min-width: 1201px) {
-  .brief-morning > .brief-rail {
-    position: sticky;
-    top: var(--space-10);
-    align-self: start;
-  }
 }
 
 /* ── The context rail ─────────────────────────────────────────────────────
@@ -684,18 +621,42 @@
 }
 
 /* ── Folds ────────────────────────────────────────────────────────────────
- * `PageZones` folds the columns; what folds here is the briefing's own scale.
- * A display-size greeting on a phone costs three lines before a reader has
- * learned anything. */
+ * `PageZones` folds the columns; what folds here is the head's facts line.
+ * Under 640px the German line does not fit beside the dial. So each fact takes
+ * its own line, and the dial stands under them. */
 @media (max-width: 720px) {
-  /* The greeting steps down a rung: at the largest rung it cost three lines
-     before a reader learned anything. */
-  .glance-greeting {
-    font: var(--fontHeadingLarge);
-  }
-
-  .glance-sentence {
+  .glance-facts {
     font: var(--fontBody);
+  }
+}
+@media (max-width: 640px) {
+  .glance-row {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  /* A fact a line, so the clamp moves from the whole line to the sentence. */
+  .glance-facts {
+    flex: none;
+    align-self: stretch;
+    display: block;
+    overflow: visible;
+  }
+  .glance-facts > p {
+    display: block;
+  }
+  .glance-facts > .glance-sentence {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+  }
+  .glance-facts > .glance-sentence-pending {
+    display: flex;
+  }
+  .glance-facts > * + *::before,
+  .glance-facts > :is(.glance-date, .glance-frozen):not(:last-child)::after {
+    content: none;
   }
 }
 

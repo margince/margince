@@ -3,15 +3,14 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { usePresence } from "./presence";
+import "./pagepane.css";
 import "./pagezones.css";
 
 // PageZones is the page-level column layout: one work column, and up to two
-// rails of context beside it.
-//
-// It carries the grid and nothing else: no name, no mark, no badge, no tabs.
-// Those belong to whatever composes it, which makes the shape available to any
-// page. A second stylesheet spelling the same three ratios and the same two
-// folds would drift the first time either moved.
+// rails of context beside it. It carries the grid, and with `panes` the surface
+// each column stands on: no name, no mark, no badge, no tabs. Those belong to
+// whatever composes it. A second stylesheet spelling the same three ratios and
+// the same two folds would drift the first time either moved.
 
 /**
  * Which columns the page has, and therefore which grid it draws.
@@ -40,6 +39,7 @@ export function PageZones({
   asideOpen = true,
   asideLabel,
   asideClassName,
+  panes = false,
   className,
 }: Readonly<{
   shape: PageZonesShape;
@@ -80,6 +80,9 @@ export function PageZones({
   asideLabel?: string;
   // Classes for the aside column, on the same rule as `railClassName`.
   asideClassName?: string;
+  // Each column stands as one page pane, the surface RecordView's cards are,
+  // and the aside stays in view beside the work as RecordView's details card.
+  panes?: boolean;
   // Classes for the grid container itself — the composing page's own concerns
   // about the block as a whole (an arrival stack, a page-specific bottom
   // clearance), which are not this component's to decide.
@@ -91,10 +94,12 @@ export function PageZones({
   // it stops, or a screen-reader user is left a region nobody can see.
   const asidePresence = usePresence({ open: asideOpen, element: asideColumn });
   const armed = useArmedAfterMount();
+  const pane = panes ? "page-pane" : undefined;
   return (
     <div
       className={cls(
         shape === "single" ? undefined : gridClass(shape),
+        panes ? "page-zones-panes" : undefined,
         className,
       )}
       // Only a page that HAS a pane declares this: on a `rail` or `single`
@@ -113,10 +118,10 @@ export function PageZones({
           reordered to fold: a rail the eye meets second and the keyboard meets
           first is a reader sent through the firmographics to reach the record
           they opened. */}
-      <div className={cls("page-zones-main", mainClassName)}>{main}</div>
+      <div className={cls("page-zones-main", pane, mainClassName)}>{main}</div>
       {rail && (
         <aside
-          className={cls("page-zones-rail-column", railClassName)}
+          className={cls("page-zones-rail-column", pane, railClassName)}
           aria-label={railLabel}
         >
           {rail}
@@ -125,7 +130,12 @@ export function PageZones({
       {aside && asidePresence.mounted && (
         <aside
           ref={asideColumn}
-          className={cls("page-zones-aside-column", asideClassName)}
+          className={cls(
+            "page-zones-aside-column",
+            pane,
+            panes ? "page-pane-sticky" : undefined,
+            asideClassName,
+          )}
           aria-label={asideLabel}
           data-state={asidePresence.state}
           // A column on its way out takes no focus and answers no pointer: it
