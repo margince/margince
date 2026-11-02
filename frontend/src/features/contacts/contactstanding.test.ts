@@ -161,7 +161,7 @@ describe("contactVerdict", () => {
     ],
     [
       "overdue_promise",
-      [{ kind: "replied_after_gap", at: AS_OF, quiet_days: 30 }],
+      [{ kind: "replied_after_gap", at: AS_OF, days: 30 }],
       "They replied after 30 quiet days.",
     ],
     [
