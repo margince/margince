@@ -22,9 +22,10 @@ DROP TRIGGER home_read_fence_workspace_domain ON workspace_email_domain;
 DROP TRIGGER home_read_fence_workspace_domain_removed ON workspace_email_domain;
 
 ALTER TABLE home_read_fence ADD COLUMN receipt_generation bigint NOT NULL DEFAULT 0;
--- A kept receipt carries no receipt fence, so none can be told current.
-DELETE FROM home_read_cache WHERE read = 'magic';
 ALTER TABLE home_read_cache ADD COLUMN receipt_fence bigint NOT NULL DEFAULT 0;
+-- A kept receipt carries no receipt fence, so none can be told current. The
+-- ALTER above holds the table, so no receipt lands between it and this.
+DELETE FROM home_read_cache WHERE read = 'magic';
 CREATE OR REPLACE FUNCTION commit_home_read_fence() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   UPDATE home_read_fence

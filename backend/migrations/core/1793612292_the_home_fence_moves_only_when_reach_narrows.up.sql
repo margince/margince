@@ -99,14 +99,17 @@ CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON capture_im
   FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence();
 
 -- These rows withhold content (auth.CommitmentContentRetainedClause and the
--- renewal arm), so becoming unavailable or renewed narrows. Recovering, losing
--- a renewal, or being removed only widens.
+-- renewal arm), so becoming unavailable or renewed narrows, and so does erasure
+-- blanking the text a Home answer shows. Recovering, losing a renewal, or being
+-- removed only widens.
 CREATE TRIGGER home_read_fence_commitment_admission AFTER INSERT ON activity_commitment_admission FOR EACH ROW
   WHEN (NEW.outcome = 'source_unavailable' OR NEW.renewed_by IS NOT NULL)
   EXECUTE FUNCTION advance_home_read_fence();
 CREATE TRIGGER home_read_fence_commitment_admission_change AFTER UPDATE ON activity_commitment_admission FOR EACH ROW
   WHEN ((NEW.outcome = 'source_unavailable' AND OLD.outcome IS DISTINCT FROM NEW.outcome)
         OR (NEW.renewed_by IS NOT NULL AND OLD.renewed_by IS DISTINCT FROM NEW.renewed_by)
+        OR (OLD.summary <> '' AND NEW.summary = '') OR (OLD.source_quote <> '' AND NEW.source_quote = '')
+        OR (OLD.meaning IS NOT NULL AND NEW.meaning IS NULL)
         OR OLD.source_activity_id IS DISTINCT FROM NEW.source_activity_id OR OLD.locator IS DISTINCT FROM NEW.locator)
   EXECUTE FUNCTION advance_home_read_fence();
 

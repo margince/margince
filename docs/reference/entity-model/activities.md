@@ -288,7 +288,7 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 **Triggers**
 
 - `home_read_fence_commitment_admission`: `AFTER INSERT FOR EACH ROW WHEN (((new.outcome = 'source_unavailable') OR (new.renewed_by IS NOT NULL))) EXECUTE FUNCTION advance_home_read_fence()`
-- `home_read_fence_commitment_admission_change`: `AFTER UPDATE FOR EACH ROW WHEN ((((new.outcome = 'source_unavailable') AND (old.outcome IS DISTINCT FROM new.outcome)) OR ((new.renewed_by IS NOT NULL) AND (old.renewed_by IS DISTINCT FROM new.renewed_by)) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id) OR (old.locator IS DISTINCT FROM new.locator))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_commitment_admission_change`: `AFTER UPDATE FOR EACH ROW WHEN ((((new.outcome = 'source_unavailable') AND (old.outcome IS DISTINCT FROM new.outcome)) OR ((new.renewed_by IS NOT NULL) AND (old.renewed_by IS DISTINCT FROM new.renewed_by)) OR ((old.summary <> '') AND (new.summary = '')) OR ((old.source_quote <> '') AND (new.source_quote = '')) OR ((old.meaning IS NOT NULL) AND (new.meaning IS NULL)) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id) OR (old.locator IS DISTINCT FROM new.locator))) EXECUTE FUNCTION advance_home_read_fence()`
 
 ## activity_identity
 

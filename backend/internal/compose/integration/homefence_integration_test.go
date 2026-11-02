@@ -49,6 +49,7 @@ func seedFenceFixture(t *testing.T, e *Env) fenceFixture {
 		f.linked, f.contact)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id) VALUES ($1, 'to', 'fence@example.test', $2)`,
 		f.linked, e.Rep1)
+	e.WsExec(t, admitCommitment, f.unlinked, "admitted")
 	e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
 		VALUES ('contact', $1, 'user', $2, 'read', $3)`, f.contact, e.Rep3, e.AdminUser)
 	return f
@@ -108,6 +109,10 @@ func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T)
 		},
 		"a commitment is found to have lost its source": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{admitCommitment, []any{f.linked, "source_unavailable"}}}
+		},
+		"erasure blanks a commitment's text": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`UPDATE activity_commitment_admission SET summary = '', source_quote = '', meaning = NULL
+				WHERE source_activity_id = $1`, []any{f.unlinked}}}
 		},
 		"a message's audience is limited": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET audience = 'participants' WHERE id = $1`, []any{f.linked}}}
