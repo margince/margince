@@ -124,7 +124,7 @@ const resetTables = `
 // exactly what a new reference table did: the sweep kept it and the coverage
 // gate reported it as leaking.
 //
-// The report fence is one boot-seeded coordination row with no customer data.
+// The report and Home fences are boot-seeded coordination rows with no customer data.
 // Its generation is monotonic; no reader depends on a particular value. The
 // own-sent-mail repair cutoff is one such row too, and every test that reads
 // it sets it first.
@@ -134,7 +134,7 @@ const resetTables = `
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
 	`'lead_origin', 'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'deal_loss_reason', 'record_role', 'partner_stage', ` +
-	`'maskable_field', 'report_projection_fence', ` +
+	`'maskable_field', 'report_projection_fence', 'home_read_fence', ` +
 	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff', 'legal_entity')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
