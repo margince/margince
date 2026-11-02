@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { AccountMenu } from "../app/account";
+import { TopBarSearch } from "../app/topbar";
 import { meFixture } from "./mefixture";
 import {
   installFetchStub,
@@ -12,9 +13,6 @@ import {
   type RouteMap,
   StoryProviders,
 } from "./story-utils";
-// This frame builds a `.topbar` by hand and imports nothing that loads the
-// strip's sheet, so without it every frame draws an unstyled strip.
-import "../app/topbar.css";
 
 // The account menu's story frame. Each story beside account.tsx and its split
 // modules renders the menu where the product does.
@@ -38,15 +36,14 @@ export function stubSession(
  *  `--pageGutter` are declared on `.app`, and the menu's drop offset reads
  *  `--topbarH`, so a bare bar draws the wrong height, gutter and offset. */
 export function TopBarTrail({ children }: Readonly<{ children: ReactNode }>) {
+  const searchRef = useRef<HTMLButtonElement>(null);
   return (
     <div className="app railexpanded">
       <div className="rail expanded" />
       <main className="main">
         <header className="topbar">
           <div className="topbar-lead" />
-          <div className="topbar-searchslot">
-            <span className="topbar-search" aria-hidden />
-          </div>
+          <TopBarSearch onOpenSearch={() => undefined} buttonRef={searchRef} />
           <div className="topbar-trail">{children}</div>
         </header>
         <div className="scroll" />

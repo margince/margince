@@ -665,7 +665,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
-    const parts = [".ws-chip", ".ws-company"];
+    const parts = [".ws-chip", ".ws-name", ".ws-company"];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "home" }} />,

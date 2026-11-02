@@ -8,9 +8,9 @@ import "./account.css";
 
 /**
  * The keyboard shortcuts, opened from Help and feedback in the account menu.
- * Two groups: the chords that work anywhere, and the keys of the Brief's
- * decision deck, named in the deck's own words. The caps follow the reader's
- * platform, so a Mac shows ⌘ and every other keyboard Ctrl.
+ * Three groups: the chords that work anywhere, the save of a multi-line field,
+ * and the keys of the Brief's decision deck. The deck's keys use the deck's own
+ * words. The caps follow the reader's platform: ⌘ on a Mac, Ctrl elsewhere.
  */
 const meta: Meta<typeof ShortcutsDialog> = {
   title: "Shell/Keyboard shortcuts",

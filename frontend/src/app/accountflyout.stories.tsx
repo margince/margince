@@ -32,3 +32,9 @@ export const OpenPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+export const OpenPhoneDark: Story = {
+  name: "Theme open (phone, dark)",
+  globals: { viewport: { value: "phone" }, theme: "dark" },
+  tags: ["uat-phone"],
+};

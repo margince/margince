@@ -118,7 +118,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
  * does not already know it, and on touch there is no ⌘K at all, so the
  * affordance itself may never leave.
  */
-function TopBarSearch({
+export function TopBarSearch({
   onOpenSearch,
   buttonRef,
 }: Readonly<{

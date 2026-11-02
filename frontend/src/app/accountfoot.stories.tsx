@@ -45,6 +45,11 @@ type Story = StoryObj<typeof SignOutRow>;
 
 export const Refused: Story = {};
 
+export const RefusedDark: Story = {
+  name: "Refused (dark)",
+  globals: { theme: "dark" },
+};
+
 export const RefusedPhone: Story = {
   name: "Refused (phone)",
   globals: { viewport: { value: "phone" } },
