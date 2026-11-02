@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type QueryKey, useQuery } from "@tanstack/react-query";
+import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ChoiceList } from "../design-system/choicelist";
@@ -94,6 +95,40 @@ export function useOpenMeetingOnDay(
         Math.abs(Date.parse(a.occurred_at) - target) -
         Math.abs(Date.parse(b.occurred_at) - target),
     )[0];
+}
+
+/**
+ * The open meeting this entry records, and the question that asks. A transcript
+ * is not asked about: a write to the meeting cannot mark its notes as one. Yes
+ * is the default, and a different meeting asks again from Yes.
+ */
+export function useRecordOfMeeting(
+  entityType: EntityKind | undefined,
+  entityId: string | undefined,
+  draft: ActivityDraft,
+  zone: string,
+): Readonly<{ meeting: OpenMeeting | undefined; question: ReactNode }> {
+  const open = useOpenMeetingOnDay(
+    entityType,
+    entityId,
+    draft.day,
+    zone,
+    draft.kind === "meeting" && !draft.asTranscript,
+  );
+  const [notRecordOf, setNotRecordOf] = useState<string | undefined>();
+  if (!open) return { meeting: undefined, question: null };
+  const recordsIt = notRecordOf !== open.id;
+  return {
+    meeting: recordsIt ? open : undefined,
+    question: (
+      <RecordOfMeetingQuestion
+        meeting={open}
+        value={recordsIt}
+        onChange={(yes) => setNotRecordOf(yes ? undefined : open.id)}
+        zone={zone}
+      />
+    ),
+  };
 }
 
 /** Is this entry the record of the open meeting? Yes, unless the reader says no. */

@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryKey,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
@@ -46,9 +50,8 @@ import { useActivityCustomFields } from "./logactivity.custom";
 import {
   type OpenMeeting,
   openMeetingKey,
-  RecordOfMeetingQuestion,
   recordOnMeeting,
-  useOpenMeetingOnDay,
+  useRecordOfMeeting,
 } from "./logactivity.openmeeting";
 import {
   attachLoggedFiles,
@@ -59,6 +62,39 @@ import {
 } from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
+
+// Every read a logged entry makes stale.
+function staleAfterLog(
+  loggedId: string,
+  input: Readonly<{
+    draft: ActivityDraft;
+    attendees: MeetingAttendees;
+    files: readonly File[];
+    meeting: OpenMeeting | undefined;
+  }>,
+  entityType: EntityKind | undefined,
+  entityId: string | undefined,
+): QueryKey[] {
+  const { draft } = input;
+  const keys: QueryKey[] =
+    entityType && entityId
+      ? [
+          ...loggedActivityKeys(
+            draft.followUp && draft.kind !== "task" ? "task" : draft.kind,
+            entityType,
+            entityId,
+            input.attendees.contacts.map((contact) => contact.id),
+          ),
+          openMeetingKey(entityType, entityId),
+        ]
+      : [TASK_QUEUE_KEY];
+  if (draft.sourceActivityId)
+    keys.push(activityFollowUpsKey(draft.sourceActivityId));
+  if (input.meeting) keys.push(["activity", input.meeting.id]);
+  if (input.files.length > 0) keys.push(...activityFileStaleKeys(loggedId));
+  keys.push(worklistKey);
+  return keys;
+}
 
 // Meetings arrive through the calendar rather than a preselected form address.
 export type OpeningKind = "note" | "task" | "call";
@@ -117,21 +153,7 @@ export function LogActivityForm({
   // The same test activityRequestBody sends source_system on.
   const transcript = draft.kind === "meeting" && draft.asTranscript;
   const banded = frame !== undefined;
-  // A meeting logged here may be the record of one booked here. A transcript
-  // is not asked about: a write to the meeting cannot mark its notes as one.
-  const openMeeting = useOpenMeetingOnDay(
-    entityType,
-    entityId,
-    draft.day,
-    recordZone,
-    draft.kind === "meeting" && !draft.asTranscript,
-  );
-  // Yes is the default, and a different meeting asks again from Yes.
-  const [notRecordOf, setNotRecordOf] = useState<string | undefined>();
-  const recordsMeeting =
-    openMeeting !== undefined && notRecordOf !== openMeeting.id
-      ? openMeeting
-      : undefined;
+  const recordOf = useRecordOfMeeting(entityType, entityId, draft, recordZone);
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
@@ -149,14 +171,7 @@ export function LogActivityForm({
     }) => {
       if (input.meeting) {
         const id = await recordOnMeeting(
-          {
-            meeting: input.meeting,
-            draft: input.draft,
-            entityType,
-            entityId,
-            zone: input.zone,
-            idempotencyKey: input.idempotencyKey,
-          },
+          { ...input, meeting: input.meeting, entityType, entityId },
           t,
         );
         return { id, unattached: await attachLoggedFiles(id, input.files) };
@@ -189,26 +204,13 @@ export function LogActivityForm({
     },
     onSuccess: (logged, input) => {
       reportUnattached(logged.unattached);
-      const keys =
-        entityType && entityId
-          ? loggedActivityKeys(
-              input.draft.followUp && input.draft.kind !== "task"
-                ? "task"
-                : input.draft.kind,
-              entityType,
-              entityId,
-              input.attendees.contacts.map((contact) => contact.id),
-            )
-          : [TASK_QUEUE_KEY];
-      if (input.draft.sourceActivityId)
-        keys.push(activityFollowUpsKey(input.draft.sourceActivityId));
-      if (input.meeting) keys.push(["activity", input.meeting.id]);
-      if (entityType && entityId)
-        keys.push([...openMeetingKey(entityType, entityId)]);
-      keys.push(worklistKey);
-      if (input.files.length > 0)
-        keys.push(...activityFileStaleKeys(logged.id));
-      for (const queryKey of keys) queryClient.invalidateQueries({ queryKey });
+      for (const queryKey of staleAfterLog(
+        logged.id,
+        input,
+        entityType,
+        entityId,
+      ))
+        queryClient.invalidateQueries({ queryKey });
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
       setAttendees(NO_ATTENDEES);
       setFiles([]);
@@ -264,7 +266,7 @@ export function LogActivityForm({
           attendees,
           idempotencyKey,
           files: files.map((held) => held.file),
-          meeting: recordsMeeting,
+          meeting: recordOf.meeting,
         });
       })}
     >
@@ -314,16 +316,7 @@ export function LogActivityForm({
           )}
         </Field>
       </div>
-      {openMeeting && (
-        <RecordOfMeetingQuestion
-          meeting={openMeeting}
-          value={recordsMeeting !== undefined}
-          onChange={(recordsIt) =>
-            setNotRecordOf(recordsIt ? undefined : openMeeting.id)
-          }
-          zone={recordZone}
-        />
-      )}
+      {recordOf.question}
       {/* WHO owes this task, asked beside when it is due. Only a task is held
           by a colleague; the field renders nothing for a note or meeting, and
           defers its roster walk to that same condition. */}
