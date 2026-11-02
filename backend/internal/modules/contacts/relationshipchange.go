@@ -231,10 +231,12 @@ func changeInputsFor(
 	rows, err := tx.Query(ctx, `
 		SELECT l.contact_id,
 		       max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+`),
+		       max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+` AND `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`)
@@ -253,8 +255,10 @@ func changeInputsFor(
 		var contactID ids.ContactID
 		var in relstrength.ChangeInputs
 		if err := rows.Scan(&contactID,
-			&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
-			&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
+			&in.Current.LastTouch, &in.Current.LastEngaged,
+			&in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
+			&in.Previous.LastTouch, &in.Previous.LastEngaged,
+			&in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
 		); err != nil {
 			return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
 		}

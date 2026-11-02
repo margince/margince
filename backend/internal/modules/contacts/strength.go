@@ -49,7 +49,10 @@ type RelationshipStrength struct {
 	Frequency   float64
 	Reciprocity float64
 
-	LastInteraction     *time.Time
+	LastInteraction *time.Time
+	// LastEngaged is the newest interaction the contact took part in, which
+	// recency counts from. Our own later send does not move it.
+	LastEngaged         *time.Time
 	InteractionCount90d int
 	Inbound90d          int
 	Outbound90d         int
@@ -286,6 +289,7 @@ func contactStrengths(
 	rows, err := tx.Query(ctx, `
 		SELECT l.contact_id,
 		       max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
@@ -310,7 +314,7 @@ func contactStrengths(
 	for rows.Next() {
 		var contactID ids.ContactID
 		var rs RelationshipStrength
-		if err := rows.Scan(&contactID, &rs.LastInteraction, &rs.InteractionCount90d,
+		if err := rows.Scan(&contactID, &rs.LastInteraction, &rs.LastEngaged, &rs.InteractionCount90d,
 			&rs.Inbound90d, &rs.Outbound90d, &rs.LastInbound, &rs.LastOutbound,
 			&rs.LastInboundPrecision, &rs.LastOutboundPrecision, &rs.LastInboundActivity); err != nil {
 			return nil, err
@@ -357,6 +361,7 @@ func strengthInputs(
 	// touch, the 90-day direction counts, and the contributing ids.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("$1", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("$1", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
@@ -372,7 +377,7 @@ func strengthInputs(
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
 		WHERE `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
-		foldArgs...).Scan(&out.LastInteraction, &out.InteractionCount90d,
+		foldArgs...).Scan(&out.LastInteraction, &out.LastEngaged, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
 		&out.LastInboundPrecision, &out.LastOutboundPrecision, &out.LastInboundActivity); err != nil {
 		return err
@@ -413,10 +418,11 @@ func strengthInputs(
 // rounding difference, so there is one copy.
 func (r *RelationshipStrength) finish(now time.Time) {
 	score := relstrength.Compute(relstrength.Inputs{
-		LastInteraction: r.LastInteraction,
-		Count90d:        r.InteractionCount90d,
-		Inbound90d:      r.Inbound90d,
-		Outbound90d:     r.Outbound90d,
+		LastTouch:   r.LastInteraction,
+		LastEngaged: r.LastEngaged,
+		Count90d:    r.InteractionCount90d,
+		Inbound90d:  r.Inbound90d,
+		Outbound90d: r.Outbound90d,
 	}, now)
 	r.Strength = score.Strength
 	r.Bucket = score.Bucket

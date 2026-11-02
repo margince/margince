@@ -99,8 +99,8 @@ type ChangeInputs struct {
 	// the number it explains cannot disagree.
 	Current Inputs
 	// Previous is that same fold over the window ending ComparisonDays ago.
-	// Its LastInteraction must be the last interaction BEFORE that instant,
-	// not the overall one, or the earlier score inherits today's recency and
+	// Its LastTouch and LastEngaged must be the last ones BEFORE that instant,
+	// not the overall ones, or the earlier score inherits today's recency and
 	// no band ever appears to move.
 	Previous Inputs
 	// LatestInbound is when they last wrote to us; nil if they never have.
@@ -186,7 +186,7 @@ func wentQuiet(lastInteraction *occurredday.Moment, now time.Time, zone *time.Lo
 // continuously, so "73 became 71" is arithmetic rather than news, and a
 // surface that reported it would cry wolf on every read.
 func bandMoved(in ChangeInputs, now time.Time) (Change, bool) {
-	if in.Current.LastInteraction == nil || in.Previous.LastInteraction == nil {
+	if in.Current.LastTouch == nil || in.Previous.LastTouch == nil {
 		return Change{}, false
 	}
 	then := Compute(in.Previous, now.AddDate(0, 0, -ComparisonDays))

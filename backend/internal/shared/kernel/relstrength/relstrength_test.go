@@ -26,7 +26,7 @@ func TestTheWorkedExampleFromTheSpec(t *testing.T) {
 	// 7 inbound and 5 outbound → 47, moderate.
 	now := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
 	got := Compute(Inputs{
-		LastInteraction: at(now, 5), Count90d: 12, Inbound90d: 7, Outbound90d: 5,
+		LastTouch: at(now, 5), LastEngaged: at(now, 5), Count90d: 12, Inbound90d: 7, Outbound90d: 5,
 	}, now)
 
 	if !closeTo(got.Recency, 0.891) {
@@ -63,12 +63,12 @@ func TestOneWayTrafficFloorsReciprocity(t *testing.T) {
 	// A hundred unanswered sends is not a relationship. The floor is what
 	// admits they happened without letting them score as one.
 	now := time.Now()
-	oneWay := Compute(Inputs{LastInteraction: at(now, 1), Count90d: 100, Outbound90d: 100}, now)
+	oneWay := Compute(Inputs{LastTouch: at(now, 1), LastEngaged: at(now, 1), Count90d: 100, Outbound90d: 100}, now)
 	if oneWay.Reciprocity != ReciprocityFloor {
 		t.Errorf("purely outbound reciprocity = %v, want the %v floor", oneWay.Reciprocity, ReciprocityFloor)
 	}
 	// Perfectly balanced traffic, same volume and recency, must beat it.
-	twoWay := Compute(Inputs{LastInteraction: at(now, 1), Count90d: 100, Inbound90d: 50, Outbound90d: 50}, now)
+	twoWay := Compute(Inputs{LastTouch: at(now, 1), LastEngaged: at(now, 1), Count90d: 100, Inbound90d: 50, Outbound90d: 50}, now)
 	if twoWay.Strength <= oneWay.Strength {
 		t.Errorf("a two-way exchange scored %d, no better than a one-way blast at %d",
 			twoWay.Strength, oneWay.Strength)
@@ -80,7 +80,7 @@ func TestUndirectedInteractionsCountForFrequencyButNotReciprocity(t *testing.T) 
 	// recorded direction is evidence that contact happened and says nothing
 	// about who reached out. It must not be silently read as one-way.
 	now := time.Now()
-	got := Compute(Inputs{LastInteraction: at(now, 1), Count90d: 20}, now)
+	got := Compute(Inputs{LastTouch: at(now, 1), LastEngaged: at(now, 1), Count90d: 20}, now)
 	if !closeTo(got.Frequency, 1.0) {
 		t.Errorf("frequency = %.4f, want 1.0 — undirected interactions still count", got.Frequency)
 	}
@@ -94,7 +94,7 @@ func TestAFutureTimestampDoesNotAmplifyRecency(t *testing.T) {
 	// unclamped, 2^(-negative/30) exceeds 1 and inflates every factor above
 	// it — a score over 100 on a record nobody can explain.
 	now := time.Now()
-	got := Compute(Inputs{LastInteraction: at(now, -3), Count90d: 20, Inbound90d: 10, Outbound90d: 10}, now)
+	got := Compute(Inputs{LastTouch: at(now, -3), LastEngaged: at(now, -3), Count90d: 20, Inbound90d: 10, Outbound90d: 10}, now)
 	if got.Recency > 1.0 {
 		t.Errorf("recency = %v for a future interaction, want it clamped to 1.0", got.Recency)
 	}
@@ -107,7 +107,7 @@ func TestTheFoldIsPure(t *testing.T) {
 	// The score is computed on every read rather than stored, which is only
 	// safe if the same inputs and the same clock always give the same answer.
 	now := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
-	in := Inputs{LastInteraction: at(now, 7), Count90d: 9, Inbound90d: 4, Outbound90d: 5}
+	in := Inputs{LastTouch: at(now, 7), LastEngaged: at(now, 7), Count90d: 9, Inbound90d: 4, Outbound90d: 5}
 	first := Compute(in, now)
 	for i := range 5 {
 		if got := Compute(in, now); got != first {
@@ -133,5 +133,50 @@ func TestBucketBoundaries(t *testing.T) {
 		if got := bucketFor(c.strength); got != c.want {
 			t.Errorf("bucketFor(%d) = %q, want %q", c.strength, got, c.want)
 		}
+	}
+}
+
+// One send of ours that the contact has not answered does not raise the band:
+// recency counts from the last time they took part.
+func TestAnUnansweredSendDoesNotRaiseTheBand(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	tenDaysAgo := now.AddDate(0, 0, -10)
+	before := Compute(Inputs{LastTouch: &tenDaysAgo, LastEngaged: &tenDaysAgo, Count90d: 16, Inbound90d: 4, Outbound90d: 6}, now)
+	after := Compute(Inputs{LastTouch: &now, LastEngaged: &tenDaysAgo, Count90d: 17, Inbound90d: 4, Outbound90d: 7}, now)
+	if before.Bucket != BucketModerate {
+		t.Fatalf("the case starts %s, want moderate", before.Bucket)
+	}
+	if after.Bucket != before.Bucket {
+		t.Fatalf("an unanswered send moved the band from %s to %s", before.Bucket, after.Bucket)
+	}
+}
+
+// Their reply today does raise it.
+func TestAReplyTodayRaisesTheBand(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	tenDaysAgo := now.AddDate(0, 0, -10)
+	before := Compute(Inputs{LastTouch: &tenDaysAgo, LastEngaged: &tenDaysAgo, Count90d: 16, Inbound90d: 4, Outbound90d: 6}, now)
+	after := Compute(Inputs{LastTouch: &now, LastEngaged: &now, Count90d: 17, Inbound90d: 5, Outbound90d: 6}, now)
+	if after.Bucket != BucketStrong || before.Bucket != BucketModerate {
+		t.Fatalf("a reply today moved %s to %s, want moderate to strong", before.Bucket, after.Bucket)
+	}
+}
+
+// A contact who never took part, only our sends, bands weak and not none: the
+// sends happened.
+func TestOnlySendsScoreWeakNotNone(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	got := Compute(Inputs{LastTouch: &now, Count90d: 20, Outbound90d: 20}, now)
+	if got.Bucket != BucketWeak || got.Recency != 0 {
+		t.Fatalf("only sends scored %s with recency %v, want weak with none", got.Bucket, got.Recency)
+	}
+}
+
+// A meeting counts as the contact taking part, so it refreshes recency.
+func TestAMeetingRefreshesRecency(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	got := Compute(Inputs{LastTouch: &now, LastEngaged: &now, Count90d: 4}, now)
+	if got.Recency != 1 {
+		t.Fatalf("recency after a meeting today = %v, want 1", got.Recency)
 	}
 }

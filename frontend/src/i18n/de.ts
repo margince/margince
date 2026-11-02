@@ -16290,7 +16290,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.band.strong": "stark",
   "contact.strength.detail": "Letzter Kontakt {last}",
   "contact.strength.sentence.weakStale":
-    "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
+    "Schwach: es ist schon eine Weile her. Zuletzt hat dein Kontakt dir am {last} geschrieben oder dich getroffen.",
   "contact.strength.sentence.weakFew":
     "Schwach: es gab kürzlich Kontakt, aber in den letzten 90 Tagen wenige Interaktionen.",
   "contact.strength.sentence.weakLopsided":

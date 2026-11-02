@@ -29137,6 +29137,11 @@ export interface components {
              * @description Timestamp of the most recent qualifying interaction; null when there are none.
              */
             last_interaction?: string | null;
+            /**
+             * Format: date-time
+             * @description The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
+             */
+            last_engaged?: string | null;
             /** @description Count of qualifying inbound interactions in the trailing 90-day window. */
             inbound_90d?: number;
             /** @description Count of qualifying outbound interactions in the trailing 90-day window. */

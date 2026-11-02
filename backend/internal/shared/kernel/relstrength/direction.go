@@ -58,6 +58,13 @@ const senderlessCounterpartySQL = `(NOT EXISTS (SELECT 1 FROM activity_participa
 		AND EXISTS (SELECT 1 FROM contact_email ce
 		 WHERE ce.contact_id = %[1]s AND ce.archived_at IS NULL AND ce.email = %[2]s.counterparty_email))`
 
+// ContactTookPartSQL admits an interaction the contact took part in: a message
+// they sent, or a meeting or call. Callers already admit only meetings and calls
+// that took place, through InteractionCountsAtSQL.
+func ContactTookPartSQL(contact, activity string) string {
+	return "(" + TheyWroteSQL(contact, activity) + " OR " + activity + ".kind IN ('meeting','call'))"
+}
+
 // WeWroteSQL admits a message we sent. Which contacts it reached is the
 // caller's walk, because reaching someone is not authorship.
 func WeWroteSQL(activity string) string {
