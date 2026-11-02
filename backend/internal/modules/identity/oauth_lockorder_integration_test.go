@@ -341,13 +341,8 @@ func (e *revocationEnv) awaitQueuedBehind(t *testing.T, pid int32, racerReturned
 		racer+" finished while the other side held the client row: it never queued on the lock both take first",
 		racer+" never queued behind the client row the other side held",
 		func(ctx context.Context) (bool, error) {
-			if _, err := e.owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, err
-			}
-			var queued bool
-			err := e.owner.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
-				  WHERE $1 = ANY (pg_blocking_pids(a.pid)))`, pid).Scan(&queued)
-			return queued, err
+			queued, err := testdb.QueuedBehind(ctx, e.owner, int32(pid))
+			return queued > 0, err
 		})
 }
 

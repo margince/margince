@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // The row-lock probe sees a backend that dials AFTER it starts looking.
@@ -58,16 +59,11 @@ func TestTheRowLockProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 	// way. It is a call-site property, never a property of the probe's own code
 	// (#970), which is why TestEveryContentionProbeClearsTheStatsSnapshot in the
 	// backend suite now requires it of every call site rather than of this one.
-	if _, err := e.owner.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		t.Fatalf("clearing the stats snapshot before the probe's first look: %v", err)
-	}
-	var queued bool
-	if err := e.owner.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
-		  WHERE $1 = ANY (pg_blocking_pids(a.pid)))`, blocker).Scan(&queued); err != nil {
+	queued, err := testdb.QueuedBehind(ctx, e.owner, int32(blocker))
+	if err != nil {
 		t.Fatalf("the probe's first look: %v", err)
 	}
-	if queued {
+	if queued > 0 {
 		t.Fatal("something was already queued on the competing transaction before the racer " +
 			"existed — this run cannot tell a working probe from a blind one")
 	}
