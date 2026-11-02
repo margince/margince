@@ -95,7 +95,7 @@ export function useMe(enabled = true) {
     // window is the one this needs to close.
     refetchOnWindowFocus: "always",
     retry: false,
-    queryFn: readSession,
+    queryFn: ({ signal }) => readSession(signal),
   });
   const scope = healthScope(query.data);
   const previousScope = useRef(scope);
@@ -111,8 +111,8 @@ export function useMe(enabled = true) {
 }
 
 // The boundary's one reading of /me; the connection screen's check shares it.
-async function readSession() {
-  const result = await api.GET("/me").catch(() => null);
+export async function readSession(signal?: AbortSignal) {
+  const result = await api.GET("/me", { signal }).catch(() => null);
   if (!result) {
     throw new AuthProbeError("connection", "the API could not be reached");
   }
