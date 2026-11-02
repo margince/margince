@@ -228,6 +228,11 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		if s.aiRoutingHandlers.store != nil {
 			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithSealer(vaultSealer(vault, s.log))
 		}
+		// The status read names the lanes whose vendor holds no key, and a
+		// sealed key counts as held.
+		if s.aiAdminHandlers.store != nil {
+			s.aiAdminHandlers.store = s.aiAdminHandlers.store.WithSealer(vaultSealer(vault, s.log))
+		}
 		// The sync lists each vendor's models with the key sealed here; guarded
 		// like the store above, for a role that composed no AI surface.
 		if s.priceCatalogues.broker != nil {

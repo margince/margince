@@ -10,10 +10,12 @@ import {
   deals,
   decisionRow,
   digest,
+  firstWeek,
   lapsed,
   NOT_FOUND,
   narratedWeek,
   pipelineRows,
+  quietRun,
   ranked,
   readingsDay,
   report,
@@ -26,6 +28,10 @@ import {
   wholeDecisions,
   wholeMeetings,
 } from "../../testing/brief.fixtures";
+import {
+  expectDialPlacement,
+  expectReportFillsPane,
+} from "../../testing/briefheadchecks";
 import {
   installFetchStub,
   jsonResponse,
@@ -165,6 +171,15 @@ function brief({
         }),
       "POST /reports/deals-by-stage": () => pipeline(),
       "GET /magic": () => jsonResponse(quietNight),
+      // The plan's week is required by the contract, which the fallback list
+      // page lacks.
+      "GET /weekly-plans/current": () =>
+        jsonResponse({
+          id: "01a00000-0000-7000-8000-0000000000c1",
+          local_week_start: WEEK_START,
+          status: "open",
+          commitments: [],
+        }),
       ...extra,
     });
     return (
@@ -513,4 +528,81 @@ export const DigestUnavailable: Story = {
     approvals: [...singles],
     extra: { "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
   }),
+};
+
+// ── The panes ───────────────────────────────────────────────────────────────
+
+// The work and the rail each on one pane, folded into one column on a phone.
+export const TodayPhone: Story = {
+  render: brief({ approvals: [...singles] }),
+  tags: ["uat-phone"],
+};
+
+// A dark pane is see-through; the focus card on it stays opaque over its ring.
+export const TodayDark: Story = {
+  globals: { theme: "dark" },
+  render: brief({ approvals: [...singles] }),
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
+};
+
+function onWeekly() {
+  const prior = globalThis.location.hash;
+  globalThis.location.hash = "#/home?view=weekly";
+  return () => {
+    globalThis.location.hash = prior;
+  };
+}
+
+// One pane as wide as the morning's two, so the dial stays put across views.
+export const Week: Story = {
+  beforeEach: onWeekly,
+  render: brief({ approvals: [] }),
+  play: async ({ canvasElement }) => {
+    await expectReportFillsPane(canvasElement);
+    await expectDialPlacement(canvasElement);
+  },
+};
+
+export const WeekPhone: Story = {
+  ...Week,
+  tags: ["uat-phone"],
+};
+
+// The head's facts line ends on the agent's badge, then the dial.
+export const TodayBriefed: Story = {
+  render: brief({
+    approvals: [...singles],
+    extra: { "GET /brief": () => jsonResponse(quietRun) },
+  }),
+  play: ({ canvasElement }) => expectDialPlacement(canvasElement),
+};
+
+export const TodayBriefedPhone: Story = {
+  ...TodayBriefed,
+  tags: ["uat-phone"],
+};
+
+// A week nobody narrated: its frozen time and counted sentence share the dial's
+// line. The stepper ends the line over the week's days.
+export const WeekCounted: Story = {
+  beforeEach: onWeekly,
+  render: brief({
+    approvals: [],
+    weekly: firstWeek,
+    extra: {
+      "GET /weekly-reviews": () =>
+        jsonResponse({ weeks: [WEEK_START, "2026-06-22"] }),
+    },
+  }),
+  play: Week.play,
+};
+
+export const WeekCountedPhone: Story = {
+  ...WeekCounted,
+  tags: ["uat-phone"],
+};
+
+export const WeekNotWrittenYet: Story = {
+  beforeEach: onWeekly,
+  render: brief({ approvals: [], weekly: null }),
 };

@@ -3,7 +3,11 @@
 
 package activities
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
 
 // Which attachments a record's Documents list holds, spelled once for the deal,
 // contact and company readers.
@@ -25,9 +29,8 @@ const (
 func mailFileIDs(linkedTo string) string {
 	return fmt.Sprintf(`SELECT mf.id FROM activity a
 		  JOIN attachment mf ON mf.entity_type = '%s' AND mf.entity_id = a.id AND mf.archived_at IS NULL
-		 WHERE a.archived_at IS NULL AND %s
-		   AND NOT (COALESCE(mf.content_type, '') LIKE 'image/%%' AND COALESCE(mf.byte_size, 0) < %d)`,
-		linkEntityActivity, linkedTo, inlineImageCeiling)
+		 WHERE a.archived_at IS NULL AND %s AND %s`,
+		linkEntityActivity, linkedTo, storekit.NotInlineMailImageSQL("mf"))
 }
 
 // documentMembership says which attachments holder's Documents list holds:
@@ -39,7 +42,10 @@ func mailFileIDs(linkedTo string) string {
 func documentMembership(holder string, pos int) string {
 	var own, linked string
 	switch holder {
-	case holderDeal, holderContact:
+	case holderDeal:
+		own = fmt.Sprintf("own.entity_type = '%s' AND own.entity_id = $%d", holder, pos)
+		linked = storekit.MessageOnDealSQL("a.id", fmt.Sprintf("$%d", pos))
+	case holderContact:
 		own = fmt.Sprintf("own.entity_type = '%s' AND own.entity_id = $%d", holder, pos)
 		linked = fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link l
 			 WHERE l.activity_id = a.id AND l.entity_type = '%[1]s' AND l.%[1]s_id = $%[2]d)`, holder, pos)

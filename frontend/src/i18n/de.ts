@@ -2653,6 +2653,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
 
+  "search.bestMatch": "Bester Treffer",
   "search.placeholder":
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
@@ -6197,14 +6198,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.act": "Als bearbeitet markieren",
   "brief.dismiss": "Ausblenden",
 
-  "brief.glance.morning": "Guten Morgen, {name}.",
-  "brief.glance.morningAnon": "Guten Morgen.",
-  "brief.glance.afternoon": "Guten Tag, {name}.",
-  "brief.glance.afternoonAnon": "Guten Tag.",
-  "brief.glance.evening": "Guten Abend, {name}.",
-  "brief.glance.eveningAnon": "Guten Abend.",
-  "brief.glance.night": "Noch bei der Arbeit, {name}.",
-  "brief.glance.nightAnon": "Noch bei der Arbeit.",
+  "brief.glance.morning": "Guten Morgen, {name}",
+  "brief.glance.morningAnon": "Guten Morgen",
+  "brief.glance.afternoon": "Guten Tag, {name}",
+  "brief.glance.afternoonAnon": "Guten Tag",
+  "brief.glance.evening": "Guten Abend, {name}",
+  "brief.glance.eveningAnon": "Guten Abend",
+  "brief.glance.night": "Noch bei der Arbeit, {name}",
+  "brief.glance.nightAnon": "Noch bei der Arbeit",
   "brief.glance.introWeekly":
     "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.suggestions.review": "Deal-Vorschläge ansehen",

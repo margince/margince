@@ -2566,6 +2566,7 @@ export const en = {
   // extensions/<unit>/frontend/i18n/, namespaced `ext<Unit>.` and merged into
   // the catalogue by gen-composition (see i18n/index.tsx).
 
+  "search.bestMatch": "Best match",
   "search.placeholder":
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
@@ -6197,14 +6198,14 @@ export const en = {
   "brief.act": "Mark handled",
   "brief.dismiss": "Dismiss",
 
-  "brief.glance.morning": "Good morning, {name}.",
-  "brief.glance.morningAnon": "Good morning.",
-  "brief.glance.afternoon": "Good afternoon, {name}.",
-  "brief.glance.afternoonAnon": "Good afternoon.",
-  "brief.glance.evening": "Good evening, {name}.",
-  "brief.glance.eveningAnon": "Good evening.",
-  "brief.glance.night": "Working late, {name}.",
-  "brief.glance.nightAnon": "Working late.",
+  "brief.glance.morning": "Good morning, {name}",
+  "brief.glance.morningAnon": "Good morning",
+  "brief.glance.afternoon": "Good afternoon, {name}",
+  "brief.glance.afternoonAnon": "Good afternoon",
+  "brief.glance.evening": "Good evening, {name}",
+  "brief.glance.eveningAnon": "Good evening",
+  "brief.glance.night": "Working late, {name}",
+  "brief.glance.nightAnon": "Working late",
   "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.suggestions.review": "Review deal suggestions",
   "brief.suggestions.empty": "No deal suggestions in this brief.",

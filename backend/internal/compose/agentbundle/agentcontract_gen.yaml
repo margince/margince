@@ -21331,6 +21331,11 @@ components:
         title: {type: [string, 'null'], description: Display label (name/subject).}
         snippet: {type: [string, 'null']}
         score: {type: [number, 'null'], description: Relevance score.}
+        identifier_match:
+          type: string
+          enum: [exact, prefix]
+          readOnly: true
+          description: The record's own email or domain matches the complete query; absent for text and employer matches.
         carried_by:
           type: [integer, 'null']
           minimum: 0

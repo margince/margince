@@ -20,6 +20,7 @@ import {
 } from "../lib/problem";
 import { useRecordZone } from "../lib/recordzone";
 import {
+  bestIdentifierMatch,
   groupSearchHits,
   SEARCH_GROUP_KEY,
   searchHitDestination,
@@ -186,6 +187,17 @@ export function useSearchCommands(query: string): SearchArm {
         ];
       }),
   );
+  const best = bestIdentifierMatch(answer?.hits ?? []);
+  const command =
+    best &&
+    commands.find((item) => item.id === `record:${best.type}:${best.id}`);
+  if (command)
+    commands.unshift({
+      ...command,
+      id: `best:${command.id}`,
+      group: t("search.bestMatch"),
+    });
+
   return {
     commands,
     // `isFetching` rather than `isPending`: a disabled query reports pending

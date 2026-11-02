@@ -69,7 +69,7 @@ func TestAClassificationMatchesAContactByItsAddress(t *testing.T) {
 // identifier lift, so a prefix match stays below the whole word.
 func TestANameSearchKeepsItsRanking(t *testing.T) {
 	e := Setup(t)
-	philip := seedContactWithEmail(e.Admin(), t, e, "Philip Dorn", "philip@dorn.example", nil)
+	philip := seedContactWithEmail(e.Admin(), t, e, "Philip Dorn", "pd@dorn.example", nil)
 	philipp := seedContactWithEmail(e.Admin(), t, e, "Philipp Adler", "philipp@adler.example", nil)
 
 	page, err := search.NewStore(e.DB()).Search(e.Admin(), search.Input{Query: "philip", Types: []string{"contact"}})

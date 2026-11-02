@@ -2570,6 +2570,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
 
+  "search.bestMatch": "Kết quả phù hợp nhất",
   "search.placeholder":
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",
@@ -6046,14 +6047,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.act": "Đánh dấu đã xử lý",
   "brief.dismiss": "Bỏ qua",
 
-  "brief.glance.morning": "Chào buổi sáng, {name}.",
-  "brief.glance.morningAnon": "Chào buổi sáng.",
-  "brief.glance.afternoon": "Chào buổi chiều, {name}.",
-  "brief.glance.afternoonAnon": "Chào buổi chiều.",
-  "brief.glance.evening": "Chào buổi tối, {name}.",
-  "brief.glance.eveningAnon": "Chào buổi tối.",
-  "brief.glance.night": "Đang làm việc khuya, {name}.",
-  "brief.glance.nightAnon": "Đang làm việc khuya.",
+  "brief.glance.morning": "Chào buổi sáng, {name}",
+  "brief.glance.morningAnon": "Chào buổi sáng",
+  "brief.glance.afternoon": "Chào buổi chiều, {name}",
+  "brief.glance.afternoonAnon": "Chào buổi chiều",
+  "brief.glance.evening": "Chào buổi tối, {name}",
+  "brief.glance.eveningAnon": "Chào buổi tối",
+  "brief.glance.night": "Đang làm việc khuya, {name}",
+  "brief.glance.nightAnon": "Đang làm việc khuya",
   "brief.glance.introWeekly":
     "Xem lại kết quả và lên kế hoạch cho bước tiếp theo.",
   "brief.suggestions.review": "Xem các cơ hội được gợi ý",
