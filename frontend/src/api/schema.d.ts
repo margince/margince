@@ -29485,7 +29485,7 @@ export interface components {
             retrieved_at: string;
         };
         /**
-         * @description Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only. `role`: the caller's role may not change this kind of record. `archived`: the record is archived or closed; restoring it is the fix where its kind can be restored. `unowned`: the record has no owner; it is claimed first where its kind can be claimed, otherwise an admin assigns an owner. `not_yours`: someone else owns it; its owner, a share or an admin is the way in.
+         * @description Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only. `role`: the caller's role may not change this kind of record. `archived`: the record is archived; restoring it is the fix where its kind can be restored. `unowned`: the record has no owner; it is claimed first where its kind can be claimed, otherwise an admin assigns an owner. `not_yours`: someone else owns it; its owner, a share or an admin is the way in.
          * @enum {string}
          */
         WriteRefusal: "seat_read_only" | "role" | "archived" | "unowned" | "not_yours";
