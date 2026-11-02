@@ -46829,7 +46829,7 @@ type Lead struct {
 	// `human_qualify`).
 	QualificationEvidence *LeadQualificationEvidence `json:"qualification_evidence,omitempty"`
 
-	// QualifiedDealId The deal opened by the qualify call that promoted this lead, when one was asked for.
+	// QualifiedDealId The deal joined or opened by the qualify call that promoted this lead, when one was asked for.
 	QualifiedDealId *openapi_types.UUID     `json:"qualified_deal_id,omitempty"`
 	Raw             *map[string]interface{} `json:"raw,omitempty"`
 
@@ -51654,6 +51654,9 @@ type PromiseTakeOver struct {
 
 // PromoteLeadPreview What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
 type PromoteLeadPreview struct {
+	// CompanyId The visible employer this promotion resolves.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
 	// Contact A contact. Mirrors the `contact` table.
 	Contact *Contact `json:"contact,omitempty"`
 
@@ -51662,6 +51665,12 @@ type PromoteLeadPreview struct {
 	// — a caller that reads the omission as `create` would tell the rep a duplicate is
 	// about to be created when the opposite is true.
 	ContactWithheld *bool `json:"contact_withheld,omitempty"`
+
+	// ExistingDeals Open deals of the resolved employer the caller may read and change. Continue with existing_deals_cursor.
+	ExistingDeals *[]Deal `json:"existing_deals,omitempty"`
+
+	// ExistingDealsCursor Cursor for the next page of eligible deals; absent on the last page.
+	ExistingDealsCursor *string `json:"existing_deals_cursor,omitempty"`
 
 	// Outcome merge = an existing live contact matches this lead's email and promotion would fold into it; create = promotion would make a new contact.
 	Outcome PromoteLeadPreviewOutcome `json:"outcome"`
@@ -51690,7 +51699,7 @@ type PromoteLeadRequest struct {
 	// Deal Open a deal in the same transaction as the promotion. Omit both ids to use the
 	// default pipeline's first open stage; a pipeline alone takes its first open stage; a
 	// stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-	// and its company is left unset, also for a lead linked to a company. The deal's id lands
+	// and its company is the contact's resolved employer when one exists. The deal's id lands
 	// on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 	Deal *QualifyDealRequest `json:"deal,omitempty"`
 
@@ -51699,6 +51708,9 @@ type PromoteLeadRequest struct {
 		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 		Note       *string             `json:"note,omitempty"`
 	} `json:"evidence,omitempty"`
+
+	// ExistingDealId Link an open, writable deal of the resolved employer instead of opening one. Mutually exclusive with deal.
+	ExistingDealId *openapi_types.UUID `json:"existing_deal_id,omitempty"`
 
 	// Trigger The genuine-engagement trigger. cold_outbound_no_reply is NOT permitted and is
 	// rejected with 422 — promotion is engagement, not import or an outbound touch.
@@ -51718,7 +51730,7 @@ type PromoteLeadResponse struct {
 	// Contact A contact. Mirrors the `contact` table.
 	Contact Contact `json:"contact"`
 
-	// DealId The deal opened alongside, when the request asked for one.
+	// DealId The deal opened or linked alongside, when the request asked for one.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 	LeadId *openapi_types.UUID `json:"lead_id,omitempty"`
 
@@ -52155,7 +52167,7 @@ type PutOnboardingStateRequestStep string
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
 // stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-// and its company is left unset, also for a lead linked to a company. The deal's id lands
+// and its company is the contact's resolved employer when one exists. The deal's id lands
 // on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
 type QualifyDealRequest struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
@@ -67118,6 +67130,12 @@ type PromoteLeadParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// PreviewLeadPromotionParams defines parameters for PreviewLeadPromotion.
+type PreviewLeadPromotionParams struct {
+	CreateCompany *bool   `form:"create_company,omitempty" json:"create_company,omitempty"`
+	DealsCursor   *string `form:"deals_cursor,omitempty" json:"deals_cursor,omitempty"`
 }
 
 // QualifyLeadParams defines parameters for QualifyLead.
@@ -84743,7 +84761,7 @@ type ServerInterface interface {
 	PromoteLead(w http.ResponseWriter, r *http.Request, id Id, params PromoteLeadParams)
 	// What promoting this lead would do — merge into an existing contact, or create one.
 	// (GET /leads/{id}/promote-preview)
-	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id)
+	PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id, params PreviewLeadPromotionParams)
 	// Fill a lead's empty qualification fields that its own data settles, and name the rest.
 	// (POST /leads/{id}/qualify)
 	QualifyLead(w http.ResponseWriter, r *http.Request, id Id, params QualifyLeadParams)
@@ -89516,7 +89534,7 @@ func (_ Unimplemented) PromoteLead(w http.ResponseWriter, r *http.Request, id Id
 
 // What promoting this lead would do — merge into an existing contact, or create one.
 // (GET /leads/{id}/promote-preview)
-func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id Id, params PreviewLeadPromotionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117638,8 +117656,37 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewLeadPromotionParams
+
+	// ------------- Optional query parameter "create_company" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "create_company", r.URL.Query(), &params.CreateCompany, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "create_company"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "create_company", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "deals_cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deals_cursor", r.URL.Query(), &params.DealsCursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deals_cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deals_cursor", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreviewLeadPromotion(w, r, id)
+		siw.Handler.PreviewLeadPromotion(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

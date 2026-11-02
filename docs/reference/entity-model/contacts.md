@@ -1229,7 +1229,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
-| `qualified_deal_id` | `uuid` |  | The deal opened by the qualify call that promoted this lead, when one was asked for. |
+| `qualified_deal_id` | `uuid` |  | The deal joined or opened by the qualify call that promoted this lead, when one was asked for. |
 | `routed_at` | `timestamp with time zone` |  | When routing assigned an owner. |
 | `score` | `smallint`, default `0` | yes | Lead-local scoring; never reads the contact graph. |
 | `score_computed` | `smallint` |  | Server-derived. |

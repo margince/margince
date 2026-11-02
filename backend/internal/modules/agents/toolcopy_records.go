@@ -276,10 +276,10 @@ var qualifyLeadCopy = toolCopy{
 
 var promoteLeadCopy = toolCopy{
 	Purpose: "Turn a lead who has genuinely engaged into a contact record, carrying their history " +
-		"across.",
+		"across. Optionally seat the contact on an open, writable existing deal of its employer, or open a new deal in the same transaction.",
 	Limits: "It requires a trigger naming the engagement that justifies it — a reply, a booked " +
 		"or held meeting, or a human's decision. Cold outreach that nobody answered is not a " +
-		"promotion, and there is no trigger for it.",
+		"promotion, and there is no trigger for it. existing_deal_id and deal are mutually exclusive.",
 	Instead: "Use qualify_lead when the lead is merely incomplete rather than ready, and " +
 		"disqualify_lead when the engagement says the opposite.",
 	Retain: "By default the lead is promoted when this call answers and the promoted contact's " +

@@ -808,9 +808,10 @@ func visibleWriteAuthorityFns(byReceiver map[string]map[string]*writeAuthorityFn
 			continue
 		}
 		merged := &writeAuthorityFn{
-			mutates:  pkgLevel.mutates || info.mutates,
-			requires: map[string]bool{},
-			calls:    map[string]bool{},
+			previewOnly: pkgLevel.previewOnly && info.previewOnly,
+			mutates:     pkgLevel.mutates || info.mutates,
+			requires:    map[string]bool{},
+			calls:       map[string]bool{},
 		}
 		for _, src := range []*writeAuthorityFn{pkgLevel, info} {
 			merged.probes = append(merged.probes, src.probes...)

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 162026,
+    "tool_catalog_bytes": 162666,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41821,
+    "approx_wire_tokens_total": 41981,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 35809,
-      "input_schema_bytes": 67072,
+      "input_schema_bytes": 67712,
       "output_schema_bytes": 49641,
-      "description_plus_input_schema_bytes": 102881
+      "description_plus_input_schema_bytes": 103521
     }
   },
   "tools": {
@@ -1773,6 +1773,36 @@
               "format": "uuid",
               "type": "string"
             },
+            "create_company": {
+              "description": "promote only",
+              "type": "boolean"
+            },
+            "deal": {
+              "additionalProperties": false,
+              "description": "promote only",
+              "properties": {
+                "amount_minor": {
+                  "type": "integer"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "pipeline_id": {
+                  "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "stage_id": {
+                  "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
             "deal_id": {
               "description": "move_deal only",
               "format": "uuid",
@@ -1780,6 +1810,11 @@
             },
             "evidence_note": {
               "description": "promote only",
+              "type": "string"
+            },
+            "existing_deal_id": {
+              "description": "promote only",
+              "format": "uuid",
               "type": "string"
             },
             "idempotency_key": {

@@ -17501,7 +17501,7 @@ components:
           enum: [human, system]
           readOnly: true
           description: 'Who last placed the lead on its status: a human by hand (an agent acting for one counts as the human), or the system from captured activity. Null for a lead nobody has moved yet — one still on new, or one carried over from before the ladder existed.'
-        qualified_deal_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal opened by the qualify call that promoted this lead, when one was asked for.'}
+        qualified_deal_id: {type: [string, 'null'], format: uuid, readOnly: true, description: 'The deal joined or opened by the qualify call that promoted this lead, when one was asked for.'}
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
@@ -17639,6 +17639,10 @@ components:
             note: {type: [string, 'null']}
         deal:
           $ref: '#/components/schemas/QualifyDealRequest'
+        existing_deal_id:
+          type: string
+          format: uuid
+          description: Link an open, writable deal of the resolved employer instead of opening one. Mutually exclusive with deal.
         create_company:
           type: boolean
           default: false
@@ -17656,7 +17660,7 @@ components:
         Open a deal in the same transaction as the promotion. Omit both ids to use the
         default pipeline's first open stage; a pipeline alone takes its first open stage; a
         stage alone is placed in its own pipeline. The deal's owner is the lead's owner
-        and its company is left unset, also for a lead linked to a company. The deal's id lands
+        and its company is the contact's resolved employer when one exists. The deal's id lands
         on the lead as `qualified_deal_id`; a deal failure rolls the whole promotion back.
       properties:
         pipeline_id: {type: [string, 'null'], format: uuid}
@@ -17695,7 +17699,7 @@ components:
           type: boolean
           description: True if promotion merged into an existing contact (no duplicate); false if a new contact was created.
         lead_id: {type: string, format: uuid}
-        deal_id: {type: [string, 'null'], format: uuid, description: 'The deal opened alongside, when the request asked for one.'}
+        deal_id: {type: [string, 'null'], format: uuid, description: 'The deal opened or linked alongside, when the request asked for one.'}
     DemoteLeadRequest:
       type: object
       required: [reason]
