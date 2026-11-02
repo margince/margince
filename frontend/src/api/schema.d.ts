@@ -33300,8 +33300,10 @@ export interface components {
             last_at?: string | null;
             /** @description Interactions in the last 90 days where they wrote to this colleague. */
             inbound_90d?: number;
-            /** @description Interactions in the last 90 days where this colleague wrote to them. */
+            /** @description Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent. */
             outbound_90d?: number;
+            /** @description Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d. */
+            sent_90d?: number;
             /**
              * Format: date-time
              * @description When they last replied to this colleague. Null means they never have.
