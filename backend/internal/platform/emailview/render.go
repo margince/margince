@@ -78,11 +78,13 @@ func document(language, preheader, card string) string {
 		card + `</table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
 }
 
-// header is the band that names who the mail comes from, with its monogram.
+// header is the wordmark that names who the mail comes from: a brand tile
+// with its initials beside the name, over a hairline.
 func header(brand string) string {
-	band := look{fill: bgElevated, edge: borderSubtle}.attrs("padding:16px 32px;border-bottom:1px solid;border-radius:"+rLg.light()+" "+rLg.light()+" 0 0", "pad")
-	return `<tr><td` + band + `><table role="presentation" cellspacing="0" cellpadding="0"><tr><td valign="middle" style="padding-right:10px">` + monogram(brand) +
-		`</td><td valign="middle"` + look{ink: textPrimary}.attrs("font:"+body.medium()) + `>` + html.EscapeString(brand) + `</td></tr></table></td></tr>`
+	band := look{edge: borderSubtle}.attrs("padding:22px 32px;border-bottom:1px solid", "pad")
+	tile := `<td width="24" height="24" align="center" valign="middle"` + look{ink: textOnAccentControl, fill: accent}.attrs("width:24px;height:24px;border-radius:6px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(brand)) + `</td>`
+	return `<tr><td` + band + `><table role="presentation" cellspacing="0" cellpadding="0"><tr>` + tile +
+		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(brand) + `</td></tr></table></td></tr>`
 }
 
 func titleRow(title, main string) string {
