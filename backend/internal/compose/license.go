@@ -170,11 +170,17 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 		// surface down with it.
 		s.licenseHandlers = s.withPosture(posture)
 		// The same posture reaches identity's seat writer as a ceiling, from the
-		// same call: a role that reports what a license grants must not be able to
-		// show an admin a number it does not hold them to. The posture is read at
-		// CALL time, so a license renewed in place raises the ceiling on the next
-		// re-check and one that lapses lowers it, without a restart — and nothing
-		// here touches a seat already in use, only the next one.
+		// same call. A role that reports what a license grants must not be able
+		// to show an admin a number it does not hold them to.
+		//
+		// The posture is read at CALL time, so a license renewed in place raises
+		// the ceiling on the next re-check, without a restart. Nothing here
+		// touches a seat already in use, only the next one.
+		//
+		// A posture that is not valid answers no number, which this writer reads
+		// as no ceiling: seats stay uncapped until the license is replaced.
+		// TestARefusedLicenceLiftsTheSeatCeiling holds that, and #8598 is where
+		// the three readings of it are set out.
 		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().Seats() })
 	}
 }
