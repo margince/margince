@@ -148,7 +148,8 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH strongest AS MATERIALIZED (
 		    SELECT DISTINCT ON (e.contact_id) e.user_id, e.contact_id,
-		           e.last_inbound_at, e.last_outbound_at, e.last_met_at, e.count_90d, e.in_count_90d,
+		           e.last_inbound_at, e.last_outbound_at, e.last_met_at, e.late_count_90d, e.late_out_count_90d,
+		           e.count_90d, e.in_count_90d,
 		           e.out_count_90d, e.count_total, o.id AS live_owner
 		      %s
 		      LEFT JOIN app_user o ON o.id = p.owner_id AND %s
@@ -159,6 +160,7 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 		     ORDER BY e.contact_id, e.count_total DESC, e.user_id
 		)
 		SELECT e.user_id, e.contact_id, x.touched, e.last_inbound_at, e.last_outbound_at, e.last_met_at,
+		       e.late_count_90d, e.late_out_count_90d,
 		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total, e.live_owner
 		  FROM (SELECT * FROM strongest ORDER BY count_total DESC) e
 		  JOIN LATERAL (%s) x ON x.touched <= $%d AND x.touched > $%d
@@ -195,6 +197,7 @@ func scanQuietContacts(rows pgx.Rows) ([]QuietContact, error) {
 		var owner *ids.UUID
 		e := &c.Edge
 		if err := rows.Scan(&e.UserID, &e.ContactID, &e.LastAt, &e.LastInboundAt, &e.LastOutbound, &e.LastMetAt,
+			&e.LateCount90d, &e.LateOutCount90d,
 			&e.Count90d, &e.InCount90d, &e.OutCount90d, &e.CountTotal, &owner); err != nil {
 			return nil, err
 		}

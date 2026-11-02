@@ -77,6 +77,13 @@ type Inputs struct {
 	Count90d    int
 	Inbound90d  int
 	Outbound90d int
+	// LateCount90d is the part of Count90d after LastEngaged, all of it when
+	// LastEngaged is nil; LateOutbound90d is its outbound part. Nothing the
+	// contact did not answer counts toward the score: an unanswered send moves
+	// neither frequency nor reciprocity. They stay in the counts a surface
+	// prints.
+	LateCount90d    int
+	LateOutbound90d int
 }
 
 // Score is the explainable output: the 0–100 number, its band, and the three
@@ -102,16 +109,18 @@ func Compute(in Inputs, now time.Time) Score {
 	}
 	var s Score
 	s.Recency = recency(in.LastEngaged, now)
-	s.Frequency = math.Min(1.0, float64(in.Count90d)/FreqSaturation)
+	count := max(in.Count90d-in.LateCount90d, 0)
+	outbound := max(in.Outbound90d-in.LateOutbound90d, 0)
+	s.Frequency = math.Min(1.0, float64(count)/FreqSaturation)
 	// Reciprocity rewards a two-way exchange and floors a one-way one. The
 	// floor keeps a hundred unanswered sends from scoring as a relationship,
 	// and still admits that they happened. Recency counts only from the
 	// contact's own part for the same reason. A send of ours they did not
 	// answer is no sign the relationship is warm.
-	directed := in.Inbound90d + in.Outbound90d
+	directed := in.Inbound90d + outbound
 	balance := 0.0
 	if directed > 0 {
-		balance = 1 - math.Abs(float64(in.Inbound90d-in.Outbound90d))/float64(directed)
+		balance = 1 - math.Abs(float64(in.Inbound90d-outbound))/float64(directed)
 	}
 	s.Reciprocity = ReciprocityFloor + (1-ReciprocityFloor)*balance
 	s.Strength = int(math.Round(100 * s.Recency * s.Frequency * s.Reciprocity))

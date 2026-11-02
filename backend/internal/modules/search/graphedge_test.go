@@ -114,12 +114,49 @@ func TestEdgeRecencyIgnoresOurLaterSend(t *testing.T) {
 	now := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
 	replied := now.AddDate(0, 0, -20)
 	met := now.AddDate(0, 0, -10)
-	edge := InteractionEdge{LastAt: now, LastInboundAt: &replied, LastOutbound: &now, Count90d: 12, InCount90d: 6, OutCount90d: 6}
+	late, lateOut := 1, 1
+	edge := InteractionEdge{
+		LastAt: now, LastInboundAt: &replied, LastOutbound: &now, Count90d: 12, InCount90d: 6, OutCount90d: 6,
+		LateCount90d: &late, LateOutCount90d: &lateOut,
+	}
 	if got, want := edge.StrengthOf(now).Recency, math.Exp2(-20.0/relstrength.HalfLifeDays); math.Abs(got-want) > 1e-9 {
 		t.Errorf("recency = %v, want %v from the reply 20 days ago", got, want)
 	}
 	edge.LastMetAt = &met
 	if got, want := edge.StrengthOf(now).Recency, math.Exp2(-10.0/relstrength.HalfLifeDays); math.Abs(got-want) > 1e-9 {
 		t.Errorf("recency = %v, want %v from the meeting 10 days ago", got, want)
+	}
+}
+
+// A row folded before the projection knew when the contact took part scores
+// by the earlier rule, from its newest interaction.
+func TestAnEdgeFoldedBeforeTheRuleScoresAsBefore(t *testing.T) {
+	now := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
+	last := now.AddDate(0, 0, -5)
+	edge := InteractionEdge{LastAt: last, Count90d: 12, InCount90d: 7, OutCount90d: 5}
+	want := relstrength.Compute(relstrength.Inputs{
+		LastTouch: &last, LastEngaged: &last, Count90d: 12, Inbound90d: 7, Outbound90d: 5,
+	}, now)
+	if got := edge.StrengthOf(now); got != want || got.Strength != 47 {
+		t.Errorf("an edge with no late counts scored %+v, want the earlier rule's %+v", got, want)
+	}
+}
+
+// Our send after the contact's last reply counts toward neither frequency nor
+// reciprocity on the edge.
+func TestAnEdgesUnansweredSendDoesNotBalanceIt(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	engaged := now.AddDate(0, 0, -19)
+	none, one := 0, 1
+	before := InteractionEdge{
+		LastAt: engaged, LastInboundAt: &engaged, Count90d: 19, InCount90d: 10, OutCount90d: 9,
+		LateCount90d: &none, LateOutCount90d: &none,
+	}
+	after := InteractionEdge{
+		LastAt: now, LastInboundAt: &engaged, Count90d: 20, InCount90d: 10, OutCount90d: 10,
+		LateCount90d: &one, LateOutCount90d: &one,
+	}
+	if b, a := before.StrengthOf(now), after.StrengthOf(now); a != b {
+		t.Errorf("an unanswered send moved the edge from %+v to %+v", b, a)
 	}
 }

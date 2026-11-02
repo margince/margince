@@ -54,9 +54,13 @@ type RelationshipStrength struct {
 	// recency counts from. Our own later send does not move it.
 	LastEngaged         *time.Time
 	InteractionCount90d int
-	Inbound90d          int
-	Outbound90d         int
-	ContributingIDs     []ids.ActivityID
+	// lateCount90d and lateOutbound90d are the window's interactions after
+	// LastEngaged, which the score leaves out (relstrength.Inputs).
+	lateCount90d    int
+	lateOutbound90d int
+	Inbound90d      int
+	Outbound90d     int
+	ContributingIDs []ids.ActivityID
 
 	// The two directions dated separately, because the counts above cannot say
 	// who wrote LAST once both are non-zero: a contact who replied in March and
@@ -106,6 +110,11 @@ func strengthCountsAt(nowPos int) string {
 func strengthCitedCountsAt(nowPos int) string {
 	return relstrength.InteractionCountsAtSQL("i", fmt.Sprintf("$%d::timestamptz", nowPos))
 }
+
+// afterEngaged admits an interaction of a fold row `a` after the contact last
+// took part, or any one when they never did. The fold's derived table carries
+// engaged_at for it.
+const afterEngaged = `(a.engaged_at IS NULL OR a.occurred_at > a.engaged_at)`
 
 // strengthDirectionPrecisions reads the precision behind each direction's last
 // date for the contact, empty where that date is null.
@@ -287,25 +296,30 @@ func contactStrengths(
 		citedWithin = " AND " + activityWithinProject("i", len(args))
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT l.contact_id,
+		SELECT a.link_contact,
 		       max(a.occurred_at),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`),
+		       max(a.engaged_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+` AND `+relstrength.WeWroteSQL("a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
-		       `+strengthDirectionPrecisions("l.contact_id")+`,
+		       `+strengthDirectionPrecisions("a.link_contact")+`,
 		       (SELECT i.id FROM activity i
-		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = l.contact_id
-		         WHERE `+relstrength.TheyWroteSQL("l.contact_id", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
+		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = a.link_contact
+		         WHERE `+relstrength.TheyWroteSQL("a.link_contact", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
 		           AND (i.archived_at IS NULL AND activity_thread_available(i.thread_key)) AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
-		FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.contact_id = ANY($1) AND `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`
-		GROUP BY l.contact_id`, args...)
+		FROM (SELECT a.*, l.contact_id AS link_contact,
+		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
+		               OVER (PARTITION BY l.contact_id) AS engaged_at
+		        FROM activity a
+		        JOIN activity_link l ON l.activity_id = a.id
+		       WHERE l.contact_id = ANY($1) AND `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a
+		GROUP BY a.link_contact`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +329,7 @@ func contactStrengths(
 		var contactID ids.ContactID
 		var rs RelationshipStrength
 		if err := rows.Scan(&contactID, &rs.LastInteraction, &rs.LastEngaged, &rs.InteractionCount90d,
-			&rs.Inbound90d, &rs.Outbound90d, &rs.LastInbound, &rs.LastOutbound,
+			&rs.Inbound90d, &rs.Outbound90d, &rs.lateCount90d, &rs.lateOutbound90d, &rs.LastInbound, &rs.LastOutbound,
 			&rs.LastInboundPrecision, &rs.LastOutboundPrecision, &rs.LastInboundActivity); err != nil {
 			return nil, err
 		}
@@ -361,10 +375,12 @@ func strengthInputs(
 	// touch, the 90-day direction counts, and the contributing ids.
 	if err := tx.QueryRow(ctx, `
 		SELECT max(a.occurred_at),
-		       max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("$1", "a")+`),
+		       max(a.engaged_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("$1", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+` AND `+relstrength.WeWroteSQL("a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.TheyWroteSQL("$1", "a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+relstrength.WeWroteSQL("a")+`),
 		       `+strengthDirectionPrecisions("$1")+`,
@@ -374,11 +390,13 @@ func strengthInputs(
 		           AND (i.archived_at IS NULL AND activity_thread_available(i.thread_key)) AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
-		FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin,
+		FROM (SELECT a.*,
+		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("$1", "a")+`) OVER () AS engaged_at
+		        FROM activity a
+		        JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
+		       WHERE `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a`,
 		foldArgs...).Scan(&out.LastInteraction, &out.LastEngaged, &out.InteractionCount90d,
-		&out.Inbound90d, &out.Outbound90d, &out.LastInbound, &out.LastOutbound,
+		&out.Inbound90d, &out.Outbound90d, &out.lateCount90d, &out.lateOutbound90d, &out.LastInbound, &out.LastOutbound,
 		&out.LastInboundPrecision, &out.LastOutboundPrecision, &out.LastInboundActivity); err != nil {
 		return err
 	}
@@ -418,11 +436,13 @@ func strengthInputs(
 // rounding difference, so there is one copy.
 func (r *RelationshipStrength) finish(now time.Time) {
 	score := relstrength.Compute(relstrength.Inputs{
-		LastTouch:   r.LastInteraction,
-		LastEngaged: r.LastEngaged,
-		Count90d:    r.InteractionCount90d,
-		Inbound90d:  r.Inbound90d,
-		Outbound90d: r.Outbound90d,
+		LastTouch:       r.LastInteraction,
+		LastEngaged:     r.LastEngaged,
+		Count90d:        r.InteractionCount90d,
+		Inbound90d:      r.Inbound90d,
+		Outbound90d:     r.Outbound90d,
+		LateCount90d:    r.lateCount90d,
+		LateOutbound90d: r.lateOutbound90d,
 	}, now)
 	r.Strength = score.Strength
 	r.Bucket = score.Bucket

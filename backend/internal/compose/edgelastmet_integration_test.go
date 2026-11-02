@@ -41,3 +41,25 @@ func TestTheColleagueEdgeKnowsWhenThePairLastMet(t *testing.T) {
 	inWorkspaceTx(t, e, func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) })
 	assertMet("rebuild")
 }
+
+// A meeting the contact declined gives the pair no last meeting.
+func TestADeclinedMeetingGivesThePairNoLastMeeting(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	dana := contactWithEmail(t, e, "Dana Declined", "dana@declined.example")
+	parties := []connector.MessageParticipant{
+		{Email: "dana@declined.example", Role: connector.ParticipantRoleAttendee, Response: connector.ResponseDeclined},
+	}
+	declined := integration.CalendarMeeting{Event: "evt-declined", At: now.AddDate(0, 0, -6), Links: contactLink(dana), Parties: parties}
+	touched := []ids.UUID{declined.Capture(t, e)}
+	for path, refold := range map[string]func(tx pgx.Tx) error{
+		"incremental fold": func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(e.Admin(), tx, touched) },
+		"rebuild":          func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) },
+	} {
+		inWorkspaceTx(t, e, refold)
+		if got := e.WsCount(t, `SELECT count(*) FROM graph_interaction_edge
+		                         WHERE contact_id = $1 AND last_met_at IS NOT NULL`, dana); got != 0 {
+			t.Errorf("%s: a declined meeting gave the pair a last meeting", path)
+		}
+	}
+}

@@ -153,7 +153,7 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 	rows, err := g.tx.Query(g.ctx, fmt.Sprintf(`
 		WITH touch AS (
 			SELECT u.id AS user_id, u.display_name, e.contact_id, e.last_at,
-			       e.last_inbound_at, e.last_met_at,
+			       e.last_inbound_at, e.last_met_at, e.late_count_90d, e.late_out_count_90d,
 			       e.count_90d, e.in_count_90d, e.out_count_90d
 			FROM graph_interaction_edge e
 			JOIN app_user u ON u.id = e.user_id AND `+liveMemberWhere+`
@@ -164,7 +164,7 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 			SELECT user_id FROM colleagues ORDER BY last_touch DESC, user_id LIMIT %d
 		)
 		SELECT touch.user_id, touch.display_name, touch.contact_id,
-		       touch.last_at, touch.last_inbound_at, touch.last_met_at,
+		       touch.last_at, touch.last_inbound_at, touch.last_met_at, touch.late_count_90d, touch.late_out_count_90d,
 		       touch.count_90d, touch.in_count_90d, touch.out_count_90d,
 		       (SELECT count(*) FROM colleagues)
 		FROM touch JOIN chosen ON chosen.user_id = touch.user_id
@@ -178,7 +178,7 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 		// Every row carries the same total; they agree because they come from
 		// one statement.
 		if err := row.Scan(&edge.user.userID, &edge.user.displayName, &edge.contactID,
-			&stored.LastAt, &stored.LastInboundAt, &stored.LastMetAt,
+			&stored.LastAt, &stored.LastInboundAt, &stored.LastMetAt, &stored.LateCount90d, &stored.LateOutCount90d,
 			&stored.Count90d, &stored.InCount90d, &stored.OutCount90d, &g.ourSideTotal); err != nil {
 			return edge, err
 		}

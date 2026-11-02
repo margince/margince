@@ -73,7 +73,7 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 
 ## graph_interaction_edge
 
-11 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
+13 columns · primary key `(user_id, contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -86,6 +86,8 @@ The 4 tables owned by `search`, as the migrations build them. [Back to the entit
 | `last_inbound_at` | `timestamp with time zone` |  |  |
 | `last_met_at` | `timestamp with time zone` |  |  |
 | `last_outbound_at` | `timestamp with time zone` |  |  |
+| `late_count_90d` | `integer` |  |  |
+| `late_out_count_90d` | `integer` |  |  |
 | `out_count_90d` | `integer`, default `0` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 

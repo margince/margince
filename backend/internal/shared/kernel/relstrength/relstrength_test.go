@@ -180,3 +180,21 @@ func TestAMeetingRefreshesRecency(t *testing.T) {
 		t.Fatalf("recency after a meeting today = %v, want 1", got.Recency)
 	}
 }
+
+// An unanswered send moves neither frequency nor reciprocity either.
+func TestAnUnansweredSendDoesNotBalanceTheExchange(t *testing.T) {
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	engaged := now.AddDate(0, 0, -19)
+	before := Compute(Inputs{LastTouch: &engaged, LastEngaged: &engaged, Count90d: 19, Inbound90d: 10, Outbound90d: 9}, now)
+	after := Compute(Inputs{
+		LastTouch: &now, LastEngaged: &engaged, Count90d: 20, Inbound90d: 10, Outbound90d: 10,
+		LateCount90d: 1, LateOutbound90d: 1,
+	}, now)
+	if before.Bucket != BucketModerate || after != before {
+		t.Fatalf("an unanswered send moved %+v to %+v", before, after)
+	}
+	replied := Compute(Inputs{LastTouch: &now, LastEngaged: &now, Count90d: 21, Inbound90d: 11, Outbound90d: 10}, now)
+	if replied.Bucket != BucketStrong {
+		t.Fatalf("their reply scored %s, want strong", replied.Bucket)
+	}
+}

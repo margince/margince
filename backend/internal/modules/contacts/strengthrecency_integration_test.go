@@ -76,3 +76,73 @@ func TestAnUnansweredSendLeavesTheBandWhereItWas(t *testing.T) {
 		t.Errorf("last engaged = %v, want their message at %v", after.LastEngaged, day(10))
 	}
 }
+
+// Nor does it balance the exchange: 10 in and 9 out stay moderate after one
+// more send of ours, and their reply then raises the band.
+func TestAnUnansweredSendDoesNotBalanceTheExchange(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
+	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
+	contact := e.seedVisibleContact(t, "Balance Contact")
+	for ago := 19; ago < 29; ago++ {
+		e.seedInteraction(t, contact, day(ago), "inbound")
+	}
+	for ago := 29; ago < 38; ago++ {
+		e.seedInteraction(t, contact, day(ago), "outbound")
+	}
+	ctx := e.as()
+	read := func(step string) RelationshipStrength {
+		t.Helper()
+		got, err := e.store.ContactStrength(ctx, contact, now)
+		if err != nil {
+			t.Fatalf("reading the strength %s: %v", step, err)
+		}
+		return got
+	}
+	if before := read("before"); before.Bucket != "moderate" {
+		t.Fatalf("the case starts %s (%d), want moderate", before.Bucket, before.Strength)
+	}
+	e.seedInteraction(t, contact, now.Add(-time.Hour), "outbound")
+	if after := read("after our send"); after.Bucket != "moderate" {
+		t.Errorf("an unanswered send moved the band to %s (%d)", after.Bucket, after.Strength)
+	}
+	e.seedInteraction(t, contact, now, "inbound")
+	if replied := read("after their reply"); replied.Bucket != "strong" {
+		t.Errorf("their reply left the band %s (%d), want strong", replied.Bucket, replied.Strength)
+	}
+}
+
+// A meeting the contact declined is not them taking part.
+func TestADeclinedMeetingDoesNotRefreshRecency(t *testing.T) {
+	e := setupDedupe(t)
+	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
+	contact := e.seedVisibleContact(t, "Declining Contact")
+	wrote := now.AddDate(0, 0, -40)
+	e.seedInteraction(t, contact, wrote, "inbound")
+	meeting := ids.New[ids.ActivityKind]()
+	ctx := e.as()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
+			VALUES ($1, 'meeting', 'Review', $2, 'held', 'manual', 'human:seed')`, meeting, now.AddDate(0, 0, -2)); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, meeting, contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, contact_id, response)
+			VALUES ($1, 'attendee', $2, 'declined')`, meeting, contact)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the declined meeting: %v", err)
+	}
+	got, err := e.store.ContactStrength(ctx, contact, now)
+	if err != nil {
+		t.Fatalf("reading the strength: %v", err)
+	}
+	if got.LastEngaged == nil || !got.LastEngaged.Equal(wrote) {
+		t.Errorf("last engaged = %v, want their message at %v and not the declined meeting", got.LastEngaged, wrote)
+	}
+}
