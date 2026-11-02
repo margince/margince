@@ -43,6 +43,9 @@ const (
 	defaultSlotDuration    = 30 * time.Minute
 	minSlotDuration        = 15 * time.Minute
 	maxSlotDuration        = 8 * time.Hour
+
+	// The field a refusal names when the fault is in the offered times.
+	optionsField = "options"
 )
 
 // SchedulingArgumentError refuses a from/to/start/end/duration combination no
@@ -98,7 +101,7 @@ var (
 	// Two proposed times that share minutes are one time offered twice, not a
 	// choice. The picker refuses the second; this holds every other door.
 	errProposalTimesOverlap = &SchedulingArgumentError{
-		Field: "options", Code: "times_overlap",
+		Field: optionsField, Code: "times_overlap",
 		Message: "two proposed times overlap; offer times that share no minutes",
 	}
 	// `links` carries minItems: 1 in crm.yaml, and nothing generated enforces

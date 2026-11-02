@@ -60,7 +60,7 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 		// open it. Refused by name rather than by the column's own CHECK, so
 		// the host is told what to change.
 		return proposalLink{}, &SchedulingArgumentError{
-			Field: "options", Code: "no_usable_lifetime",
+			Field: optionsField, Code: "no_usable_lifetime",
 			Message: "Offer a time far enough ahead that the link is still open when it arrives",
 		}
 	}
@@ -88,7 +88,7 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 		// sealed link.
 		if !expires.After(s.now()) {
 			return &SchedulingArgumentError{
-				Field:   "options",
+				Field:   optionsField,
 				Code:    "no_usable_lifetime",
 				Message: "Offer a time far enough ahead that the link is still open when it arrives",
 			}
