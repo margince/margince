@@ -131,8 +131,8 @@ Where the time goes, per read:
  database planning ............ 853 ms   ← more than running the SQL
  running the SQL .............. 489 ms
  identity-family function ..... ~2,500 calls   ← once per row, not once per read
- the "rank" stage ............. 108 statements, mostly the scroll tail
-                                re-reading rows the lanes already returned
+ the scroll tail .............. up to 208 statements and 1.2 s on a page of
+                                100 rows; most of it plans one 200 KB statement
 ```
 
 Why planning is so expensive: the access rules are written into every
@@ -184,7 +184,8 @@ cannot put real work on the list at all: it can only send a plain notice.
                       │   ├─ lanes, one per kind, read live          │
                       │   │    identity checked once per statement   │
                       │   ├─ rank → views → page                     │
-                      │   └─ scroll tail continues where lanes stop  │
+                      │   └─ scroll tail, its waiting check planned  │
+                      │      once instead of on every call           │
                       └───────────────────────┬──────────────────────┘
                                               ▼
                                    the same answer, faster
@@ -197,7 +198,7 @@ cannot put real work on the list at all: it can only send a plain notice.
 | Kind catalog | One YAML file says what each kind of work is; extensions add to it | YAML, loader, checks and the frontend table: yes. Backend table: next |
 | Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | Yes (switched on by the test; the production hook is next) |
 | Identity check once | The "who am I" list is computed once per statement, not once per row | Yes |
-| Scroll tail continues | Scrolling starts where each lane stopped instead of from the beginning | Next |
+| Scroll tail | Measured: its cost is the planning of one waiting statement; the fix gives that statement a plan Postgres can keep | Measured; fix next |
 | A read that only reads | The Worklist read stops writing, so it can be prepared ahead, cached safely and run on a replica | Next |
 | Ground-truth check | Proves a change gives today's answers, field by field | Yes |
 
@@ -277,18 +278,80 @@ a.captured_by LIKE ANY (ARRAY(SELECT $2 || author_identity.id::text
 - One function builds this clause for every query that checks activity access,
   so every lane gets the change.
 
-### 2.5 The scroll tail continues (next)
+### 2.5 The scroll tail (measured; fix next)
+
+The screen asks for 100 rows (`WORKLIST_PAGE_ROWS`). When the ranked rows run
+out before that, the scroll tail fills the rest of the page from three sources,
+in up to 4 rounds:
 
 ```
- today:  when a lane was cut short, the tail starts each source from the
-         beginning, re-reads the rows the lane already returned, throws them
-         away, and repeats for up to 4 rounds × 3 sources
- new:    start each source from where its lane stopped; one guarded read each
+ ranked rows (lanes, ranked) ─── fewer than 100? ──► the tail reads more:
+                                                      tasks             past the lane's 12
+                                                      customers waiting past the lane's cut
+                                                      deals at risk     past the lane's two sweeps
 ```
 
-Expected to remove most of the 108 statements in the `rank` stage. Not built
-yet. When it is, the ground-truth check must compare the cursor's decoded
-position instead of leaving the cursor out.
+What it costs. The branch adds a `tail` stage and one stage per source
+(`tail_task`, `tail_customer_waiting`, `tail_deal_at_risk`) to the stage
+metrics. On the bench data, for every member, scope `mine` and `team`, pages 1
+and 2:
+
+```
+ pages read ........................ 31, the tail ran on 21
+ tail time when it ran ............. 32 ms to 1.23 s, mean 0.46 s
+                                     27% of those reads' whole time
+ deals at risk ..................... up to 132 statements, up to 0.92 s
+ tasks ............................. up to  76 statements, up to 0.31 s
+ customers waiting ................. never ran: no waiting lane was cut
+```
+
+Where the at-risk time goes, for one manager's team view, page 2:
+
+```
+ tail_deal_at_risk ............................ 1,037 ms
+   is this deal already on the page elsewhere?    882 ms
+     does a waiting customer name it? .......... 805 ms   13 statements
+     does a near task hold it? ................. 100 ms
+   read the deals .............................. 145 ms
+   labels, prices, Done marks ..................   7 ms
+```
+
+Postgres's own figures for the statement at the bottom of that check (the
+waiting cards statement, about 200 KB of SQL): planning takes 358 to 453 ms a
+call, running it 4 to 8 ms. Two code facts explain why it is planned on every
+call:
+
+- The waiting statements run in `pgx.QueryExecModeDescribeExec`, so no
+  prepared statement is kept to hold a plan.
+- The cards statement writes its cap into the SQL text as a `LIMIT` equal to
+  the number of messages judged, so the text differs between calls.
+
+The waiting lane's own statement (about 110 KB) has the same shape: about
+186 ms of planning per read.
+
+What we tried and dropped:
+
+```
+ start each source where its lane stopped
+   only tasks qualify: their lane and tail run the same query in the same
+   order. The waiting lane reads newest first and its tail oldest first; the
+   at-risk lane reads two sweeps and its tail one query by close date.
+   The task lane holds 12 rows and the tail reads up to 88, so the start
+   saves at most 12 rows inside a read the tail makes anyway.
+
+ ask "which deals does a waiting customer name?" once per page
+   exact: a card's judgment reads every message of its fold, so one read
+   serves every deal. But slower: tail_deal_at_risk mean 229 → 404 ms. The
+   narrow read ran about once a page already, and judging every message
+   filed under any deal costs more than judging the few asked about.
+```
+
+Next: the waiting statements keep a fixed text and bind their cap as a value,
+so a prepared statement can hold a plan. Then measure which plan the
+id-narrowed statements should use. `PlanEachBind` exists because the generic
+plan of the open waiting scan is poor; a statement narrowed to a list of
+message ids may not share that problem. This is the shared plan-reuse fix
+(2.3) applied to the statements it cannot reach today, not a fix for one kind.
 
 ### 2.6 The kind catalog
 
@@ -481,7 +544,7 @@ A reader feels two kinds of waiting, and they need different fixes:
 ```
 
 - **Server time** is what this document changes: less planning, the identity
-  list once, fewer tail reads. The rep's Home call goes from 1.33 s to 1.01 s
+  list once, and next the tail's waiting check (2.5). The rep's Home call goes from 1.33 s to 1.01 s
   on the bench data (3.1).
 - **What the page does while it waits** is a frontend matter. Pull request
   #9905 makes Home draw each part's placeholder at the size of what replaces
@@ -543,17 +606,19 @@ Three things this system can add to the cache:
    minutes old when it arrives, so a colleague's new work can take about 10
    minutes to show. Counting from the answer's `as_of` would keep it at 5.
 
-The pull request does not give a hit rate or a time for a hit or a miss.
-A run of the daily bench with the cache on and off would answer both. The
-PoC branch now carries `main` with the cache, so the ground-truth check can
-be pointed at it.
+The pull request does not give a hit rate. The daily bench on the PoC branch,
+which carries `main` with the cache, now shows both sides (3.2): a repeated
+Home call is answered in 5 to 13 ms, and the calls the cache does not answer
+still cost what the engine costs. So the bench's repeated-call rows no longer
+measure the engine; the rows to watch are the ones the cache does not answer.
 
 ### 2.14 Order of work
 
 ```
  1  plan reuse + identity once      proven: same answers; shared by every kind
  2  #9950 contact cases             the largest single cost for members with many duplicates
- 3  scroll tail continues           most of the rank stage's statements
+ 3  scroll tail: waiting statements  up to 0.9 s on a page; planning, not running
+    keep a plan
  4  a read that only reads          unlocks the cache warm-up, a replica, parallel lanes
  5  kind catalog: backend table,    growth and extensions; no speed effect
     extension fragments
@@ -602,6 +667,18 @@ that call, and the bench must run at full scale before anyone claims PERF-8.
 
  kind catalog vs today's maps:  29 kinds × 5 fields, 0 differences
 
+ daily bench, scale 0.1, on the branch with main merged in (one run each)
+                                 1 Nov, before       2 Nov, Home cache on
+                                 main merged in
+   worklist, rep, repeated ....... 2.02 s              13 ms    cache hit
+   worklist, manager, repeated ... 0.66 s               5 ms    cache hit
+   home_worklist, rep ............ 1.32 s            1.54 s     not a cache hit
+   home_worklist, manager ........ 0.77 s            0.77 s     not a cache hit
+   worklist_team, manager ........ 1.62 s            1.81 s     not a cache hit
+   first load of the day, rep .... 3.07 s            3.22 s     empty caches
+
+ scroll tail (2.5): ran on 21 of 31 pages, mean 0.46 s when it ran
+
  where the time goes on main (Today, mine, page of 25, live clock)
    member with no work ........ 0.57–0.85 s
    page 1 vs page 2 ........... 1.16 s vs 1.02 s
@@ -649,7 +726,10 @@ with wording fixes, which are applied.
 - The check's coverage: filters beyond each view's own; the small writes a read
   makes (snoozes returning, brief marked as opened, walk freeze); more hard
   cases in the bench data.
-- Not built yet: the scroll tail change, the backend side of the catalog
+- The daily bench figures in 3.2 are one run each. The rows the cache does not
+  answer did not get faster after the merge; whether they got slower needs more
+  runs.
+- Not built yet: the scroll tail's waiting statements with a plan they keep, the backend side of the catalog
   generator (the engine's maps reading a generated table), and the merge of
   extension catalog fragments.
 
@@ -663,6 +743,7 @@ with wording fixes, which are applied.
  0c4126c3  PlanEachBind: the waiting scan keeps its own plans
  b551b735  the frontend kind table generated from the catalog
  e86f3e3f  main merged in: the Home cache (#9915) and the waiting scan's bound (#9961)
+ next      tail stages in the stage metrics; the tail measured (2.5)
  later     this proposal
 ```
 
@@ -678,6 +759,7 @@ Files that matter:
 | `backend/internal/platform/auth/memberidentity.go` | The identity check, once per statement |
 | `backend/internal/modules/activities/waitingsql.go` | `perBind`, used by the five waiting call sites |
 | `backend/internal/compose/worklistparity_poc_test.go` | The ground-truth check |
+| `backend/internal/compose/worklisttail_poc_test.go` | The scroll tail's cost per stage (2.5) |
 | `backend/internal/compose/worklist*_poc_test.go` | The other measurements |
 | `backend/internal/modules/worklist/store.go` | The push experiment's store (3.3) |
 
@@ -698,7 +780,7 @@ The `poc` build tag keeps every PoC test out of `make check` and CI.
 ### 3.7 Questions for the table
 
 1. Do we agree on the order in 2.14: shared engine changes first, #9950 beside
-   them, then the scroll tail and a read that only reads, then the kind
+   them, then the tail's waiting statements and a read that only reads, then the kind
    catalog, with per-kind push parked?
 2. The speed changes overlap the open Worklist speed issue (#4912), which has an owner. How
    do we hand over the check and the two proven changes?
