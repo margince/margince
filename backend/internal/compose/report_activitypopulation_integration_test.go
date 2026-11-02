@@ -150,3 +150,30 @@ func (e *forecastEnv) creditedCount(t *testing.T, seat ids.UUID) int {
 	}
 	return int(count)
 }
+
+// A meeting credits everyone the attendance evidence names, so a report
+// filtered to any one of them finds it. Comparing the single seat a listing
+// shows answered no for every colleague but that one.
+func TestAMeetingIsFoundByEveryColleagueItCredits(t *testing.T) {
+	e := setupForecast(t)
+	// Above the floor for both seats, or a withheld answer reads like a miss.
+	for range 6 {
+		meeting := e.seedID(t, `INSERT INTO activity
+			(id, kind, subject, occurred_at, source, captured_by, host_user_id, meeting_status)
+			VALUES ($1, 'meeting', 'both attended', now() - interval '2 days', 'manual', 'human:x', $2, 'held')`,
+			e.Rep1)
+		// Rep3 accepted, so the evidence credits them too. Rep1 holds the host
+		// column, which is the one seat a listing would show.
+		e.seedID(t, `INSERT INTO activity_participant
+			(id, activity_id, role, user_id, response)
+			VALUES ($1, $2, 'attendee', $3, 'accepted')`, meeting, e.Rep3)
+	}
+
+	if host := e.creditedCount(t, e.Rep1); host != 6 {
+		t.Errorf("the host is credited with %d meetings, want 6", host)
+	}
+	if guest := e.creditedCount(t, e.Rep3); guest != 6 {
+		t.Errorf("the colleague who accepted is credited with %d, want 6: the filter found only the listing seat",
+			guest)
+	}
+}

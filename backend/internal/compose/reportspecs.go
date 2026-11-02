@@ -28,6 +28,17 @@ var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " +
 // where the current host is the only host there has ever been.
 const heldHostUnrecorded = "held.host_id_at_change IS NULL"
 
+// creditedSeatIsFilter narrows to the meetings one colleague is credited for.
+//
+// A meeting credits everyone the attendance evidence names, so asking whether
+// the set holds them finds it. Comparing the single seat a listing shows
+// answered no for every colleague but the one it happened to pick.
+func creditedSeatIsFilter() string {
+	return "(t.kind = 'meeting' AND EXISTS (SELECT 1 FROM " +
+		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") +
+		" WHERE credit.id = %s))"
+}
+
 const (
 	fieldKind          = "kind"
 	fieldMeetingStatus = "meeting_status"
@@ -285,6 +296,9 @@ var prebuiltReports = map[string]reportSpec{
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
 		joins:  []string{heldTransitionJoin},
+		filterPredicates: map[string]string{
+			fieldHostUserID: creditedSeatIsFilter(),
+		},
 		// `activity` has no owner_id column at all, so the population
 		// default's hardcoded `owner_id = caller` clause does not narrow this
 		// report for a non-workspace-scope caller — it renders invalid SQL,

@@ -335,6 +335,20 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 			out = append(out, clause)
 			continue
 		}
+		if field.Predicate != "" {
+			// A set holds the value or it does not, so no other comparison
+			// means anything here. Answering one of them against the single
+			// listing value is the defect this replaces.
+			if f.Op != OpEq {
+				return nil, &RefusalError{
+					Kind:    RefusalUnsupported,
+					Message: fmt.Sprintf("%s holds a set, which %s cannot compare", f.Field, f.Op),
+					Suggest: fmt.Sprintf("filter %s with %s", f.Field, OpEq),
+				}
+			}
+			out = append(out, fmt.Sprintf(field.Predicate, arg(f.Value)))
+			continue
+		}
 		form := filterSQL[f.Op]
 		if valuelessOps[f.Op] {
 			out = append(out, fmt.Sprintf("%s %s", field.Expr, form))
