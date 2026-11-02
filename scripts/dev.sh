@@ -683,6 +683,16 @@ claim_stack() { # slug → "<redis_db> <fe_port>"
   # it would replace live pids with a pid-less reservation, and dev-stop would
   # then have nothing to kill.
   if grep -q '^BACKEND_PID=[0-9]' "${root}/${want}/env" 2>/dev/null; then
+    # A started stack whose database left the block cannot be handed a new one
+    # here: this path returns without writing, so the number would be recorded
+    # nowhere and the next overlapping start would pick it again. The running
+    # stack is also on a database the lane now owns, which flushes it.
+    if [[ -z "$MINE_DB" ]]; then
+      echo "FAIL: this worktree's stack is on a Redis database outside ${DEV_REDIS_DB_MIN}..${DEV_REDIS_DB_MAX}," >&2
+      echo "  which the integration lane now owns and flushes between tests." >&2
+      echo "  Stop it and start it again: make dev-stop && make dev" >&2
+      return 1
+    fi
     printf '%s %s' "$db" "$port"
     return 0
   fi

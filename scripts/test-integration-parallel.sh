@@ -191,7 +191,9 @@ echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_
 GO_DIRS=(backend)
 
 # Redis logical dbs available to the lane: every db the server serves except 0,
-# which `make dev` owns. Must match --databases in docker-compose.dev.yml.
+# which `make dev` owns, and the block above this one, which the per-worktree
+# dev stacks take. So --databases in docker-compose.dev.yml is higher than this
+# number, not equal to it, and the gate asserts the offset rather than equality.
 # It is one PER PACKAGE, not per concurrent job — a package's keys must survive
 # the whole package, and a slot freed by a finished package cannot be handed on
 # while its successor is still reading.

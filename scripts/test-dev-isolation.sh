@@ -352,6 +352,17 @@ check "1" "$(pick_free_db >/dev/null 2>&1; echo $?)" \
 check "1" "$(claim_stack newcomer >/dev/null 2>&1; echo $?)" \
       "claim_stack propagates that refusal as a non-zero status, which is what stops the boot"
 
+# A started stack whose database left the block. The reclaim refuses the record,
+# so a free database is picked, but the started-stack path returns without
+# writing it: handing one over here would record it nowhere, and the next
+# overlapping start would pick the same number.
+rm -rf "$tmp_root"/*
+mkdir -p "$tmp_root/upgraded"
+printf 'SLUG=upgraded\nFE_PORT=8081\nAPI_PORT=18081\nREDIS_DB=%s\nBACKEND_PID=1\n' \
+      "$((DEV_REDIS_DB_MIN - 1))" >"$tmp_root/upgraded/env"
+check "1" "$(claim_stack upgraded >/dev/null 2>&1; echo $?)" \
+      "a started stack on a database below the block is refused, not moved silently"
+
 unset MARGINCE_DEV_STATE_DIR
 
 echo "the state home is spelled once, across every script that composes it"
