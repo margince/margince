@@ -10,6 +10,7 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -30,7 +31,7 @@ func keep(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UUID
 
 func served(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UUID, read homecache.Read) bool {
 	t.Helper()
-	_, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, reader, read, "home")
+	_, _, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, reader, read, "home")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +45,7 @@ func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 	contact := e.SeedContact(t, "Fenced", &e.Rep1)
 
 	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
-	if got, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || got.View == nil || *got.View != "decisions" {
+	if got, _, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || got.View == nil || *got.View != "decisions" {
 		t.Fatalf("lookup = %v %+v (err %v), want the kept answer", hit, got, err)
 	}
 	if served(e.As(e.Rep2, []ids.UUID{e.Team1}, RepPerms), t, c, e.Rep2, homecache.Worklist) {
@@ -124,7 +125,9 @@ func TestACachedFirstPageEndsWithTheWalkItStarted(t *testing.T) {
 	}
 }
 
-func TestAMachineWriteEndsTheCachedReceiptButNotTheWorklist(t *testing.T) {
+// Home may lag background work by its five minutes, so a machine's write ends
+// neither answer.
+func TestAMachineWriteLeavesTheCachedReceiptAndWorklist(t *testing.T) {
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -133,11 +136,38 @@ func TestAMachineWriteEndsTheCachedReceiptButNotTheWorklist(t *testing.T) {
 
 	e.WsExec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
 		VALUES ('agent', 'agent:enrich', 'update', 'deal', $1)`, ids.NewV7())
-	if served(ctx, t, c, e.Rep1, homecache.Magic) {
-		t.Error("the receipt was served after a machine wrote")
+	for _, read := range []homecache.Read{homecache.Magic, homecache.Worklist} {
+		if !served(ctx, t, c, e.Rep1, read) {
+			t.Errorf("a machine write ended the kept %s", read)
+		}
 	}
-	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
-		t.Error("a machine write ended the worklist's answer, which it is not bound by")
+}
+
+func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "decisions")
+	e.WsExec(t, `UPDATE home_read_cache SET computed_at = computed_at - $1::interval WHERE reader_id = $2`,
+		(homecache.Life - 30*time.Second).String(), e.Rep1)
+
+	reads := 0
+	fresh := func(context.Context) (crmcontracts.Worklist, error) {
+		reads++
+		return crmcontracts.Worklist{View: new(crmcontracts.WorklistViewToday)}, nil
+	}
+	noWalk := func(crmcontracts.Worklist) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the fake page starts no walk, which Serve reads as nil
+	got, err := homecache.Serve(ctx, c, e.Rep1, homecache.Worklist, "home", fresh, noWalk)
+	if err != nil || got.View == nil || *got.View != "decisions" {
+		t.Fatalf("serve near the end of life = %+v (err %v), want the kept answer", got, err)
+	}
+	c.Settle()
+	if reads != 1 {
+		t.Fatalf("read again %d times behind the served answer, want once", reads)
+	}
+	kept, age, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home")
+	if err != nil || !hit || kept.View == nil || *kept.View != crmcontracts.WorklistViewToday || age > time.Minute {
+		t.Errorf("after the refresh the kept answer is %+v aged %s (hit %v, err %v), want the fresh one", kept, age, hit, err)
 	}
 }
 

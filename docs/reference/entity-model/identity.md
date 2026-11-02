@@ -508,7 +508,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `home_read_fence_record_grant`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_record_grant`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## role
 

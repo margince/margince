@@ -414,7 +414,8 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `home_read_fence_capture_import`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_capture_import`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_capture_import_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## capture_owner_identity
 
@@ -830,4 +831,5 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `home_read_fence_workspace_domain`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_workspace_domain`: `AFTER UPDATE FOR EACH ROW WHEN (((old.domain IS DISTINCT FROM new.domain) OR (old.verified AND (NOT new.verified)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `home_read_fence_workspace_domain_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
