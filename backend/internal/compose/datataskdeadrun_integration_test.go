@@ -43,7 +43,7 @@ func TestAReconcileClosesADeadRunAndQueuesTheNextOne(t *testing.T) {
 		t.Fatal(err)
 	}
 	dead := inserted.Job.ID
-	e.WsExec(t, `UPDATE river_job SET state = 'running', attempt = 1 WHERE id = $1`, dead)
+	e.WsExec(t, `UPDATE river_job SET state = 'running', attempt = 1, attempted_at = now() - interval '1 hour' WHERE id = $1`, dead)
 	reconcile := func() {
 		t.Helper()
 		if err := (&dataTaskReconcileWorker{pool: e.Pool}).Work(ctx, nil); err != nil {
@@ -68,6 +68,35 @@ func TestAReconcileClosesADeadRunAndQueuesTheNextOne(t *testing.T) {
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind = $1 AND state = 'available'`, kind); got != 1 {
 		t.Errorf("queued runs = %d after the dead one closed, want 1", got)
+	}
+}
+
+// A run drops its lock as Work returns, and River records the snooze only
+// after that. A reconcile in between finds the lock free and the row running,
+// and must leave the live run alone.
+func TestAReconcileBetweenARunsReturnAndItsSnoozeKeepsTheRun(t *testing.T) {
+	e := integration.Setup(t)
+	integration.ApplyRiverSchema(t)
+	client, err := river.NewClient(riverpgxv5.New(e.Pool), &river.Config{Logger: slog.New(slog.DiscardHandler)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := rivertest.WorkContext(t.Context(), client)
+	inserted, err := client.Insert(ctx, DataTaskRunArgs{}, dataTaskInsertOpts())
+	if err != nil {
+		t.Fatal(err)
+	}
+	live := inserted.Job.ID
+	e.WsExec(t, `UPDATE river_job SET state = 'running', attempt = 1, attempted_at = now() WHERE id = $1`, live)
+
+	if err := (&dataTaskReconcileWorker{pool: e.Pool}).Work(ctx, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := jobRowState(ctx, t, e.Pool, live); got != "running" {
+		t.Errorf("the live run is %s after a reconcile in its snooze window, want running", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind = $1 AND state = 'discarded'`, DataTaskRunArgs{}.Kind()); got != 0 {
+		t.Errorf("discarded runs = %d, want 0", got)
 	}
 }
 
