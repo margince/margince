@@ -403,6 +403,11 @@ var vanillaStubs = []struct {
 		emit:  func() []byte { return extLocalesGen(nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extLocalesGenHeader)",
 	},
+	{
+		rel:   frontendInstrumentsVanillaStub,
+		emit:  func() []byte { return extInstrumentsGen(nil, nil) },
+		align: "align the committed stub with tools/gen-composition (emitfrontend.go's extInstrumentsGenHeader)",
+	},
 }
 
 // frontendVanillaStub is the SPA's committed empty-tree registry. It sits
@@ -421,6 +426,10 @@ const frontendScreensVanillaStub = "frontend/src/composition/extscreens.gen.ts"
 // frontendLocalesVanillaStub is the empty-tree copy overlay, beside the other
 // two and for the same reason.
 const frontendLocalesVanillaStub = "frontend/src/composition/extlocales.gen.ts"
+
+// frontendInstrumentsVanillaStub is the empty-tree browser-instrument registry,
+// beside the others and for the same reason.
+const frontendInstrumentsVanillaStub = "frontend/src/composition/extinstruments.gen.ts"
 
 // stubMatchesVanilla holds the lanes together: each committed stub (what a
 // bare build wires) must be byte-identical to this generator's vanilla output

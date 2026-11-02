@@ -248,6 +248,9 @@ func composedFiles(root string) (composition, error) {
 	if err := checkPanelFrontends(manifests); err != nil {
 		return composition{}, err
 	}
+	if err := checkInstrumentFrontends(manifests); err != nil {
+		return composition{}, err
+	}
 	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls))
 	if err != nil {
 		return composition{}, err
@@ -259,6 +262,8 @@ func composedFiles(root string) (composition, error) {
 		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
 		"frontend/extscreens.gen.ts": extScreensGen(units, manifestPanels(manifests)),
 		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
+
+		"frontend/extinstruments.gen.ts": extInstrumentsGen(units, manifestBrowserInstruments(manifests)),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With
 	// no fragments each one is its base, byte-identical — see mergeContract.

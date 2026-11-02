@@ -345,3 +345,23 @@ func TestPanelIdentsAreInjective(t *testing.T) {
 		seen[ident] = "panel " + pair[0] + "/" + pair[1]
 	}
 }
+
+func TestExtInstrumentsGenImportsEachDeclaredBrowserInstrument(t *testing.T) {
+	units := []extensionUnit{
+		{Name: "alpha", Frontend: &unitFrontend{Package: "@margince-ext/alpha", Export: "@margince-ext/alpha"}},
+		{Name: "beta", Frontend: &unitFrontend{Package: "@margince-ext/beta", Export: "@margince-ext/beta"}},
+	}
+	got := string(extInstrumentsGen(units, map[string]string{"alpha": "instrument"}))
+	if !strings.Contains(got, `import { instrument as Alpha__instrument } from "@margince-ext/alpha";`) {
+		t.Fatalf("missing import:\n%s", got)
+	}
+	if !strings.Contains(got, `  "alpha": Alpha__instrument,`) || strings.Contains(got, "beta") {
+		t.Fatalf("registry wrong:\n%s", got)
+	}
+}
+
+func TestExtInstrumentsGenVanillaIsAnEmptyRecord(t *testing.T) {
+	if !strings.HasSuffix(string(extInstrumentsGen(nil, nil)), "export const extensionInstruments = {};\n") {
+		t.Fatal("vanilla registry must be an empty record")
+	}
+}

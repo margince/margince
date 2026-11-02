@@ -20,3 +20,4 @@ composition/extensions_gen.go            -text
 frontend/src/composition/extensions.gen.ts  -text
 frontend/src/composition/extscreens.gen.ts  -text
 frontend/src/composition/extlocales.gen.ts  -text
+frontend/src/composition/extinstruments.gen.ts  -text

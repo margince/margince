@@ -441,6 +441,8 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		m.Settings, err = r.readSettings(kv.Value, file)
 	case "Panels":
 		m.Panels, err = r.readPanels(kv.Value, file)
+	case "Instrumentation":
+		m.Instrumentation, err = r.readInstrumentation(kv.Value)
 	case "Inbound":
 		m.Inbound, err = r.readInbound(kv.Value, file)
 	case "SystemReads":
