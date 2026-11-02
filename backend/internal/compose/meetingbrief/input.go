@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Input is the room, the deal, what was promised, and what recently happened.
@@ -101,12 +102,30 @@ func (in Input) RailLabel() string {
 
 // DealIn is the deal this meeting is about.
 type DealIn struct {
-	ID          string
-	Name        string
-	Stage       string
-	AmountMinor int64
+	ID    string
+	Name  string
+	Stage string
+	// AmountMinor is the integer the column holds, in minor units. It never
+	// reaches the model: a raw 1850000 EUR reads as 1,850,000 euros, so
+	// MarshalJSON writes it in major units instead.
+	AmountMinor int64 `json:"-"`
 	Currency    string
 	CloseDate   *time.Time
+}
+
+// MarshalJSON adds the amount in major units: "18500.00" for 1850000 EUR, and
+// "1850000" for the same integer in JPY. values.MajorUnits owns that scale.
+// A deal with no amount or no currency carries no amount, as the header does.
+func (d DealIn) MarshalJSON() ([]byte, error) {
+	type plain DealIn // no methods, so no recursion back into this one
+	var amount string
+	if d.AmountMinor != 0 && d.Currency != "" {
+		amount = values.MajorUnits(d.AmountMinor, d.Currency)
+	}
+	return json.Marshal(struct {
+		plain
+		Amount string `json:"amount,omitempty"`
+	}{plain: plain(d), Amount: amount})
 }
 
 // PriorMeetingIn is one earlier meeting with somebody from this room.
