@@ -161,9 +161,12 @@ func TestAHumanOutcomeCommittedWhileTheFoldWaitsBlocksIt(t *testing.T) {
 func waitForALockWait(t *testing.T, e *integration.Env) {
 	t.Helper()
 	for range 400 {
+		if _, err := e.Pool.Exec(context.Background(), `SELECT pg_sleep(0.025)`); err != nil {
+			t.Fatal(err)
+		}
 		var waiting bool
 		if err := e.Pool.QueryRow(context.Background(),
-			`SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted) FROM pg_sleep(0.025)`).Scan(&waiting); err != nil {
+			`SELECT EXISTS (SELECT 1 FROM pg_locks WHERE NOT granted)`).Scan(&waiting); err != nil {
 			t.Fatal(err)
 		}
 		if waiting {
