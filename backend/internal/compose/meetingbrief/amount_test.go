@@ -29,7 +29,7 @@ func TestThePromptsStateADealAmountInMajorUnits(t *testing.T) {
 			Subject:    "Meeting",
 			Deal: &DealIn{
 				ID: "00000000-0000-0000-0000-000000000002", Name: "Deal B",
-				Stage: "Discovery", AmountMinor: tc.minor, Currency: tc.currency,
+				Stage: "Discovery", AmountMinor: new(tc.minor), Currency: tc.currency,
 			},
 		}
 		brief := BriefRequest(in, "en").Messages[0].Content
@@ -45,15 +45,34 @@ func TestThePromptsStateADealAmountInMajorUnits(t *testing.T) {
 	}
 }
 
-// A deal with no amount says nothing about one, rather than "0.00".
-func TestADealWithoutAnAmountStatesNone(t *testing.T) {
+// A deal with no amount says nothing about one. A zero amount is still an
+// amount, and the prompt states it.
+func TestAZeroAmountIsStatedAndANullOneIsNot(t *testing.T) {
 	t.Parallel()
-	in := Input{
-		ActivityID: "00000000-0000-0000-0000-000000000001",
-		Subject:    "Meeting",
-		Deal:       &DealIn{ID: "00000000-0000-0000-0000-000000000002", Name: "Deal B", Currency: "EUR"},
+	cases := []struct {
+		name   string
+		minor  *int64
+		want   string
+		absent bool
+	}{
+		{name: "null", minor: nil, absent: true},
+		{name: "zero", minor: new(int64(0)), want: `"amount":"0.00"`},
 	}
-	if body := BriefRequest(in, "en").Messages[0].Content; strings.Contains(body, `"amount"`) {
-		t.Errorf("a deal with no amount put one in the prompt: %s", body)
+	for _, tc := range cases {
+		in := Input{
+			ActivityID: "00000000-0000-0000-0000-000000000001",
+			Subject:    "Meeting",
+			Deal: &DealIn{
+				ID: "00000000-0000-0000-0000-000000000002", Name: "Deal B",
+				AmountMinor: tc.minor, Currency: "EUR",
+			},
+		}
+		body := BriefRequest(in, "en").Messages[0].Content
+		if tc.absent && strings.Contains(body, `"amount"`) {
+			t.Errorf("%s: a deal with no amount put one in the prompt: %s", tc.name, body)
+		}
+		if !tc.absent && !strings.Contains(body, tc.want) {
+			t.Errorf("%s: the prompt does not state %s: %s", tc.name, tc.want, body)
+		}
 	}
 }

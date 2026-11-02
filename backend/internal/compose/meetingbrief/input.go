@@ -105,22 +105,23 @@ type DealIn struct {
 	ID    string
 	Name  string
 	Stage string
-	// AmountMinor is the integer the column holds, in minor units. It never
-	// reaches the model: a raw 1850000 EUR reads as 1,850,000 euros, so
-	// MarshalJSON writes it in major units instead.
-	AmountMinor int64 `json:"-"`
+	// AmountMinor is the integer the column holds, in minor units, and nil
+	// when the deal has no amount. It never reaches the model: a raw 1850000
+	// EUR reads as 1,850,000 euros, so MarshalJSON writes it in major units.
+	AmountMinor *int64 `json:"-"`
 	Currency    string
 	CloseDate   *time.Time
 }
 
 // MarshalJSON adds the amount in major units: "18500.00" for 1850000 EUR, and
 // "1850000" for the same integer in JPY. values.MajorUnits owns that scale.
-// A deal with no amount or no currency carries no amount, as the header does.
+// A zero amount is stated as zero. Only a deal with no amount or no currency
+// carries no amount.
 func (d DealIn) MarshalJSON() ([]byte, error) {
 	type plain DealIn // no methods, so no recursion back into this one
 	var amount string
-	if d.AmountMinor != 0 && d.Currency != "" {
-		amount = values.MajorUnits(d.AmountMinor, d.Currency)
+	if d.AmountMinor != nil && d.Currency != "" {
+		amount = values.MajorUnits(*d.AmountMinor, d.Currency)
 	}
 	return json.Marshal(struct {
 		plain
@@ -214,7 +215,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			Stage:       room.Deal.Stage,
 			Currency:    room.Deal.Currency,
 			CloseDate:   room.Deal.CloseDate,
-			AmountMinor: derefInt(room.Deal.AmountMinor),
+			AmountMinor: room.Deal.AmountMinor,
 		}
 	}
 	if room.Project != nil {
@@ -339,9 +340,7 @@ func dealFromView(view crmcontracts.Contact360) *DealIn {
 	if deal.Stage != nil {
 		out.Stage = *deal.Stage
 	}
-	if deal.AmountMinor != nil {
-		out.AmountMinor = *deal.AmountMinor
-	}
+	out.AmountMinor = deal.AmountMinor
 	if deal.Currency != nil {
 		out.Currency = *deal.Currency
 	}
