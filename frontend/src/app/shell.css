@@ -402,19 +402,16 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
-/* The head: the company's square mark, its name, and under the name the line
-   that says what it runs on and what stage it is at. The marker stands beside
-   the attribution instead of at the foot of a column a demo never scrolls to,
-   and the control that collapses this panel is not here: it stands in the top
-   bar (app/topbar.css), where it does not travel with the panel it opens.
-   A grid, so the mark spans both lines and the name and attribution share one
-   left edge whatever the mark's size. */
+/* The head: a mark and a name, and under the name the line that says what an
+   installation runs on. The control that collapses this panel is not here: it
+   stands in the top bar (app/topbar.css), where it does not travel with the
+   panel it opens.
+   A grid, so the mark spans both lines when there are two and the name and
+   attribution share one left edge whatever the mark's size. */
 .rail .railhead {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    "mark name"
-    "mark by";
+  grid-template-areas: "mark name";
   align-items: center;
   column-gap: var(--space-2);
   /* The containing block of the name's stretched link (`.rail .ws::after`). */
@@ -425,11 +422,18 @@
      the strip it is aligned to and every icon below it rode up by that much. */
   flex: none;
   /* The strip's height as a FLOOR, never a ceiling: the box has to be as tall as
-     what stands in it, or the attribution and the marker fall outside it. */
+     what stands in it, or the attribution falls outside it. */
   min-height: var(--topbarH);
-  /* A breath between the head and the first destination: with the marker on the
-     head's last line the row under it read as one more item in its stack. */
+  /* A breath between the head and the first destination: without it the row
+     under the head reads as one more item in its stack. */
   margin-block-end: var(--space-5);
+}
+/* Only an installation's head has the second line. A head without it stays one
+   row, so the name centres on the mark instead of sitting in an empty half. */
+.rail .railhead-attributed {
+  grid-template-areas:
+    "mark name"
+    "mark by";
 }
 /* Expanded, the head is a card: one bordered object that holds the company and
    what it runs on, the same width as the rows' pills so its mark stands on the
@@ -439,16 +443,13 @@
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
 }
-/* Collapsed the head is the mark and the marker under it, centred on the 56px
-   column's axis, which is the axis every row glyph below stands on too. No card:
-   a border around one square would be a second frame for the same thing. */
+/* Collapsed the head is the mark alone, centred on the 56px column's axis,
+   which is the axis every row glyph below stands on too. No card: a border
+   around one square would be a second frame for the same thing. */
 .rail.collapsed .railhead {
   grid-template-columns: 1fr;
-  grid-template-areas:
-    "mark"
-    "by";
+  grid-template-areas: "mark";
   justify-items: center;
-  row-gap: var(--space-1);
 }
 /* brand block */
 .rail .ws {
@@ -555,22 +556,17 @@
   height: 0;
   opacity: 0;
 }
-/* The head's second line: what this installation runs on, and what stage that
-   product is at. One row for both, because they are one statement.
-   It is a SIBLING of the brand anchor and not a child of it: the marker is a
-   fact about the build, and a fact inside a link is a fact a press carries you
-   away from. */
+/* The head's second line: what this installation runs on. It is a SIBLING of
+   the brand anchor and not a child of it: the press target is the name, and
+   the attribution is not somewhere it should lead. */
 .rail .ws-company {
   grid-area: by;
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
 }
-/* The ellipsis is the TEXT's, not the row's: an installation name is user data
-   of unbounded length in a narrow column, and a row that clipped itself would
-   take the marker with it — the one thing on this line that must always be
-   legible.
+/* The ellipsis is the TEXT's, not the row's, because the row is a flex box and
+   only a block-level child clips.
 
    Body S, because this is the attribution UNDER the name and not a second name:
    at the body size it read as a peer of the heading above it and the head had
@@ -581,21 +577,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Only the attribution gives way. Whatever else stands on this line is sized by
-   its own words, and one squeezed to buy the name room loses its label to the
-   ellipsis above — where the name can afford the ellipsis and still be read.
-   Said of the row's other children rather than of any one class, so the marker
-   beside it can be replaced or removed without taking its sizing with it; the
-   same direction `.panel-head` takes with its own title. */
-.rail .ws-company > :not(.ws-company-text) {
-  flex-shrink: 0;
-}
 /* Collapsed there is no room for the attribution and no need for it: the mark
-   above says whose installation this is, and 56px is one glyph wide. The marker
-   stays — it is the whole reason this line survives the collapse — at its full
-   word, which is short enough for the column, and centred under the mark by the
-   head's own `align-items`. */
-.rail.collapsed .ws-company-text {
+   says whose installation this is, and 56px is one glyph wide. The head has no
+   `by` area then, so the row goes rather than being placed in an implicit one. */
+.rail.collapsed .ws-company {
   display: none;
 }
 
@@ -1524,9 +1509,7 @@
   .rail.sheetopen .railhead {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "mark name"
-      "mark by";
+    grid-template-areas: "mark name";
     justify-items: stretch;
     order: -1;
     /* The expanded sidebar's layout, flush left: the sheet inherits
@@ -1536,6 +1519,11 @@
     min-height: 44px;
     margin: 0 0 var(--space-2);
     padding-right: var(--space-12);
+  }
+  .rail.sheetopen .railhead-attributed {
+    grid-template-areas:
+      "mark name"
+      "mark by";
   }
   .rail.sheetopen .ws {
     grid-area: name;
@@ -1550,10 +1538,10 @@
     height: auto;
     opacity: 1;
   }
-  /* And the attribution beside the marker: the sheet is 600px wide, so the row
-     the 56px rail reduces to one badge is spelled out in full here. */
-  .rail.sheetopen .ws-company-text {
-    display: block;
+  /* And the attribution: the sheet is 600px wide, so the line the 56px rail
+     drops is spelled out in full here. */
+  .rail.sheetopen .ws-company {
+    display: flex;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner
      there is no room for one, and "Close" is what its `aria-label` says. */
