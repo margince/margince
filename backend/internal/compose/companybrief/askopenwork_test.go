@@ -82,7 +82,8 @@ func TestAReplyCitingEveryOpenRecordIsKept(t *testing.T) {
 	in := taskAndCommitment()
 	lane := replyOf(
 		citing("Send the quote is open.", "activity", taskActivity),
-		citing("We promised the security audit.", "activity", commitmentActivity))
+		citing("We promised the security audit.", "activity", commitmentActivity),
+	)
 	_, by := answerOpen(t, lane, in)
 	if by != crmcontracts.WrittenByModel {
 		t.Errorf("generated_by = %q, want the model: the reply cited both records", by)
@@ -93,7 +94,8 @@ func TestAReplyMissingTheCommitmentIsRefusedWhateverItSaysAboutTasks(t *testing.
 	in := taskAndCommitment()
 	lane := replyOf(
 		citing("Send the quote is open.", "activity", taskActivity),
-		citing("Brandt is an automotive account.", "company", askCompanyID))
+		citing("Brandt is an automotive account.", "company", askCompanyID),
+	)
 	if _, by := answerOpen(t, lane, in); by != crmcontracts.WrittenByDeterministic {
 		t.Errorf("generated_by = %q, want the floor", by)
 	}
@@ -147,6 +149,47 @@ func TestTwoPromisesFromOneMessageEachNameTheirOwnClaim(t *testing.T) {
 	}
 	if !names["Send the price list"] || !names["Book the site visit"] {
 		t.Errorf("chip names %v: each promise needs its own claim as the chip name", names)
+	}
+}
+
+// A model writes a citation as a type and an id, with no claim in it. So a
+// message carrying two promises cannot be labelled with either, and this holds
+// that it is labelled with neither rather than with the first.
+//
+// The deterministic floor is not reached by this: it sets its own names, and
+// withEvidenceNames fills only a citation whose name is still empty.
+func TestAModelWrittenCitationOfTwoPromisesNamesNeither(t *testing.T) {
+	in := Input{OpenCommitments: []CommitmentIn{
+		{ID: "c1", ActivityID: commitmentActivity, Claim: "Send the price list", Side: sideOurs},
+		{ID: "c2", ActivityID: commitmentActivity, Claim: "Book the site visit", Side: sideOurs},
+	}}
+	// What a model hands back: the record, and nothing about which promise.
+	written := []Sentence{{
+		Text:     "They are waiting on two things.",
+		Evidence: []Evidence{{EntityType: citeActivity, EntityID: commitmentActivity}},
+	}}
+
+	named := withEvidenceNames(written, in)
+	if got := named[0].Evidence[0].Name; got != "" {
+		t.Errorf("chip name = %q, want empty: one of the two promises would be the wrong label "+
+			"for a citation that names neither", got)
+	}
+}
+
+// One promise on a message still names it, which is why the claim is preferred
+// over the subject line.
+func TestAModelWrittenCitationOfOnePromiseNamesIt(t *testing.T) {
+	in := Input{OpenCommitments: []CommitmentIn{
+		{ID: "c1", ActivityID: commitmentActivity, Claim: "Send the price list", Side: sideOurs},
+	}}
+	written := []Sentence{{
+		Text:     "They are waiting on the price list.",
+		Evidence: []Evidence{{EntityType: citeActivity, EntityID: commitmentActivity}},
+	}}
+
+	named := withEvidenceNames(written, in)
+	if got := named[0].Evidence[0].Name; got != "Send the price list" {
+		t.Errorf("chip name = %q, want the promise's own claim", got)
 	}
 }
 
@@ -207,7 +250,8 @@ func TestAModelAnswerOverACutReadStillSaysSo(t *testing.T) {
 	in.OpenWorkCapped = true
 	lane := replyOf(
 		citing("Send the quote is open.", "activity", taskActivity),
-		citing("We promised the security audit.", "activity", commitmentActivity))
+		citing("We promised the security audit.", "activity", commitmentActivity),
+	)
 	answered, by := answerOpen(t, lane, in)
 	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q", by)
