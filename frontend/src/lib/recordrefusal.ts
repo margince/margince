@@ -13,40 +13,46 @@ import {
 export type RefusingKind = "contact" | "company" | "lead" | "deal" | "project";
 
 // The one table from refusal code to sentence. The archived and not-yours
-// sentences name the record's kind, so each kind has its own; the seat, role
-// and owner sentences hold for every kind.
+// sentences name the record's kind. A project cannot be claimed, so its
+// unowned sentence asks for an owner instead.
+type KindCode = "archived" | "not_yours" | "unowned";
+
 const KIND_SENTENCES = {
   contact: {
     archived: "contact.rail.archivedReadOnly",
     not_yours: "contact.notYoursToChange",
+    unowned: "writeRefusal.unowned",
   },
   company: {
     archived: "record.archivedReadOnly",
     not_yours: "record.notYoursToChange",
+    unowned: "writeRefusal.unowned",
   },
   lead: {
     archived: "lead.terminalReadOnly",
     not_yours: "lead.notYoursToChange",
+    unowned: "writeRefusal.unowned",
   },
   deal: {
     archived: "deal.archivedReadOnly",
     not_yours: "deal.notYoursToChange",
+    unowned: "writeRefusal.unowned",
   },
   project: {
     archived: "project.archivedReadOnly",
     not_yours: "project.notYoursToChange",
+    unowned: "writeRefusal.unownedProject",
   },
 } as const satisfies Record<
   RefusingKind,
-  Record<"archived" | "not_yours", MessageKey>
+  Record<KindCode, MessageKey>
 >;
 
 const SHARED_SENTENCES = {
   seat_read_only: "writeRefusal.seatReadOnly",
   role: "writeRefusal.role",
-  unowned: "writeRefusal.unowned",
 } as const satisfies Record<
-  Exclude<WriteRefusal, "archived" | "not_yours">,
+  Exclude<WriteRefusal, KindCode>,
   MessageKey
 >;
 
@@ -63,7 +69,7 @@ export function useRecordRefusal(
     return undefined;
   }
   const key =
-    code === "archived" || code === "not_yours"
+    code === "archived" || code === "not_yours" || code === "unowned"
       ? KIND_SENTENCES[kind][code]
       : SHARED_SENTENCES[code];
   return { code, text: t(key) };

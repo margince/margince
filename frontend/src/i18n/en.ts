@@ -3022,6 +3022,8 @@ export const en = {
     "Your role cannot change records of this kind. Ask an administrator to change your role.",
   "writeRefusal.unowned":
     "Nobody owns this record yet. Make yourself its owner to change it.",
+  "writeRefusal.unownedProject":
+    "Nobody owns this project yet. Ask an administrator to give it an owner.",
   "field.lockedWhy": "Why {field} is locked",
   "common.versionSkew":
     "This record changed after you opened it. Reload it to see the change, then make yours again.",

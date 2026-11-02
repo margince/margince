@@ -3095,7 +3095,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "writeRefusal.role":
     "Deine Rolle darf Datensätze dieser Art nicht ändern. Frage einen Admin, deine Rolle anzupassen.",
   "writeRefusal.unowned":
-    "Dieser Datensatz ist noch niemandem zugewiesen. Übernimm ihn, um ihn zu ändern.",
+    "Für diesen Datensatz ist noch niemand verantwortlich. Übernimm ihn, um ihn zu ändern.",
+  "writeRefusal.unownedProject":
+    "Für dieses Projekt ist noch niemand verantwortlich. Frage einen Admin, es jemandem zuzuweisen.",
   "field.lockedWhy": "Warum {field} gesperrt ist",
   "common.versionSkew":
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",

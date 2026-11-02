@@ -3007,6 +3007,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Vai trò của bạn không được sửa loại hồ sơ này. Liên hệ quản trị viên để đổi vai trò.",
   "writeRefusal.unowned":
     "Hồ sơ này chưa có ai chịu trách nhiệm. Hãy nhận trách nhiệm hồ sơ này để sửa.",
+  "writeRefusal.unownedProject":
+    "Dự án này chưa có ai chịu trách nhiệm. Liên hệ quản trị viên để giao dự án cho ai đó.",
   "field.lockedWhy": "Vì sao {field} bị khóa",
   "common.versionSkew":
     "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",

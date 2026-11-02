@@ -3031,7 +3031,7 @@ type WebFormValue struct {
 	Value string `json:"value"`
 }
 
-// WriteRefusal Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only. `role`: the caller's role may not change this kind of record. `archived`: the record is archived, and restoring it is the fix. `unowned`: the record has no owner and is claimed before anyone changes it. `not_yours`: someone else owns it; its owner, a share or an admin is the way in.
+// WriteRefusal Why the caller may not change a record. `seat_read_only`: the caller's seat is read-only. `role`: the caller's role may not change this kind of record. `archived`: the record is archived or closed; restoring it is the fix where its kind can be restored. `unowned`: the record has no owner; it is claimed first where its kind can be claimed, otherwise an admin assigns an owner. `not_yours`: someone else owns it; its owner, a share or an admin is the way in.
 type WriteRefusal string
 
 // Getter for additional properties for Activity. Returns the specified
