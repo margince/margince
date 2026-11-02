@@ -559,3 +559,44 @@ func TestAMessageWithNoDirectionStillGetsLabelled(t *testing.T) {
 		t.Errorf("a directionless row took reply verdict %q", *v)
 	}
 }
+
+// editingBrain changes the message while the model is thinking, as a restore
+// of the body would.
+type editingBrain struct {
+	*scriptedClassifyBrain
+	edit func()
+}
+
+func (b editingBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	b.edit()
+	return b.scriptedClassifyBrain.Complete(ctx, req)
+}
+
+// A message edited during the model call is classified again, not labelled
+// with a verdict about the text the model read.
+func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
+	e := integration.Setup(t)
+	edited := seedInboundEmail(t, e, "yes please, send it over")
+	brain := editingBrain{
+		scriptedClassifyBrain: &scriptedClassifyBrain{
+			labels:     map[string]string{edited.String(): "commitment"},
+			replies:    map[string]string{edited.String(): "positive"},
+			sawInbound: map[string]string{},
+		},
+		edit: func() {
+			e.WsExec(t, `UPDATE activity SET body = 'the full restored text' WHERE id = $1`, edited)
+		},
+	}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if v := replyVerdictOf(t, e, edited); v != nil {
+		t.Errorf("reply verdict = %q on a message edited during the call, want none", *v)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND capture_label IS NULL`, edited); n != 1 {
+		t.Error("the edited message was labelled from the text the model read")
+	}
+}

@@ -232,13 +232,17 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 	return labeled, nil
 }
 
-// commitLabel writes one label and the reply verdict riding it.
+// commitLabel writes one label and the reply verdict riding it. A label that
+// did not apply takes no reply verdict, because both are about the text read.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
 	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	if err != nil {
 		return false, err
 	}
-	return applied, c.recordReply(ctx, msg, v, judge)
+	if !applied {
+		return false, nil
+	}
+	return true, c.recordReply(ctx, msg, v, judge)
 }
 
 // recordReply stores the reply verdict this call also produced, when it produced
