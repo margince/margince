@@ -14,6 +14,7 @@ import {
 import { type Route, routeHash, useHash } from "../lib/router";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
+import { sidebarHotkeyCaps } from "./hotkeys";
 import {
   entryLabel,
   NAV,
@@ -40,12 +41,6 @@ import "./topbar.css";
 // Three tracks, the outer two equal, so the search sits at the middle of the
 // CONTENT column — the reference this follows centres there too, and a field
 // centred on the window sits visibly left of the column it stands in.
-
-// The sidebar's shortcut, spelled the way the platform spells it — the palette's
-// label helper answers the same question for ⌘K.
-function collapseHotkeyLabel(platform: string): string {
-  return /mac|iphone|ipad|ipod/i.test(platform) ? "⌘B" : "Ctrl B";
-}
 
 // A page that stands below a list: a record, or a page a record screen reserves
 // a segment for. An id that names no record (a settings tab) is still the
@@ -192,7 +187,7 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={`${toggleLabel} · ${collapseHotkeyLabel(navigator.platform)}`}
+            title={`${toggleLabel} · ${sidebarHotkeyCaps(navigator.platform).join(" ")}`}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >

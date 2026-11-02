@@ -459,6 +459,35 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(choices.getByRole("radio", { name: "Dunkel" })).toBeChecked();
 });
 
+// Help and feedback is a submenu of real menu items, and the shortcuts it opens
+// are a dialog. Both are swept by axe in the state a reader reaches them in.
+test("features/10 §7: help and feedback and the keyboard shortcuts meet AA", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  await accountTrigger(page).click();
+  const help = page
+    .locator(".topbar [role='menu']")
+    .first()
+    .getByRole("menuitem", { name: de["shell.helpMenu"] });
+  await help.press("ArrowRight");
+  const submenu = page.getByRole("menu", { name: de["shell.helpMenu"] });
+  await expect(submenu.getByRole("menuitem").first()).toBeFocused();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — help and feedback");
+
+  await submenu
+    .getByRole("menuitem", { name: de["shell.help.shortcuts"] })
+    .click();
+  const dialog = page.getByRole("dialog", { name: de["shell.help.shortcuts"] });
+  await expect(dialog).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — keyboard shortcuts");
+  await page.keyboard.press("Escape");
+  await expect(accountTrigger(page)).toBeFocused();
+});
+
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {

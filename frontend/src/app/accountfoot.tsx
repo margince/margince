@@ -7,30 +7,16 @@ import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { CORE_RELEASE, comparableRelease, SPA_RELEASE } from "../lib/release";
 import { useLogout } from "../lib/session";
+import type { RowSeat } from "./accountseats";
 
-// The foot of the account menu: the way out, and the release the reader is on.
+// The way out of the account menu, and the release the reader is on.
 // Apart from account.tsx so the menu's roving walk and its rows read on their own.
 
 /**
- * What a row needs to be a menu item. It holds the row's roving tabstop, the
- * handle the menu moves focus with, and the callback that records focus.
- *
- * Optional at every call site, because the phone sheet's rows are ordinary
- * content walked with Tab. A `role="menuitem"` there would promise keys that
- * nothing implements.
- */
-export type RowSeat = Readonly<{
-  ref: (element: HTMLElement | null) => void;
-  tabIndex: number;
-  onFocus: () => void;
-}>;
-
-/**
  * The way out, with the guard against a second POST while the first is in
- * flight. One spelling for the menu and the sheet: two would be two ways to sign
- * out, and only one of them would keep the guard.
+ * flight.
  */
-export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
+export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
   const t = useT();
   const logout = useLogout();
   return (
@@ -38,10 +24,8 @@ export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
       <button
         type="button"
         className="acctrow"
-        role={seat ? "menuitem" : undefined}
-        tabIndex={seat?.tabIndex}
-        ref={seat?.ref}
-        onFocus={seat?.onFocus}
+        role="menuitem"
+        {...seat}
         disabled={logout.isPending}
         onClick={() => logout.mutate()}
       >
@@ -66,11 +50,22 @@ export function SignOutRow({ seat }: Readonly<{ seat?: RowSeat }>) {
 }
 
 /**
+ * The release a problem report names. The tracker is the core's, so an instance
+ * build names the core release it pins rather than its own.
+ */
+export function reportedRelease(): string | undefined {
+  if (comparableRelease(CORE_RELEASE)) {
+    return CORE_RELEASE;
+  }
+  return comparableRelease(SPA_RELEASE) ? SPA_RELEASE : undefined;
+}
+
+/**
  * The releases this bundle was built from, so a reader reporting a problem can
  * say which build it is in. A statement, not a row: `role="none"` keeps it out
  * of the menu's items and out of the roving tabstop. A stamped core release
  * marks an instance build, which names both repositories even when they agree.
- * An unstamped value prints nothing rather than a version that is not one.
+ * An unstamped build says so rather than printing a version that is not one.
  */
 export function AccountRelease() {
   const t = useT();
@@ -82,18 +77,14 @@ export function AccountRelease() {
     lines.push(t("shell.coreVersion", { version: CORE_RELEASE }));
   } else if (comparableRelease(SPA_RELEASE)) {
     lines.push(t("shell.version", { version: SPA_RELEASE }));
-  }
-  if (lines.length === 0) {
-    return null;
+  } else {
+    lines.push(t("shell.help.devBuild"));
   }
   return (
-    <>
-      <hr />
-      <div className="acctversion t-caption" role="none">
-        {lines.map((line) => (
-          <div key={line}>{line}</div>
-        ))}
-      </div>
-    </>
+    <div className="acctversion t-caption" role="none">
+      {lines.map((line) => (
+        <div key={line}>{line}</div>
+      ))}
+    </div>
   );
 }

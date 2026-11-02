@@ -149,14 +149,15 @@ export const TopBar: Story = {
  *
  * Read top to bottom it is the whole of what this menu is for: who you are —
  * printed HERE because the trigger no longer prints it — the product's one door
- * into settings, the appearance choice, and the way out under its own rule.
+ * into settings, the appearance choice, the booking link, help and feedback,
+ * and the way out under its own rule.
  *
- * Only ONE row carries a leading glyph, and it is Sign out. The other two are
- * words in a list of three, where a column of icons is decoration that has to be
+ * Only ONE row carries a leading glyph, and it is Sign out. The others are
+ * words in a list, where a column of icons is decoration that has to be
  * scanned past; the way out is the row nobody wants to hit by accident, so it is
- * the one that earns a second signal beside its label. The chevron on Theme is
- * not that signal — it says there is a layer behind the row, which is a fact
- * about the control rather than an emblem for it.
+ * the one that earns a second signal beside its label. The chevrons on Theme
+ * and Help are not that signal — they say there is a layer behind the row,
+ * which is a fact about the control rather than an emblem for it.
  */
 export const TopBarMenu: Story = {
   name: "Top bar menu",
@@ -215,4 +216,48 @@ export const TopBarThemeFlyoutDark: Story = {
       </StoryProviders>
     );
   },
+};
+
+/** Open the menu and then Help and feedback. */
+async function openHelpFlyout(context: { canvasElement: HTMLElement }) {
+  await openMenu(context);
+  const canvas = within(context.canvasElement);
+  await userEvent.click(
+    canvas.getByRole("menuitem", { name: "Help and feedback" }),
+  );
+}
+
+/**
+ * Help and feedback, open, opening LEFT like the theme flyout. Its rows are
+ * menu items: four places off the app, each marked as a new tab, and the
+ * shortcuts dialog. The build sits under its own rule as a statement, and a
+ * local build says "Development build" rather than nothing.
+ */
+export const TopBarHelpFlyout: Story = {
+  name: "Top bar help flyout",
+  play: openHelpFlyout,
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <TopBarTrail>
+          <AccountMenu />
+        </TopBarTrail>
+      </StoryProviders>
+    );
+  },
+};
+
+export const TopBarHelpFlyoutDark: Story = {
+  ...TopBarHelpFlyout,
+  name: "Top bar help flyout (dark)",
+  globals: { theme: "dark" },
+};
+
+/** At phone width the flyout folds into the menu as an indented group. */
+export const TopBarHelpFlyoutPhone: Story = {
+  ...TopBarHelpFlyout,
+  name: "Top bar help flyout (phone)",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

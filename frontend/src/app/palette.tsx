@@ -26,6 +26,7 @@ import {
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
+import { modifierCap } from "./hotkeys";
 import { CREATE_ID, NAV } from "./nav";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import {
@@ -438,14 +439,16 @@ function defaultSelection(
   return Math.max(named, 0);
 }
 
+const PALETTE_KEY = "k";
+
 // Global ⌘K / Ctrl+K binding (AC-shell-3).
 // Both chords work, but an affordance may only advertise ONE and it has to be
 // the one the reader's keyboard has: a Windows user told to press ⌘K is told to
 // press a key that is not there. Pure in its argument, so the call site passes
 // `navigator.platform` and this stays testable without stubbing it.
 /**
- * The chord as its KEYS, because the one surface that draws it draws a cap per
- * key (app/topbar.tsx).
+ * The chord as its KEYS, because every surface that draws it draws a cap per
+ * key (app/topbar.tsx, app/shortcutsdialog.tsx).
  *
  * Keys rather than a joined string, and no regex: the top bar used to split a
  * "⌘K" label with a lookbehind, which is a parse-time SyntaxError on an engine
@@ -453,7 +456,7 @@ function defaultSelection(
  * plain-looking shortcut.
  */
 export function paletteHotkeyCaps(platform: string): readonly string[] {
-  return /mac|iphone|ipad|ipod/i.test(platform) ? ["⌘", "K"] : ["Ctrl", "K"];
+  return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
 }
 
 export function usePaletteHotkey(
@@ -462,7 +465,10 @@ export function usePaletteHotkey(
 ) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === PALETTE_KEY
+      ) {
         event.preventDefault();
         // An open dialog makes the rest of the app unreachable, the palette with
         // it; asked only while closed, so the palette's own box never blocks it.
