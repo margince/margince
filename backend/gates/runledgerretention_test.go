@@ -34,6 +34,8 @@ import (
 // their history would be the wrong way to find that out. The register carries
 // what each table is and what deciding its window would cost.
 var runLedgerWindow = gatekit.Waive(map[string]string{
+	"activity_reminder_delivery": "one row per task, keyed by the task and overwritten when its reminder " +
+		"moves; the task's delete cascades to it, so the task count bounds it and no window applies",
 	"data_task_run": "one durable row per release task step, bounded by the shipped catalog rather than execution count. Deleting a completed cursor would rerun a correction after restart; retirement requires an explicit minimum supported upgrade release.",
 	"data_task_run_history": "previous reviewed runs retain the operator, bounded selection and outcome " +
 		"needed to explain archived records after reactivation. No source bodies are stored; deleting " +
