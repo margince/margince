@@ -1,0 +1,60 @@
+/* A page pane: a level-1 surface on the page ground. RecordView's two cards
+   and PageZones' `panes` columns wear this one rule, so the pages agree. */
+.page-pane {
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  min-inline-size: 0;
+}
+/* Only the pane rests on a shadow. A panel inside one is a box in a box, and
+   its hairline alone separates it. */
+.page-pane .panel {
+  box-shadow: none;
+}
+/* A pane that stays in view while the page scrolls, and scrolls itself when
+   taller than the window. Its owner sets it static where its columns fold. */
+.page-pane-sticky {
+  position: sticky;
+  inset-block-start: 0;
+  max-block-size: calc(
+    100dvh -
+    var(--topbarH, 0px) -
+    var(--pageGapTop, 0px) -
+    var(--space-6)
+  );
+  overflow-y: auto;
+  /* The pane scrolls only to stay in view, so its bar is no part of the
+     picture until the pointer is on the pane. */
+  scrollbar-color: transparent transparent;
+}
+/* Under :where() so the shell's accent still lights the bar itself
+   (app.css). */
+.page-pane-sticky:where(:hover) {
+  scrollbar-color: var(--borderControl) transparent;
+}
+/* Chrome and Safari draw this 6px bar only while both standard properties are
+   `auto`. The hover selector outranks the shell's `*:hover` rule (app.css),
+   which would set them again. Firefox skips this block and keeps a thin bar. */
+@supports selector(::-webkit-scrollbar) {
+  .page-pane-sticky,
+  .page-pane.page-pane-sticky:hover {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  .page-pane-sticky::-webkit-scrollbar {
+    width: 6px;
+  }
+  /* The track stops short of the pane's rounded corners. */
+  .page-pane-sticky::-webkit-scrollbar-track {
+    margin: var(--r-lg) 0;
+  }
+  .page-pane-sticky::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  .page-pane-sticky:hover::-webkit-scrollbar-thumb {
+    background: var(--borderControl);
+  }
+  .page-pane-sticky::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+}
