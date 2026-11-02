@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
 import { HowItStands } from "../../design-system/howitstands";
-import { type ReadingTone, statTone } from "../../design-system/readingtone";
+import { statTone } from "../../design-system/readingtone";
 import { StandingDims } from "../../design-system/standingdims";
 import { StrengthRing } from "../../design-system/standingring";
 import { StandingTimeline } from "../../design-system/standingtimeline";
@@ -12,7 +12,7 @@ import { contactTabRoute } from "../../lib/contacttab";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { activityMarks } from "../../lib/standingmarks";
-import { changeUnder, contactDims, contactVerdict } from "./contactstanding";
+import { contactDims, contactVerdict } from "./contactstanding";
 import { type ContactPeeks, contactPeeks } from "./contactstanding.peeks";
 import {
   type ContactFigure,
@@ -25,6 +25,7 @@ import { strengthSentence } from "./contactstrengthsentence";
 import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 
 /**
  * How the contact stands: the verdict over the strength ring and three
@@ -53,7 +54,7 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
         <StrengthHero
           view={view}
           sentence={verdict.sentence}
-          tone={verdict.tone}
+          change={verdict.change}
         />
       }
       dims={
@@ -113,13 +114,18 @@ function openFigure(contactId: string, figure: ContactFigure) {
   }
 }
 
-// The caption is the newest change of band that agrees with the heading,
-// unless the verdict already says it.
+// The caption is the change the verdict's sentence was read under, unless the
+// sentence already says it. It is taken from the verdict, never picked again,
+// so the two can never point opposite ways.
 function StrengthHero({
   view,
   sentence,
-  tone,
-}: Readonly<{ view: Contact360; sentence?: string; tone: ReadingTone }>) {
+  change,
+}: Readonly<{
+  view: Contact360;
+  sentence?: string;
+  change?: RelationshipChange;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -127,7 +133,6 @@ function StrengthHero({
   if (!strength) {
     return null;
   }
-  const change = changeUnder(view, tone);
   const caption = change ? changeSentence(change, t) : undefined;
   return (
     <div className="pe-standing-hero">

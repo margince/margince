@@ -176,6 +176,11 @@ describe("contactVerdict", () => {
       ],
       "The relationship cooled from strong to moderate.",
     ],
+    [
+      "re_engaged",
+      [{ kind: "went_quiet", at: AS_OF, days: 45 }],
+      "No activity for 45 days.",
+    ],
   ])(
     "puts no contrary change under the %s heading",
     (rule, changes, contrary) => {
@@ -194,6 +199,8 @@ describe("contactVerdict", () => {
     },
   );
 
+  // The wire orders changes by consequence, not by time, so the newest one
+  // sits last here and the oldest agreeing one first.
   it("takes the newest change that agrees with the heading", () => {
     const verdict = contactVerdict(
       {
@@ -202,15 +209,21 @@ describe("contactVerdict", () => {
         strength: strength("moderate", 54),
         relationship_changes: [
           {
+            kind: "cooled",
+            at: "2026-07-01T09:00:00Z",
+            from_bucket: "strong",
+            to_bucket: "moderate",
+          },
+          {
             kind: "warmed",
-            at: AS_OF,
+            at: "2026-08-12T09:00:00Z",
             from_bucket: "weak",
             to_bucket: "moderate",
           },
           {
             kind: "cooled",
-            at: AS_OF,
-            from_bucket: "strong",
+            at: "2026-08-10T09:00:00Z",
+            from_bucket: "moderate",
             to_bucket: "weak",
           },
         ],
@@ -218,7 +231,7 @@ describe("contactVerdict", () => {
       t,
     );
     expect(verdict?.sentence).toBe(
-      "The relationship cooled from strong to weak.",
+      "The relationship cooled from moderate to weak.",
     );
   });
 
