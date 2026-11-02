@@ -41,6 +41,7 @@ var memberReferences = map[string]memberReference{
 	"activity.host_user_id":                    {disposition: referenceRetain},
 	"activity.invitation_sender":               {disposition: referenceRetain},
 	"activity.sent_by_colleague":               {disposition: referenceRetain},
+	"activity_reminder_delivery.delivered_to":  {disposition: referenceRetain},
 	"activity.source_author_id":                {disposition: referenceRetain},
 	"activity_participant.roster_seat":         {disposition: referenceRetain},
 	"activity_participant.user_id":             {disposition: referenceRetain},

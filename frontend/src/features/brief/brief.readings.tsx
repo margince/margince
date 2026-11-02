@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { StatCard } from "../../design-system/atoms";
+import { Skeleton, StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { useTooltip } from "../../design-system/tooltip";
 import { floorFigure, readsAsFloor } from "../../format/figure";
@@ -335,6 +335,27 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         />
       </StatStrip>
     </section>
+  );
+}
+
+/** One slot per reading the strip above draws, in its order. */
+export const BRIEF_READING_SLOTS = [
+  "urgent",
+  "meetings",
+  "leads",
+  "risk",
+  "decisions",
+] as const;
+
+/** The strip's room while the day is read: its own plate, one reading card's
+ *  height per slot, so what stands under it does not move when it lands. */
+export function BriefReadingsPending() {
+  return (
+    <StatStrip>
+      {BRIEF_READING_SLOTS.map((slot) => (
+        <Skeleton key={slot} width="100%" height="5.5rem" />
+      ))}
+    </StatStrip>
   );
 }
 

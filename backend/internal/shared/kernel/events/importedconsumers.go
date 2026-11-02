@@ -42,6 +42,7 @@ type ImportedDecision struct {
 const ExtensionGroupPrefix = "cg:ext-"
 
 var importedDecisions = map[string]ImportedDecision{
+	"cg:deal-refile":        {KeepImported, "recent captured correspondence follows imported deal and contact facts through the same attribution rule"},
 	"cg:context-graph":      {KeepImported, "embeds and indexes the record, and imported history belongs in the graph"},
 	"cg:read-model":         {KeepImported, "a projection holds every deal, however it arrived"},
 	"cg:audit-stream":       {KeepImported, "the audit slice records every event"},

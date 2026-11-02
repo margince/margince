@@ -329,22 +329,6 @@ function CaptureHealthBody({
   const { locale } = useLocale();
   return (
     <>
-      <PanelGroupHead title={t("captureHealth.sweeps")} level="h3" />
-      <PanelBody>
-        <PanelIntro>{t("captureHealth.sweepsSub")}</PanelIntro>
-      </PanelBody>
-      <DataTable
-        bleed
-        fold
-        label={t("captureHealth.sweeps")}
-        columns={sweepColumns(health, t, plural, locale, zone)}
-        rows={[...health.sweeps]}
-        rowKey={(sweep) => sweep.sweep}
-      />
-      <CaptureConnectionsHealth
-        rows={health.connection_concerns ?? []}
-        zone={zone}
-      />
       {health.mailboxes.length > 0 && (
         <>
           <PanelGroupHead title={t("captureHealth.mailboxes")} level="h3" />
@@ -361,6 +345,22 @@ function CaptureHealthBody({
           />
         </>
       )}
+      <PanelGroupHead title={t("captureHealth.sweeps")} level="h3" />
+      <PanelBody>
+        <PanelIntro>{t("captureHealth.sweepsSub")}</PanelIntro>
+      </PanelBody>
+      <DataTable
+        bleed
+        fold
+        label={t("captureHealth.sweeps")}
+        columns={sweepColumns(health, t, plural, locale, zone)}
+        rows={[...health.sweeps]}
+        rowKey={(sweep) => sweep.sweep}
+      />
+      <CaptureConnectionsHealth
+        rows={health.connection_concerns ?? []}
+        zone={zone}
+      />
     </>
   );
 }

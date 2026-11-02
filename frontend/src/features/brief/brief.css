@@ -257,6 +257,18 @@
 .brief-morning .glance-greeting {
   font: var(--fontDisplayLarge);
 }
+/* Held while the day is read: one line, two at phone width. Holding the
+   clamp's four would drop the page each time the agenda is short. */
+.glance-sentence-pending {
+  display: flex;
+  align-items: center;
+  min-block-size: 1lh;
+}
+@media (max-width: 600px) {
+  .glance-sentence-pending {
+    min-block-size: 2lh;
+  }
+}
 .brief-morning .glance-sentence {
   font: var(--fontLead);
   max-width: none;
