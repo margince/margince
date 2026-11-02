@@ -136,6 +136,9 @@ export const TasksTabOnPhone: Story = {
     </StoryProviders>
   ),
   play: async ({ canvasElement }) => {
+    // A folded table hides its headings, so an unfolded one fails here first.
+    const head = canvasElement.querySelector("thead")?.getBoundingClientRect();
+    await expect(head?.height).toBeLessThanOrEqual(1);
     const titles = canvasElement.querySelectorAll('[data-fold="title"]');
     await expect(titles.length).toBe(3);
     for (const title of titles) {
