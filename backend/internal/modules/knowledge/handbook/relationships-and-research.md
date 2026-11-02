@@ -24,7 +24,7 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
-- **Recency** is cut by half every 30 days since the contact last wrote, met or spoke with you. Your own mail they have not answered does not reset it.
+- **Recency** is cut by half every 30 days since the contact last wrote to you or had a meeting or call with you. Your own mail they have not answered does not reset it.
 - **Frequency** counts up to 20 interactions in 90 days; any more add
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
