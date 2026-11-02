@@ -10,7 +10,7 @@
 //     made by colleagues and by background work;
 //   - the access fence has not moved since its own read began. Every write that
 //     can take a record out of somebody's reach advances home_read_fence through
-//     a trigger, so no writer can forget it (migration 1793559778);
+//     a trigger, so no writer can forget it (migration 1793594630);
 //   - no record grant it was assembled under has expired, since expiry writes
 //     nothing;
 //   - the walk its first page started can still be resumed;
