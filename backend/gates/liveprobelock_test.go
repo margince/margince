@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -49,13 +50,25 @@ const (
 	// because it discharges the lock too, it satisfies both halves below.
 	liveProbe     = "EnsureWritableLive"
 	liveProbeHeld = "HoldWritableLive"
-	subjectLock   = "LockSubjectLive"
+	// A deal room decides a buyer may write from the room's STANDING rather
+	// than from a row's liveness, so neither name above reaches it.
+	liveProbeStanding = "readStanding"
+	subjectLock       = "LockSubjectLive"
 )
 
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms:Store.OpenThread": "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
 	"internal/modules/dealrooms:Store.Reply":      "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
+
+	// The buyer side, which the gate could not see until it read the standing
+	// probe. Both carry threadAuthor{participantID}, so each can leave a
+	// comment an erasure already deleted.
+	//
+	// Locking the subject is what they owe and cannot yet do. A buyer seat may
+	// hold no contact row, so nothing names a subject to lock.
+	"internal/modules/dealrooms:Store.ReplyAsBuyer":    "waits on #6898: a buyer seat may hold no contact row, so the subject lock has nothing to name until the seat itself becomes lockable",
+	"internal/modules/dealrooms:Store.OpenBuyerThread": "the same, on the opening comment rather than the reply, and found by widening the probe the gate reads",
 
 	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
 })
@@ -72,14 +85,20 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 
 	var findings []string
 	probed, locked := 0, 0
-	for _, dir := range moduleDirsWith(t, "WritableLive") {
+	// Named, not derived, and the derivation was measured rather than assumed.
+	// Enrolling every writer of an erasure-cleared table instead reaches 282
+	// functions, so the narrowing to a decide-then-write probe is what makes
+	// the gate answerable. The probes themselves share no marker to key on:
+	// one asks whether a row is live, the other whether a room still is.
+	for _, dir := range moduleDirsWith(t, "WritableLive", "readStanding") {
 		graph := packageCallGraph(t, dir)
 		for name := range graph {
 			// Through reaches, which reads identifiers rather than call
 			// edges: both of these are cross-package, and packageCallGraph
 			// records a selector call as an edge only when its base is the
 			// receiver. The Sel is an identifier either way.
-			if !reaches(graph, name, liveProbe) && !reaches(graph, name, liveProbeHeld) {
+			if !reaches(graph, name, liveProbe) && !reaches(graph, name, liveProbeHeld) &&
+				!reaches(graph, name, liveProbeStanding) {
 				continue
 			}
 			probed++
@@ -126,7 +145,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 // the tree rather than listed: a module that starts live-probing joins this
 // census without anybody editing it. The caller passes the SHARED substring of
 // the two probe spellings, so neither has to be enumerated here.
-func moduleDirsWith(t *testing.T, identifier string) []string {
+func moduleDirsWith(t *testing.T, identifiers ...string) []string {
 	t.Helper()
 	paths, err := filepath.Glob("internal/modules/*/*.go")
 	if err != nil {
@@ -141,7 +160,9 @@ func moduleDirsWith(t *testing.T, identifier string) []string {
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}
-		if strings.Contains(string(source), identifier) {
+		if slices.ContainsFunc(identifiers, func(id string) bool {
+			return strings.Contains(string(source), id)
+		}) {
 			dirs[filepath.ToSlash(filepath.Dir(path))] = true
 		}
 	}
