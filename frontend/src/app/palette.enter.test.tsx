@@ -7,8 +7,8 @@ import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
 
 // Where Enter lands when the reader has not picked a row. A screen the words
-// match keeps it (palette.test.tsx holds that); a record found by search takes
-// it only when the words name it whole, and the results page otherwise. A row
+// match keeps it; palette.test.tsx holds that. A record found by search takes
+// it only when the words name it whole; otherwise the results page does. A row
 // that runs leaves the palette closed.
 
 afterEach(() => {
