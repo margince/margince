@@ -22,8 +22,8 @@ import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { appendedNotes } from "./logactivity.openmeeting";
 
-// A meeting logged on a record that has a booked meeting owing its outcome is
-// asked about: Yes writes the notes and the outcome on that meeting, No logs a
+// A meeting logged on a record where a booked meeting owes its outcome is
+// asked about. Yes writes the notes and the outcome on that meeting. No logs a
 // separate one.
 
 afterEach(() => {

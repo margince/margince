@@ -45,7 +45,7 @@ export function openMeetingKey(entityType: EntityKind, entityId: string) {
 
 /**
  * The meeting on this record that still owes its outcome and that the reader
- * may answer, within a day of the chosen day; the one closest to it.
+ * may answer. Of those within a day of the chosen day, the closest wins.
  * `enabled` is false for every case the form does not ask about.
  */
 export function useOpenMeetingOnDay(
@@ -150,10 +150,11 @@ export function appendedNotes(
  * Records the typed entry on the open meeting, and returns the activity the
  * picked files belong to.
  *
- * A meeting the calendar manages keeps its own subject and notes, so the notes
- * become a note on the record, written first and under the form's key: a retry
- * after a refused version replays that note rather than making a second. Every
- * other meeting takes the notes after its own, with its outcome, in one write.
+ * A meeting the calendar manages keeps its own subject and notes. So the notes
+ * become a note on the record, written first and under the form's key. A retry
+ * after a refused version then replays that note rather than making a second.
+ * Every other meeting takes the notes after its own, with its outcome, in one
+ * write.
  */
 export async function recordOnMeeting(
   input: Readonly<{
