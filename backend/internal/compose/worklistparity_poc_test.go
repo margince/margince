@@ -180,7 +180,7 @@ func TestWorklistParityPoC(t *testing.T) {
 			took[len(took)/2].Round(time.Millisecond), took[len(took)-1].Round(time.Millisecond))
 	}
 
-	if path := os.Getenv("POC_PARITY_OUT"); path != "" {
+	if path := os.Getenv("POC_PARITY_OUT"); path != "" && !t.Failed() {
 		recorded, err := json.Marshal(answers)
 		if err != nil {
 			t.Fatal(err)

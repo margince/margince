@@ -163,6 +163,107 @@ Some of those maps have a default (`categoryOfSource` falls back to `system`),
 so a forgotten entry fails no test. And an extension (`extensions/<unit>/`)
 cannot put real work on the list at all: it can only send a plain notice.
 
+
+### 1.6 How a Home read grows
+
+The question: as mail keeps arriving, how long until a Home read takes more
+than 10 s on a database server with 4 GB of memory?
+
+The setup, built to look like a small cloud database:
+
+```
+ Postgres 16, 4 GB of memory (its file cache included), 2 CPUs
+ shared_buffers 1 GB · effective_cache_size 2 GB · work_mem 4 MB · JIT off
+ disk reads and writes capped at 3,000 per second
+ a proxy in front that holds each request 1, 2 or 3 ms: one round trip each
+ the bench data at scale 0.1 (15 members, 42,500 emails a year), grown a year
+ at a time for every mailbox; Home's read (Today, mine and team, pages 1 and 2)
+```
+
+Older history was made two ways, because real history lies between them:
+
+```
+ shape A  "same people"  old mail stays on today's contacts     (upper bound)
+ shape B  "new people"   each old year goes to cloned contacts  (lower bound)
+```
+
+The method is a loop: state a theory, predict a number before measuring it,
+then measure. A theory that misses is dropped.
+
+Theory 1: once the data outgrows memory, reads fall off a cliff. Wrong.
+
+```
+ shape B, warm      DB size   p50      p90      worst    worst, cold cache
+ 1 year             0.7 GB   1.43 s   2.46 s   3.5 s    3.7 s
+ 2 years            1.3 GB   1.49 s   2.38 s   3.4 s    4.3 s
+ 4 years            2.4 GB   1.57 s   2.77 s   3.9 s    5.8 s
+ 8 years            4.6 GB   1.66 s   3.44 s   4.4 s    8.7 s
+ shape A, 4 years   2.4 GB   1.97 s   3.23 s   4.3 s
+```
+
+Eight times the mail adds 16% to p50 on shape B. Most lanes read by owner and
+time, so old mail is rarely read. Shape A grows faster, mostly in
+`relationship_decay` (441 ms against about 180 ms on shape B at 4 years).
+
+Theory 2: a read costs its database work plus one round trip per request.
+Held. Each read was fitted on 0, 1 and 3 ms and predicted at 2 ms before the
+2 ms run: over 30 reads the prediction was off by 4.2% on average, inside the
+noise of two identical runs.
+
+```
+ Home read ≈ database work + round trip × round trips per read
+             (grows slowly with history)   (80 to 600 for a read with no open cases)
+```
+
+Theory 3: each open duplicate case in a reader's view adds a fixed number of
+round trips, up to the 200 cases the lane reads (#9950). Held. Three reps were
+given 1,200, 450 and 300 open pairs, and two more 50 and 100, with the numbers
+predicted first:
+
+```
+                         round trips per read
+                         predicted   measured
+ rep with 50 open pairs     830         786
+ rep with 100 open pairs  1,560       1,531
+ any view with ≥ 200 cases   —     2,350 – 2,660   a manager's team view counts the team's
+```
+
+So each case costs about 10 round trips and about 20 ms of database work, and
+past 200 cases the cost stops growing. With 1,950 open pairs on 8 years of
+shape B:
+
+```
+ round trip     p50      p90      worst
+ none           1.95 s   6.20 s   7.2 s
+ 1 ms           2.41 s   8.85 s  10.3 s
+ 2 ms           2.98 s  11.48 s  12.3 s
+ 3 ms           3.50 s  13.73 s  15.1 s
+```
+
+The second pass of a long-running process, with every statement already
+prepared, makes 338 round trips at the median against 397 in a fresh process,
+and the same 600 at most. The round trips are not a test artefact.
+
+What crosses 10 s, then:
+
+- Open duplicate cases, now. At a 3 ms round trip each case costs about 50 ms.
+  A rep's read starts near 2.5 s, so about 150 open cases put it over 10 s. A
+  manager's team view starts near 5 s and adds the whole team's cases, so
+  about 100 do. How long that takes is how fast cases are left open: at one
+  case a day left in a manager's view, about 100 days.
+- History, slowly. With no open cases, at 3 ms the worst read was 5.6 s after
+  8 years on shape B and 6.0 s after 4 years on shape A: about 0.1 to 0.3 s a
+  year on the worst read. Ten seconds is past the 8 years and 4.6 GB measured,
+  so any date for it is an extrapolation; no cliff showed inside that range.
+- The address + time index with kept plans (2.5), at 8 years and 3 ms: p50
+  2.73–3.06 → 2.06 s, worst 5.6–8.6 → 3.9–4.1 s over two runs each. It buys
+  seconds on reads that were already under 10 s. Round trips set the 10 s
+  line, and that is what the baseline (2.15) budgets.
+
+Limits: synthetic history copies one year of bench mail; one machine; one
+thread, no concurrent readers; the proxy holds each chunk the client sends,
+which is one per request for these reads.
+
 ---
 
 ## Part 2. How the new system works
@@ -196,7 +297,7 @@ cannot put real work on the list at all: it can only send a plain notice.
 | Piece | What it does | Built on the branch? |
 |---|---|---|
 | Kind catalog | One YAML file says what each kind of work is; extensions add to it | YAML, loader, checks and the frontend table: yes. Backend table: next |
-| Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | Yes (switched on by the test; the production hook is next) |
+| Plan reuse | Postgres plans each statement once and reuses the plan for the whole read | The helper and five reads that use it are on `main`; the branch adds `PlanEachBind` and a test-only switch for the whole read. Production hook and census gate: next |
 | Identity check once | The "who am I" list is computed once per statement, not once per row | Yes |
 | Scroll tail and waiting statements | Their cost is planning the waiting statements; a kept plan removes it once an address + time index bounds the seat's mail | Measured and tested; index next |
 | A read that only reads | The Worklist read stops writing, so it can be prepared ahead, cached safely and run on a replica | Next |
@@ -443,12 +544,12 @@ address + time form, with and without kept plans. At full scale (3.2) it is
 270 of 270.
 
 What else grows with history. The same test showed most of the extra time
-outside the waiting stage. Rep-a1's whole read went from 1.85 s to 5.6 s:
-`relationship_decay` from 258 ms to 3,235 ms and `row_names` from 107 ms to
-591 ms. Every other member's read also got 0.5 to 1.5 s slower. Lanes that
-look for a contact's last touch read the whole history, so they need the same
-treatment: an index that starts from the contact and the time. This is a
-measured direction, not built.
+outside the waiting stage: `relationship_decay` and `row_names` grew most.
+That copy put 30 years of mail on the same contacts, which no real team has,
+so its figures overstate the effect; 1.6 measures two realistic shapes on a
+4 GB server. What holds: lanes that look for a contact's last touch grow with
+each contact's history, so they need an index that starts from the contact
+and the time. Measured, not built.
 
 What a product change needs:
 
@@ -588,7 +689,7 @@ into a separate store needs extra code for every line above, for every kind
 - A source that failed is never recorded as the truth. At full scale the
   manager's `all` read takes 5.5 to 6.2 s, and once its waiting lane ran past
   its 4 s budget: the recorded page had no waiting customers, and every replay
-  "differed". The check now refuses an answer with a failed source.
+  "differed". A run with a failed source now fails and writes no truth file.
 - File: `backend/internal/compose/worklistparity_poc_test.go`. In production it
   becomes an integration test that takes its views, scopes and filters from the
   API contract, so it fails if coverage shrinks.
@@ -732,7 +833,9 @@ How often the cache can answer, from the code and a test:
   sender after the capture transaction commits
   (`capture/sinkensure.go`), so the mail is unlinked for a moment, and linking
   it moves the shared fence (`home_read_fence_first_link`). A PoC test
-  (`homefence_actions_poc_test.go`) drives the real code: each captured mail
+  (`homefence_actions_poc_test.go`) seeds a mail and runs the real link step
+  that capture runs after commit (`contacts.EnsureCounterparty`); it logs the
+  fence and asserts nothing yet. Each captured mail
   moves the fence by one, also from a known sender. Creating contacts,
   companies, deals, notes and tasks, renaming and completing a task, and
   filing a note on a deal move it by zero; archiving a note moves it by one.
@@ -752,35 +855,117 @@ Ways to raise the hit rate, none built:
 2. A fence per reader for this case: only the readers who could see the
    unlinked mail lose their copy, through `Forget`, not every member.
 3. Skip statements that changed no row: a trigger with a transition table
-   fires only when a row changed.
+   still fires per statement, so its body must test that the table holds a
+   row, as `home_read_fence_first_link` already does.
 4. Count hits and misses on `/metrics`, so the rate is measured, not modelled.
 
-The pull request does not give a hit rate. The daily bench on the PoC branch,
-which carries `main` with the cache, now shows both sides (3.2): a repeated
-Home call is answered in 5 to 13 ms, and the calls the cache does not answer
-still cost what the engine costs. So the bench's repeated-call rows no longer
-measure the engine; the rows to watch are the ones the cache does not answer.
+The pull request does not give a hit rate. In the daily bench (3.2) the
+`worklist` rows send Home's own request (`view=today`) and are answered from
+the cache in 5 to 13 ms when repeated, so they no longer measure the engine.
+The `home_worklist` rows send no view (`daily_flows_bench_test.go`), so they
+are not Home's request and never use the cache; they still time the engine.
+The bench should send `view=today` there, or name the row for what it reads.
 
 ### 2.14 Order of work
 
+Ordered by what 1.6 measured and by the independent review (Part 3, Review): what crosses 10 s
+first, and what makes the rest safe to change.
+
 ```
- 1  plan reuse + identity once      proven: same answers; shared by every kind
- 2  #9950 contact cases             the largest single cost for members with many duplicates
- 3  a seat's mail by address +       tested: bounded at 30× history, 270/270
-    time (column, index, data task)   identical at full scale; needed before 4
- 4  waiting statements keep a plan  tested: rep Home call −26% at full scale with
-                                      whole-read reuse, 270/270 identical
- 5  last-touch lanes by contact +    relationship_decay 0.26 → 3.2 s at 30× history;
-    time                             measured, not built
- 6  a read that only reads          unlocks the cache warm-up, a replica, parallel lanes
- 7  Home cache: link mail in the    one captured mail ends every member's copy (2.13)
-    capture transaction, or a
-    fence per reader
- 8  kind catalog: backend table,    growth and extensions; no speed effect
-    extension fragments
+ 1  identity check once            small, answers proven identical; ship alone
+ 2  tail stage metrics, and the    three lines; makes the production stage metrics and
+    bench's home_worklist row      the bench tell the truth
+ 3  #9950 contact cases (B1)       the one rule that crosses 10 s; owner assigned
+ 4  round-trip budget (B3)         moves the 10 s line most; measure a batched read first
+ 5  Home cache: trigger census,    guards code already shipped; then the capture link
+    hit/miss counters (B6)         or a fence per reader
+ 6  whole-read plan reuse (B4)     after the census of every statement and the memory
+                                   figures; behind a setting, read the stage metrics
+ 7  seat mail by address + time    one change with the kept waiting plans: both sides of
+    + kept waiting plans (B2, B4)  one wire; column, index, data task, drift gate
+ 8  last touch by contact + time   shape A in 1.6
+ 9  a read that only reads         small parts (base currency, brief opened) when near
+10  kind catalog                   loader, generator and gate, without the push vocabulary
 ```
 
 The ground-truth check runs before each step lands.
+
+### 2.15 A baseline that does not grow
+
+1.6 shows what a Home read pays for: database work that grows with what a lane
+reads, and one round trip per request. The baseline turns each into a budget
+that a test holds, for every kind at once.
+
+```
+ today                                     baseline
+ a lane reads items to count them          a lane reads its page; counts come from a count
+ a lane may read a whole history           every read starts from (who, when) on an index
+ 80 to 2,660 round trips per Home read     a budget of round trips per read, held by a test
+ plans made on every call                  stable statement text, one plan per connection
+ a lane past its budget drops silently     a lane past its budget is counted and named
+ one shared fence ends every cached copy   only the readers a write narrows lose their copy
+ growth found by accident                  growth measured by a loop that predicts first
+```
+
+B1. A read costs what it shows, not what exists. Each lane reads the rows its
+page can show (a lane's page is 10) and takes its figure from a count query.
+Today the duplicate lane reads up to 200 cases to show one count (#9950), and
+that one rule is what crosses 10 s in 1.6. Test: every lane runs a fixed
+number of statements at N and at 10N rows, like
+`TestCompany360CostDoesNotGrowWithTheAccount`.
+
+B2. Every read starts from who and when. Each lane's rows are reached through
+an index on its owner or seat and its time, so a lane reads its horizon and
+never the history behind it:
+
+```
+ kind                 who                 when            index today
+ customers waiting    seat's address      message time    missing (2.5: address + time)
+ last touch, decay    contact             activity time   missing (1.6, shape A)
+ tasks                assignee            due date        idx_activity_tasks
+ meetings             host                start           idx_activity_meeting_host
+ deals at risk        owner               expected close  to check
+ decisions            owner, open         created         to check
+```
+
+Test: on the grown bench, each lane reads no more than a fixed multiple of
+the rows it returns (`EXPLAIN (ANALYZE)` rows read against rows returned).
+
+B3. A budget of round trips. A Home read sends its lanes' statements in
+batches: pgx sends a batch of queries in one round trip, inside the same
+snapshot. A lane that may fail keeps its savepoint inside the batch. Reads
+that name rows by id read the whole page in one statement per kind, not one
+per row. A target to argue: 50 round trips per Home read, against 80 to 2,660
+today. At a 3 ms round trip that is 0.15 s instead of up to 8 s. Test: the
+stage metrics already count statements; an integration test fails a read past
+the budget. Not built or measured yet: the largest change here, and the one
+that moves the 10 s line most.
+
+B4. One plan per connection. Statement text stays the same between calls (no
+values written into the text, caps bound as values), so a prepared statement
+keeps its plan. Generic plans for a whole read only after a census of every
+statement of a full read finds none that loses an index (2.3, and the independent review).
+`PlanEachBind` stays only where a statement needs its values to stop early,
+and B2 removes most of those cases.
+
+B5. Budgets fail loud. A lane past its time budget is counted on `/metrics` and
+named on the page, and the ground-truth check refuses a run with a failed
+source (2.9). At full scale a manager's `all` view lost its waiting customers
+this way with no sign but the page.
+
+B6. A cached Home answer ends only for whom it changed. Captured mail is linked
+in its capture transaction, or the first link ends only the copies of readers
+who could see the mail (2.13). The fence triggers come from a census of the
+access rules, not a hand list.
+
+B7. Growth is tested, not met. The loop of 1.6 runs as a bench: grow history,
+add skew (open cases, a large mailbox), add a round trip, fit the model,
+predict the next step, and fail when the read that crosses 10 s comes closer.
+
+How the kinds of 1.1 map onto the baseline: each keeps its lane and its rules,
+and gains a bound. Customers waiting needs B2 (address + time) and B4.
+Duplicates need B1 (#9950). Relationships need B2 (contact + time). Every kind
+gains B3, because round trips are shared machinery, like planning.
 
 ---
 
@@ -799,7 +984,7 @@ that member may not use).
 ```
                                 today (main)   + identity   + identity       change
                                                check once   + plan reuse
- rep, Home / Worklist call        1.33 s       1.29 s       1.01 s          −24%
+ rep, Home / Worklist call        1.33 s       1.29 s*      1.01 s          −24%
  rep, relationships panel         1.04 s       0.99 s       0.68 s          −35%
  rep, Decisions / System         ~0.93 s                   ~0.58 s          −38%
  manager, team view               1.55 s       1.50 s       0.85 s          −45%
@@ -808,6 +993,10 @@ that member may not use).
 
  identical to today:              269/269      269/269      269/269
  plan modes checked: whole read generic → waiting scan custom → generic again
+
+ * within noise: two runs of main differ by 4 to 5% (1.39 against 1.33 s).
+   The identity change matters on large histories, not on this data.
+ manager, all is one call (n=1); its change is not a measured effect.
 ```
 
 PERF-8 asks for under 1 s. With plan reuse and the identity change, the rep's
@@ -830,9 +1019,9 @@ from 2.16 to 1.59 s, so PERF-8 needs more than plan reuse.
                                  main merged in
    worklist, rep, repeated ....... 2.02 s              13 ms    cache hit
    worklist, manager, repeated ... 0.66 s               5 ms    cache hit
-   home_worklist, rep ............ 1.32 s            1.54 s     not a cache hit
-   home_worklist, manager ........ 0.77 s            0.77 s     not a cache hit
-   worklist_team, manager ........ 1.62 s            1.81 s     not a cache hit
+   home_worklist, rep ............ 1.32 s            1.54 s     no view: never cached
+   home_worklist, manager ........ 0.77 s            0.77 s     no view: never cached
+   worklist_team, manager ........ 1.62 s            1.81 s     team scope: never cached
    first load of the day, rep .... 3.07 s            3.22 s     empty caches
 
  scroll tail (2.5): ran on 21 of 31 pages, mean 0.46 s when it ran
@@ -889,6 +1078,22 @@ faults. The copy-based versions failed with blockers (wrong access gate, a
 capped rebuild, a lock taken in the wrong order). The current approach passed
 with wording fixes, which are applied.
 
+A later review read the whole branch, the raw logs and the plans, and re-ran
+the identity clause and the seat-mail scan on the bench databases. Its
+findings, all taken in:
+
+- Every speed effect it re-checked reproduced; the ground-truth check is the
+  strongest part of the work.
+- Some figures sat inside the noise (4 to 5% between two identical runs) or
+  rested on one call; they are marked so in 3.1.
+- The `home_worklist` bench row is not Home's request (2.13).
+- The 30× history copy reused the same contacts; 1.6 now brackets real history
+  with two shapes.
+- Whole-read plan reuse needs a census of every statement of a full read, and
+  memory figures for kept plans per connection, before it ships (2.14 step 6).
+- The address + time column needs a writer rule and a drift gate, because a
+  missed `occurred_at` update would drop mail silently.
+
 ### 3.5 Known limits and what is not proven yet
 
 - Speed on large data: the bench at full scale (scale 1). A generic plan
@@ -900,9 +1105,8 @@ with wording fixes, which are applied.
 - The check's coverage: filters beyond each view's own; the small writes a read
   makes (snoozes returning, brief marked as opened, walk freeze); more hard
   cases in the bench data.
-- The daily bench figures in 3.2 are one run each. The rows the cache does not
-  answer did not get faster after the merge; whether they got slower needs more
-  runs.
+- The daily bench figures in 3.2 are one run each, and every timing here is
+  one read per call in one thread: no p95 under concurrent load.
 - The kept plan and the address + time form (2.5) were tested on bench data at
   scale 0.1 and 1, and on one seat with 30× synthetic history. Synthetic
   history copies one seat's mail; real history differs in links and threads.
@@ -926,8 +1130,9 @@ with wording fixes, which are applied.
  e86f3e3f  main merged in: the Home cache (#9915) and the waiting scan's bound (#9961)
  3c55df08  tail stages in the stage metrics; the tail measured (2.5)
  4e092c8e  waiting statements with a kept plan, tested and reverted (2.5)
- later     address + time form tested at 30× history and full scale; Home
+ 3d8e381e  address + time form tested at 30× history and full scale; Home
            cache fence census; the check refuses a failed source
+ later     growth on a 4 GB server (1.6), the baseline (2.15), review fixes
  later     this proposal
 ```
 
@@ -945,6 +1150,8 @@ Files that matter:
 | `backend/internal/compose/worklistparity_poc_test.go` | The ground-truth check |
 | `backend/internal/compose/worklisttail_poc_test.go` | The scroll tail's cost per stage (2.5); `POC_ALL_STAGES` prints every stage for one member |
 | `backend/internal/compose/integration/homefence_actions_poc_test.go` | How everyday actions and capture move the Home fence (2.13) |
+| `poc/growth/grow.sql` | The growth loop of 1.6: one more year of mail per call, in either shape |
+| `poc/growth/delayproxy.go` | A TCP proxy that holds each request for a set delay: the round trip of 1.6 |
 | `backend/internal/compose/worklist*_poc_test.go` | The other measurements |
 | `backend/internal/modules/worklist/store.go` | The push experiment's store (3.3) |
 
