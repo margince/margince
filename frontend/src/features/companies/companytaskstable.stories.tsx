@@ -116,8 +116,8 @@ function brokenWords(root: Element): string[] {
   return broken;
 }
 
-// At a phone's width the badge and the snooze give way to the task's name, so
-// the name reads as whole words instead of one letter per line.
+// At a phone's width the badge and the snooze give way to the task's name. The
+// name reads as whole words, never one letter per line.
 export const TasksTabOnPhone: Story = {
   render: () => (
     <StoryProviders>
