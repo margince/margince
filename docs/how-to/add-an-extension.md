@@ -769,8 +769,9 @@ full request path in a log call. It cannot see what you send to other places.
 | `Shutdown` | When the process exits, so the unit can send what it still holds |
 
 A log record that carries a `panic` field describes a panic already handed to `Panic`, so do not report it
-twice. A panic that other code recovers by itself does not reach `Panic`. It reaches your `LogHandler` at
-`Error` level, and in no other way.
+twice. River's own job-panic line carries `panic_val` instead. It follows a panic already handed to `Panic`,
+so do not report it either. A panic that other code recovers by itself does not reach `Panic`. It reaches
+your `LogHandler` at `Error` level, and in no other way.
 
 A `Work` hook must call `run` in the call itself, not from another thread, and return what it returns. The work runs once even if the hook never calls
 `run`, or panics before it does. If the work panics, the panic reaches its caller as it was, so a job fails

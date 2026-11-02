@@ -68,8 +68,9 @@ type Instruments struct {
 	// extension job tick and an extension subscription delivery report too.
 	// A panic that other code recovers by itself reaches a unit only through
 	// its LogHandler, at Error level. Every site also logs its panic at Error
-	// with a "panic" attribute. A record with that attribute describes a
-	// panic already handed to Panic, so a unit must not report it twice.
+	// with a "panic" attribute. River's own job-panic line carries "panic_val"
+	// instead. A record with either attribute describes a panic already handed
+	// to Panic, so a unit must not report it twice.
 	Panic func(ctx context.Context, value any, stack []byte)
 	// Shutdown runs when the process exits, so a unit can send what it still
 	// holds. It gets a window of 2 seconds.
