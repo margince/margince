@@ -54,15 +54,17 @@ func timeoutOf(t *testing.T, kind string) time.Duration {
 }
 
 // A worker drops the lock before River records its snooze, so a row still
-// running inside its timeout may be a live run. A row past it, or with no
-// attempt time at all, is closed.
+// running inside its timeout plus the completion margin may be a live run. A
+// row past that cutoff, or with no attempt time at all, is closed.
 func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.T) {
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	timeout := timeoutOf(t, timedKind)
 	dead := seedRun(ctx, t, pool, timedKind, "running", timeout+time.Hour)
 	returning := seedRun(ctx, t, pool, timedKind, "running", time.Second)
-	fullBatch := seedRun(ctx, t, pool, timedKind, "running", timeout+time.Second)
+	cutoff := timeout + jobs.OrphanCompletionMargin
+	insideCutoff := seedRun(ctx, t, pool, timedKind, "running", cutoff-10*time.Second)
+	pastCutoff := seedRun(ctx, t, pool, timedKind, "running", cutoff+10*time.Second)
 	own := seedRun(ctx, t, pool, timedKind, "running", timeout+time.Hour)
 	queued := seedRun(ctx, t, pool, timedKind, "available", timeout+time.Hour)
 	other := seedRun(ctx, t, pool, untimedKind, "running", timeout+time.Hour)
@@ -75,11 +77,12 @@ func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.
 	if err != nil {
 		t.Fatalf("DiscardOrphanedRuns: %v", err)
 	}
-	if closed != 2 {
-		t.Errorf("closed %d rows, want 2", closed)
+	if closed != 3 {
+		t.Errorf("closed %d rows, want 3", closed)
 	}
 	for id, want := range map[int64]string{
-		dead: "discarded", unstamped: "discarded", returning: "running", fullBatch: "running",
+		dead: "discarded", unstamped: "discarded", pastCutoff: "discarded",
+		returning: "running", insideCutoff: "running",
 		own: "running", queued: "available", other: "running",
 	} {
 		if got := stateOf(ctx, t, pool, id); got != want {
@@ -108,9 +111,14 @@ func TestDiscardOrphanedRunsClosesEveryOtherRunningRowOfAKindWithNoTimeout(t *te
 }
 
 func TestDiscardOrphanedRunsRefusesAnUndeclaredKind(t *testing.T) {
+	ctx := t.Context()
 	_, pool := migratedAppPool(t)
-	if _, err := jobs.DiscardOrphanedRuns(t.Context(), pool, "orphan_test_kind", 1); err == nil {
+	stale := seedRun(ctx, t, pool, "orphan_test_kind", "running", 24*time.Hour)
+	if _, err := jobs.DiscardOrphanedRuns(ctx, pool, "orphan_test_kind", 1); err == nil {
 		t.Fatal("an undeclared kind has no timeout to judge its rows by, and was answered anyway")
+	}
+	if got := stateOf(ctx, t, pool, stale); got != "running" {
+		t.Errorf("a refused call left the undeclared kind's row %s, want running", got)
 	}
 }
 

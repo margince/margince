@@ -19,14 +19,14 @@ const orphanCompletionMargin = time.Minute
 // DiscardOrphanedRuns finalizes running rows of a kind left by a dead worker,
 // except the one named. The caller holds the kind's session lock.
 //
-// River records a snooze only after the worker drops that lock. So only a row
-// older than the kind's timeout plus orphanCompletionMargin is surely dead.
+// River records a snooze only after the worker drops that lock. So a row is
+// surely dead only when older than the kind's timeout plus
+// orphanCompletionMargin, or when it has no attempt time at all.
 func DiscardOrphanedRuns(ctx context.Context, pool *pgxpool.Pool, kind string, keep int64) (int64, error) {
 	spec, declared := SpecFor(kind)
 	if !declared {
 		return 0, fmt.Errorf("discarding orphaned %s runs: api/jobs.yaml does not declare the kind", kind)
 	}
-	// A running row with no attempt time has no live attempt to wait for.
 	tag, err := pool.Exec(ctx, `
 		UPDATE river_job SET state = 'discarded', finalized_at = now()
 		WHERE kind = $1 AND state = 'running' AND id <> $2
