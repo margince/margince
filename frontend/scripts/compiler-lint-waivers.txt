@@ -6,7 +6,6 @@
 # new finding instead.
 # Format: <count> <rule> <path>
 1 react-hooks/set-state-in-effect src/App.tsx
-3 react-hooks/refs src/app/account.tsx
 3 react-hooks/refs src/app/agent-edge.tsx
 2 react-hooks/set-state-in-effect src/app/agent-edge.tsx
 1 react-hooks/set-state-in-effect src/app/agentpanelframe.tsx
