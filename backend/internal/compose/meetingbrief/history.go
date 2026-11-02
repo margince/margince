@@ -58,11 +58,22 @@ type HistoryIn struct {
 	ThreadKey string
 	// OnDeal marks a conversation filed under the deal this brief is about.
 	OnDeal bool
+	// OtherDeal is the deal a conversation is filed under when that deal is
+	// not this brief's, and only when the caller may see that deal.
+	OtherDeal *FiledDeal
 	// Withheld says this caller is outside the activity's audience: the row
 	// happened, and what it says is not theirs to read. Subject and body are
 	// empty for such a row — not because it was empty, which is the confusion
 	// this field exists to prevent.
 	Withheld bool
+}
+
+// FiledDeal names another deal a conversation is filed under, and whether it
+// is open, won or lost. The plan model needs both to keep a lost deal's thread
+// out of this meeting's objective.
+type FiledDeal struct {
+	Name  string
+	State string
 }
 
 const historyQuery = `
@@ -71,8 +82,20 @@ const historyQuery = `
 	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
 	          SELECT 1 FROM activity_link dl
 	          WHERE dl.activity_id = a.id AND dl.deal_id = $%[3]d)) AS on_deal,
-	       (%[2]s) AS readable
+	       (%[2]s) AS readable,
+	       COALESCE(od.name, ''), COALESCE(od.status, '')
 	FROM activity a
+	-- Another deal the row is filed under, under the caller's deal scope. An
+	-- open one wins, so a thread on a live and a lost deal is named live.
+	LEFT JOIN LATERAL (
+	  SELECT fd.name, fd.status
+	  FROM activity_link ol
+	  JOIN deal fd ON fd.id = ol.deal_id AND fd.archived_at IS NULL
+	  WHERE ol.activity_id = a.id AND ol.deal_id IS NOT NULL
+	    AND ol.deal_id IS DISTINCT FROM $%[3]d::uuid AND %[10]s
+	  ORDER BY (fd.status = 'open') DESC, fd.id
+	  LIMIT 1
+	) od ON TRUE
 	WHERE a.archived_at IS NULL
 	  AND a.kind <> 'task'
 	  AND a.id <> $%[4]d
@@ -144,22 +167,33 @@ func (s *Service) readHistory(
 	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
 	attendeePos := arg(room.Room)
 	within := projectWithinPredicate("a", "hw", project, arg)
+	otherDeal, err := scopeFor(ctx, "deal", "fd", arg)
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
 		scope, readable, dealPos, roomPos, occurredday.WithinSQL("a", floor, opens), attendeePos, within, historyCap, happened,
+		otherDeal,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}
 	defer rows.Close()
 
+	return scanHistory(rows)
+}
+
+func scanHistory(rows pgx.Rows) ([]HistoryIn, error) {
 	var history []HistoryIn
 	for rows.Next() {
 		var row HistoryIn
 		var id ids.UUID
 		var readableRow bool
+		var filed FiledDeal
 		if err := rows.Scan(&id, &row.Kind, &row.Subject, &row.Direction,
-			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
+			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow,
+			&filed.Name, &filed.State); err != nil {
 			return nil, fmt.Errorf("read the account history: %w", err)
 		}
 		row.ID = id.String()
@@ -169,12 +203,23 @@ func (s *Service) readHistory(
 			// nothing and, per threads.go, does not shape the arc either.
 			row.Subject = ""
 		}
+		row.OtherDeal = otherDealOf(row, filed)
 		history = append(history, row)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}
 	return history, nil
+}
+
+// otherDealOf is the other deal a row may name. A row on this deal is about
+// this deal, whatever else it is filed under. A withheld row names nothing,
+// as it carries no subject.
+func otherDealOf(row HistoryIn, filed FiledDeal) *FiledDeal {
+	if row.Withheld || row.OnDeal || filed.State == "" {
+		return nil
+	}
+	return &filed
 }
 
 // withheldCount is how many conversations this caller may know happened but
