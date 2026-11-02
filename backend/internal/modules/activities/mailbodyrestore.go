@@ -63,9 +63,9 @@ func mailTextIsTheirsSQL(withSubject bool) string {
 // RestoreMailBodyTx writes a mail body re-derived from its stored original.
 // It writes nothing when the row changed since it was read, or when a member
 // ever edited its body: that text is theirs. The occurrence time stays, so the
-// mail keeps its age. The language and an automatic request verdict were read
-// from the old text. So the language is cleared, and the verdict is marked for
-// the next re-judgement. It answers the thread whose reading is now stale.
+// mail keeps its age. The language, the attention label and an automatic
+// request verdict were read from the old text. The first two are cleared, and
+// the verdict is re-judged.
 func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (bool, *string, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, nil, err
@@ -84,6 +84,9 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 	err := tx.QueryRow(ctx, `
 		WITH old AS (SELECT body_completeness, owed_verdict_ruleset FROM activity WHERE id = $1 AND restricted_at IS NULL)
 		UPDATE activity a SET body = $2, body_completeness = $3, language = NULL,
+		       -- A cleared label returns the row to the classify backlog. The stamp
+		       -- goes with it: activity_capture_label_stamped holds the two together.
+		       capture_label = NULL, capture_labeled_at = NULL,
 		       subject = COALESCE($6, a.subject),
 		       owed_verdict_ruleset = CASE WHEN `+humanReviewedOwedSQL("a")+` THEN a.owed_verdict_ruleset END
 		  FROM old

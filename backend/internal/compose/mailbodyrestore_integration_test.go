@@ -255,3 +255,81 @@ func placeStatutoryHold(t *testing.T, message ids.UUID) {
 		t.Fatal(err)
 	}
 }
+
+// A restore hands the classifier text it never saw, so the label it gave the
+// header-only body is no longer an answer about this message. Clearing it
+// returns the row to the backlog, which selects on capture_label IS NULL.
+func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
+	o := setupOwed(t)
+	o.now = clocktest.Now(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	ask := "Can we meet on Tuesday to sign?"
+	headerOnly := "From: pat@customer.example\nTo: " + o.seat
+
+	message := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signing", messageID: "restore-noise@customer.example",
+		body: readInFull(ask), encoding: "base64", authenticated: true, at: o.now.Add(-48 * time.Hour),
+	})
+	o.asLegacy(t, message, headerOnly)
+	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "noise"); err != nil {
+		t.Fatalf("labelling the header-only body: %v", err)
+	}
+	if label := o.captureLabel(t, message); label == nil || *label != "noise" {
+		t.Fatalf("label before the restore = %v, want noise", label)
+	}
+
+	restoration := activities.MailBodyRestoration{
+		Activity: message, StoredBody: headerOnly, Body: headerOnly + "\n\n" + ask, Completeness: "complete",
+	}
+	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT version FROM activity WHERE id = $1`, message).Scan(&restoration.Version)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
+	var restored bool
+	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		restored, _, err = activities.RestoreMailBodyTx(system, tx, restoration)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !restored {
+		t.Fatal("the restore wrote nothing, so the label question does not arise")
+	}
+
+	if label := o.captureLabel(t, message); label != nil {
+		t.Errorf("label after the restore = %q, want none so the classifier reads the full text", *label)
+	}
+	if stamped := o.captureLabelStamp(t, message); stamped != nil {
+		t.Errorf("the stamp outlived the label it dated, at %v", *stamped)
+	}
+}
+
+// captureLabel and captureLabelStamp read the two columns
+// activity_capture_label_stamped holds together.
+func (o *owedEnv) captureLabel(t *testing.T, message ids.UUID) *string {
+	t.Helper()
+	var label *string
+	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT capture_label FROM activity WHERE id = $1`, message).Scan(&label)
+	}); err != nil {
+		t.Fatalf("reading the attention label: %v", err)
+	}
+	return label
+}
+
+func (o *owedEnv) captureLabelStamp(t *testing.T, message ids.UUID) *time.Time {
+	t.Helper()
+	var stamped *time.Time
+	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT capture_labeled_at FROM activity WHERE id = $1`, message).Scan(&stamped)
+	}); err != nil {
+		t.Fatalf("reading the label stamp: %v", err)
+	}
+	return stamped
+}
