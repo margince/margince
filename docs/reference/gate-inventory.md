@@ -272,6 +272,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactprosecoverage_test.go` | H3 | Every table with a foreign key to contact and a column prose fits in is registered or carries a reason. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `contractlistpaging_test.go` | H2 | A list that can be cut says where it was cut. |
+| `contractnullable_test.go` | H3 | `nullable:` in a document that declares OpenAPI 3.1, where the keyword does not exist. |
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
 | `contractrefs_test.go` | H3 | Every local $ref in api/crm.yaml resolves, and a dangling one fails with a readable message. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
