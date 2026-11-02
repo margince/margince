@@ -11,6 +11,7 @@ import {
   LIFECYCLE_OPTIONS,
   SIZE_BAND_OPTIONS,
 } from "../../components/companylookups";
+import { HandoverRequest } from "../../components/handoverrequest";
 import { Badge } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
@@ -26,7 +27,6 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useRecordWriteRefusal } from "../../lib/recordrefusal";
-import { HandoverRequest } from "../records/handoverrequest";
 import { CompanyContactCard } from "./companycontactcard";
 import { companyWebsite, displayHost } from "./companyheader";
 import {

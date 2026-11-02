@@ -7,21 +7,21 @@
 // record, as the next step after it. The owner answers on their Worklist.
 // This control only asks and takes the ask back.
 
-import { Button } from "../../design-system/button";
-import { ErrorLine } from "../../design-system/errorline";
-import { useToast } from "../../design-system/toast";
-import { formatDate } from "../../format/format.dates";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
-import { useCan, useCanMutate } from "../../lib/capability";
-import { useMemberName } from "../../lib/membernames";
-import { problemMessageOf } from "../../lib/problem";
-import { useViewerId } from "../../lib/session";
+import { Button } from "../design-system/button";
+import { ErrorLine } from "../design-system/errorline";
+import { useToast } from "../design-system/toast";
+import { formatDate } from "../format/format.dates";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
+import { useCan, useCanMutate } from "../lib/capability";
+import { useMemberName } from "../lib/membernames";
 import {
   type TransferableRecordType,
   useOwnershipRequest,
   useOwnershipRequestActions,
-} from "./ownershiprequest";
+} from "../lib/ownershiprequest";
+import { problemMessageOf } from "../lib/problem";
+import { useViewerId } from "../lib/session";
 
 type HandoverRecord = Readonly<{
   id?: string;

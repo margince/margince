@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
+import { HandoverRequest } from "../../components/handoverrequest";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -12,7 +13,6 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
-import { HandoverRequest } from "../records/handoverrequest";
 import { useWriteRefusal } from "./contactactions";
 import { type ConsentRead, useConsentRows } from "./contactconsentpanel";
 import { useContactAboutSections } from "./contactdetails";

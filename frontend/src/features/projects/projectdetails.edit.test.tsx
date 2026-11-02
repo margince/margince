@@ -18,7 +18,13 @@ afterEach(cleanup);
 
 function mount(grant: ("read" | "update")[]) {
   const sent: unknown[] = [];
-  const current = project({ description: "Old words" });
+  // The server's own answer for this grant: no update means no writable row.
+  const mayUpdate = grant.includes("update");
+  const current = project({
+    description: "Old words",
+    writable: mayUpdate,
+    write_refusal: mayUpdate ? undefined : "role",
+  });
   installFetchStub({
     "GET /me": meRoute({ project: grant }, { seat: "full" }),
     "GET /users": () => jsonResponse({ data: [], page: { has_more: false } }),

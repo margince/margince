@@ -17,14 +17,14 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanMutate } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { problemMessageOf } from "../../lib/problem";
-import { useViewerId } from "../../lib/session";
 import {
   type TransferableRecordType,
   useOwnershipOffer,
   useOwnershipOfferActions,
   useOwnershipOfferCandidates,
-} from "./ownershiprequest";
+} from "../../lib/ownershiprequest";
+import { problemMessageOf } from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
 
 type OfferedRecord = Readonly<{
   id?: string;

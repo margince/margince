@@ -113,7 +113,13 @@ describe("the details groups", () => {
   it("says a project is unassigned rather than leaving the owner blank", () => {
     show(
       <ProjectDetails
-        view={project360({ project: project({ owner_id: null }) })}
+        view={project360({
+          project: project({
+            owner_id: null,
+            writable: false,
+            write_refusal: "not_yours",
+          }),
+        })}
       />,
     );
     expect(screen.getByText(en["list.unowned"])).toBeTruthy();
