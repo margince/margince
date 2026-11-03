@@ -126,6 +126,7 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
+	"internal/modules/activities:maskRowTextTx":         "the credential repair writes an archived mail on purpose: an archived row still stores the password in clear, and the acceptance is that no row keeps one. A statutory hold is a different matter and IS refused, by the restricted_at predicate in the same statement",
 	"internal/modules/privacy:deleteNoticeActivities":   "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
 	"internal/modules/privacy:deleteLeadRecordsTx":      "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
 	"internal/modules/contacts:RestoreContactTx":        "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
