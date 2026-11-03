@@ -114,7 +114,7 @@ describe("Sales review", () => {
     expect(strip.getByText("3.6×")).toBeVisible();
     expect(
       strip.getByText(
-        "€1.3m eligible to close this quarter / €380k still to win",
+        "€1.36m eligible to close this quarter / €380k still to win",
       ),
     ).toBeVisible();
     expect(
