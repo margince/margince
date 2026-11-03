@@ -239,11 +239,10 @@ func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.Accou
 	if err != nil {
 		return nil, fmt.Errorf("read when the accounts last exchanged a word: %w", err)
 	}
-	cutoff := pop.now.AddDate(0, 0, -days)
 	var rows []crmcontracts.AccountCoverageRow
 	for _, candidate := range candidates {
 		touch := touches[ids.From[ids.CompanyKind](ids.UUID(candidate.Company.Id))]
-		if touch.Contact != nil && !touch.Contact.At.Before(cutoff) {
+		if touch.Contact != nil && elapsed.Days(touch.Contact.At, pop.now, pop.zone) < days {
 			continue
 		}
 		candidate.LastInbound, candidate.LastOutbound = touch.InboundAt, touch.OutboundAt
