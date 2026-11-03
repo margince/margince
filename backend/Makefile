@@ -548,7 +548,7 @@ bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (
 
 # AC-W2, and the newest arrival in this lane. It gated the standing integration
 # lane until a health check read p50=13ms against a p95 of 201.6ms and filed
-# main as broken over the 1.6ms: the shards share one Postgres there, and what a
+# main as broken over the 1.6ms: the tests within a shard share one Postgres, and what a
 # contended runner measures is the runner. The regression it existed to catch is
 # held in the lane deterministically now, by the sequential-scan count in
 # workflow_dispatch_integration_test.go.
