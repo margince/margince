@@ -22,38 +22,60 @@ import (
 // review. A second task for the same episode would ask the same thing again.
 func ReviewTypes() []string { return []string{TypeDealViability} }
 
-// EpisodeTask reads a finding's episode and the task that episode was
-// delivered as, if any. Held FOR UPDATE, so two deliveries of one episode
-// serialize here and the second finds the first one's link.
-func (s *Store) EpisodeTask(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) (int, *ids.UUID, error) {
-	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
-		return 0, nil, err
-	}
-	var episode int
-	var task *ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT episode, task_activity_id FROM assurance_exception
-		 WHERE id = $1
-		 FOR UPDATE`, exceptionID).Scan(&episode, &task)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return 0, nil, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return 0, nil, fmt.Errorf("assurance: reading the finding's episode: %w", err)
-	}
-	return episode, task, nil
+// ReviewEpisode is a review finding's current episode and how far its
+// delivery got.
+type ReviewEpisode struct {
+	Episode int
+	// Task is the task the episode was delivered as, nil until it is.
+	Task *ids.UUID
+	// DeliveredAssignee is the seat the system gave the task. Nil when the task
+	// went to the unassigned queue, or somebody else held it at delivery.
+	DeliveredAssignee *ids.UUID
 }
 
-// LinkEpisodeTask records the task an episode was delivered as. It refuses to
-// move an existing link: once delivered, the episode keeps its task.
-func (s *Store) LinkEpisodeTask(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, task ids.UUID) error {
+// Delivery states of a review episode. A finding that is not a review, and an
+// episode no pass has queued yet, have none.
+const (
+	DeliveryPending   = "pending"
+	DeliveryFailed    = "failed"
+	DeliveryDelivered = "delivered"
+)
+
+// EpisodeTask reads a finding's episode and its delivery. Held FOR UPDATE, so
+// two deliveries of one episode serialize here and the second finds the first
+// one's link.
+func (s *Store) EpisodeTask(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) (ReviewEpisode, error) {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
+		return ReviewEpisode{}, err
+	}
+	var out ReviewEpisode
+	err := tx.QueryRow(ctx, `
+		SELECT episode, task_activity_id, delivered_assignee_id FROM assurance_exception
+		 WHERE id = $1
+		 FOR UPDATE`, exceptionID).Scan(&out.Episode, &out.Task, &out.DeliveredAssignee)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ReviewEpisode{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return ReviewEpisode{}, fmt.Errorf("assurance: reading the finding's episode: %w", err)
+	}
+	return out, nil
+}
+
+// LinkEpisodeTask records the task an episode was delivered as, and the seat
+// the system gave it. It refuses to move an existing link: once delivered, the
+// episode keeps its task.
+func (s *Store) LinkEpisodeTask(
+	ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, task ids.UUID, assignee *ids.UUID,
+) error {
 	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
 		return err
 	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE assurance_exception
-		SET task_activity_id = $3, updated_at = now()
-		WHERE id = $1 AND episode = $2 AND task_activity_id IS NULL`, exceptionID, episode, task)
+		SET task_activity_id = $3, delivered_assignee_id = $4, delivery_state = $5, updated_at = now()
+		WHERE id = $1 AND episode = $2 AND task_activity_id IS NULL`,
+		exceptionID, episode, task, assignee, DeliveryDelivered)
 	if err != nil {
 		return fmt.Errorf("assurance: linking the episode's task: %w", err)
 	}
@@ -63,4 +85,77 @@ func (s *Store) LinkEpisodeTask(ctx context.Context, tx pgx.Tx, exceptionID ids.
 	_, err = storekit.AuditEvent(ctx, tx, "update", "assurance_exception", exceptionID,
 		map[string]any{"episode": episode, "task_activity_id": task.String()})
 	return err
+}
+
+// FollowedOwner records that the episode's task moved with the deal to a new
+// owner, so the next owner change is measured against this one.
+func (s *Store) FollowedOwner(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, assignee ids.UUID) error {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE assurance_exception SET delivered_assignee_id = $3, updated_at = now()
+		 WHERE id = $1 AND episode = $2`, exceptionID, episode, assignee); err != nil {
+		return fmt.Errorf("assurance: recording the review task's new assignee: %w", err)
+	}
+	_, err := storekit.AuditEvent(ctx, tx, "update", "assurance_exception", exceptionID,
+		map[string]any{"episode": episode, "delivered_assignee_id": assignee.String()})
+	return err
+}
+
+// QueueDelivery marks an undelivered episode pending. A failed one is pending
+// again: the pass that queues it is its retry.
+func (s *Store) QueueDelivery(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int) error {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE assurance_exception SET delivery_state = $3, updated_at = now()
+		 WHERE id = $1 AND episode = $2 AND task_activity_id IS NULL`,
+		exceptionID, episode, DeliveryPending); err != nil {
+		return fmt.Errorf("assurance: queueing the review's delivery: %w", err)
+	}
+	return nil
+}
+
+// RecordDeliveryAttempt counts one attempt at delivering the episode, and marks
+// it failed when it was the last one the job gets and left no task.
+func (s *Store) RecordDeliveryAttempt(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, episode int, last bool) error {
+	if err := auth.Require(ctx, rbacBundle, principal.ActionUpdate); err != nil {
+		return err
+	}
+	state := DeliveryPending
+	if last {
+		state = DeliveryFailed
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE assurance_exception
+		   SET delivery_attempts = delivery_attempts + 1, updated_at = now(),
+		       delivery_state = CASE WHEN task_activity_id IS NULL THEN $3 ELSE delivery_state END
+		 WHERE id = $1 AND episode = $2`, exceptionID, episode, state); err != nil {
+		return fmt.Errorf("assurance: counting the review's delivery attempt: %w", err)
+	}
+	return nil
+}
+
+// DeliveryCounts are the open reviews by how far their delivery got. A review
+// whose task somebody completed is delivered: the task reached them.
+type DeliveryCounts struct {
+	Pending, Failed, Delivered int
+}
+
+// reviewDeliveryCounts counts the open reviews by delivery.
+func reviewDeliveryCounts(ctx context.Context, tx pgx.Tx) (DeliveryCounts, error) {
+	var out DeliveryCounts
+	err := tx.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE task_activity_id IS NULL AND delivery_state IS DISTINCT FROM $2),
+		       count(*) FILTER (WHERE task_activity_id IS NULL AND delivery_state = $2),
+		       count(*) FILTER (WHERE task_activity_id IS NOT NULL)
+		  FROM assurance_exception
+		 WHERE status = 'open' AND type = ANY($1)`, ReviewTypes(), DeliveryFailed).
+		Scan(&out.Pending, &out.Failed, &out.Delivered)
+	if err != nil {
+		return DeliveryCounts{}, fmt.Errorf("assurance: counting the reviews' deliveries: %w", err)
+	}
+	return out, nil
 }

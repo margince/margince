@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "a2860ad810d07c54c739c3f5c4a76b4dc1a88d6e910554c4be69df2907c43aa6"
+const jobContractHash = "29e32698f9b2879c510a5e88505ecc9d8401c20fdbcd9db5d3def0756c089259"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -32,6 +32,7 @@ func (ApprovalAutoApplyArgs) declaredJobType(ApprovalAutoApplyArgs)             
 func (ApprovalExpiryArgs) declaredJobType(ApprovalExpiryArgs)                     {}
 func (ApprovalNoticeReconcileArgs) declaredJobType(ApprovalNoticeReconcileArgs)   {}
 func (AssuranceDealRescanArgs) declaredJobType(AssuranceDealRescanArgs)           {}
+func (AssuranceReviewDeliveryArgs) declaredJobType(AssuranceReviewDeliveryArgs)   {}
 func (AssuranceRunArgs) declaredJobType(AssuranceRunArgs)                         {}
 func (AssuranceSweepArgs) declaredJobType(AssuranceSweepArgs)                     {}
 func (BriefGenerateArgs) declaredJobType(BriefGenerateArgs)                       {}
@@ -193,6 +194,7 @@ var (
 var (
 	_ jobs.WorkspaceScoped = AccountScanArgs{}
 	_ jobs.WorkspaceScoped = AssuranceDealRescanArgs{}
+	_ jobs.WorkspaceScoped = AssuranceReviewDeliveryArgs{}
 	_ jobs.WorkspaceScoped = AssuranceRunArgs{}
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}

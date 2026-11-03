@@ -71,6 +71,10 @@ type bundleDeps struct {
 // so failing the job here would leave River retrying a pass whose real output
 // already landed, and the retry would re-scan and re-mint. What a failure costs
 // instead is one deal's task, which the next night's cycle mints again.
+//
+// A review is delivered by its own job (jobs_assurancereview.go). This pass
+// only files under a delivered review's task, and completes the review tasks
+// that have nothing left open.
 func bundleRunFindings(
 	ctx context.Context, deps bundleDeps, runID ids.UUID,
 ) (minted int, err error) {
@@ -126,6 +130,9 @@ func bundleRunFindings(
 		if wasMinted {
 			minted++
 		}
+	}
+	if err := settleReviewTasks(ctx, deps); err != nil {
+		failed = append(failed, err)
 	}
 	if len(failed) > 0 {
 		return minted, errors.Join(failed...)
@@ -236,7 +243,11 @@ func bundleSubject(
 	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
 	if review, ok := reviewFinding(subject); ok {
-		return bundleReview(ctx, deps, cycle, subject, review)
+		episode, err := readEpisodeTask(ctx, deps, review.ID)
+		if err != nil {
+			return false, err
+		}
+		return false, fileUnderDeliveredReview(ctx, deps, cycle, subject, review, episode)
 	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {

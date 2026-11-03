@@ -20908,7 +20908,7 @@ components:
       type: object
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources, freshness]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness, review_deliveries]
       properties:
         run_id: {type: string, format: uuid}
         as_of: {type: string, format: date-time}
@@ -20931,6 +20931,27 @@ components:
           description: Every source the run tried, and how far it reached into each.
           items: {$ref: '#/components/schemas/ForecastAssuranceSource'}
         freshness: {$ref: '#/components/schemas/AssuranceFreshness'}
+        review_deliveries: {$ref: '#/components/schemas/AssuranceReviewDeliveries'}
+      additionalProperties: false
+    AssuranceReviewDeliveries:
+      type: object
+      description: >-
+        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+      required: [pending, failed, delivered]
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+          description: Reviews whose task is queued or retrying.
+        failed:
+          type: integer
+          minimum: 0
+          description: Reviews whose task could not be delivered after every retry.
+        delivered:
+          type: integer
+          minimum: 0
+          description: >-
+            Reviews that have their task, including a task somebody already completed while the review stays open.
       additionalProperties: false
     AssuranceFreshness:
       type: object

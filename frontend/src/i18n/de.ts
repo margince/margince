@@ -8075,6 +8075,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 Deal hat sich seit dieser Prüfung geändert.",
   "review.outOfDateDeals_other":
     "{count} Deals haben sich seit dieser Prüfung geändert.",
+  "review.deliveryFailed_one":
+    "1 Kundenprüfung konnte nicht als Aufgabe an den Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
+  "review.deliveryFailed_other":
+    "{count} Kundenprüfungen konnten nicht als Aufgaben an die Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
   "review.outOfDateWorkspace":
     "Eine Phase oder eine Prognose hat sich seit dieser Prüfung geändert.",
   "review.outOfDateSignals_one":

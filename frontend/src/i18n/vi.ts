@@ -7863,6 +7863,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateDeals_other":
     "{count} deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.deliveryFailed_one":
+    "1 lần xem xét khách hàng chưa thể giao thành công việc cho người phụ trách. Lần kiểm tra tới sẽ thử lại.",
+  "review.deliveryFailed_other":
+    "{count} lần xem xét khách hàng chưa thể giao thành công việc cho người phụ trách. Lần kiểm tra tới sẽ thử lại.",
   "review.outOfDateWorkspace":
     "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateSignals_one":

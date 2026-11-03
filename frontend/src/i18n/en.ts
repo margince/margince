@@ -8059,6 +8059,10 @@ export const en = {
   "review.outOfDate": "Out of date",
   "review.outOfDateDeals_one": "1 deal changed since this check.",
   "review.outOfDateDeals_other": "{count} deals changed since this check.",
+  "review.deliveryFailed_one":
+    "1 customer review could not be handed to its owner as a task. The next check tries again.",
+  "review.deliveryFailed_other":
+    "{count} customer reviews could not be handed to their owners as tasks. The next check tries again.",
   "review.outOfDateWorkspace":
     "A stage or forecast call changed since this check.",
   "review.outOfDateSignals_one": "1 buying signal changed since this check.",

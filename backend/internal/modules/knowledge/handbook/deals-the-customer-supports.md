@@ -21,6 +21,14 @@ somebody answers it, so that somebody checks the next step and the close date.
 Completing the task alone does not answer it, and no second task comes for the
 same review.
 
+The task follows the deal. When the deal gets a new owner, the next check moves
+the task to them. If somebody gave the task to a colleague, it stays with that
+colleague. When the review and every other check on the same task are answered,
+the next check marks the task done.
+
+If a review's task could not be created, **Checks before the call** says how
+many reviews are still without one. The next check tries again.
+
 A review takes four answers:
 
 - **The customer is back** closes the review. It needs a message or a meeting

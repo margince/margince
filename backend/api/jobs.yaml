@@ -679,6 +679,26 @@ kinds:
       Unique on the workspace and the deal while one is waiting or running, so
       a burst of edits to one deal is one job.
 
+  assurance_review_delivery:
+    role: worker
+    go_type: AssuranceReviewDeliveryArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    args:
+      Workspace: id
+      Exception: id
+      Run: id
+      Episode:
+        scalar: true
+        reason: The review's episode counter, so a job for an episode that has since ended does nothing.
+    reason: >-
+      Delivers one review episode as its task. Inserted in the transaction that
+      records the finding, so the delivery exists exactly when the review does,
+      and retried on the saved run and episode rather than by a new check. One
+      review's task and filing take seconds. Unique on the review and its episode
+      while one is waiting or running.
+
   close_date_sweep:
     role: worker
     fleet: true
