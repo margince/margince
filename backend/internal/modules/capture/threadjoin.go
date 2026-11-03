@@ -6,16 +6,16 @@ package capture
 // Joining the threads one email links.
 //
 // A captured email's thread_key is the first id of its References header. Mail
-// programs shorten that header — iPhone Mail sends only the direct parent — so
+// programs shorten that header (iPhone Mail sends only the direct parent). So
 // one conversation arrives under a new root at every reply such a program
-// makes, and a thread an importer filed under its own key never meets the key
-// a mailbox derives. The email itself still says exactly what it answers. Every
-// capture stores those ids, looks for the messages on either end of them, and
-// merges the thread keys it finds into one.
+// makes. A thread an importer filed under its own key never meets the key a
+// mailbox derives. The email itself still says what it answers. Every capture
+// stores those ids, looks for the messages on either end of them, and merges
+// the thread keys it finds into one.
 //
-// Order does not matter. A backfill walks a mailbox newest first, so the reply
-// is usually stored before the message it answers; the stored links are what
-// let the older message find its replies when it arrives.
+// Order does not matter. A backfill walks a mailbox newest first. So the reply
+// is usually stored before the message it answers, and the stored links let
+// the older message find its replies when it arrives.
 
 import (
 	"context"
@@ -60,15 +60,15 @@ func (s *Sink) WithThreadJoin(j ThreadJoiner) *Sink {
 // joinThread records what this email replies to and merges every thread its
 // reply links reach into one.
 //
-// It runs after this seat's import row is written, on every path a capture
-// can take — a new row, a replay, and an import this mailbox took over — since
-// the take-over is exactly where an importer's key meets a mailbox's. created
-// says this capture minted the row.
+// It runs after this seat's import row is written. That holds on every path a
+// capture can take: a new row, a replay, and an import this mailbox took over.
+// The take-over is where an importer's key meets a mailbox's. created says this
+// capture minted the row.
 //
 // The References header is the sender's text, so three rules keep a stranger
 // from steering the join:
 //
-//   - The seat must hold THIS message (its own import row), and a link counts
+//   - The seat must hold this message (its own import row), and a link counts
 //     only toward a neighbour the seat also holds or is proved to have sent.
 //   - A row this capture just minted got its key from its own header. That key
 //     is merged as a thread only when no other message carries it yet;
@@ -105,10 +105,10 @@ func (s *Sink) joinThread(
 	return s.holdFromJoinedThreadTx(ctx, tx, id)
 }
 
-// mergeLockStatement is ONE workspace-wide lock for every thread merge, spelled
-// once because two callers take it: takeMergeLockFirst before a row is written,
-// and mergeLinkedThreads where the merge happens. Two spellings of one lock name
-// are two locks, and the ordering that stops the deadlock would be silently gone.
+// mergeLockStatement is one workspace-wide lock for every thread merge. It is
+// spelled once because two callers take it: takeMergeLockFirst before a row is
+// written, and mergeLinkedThreads where the merge happens. Two spellings of one
+// lock name are two locks, and the deadlock ordering would be lost.
 //
 // Held by: TestTheMergeLockHasOneSpelling (backend/gates/mergelockordering_test.go)
 const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`
@@ -118,20 +118,18 @@ const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('threa
 func (s *Sink) mergeLinkedThreads(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) error {
-	// Read once without the lock: nearly every capture finds one key and
-	// stops, and a replay that already holds its own row lock must not then
-	// wait on the merge lock for nothing.
+	// Read once without the lock. Nearly every capture finds one key and stops.
+	// A replay that already holds its own row lock must not then wait on the
+	// merge lock for nothing.
 	keys, err := s.keysToMerge(ctx, tx, seat, id, neighbours, created)
 	if err != nil || len(keys) < 2 {
 		return err
 	}
 	// One lock for every merge in the workspace, and the keys read again under
-	// it, so a concurrent merge cannot retire a key between the read and the
-	// rewrite.
-	// Usually already held: takeMergeLockFirst takes it before the row write, and
-	// an advisory xact lock is re-entrant within one transaction. Taken again here
-	// because THIS is the call correctness rests on — the probe only decides
-	// whether the cost is paid early.
+	// it. So a concurrent merge cannot retire a key between the read and the
+	// rewrite. takeMergeLockFirst usually holds it already, and an advisory xact
+	// lock is re-entrant within one transaction. Correctness rests on this call;
+	// the probe only decides whether the cost is paid early.
 	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
 		return fmt.Errorf("capture: locking the thread merge: %w", err)
 	}
@@ -153,9 +151,9 @@ func (s *Sink) mergeLinkedThreads(
 	return nil
 }
 
-// keysToMerge answers the thread keys this email joins, sorted: those of the
-// neighbours the seat holds, and the email's own key when the rules in
-// joinThread let it count.
+// keysToMerge answers the thread keys this email joins, sorted. These are the
+// keys of the neighbours the seat holds, and the email's own key when the rules
+// in joinThread let it count.
 func (s *Sink) keysToMerge(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) ([]string, error) {
@@ -189,7 +187,7 @@ func (s *Sink) keysToMerge(
 	return keys, nil
 }
 
-// seatHoldsTx answers whether this seat's own mailbox delivered the message —
+// seatHoldsTx answers whether this seat's own mailbox delivered the message:
 // its capture_import row, which recordThisImport writes only on proof.
 func seatHoldsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID) (bool, error) {
 	var held bool

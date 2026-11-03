@@ -214,7 +214,7 @@ var (
 
 // Upsert lands one normalized record: raw original + domain row +
 // audit + captured event, one transaction, idempotent on the natural
-// key. Replays return the existing row and write NOTHING new — an
+// key. Replays return the existing row and write nothing new, so an
 // at-least-once sync loop costs no duplicate audit entries.
 func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (datasource.EntityRef, error) {
 	noteDelivered(ctx, rec)
@@ -263,11 +263,10 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 
 		switch fields := rec.Fields.(type) {
 		case ActivityFields:
-			// FIRST of everything that touches an activity row in this
-			// transaction, alias adoption included: adoption recomputes the
-			// audience of every message it adopts, which locks those rows, and a
-			// transaction holding one before it asks for the merge lock is the
-			// cycle takeMergeLockFirst exists to break.
+			// First of everything that touches an activity row in this transaction,
+			// alias adoption included. Adoption recomputes the audience of every message
+			// it adopts, which locks those rows. A transaction holding one before it asks
+			// for the merge lock is the cycle takeMergeLockFirst exists to break.
 			if err := s.takeMergeLockFirst(ctx, tx, rec); err != nil {
 				return err
 			}

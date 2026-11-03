@@ -414,21 +414,13 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:CompanyNameCandidates":        "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named companies and the signature evidence naming them",
 	"internal/modules/privacy:EvaluateInstallation":          "the retention pass: its one production caller is the privacy-retention River worker (compose/jobs_privacyretention.go), which builds a PrincipalSystem actor onto the context before the call, so no human principal exists here to admit. Gating it on one would be wrong rather than merely redundant — a retention obligation outlives any seat, and an installation whose reviewer lost access must still age out the data it promised to",
 
-	// comms: delivery machinery, not the message. StageTx runs inside the
-	// caller's own transaction, alongside the activity write that already
-	// passed the gated activity:create check — the outbound send itself was
-	// admitted there. But activity:create alone would only prove the actor
-	// may create an activity, not that the delivery may send through THEIR
-	// mailbox — the security-relevant fact this store owns — so StageTx
-	// itself derives user_id from the authenticated principal on ctx
-	// (storekit.Actor) and fails closed when none resolves to an app_user;
-	// no caller input can name a different sender. Object-RBAC has nothing
-	// left to narrow once that derivation stands. Load/RecordSent/Park/
-	// ParkTransmitted/RecordFailure/RecordDeferral/MarkInFlight/ClearInFlight
-	// are the dispatcher's own state-machine steps, driven by the outbox/River worker
-	// under the system principal with no human principal in the call at all;
-	// nothing here discloses a record to anyone — the reason each of them
-	// writes is an operator-facing transport diagnosis, not tenant data.
+	// comms: delivery machinery, not the message. StageTx runs in the caller's
+	// transaction, beside an activity write that passed activity:create. That
+	// check does not prove the delivery may send through the actor's mailbox.
+	// So StageTx derives user_id from the principal on ctx (storekit.Actor) and
+	// fails closed when none resolves to an app_user. The other methods are the
+	// dispatcher's state-machine steps, run by the worker under the system
+	// principal; they write transport diagnosis, not tenant data.
 	"internal/modules/comms:StageTx":                      "derives user_id from the authenticated principal (storekit.Actor) and fails closed with no caller-suppliable override; the activity:create check on the shared transaction admits the send action itself, but the sending IDENTITY is enforced here, in the store, not inherited from that check",
 	"internal/modules/comms:StageChannelTx":               "the channel-shaped twin of StageTx and the same posture: it derives user_id from the authenticated principal (stagingUser, shared with StageTx so neither can grow a caller-suppliable override) and runs inside the caller's already-gated activity transaction",
 	"internal/modules/comms:StageControllerTx":            "the INSTALLATION sending in its own name, so there is no human identity to derive and no seat to check: the caller is a compose seam acting for the system principal, and what constrains the write instead is the registered template — an unregistered key, a placeholder that disagrees with the material, and an absent registry are all refused before any row is written. Admission for the underlying act happened where the timeline activity was logged, on the same transaction",
