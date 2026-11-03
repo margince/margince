@@ -59,6 +59,7 @@ export function DecisionsPanel() {
   const zone = useRecordZone();
   const decisions = useSalesDecisions();
   const canRecord = useCanWrite("activity", "create");
+  const canClose = useCanWrite("activity", "update");
   const [recording, setRecording] = useState(false);
   const [closing, setClosing] = useState<SalesDecision | null>(null);
   return (
@@ -131,21 +132,27 @@ export function DecisionsPanel() {
                   {
                     key: "status",
                     header: t("analytics.decisions.status"),
-                    render: (decision) =>
-                      decision.status === "done" ? (
-                        <Badge tone="success">
-                          {t("analytics.decisions.done")}
-                        </Badge>
-                      ) : canRecord ? (
-                        <Button
-                          variant="link"
-                          onClick={() => setClosing(decision)}
-                        >
-                          {t("analytics.decisions.recordOutcome")}
-                        </Button>
-                      ) : (
-                        <Badge>{t("analytics.decisions.open")}</Badge>
-                      ),
+                    // A task closed elsewhere still owes its outcome, so the
+                    // action stays until a result is recorded.
+                    render: (decision) => (
+                      <>
+                        {decision.status === "done" ? (
+                          <Badge tone="success">
+                            {t("analytics.decisions.done")}
+                          </Badge>
+                        ) : (
+                          <Badge>{t("analytics.decisions.open")}</Badge>
+                        )}
+                        {canClose && decision.result == null && (
+                          <Button
+                            variant="link"
+                            onClick={() => setClosing(decision)}
+                          >
+                            {t("analytics.decisions.recordOutcome")}
+                          </Button>
+                        )}
+                      </>
+                    ),
                   },
                 ]}
               />

@@ -7,31 +7,40 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // A decision recorded from a sales review is a task on its deal. It is
 // written through the activities store, so it lives where every other task
 // lives. decisionSourceSystem marks those tasks; nothing else writes it.
-const decisionSourceSystem = "analytics_decision"
+const decisionSourceSystem = provenance.AnalyticsDecisionSource
 
 // decisionOutcomeMarker separates the expected result from the recorded one
 // inside the task's body. The two are one text on the task, as a rep reads
 // it, and are read back apart here.
-const decisionOutcomeMarker = "\n\n--- outcome ---\n"
+const decisionOutcomeMarker = "\n\nOutcome: "
 
 // decisionListLimit bounds the list a review reads: the latest decisions,
-// not every task ever recorded.
-const decisionListLimit = 50
+// not every task ever recorded. decisionMatchLimit is how far back a repeat
+// of one decision on one deal is looked for.
+const (
+	decisionListLimit  = 50
+	decisionMatchLimit = 500
+)
 
 // salesDecisions is the seam between the sales review and the activities
 // store. It owns no table: a decision is a task, read back as a decision.
@@ -57,7 +66,8 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 	var out crmcontracts.SalesDecision
 	var created bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		existing, err := s.openDecisionTx(ctx, tx, deal, decision)
+		owner := ids.UserID{UUID: ids.UUID(in.OwnerId)}
+		existing, err := s.openDecisionTx(ctx, tx, deal, owner.UUID, decision)
 		if err != nil {
 			return err
 		}
@@ -65,11 +75,18 @@ func (s salesDecisions) Record(ctx context.Context, in crmcontracts.SalesDecisio
 			out = *existing
 			return nil
 		}
+		// The owner is handed work, so the caller's reach to them is asked
+		// as it is for any hand-over.
+		if err := auth.EnsureAssignee(ctx, tx, owner.UUID); err != nil {
+			return err
+		}
+		due, err := reviewDue(ctx, tx, in.ReviewOn.Time)
+		if err != nil {
+			return err
+		}
 		kind := "task"
 		source := decisionSourceSystem
 		sourceID := ids.NewV7().String()
-		owner := ids.UserID{UUID: ids.UUID(in.OwnerId)}
-		due := in.ReviewOn.Time
 		var body *string
 		if in.ExpectedResult != nil && strings.TrimSpace(*in.ExpectedResult) != "" {
 			expected := strings.TrimSpace(*in.ExpectedResult)
@@ -112,7 +129,11 @@ func (s salesDecisions) Outcome(ctx context.Context, id ids.UUID, result string)
 	}
 	expected := ""
 	if current.Body != nil {
-		expected, _ = splitOutcome(*current.Body)
+		var recorded *string
+		expected, recorded = splitOutcome(*current.Body)
+		if recorded != nil {
+			return crmcontracts.SalesDecision{}, fmt.Errorf("the outcome is recorded: %w", apperrors.ErrConflict)
+		}
 	}
 	body := expected + decisionOutcomeMarker + result
 	done := true
@@ -147,15 +168,19 @@ func (s salesDecisions) List(ctx context.Context, deal *ids.UUID, status *string
 }
 
 // openDecisionTx finds the open task that already records this decision on
-// this deal. A completed one never blocks a new occurrence.
-func (s salesDecisions) openDecisionTx(ctx context.Context, tx pgx.Tx, deal ids.UUID, decision string) (*crmcontracts.SalesDecision, error) {
-	kind, source, limit := "task", decisionSourceSystem, decisionListLimit
+// this deal for this owner. A completed one, or the same decision handed to
+// someone else, never blocks a new occurrence.
+func (s salesDecisions) openDecisionTx(ctx context.Context, tx pgx.Tx, deal, owner ids.UUID, decision string) (*crmcontracts.SalesDecision, error) {
+	kind, source, limit := "task", decisionSourceSystem, decisionMatchLimit
 	tasks, _, err := s.activities.ListActivitiesIn(ctx, tx, activities.ListActivitiesInput{Kind: &kind, SourceSystem: &source, LinkedToDeals: []ids.UUID{deal}, Limit: &limit})
 	if err != nil {
 		return nil, err
 	}
 	for _, task := range tasks {
 		if isDone(task) || task.Subject == nil || strings.TrimSpace(*task.Subject) != decision {
+			continue
+		}
+		if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != owner {
 			continue
 		}
 		found := decisionOf(task)
@@ -198,6 +223,20 @@ func decisionOf(task crmcontracts.Activity) crmcontracts.SalesDecision {
 
 func isDone(task crmcontracts.Activity) bool {
 	return task.IsDone != nil && *task.IsDone
+}
+
+// reviewDue is the end of the review day in the installation's calendar, as
+// a task picked for a day falls due.
+func reviewDue(ctx context.Context, tx pgx.Tx, day time.Time) (time.Time, error) {
+	zone, err := identity.TimezoneOf(ctx, tx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	loc, err := time.LoadLocation(zone)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("the installation's time zone %q: %w", zone, err)
+	}
+	return time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 0, loc), nil
 }
 
 // splitOutcome reads the expected result and, after the marker, the

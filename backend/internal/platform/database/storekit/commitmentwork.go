@@ -87,6 +87,7 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	provenance.LeadSLATaskSource:            {currency: currentByItsWriter},
 	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter},
 	provenance.AssuranceTaskSource:          {currency: currentByItsWriter},
+	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter},
 	provenance.OvernightReconcileSource:     {currency: currentByItsWriter},
 	provenance.LeadRepliedSource:            {currency: currentByLeadEngagement, undated: true, generatedDate: true},
 	// A refused submission has no activity source; the owner decides its lifecycle.

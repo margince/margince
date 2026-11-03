@@ -49,13 +49,30 @@ func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
 		t.Fatalf("a second record of the open decision gave %+v, created=%v; want the first task back", again, created)
 	}
 
+	// The same words on another deal, or handed to another owner, are another
+	// decision.
+	elsewhere := in
+	elsewhere.DealId = openapi_types.UUID(open["Tern portal"])
+	if other, created, err := seam.Record(ctx, elsewhere); err != nil || !created || other.Id == first.Id {
+		t.Fatalf("the decision on another deal gave %+v, created=%v, err=%v; want a task of its own", other, created, err)
+	}
+	handed := in
+	handed.OwnerId = openapi_types.UUID(e.Rep3)
+	if other, created, err := seam.Record(ctx, handed); err != nil || !created || other.Id == first.Id {
+		t.Fatalf("the decision handed to another owner gave %+v, created=%v, err=%v; want a task of its own", other, created, err)
+	}
+
 	deal := open["Linden press"]
+	var before time.Time
+	if err := e.Pool.QueryRow(context.Background(), `SELECT updated_at FROM deal WHERE id = $1`, deal).Scan(&before); err != nil {
+		t.Fatal(err)
+	}
 	listed, err := seam.List(ctx, &deal, nil)
 	if err != nil {
 		t.Fatalf("listing the deal's decisions: %v", err)
 	}
-	if len(listed) != 1 || listed[0].ExpectedResult == nil || *listed[0].ExpectedResult != expected {
-		t.Fatalf("the deal's decisions are %+v, want the one open decision with its expected result", listed)
+	if len(listed) != 2 || listed[0].ExpectedResult == nil || *listed[0].ExpectedResult != expected {
+		t.Fatalf("the deal's decisions are %+v, want its two open decisions with their expected result", listed)
 	}
 
 	done, err := seam.Outcome(ctx, ids.UUID(first.Id), "Buyer met; the budget owner is named")
@@ -66,11 +83,15 @@ func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
 		t.Fatalf("the outcome left %+v", done)
 	}
 	var status string
-	if err := e.Pool.QueryRow(context.Background(), `SELECT status FROM deal WHERE id = $1`, deal).Scan(&status); err != nil {
+	var after time.Time
+	if err := e.Pool.QueryRow(context.Background(), `SELECT status, updated_at FROM deal WHERE id = $1`, deal).Scan(&status, &after); err != nil {
 		t.Fatal(err)
 	}
-	if status != "open" {
-		t.Fatalf("recording an outcome moved the deal to %q", status)
+	if status != "open" || !after.Equal(before) {
+		t.Fatalf("recording an outcome left the deal %q, updated %v then %v; want it untouched", status, before, after)
+	}
+	if _, err := seam.Outcome(ctx, ids.UUID(first.Id), "again"); err == nil {
+		t.Fatal("a second outcome on a closed decision was accepted")
 	}
 
 	third, created, err := seam.Record(ctx, in)
@@ -85,7 +106,7 @@ func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed) != 1 || listed[0].Id != third.Id {
-		t.Fatalf("the open decisions are %+v, want the new task alone", listed)
+	if len(listed) != 2 || listed[0].Id != third.Id {
+		t.Fatalf("the open decisions are %+v, want the new task first and the handed one", listed)
 	}
 }
