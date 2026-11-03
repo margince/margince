@@ -1085,6 +1085,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/provider-connections/{provider}":                               {Op: "connectProvider", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/public/preferences/{token}":                                    {Op: "updatePreferences", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/scheduling/profile":                                            {Op: "putSchedulingProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/scheduling/profile/alias":                                      {Op: "putSchedulingAlias", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/stage-automation/policies/{id}":                                {Op: "setTransitionPolicy", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/teams/{id}/members/{userId}":                                   {Op: "addTeamMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/weekly-plans/commitments/{id}/help":                            {Op: "askForWeeklyPlanHelp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
