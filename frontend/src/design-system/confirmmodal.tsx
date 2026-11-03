@@ -4,9 +4,9 @@ import { useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
+import { isParagraphCommit } from "./fieldeditdialog";
 import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
-import { isParagraphCommit } from "./inlinetext";
 import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
 
