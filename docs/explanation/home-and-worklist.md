@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **First** section on Morning, and the
@@ -48,6 +48,21 @@ That is imported history, not today's breach; a duty that fell due while on reco
 `recoveryHorizonDays` (14, `classifyrisk.go`) makes deal recovery urgent when the expected close is past or
 inside it.
 
+A meeting that starts within `meetingHorizon` (2 hours, `rank.go`) is `levelWaiting` until the reader says
+**I’m ready** (`classifyMeeting` in `meeting.go`). Then it keeps its `meeting_soon` reason at `levelAgreed`.
+The store keeps that answer per attendee, with the start, the guests and a fingerprint of the invite's own
+description. A change to any of them asks again; a note typed into the meeting does not.
+
+## Views and later tasks
+
+`view` (`attention/views.go`) splits the ranked day into **Today**, **Decisions** and **System** by category.
+The split comes before the page is cut, so a walk never reaches another view's rows. The cursor binds the view.
+
+A task due in the `upcomingHorizonDays` (14, `feed.go`) after today takes the `upcoming` category
+(`classify.go`), unless it is late or its reminder is due. Such a row is shown only when the filter asks for
+`upcoming`, and `summary` never counts it, so later work cannot raise Today's total. The lanes read no task due
+after that window.
+
 ## Deal suggestions need current facts
 
 `admittedBriefItems` in `attention/briefadmission.go` checks each brief suggestion before counts, filters and pages.
@@ -56,7 +71,7 @@ A stored signal or finding cannot create current work alone. Suggestions without
 
 Home and Worklist use the same typed reasons. Deal values and dates keep their own fields.
 
-Current deal actions use the deal page's rules over one batch of owning reads, before the page is cut.
+Current deal actions use the deal page's rules over one batch of owning reads. They are read for every brief and at-risk deal row on the page. A deal the tail reached carries the action it would carry in the ranked top.
 They share the Worklist's database snapshot. A failed advice read keeps the work and names the gap.
 
 Saved model words are an earlier view, with their written date. They never admit work or change its rank.
@@ -73,6 +88,95 @@ A changed basis returns a version conflict. Only one task can commit from the sa
 The other prepared actions check that basis before opening. Tasks you create keep their existing write path.
 
 Stored findings follow the current audience of their cited activities on both run reads and item read-backs.
+
+## Ownership comes before scan limits
+
+`backend/internal/compose/attention/recordowners.go` resolves the queue's owners before the deal risk read.
+The deal store applies these owners and the caller's visibility rules before limiting either the quiet or overdue scan.
+An empty set reads no owners. No set means the visible workspace view.
+Team reads keep work from former team members and work with no owner.
+
+Company and lead duplicate pairs and deal and tag suggestions have no requested decider.
+**Mine** and chosen member views skip those sources before building the decision page and counts.
+**Unassigned** and wider views keep them. Approvals keep their requested-decider query.
+
+Contact pairs reach the queue as contact cases (source `contact_case`, `attention/contactcaselane.go`), never one pair at a time.
+A case is a group of contacts joined by open pairs, and its row id is the lowest member id.
+The case read binds the page's owner before it ranks.
+So **Mine** and a chosen member view show every case with a member that owner owns.
+The row names that owner as its requested decider, so each owner of a member sees the case on their own page.
+
+**Unassigned** shows the cases where no member has a live owner.
+A wider view names the reader if they own a member, then an owner in the team the page shows, then the first owner.
+**Done** hides a case for that owner alone, and the other owners keep it.
+Cases count into the open duplicates total, and they come first in each round of the decision lane.
+
+The final scope cut still checks the owner. It cannot add candidates a source has already left out.
+Home, Focus, source reach and summary counts use the same scoped day.
+
+## Totals and the rows below the ranked top
+
+Only the first rows are ranked. Ranking needs every candidate in hand, so each lane reads to its cap.
+The ranked rows are those candidates, frozen as a walk (`walk.go`). Totals come on the first page, with no
+later counting pass and no background job. A source is counted in SQL when the count fits the first page's budget.
+Otherwise it stays a floor, for the measured reason the census gives.
+
+A category states an exact `total` only when every source behind it was read whole or counted by its store
+(`withTotals` in `attention/totals.go`). The count runs the source's own admission rules in SQL, so it
+matches what the list holds. `attention/backlog.go` holds the counts and runs them only for a source its lane cut.
+A count that fails leaves the category a floor and does not fail the page.
+
+Once the ranked rows run out, the next pages load a tail (`attention/backlogtail.go`). Each cut source goes on
+from its own keyset, skipping the rows the ranked top already holds. The tail rows go through the same admission,
+scope, Done, view and filter steps as the top. The reader's Done marks are read for the tail rows too.
+
+The cursor carries where each source stopped, and binds the same scope, owner, view and filter as before. The list ends when
+every source in the tail is read to its end. A source that fails while the tail loads is named in
+`sources_unavailable`, and the list stops short of it.
+
+The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
+a time: a task's due date, when a waiting customer's message came in, or a deal's expected close date. Rows go
+from the earliest time to the latest, and an undated task or deal goes last. A tie goes to the source's name, then to the store's own order. So the
+longest-standing work comes first, whichever source holds it.
+
+Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
+hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
+next page.
+
+The first page decides which sources the tail reads: those its lanes cut. After that, a source leaves the tail only
+when its own read finds nothing more, so completing tasks above never ends it. The cursor also keeps the first page's
+time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
+names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
+
+Three sources are read on in the tail today:
+
+- Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
+  count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
+  scope keeps them. Its task totals are exact only when the roster was read whole. A roster cut at its cap, or one that
+  failed, leaves every category of the page without a total (`withTotals` in `attention/totals.go`).
+- Customers waiting (`WithWaitingBacklog`, `compose/attentionwaitingseam.go`). Each read judges a fixed number of
+  messages in SQL (`modules/activities/waitingcards.go`) and folds them as the lane does. A conversation of requests
+  is one card, and other mail is one card per sender and subject. The category has no count: judging every message
+  costs more than the first page may spend.
+
+- Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
+  deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
+  by expected close, and draws each deal as the lane does.
+
+  A deal a waiting card names is left out, even when that card is far down the waiting source (`DealsWaiting`). So
+  is a deal with an open task due within 7 days (`TasksOnDeals`, judged by the ranked page's rule). A deal a brief
+  row above already names is left out too, so one deal is one row. A reader can mark a tail deal done, and the Done check reads the tail for it.
+
+Mail a sending system wrote is left out of the waiting lane and its tail, unless it asks us something. Capture and
+the activity writer stamp it on `sender_is_machine` with the one Go rule, and the tail drops stamped mail in SQL.
+The lane and the tail also ask the rule itself, so mail from before the stamp is judged as before.
+
+Approvals are not read on in the tail. The approval engine counts them under the lane's own query, so a cut lane
+still states their exact total. The list never shows the rows past the lane's cut. A team page states no approval total,
+because the count does not judge by the team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
+
+Every other cut source leaves its category a floor, and the list ends at the ranked rows for it.
+The reasons each one is not counted yet are in [the source census](../reference/worklist-source-census.md).
 
 ## Personal work needs its own owner
 
@@ -253,7 +357,11 @@ The sentence is asked for in the member's saved language, else the installation'
 
 `snapshotTeams` in `weeklyteamjobs.go` skips a team while any of its members failed on this run, so a team
 total never stands on a missing member. It reads the team as a member who has the rights to open it, trying each in turn. Not every member may read a team's week. A team with no live members gets no
-snapshot, because an empty week would claim the team did nothing.
+snapshot, because an empty week would claim the team did nothing. While the installation setting
+`installation.individual_performance` is off, `measureWorkspace` freezes no team week at all, and
+`readTeamReview` refuses every stored one with `individual_performance_off`. Both read the setting
+in their own transaction, and `teamWeekWithdrawn` reads it again before a weekly mail that names a
+team's members goes out.
 
 `team_weekly_review` is written once per team and week (`teamreviewstore.go`). The one exception is a
 snapshot that counted zero members: its first real measure replaces it, keeps its id, and writes an audit
@@ -271,6 +379,21 @@ Older notices got their facts back in migration
 `1789335792_stage_notices_recover_the_change_they_report`, by following the event that created each notice
 to the stage change that caused it. It never matched by deal name or nearby times, since neither names one
 move. Recorded stage names come first; without them, only a stage setup nobody has edited gives a name.
+
+## What a row offers
+
+The verbs on a row that change a record come from its `actions`, which the server sets. So the screen never
+offers a write the server would refuse. A task row (`taskActions` in `taskactions.go`) offers `complete` and `snooze`, and `take`
+when nobody holds the task. `take` shows on every scope, because nobody holding a task is a fact about the
+task and not about the view.
+
+A meeting owed an outcome (`meetingOutcomeActions` in `meeting.go`) offers `decide`, and `cancel` only when
+no live calendar invite holds it. `PATCH /activities/{id}` refuses that cancel with `calendar_managed`,
+because the invite owns the meeting's time and words. Record pages ask the same question through
+`Activity.awaiting_outcome`, which uses the lane's rule without its look-back window.
+
+A reader who may see a task or meeting and not change it gets no verbs. The reason `read_only` says why,
+so an empty row does not look broken.
 
 ## Addresses
 

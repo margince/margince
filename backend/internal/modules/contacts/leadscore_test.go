@@ -213,3 +213,14 @@ func TestOriginIntentsWeighOnlyAKnownOrigin(t *testing.T) {
 		t.Errorf("Of(nil) = %q, want neutral: a lead nobody classified scores neutral", got)
 	}
 }
+
+// A meeting booked ahead scores its base value, however far ahead it is.
+func TestABookingAheadScoresItsBaseValue(t *testing.T) {
+	now := time.Date(2026, 6, 4, 0, 0, 0, 0, time.UTC)
+	for _, ahead := range []int{30, 90} {
+		booking := []BehavioralSignal{{Kind: "meeting_booked", OccurredAt: now.AddDate(0, 0, ahead)}}
+		if score, _ := scoreLeadByOrigin("", "", booking, now); score != behavioralMeetingBooked {
+			t.Errorf("a booking %d days ahead scores %d, want its base %d", ahead, score, behavioralMeetingBooked)
+		}
+	}
+}

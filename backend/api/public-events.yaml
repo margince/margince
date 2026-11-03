@@ -117,9 +117,11 @@ components:
         - forecast.share_revoked
         - weekly_plan.updated
         - weekly_plan.help_requested
+        - sales_initiative.updated
         - activity.disposition_recorded
         - activity.marked_handled
         - activity.link_suggestion_changed
+        - activity.readiness_recorded
         - relationship_nudge.decided
         - notice.read
         - approval.preference_changed
@@ -1026,6 +1028,11 @@ components:
         win_probability:
           type: integer
           description: The target stage's win probability, frozen at the moment of the move.
+        lost_reason_code:
+          type: string
+          description: >-
+            The key from `/loss-reasons` the closer chose, on a move to a lost stage. Absent when
+            the loss names only a free note.
         partner_company_id:
           type: string
           format: uuid
@@ -2225,12 +2232,21 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        thread_key:
+          type: string
+          description: The activity's new conversation key, when its thread grouping changed.
         automatic_task_repaired:
           type: boolean
           description: A reviewed correction changed the task's source link or cleared a generated deadline; fetch the task through its normal access gate.
         commitment_admissions_changed:
           type: boolean
           description: The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
+        request_settlement_changed:
+          type: boolean
+          description: The request's settlement verdict, or the ask to judge it again, changed; fetch the request through its normal access gate.
+        agenda_changed:
+          type: boolean
+          description: The calendar invite's own description changed. An attendee who said they were ready is asked to confirm again. The description is not carried.
         restored:
           type: boolean
           description: True when explicit request acceptance restores an archived unfinished reminder.
@@ -2462,6 +2478,13 @@ components:
             How many deals the run considered. A consumer comparing this against the
             previous run's count sees a pass that covered less of the pipeline.
         eligible_signals: { type: integer }
+        deal_id:
+          type: string
+          format: uuid
+          description: >-
+            Set on a pass over this one deal, queued because the deal changed.
+            Its counts describe that deal alone and never the pipeline. Absent
+            on a pass over every deal.
       additionalProperties: false
     PublicEventForecastExceptionResolved:
       type: object
@@ -2617,6 +2640,33 @@ components:
             type: string
           description: Which parts of the plan moved — status, commitments.
       additionalProperties: false
+    PublicEventSalesInitiativeUpdated:
+      type: object
+      x-event-type: sales_initiative.updated
+      x-entity-type: sales_initiative
+      x-version: 1
+      description: >-
+        Payload for sales_initiative.updated. A sales initiative was defined,
+        changed, launched or had its picked and excluded records changed. The
+        entity is the initiative. `changed_fields` names what moved rather than
+        carrying it; the definition and the members stay on the record.
+      required:
+        - initiative_id
+        - status
+        - changed_fields
+      properties:
+        initiative_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, live, ended]
+        changed_fields:
+          type: array
+          items:
+            type: string
+          description: Which parts moved, such as definition, status, members.
+      additionalProperties: false
     PublicEventWeeklyPlanHelpRequested:
       type: object
       x-event-type: weekly_plan.help_requested
@@ -2759,6 +2809,36 @@ components:
         target_id:
           type: string
           format: uuid
+      additionalProperties: false
+
+    PublicEventActivityReadinessRecorded:
+      type: object
+      x-event-type: activity.readiness_recorded
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.readiness_recorded. One attendee said they are
+        ready for a meeting, or took that back (activities/meetingreadiness.go).
+        It holds for that attendee alone, at the preparation revision they
+        confirmed, and the attendee is not on the wire. A moved start, a new
+        agenda or a changed guest list makes the revision stale without a new
+        event.
+      required:
+        - activity_id
+        - state
+        - preparation_revision
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum: [ready, withdrawn]
+          description: >-
+            `ready` when the attendee confirmed, `withdrawn` when they undid it.
+        preparation_revision:
+          type: string
+          description: The preparation revision the confirmation was given at.
       additionalProperties: false
 
     PublicEventRelationshipNudgeDecided:
@@ -3340,8 +3420,9 @@ components:
         has_signature:
           type: boolean
           description: >-
-            Whether mail from this member now carries a sign-off. False after
-            a member empties the field, which is a chosen "send unsigned".
+            Whether the member has saved personal plain text or HTML. This reports
+            stored presence; sanitized HTML without visible text uses the usual fallback.
+            A workspace template or closing may still sign mail when this is false.
       additionalProperties: false
 
     PublicEventUserDeliveryChanged:

@@ -18,12 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
@@ -86,6 +86,7 @@ type Server struct {
 	// restore seam the reversal route uses — the receipt's offer and the write's
 	// refusal have to be one judgment.
 	magicService *magic.Service
+	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads
@@ -119,7 +120,9 @@ type Server struct {
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
+	conversationSuggestionHandlers
 	claimHandlers
+	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
 	importHandlers
@@ -132,8 +135,9 @@ type Server struct {
 	exportBundleHandlers
 	agentBundleHandlers
 	companyRollupHandlers
+	reviewAnswerHandlers
 	companyOfferedHandlers
-	strengthHandlers
+	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
@@ -195,7 +199,9 @@ type Server struct {
 	// it. In compose because the vocabulary is derived from the report catalog
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
+	salesDecisionHandlers
 	analyticsContextHandlers
+	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and
@@ -204,6 +210,8 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
+	// The sales initiative transport; the reporting engine reads its membership too.
+	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
 	// deployment composed, in registration order. It exists because each
@@ -236,6 +244,8 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
+	// mcpInputStateKey signs the questions a tool asks in the chat.
+	mcpInputStateKey string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no
@@ -334,18 +344,10 @@ type Server struct {
 	// pinned baselines.
 	captureConfig CaptureConfig
 
-	// gmailAppConfigured records whether this DEPLOYMENT configured a Google app
-	// that could transmit under a user's mailbox grant — the one fact the send
-	// pre-flight cannot read off a capture_connection row, since the grant
-	// survives the app being removed and a mailbox connected on one deployment
-	// reads the same on another.
-	//
-	// It is a deployment fact, not a role fact: WithGmailCapture records it
-	// before its own transport gate and off canSync, so an installation holding
-	// client credentials but no state key — which mounts no api-side connect
-	// transport yet sends perfectly well from the worker — still counts as
-	// configured. False is the honest default for a composition never told about
-	// a Google app at all.
+	// gmailAppConfigured records whether the ENVIRONMENT carries a Google app.
+	// The send pre-flight asks googleAppResolver too, so false still finds an
+	// app stored in Settings. WithGmailCapture records it before its transport
+	// gate, so an installation with credentials but no state key still counts.
 	gmailAppConfigured bool
 	// graphAppConfigured is the Microsoft twin, recorded by WithGraphCapture on
 	// the same condition and read by the same pre-flight. It exists because
@@ -496,5 +498,3 @@ type Server struct {
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string
 }
-
-var _ crmcontracts.ServerInterface = Server{}

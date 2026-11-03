@@ -64,6 +64,12 @@ func (h *Histogram) Snapshot() Histogram {
 	return out
 }
 
+// Sum is the total of every sample observed.
+func (h Histogram) Sum() float64 { return h.sum }
+
+// Count is how many samples were observed.
+func (h Histogram) Count() uint64 { return h.count }
+
 // WriteSeries renders this histogram's three series groups under name, with
 // labels already rendered as a non-empty `k=v,k=v` fragment. Every histogram in
 // this tree is keyed by something; a family with no labels of its own would

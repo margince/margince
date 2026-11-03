@@ -270,3 +270,28 @@ describe("the question builder", () => {
     ).toBeTruthy();
   });
 });
+
+describe("grouping by the installation's own fields", () => {
+  it("lists them after the built-in fields, each with how many deals hold a value", async () => {
+    const user = userEvent.setup();
+    const asked = renderBuilder(newDraft("deals-by-stage"), [CUSTOM_DEALS]);
+    const groupBy = screen.getByRole("combobox", { name: "Group by" });
+    await user.click(groupBy);
+    const names = (await screen.findAllByRole("option")).map(
+      (option) => option.textContent,
+    );
+    expect(names).toEqual([
+      "Status",
+      "Strategic · 10 of 10 deals",
+      "Territory · 7 of 10 deals",
+      "Tier (company) · 3 of 10 deals",
+    ]);
+    await user.click(
+      screen.getByRole("option", { name: "Tier (company) · 3 of 10 deals" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Status" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Run report" }));
+    expect(asked[0]?.groupBy).toEqual(["status", "company_cf_tier"]);
+  });
+});

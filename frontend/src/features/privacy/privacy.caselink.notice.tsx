@@ -1,6 +1,6 @@
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
-import type { LinkedCase } from "./privacy.caselink";
+import type { LinkedCase } from "../../lib/privacycaselink";
 
 /**
  * What the queue says when it cannot show the case it was sent to open.

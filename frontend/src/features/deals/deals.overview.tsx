@@ -13,6 +13,7 @@ import { tasksPeek } from "../../lib/standingpeeks";
 import { dealRoleLabel } from "../records/record360";
 import { DealApprovals } from "./deal360/dealapprovals";
 import { DealBrief } from "./deal360/dealbrief";
+import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
 import { DealLinksCard } from "./deal360/deallinkscard";
@@ -220,6 +221,9 @@ export function DealOverviewPane({
             refusedReasonId={refusedReasonId}
             onCreate={onCreateOffer}
           />
+          {!deal.archived_at && (
+            <DealCommitmentsCard dealId={deal.id} onOpenEmail={onOpenEmail} />
+          )}
           {!deal.archived_at && (
             <DealCommitteeCard
               dealId={deal.id}

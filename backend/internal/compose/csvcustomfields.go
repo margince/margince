@@ -96,7 +96,7 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	if !hasCustomFields(object) {
 		return importColumns{catalog: cat}, nil
 	}
-	store, err := contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
+	store, err := newContactsStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
 		ActiveCreateColumns(ctx, object)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return importColumns{}, err

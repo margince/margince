@@ -87,6 +87,14 @@ func (w *csvWriters) validateReviewedLinks(ctx context.Context, external string)
 			if !found || binding.RunID != w.runID || current.TargetID != binding.NativeID.String() {
 				return apperrors.ErrVersionSkew
 			}
+		} else if expected.Object == migration.ObjectCompany && expected.TargetID == "" && !expected.Dropped && current.TargetID != "" {
+			binding, found, err := w.identities.LookupBinding(ctx, w.sourceSystem, migration.ObjectCompany, employerImportKey(current.TargetID))
+			if err != nil {
+				return err
+			}
+			if !found || binding.RunID != w.runID {
+				return apperrors.ErrVersionSkew
+			}
 		} else if current.TargetID != expected.TargetID || current.Dropped != expected.Dropped || current.Pending {
 			return apperrors.ErrVersionSkew
 		}

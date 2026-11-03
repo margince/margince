@@ -1,5 +1,6 @@
 import { QueryGate, type QueryLike } from "../../design-system/querystates";
 import { formatDateTime } from "../../format/format";
+import { monthName } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { ReportingCharts } from "./reporting.charts";
 import {
@@ -73,9 +74,38 @@ export function ReportResults({
       {(evaluation) => (
         <>
           <p className="t-caption">{t("reporting.live")}</p>
-          <ReportingCharts evaluation={evaluation} onEvidence={onEvidence} />
+          <FiscalQuarterNote evaluation={evaluation} />
+          <ReportingCharts
+            evaluation={evaluation}
+            report={{ id: reportId, revision: previewRevision }}
+            onEvidence={onEvidence}
+          />
         </>
       )}
     </QueryGate>
+  );
+}
+
+/**
+ * A live report that reads this quarter follows the current fiscal start, so
+ * it says which one. A sent edition keeps the start it was captured under.
+ */
+function FiscalQuarterNote({
+  evaluation,
+}: Readonly<{ evaluation: ReportingEvaluation }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { selection, context } = evaluation;
+  const fiscal =
+    selection.period === "this_quarter" ||
+    selection.target_basis === "fiscal_quarter" ||
+    selection.close_window === "fiscal_quarter";
+  if (!fiscal || context.fiscal_year_start_month == null) return null;
+  return (
+    <p className="t-caption">
+      {t("reporting.fiscalQuarterNote", {
+        month: monthName(context.fiscal_year_start_month, locale),
+      })}
+    </p>
   );
 }

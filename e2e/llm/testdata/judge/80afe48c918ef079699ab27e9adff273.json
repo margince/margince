@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer describes the fold happening in one operation (approval then release), never stating that folding is impossible, that no merge method exists, or that record-by-record hand work is required.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2, the capability. The answer never tells the reader that Margince cannot fold two tags into one, or that there is no way to merge them, or that the fold had to be done by hand record by record. The product does fold them, in one call.",
+  "answer": "Both spellings are in the tag list, and only each tag's own read carries a usage count: Strategic Account 41, Strategic Accts 3.\n\nSo Strategic Accts loses, and its 3 accounts move onto Strategic Account.\n\nNothing has moved yet. The fold sits with an approval and somebody has to release it before any record changes.\n\nStrategic Account now reads: an account with a named exec sponsor."
+}

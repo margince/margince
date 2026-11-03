@@ -41,9 +41,11 @@ describe("the update card", () => {
       },
     ]);
     expectReadable(root);
-    expect(root.querySelector("h1")?.textContent).toBe(
-      'Updated lead "Jane Doe"',
+    expect(root.querySelector("h1")?.textContent).toBe("Updated a lead");
+    expect(root.querySelector(".record-line")?.textContent).toBe(
+      "JDJane DoeLead",
     );
+    expect(root.querySelector(".panel-head")?.textContent).toContain("Saved");
     expect(rows(root)).toEqual(["OwnerAna Rep → Sam Rep"]);
   });
 

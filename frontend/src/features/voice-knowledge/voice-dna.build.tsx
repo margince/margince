@@ -23,11 +23,8 @@ export function reportFailure(
   };
 }
 
-// The two ADR-0066 maturity thresholds, mirrored so the build control can say
-// how far a corpus still has to go. The server decides what state a profile is
-// in (VoiceProfile.maturity); these only phrase the distance to the next one.
-const VOICE_FIRST_BUILD_WORDS = 800;
-
+// The ADR-0066 full-build threshold, mirrored to phrase how far a provisional
+// corpus still has to go. The first-build distance comes from the server.
 const VOICE_FULL_BUILD_WORDS = 4000;
 
 /** How a build ended, and the server's own words about it when it has any. */
@@ -73,24 +70,30 @@ function buildOutcomeText(
   return t(`settings.voice.buildStatus.${outcome.status}`);
 }
 
+// The newest build as the profile read recorded it, for a page opened after
+// the build started or ended elsewhere. A success says nothing here: what it
+// produced is drawn as the voice or the candidate review.
+function recordedOutcome(
+  t: ReturnType<typeof useT>,
+  profile: VoiceProfile,
+): BuildOutcome | null {
+  const build = profile.latest_build;
+  switch (build?.status) {
+    case "queued":
+    case "running":
+      return { status: "pending", detail: t("settings.voice.buildRunning") };
+    case "failed":
+    case "deferred":
+      return { status: build.status, detail: deferralDetail(t, build) };
+    default:
+      return null;
+  }
+}
+
 // Build creates a durable background build; poll to a terminal state. A slow or
-// budget-deferred build is reported as such, not spun on forever.
-//
-// One row: what the verb does on the left, the verb and the last outcome on the
-// right. The distance still to go is the row's description, not a sentence by
-// the button. It is two sentences, and only the naming column is wide enough.
-// When that distance is a refusal, `reasonId` points the button at those words.
-export function BuildControls({
-  profile,
-  canEdit,
-  onBuilt,
-  intakeBusy = false,
-}: Readonly<{
-  canEdit: boolean;
-  profile: VoiceProfile;
-  onBuilt: () => void;
-  intakeBusy?: boolean;
-}>) {
+// budget-deferred build is reported as such, not spun on forever. The hero and
+// the Builds card both start builds, so the one engine behind them lives here.
+export function useVoiceBuild(profile: VoiceProfile, onBuilt: () => void) {
   const t = useT();
   const { locale } = useLocale();
   // The outcome and what the server said about it. A terminal build carries
@@ -151,14 +154,14 @@ export function BuildControls({
   // threshold. The word counts below only phrase the distance to the next state.
   const tooThin = profile.maturity === "collecting";
   // The distance is quoted only from a corpus total that loaded. A failed
-  // fetch would read as zero words and announce "about 800 more words" when
-  // the cause was the failure. The button's state follows maturity, which
-  // comes from a different request.
+  // fetch would read as zero words and announce a distance caused by the
+  // failure. The first-build distance is the profile's own server fact.
   const words = corpus.isSuccess ? corpus.data.summary.total_words : null;
+  const remaining = profile.first_build_words_remaining ?? null;
   const blocked =
-    tooThin && words !== null
+    tooThin && remaining !== null
       ? t("settings.voice.buildNeedsWords", {
-          n: formatNumber(Math.max(0, VOICE_FIRST_BUILD_WORDS - words), locale),
+          n: formatNumber(remaining, locale),
         })
       : null;
   const reach =
@@ -168,37 +171,91 @@ export function BuildControls({
         })
       : null;
 
+  return {
+    build,
+    error,
+    tooThin,
+    words,
+    remaining,
+    blocked,
+    reach,
+    progress: buildStatusLine(
+      t,
+      build.isPending,
+      outcome ?? recordedOutcome(t, profile),
+    ),
+  };
+}
+
+export type VoiceBuild = ReturnType<typeof useVoiceBuild>;
+
+// The verb itself. "Rebuild" names a build that has happened. Before the first
+// one there is nothing to redo, so the verb is the build.
+export function BuildButton({
+  run,
+  profile,
+  intakeBusy,
+  variant = "ai",
+  describedBy,
+}: Readonly<{
+  run: VoiceBuild;
+  profile: VoiceProfile;
+  intakeBusy: boolean;
+  variant?: "ai" | "ghost";
+  describedBy?: string;
+}>) {
+  const t = useT();
+  return (
+    <Button
+      variant={variant}
+      // A refusal the reader can act on, attached to the control rather than
+      // left in a `title` no screen reader announces on a disabled button.
+      reasonId={run.blocked === null ? undefined : describedBy}
+      aria-describedby={describedBy}
+      disabled={!run.build.isPending && (run.tooThin || intakeBusy)}
+      pending={run.build.isPending}
+      busyLabel={t("settings.voice.building")}
+      onClick={() => run.build.mutate()}
+    >
+      <Sparkles aria-hidden />{" "}
+      {t(
+        (profile.profile_version ?? 0) > 0
+          ? "settings.voice.rebuild"
+          : "settings.voice.buildFirst",
+      )}
+    </Button>
+  );
+}
+
+// One row: what the verb does on the left, the verb and the last outcome on the
+// right. The distance still to go is the row's description, not a sentence by
+// the button. It is two sentences, and only the naming column is wide enough.
+export function BuildControls({
+  profile,
+  canEdit,
+  onBuilt,
+  intakeBusy = false,
+}: Readonly<{
+  canEdit: boolean;
+  profile: VoiceProfile;
+  onBuilt: () => void;
+  intakeBusy?: boolean;
+}>) {
+  const t = useT();
+  const run = useVoiceBuild(profile, onBuilt);
   return (
     <SettingRow
       label={t("settings.voice.buildRowLabel")}
-      description={blocked ?? reach ?? undefined}
+      description={run.blocked ?? run.reach ?? undefined}
       control={(control) =>
         canEdit ? (
           <div className="vdna-buildcell">
-            <Button
-              variant="primary"
-              // A refusal the reader can act on, attached to the control rather
-              // than left in a `title` no screen reader announces on a disabled
-              // button. It points at the description this row already draws.
-              reasonId={
-                blocked === null ? undefined : control["aria-describedby"]
-              }
-              aria-describedby={control["aria-describedby"]}
-              disabled={!build.isPending && (tooThin || intakeBusy)}
-              pending={build.isPending}
-              busyLabel={t("settings.voice.building")}
-              onClick={() => build.mutate()}
-            >
-              <Sparkles aria-hidden />{" "}
-              {/* "Rebuild" names a build that has happened. Before the first
-                  one there is nothing to redo, and the verb the reader came
-                  for is the first build itself. */}
-              {t(
-                (profile.profile_version ?? 0) > 0
-                  ? "settings.voice.rebuild"
-                  : "settings.voice.buildFirst",
-              )}
-            </Button>
+            <BuildButton
+              run={run}
+              profile={profile}
+              intakeBusy={intakeBusy}
+              describedBy={control["aria-describedby"]}
+            />
             {/* Mounted whether or not there is an outcome yet. A build runs for
                 about a minute behind a poll, so its reader has looked away. A
                 live region inserted with its text is not reliably announced,
@@ -210,9 +267,9 @@ export function BuildControls({
                 without saying why invites the press again. It also says the
                 wait can be left: a build outlives this page. */}
             <p className="t-caption" role="status">
-              {buildStatusLine(t, build.isPending, outcome)}
+              {run.progress}
             </p>
-            {error && <ErrorLine>{error}</ErrorLine>}
+            {run.error && <ErrorLine>{run.error}</ErrorLine>}
           </div>
         ) : null
       }

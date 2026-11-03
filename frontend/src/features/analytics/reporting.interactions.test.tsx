@@ -18,6 +18,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { AnalyticsScreen } from "./analytics";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { layoutOf } from "./reporting.layout";
 import { ReportingOverview } from "./reporting.overview";
@@ -233,7 +234,7 @@ it("opens keyboard-selected evidence with its receipt and restores focus", async
   const fetch = vi.spyOn(globalThis, "fetch");
   const { container } = render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   await screen.findByRole("heading", { name: "Sales won over time" });
@@ -263,7 +264,7 @@ it("uses local inclusive custom dates without querying an incomplete range", asy
   render(
     <StoryProviders>
       <RecordZoneProvider zone={REPORTING_FIXTURE_ZONE}>
-        <ReportingOverview scope={reportingStoryScope} />
+        <ReportingOverview view="sales" scope={reportingStoryScope} />
       </RecordZoneProvider>
     </StoryProviders>,
   );
@@ -320,17 +321,19 @@ it("does not request editions or schedules without their read grants", async () 
     screen.queryByRole("button", { name: "Save snapshot" }),
   ).not.toBeInTheDocument();
 });
-it("preserves the sales pipeline after changing the SDR date range", async () => {
+it("carries the date range across tabs and keeps the sales pipeline", async () => {
   const user = userEvent.setup({ delay: null });
+  window.location.hash = "#/analytics/performance";
   installFetchStub(reportingStoryRoutes());
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <AnalyticsScreen />
     </StoryProviders>,
   );
   const pipeline = await screen.findByRole("combobox", { name: "Pipeline" });
   expect(pipeline).toHaveTextContent("Sales");
   await user.click(screen.getByRole("button", { name: "SDR outcomes" }));
+  await screen.findByRole("button", { name: "SDR outcomes", pressed: true });
   expect(
     screen.queryByRole("combobox", { name: "Pipeline" }),
   ).not.toBeInTheDocument();
@@ -339,13 +342,13 @@ it("preserves the sales pipeline after changing the SDR date range", async () =>
     screen.getByRole("combobox", { name: "Date range" }),
     "Last month",
   );
-  await user.click(screen.getByRole("button", { name: "Sales" }));
+  await user.click(screen.getByRole("button", { name: "Performance" }));
+  expect(
+    await screen.findByRole("combobox", { name: "Pipeline" }),
+  ).toHaveTextContent("Sales");
   expect(
     screen.getByRole("combobox", { name: "Date range" }),
   ).toHaveTextContent("Last month");
-  expect(screen.getByRole("combobox", { name: "Pipeline" })).toHaveTextContent(
-    "Sales",
-  );
 });
 
 it("requires confirmation before archiving and explains the schedule effect", async () => {
@@ -392,7 +395,7 @@ it("restores the selected period and close window after reopening performance", 
   installFetchStub(reportingStoryRoutes());
   const first = render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   await pickOption(
@@ -408,7 +411,7 @@ it("restores the selected period and close window after reopening performance", 
   first.unmount();
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   expect(
@@ -426,7 +429,7 @@ it("derives the target period from the business period despite an old bookmark",
   const fetch = vi.spyOn(globalThis, "fetch");
   render(
     <StoryProviders>
-      <ReportingOverview scope={reportingStoryScope} />
+      <ReportingOverview view="sales" scope={reportingStoryScope} />
     </StoryProviders>,
   );
   await screen.findByRole("heading", { name: "Sales won over time" });

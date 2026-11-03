@@ -5,7 +5,11 @@
 // beside it. The panel's head, states and foot are in brief.feed.tsx.
 
 import { useRef } from "react";
-import { TaskNextSteps } from "../../components/tasknextsteps";
+import {
+  TaskNextSteps,
+  TaskNextStepsPending,
+} from "../../components/tasknextsteps";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
@@ -24,11 +28,11 @@ import {
   reasonText,
   subjectHref,
   whenText,
-} from "../worklist/worklist.copy";
-import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
+} from "../../lib/worklistcopy";
+import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
-import { contactHref } from "../worklist/worklist.row.captions";
+import { contactHref, useListed } from "../worklist/worklist.row.captions";
 
 import "./brief.feed.css";
 
@@ -66,17 +70,23 @@ export function Triage({
     }
   };
   // A task row's id is its activity's, so the card reads the task it shows.
-  const task = useActivity(lead.id, lead.source === "task").data;
+  const isTask = lead.source === "task";
+  const taskRead = useActivity(lead.id, isTask);
+  const task = taskRead.data;
+  const taskPending = isTask && taskRead.isPending;
   const cardVerbs =
-    onContext || task ? (
+    onContext || task || taskPending ? (
       <>
+        {/* The drafted mail stands beside Done, ahead of the way to read
+            more: it is the task's next step, the details are about it. */}
+        {taskPending && <TaskNextStepsPending />}
+        {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
           <Button variant="ghost" onClick={() => onContext(lead)}>
             {t("brief.focus.context")}
           </Button>
         )}
-        {task && <TaskNextSteps task={task} offerOpen={false} />}
       </>
     ) : undefined;
   // The head's facts come from the helpers the row uses, so the card and the
@@ -210,14 +220,16 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   const label =
     contact?.label ??
     (briefSubjectLabel(item) ? undefined : item.subject?.label);
-  const href = contact?.label ? contactHref(contact) : subjectHref(item);
+  const listed = useListed();
+  const target = contact?.label ? contactHref(contact) : subjectHref(item);
+  const href = target && listed(target);
   const inbox = item.email_summary?.display_status;
   return (
     <>
       {label && href && (
-        <a className="entity-link" href={href}>
+        <AppLink className="entity-link" href={href}>
           {label}
-        </a>
+        </AppLink>
       )}
       {inbox && <span>{t(`visibility.${inbox}`)}</span>}
     </>

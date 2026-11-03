@@ -54,23 +54,28 @@ export function WorklistScreen({
   const t = useT();
   const {
     scope,
+    view,
     filter,
     owner,
     selectedId,
     setScope,
+    setView,
     setFilter,
     setOwner,
     setSelectedId,
   } = useWorklistAddress(opensOn, embedded);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
+  const day = useWorklist(
+    scope,
+    filter,
+    owner === "" ? undefined : owner,
+    true,
+    view,
+  );
   const refreshWalk = useRefreshWalk();
   const queryClient = useQueryClient();
-  // A failed LOAD MORE is not a failed page. `isError` covers both, and
-  // treating them alike would replace a screen of rows the reader is working
-  // through with an error panel because one extra page did not arrive. The
-  // rows already loaded are still true, so the surface stays ready and the
-  // control below says the request failed.
+  // A failed next batch is not a failed page. The rows already loaded stay,
+  // and the scroll sentinel below them says the batch failed.
   const lostTheDay = day.isError && day.data === undefined;
   // A refusal is not a failure. A named owner this reader has no reach over
   // answers 403, and "did not load. Retry" invites a retry that can only
@@ -126,17 +131,19 @@ export function WorklistScreen({
             onRefresh={refreshWalk}
             queue={queue}
             scope={scope}
+            view={view}
             filter={filter}
             owner={owner}
             selectedId={selectedId}
             onScope={setScope}
+            onView={setView}
             onFilter={setFilter}
             onOwner={setOwner}
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
-            hasMore={day.hasNextPage}
+            cursor={day.data?.pages.at(-1)?.next_cursor ?? undefined}
             loadingMore={day.isFetchingNextPage}
-            moreFailed={day.isError && day.data !== undefined}
+            moreFailed={day.isFetchNextPageError}
             onMore={() => void day.fetchNextPage()}
           />
         )}

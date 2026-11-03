@@ -8,6 +8,8 @@ const READS: readonly (readonly unknown[])[] = [
   ["reporting-catalog"],
   ["reporting-evaluation", { period: "this_month" }],
   ["reporting-live", "r-1", "published"],
+  ["signal", "s-1"],
+  ["signals", "company", "co-1"],
 ];
 
 describe("a display-language change", () => {

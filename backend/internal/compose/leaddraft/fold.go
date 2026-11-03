@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -94,20 +95,16 @@ func greetingNames(full string) (first, last string) {
 //
 // The activities arrive newest first, so the first of each direction is the
 // latest of it. An activity with no direction is not a side speaking.
-func lastEachWay(activities []crmcontracts.Activity) (inbound, outbound time.Time) {
-	for _, activity := range activities {
-		if activity.Direction == nil {
+func lastEachWay(rows []crmcontracts.Activity) (inbound, outbound time.Time) {
+	for _, activity := range rows {
+		ours, known := activities.WroteItOurSide(activity)
+		switch {
+		case !known:
 			continue
-		}
-		switch *activity.Direction {
-		case crmcontracts.ActivityDirectionInbound:
-			if inbound.IsZero() {
-				inbound = activity.OccurredAt.UTC()
-			}
-		case crmcontracts.ActivityDirectionOutbound:
-			if outbound.IsZero() {
-				outbound = activity.OccurredAt.UTC()
-			}
+		case ours && outbound.IsZero():
+			outbound = activity.OccurredAt.UTC()
+		case !ours && inbound.IsZero():
+			inbound = activity.OccurredAt.UTC()
 		}
 		if !inbound.IsZero() && !outbound.IsZero() {
 			return inbound, outbound

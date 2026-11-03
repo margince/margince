@@ -58,14 +58,9 @@ func countryOf() storekit.Field {
 const contactEmailExpr = `(SELECT ce.email FROM contact_email ce
 	WHERE ce.contact_id = t.id AND ce.archived_at IS NULL` + contactaddress.ReachableOrder + ` LIMIT 1)`
 
-// contactEmployerLink is the contact list's employer filter as a link leaf:
-// the one current primary employment edge, which uq_rel_current_primary_employer
-// keeps unique per contact. The contacts module spells the same predicate for
-// its list parameter; both read employment.CurrentPrimarySQL, so "works there
-// today" has one definition, and a module never imports its sibling.
+// contactEmployerLink keeps secondary current jobs in the same company cohort.
 var contactEmployerLink = "EXISTS (SELECT 1 FROM relationship rel WHERE rel.contact_id = t.id" +
-	" AND rel.kind = 'employment' AND " + employment.CurrentPrimarySQL("rel") +
-	" AND rel.archived_at IS NULL AND %s)"
+	" AND " + employment.CurrentMembershipSQL("rel") + " AND %s)"
 
 // contactEmployerField is withheld until bindEmployerScope admits the caller:
 // an edge discloses a contact and a company as a pair, which neither record's

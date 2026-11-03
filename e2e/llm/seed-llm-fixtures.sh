@@ -1391,7 +1391,11 @@ freeze_forecast() {
 if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'daily'")" -ne 2 ]]; then
   lane_psql "DELETE FROM forecast_snapshot WHERE trigger = 'daily'" >/dev/null
   freeze_forecast
-  lane_psql "UPDATE forecast_snapshot SET taken_at = taken_at - interval '7 days', local_day = local_day - 7 WHERE trigger = 'daily'" >/dev/null
+  # The table refuses an UPDATE by trigger, so the trigger is off for this one
+  # backdating and back on in the same transaction.
+  lane_psql "ALTER TABLE forecast_snapshot DISABLE TRIGGER forecast_snapshot_is_frozen;
+    UPDATE forecast_snapshot SET taken_at = taken_at - interval '7 days', local_day = local_day - 7 WHERE trigger = 'daily';
+    ALTER TABLE forecast_snapshot ENABLE TRIGGER forecast_snapshot_is_frozen" >/dev/null
   vorort_deal="$(deal_id_by_name "Vorort Systeme Ausbau")"
   valantic_deal="$(deal_id_by_name "valantic Migrationsprojekt")"
   [[ -n "$vorort_deal" && -n "$valantic_deal" ]] || { echo "case 50 needs the Vorort and valantic deals" >&2; exit 1; }

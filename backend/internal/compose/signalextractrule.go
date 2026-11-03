@@ -253,7 +253,10 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 		       -- "how far did reading get" has the same answer as a thread with
 		       -- no row at all. It is also not a time.Time, so scanning it
 		       -- would fail the whole pass.
-		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id
+		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id,
+		       -- The thread's own lower end, the pair threadHasMoved compares the
+		       -- cursor with, so a read that covered what it may read can say so.
+		       c.oldest, c.oldest_id
 		  FROM conversation c
 		  -- A probe of the scan table's key per thread. The aggregate's row
 		  -- estimate is far too low, and a plain join under it read the whole

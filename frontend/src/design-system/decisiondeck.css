@@ -391,7 +391,6 @@
   padding: var(--space-3);
   border: 1px solid var(--accentMed);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
 }
 

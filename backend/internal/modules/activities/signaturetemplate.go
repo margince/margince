@@ -19,10 +19,11 @@ import (
 )
 
 // SenderSignature is what a send knows about its sender's sign-off: their own
-// plain-text signature, the values a template fills in, and the workspace's
+// signature, the values a template fills in, and the workspace's
 // template. An empty Template means the workspace has none.
 type SenderSignature struct {
 	Body     string
+	HTML     string
 	Title    string
 	Phone    string
 	Template string
@@ -57,7 +58,11 @@ func renderSignatureTemplate(template string, v signatureValues) (markup, text s
 		"{phone}", html.EscapeString(v.Phone),
 		"{logo}", logo,
 	).Replace(template)
-	markup, err = sanitizeHTML(filled, signaturePolicy)
+	return signatureMarkup(filled)
+}
+
+func signatureMarkup(source string) (markup, text string, err error) {
+	markup, err = sanitizeHTML(source, signaturePolicy)
 	if err != nil {
 		return "", "", err
 	}
@@ -87,12 +92,21 @@ func markupText(markup string) (string, error) {
 }
 
 // textBlocks are the allowed elements a reader sees on a line of their own.
-var textBlocks = map[atom.Atom]bool{atom.P: true, atom.Li: true, atom.Blockquote: true, atom.Ul: true, atom.Ol: true}
+var textBlocks = map[atom.Atom]bool{atom.P: true, atom.Li: true, atom.Blockquote: true, atom.Ul: true, atom.Ol: true, atom.Div: true, atom.Table: true, atom.Tr: true, atom.H1: true, atom.H2: true, atom.H3: true, atom.H4: true, atom.H5: true, atom.H6: true}
 
 func writeText(out *strings.Builder, node *xhtml.Node) {
 	switch {
 	case node.Type == xhtml.TextNode:
 		out.WriteString(node.Data)
+	case node.DataAtom == atom.A:
+		var label strings.Builder
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			writeText(&label, child)
+		}
+		out.WriteString(label.String())
+		if href, safe := safeHref(node); safe && !strings.Contains(label.String(), strings.TrimPrefix(href, "mailto:")) {
+			out.WriteString(" <" + href + ">")
+		}
 	case node.DataAtom == atom.Br || node.DataAtom == atom.Hr:
 		out.WriteString("\n")
 	default:

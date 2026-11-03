@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -62,48 +63,35 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) func(context.Context)
 	}
 }
 
-// quietDealScan is quietDealLister with its SCAN DEPTH reported.
-//
-// The bool says a sweep stopped at its bound, and it travels with the rows
-// because it cannot be recovered from them: this reader filters after it scans,
-// keeping only what is quiet or overdue out of two bounded sweeps, so ten
-// survivors can be all that is left of a full fifty. A caller comparing the
-// returned count against the bound would read a truncated scan with few
-// survivors as a complete one — under-reporting, which is the one direction a
-// figure about somebody's workload must never fail in.
-//
-// One function with two callers rather than two predicates: quietDealLister
-// above is this, with the depth dropped, because agents.SlippingLister is a
-// shared type this cannot widen.
+// The scan-depth flag cannot be inferred from survivors of the bounded sweeps.
+// Tool callers keep the unrestricted selection used by their existing contract.
 func quietDealScan(
 	pool *pgxpool.Pool, quietForDays int,
 ) func(context.Context) ([]agents.SlippingDeal, bool, error) {
-	return quietDealScanWithClock(pool, quietForDays, clockNow)
+	scan := quietDealScanWithClock(pool, quietForDays, clockNow)
+	return func(ctx context.Context) ([]agents.SlippingDeal, bool, error) { return scan(ctx, nil) }
 }
 
-func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() time.Time) func(context.Context) ([]agents.SlippingDeal, bool, error) {
+func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() time.Time) func(context.Context, *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error) {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-	return func(ctx context.Context) ([]agents.SlippingDeal, bool, error) {
+	return func(ctx context.Context, owners *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error) {
 		zone, err := installationZone(ctx, pool)
 		if err != nil {
 			return nil, false, err
 		}
 		now := clock().UTC()
 		limit := slippingScanLimit
-		quiet, _, err := store.ListDeals(ctx, deals.ListDealsInput{
-			QuietForDays: &quietForDays, Limit: &limit,
-		})
+		// Each sweep reads one arm of the module's at-risk rule at this instant.
+		// The quiet one keeps the list's newest-first order.
+		quietIn := atRiskList(quietForDays, now, zone, owners, deals.AtRiskQuiet)
+		quietIn.Sort, quietIn.Limit = nil, &limit
+		quiet, _, err := store.ListDeals(ctx, quietIn)
 		if err != nil {
 			return nil, false, err
 		}
-		openStatus := "open"
-		date := now.In(zone).Format(time.DateOnly)
-		today, err := time.Parse(time.DateOnly, date)
-		if err != nil {
-			return nil, false, err
-		}
-		sort := acceptFieldExpectedClose
-		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, CloseBefore: &today, Sort: &sort, Limit: &limit})
+		openIn := atRiskList(quietForDays, now, zone, owners, deals.AtRiskOverdue)
+		openIn.Limit = &limit
+		open, _, err := store.ListDeals(ctx, openIn)
 		if err != nil {
 			return nil, false, err
 		}
@@ -149,18 +137,59 @@ func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() t
 		// absence, so it cannot come off the deal rows the two sweeps above
 		// read — and asking it before the filter would pay for deals that are
 		// about to be dropped.
-		ids := make([]ids.UUID, 0, len(out))
-		for _, d := range out {
-			ids = append(ids, d.DealID)
-		}
-		stepless, err := dealsWithNoOpenNextStep(ctx, pool, ids, now)
-		if err != nil {
+		if err := markNoOpenNextStep(ctx, pool, out, now); err != nil {
 			return nil, false, err
 		}
-		for i := range out {
-			out[i].NoOpenNextStep = stepless[out[i].DealID]
-		}
 		return out, cut, nil
+	}
+}
+
+// markNoOpenNextStep sets NoOpenNextStep on each candidate, in one read.
+func markNoOpenNextStep(ctx context.Context, pool *pgxpool.Pool, candidates []agents.SlippingDeal, now time.Time) error {
+	dealIDs := make([]ids.UUID, 0, len(candidates))
+	for _, d := range candidates {
+		dealIDs = append(dealIDs, d.DealID)
+	}
+	stepless, err := dealsWithNoOpenNextStep(ctx, pool, dealIDs, now)
+	if err != nil {
+		return err
+	}
+	for i := range candidates {
+		candidates[i].NoOpenNextStep = stepless[candidates[i].DealID]
+	}
+	return nil
+}
+
+// quietDealTail continues the candidate set quietDealScanWithClock sweeps, past
+// its sweeps. Its predicate is the union of the two sweeps' filters, ordered by
+// expected close, so every candidate is reached once. Each candidate carries
+// the position after it.
+func quietDealTail(pool *pgxpool.Pool, quietForDays int) func(
+	ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, after string, limit int,
+) ([]agents.SlippingDeal, []string, bool, error) {
+	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	return func(ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, after string, limit int) ([]agents.SlippingDeal, []string, bool, error) {
+		zone, err := installationZone(ctx, pool)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		in := atRiskList(quietForDays, asOf, zone, owners, deals.AtRiskEither)
+		in.Limit = &limit
+		if after != "" {
+			in.Cursor = &after
+		}
+		read, positions, page, err := store.ListDealsPositioned(ctx, in)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		out := make([]agents.SlippingDeal, len(read))
+		for i, d := range read {
+			out[i] = slippingCandidate(d, asOf, zone)
+		}
+		if err := markNoOpenNextStep(ctx, pool, out, asOf); err != nil {
+			return nil, nil, false, err
+		}
+		return out, positions, page.HasMore, nil
 	}
 }
 
@@ -270,4 +299,42 @@ func forecastCategoryName(category *crmcontracts.DealForecastCategory) *string {
 	}
 	name := string(*category)
 	return &name
+}
+
+// atRiskList is the list read of the whole at-risk candidate set, by expected close.
+func atRiskList(
+	quietForDays int, asOf time.Time, zone *time.Location, owners *storekit.OwnerSet, arm deals.AtRiskArm,
+) deals.ListDealsInput {
+	sort := deals.AtRiskSort
+	return deals.ListDealsInput{
+		AtRisk: &deals.AtRiskWindow{
+			QuietForDays: quietForDays, AsOf: asOf, CloseBefore: storekit.WorkspaceDay(asOf, zone), Arm: arm,
+		},
+		Sort: &sort, ScopeOwners: owners,
+	}
+}
+
+// quietDealsAmong answers which of these deals are in the candidate set
+// quietDealTail continues.
+func quietDealsAmong(pool *pgxpool.Pool, quietForDays int) func(
+	ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, among []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
+	return func(ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, among []ids.UUID) (map[ids.UUID]bool, error) {
+		zone, err := installationZone(ctx, pool)
+		if err != nil {
+			return nil, err
+		}
+		in := atRiskList(quietForDays, asOf, zone, owners, deals.AtRiskEither)
+		in.IDs, in.Limit = among, new(len(among))
+		read, _, err := store.ListDeals(ctx, in)
+		if err != nil {
+			return nil, err
+		}
+		held := make(map[ids.UUID]bool, len(read))
+		for _, d := range read {
+			held[ids.UUID(d.Id)] = true
+		}
+		return held, nil
+	}
 }

@@ -220,8 +220,8 @@ That is the rule when a message reached two mailboxes. Each owner adds what
 their own mailbox asks for, and the message ends at the **strictest** of those.
 
 ### How do I change who can read one logged message?
-To change who can read one logged message in Margince, press **Change visibility** on its row and answer "Who may read this message?".
-1. On the timeline, find the message and press **Change visibility**.
+To change who can read one logged message in Margince, use **Change visibility** under **More actions** (⋯) on its row.
+1. On the timeline, find the message, open **More actions** (⋯) on its row and press **Change visibility**.
 2. Choose **Everyone in the company**, **Participants only**, or name the colleagues and teams who may read it.
 3. Press **Save visibility**.
 
@@ -260,5 +260,5 @@ never shows mail from another seat's own mailbox.
 | The company-wide floor | Settings → Capture rules → Mail sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
 | Share one thread | The message itself, or Settings → Capture activity → Held threads |
-| One logged message's audience | Change visibility, on its row |
+| One logged message's audience | Change visibility, under More actions on its row |
 | Who can see the *record* | The contact or company header |

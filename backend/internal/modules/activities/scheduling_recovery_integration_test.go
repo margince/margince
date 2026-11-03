@@ -102,6 +102,129 @@ func TestRescheduleKeepsTheOriginalReservationUntilAcknowledged(t *testing.T) {
 	}
 }
 
+// A held meeting rescheduled has not happened at its new slot. So settling the
+// move books it again, even when the receipt lands after the new slot began.
+func TestAHeldMeetingRescheduledSettlesBooked(t *testing.T) {
+	for name, settledAt := range map[string]time.Time{
+		"settled before the new slot":      monday(12),
+		"settled after the new slot began": monday(17),
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newInvitationFixture(t)
+			meeting := f.book(t)
+			id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+			f.now = monday(12)
+			held := string(crmcontracts.ActivityMeetingStatusHeld)
+			if _, err := f.store.UpdateActivity(f.ctx, id, UpdateActivityInput{MeetingStatus: &held}); err != nil {
+				t.Fatalf("recording the meeting as held: %v", err)
+			}
+			start, end := monday(15), monday(16)
+			if _, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end}); err != nil {
+				t.Fatalf("rescheduling: %v", err)
+			}
+			f.calendar.saved = func() { f.now = settledAt }
+			if err := f.store.DeliverInvitations(f.ctx); err != nil {
+				t.Fatalf("settling the reschedule: %v", err)
+			}
+			var status string
+			if err := f.env.owner.QueryRow(f.ctx, `SELECT meeting_status FROM activity WHERE id=$1`, meeting.Id).Scan(&status); err != nil {
+				t.Fatal(err)
+			}
+			if status != "booked" {
+				t.Errorf("the rescheduled meeting reads %q, want booked", status)
+			}
+		})
+	}
+}
+
+// Only a Margince reschedule takes an outcome away. A provider change that
+// leaves the start where it was keeps it, on a meeting rescheduled before too.
+func TestAHeldRescheduledMeetingKeepsItsOutcomeWhenTheProviderMovesOnlyTheEnd(t *testing.T) {
+	f := newInvitationFixture(t)
+	meeting := f.book(t)
+	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+	start, end := monday(13), monday(14)
+	if _, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end}); err != nil {
+		t.Fatalf("rescheduling: %v", err)
+	}
+	if err := f.store.DeliverInvitations(f.ctx); err != nil {
+		t.Fatalf("settling the reschedule: %v", err)
+	}
+	f.now = monday(15)
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	if _, err := f.store.UpdateActivity(f.ctx, id, UpdateActivityInput{MeetingStatus: &held}); err != nil {
+		t.Fatalf("recording the moved meeting as held: %v", err)
+	}
+	transitions := func() (count int) {
+		if err := f.env.owner.QueryRow(f.ctx, `SELECT count(*) FROM activity_meeting_history WHERE activity_id=$1`, meeting.Id).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		return count
+	}
+	before := transitions()
+	var row invitationRow
+	if err := f.store.tx(f.ctx, func(tx pgx.Tx) error {
+		var err error
+		row, err = readInvitation(f.ctx, tx, ids.UUID(meeting.Id), false)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.store.reconcileInvitation(f.ctx, row, connector.CalendarState{Start: start, End: monday(15)}); err != nil {
+		t.Fatalf("importing the provider's new end: %v", err)
+	}
+	var status string
+	var seconds int
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT meeting_status, duration_seconds FROM activity WHERE id=$1`, meeting.Id).Scan(&status, &seconds); err != nil {
+		t.Fatal(err)
+	}
+	if seconds != 2*60*60 {
+		t.Fatalf("the provider's new end was not imported: %d seconds", seconds)
+	}
+	if status != held {
+		t.Errorf("the meeting reads %q after an end-only provider change, want held", status)
+	}
+	if after := transitions(); after != before {
+		t.Errorf("an end-only provider change wrote %d status transitions, want none", after-before)
+	}
+}
+
+// A reschedule start carries nanoseconds the stored start drops. Settling that
+// reschedule again, as a retry does, still finds the outcome at its own start.
+func TestSettlingASubMicrosecondRescheduleAgainKeepsItsOutcome(t *testing.T) {
+	f := newInvitationFixture(t)
+	meeting := f.book(t)
+	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+	start, end := monday(13).Add(789*time.Nanosecond), monday(14)
+	if _, err := f.store.ChangeInvitation(f.ctx, ids.UUID(meeting.Id), crmcontracts.MeetingInvitationChange{Action: "reschedule", Version: meeting.Version, Start: &start, End: &end}); err != nil {
+		t.Fatalf("rescheduling: %v", err)
+	}
+	if err := f.store.DeliverInvitations(f.ctx); err != nil {
+		t.Fatalf("settling the reschedule: %v", err)
+	}
+	f.now = monday(15)
+	held := string(crmcontracts.ActivityMeetingStatusHeld)
+	if _, err := f.store.UpdateActivity(f.ctx, id, UpdateActivityInput{MeetingStatus: &held}); err != nil {
+		t.Fatalf("recording the moved meeting as held: %v", err)
+	}
+	if err := f.store.tx(f.ctx, func(tx pgx.Tx) error {
+		row, err := readInvitation(f.ctx, tx, ids.UUID(meeting.Id), false)
+		if err != nil {
+			return err
+		}
+		return f.store.settleInvitation(f.ctx, tx, row, true)
+	}); err != nil {
+		t.Fatalf("settling the reschedule again: %v", err)
+	}
+	var status string
+	if err := f.env.owner.QueryRow(f.ctx, `SELECT meeting_status FROM activity WHERE id=$1`, meeting.Id).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != held {
+		t.Errorf("the meeting reads %q after its reschedule settled again, want held", status)
+	}
+}
+
 func TestAProposalIsConsumedInTheInvitationTransaction(t *testing.T) {
 	f := newInvitationFixture(t)
 	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: f.request.Subject, DurationMinutes: 60})

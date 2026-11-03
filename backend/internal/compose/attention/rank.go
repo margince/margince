@@ -124,6 +124,9 @@ type ranked struct {
 	// reminded says the row is a task of the reader's whose reminder came due.
 	// It sorts at the pin level for the same reason, and means what it meant.
 	reminded bool
+	// uncrowdable exempts the row from crowding: the reader's own meeting,
+	// within meetingHorizon, that they have not confirmed they are ready for.
+	uncrowdable bool
 	// opportunity is the overnight brief's own composite for this deal, between
 	// 0 and 1, and zero where the night did not rank it.
 	//

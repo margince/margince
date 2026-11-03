@@ -118,7 +118,7 @@
 }
 
 .emailentry--open:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .emailentry--open:focus-visible {

@@ -149,6 +149,7 @@ type archiveTag struct{ tags Tags }
 func (t archiveTag) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "archive_tag", Title: "Retire a tag", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   archiveTagCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
 		ReplayGrant: &mcp.ReplayGrant{Object: tagRecordType, Action: principal.ActionDelete},
@@ -199,6 +200,7 @@ type mergeTags struct {
 func (t mergeTags) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "merge_tags", Title: "Fold one tag into another", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   mergeTagsCopy.render(),
 		Instead:       mergeTagsCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired,

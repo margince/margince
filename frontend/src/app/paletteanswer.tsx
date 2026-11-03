@@ -3,7 +3,9 @@
 
 import { Settings } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { EmptyState, PendingBody } from "../design-system/atoms";
+import { AiPending } from "../design-system/aipending";
+import { AiReveal } from "../design-system/aireveal";
+import { EmptyState } from "../design-system/atoms";
 import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -85,7 +87,7 @@ export function PaletteAnswer({
   if (pending) {
     return (
       <div className="palette-answer">
-        <PendingBody label={t("palette.asking")} lines={2} />
+        <AiPending label={t("palette.asking")} lines={2} />
       </div>
     );
   }
@@ -132,11 +134,13 @@ function AnsweredQuestion({
           ? t("palette.answerAfterHandbook", { name: answer.corpus.name })
           : t("palette.answerFrom", { name: answer.corpus.name })}
       </Eyebrow>
-      <AnswerView
-        answer={answer}
-        openCite={openCite}
-        onOpenCite={setOpenCite}
-      />
+      <AiReveal text={answer.summary}>
+        <AnswerView
+          answer={answer}
+          openCite={openCite}
+          onOpenCite={setOpenCite}
+        />
+      </AiReveal>
       {covered ? null : <p className="t-caption">{t("palette.askNoAnswer")}</p>}
       {sections.length > 0 ? (
         <ul className="palette-answer-sections t-caption">

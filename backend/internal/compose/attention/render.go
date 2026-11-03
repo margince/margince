@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -65,13 +66,9 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // honest answer: the alternative is a merge button over a record they cannot
 // read.
 //
-// The verbs need MORE than that read, and this is where the two questions part.
-// Deciding a pair either way writes it, so both verbs are offered only to a
-// reader who could change BOTH records — the records' owner, or a seat that
-// writes the whole workspace. Everyone else sees the pair and no verb, because
-// they are the ones who cannot act on it. Offered on visibility alone, the
-// button refused every press on a pair whose two records had different owners,
-// and the surface then advised trying again.
+// The verbs need more than that read. Dismissing writes both records, so it is
+// offered only to a reader who could change both. Merging is offered by
+// contacts.MayMergePair, the rule the merge itself asks of a filed pair.
 func (s *Service) duplicateItem(
 	pair DuplicatePair, known pairFaces, decidable pairAuthority, settleable map[ids.UUID]bool,
 ) crmcontracts.AttentionItem {
@@ -107,9 +104,10 @@ func (s *Service) duplicateItem(
 	// from here.
 	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
 		item.Actions = append(item.Actions, actionDismiss)
-		if settleable[pair.ID] {
-			item.Actions = append(item.Actions, "merge")
-		}
+	}
+	if offer := decidable.mergeOffer(pair.EntityType, pair.LeftID, pair.RightID); offer.May && settleable[pair.ID] {
+		item.Actions = append(item.Actions, "merge")
+		item.Pair.KeepId = (*openapi_types.UUID)(offer.Keep)
 	}
 	return item
 }
@@ -127,6 +125,12 @@ type pairAuthority map[string]map[ids.UUID]bool
 func (a pairAuthority) both(entityType string, left, right ids.UUID) bool {
 	rows := a[entityType]
 	return rows[left] && rows[right]
+}
+
+// mergeOffer is the merge's own question of a filed pair.
+func (a pairAuthority) mergeOffer(entityType string, left, right ids.UUID) contacts.MergeOffer {
+	rows := a[entityType]
+	return contacts.OfferMerge(left, right, contacts.PairWriters{Left: rows[left], Right: rows[right]}, true)
 }
 
 func (f pairFaces) side(entityType string, id ids.UUID) (crmcontracts.AttentionPairSide, bool) {
@@ -251,11 +255,12 @@ func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
 func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcontracts.AttentionItem {
 	kind := approval.Kind
 	item := crmcontracts.AttentionItem{
-		Id:      approval.Id.String(),
-		Source:  crmcontracts.AttentionItemSource("approval"),
-		Kind:    &kind,
-		Title:   approval.Summary,
-		Actions: []crmcontracts.AttentionItemActions{"decide"},
+		Id:           approval.Id.String(),
+		Source:       crmcontracts.AttentionItemSource("approval"),
+		Kind:         &kind,
+		Title:        approval.Summary,
+		SummaryParts: approval.SummaryParts,
+		Actions:      []crmcontracts.AttentionItemActions{"decide"},
 	}
 	if approvals.PreviewRefusal(approval.Preview) != nil {
 		item.Actions = []crmcontracts.AttentionItemActions{}
@@ -328,18 +333,13 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Source:  crmcontracts.AttentionItemSource("task"),
 		Title:   &subject,
 		Subject: subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
-		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
+		Actions: taskActions(task),
 	}
 	if task.SourceActivityID != nil {
 		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
 	}
 	if len(task.Recipients) > 0 {
 		item.PromiseRecipients = &task.Recipients
-	}
-	// Both verbs PATCH the task, so a reader who may not change it is offered
-	// neither.
-	if task.ReadOnly {
-		item.Actions = []crmcontracts.AttentionItemActions{}
 	}
 	if task.LeadResponseEscalation {
 		kind := "lead_response_escalation"

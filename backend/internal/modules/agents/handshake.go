@@ -12,6 +12,7 @@ package agents
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -59,10 +60,33 @@ func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpc
 // since one that tried and failed learns the check is broken rather than that
 // there was nothing to check.
 func (s *Dispatcher) instructions() string {
+	guidance := orientation + s.startingTools() + surfaceInstructions
 	if _, served := s.registry.Spec(listApprovalsToolName); !served {
-		return surfaceInstructions
+		return guidance
 	}
-	return surfaceInstructions + " " + queueInstruction
+	return guidance + " " + queueInstruction
+}
+
+// orientation says what this server is, ahead of the rules. A host that loads
+// tools on demand reads these instructions before any tool's own text.
+const orientation = "Margince is a CRM: contacts, companies, deals, leads, projects and the " +
+	"activity on them. When an answer names a record, give the reader its evidence web_url so " +
+	"they can open it. Money comes as <name>_minor in minor units with a readable <name>_display " +
+	"beside it; quote the display. "
+
+// startingTools names the first tools to reach for, only those this composition
+// serves, for the same reason the queue sentence is conditional.
+func (s *Dispatcher) startingTools() string {
+	var served []string
+	for _, name := range []string{readAttentionToolName, findRecordsToolName, readContextToolName, "read_record"} {
+		if _, ok := s.registry.Spec(name); ok {
+			served = append(served, name)
+		}
+	}
+	if len(served) == 0 {
+		return ""
+	}
+	return "Start with " + strings.Join(served, ", ") + ". "
 }
 
 // surfaceInstructions is the guidance for the model on the other side of the
@@ -93,3 +117,65 @@ const queueInstruction = "A write can also leave a question for a human WITHOUT 
 	"answer — an automation reacting to what you just wrote may draft a reply or stage a change " +
 	"of its own, after your call returned. Before telling anyone the work is finished, call " +
 	"list_approvals and report what is waiting; it needs no approval of its own."
+
+// identity is the serverInfo both framings report: the handshake era in its
+// initialize result, the modern era in every result's _meta.
+// iconSizeAny is the sizes value of an icon that scales, as the SVG does.
+const iconSizeAny = "any"
+
+func (s *Dispatcher) identity() map[string]any {
+	info := map[string]any{
+		fieldName: s.name, "version": s.version,
+		fieldTitle:       serverTitle,
+		fieldDescription: serverDescription,
+	}
+	if s.publicOrigin != "" {
+		info["websiteUrl"] = s.publicOrigin
+		info["icons"] = []map[string]any{
+			{"src": s.publicOrigin + "/icon.svg", "mimeType": "image/svg+xml", "sizes": []string{iconSizeAny}},
+			{"src": s.publicOrigin + "/web-app-manifest-512x512.png", "mimeType": "image/png", "sizes": []string{"512x512"}},
+		}
+	}
+	return info
+}
+
+// The name and line a host shows in its connector list.
+const (
+	serverTitle       = "Margince"
+	serverDescription = "Your CRM in the conversation: deals, contacts, meetings, the forecast and what needs attention."
+)
+
+// eraOwned answers the calls that exist in one framing only, and reports
+// whether the method was one of them at all.
+//
+// Each era's opening call is here because answering the other era's would
+// mislead a client about which kind of server it found. That is the
+// question those two calls exist to settle. ping is here because the 2026-07-28
+// revision removed it with the handshake it kept alive.
+func (s *Dispatcher) eraOwned(req rpcRequest, fr framing) (rpcResponse, bool) {
+	resp := rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID}
+	switch req.Method {
+	case methodInitialize:
+		if fr.modern {
+			return methodNotFound(req), true
+		}
+		if result, rpcErr := s.initialize(req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
+	case methodDiscover:
+		if !fr.modern {
+			return methodNotFound(req), true
+		}
+		resp.Result = s.discover()
+	case methodPing:
+		if fr.modern {
+			return methodNotFound(req), true
+		}
+		resp.Result = map[string]any{}
+	default:
+		return rpcResponse{}, false
+	}
+	return resp, true
+}

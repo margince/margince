@@ -52,66 +52,13 @@ const (
 	subjectLock   = "LockSubjectLive"
 )
 
-// unlockedLiveWrites ratifies a live-probed writer of an erasure-cleared table
-// that does not hold its subject.
-//
-// Every entry so far shares one reason, and it is the only reason that makes the
-// residue nil rather than small: the subject is CREATED by the very transaction
-// that writes its children. An Art. 17 erasure races a row it can see, and no
-// other transaction can see this contact until this one commits — so there is no
-// window to lose, and a lock would be taken against nobody.
-//
-// These three reach the live probe through the employment edge they attach,
-// which probes the contact it hangs on. That edge takes lockContactForAttach on
-// the same row, for the archive race one level down; the walk does not read it
-// as the subject lock because it deliberately is not one (contactattachlock.go
-// says why at length — routing it through the mutation door would answer a
-// product question as a side effect of a concurrency fix).
-const existingPairPromotionReason = "the cleanup reaches contact_email through the ordinary promotion engine. That engine locks the target contact and source lead before it carries any child row, so an erasure or archive cannot pass the promotion and leave restored residue"
-
-var unlockedLiveWrites = gatekit.Waive(withPromotionEdgeWriters(map[string]string{
-	"internal/modules/contacts:Store.EnsureBookerByEmail":                    "the call graph reaches contact_phone only through CreateContact, but this booking seam supplies no phone. Its existing-contact arm writes nothing, and its create arm makes the subject and email in one transaction, so no erased phone can be restored",
-	"internal/modules/contacts:Store.MergeExistingLeadContactPairsTx":        existingPairPromotionReason,
-	"internal/modules/contacts:Store.MergeExistingLeadContactPairForEmailTx": existingPairPromotionReason,
-	"internal/modules/contacts:Store.mergeExistingLeadContactPairTx":         existingPairPromotionReason,
-	"internal/modules/dealrooms:Store.OpenThread":                            "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
-	"internal/modules/dealrooms:Store.Reply":                                 "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
+// unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
+var unlockedLiveWrites = gatekit.Waive(map[string]string{
+	"internal/modules/dealrooms:Store.OpenThread": "the SELLER side of a deal-room thread: it builds threadAuthor{userID: &userID}, so every comment it writes carries author_user_id and a NULL author_participant_id. The erasure's delete is keyed on author_participant_id, so no row this function writes is one an erasure clears, and there is no row for a racing erasure to restore. The buyer's own reply path writes the participant author instead, and reaches this census through a different probe helper than the one it walks, so its own race is not answered by this declaration",
+	"internal/modules/dealrooms:Store.Reply":      "the same seller-side author on the reply rather than the opening comment, threadAuthor{userID: &userID} at thread_write.go:382, so the same reasoning holds: author_participant_id is NULL and the erasure's delete cannot name the row",
 
 	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
-
-	"internal/modules/contacts:Store.applyEmploymentEpisode":  "private import helper reached only after ApplyEmploymentImport holds the live contact row for this transaction; the contact lock covers the applied-field support and its relationship. The census reads callees rather than callers, so this declaration relies on the parent's held lock",
-	"internal/modules/contacts:Store.applyEmploymentEvidence": "private iteration inside ApplyEmploymentImport's transaction, after HoldWritableLive; every evidence item has the same locked contact. The census cannot propagate a caller's held lock down into this helper",
-
-	"internal/modules/contacts:Store.QuickCapture":     "quick capture creates the contact and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
-	"internal/modules/contacts:Store.quickCaptureInTx": "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same contact before writing its socials",
-}))
-
-// promotionEdgeReason is why the writers below reach the live probe. A lead's
-// promotion seats its contact on the deal it opened, through the writer a deal's
-// contact_ref uses, and that writer probes its anchor.
-const promotionEdgeReason = "reaches the live probe only through the stakeholder edge a promotion seats on the deal it opened in the same transaction: the anchor it probes is that new deal, which no erasure can be racing. The edge takes lockContactForAttach on the contact before it writes. The contact's own rows are written by earlier statements of the transaction, under the lock the promotion already holds on its lead"
-
-// withPromotionEdgeWriters adds the writers that reach the probe through a
-// promotion's stakeholder edge to the ratified set.
-func withPromotionEdgeWriters(declared map[string]string) map[string]string {
-	for _, name := range []string{
-		"CreateContact",
-		"CreateContactTx",
-		"EnsureContactByEmail",
-		"PromoteLead",
-		"QualifyLead",
-		"ReassignContactTx",
-		"UpdateContact",
-		"convertEditedLeads",
-		"convertLeadsIntoTx",
-		"createContactInTx",
-		"promoteLeadTx",
-		"updateContactInTx",
-	} {
-		declared["internal/modules/contacts:Store."+name] = promotionEdgeReason
-	}
-	return declared
-}
+})
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 	t.Parallel()

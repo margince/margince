@@ -12,6 +12,7 @@ import { useT } from "../i18n";
 import { MESSENGER_NAME, useCallMessengers } from "../lib/callmessengers";
 import { type CallRecord, useCallStart } from "../lib/callstart";
 import { opensElsewhere } from "../lib/linkclick";
+import { AppLink } from "./applink";
 import "./callaction.css";
 import { IconAction } from "./iconaction";
 import { OffsiteLink } from "./offsitelink";
@@ -114,10 +115,10 @@ export function linkVerb(
   onClick?: (event: MouseEvent<HTMLAnchorElement>) => void,
 ) {
   return (
-    <a className="btn btn-ghost" href={href} onClick={onClick}>
+    <AppLink className="btn btn-ghost" href={href} onClick={onClick}>
       {glyph}
       {label}
-    </a>
+    </AppLink>
   );
 }
 

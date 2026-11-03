@@ -50,8 +50,13 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	if !strings.Contains(dsn, "pool_min_conns") {
 		cfg.MinConns = 2
 	}
-	if !strings.Contains(dsn, "pool_max_conn_lifetime") {
-		cfg.MaxConnLifetime = 30 * time.Minute
+	// A backend keeps its plan memory until the connection closes. Jitter
+	// spreads the closes; its name contains the lifetime's, so it is cut first.
+	if !strings.Contains(strings.ReplaceAll(dsn, "pool_max_conn_lifetime_jitter", ""), "pool_max_conn_lifetime") {
+		cfg.MaxConnLifetime = 10 * time.Minute
+	}
+	if !strings.Contains(dsn, "pool_max_conn_lifetime_jitter") {
+		cfg.MaxConnLifetimeJitter = 2 * time.Minute
 	}
 	if !strings.Contains(dsn, "pool_max_conn_idle_time") {
 		cfg.MaxConnIdleTime = 5 * time.Minute
@@ -85,6 +90,17 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// Typed entity ids ride uuid/uuid[] on every connection, and every
 	// timestamptz reads back in UTC.
 	setSessionUTC(cfg)
+	// Inert until a caller binds a StatementMeter to the context. The worklist
+	// binds one to split each stage's time into pgx calls, pool waits and the rest.
+	tracer := statementTracer{now: time.Now}
+	if censusDir != "" {
+		census, err := processCensus(censusDir)
+		if err != nil {
+			return nil, err
+		}
+		tracer.census = census
+	}
+	cfg.ConnConfig.Tracer = tracer
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
 		RegisterUTCTimes(conn)

@@ -4,15 +4,12 @@
  * Colours read tokens only; the conformance gate enforces it. */
 
 .card {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-rest);
   padding: var(--padCard);
 }
 .card-inset {
-  background: var(--bgInset);
-  border: 0;
   box-shadow: none;
 }
 
@@ -47,7 +44,7 @@
   cursor: default;
 }
 .table > tbody > tr:hover > td {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
    so the first column lines up with a PanelBody's text. A table opened from a
@@ -118,13 +115,10 @@
   position: sticky;
   inset-inline-start: 0;
   z-index: 1;
-  background: var(--bgPage);
-}
-.panel .table-scroll-sticky > table > * > tr > :first-child {
-  background: linear-gradient(var(--pane), var(--pane)), var(--bgPage);
+  background: var(--ground);
 }
 .table-scroll-sticky > .table > tbody > tr:hover > :first-child {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* The edge shows only once a column has slid under it. */
 @container scroll-state(scrollable: inline-start) {
@@ -244,7 +238,7 @@
   padding: var(--space-5) var(--space-4);
   border: 1px dashed var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .empty-plate-title {
   margin: 0;
@@ -282,7 +276,6 @@
   z-index: 50;
 }
 .modal {
-  background: var(--bgElevated);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   padding: 22px;
@@ -494,7 +487,7 @@
   top: 0;
   z-index: 1;
   padding: var(--space-5) var(--space-5) var(--space-4);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-bottom: 1px solid var(--borderSubtle);
 }
 .modal-drawer-wide > .drawer-body {
@@ -508,7 +501,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
-  background: var(--bgElevated);
+  background: var(--ground);
   border-top: 1px solid var(--borderSubtle);
 }
 /* A form or drawer whose body is one `.form-stack` scrolls that body, keeping
@@ -588,11 +581,14 @@
     padding: 0;
   }
   /* The actions sit at the foot of the sheet rather than after the content,
-     so a long form does not bury its own confirm button. */
+     so a long form does not bury its own confirm button. A sticky foot stops
+     at the dialog's padding, and the shadow fills that padding below it, so
+     text scrolling under the row cannot show beneath the buttons. */
   .modal .actions {
     position: sticky;
     bottom: 0;
-    background: var(--bgElevated);
+    background: var(--ground);
+    box-shadow: 0 var(--space-6) 0 var(--ground);
     padding-top: var(--space-3);
   }
 }
@@ -797,11 +793,9 @@
    strip, a segmented row, any option whose name is followed by how much sits
    behind it. Declared here rather than by each host, because every host that
    styled it reached a slightly different answer and the same record then drew
-   one figure two ways.
-   Its own ink, not the host's: a quiet label's --textSecondary reads under
-   4.5:1 on the chip in dark, so the figure stays primary. The minimum width is what keeps a
-   column of chips the same size from 1 to 99, and the centring is what keeps
-   the digit in the middle of it. */
+   one figure two ways. The minimum width is what keeps a column of chips the
+   same size from 1 to 99, and the centring is what keeps the digit in the
+   middle of it. */
 .optioncount {
   display: flex;
   justify-content: center;
@@ -815,7 +809,7 @@
 }
 
 .segmented {
-  border: 0;
+  border: 1px solid var(--groundEdge);
   margin: 0;
   display: inline-flex;
   /* An unwrapped inline-flex does not shrink: it sets its own minimum width and
@@ -828,7 +822,8 @@
   background: var(--bgChip);
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  padding: 3px;
+  /* 2px plus the 1px edge: the option's --segmentPaddingY again. */
+  padding: 2px;
   gap: 2px;
 }
 .segmented button {
@@ -849,8 +844,11 @@
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
 }
+.segmented button:hover:where(:not(:disabled)) {
+  background: var(--groundHover);
+}
 .segmented button[aria-pressed="true"] {
-  background: var(--bgElevated);
+  background: var(--segmentPressed);
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
   box-shadow: var(--shadow-rest);
@@ -1823,7 +1821,6 @@ span.error-line {
   padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,
@@ -1898,7 +1895,7 @@ span.error-line {
    ring is drawn INSIDE the row — the panel's inset is --space-1, and an
    outline offset outward from a row would be clipped by it. */
 .overflow-menu-items .btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
   /* .btn-primary and .btn-danger lift a pixel on hover. A row in a list does
      not move under the pointer travelling down it. */
@@ -1949,12 +1946,10 @@ span.error-line {
   display: flex;
   flex-direction: column;
   padding: var(--space-4);
-  /* The pane, not the card: a reading sits on translucent ground with a
-     hairline, the same surface every zone of a record uses, so a row of them
-     reads as five panes of one page rather than five boxes on it. */
-  border: 1px solid var(--paneEdge);
+  /* The pane's hairline, the edge every zone of a record uses, so a row of
+     them reads as five panes of one page rather than five boxes on it. */
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
-  background: var(--pane);
   box-shadow: var(--shadow-rest);
   min-width: 0;
   /* The ground the door stretches over (`.stat-card-open::after`). A card
@@ -2300,6 +2295,9 @@ span.error-line {
 .stat-card-info ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--info);
 }
+.stat-card-meter-ai .stat-card-meter-fill {
+  background: var(--ai);
+}
 /* An empty segment is the track, whatever the tone. It matches the tone rules'
    weight and comes after them, so no fill colour reaches it. */
 .stat-card-meter .stat-card-meter-fill.stat-card-meter-empty {
@@ -2331,7 +2329,7 @@ span.error-line {
    see StatCard's `alert` docblock. Two classes deliberately, so this beats a
    strip's own `> *` background reset regardless of stylesheet order. */
 .stat-card.stat-card-alert {
-  background: var(--dangerBg);
+  background-image: linear-gradient(var(--dangerBg), var(--dangerBg));
 }
 
 /*
@@ -2363,7 +2361,7 @@ span.error-line {
    off one host and invisible on the next. --bgElevated is the one ground in the
    ladder that is a step off the track on every host. */
 .segmented button:active:not(:disabled) {
-  background-color: var(--bgElevated);
+  background-color: var(--segmentPressed);
   transition-duration: var(--dur-tap);
 }
 /* The strip's own disabled state, which it did not have: a segment nobody may

@@ -139,6 +139,7 @@ export function Panel({
             as={TITLE_ELEMENT[titleLevel ?? 2]}
             className="panel-title"
             id={titleId}
+            tabIndex={-1}
           >
             {title}
           </Heading>

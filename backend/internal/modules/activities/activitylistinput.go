@@ -22,8 +22,11 @@ import (
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
 	mailIdentities   map[string][]string
-	Cursor           *string
-	Limit            *int
+	// onlyID narrows a read to one row, so a caller can ask whether this list
+	// returns it without a second spelling of the list's clauses.
+	onlyID *ids.ActivityID
+	Cursor *string
+	Limit  *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.
@@ -35,10 +38,16 @@ type ListActivitiesInput struct {
 	// from Kind rather than a second spelling of it: the two compose, so "every
 	// message on telegram" and "every message" are both askable.
 	ChannelProvider *string
-	EntityType      *string
+	// SourceSystem narrows to rows one connector wrote, such as website forms.
+	SourceSystem *string
+	// AnswersThem keeps only rows that answer the other side (answersThemSQL).
+	AnswersThem bool
+	EntityType  *string
 	// note: EntityType+EntityID is the polymorphic activity_link filter —
 	// the target is ANY entity kind, so the id stays untyped (rule 6).
 	EntityID *ids.UUID
+	// LinkedToDeals keeps the rows filed under any of these deals.
+	LinkedToDeals []ids.UUID
 	// Query is the contract's `q`: a substring match over the subject and
 	// body a human would recognize the item by.
 	Query *string
@@ -66,8 +75,10 @@ type ListActivitiesInput struct {
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
-	// TaskAsOf is required for transaction reads filtered by assignee; store reads supply their clock.
-	TaskAsOf *time.Time
+	// AsOf is the page's instant: open tasks, reminders and each row's
+	// awaiting_outcome are judged at it. Store reads supply their clock; a
+	// transaction read filtered by assignee must set it.
+	AsOf *time.Time
 
 	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
@@ -81,6 +92,9 @@ type ListActivitiesInput struct {
 	// personal queue it arrives as though already theirs, which is how one
 	// automation's follow-up came to sit on every colleague's page.
 	UnassignedQueue bool
+	// TeamQueueOf narrows to the open tasks one of these seats holds, or nobody
+	// holds: the rows a team view keeps. Nil leaves the read unnarrowed.
+	TeamQueueOf []ids.UUID
 	// WorklistAsOf marks the read as the Worklist's, judged at this instant. It
 	// drops automatic response escalations unsupported by an inquiry, and open
 	// tasks aged out of the Worklist (worklistageout.go) the reader did not pin.
@@ -103,6 +117,10 @@ type ListActivitiesInput struct {
 	// its own scope, like UnassignedQueue: somebody picks unowned work up by
 	// choice, and it does not arrive in everybody's day.
 	UnhostedMeetings bool
+	// WithOutsideParty keeps the meetings with somebody from outside on them
+	// (outsidePartySQL), in SQL before the page is cut.
+	WithOutsideParty bool
+	outsideParty     func(arg func(any) int) (string, error)
 
 	// ReadableOnly drops the rows this caller may discover but not read, in SQL,
 	// BEFORE the page is cut.
@@ -143,15 +161,18 @@ type ListActivitiesInput struct {
 	// DayDates holds a day entry to a range of dates instead, as anchors: a day
 	// has no hour to fall inside the range above. Nil leaves days to that range.
 	DayDates *DayDates
-	// AwaitingOutcome narrows to meetings whose status is still open: booked,
-	// or NULL because capture writes calendar events with no status. Both
-	// meeting lanes set it so the status filter runs before the limit. A page
-	// cut first fills with held or canceled rows and hides the next real one.
-	AwaitingOutcome bool
+	// OpenStatusOnly keeps meetings whose status is still open: booked, or NULL
+	// because capture writes calendar events with no status. It says nothing of
+	// the start; AwaitingOutcomeAsOf does. The filter runs before the limit, so
+	// held or canceled rows cannot fill a page and hide the next open one.
+	OpenStatusOnly bool
 	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the
 	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
 	// internal stand-up owes no customer follow-up.
 	CustomerMeetingsOnly bool
+	// AwaitingOutcomeAsOf keeps the meetings that owe an outcome at that instant
+	// (awaitingOutcomeClause), the rule each Activity read stamps as awaiting_outcome.
+	AwaitingOutcomeAsOf *time.Time
 	// WaitingReplyAsOf narrows the list to the SAME thread walk WaitingReplies
 	// answers for the Worklist: the newest inbound message per thread that
 	// nobody has answered, as of this instant. Nil means the filter is off.
@@ -169,6 +190,9 @@ type ListActivitiesInput struct {
 	RequestCurrentAsOf *time.Time
 	// RequestReviewAsOf reads request evidence independently of current-work admission.
 	RequestReviewAsOf *time.Time
+	// positions, set by ListActivitiesPositioned, receives the cursor that
+	// resumes the list after each row it returns.
+	positions *[]string
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
 	// against. Unexported and set by the store beside the transaction it reads
 	// in, never by a caller: it is one read's snapshot, not a request parameter,
@@ -220,6 +244,9 @@ type ListActivitiesInput struct {
 	// content-gated, because a reminder offers the task to act on.
 	RemindersDue   bool
 	OrRemindersDue bool
+	// ExceptRemindersDue drops the caller's due reminders from the window. A
+	// reminded task is today's work, so the upcoming count leaves it out.
+	ExceptRemindersDue bool
 	// CustomFilters are the request's cf_ equality filters. They read content, so
 	// a row whose content the caller may not read drops out.
 	CustomFilters map[string]string

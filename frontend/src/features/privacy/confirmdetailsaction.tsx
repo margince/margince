@@ -1,18 +1,18 @@
-import { useMutation } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
+import { useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { ErrorLine } from "../../design-system/errorline";
 import { PanelBody } from "../../design-system/panel";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import {
+  ControllerMailDialog,
+  type ControllerMailIssued,
+} from "./controllermail";
 
 // Issuing the link queues a message; it does not prove delivery.
 function sentenceFor(
-  issued: components["schemas"]["ConfirmRequestIssued"],
+  issued: ControllerMailIssued,
   t: ReturnType<typeof useT>,
 ): string {
   const address = issued.delivered_to;
@@ -51,21 +51,14 @@ export function ConfirmDetailsAction({
   // undefined, which bars the action the same way a false does. It then says
   // so, rather than naming a fact nobody has read.
   const sendable = useMe().data?.confirm_requests_sendable;
-  const ask = useMutation({
-    // Keyed on the contact, so a result belongs to the record it was asked
-    // about. React reuses this component across a navigation between two
-    // cached contacts. Without the key, the previous contact's address sat
-    // under the new record's rows, naming somebody else's mailbox as this
-    // contact's.
-    mutationKey: ["confirm-request", contactId],
-    mutationFn: async (id: string) => {
-      return unwrap(
-        await api.POST("/contacts/{id}/consent/confirm-request", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
+  const [previewing, setPreviewing] = useState(false);
+  // Kept with the contact it was about: React reuses this component across a
+  // navigation between two cached contacts, and the address must not follow.
+  const [sent, setSent] = useState<{
+    contactId: string;
+    issued: ControllerMailIssued;
+  } | null>(null);
+  const issued = sent?.contactId === contactId ? sent.issued : null;
 
   if (!mayWrite) {
     return null;
@@ -79,10 +72,10 @@ export function ConfirmDetailsAction({
   return (
     <PanelBody className="consent-confirm-ask">
       <Button
-        disabled={ask.isPending}
         reason={reason}
+        aria-haspopup="dialog"
         data-testid="confirm-details-ask"
-        onClick={() => ask.mutate(contactId)}
+        onClick={() => setPreviewing(true)}
       >
         {t("consent.askToConfirm")}
       </Button>
@@ -92,13 +85,19 @@ export function ConfirmDetailsAction({
         </p>
       )}
       <p>{t("consent.askToConfirmWhat")}</p>
-      <ErrorLine error={ask.error} />
-      {ask.data && (
+      {issued && (
         <p className="t-caption" data-testid="confirm-details-sent">
-          {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}
-          {formatDateTime(ask.data.expires_at, locale, zone)}
+          {sentenceFor(issued, t)} {t("consent.askExpires")}:{" "}
+          {formatDateTime(issued.expires_at, locale, zone)}
         </p>
       )}
+      <ControllerMailDialog
+        contactId={contactId}
+        kind="record_confirmation"
+        open={previewing}
+        onClose={() => setPreviewing(false)}
+        onSent={(next) => setSent({ contactId, issued: next })}
+      />
     </PanelBody>
   );
 }

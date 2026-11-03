@@ -1,4 +1,4 @@
-import { Bot, Circle, CircleCheck, ShieldCheck } from "lucide-react";
+import { Bot, Circle, ShieldCheck } from "lucide-react";
 import { useId } from "react";
 import type { components } from "../../api/schema";
 import {
@@ -45,8 +45,6 @@ export function CompanyStep({
   draft,
   setField,
   read,
-  saved,
-  saveError,
   missingRequired,
   selectedFactKeys,
   setSelectedFactKeys,
@@ -58,8 +56,6 @@ export function CompanyStep({
   setField: (field: CompanyFieldName, value: string) => void;
   onPickEntity: (entity: CompanySiteReadLegalEntity) => void;
   read: CompanySiteRead | null;
-  saved: boolean;
-  saveError: string | null;
   missingRequired: readonly CompanyFieldName[];
   selectedFactKeys: readonly string[];
   setSelectedFactKeys: (keys: string[]) => void;
@@ -101,25 +97,6 @@ export function CompanyStep({
             : t("ob.confirmManual")}
         </span>
       </div>
-
-      {saved && (
-        <p className="ob-sub ob-companyform-saved">
-          <CircleCheck aria-hidden className="ob-companyform-savedmark" />{" "}
-          {t("ob.s1.savedNote")}
-        </p>
-      )}
-
-      {saveError && (
-        <div className="readfail warning ob-companyform-savefail">
-          <span className="rfi">
-            <Circle aria-hidden />
-          </span>
-          <div>
-            <div className="rft">{t("ob.s1.saveFailed")}</div>
-            <p className="rfp">{saveError}</p>
-          </div>
-        </div>
-      )}
 
       {missingRequired.length > 0 && (
         <div className="urlnote err">

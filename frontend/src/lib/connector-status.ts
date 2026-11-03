@@ -220,6 +220,16 @@ export function serviceReason(service: CaptureConnection): MessageKey | null {
 
 type ServiceFacts = Pick<CaptureConnection, "status" | "last_sync_error_class">;
 
+/** Whether a service is connected at all: set up, and neither removed nor
+ *  expired. A failing sync still counts, and so does an `error` row, because the
+ *  sweep retries both by itself. So setup does not reopen and a booking still
+ *  lands. A surface that warns asks serviceHealth instead. */
+export function isConnectedAtAll(
+  service: Pick<CaptureConnection, "status">,
+): boolean {
+  return service.status === "connected" || service.status === "error";
+}
+
 /** One service's word. A connected row still carrying an error class is in a
  *  failure streak the sweep has not given up on, so it is not up to date. */
 export function serviceHealth(service: ServiceFacts): ConnectorHealth {

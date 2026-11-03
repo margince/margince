@@ -11,6 +11,7 @@ import {
   counterpartyRef,
   edgeOptions,
   endpointBody,
+  kindLabelFor,
   type RelationshipScope,
 } from "./relationships";
 
@@ -93,6 +94,42 @@ describe("endpointBody — the picked id lands on exactly one field", () => {
       counterparty_company_id: "x",
     });
     expect(endpointBody("deal_id", "x")).toEqual({ deal_id: "x" });
+  });
+});
+
+describe("kindLabelFor — an edge reads the right way round from each end", () => {
+  // B was referred by the partner A: company_id is B, counterparty is A.
+  const referral = (): Relationship =>
+    baseRel({
+      kind: "referred_by",
+      company_id: "o-b",
+      counterparty_company_id: "o-a",
+    });
+
+  it("reads as referred by on the referred company's page", () => {
+    expect(kindLabelFor(referral(), { company_id: "o-b" })).toBe(
+      "rel.kind.referredBy",
+    );
+  });
+
+  it("reads as referred on the referring partner's page", () => {
+    expect(kindLabelFor(referral(), { company_id: "o-a" })).toBe(
+      "rel.kind.referred",
+    );
+  });
+
+  it("keeps every other kind's word from either end", () => {
+    const partner = baseRel({
+      kind: "partner_of",
+      company_id: "o-b",
+      counterparty_company_id: "o-a",
+    });
+    expect(kindLabelFor(partner, { company_id: "o-a" })).toBe(
+      "rel.kind.partnerOf",
+    );
+    expect(kindLabelFor(partner, { company_id: "o-b" })).toBe(
+      "rel.kind.partnerOf",
+    );
   });
 });
 

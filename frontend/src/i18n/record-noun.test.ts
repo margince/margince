@@ -80,6 +80,13 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
+    // A duplicate case asks whether two contacts are the same human being.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
     // A booking guest is a human, not the CRM contact record type.
     "scheduling.personalLinksFoot",
     "scheduling.whenTitle",
@@ -162,6 +169,16 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   de: [
+    // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
+    "contactCase.ownerPlaceholder",
+    "contactCase.notAllowed.noAuthority",
+    "contactCase.preview.noShares",
     // The meeting host and a booking guest are humans, not the CRM contact
     // record type.
     "scheduling.personalLinksFoot",
@@ -275,6 +292,43 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
   ],
   vi: [
+    // Operators and mailbox owners are human roles, not contact record types.
+    "health.stoppedNext",
+    "health.readFailedNext",
+    "health.effect.jobs",
+    "health.effect.automatic",
+    "health.effect.unknown",
+    "health.condition.waiting_human",
+    "health.responsible.operator",
+    "health.recovery.intake",
+    "health.operatorHandoff",
+    "health.code.capture_processing",
+    "health.code.capture_exhausted",
+    "health.impact.jobs",
+    "health.impact.capture",
+    "health.impact.intake",
+    "health.impact.recovery",
+    "health.impact.automatic",
+
+    // A duplicate case asks whether two contacts are the same human being; an owner is a human too.
+    "contactCase.intro",
+    "contactCase.pair.notSame",
+    "contactCase.member.dismissedWith",
+    "contactCase.evidence.different",
+    "worklist.ask.contact_case",
+    "sharedMergeReviews.hint",
+    "contactCase.refused",
+    "contactCase.pair.refused",
+    "contactCase.noOwner",
+    "contactCase.ownerLabel",
+    "contactCase.ownerHint",
+    "contactCase.ownerPlaceholder",
+    "contactCase.member.owner",
+    "contactCase.notAllowed.ownersOnly",
+    "contactCase.notAllowed.noAuthority",
+    "contactCase.preview.noShares",
+    "worklist.contactCase.owners",
+    "sharedMergeReviews.switch",
     "linkedinReach.sub",
     // A colleague's LinkedIn acquaintances (người quen) are people, counted.
     "companyReach.sub",
@@ -585,7 +639,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "heldThreads.heldByOthers_other",
     "lead.bulkOwnerPick",
     "log.transcriptHint",
-    "noticeDuty.what",
     "ob.manual.buying_centerHint",
     "contact.intro.answerSuggest",
     "consent.askToConfirmWhat",
@@ -638,6 +691,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.field.owner",
     "lead.bulkOwner",
     "lead.ownerLabel",
+    "webForms.field.owner",
     "recordRoles.intro",
     "bulk.owner",
     "whoCanSee.group.owner",
@@ -678,6 +732,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contact.card.committee_other",
     "contact.aside.ownerGone",
     "lead.signal.setBy",
+    "worklist.scope.unassignedHint",
   ],
 };
 

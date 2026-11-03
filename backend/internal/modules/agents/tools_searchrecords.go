@@ -69,8 +69,9 @@ type RecordSearchHit struct {
 // key, a product's SKU, a lead's company or an activity's opening text. WorksAt
 // is the company a contact was found through. Other hits carry neither.
 type RecordMatch struct {
-	Snippet string          `json:"snippet,omitempty"`
-	WorksAt *RecordEmployer `json:"works_at,omitempty"`
+	IdentifierMatch string          `json:"identifier_match,omitempty"`
+	Snippet         string          `json:"snippet,omitempty"`
+	WorksAt         *RecordEmployer `json:"works_at,omitempty"`
 }
 
 // RecordEmployer is the matched company a contact was found through.

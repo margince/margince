@@ -106,13 +106,13 @@ const (
 // identically.
 var pipelineBaseValueExpr = deals.BaseValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t")
 
-// pipelineWeightedBaseExpr weights that base value by the deal's stage
-// probability, rounded PER DEAL.
+// pipelineWeightedBaseExpr weights that base value by the chance the forecast
+// uses for the deal (reportChanceToken), rounded per deal.
 //
 // Per deal and not on the total: rounding once at the end differs by up to a
 // minor unit per deal, so a stage total would stop equalling the sum of the
 // rows a reader opens underneath it.
-var pipelineWeightedBaseExpr = "round((" + pipelineBaseValueExpr + ")::numeric * s.win_probability * 0.01)::bigint"
+var pipelineWeightedBaseExpr = "round((" + pipelineBaseValueExpr + ")::numeric * " + reportChanceToken + " * 0.01)::bigint"
 
 // baseMoneyMeasures shares the valuation expressions across report populations.
 func baseMoneyMeasures(native map[string]string) map[string]string {

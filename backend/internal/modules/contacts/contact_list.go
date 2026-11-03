@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -37,8 +36,11 @@ type ListContactsInput struct {
 	// OwnerTeamID narrows to a team's rows; Unassigned to the unowned queue.
 	// Both narrow the caller's row scope and never widen it — see
 	// storekit.OwnershipClause, which also refuses two of them at once.
-	OwnerTeamID     *ids.TeamID
-	Unassigned      *bool
+	OwnerTeamID *ids.TeamID
+	Unassigned  *bool
+	// SharedWithMe narrows to contacts someone else owns and the caller holds a
+	// live grant on. It names its own set, so it excludes the owner filters.
+	SharedWithMe    *bool
 	IncludeArchived bool
 	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).
 	CapturedByKind *string
@@ -124,10 +126,13 @@ func orderByCurrentEmployer(ctx context.Context, arg func(any) int) (string, err
 	if !visible {
 		// A caller who may see no employer is ordered by no employer: every row
 		// sits in the tail and the page falls back to its tie-breaker.
-		return "NULL::text", nil
+		return noEmployer, nil
 	}
 	return "(SELECT company.display_name" + from + ")", nil
 }
+
+// noEmployer is the employer column of a reader who may see none.
+const noEmployer = "NULL::text"
 
 // contactTagClause narrows the page to the contacts carrying the named tags.
 //
@@ -138,46 +143,17 @@ func contactTagClause(ctx context.Context, tagIDs []ids.UUID, mode storekit.TagM
 	return storekit.TagFilterClause(ctx, contactEntity, "contact.id", tagIDs, mode, arg)
 }
 
-// contactEmployerClause narrows the page to the contacts who work at one account
-// today, or "" when the caller named none.
-//
-// CURRENT PRIMARY employment only. A contact's history carries every employer
-// they have had, and "who works there" is not "who has ever worked there" — a
-// list that answered the second would hand a rep the leavers alongside the
-// staff, which is the wrong answer wearing the right shape. The edge is the
-// one `uq_rel_current_primary_employer` keeps unique per contact, so this
-// matches at most one row per contact and cannot duplicate the page.
-//
-// EXISTS rather than a join, for the same reason the tag filter uses one: a
-// join multiplies a contact by their matching edges, and the keyset cursor
-// would page over those copies as though they were distinct contacts.
-//
-// It carries the EDGE grant, and the reason is worth stating because the edge
-// contributes nothing to the response: filtering by employer answers "who works
-// at Acme" one page at a time, which is a stronger disclosure than the contact
-// count on the account itself — a listing beats a count. A caller refused the
-// edge is refused the FILTER rather than handed an empty page: they asked a
-// question about the pairs, and an empty page would answer it with "nobody",
-// which is false.
+// contactEmployerClause shares current roster membership with the count and tab.
+// The subquery keeps one contact row even when several employment edges match.
 func contactEmployerClause(ctx context.Context, companyID *ids.CompanyID, arg func(any) int) (string, error) {
 	if companyID == nil {
 		return "", nil
 	}
-	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
+	roster, err := CompanyRosterSQL(ctx, storekit.SQLf("$%d", arg(*companyID)), arg)
 	if err != nil {
 		return "", err
 	}
-	if edgeBound == "" {
-		edgeBound = "TRUE"
-	}
-	return storekit.SQLf(`EXISTS (
-		SELECT 1 FROM relationship rel
-		WHERE rel.contact_id = contact.id
-		  AND rel.kind = 'employment'
-		  AND `+employment.CurrentPrimarySQL("rel")+`
-		  AND rel.archived_at IS NULL
-		  AND `+edgeBound+`
-		  AND rel.company_id = $%d)`, arg(*companyID)), nil
+	return "contact.id IN (" + roster + ")", nil
 }
 
 // contactCommonFilters is the shared filter chain a contact list narrows by,
@@ -213,6 +189,13 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			if err != nil {
 				return nil, err
 			}
+			shared, err := sharedWithMeClause(ctx, in, arg)
+			if err != nil {
+				return nil, err
+			}
+			if shared != "" {
+				where = append(where, shared)
+			}
 			if clause := relationshipMarkClause(in, arg); clause != "" {
 				where = append(where, clause)
 			}
@@ -228,12 +211,32 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			}
 			return where, nil
 		},
-		scan:   scanContactPage,
-		attach: attachContactChildren,
+		scan: scanContactPage,
+		attach: func(ctx context.Context, tx pgx.Tx, contacts []crmcontracts.Contact) error {
+			if err := attachContactChildren(ctx, tx, contacts); err != nil {
+				return err
+			}
+			return attachContactCreators(ctx, tx, contacts)
+		},
 		cursorKey: func(last crmcontracts.Contact) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)
 		},
 	})
+}
+
+// sharedWithMeClause renders shared_with_me, refused beside an owner filter
+// the way storekit.OwnershipClause refuses two of those at once.
+func sharedWithMeClause(ctx context.Context, in ListContactsInput, arg func(any) int) (string, error) {
+	if in.SharedWithMe == nil || !*in.SharedWithMe {
+		return "", nil
+	}
+	if in.OwnerID != nil || in.OwnerTeamID != nil || (in.Unassigned != nil && *in.Unassigned) {
+		return "", &storekit.PredicateError{
+			Field: "shared_with_me", Code: storekit.CodeConflictingFilters,
+			Message: "shared_with_me names contacts someone else owns; send it without owner_id, owner_team_id or unassigned",
+		}
+	}
+	return auth.SharedWithCallerClause(ctx, contactEntity, contactEntity, arg)
 }
 
 // scanContactPage drains one list query's rows: each contact plus, under a

@@ -14,11 +14,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, target *crmcontracts.ReportingTarget) error {
+func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, owners MeasurableOwners, target *crmcontracts.ReportingTarget) error {
 	if target.Definition.Scope.Kind == reportingOwner || target.Definition.Retired != nil && *target.Definition.Retired {
 		return nil
 	}
-	visible, err := s.allocationVisible(ctx, tx, target.Definition.Scope)
+	visible, err := s.allocationVisible(ctx, tx, owners, target.Definition.Scope)
 	if err != nil || !visible {
 		return err
 	}
@@ -45,10 +45,14 @@ func (s *Service) targetAllocation(ctx context.Context, tx pgx.Tx, target *crmco
 // the sum of every member's owner target, and with one colleague in the scope
 // it is that colleague's target. So only a seat that reads all of them sees it:
 // row scope all, or a writer whose reach covers the scope.
-func (s *Service) allocationVisible(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error) {
+func (s *Service) allocationVisible(ctx context.Context, tx pgx.Tx, owners MeasurableOwners, scope crmcontracts.ReportingScope) (bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return false, apperrors.ErrPermissionDenied
+	}
+	// The allocation is the sum of owner targets, which the switch withholds.
+	if owners.IndividualOff {
+		return false, nil
 	}
 	// A lead's own teams are the members the lead reads every target of.
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll || scope.Kind == reportingManagedTeams {
@@ -59,7 +63,8 @@ func (s *Service) allocationVisible(ctx context.Context, tx pgx.Tx, scope crmcon
 
 func (s *Service) targetHistory(ctx context.Context, tx pgx.Tx, target *crmcontracts.ReportingTarget) error {
 	var b bindings
-	rows, err := tx.Query(ctx, "SELECT definition FROM sales_target_revision WHERE target_id="+b.add(target.Id)+" ORDER BY revision", b.values...)
+	query := "SELECT definition FROM sales_target_revision WHERE target_id=" + b.add(target.Id) + " ORDER BY revision"
+	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}

@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -102,6 +103,7 @@ type (
 	forecastHandlers        = forecasting.Handlers
 	assuranceHandlers       = assurance.Handlers
 	introductionHandlers    = introductions.Handlers
+	initiativeHandlers      = initiatives.Handlers
 	assignmentHandlers      = assignments.Handlers
 )
 

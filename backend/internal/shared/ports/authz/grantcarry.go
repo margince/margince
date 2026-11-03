@@ -30,3 +30,18 @@ type CarriedRecordGrant struct {
 	After         RecordGrantState
 	ActiveAfter   bool
 }
+
+// The reasons a merge gives a former owner no new grant on the survivor.
+const (
+	OwnerCarryInactive       = "inactive"
+	OwnerCarryAlreadyOwner   = "already_owner"
+	OwnerCarryAlreadyGranted = "already_granted"
+)
+
+// OwnerAccessCarry is what keeping one former owner's access on a merge's
+// survivor did: the access granted, or the reason none was.
+type OwnerAccessCarry struct {
+	Owner   ids.UUID
+	Access  string
+	Skipped string
+}
