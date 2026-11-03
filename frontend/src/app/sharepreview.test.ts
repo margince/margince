@@ -317,9 +317,7 @@ describe("robots.txt lets link previews through and nothing else", () => {
   it("allows an unlisted preview fetcher to read a booking page's card and logo, not its calendar", () => {
     const fetcher = "UnlistedPreviewFetcher";
     expect(allowed(fetcher, "/book/Ab3_x-9Qr")).toBe(true);
-    expect(allowed(fetcher, "/v1/public/booking/Ab3_x-9Qr/preview")).toBe(
-      true,
-    );
+    expect(allowed(fetcher, "/v1/public/booking/Ab3_x-9Qr/preview")).toBe(true);
     expect(
       allowed(fetcher, "/v1/public/booking/company-logo?entity=example"),
     ).toBe(true);
