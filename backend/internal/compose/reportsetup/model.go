@@ -19,12 +19,12 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -237,11 +237,7 @@ func prose(raw string, bound int) string {
 	if raw == "" || claims.SpellsRecordID(raw) {
 		return ""
 	}
-	if utf8.RuneCountInString(raw) > bound {
-		runes := []rune(raw)
-		raw = strings.TrimSpace(string(runes[:bound]))
-	}
-	return raw
+	return strings.TrimSpace(textcut.Runes(raw, bound))
 }
 
 func (g *gate) name(raw string) {
