@@ -111,7 +111,8 @@ func Span(grain Grain, label string, zone *time.Location, fiscalStart int) (from
 
 // Containing answers the half-open period of grain that holds at, in one
 // calendar: the zone and the month its fiscal year begins. It is Span for an
-// instant rather than a label, so the two cannot disagree on a period's bounds.
+// instant rather than a label, so the two cannot disagree on a period's bounds,
+// in any grain.
 //
 // Held by: TestContainingAgreesWithSpanUnderEveryFiscalStart (backend/internal/shared/kernel/reportperiod/containing_test.go)
 func Containing(grain Grain, at time.Time, zone *time.Location, fiscalStart int) (from, to time.Time, ok bool) {

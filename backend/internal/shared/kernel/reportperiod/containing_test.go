@@ -9,23 +9,29 @@ import (
 	"time"
 )
 
-// quarterLabelOf renders the label a quarter bucket carries, in the spelling
-// ParseLabel reads, so Containing can be held to Span.
-func quarterLabelOf(from time.Time, fiscalStart int) string {
+// labelOf renders the label a period bucket carries, in the spelling ParseLabel
+// reads, so Containing can be held to Span in every grain.
+func labelOf(grain Grain, from time.Time, fiscalStart int) string {
+	if grain == GrainMonth {
+		return fmt.Sprintf("%d-%02d", from.Year(), from.Month())
+	}
 	year := from.Year()
 	if int(from.Month()) < fiscalStart {
 		year--
 	}
-	quarter := (int(from.Month())-fiscalStart+12)%12/3 + 1
-	if fiscalStart == 1 {
-		return fmt.Sprintf("%d-Q%d", year, quarter)
+	label := fmt.Sprintf("%d", year)
+	if fiscalStart != 1 {
+		label = fmt.Sprintf("FY%d/%02d", year, (year+1)%100)
 	}
-	return fmt.Sprintf("FY%d/%02d-Q%d", year, (year+1)%100, quarter)
+	if grain == GrainQuarter {
+		label += fmt.Sprintf("-Q%d", (int(from.Month())-fiscalStart+12)%12/3+1)
+	}
+	return label
 }
 
-// Every day of two years is checked under every fiscal start. The period holds
-// the day, opens on its fiscal boundary and runs its whole length. A quarter is
-// the one Span reads from that quarter's own label.
+// Every day of two years is checked under every fiscal start, at its first and
+// its last local second. The period holds the instant, opens on its fiscal
+// boundary and runs its whole length. Span reads the same bounds from its label.
 func TestContainingAgreesWithSpanUnderEveryFiscalStart(t *testing.T) {
 	t.Parallel()
 	zone, err := time.LoadLocation("Europe/Berlin")
@@ -34,25 +40,30 @@ func TestContainingAgreesWithSpanUnderEveryFiscalStart(t *testing.T) {
 	}
 	lengths := map[Grain]int{GrainYear: 12, GrainQuarter: 3, GrainMonth: 1}
 	for fiscalStart := 1; fiscalStart <= 12; fiscalStart++ {
-		for day := time.Date(2025, 1, 1, 12, 0, 0, 0, zone); day.Year() < 2027; day = day.AddDate(0, 0, 1) {
-			for grain, months := range lengths {
-				from, to, ok := Containing(grain, day, zone, fiscalStart)
-				if !ok || day.Before(from) || !day.Before(to) || !to.Equal(from.AddDate(0, months, 0)) {
-					t.Fatalf("%s of %s from %d = [%s, %s) ok=%v", grain, day, fiscalStart, from, to, ok)
-				}
-				if grain != GrainMonth && (int(from.Month())-fiscalStart+12)%months != 0 {
-					t.Fatalf("%s of %s from %d opens in month %d, off the fiscal boundary", grain, day, fiscalStart, from.Month())
-				}
-				if grain != GrainQuarter {
-					continue
-				}
-				spanFrom, spanTo, read := Span(GrainQuarter, quarterLabelOf(from, fiscalStart), zone, fiscalStart)
-				if !read || !spanFrom.Equal(from) || !spanTo.Equal(to) {
-					t.Fatalf("quarter of %s from %d: Containing [%s, %s), Span(%s) [%s, %s)",
-						day, fiscalStart, from, to, quarterLabelOf(from, fiscalStart), spanFrom, spanTo)
+		for day := time.Date(2025, 1, 1, 0, 0, 0, 0, zone); day.Year() < 2027; day = day.AddDate(0, 0, 1) {
+			for _, at := range []time.Time{day, day.AddDate(0, 0, 1).Add(-time.Second)} {
+				for grain, months := range lengths {
+					checkContaining(t, grain, months, at, zone, fiscalStart)
 				}
 			}
 		}
+	}
+}
+
+func checkContaining(t *testing.T, grain Grain, months int, at time.Time, zone *time.Location, fiscalStart int) {
+	t.Helper()
+	from, to, ok := Containing(grain, at, zone, fiscalStart)
+	if !ok || at.Before(from) || !at.Before(to) || !to.Equal(from.AddDate(0, months, 0)) {
+		t.Fatalf("%s of %s from %d = [%s, %s) ok=%v", grain, at, fiscalStart, from, to, ok)
+	}
+	if grain != GrainMonth && (int(from.Month())-fiscalStart+12)%months != 0 {
+		t.Fatalf("%s of %s from %d opens in month %d, off the fiscal boundary", grain, at, fiscalStart, from.Month())
+	}
+	label := labelOf(grain, from, fiscalStart)
+	spanFrom, spanTo, read := Span(grain, label, zone, fiscalStart)
+	if !read || !spanFrom.Equal(from) || !spanTo.Equal(to) {
+		t.Fatalf("%s of %s from %d: Containing [%s, %s), Span(%s) [%s, %s)",
+			grain, at, fiscalStart, from, to, label, spanFrom, spanTo)
 	}
 }
 

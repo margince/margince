@@ -17,9 +17,9 @@ import (
 	"testing"
 )
 
-// fiscalElapsed is the arithmetic every copy writes: the months since the
-// fiscal year opened, kept positive by adding twelve before the modulo.
-var fiscalElapsed = regexp.MustCompile(`-\s*[A-Za-z_.]*[Ff]iscal[A-Za-z_.]*\s*\+\s*12\s*\)\s*%\s*12`)
+// fiscalElapsed is the arithmetic every copy writes: a month folded modulo
+// twelve. It matches the shape, whatever the operands are called.
+var fiscalElapsed = regexp.MustCompile(`Month\(\)[^\n]*%\s*12\b`)
 
 func TestTheFiscalPeriodIsComputedOnce(t *testing.T) {
 	t.Parallel()

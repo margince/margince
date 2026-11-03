@@ -81,17 +81,19 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 	if fiscalStartMonth < 1 || fiscalStartMonth > 12 {
 		return Period{}, fmt.Errorf("forecasting: fiscal year start month %d is outside 1..12", fiscalStartMonth)
 	}
-	// A week is not a division of the financial year, so the month arithmetic
-	// below cannot answer it. Refused rather than defaulted: monthsIn returns 3
-	// for anything it does not recognise, so an unrefused week would resolve to
-	// a QUARTER and every reading would silently be the wrong window.
-	if kind == PeriodWeek {
+	// Each kind names its grain. A week is not a division of the financial year,
+	// and any other kind is refused rather than read as a quarter.
+	var grain reportperiod.Grain
+	switch kind {
+	case PeriodQuarter:
+		grain = reportperiod.GrainQuarter
+	case PeriodMonth:
+		grain = reportperiod.GrainMonth
+	case PeriodWeek:
 		return Period{}, errors.New("forecasting: a week is resolved by ResolveWeek from the Monday weekly.WeekStartOf returns, " +
 			"not from the financial year")
-	}
-	grain := reportperiod.GrainQuarter
-	if kind == PeriodMonth {
-		grain = reportperiod.GrainMonth
+	default:
+		return Period{}, fmt.Errorf("forecasting: no period kind %q", kind)
 	}
 	start, end, ok := reportperiod.Containing(grain, at, zone, fiscalStartMonth)
 	if !ok {
