@@ -233,7 +233,7 @@ You see only the messages whose audience includes you; a held message stays with
 Also called: email history, correspondence, all mails with a customer.
 
 ### What counts as one email thread?
-A reply whose subject changes starts a new conversation. "Re:" and "AW:" do not count as a change, and neither do capital letters. A reply with no subject of its own stays in its parent's conversation. A conversation you kept private stays private under its new subject.
+A reply starts a new conversation only when its subject shares no word with the message it answers. Tags in brackets, reply prefixes, marks, capital letters and words such as "the" do not count. "Signature requested" and "Signature completed" stay together. A reply stays with its parent when either subject has no words left. A conversation you kept private stays private under its new subject.
 
 Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
 Also called: thread split, new subject, separate conversation.

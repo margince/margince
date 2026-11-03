@@ -16,7 +16,7 @@ bound, the rest of the product works as normal.
 
 | What you need | Notes |
 |---|---|
-| **Postgres 16** with **pgvector** ≥ 0.5.0 | Postgres does not trust the `vector` extension. A superuser must install it one time (`scripts/deploy/db-bootstrap.sql`). |
+| **Postgres 16** with **pgvector** ≥ 0.5.0 and `ICU` support | Postgres does not trust the `vector` extension. A superuser must install it one time (`scripts/deploy/db-bootstrap.sql`). Subject words use `und-x-icu` for letter case and word breaks. The supported database image supplies it. |
 | **Redis 7.0 to 7.2** | It needs streams with consumer groups. **Valkey** works too, but we do not test it. |
 | **A proxy in front that ends TLS** | Serve the API and the web under one host name. |
 | **A correct system clock** | Retention, automation triggers and job schedules use the system time. |
