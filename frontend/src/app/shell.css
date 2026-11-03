@@ -146,7 +146,7 @@
    400px tall and the card is 400px tall. The mirror of this for the phone bar's
    lane is in the phone block below. */
 .app.railless .scroll {
-  padding-top: 0;
+  --scrollPadTop: 0px;
 }
 
 .main {
@@ -187,7 +187,10 @@
      (non-overlay) scrollbars. Overlay scrollbars reserve nothing, so the
      default macOS look is unchanged. */
   scrollbar-gutter: stable;
-  padding-top: var(--pageGapTop);
+  /* A property, so a sticky pane can subtract what the scroller holds back at
+     its top (design-system/pagepane.css). */
+  --scrollPadTop: var(--pageGapTop);
+  padding-top: var(--scrollPadTop);
   /* No bottom padding: `.wrap` carries the page's own end rhythm, and a second
      band under it — reserved for the agent dock's lane — read as a screenful of
      whitespace at the end of every page. The dock overlaps the last rows
@@ -229,7 +232,7 @@
    file order, so a later rule cannot silently reinstate it. */
 .app:not(.railless) .main:not(:has(> .appbanner)) > .scroll {
   margin-top: calc(-1 * var(--topbarH));
-  padding-top: calc(var(--topbarH) + var(--pageGapTop));
+  --scrollPadTop: calc(var(--topbarH) + var(--pageGapTop));
 }
 /* The page gutter. Its left inset matches the page head's, so the heading and
    the content beneath it start on the same line — the shell no longer insets

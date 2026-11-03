@@ -220,3 +220,46 @@ test.describe("a refused rename under the record's name", () => {
     });
   }
 });
+
+// A shell banner shortens the scroller the record stands in. The details card
+// caps its height to that scroller, so at the end of a scroll in a short window
+// its top is still in view, under the banner rather than cut by it.
+test.describe("the details card clears a shell banner", () => {
+  for (const record of RECORDS) {
+    test(`on a ${record.name} at the end of a scroll in a short window`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1440, height: 600 });
+      await openRecord(page, record.route, { license: "rejected" });
+      await expect(page.locator(".appbanner")).toHaveCount(1);
+      await expect(page.locator(".record-aside")).toBeVisible();
+
+      const scrolled = await page
+        .locator(".main > .scroll")
+        .evaluate((scroller) => {
+          scroller.scrollTop = scroller.scrollHeight;
+          return scroller.scrollTop;
+        });
+      expect(scrolled, "the record is too short to scroll").toBeGreaterThan(0);
+
+      const scroller = await page.locator(".main > .scroll").boundingBox();
+      const details = await page
+        .locator(".record-split-details")
+        .first()
+        .boundingBox();
+      expect(scroller).not.toBeNull();
+      expect(details).not.toBeNull();
+      if (!scroller || !details) {
+        return;
+      }
+      expect(
+        details.y,
+        "the details card's top is cut by the scroller under the banner",
+      ).toBeGreaterThanOrEqual(scroller.y - 1);
+      expect(
+        details.y + details.height,
+        "the details card runs past the scroller's foot",
+      ).toBeLessThanOrEqual(scroller.y + scroller.height + 1);
+    });
+  }
+});
