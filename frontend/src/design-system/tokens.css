@@ -386,9 +386,6 @@
   /* The line icon a control carries. Sized by the control rather than at the
      call site, because lucide's own default is 24px. */
   --controlIcon: 16px;
-  /* The smallest avatar rung (avatar.css), named so the top bar can line the
-     chip's own edge up with the page. */
-  --avatarSm: 28px;
   /* The vertical inset of ONE option inside a segmented track. Off the 4px
      scale on purpose and therefore a token rather than a raw value: the track
      draws 3px (edge and padding) around the options, and the option repeats it

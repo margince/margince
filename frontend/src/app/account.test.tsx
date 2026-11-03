@@ -17,11 +17,9 @@ import { AccountMenu } from "./account";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
-// The account block: an avatar in the top bar's trail, and the menu it opens is
-// the product's ONE door into settings and its ONE appearance control — the
-// sidebar's foot carried the first and no longer exists, and the second used to
-// be a form two navigations away. Behaviour only: WHERE the panel opens is CSS,
-// but what it holds, and what a keyboard reader can do with it, are promises.
+// The account block: a glyph in the top bar's trail. Its menu is the one door
+// into settings and the one appearance control. Behaviour only: where the panel
+// opens is CSS, but what it holds and what a keyboard reader can do are promises.
 
 // The theme is ONE module-level store shared by every mounted control, so it
 // outlives a case. Every case here starts from the unchosen state — following
@@ -74,9 +72,9 @@ const renderNamed = (displayName: string) => {
 
 // Expanded, the trigger's accessible name carries the visible name as well as
 // what the control does, so it is matched by suffix rather than by equality.
-// Avatar-only there is no visible text to carry, and the name is exact.
+// Glyph-only there is no visible text to carry, and the name is exact.
 const railTrigger = () => screen.getByRole("button", { name: /Account$/ });
-const avatarTrigger = () => screen.getByRole("button", { name: "Account" });
+const glyphTrigger = () => screen.getByRole("button", { name: "Account" });
 
 const openMenu = async (user: UserEvent, trigger: HTMLElement) => {
   await user.click(trigger);
@@ -90,15 +88,20 @@ describe("AccountMenu", () => {
   // The rail's chip and the settings page's chip are the SAME contact, so they
   // wear the same mesh — and keep it when the display name changes, because
   // the mesh is keyed on the address rather than on the name.
-  it("keys the chip's mesh on the address, not the display name", () => {
-    const meshOf = (root: HTMLElement) =>
-      root.querySelector(".avatar-mesh")?.getAttribute("style");
+  it("keys the chip's mesh on the address, not the display name", async () => {
+    const user = userEvent.setup();
+    const meshOf = async (root: HTMLElement) => {
+      await openMenu(user, glyphTrigger());
+      return root
+        .querySelector(".acctmenuwho .avatar-mesh")
+        ?.getAttribute("style");
+    };
     const { container: named } = renderNamed("Test User");
-    const mesh = meshOf(named);
+    const mesh = await meshOf(named);
     expect(mesh).toContain("--avatar-hue-a");
     cleanup();
     const { container: renamed } = renderNamed("Renamed Contact");
-    expect(meshOf(renamed)).toBe(mesh);
+    expect(await meshOf(renamed)).toBe(mesh);
   });
 
   // WCAG 2.5.3: the row prints the contact's name, so a voice user who says the
@@ -374,13 +377,13 @@ describe("AccountMenu", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  // The trigger prints nothing, and an avatar alone tells a screen reader
+  // The trigger prints nothing, and a glyph alone tells a screen reader
   // nothing. The sentence is carried as clipped text and wired as the trigger's
   // description — the `title` is the pointer's copy of it and is never the
   // accessible name.
   it("carries the identity for a screen reader without printing it", () => {
     const { container } = render(<AccountMenu />);
-    const trigger = avatarTrigger();
+    const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
 
     const describedBy = trigger.getAttribute("aria-describedby") ?? "";
@@ -391,18 +394,20 @@ describe("AccountMenu", () => {
     expect(trigger.getAttribute("title")).toBe(spoken?.textContent);
   });
 
-  // The trigger is the avatar and nothing else, so the name it carries is the
-  // only thing that identifies it — and the panel is the only place the reader
-  // can confirm WHOSE account they are about to act on.
-  it("names the top bar's avatar-only trigger, and prints the identity in the panel", async () => {
+  // The trigger is a glyph alone, so its name is all that identifies it. The
+  // panel is where the reader confirms whose account they are about to act on.
+  it("names the top bar's glyph-only trigger, and prints the identity in the panel", async () => {
     const user = userEvent.setup();
     const { container } = render(<AccountMenu />);
-    const trigger = avatarTrigger();
+    const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
     expect(trigger.getAttribute("aria-label")).toBe("Account");
+    expect(trigger.querySelector(".avatar")).toBeNull();
 
     await openMenu(user, trigger);
     const who = container.querySelector(".acctmenuwho");
+    // The chip stands before the two lines, in the panel only.
+    expect(who?.firstElementChild?.classList).toContain("avatar");
     expect(who?.querySelector("b")?.textContent).toBe("Test User");
     expect(who?.querySelector(".acctmail")?.textContent).toBe(
       "test@example.test",

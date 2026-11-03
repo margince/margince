@@ -1402,6 +1402,40 @@
     width: 20px;
     height: 20px;
   }
+  /* The burger turns into the cross as the menu opens, and back as it closes. */
+  .rail .railmore-glyphs {
+    display: grid;
+  }
+  .rail .railmore-glyphs svg {
+    grid-area: 1 / 1;
+    transition:
+      opacity var(--dur-move) var(--ease-out),
+      transform var(--dur-move) var(--ease-out);
+  }
+  .rail .railmore .railmore-close,
+  .rail .railmore[aria-expanded="true"] .railmore-open {
+    opacity: 0;
+  }
+  .rail .railmore .railmore-close {
+    transform: rotate(-90deg);
+  }
+  .rail .railmore[aria-expanded="true"] .railmore-open {
+    transform: rotate(90deg);
+  }
+  .rail .railmore[aria-expanded="true"] .railmore-close {
+    opacity: 1;
+    transform: none;
+  }
+  /* A plain crossfade, after the turns it removes. */
+  @media (prefers-reduced-motion: reduce) {
+    .rail .railmore-glyphs svg {
+      transition: opacity var(--dur-move) var(--ease-out);
+    }
+    .rail .railmore .railmore-close,
+    .rail .railmore[aria-expanded="true"] .railmore-open {
+      transform: none;
+    }
+  }
   .rail .navwrap {
     display: flex;
     justify-content: center;

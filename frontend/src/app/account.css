@@ -1,5 +1,5 @@
 /* ===== the account block =====
-   An avatar in the top bar's trail, and the menu that drops out of it.
+   A glyph in the top bar's trail, and the menu that drops out of it.
 
    One container. The block had a sidebar form once and it went with the foot it
    stood in, so nothing here is scoped by a container any more — what remains is
@@ -53,7 +53,6 @@
   padding: var(--controlGap);
   gap: 1px; /* ds:ignore menu rows read as one list, not as spaced blocks */
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
   z-index: 60;
 }
@@ -131,6 +130,8 @@
    anywhere. */
 .acctmenuwho {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 

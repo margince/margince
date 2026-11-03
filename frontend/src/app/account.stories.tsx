@@ -15,18 +15,11 @@ import { AccountMenu } from "./account";
  * Who is signed in, and the two things the product now offers nowhere else: the
  * door into settings, and the appearance choice.
  *
- * ONE chrome: the avatar at the end of the strip's trail, with the menu dropping
- * out of it and the theme flyout opening LEFT because there is no room on the
- * right. The block had a sidebar form once — a row at the foot of the column,
- * menu rising, flyout mirrored — and it went with the foot it stood in; the
- * sidebar carries the installation's entitlement there now (Shell/Navigation
- * shell). Nothing here photographs an arrangement a reader cannot reach.
+ * One chrome: a contact glyph at the end of the strip's trail. The menu drops
+ * out of it, and the theme flyout opens left because the right has no room.
  *
- * The chip is the design system's `Avatar` rather than a mark of this block's
- * own: the monogram is taken the same way everywhere, and the mesh is keyed on
- * the seat's USER ID, so the reader carries one colour from the chrome to their
- * own account page, and neither a rename nor a new address moves them to
- * another one.
+ * The menu's head carries the chip, the design system's `Avatar`. Its mesh is
+ * keyed on the seat's user id, so a rename or a new address keeps its colour.
  *
  * fullscreen: the block measures itself against the container it sits in — the
  * strip's trail is flush to the content column's right edge, and the menu's drop
@@ -43,7 +36,7 @@ export default meta;
 type Story = StoryObj<typeof AccountMenu>;
 
 /**
- * The top bar: the avatar alone, 32px, at the end of the trail.
+ * The top bar: a contact glyph alone, at the size the bar gives every glyph.
  *
  * Nothing beside it is drawn — no name, no address, no chevron — so the mark is
  * the whole of the affordance, and the sentence it stands for reaches a screen
@@ -51,6 +44,18 @@ type Story = StoryObj<typeof AccountMenu>;
  */
 export const TopBar: Story = {
   name: "Top bar trigger",
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole("button", {
+      name: /Account$/,
+    });
+    const icon = trigger.querySelector("svg");
+    if (!icon) throw new Error("the account trigger draws no glyph");
+    const size = getComputedStyle(trigger).getPropertyValue("--controlIcon");
+    await expect(icon.getBoundingClientRect().width).toBe(
+      Number.parseFloat(size),
+    );
+    await expect(trigger.querySelector(".avatar")).toBeNull();
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;
@@ -58,37 +63,26 @@ export const TopBar: Story = {
 };
 
 /**
- * Before the session resolves: a contact glyph in the chip's box, drawn at the
- * control's icon size like every glyph in the bar.
- */
-export const TopBarPending: Story = {
-  name: "Top bar trigger (session pending)",
-  play: async ({ canvasElement }) => {
-    const trigger = await within(canvasElement).findByRole("button", {
-      name: /Account$/,
-    });
-    const icon = trigger.querySelector("svg");
-    if (!icon) throw new Error("the pending chip draws no glyph");
-    const size = getComputedStyle(trigger).getPropertyValue("--controlIcon");
-    await expect(icon.getBoundingClientRect().width).toBe(
-      Number.parseFloat(size),
-    );
-  },
-  render: () => {
-    stubSession({}, { "GET /me": () => new Promise<Response>(() => {}) });
-    return <AccountMenuFrame />;
-  },
-};
-
-/**
- * The panel, open: who you are, settings, theme, the booking link, help and
- * feedback, and sign out under its own rule. Only Sign out has a leading glyph,
- * because it is the row nobody wants to press by accident. A chevron says a
- * layer is behind its row.
+ * The panel, open: who you are, with the chip before the name and address.
+ * Then settings, theme, the booking link, help and feedback, and sign out under
+ * its own rule. Only Sign out has a leading glyph, because nobody wants to press
+ * it by accident. A chevron says a layer is behind its row.
  */
 export const TopBarMenu: Story = {
   name: "Top bar menu",
-  play: openMenu,
+  play: async (context) => {
+    await openMenu(context);
+    const who = document.querySelector(".acctmenuwho");
+    const chip = who?.querySelector(".avatar");
+    const lines = who?.querySelector(".acctwho");
+    if (!chip || !lines)
+      throw new Error("the menu head lost its chip or lines");
+    const middle = (box: DOMRect) => box.top + box.height / 2;
+    const chipBox = chip.getBoundingClientRect();
+    const linesBox = lines.getBoundingClientRect();
+    await expect(chipBox.right).toBeLessThan(linesBox.left);
+    await expect(middle(chipBox)).toBeCloseTo(middle(linesBox), 0);
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;
@@ -128,8 +122,8 @@ export const TopBarThemeFlyoutDark: Story = {
 };
 
 /**
- * On a phone, open. The avatar's own edge meets the page gutter while its
- * square target reaches past it, and the menu hangs at that same gutter.
+ * On a phone, open. The glyph's edge meets the gutter as far as its target can
+ * reach without leaving the bar. The menu hangs at the gutter.
  */
 export const TopBarMenuPhone: Story = {
   name: "Top bar menu (phone)",
@@ -138,15 +132,20 @@ export const TopBarMenuPhone: Story = {
   play: async (context) => {
     await openMenu(context);
     const bar = context.canvasElement.querySelector<HTMLElement>(".topbar");
-    const avatar = bar?.querySelector(".account .avatar");
+    const trigger = bar?.querySelector(".account .user");
+    const glyph = trigger?.querySelector("svg");
     const menu = await within(document.body).findByRole("menu");
-    if (!bar || !avatar) {
-      throw new Error("the top bar or its avatar is missing");
+    if (!bar || !trigger || !glyph) {
+      throw new Error("the top bar or its account glyph is missing");
     }
-    const inner =
-      bar.getBoundingClientRect().right -
-      Number.parseFloat(getComputedStyle(bar).paddingRight);
-    await expect(avatar.getBoundingClientRect().right).toBe(inner);
+    const edge = bar.getBoundingClientRect().right;
+    const inner = edge - Number.parseFloat(getComputedStyle(bar).paddingRight);
+    const box = trigger.getBoundingClientRect();
+    const inset = (box.width - glyph.getBoundingClientRect().width) / 2;
+    await expect(box.right).toBeLessThanOrEqual(edge);
+    await expect(glyph.getBoundingClientRect().right).toBe(
+      Math.min(inner, edge - inset),
+    );
     await expect(menu.getBoundingClientRect().right).toBe(inner);
   },
   render: () => {

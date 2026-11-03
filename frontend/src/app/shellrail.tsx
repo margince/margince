@@ -310,7 +310,11 @@ export function WorkspaceRail({
           aria-current={menuOpen ? undefined : moreClaim}
           onClick={() => setOpenAt(menuOpen ? undefined : here)}
         >
-          {menuOpen ? <X aria-hidden /> : <Menu aria-hidden />}
+          {/* Both glyphs stay drawn, so one can turn into the other. */}
+          <span className="railmore-glyphs" aria-hidden>
+            <Menu className="railmore-open" />
+            <X className="railmore-close" />
+          </span>
           <span className="navlabel">
             {menuOpen ? t("shell.closeMenu") : t("shell.more")}
           </span>

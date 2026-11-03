@@ -8,6 +8,8 @@
   right: var(--pageGutter);
   /* The room under the strip, for a panel that scrolls inside itself. */
   --topbarPopoverRoom: calc(100dvh - var(--topbarH) - var(--space-8));
+  /* The corner of the design system's floating panel (popover.css). */
+  border-radius: var(--r-md);
   animation: topbar-popover-in var(--dur-state) var(--ease-out) both;
   transform-origin: top right;
 }

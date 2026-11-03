@@ -181,11 +181,10 @@
   color: var(--textPrimary);
 }
 
-/* The avatar's own edge meets the gutter, and it stands off the bell as far as
-   the glyphs stand off each other. The box keeps its full size and reaches out. */
+/* The last glyph's own edge meets the gutter; its box keeps its size and
+   reaches past it. */
 .topbar .account .user {
-  margin-inline-start: calc((var(--avatarSm) - var(--controlIcon)) / 2);
-  margin-inline-end: calc((var(--avatarSm) - var(--controlHeight)) / 2);
+  margin-inline-end: calc((var(--controlIcon) - var(--controlHeight)) / 2);
 }
 
 /* Below this width a centred field and the trail beside it are competing for
@@ -316,7 +315,7 @@
     min-inline-size: 44px;
   }
   /* The ends of the bar meet the gutter with what a reader sees, the chip and
-     the avatar, while their targets reach past it. */
+     the account glyph, while their targets reach past it. */
   .topbar-home {
     margin-inline-start: calc(
       (var(--controlHeight) - max(var(--controlHeight), 44px)) /
@@ -326,11 +325,14 @@
   .icon-action ~ .topbar-home {
     margin-inline-start: 0;
   }
+  /* Never past the bar's edge: a box beyond it scrolls the column sideways
+     when it takes focus. */
   .topbar .account .user {
-    margin-inline-end: calc(
-      (var(--avatarSm) - max(var(--controlHeight), 44px)) /
+    --accountReach: calc(
+      (max(var(--controlHeight), 44px) - var(--controlIcon)) /
       2
     );
+    margin-inline-end: calc(-1 * min(var(--accountReach), var(--pageGutter)));
   }
   /* A 44px box leaves 3px either side in the bar, so the ring is drawn inside
      the box rather than over the bar's rule. */

@@ -34,9 +34,14 @@
      "Mark all read" off the bottom of the window. */
   max-height: min(560px, var(--topbarPopoverRoom));
   overflow-y: auto;
-  /* The panel's corner, so the overlay ground and its shadow follow it. */
-  border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
+}
+/* A phone gives the list the whole width between the gutters. */
+@media (max-width: 700px) {
+  .notifbell-loose {
+    left: var(--pageGutter);
+    width: auto;
+  }
 }
 
 .notifbell-list {

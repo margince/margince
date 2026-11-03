@@ -200,6 +200,9 @@ function AccountPanel({
       {identity.label && (
         <>
           <div className="acctmenuwho">
+            {/* The one chip, keyed on the seat's user id like every other chip
+                drawn for this colleague. */}
+            <Avatar identity={identity.id} name={identity.label} />
             <IdentityLines identity={identity} />
           </div>
           <hr />
@@ -313,11 +316,9 @@ export function AccountMenu() {
         iconOnly
         className="user"
         ref={trigger}
-        // Where the row PRINTS the contact's name, WCAG 2.5.3 (Label in Name)
-        // requires that visible text to be part of the accessible name. This
-        // trigger prints none — it is the avatar alone — so it is named by what
-        // it does, and the contact it belongs to is carried as its DESCRIPTION
-        // below.
+        // WCAG 2.5.3 (Label in Name) binds only printed text, and this glyph
+        // prints none. So it is named by what it does, and the contact is its
+        // description below.
         aria-label={t("shell.accountAria")}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -332,18 +333,7 @@ export function AccountMenu() {
         title={identity.spoken || undefined}
         onClick={() => setOpen((current) => !current)}
       >
-        {identity.label ? (
-          // The one chip, from the design system, keyed on the seat's user id
-          // like every other chip drawn for this colleague.
-          <Avatar identity={identity.id} name={identity.label} />
-        ) : (
-          // The session has not resolved yet. The chip keeps its box so the row
-          // does not jump when the name arrives, and shows a contact glyph rather
-          // than an empty circle or initials of a name nobody has.
-          <span className="avatar avatar-sm" aria-hidden>
-            <UserRound />
-          </span>
-        )}
+        <UserRound aria-hidden />
         {identity.spoken && (
           <span className="sr-only" id={spokenId}>
             {identity.spoken}
