@@ -39112,7 +39112,10 @@ type ContactGraphEdge struct {
 	Outbound90d *int       `json:"outbound_90d,omitempty"`
 
 	// Receipts The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows.
-	Receipts       *[]ContactGraphReceipt         `json:"receipts,omitempty"`
+	Receipts *[]ContactGraphReceipt `json:"receipts,omitempty"`
+
+	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed; `outbound_90d` then stands for it.
+	Sent90d        *int                           `json:"sent_90d,omitempty"`
 	StrengthBucket ContactGraphEdgeStrengthBucket `json:"strength_bucket"`
 
 	// To A node id.
@@ -39235,6 +39238,9 @@ type ContactGraphRouteEvidence struct {
 	Interactions90d int        `json:"interactions_90d"`
 	LastAt          *time.Time `json:"last_at,omitempty"`
 	Outbound90d     *int       `json:"outbound_90d,omitempty"`
+
+	// Sent90d Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed; `outbound_90d` then stands for it.
+	Sent90d *int `json:"sent_90d,omitempty"`
 
 	// TwoWay Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
 	TwoWay bool `json:"two_way"`

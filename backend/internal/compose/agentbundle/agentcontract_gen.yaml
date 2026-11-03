@@ -13093,6 +13093,7 @@ components:
         interactions_90d: {type: integer}
         inbound_90d: {type: integer}
         outbound_90d: {type: integer}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed; `outbound_90d` then stands for it."}
         last_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.'}
         receipts:
           type: array
@@ -13190,6 +13191,7 @@ components:
         interactions_90d: {type: integer}
         inbound_90d: {type: integer}
         outbound_90d: {type: integer}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed; `outbound_90d` then stands for it."}
         two_way:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.

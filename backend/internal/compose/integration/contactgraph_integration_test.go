@@ -191,6 +191,44 @@ func TestContactGraphWithholdsReceiptsFromACallerWithNoActivityGrant(t *testing.
 	if graph.Edges[0].Interactions90d == 0 {
 		t.Error("the pooled count went with the receipts; it is disclosable where the messages are not")
 	}
+	if sent := graph.Edges[0].Sent90d; sent != nil {
+		t.Errorf("a caller with no activity grant was told the colleague sent %d message(s)", *sent)
+	}
+	for _, route := range routesOf(t, graph) {
+		if route.Evidence.Sent90d != nil {
+			t.Errorf("route %s states a sent count to a caller with no activity grant", route.RouteId)
+		}
+	}
+}
+
+// The sender count reaches the graph edge and the route evidence for a caller
+// who may read activity, so a route names who actually wrote.
+func TestContactGraphStatesWhatTheColleagueSent(t *testing.T) {
+	e := Setup(t)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	seedExchange(t, e, e.Rep1, mine, "Q3 pricing")
+
+	code, graph := readGraph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms), t, e, mine)
+	if code != http.StatusOK || len(graph.Edges) != 1 {
+		t.Fatalf("graph → %d with %d edges, want 200 with 1", code, len(graph.Edges))
+	}
+	if sent := graph.Edges[0].Sent90d; sent == nil || *sent != 1 {
+		t.Errorf("the edge's sent_90d = %v, want 1 for the one message Rep1 sent", sent)
+	}
+	for _, route := range routesOf(t, graph) {
+		if sent := route.Evidence.Sent90d; sent == nil || *sent != 1 {
+			t.Errorf("route %s carries sent_90d = %v, want 1", route.RouteId, sent)
+		}
+	}
+}
+
+// routesOf is the graph's routes, which a graph with an edge always offers.
+func routesOf(t *testing.T, graph crmcontracts.ContactGraph) []crmcontracts.ContactGraphRouteCandidate {
+	t.Helper()
+	if graph.Routes == nil || len(*graph.Routes) == 0 {
+		t.Fatal("a graph with an edge offered no route")
+	}
+	return *graph.Routes
 }
 
 // The account arm is row-scoped IN the query. A coworker outside the caller's

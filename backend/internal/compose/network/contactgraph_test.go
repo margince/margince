@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -178,5 +179,68 @@ func TestNodeIdsKeepUsersAndContactsApart(t *testing.T) {
 	same := uuidFor(7)
 	if userNodeID(same) == contactNodeID(same) {
 		t.Error("a user and a contact with the same uuid produced the same node id")
+	}
+}
+
+// A colleague copied on mail both ways wrote nothing, so their edge is no
+// two-way route. It ranks below a colleague who did write, even one with fewer
+// interactions, and its proof line says the relationship is one-sided.
+func TestACopiedColleagueIsNotATwoWayRoute(t *testing.T) {
+	anchor := contactNodeID(uuidFor(9))
+	graph := graphWith(
+		[]crmcontracts.ContactGraphNode{
+			colleague(1, "Only copied", crmcontracts.ContactGraphNodeGroupDirect),
+			colleague(2, "Wrote back", crmcontracts.ContactGraphNodeGroupDirect),
+		},
+		[]crmcontracts.ContactGraphEdge{
+			{
+				From: userNodeID(uuidFor(1)), To: anchor,
+				Interactions90d: 5, Inbound90d: new(3), Outbound90d: new(2), Sent90d: new(0), LastAt: daysBefore(1),
+			},
+			{
+				From: userNodeID(uuidFor(2)), To: anchor,
+				Interactions90d: 2, Inbound90d: new(1), Outbound90d: new(1), Sent90d: new(1), LastAt: daysBefore(3),
+			},
+		})
+
+	copied := evidenceOf(&graph.Edges[0], graphNow, time.UTC)
+	if copied.TwoWay {
+		t.Error("a colleague who sent nothing reads as a two-way exchange")
+	}
+	if line := proofLineFor(copied); !strings.Contains(line, "one-sided") {
+		t.Errorf("the copied colleague's proof line reads %q, want it one-sided", line)
+	}
+	route := chooseRoute(chooseRoutes(graph, graphNow, time.UTC))
+	if route == nil || route.ViaDisplayName != "Wrote back" {
+		t.Errorf("the route goes via %v, want the colleague who wrote", route)
+	}
+}
+
+// A reader without activity read gets no sent count. Their routes keep the
+// outbound reading, which a count they may not see cannot narrow.
+func TestRouteEvidenceKeepsTheOutboundReadingWhenTheSentCountIsWithheld(t *testing.T) {
+	ev := evidenceOf(&crmcontracts.ContactGraphEdge{
+		Interactions90d: 4, Inbound90d: new(2), Outbound90d: new(2), LastAt: daysBefore(2),
+	}, graphNow, time.UTC)
+	if !ev.TwoWay {
+		t.Error("an exchange with no sent count lost its two-way reading")
+	}
+	if ev.Sent90d != nil {
+		t.Errorf("the evidence carries sent_90d = %d where the edge carried none", *ev.Sent90d)
+	}
+}
+
+// The graph edge carries the sender count it was folded with, and none where
+// the reader was not given one.
+func TestGraphEdgeCarriesWhatTheColleagueSent(t *testing.T) {
+	sent := 1
+	from, to := userNodeID(uuidFor(1)), contactNodeID(uuidFor(9))
+	edge := wireEdge(search.InteractionEdge{OutCount90d: 2, SentCount90d: &sent, Count90d: 2, LastAt: graphNow}, from, to, graphNow)
+	if edge.Sent90d == nil || *edge.Sent90d != 1 {
+		t.Errorf("sent_90d = %v, want 1", edge.Sent90d)
+	}
+	withheld := wireEdge(search.InteractionEdge{OutCount90d: 2, Count90d: 2, LastAt: graphNow}, from, to, graphNow)
+	if withheld.Sent90d != nil {
+		t.Errorf("an edge with no sent count carries sent_90d = %d", *withheld.Sent90d)
 	}
 }

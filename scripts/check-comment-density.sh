@@ -65,7 +65,7 @@ if (( now_pm < base_pm - TOLERANCE_PER_MILLE )); then
 FAIL: comment-density — the tree is down to ${now_pm} per mille, under the pinned ${base_pm}.
 
 Re-pin it in this same change so the gain is held:
-  echo ${now_pm} > ${BASELINE_FILE}.new && cat ${BASELINE_FILE}.new
+  echo ${now_pm} > ${BASELINE_FILE}
 MSG
 	exit 1
 fi

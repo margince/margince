@@ -24,7 +24,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // routeCandidateCap bounds the list for the same reason the groups are capped:
@@ -174,7 +173,8 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Locat
 		Interactions90d: e.Interactions90d,
 		Inbound90d:      e.Inbound90d,
 		Outbound90d:     e.Outbound90d,
-		TwoWay:          twoWay(e.Inbound90d, e.Outbound90d),
+		Sent90d:         e.Sent90d,
+		TwoWay:          twoWayExchange(countOf(e.Inbound90d), e.Sent90d, countOf(e.Outbound90d)),
 	}
 	if e.LastAt != nil {
 		last := *e.LastAt
@@ -185,14 +185,13 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Locat
 	return ev
 }
 
-// twoWay is the claim that separates a relationship from a mailing list, in
-// relstrength's direction words over the colleague's 90-day counts.
-func twoWay(inbound, outbound *int) bool {
-	sides := relstrength.Sides{
-		TheyWrote: inbound != nil && *inbound > 0,
-		WeWrote:   outbound != nil && *outbound > 0,
+// countOf reads an optional wire count. An absent count says nothing was
+// counted, which no claim may read as a message written.
+func countOf(n *int) int {
+	if n == nil {
+		return 0
 	}
-	return sides.Direction() == relstrength.DirectionTwoWay
+	return *n
 }
 
 func bucketOf(b crmcontracts.ContactGraphEdgeStrengthBucket) *crmcontracts.ContactGraphRouteCandidateStrengthBucket {
