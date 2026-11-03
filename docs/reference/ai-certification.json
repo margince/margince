@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 50,
+    "sites": 52,
     "sites_best_current": 31,
     "sites_best_partial": 1,
     "sites_best_stale": 16,
-    "sites_absent": 2,
-    "scenarios": 275,
+    "sites_absent": 4,
+    "scenarios": 279,
     "records": 355,
     "bindings": 18,
     "self_judged_records": 0
@@ -554,6 +554,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -862,7 +890,7 @@
         "supported_degraded": 4,
         "not_supported": 8
       },
-      "untested": 3,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1426,6 +1454,35 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini",
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini",
+              "model": "gemini-3.6-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -1744,7 +1801,7 @@
         "supported_degraded": 6,
         "not_supported": 1
       },
-      "untested": 5,
+      "untested": 6,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2480,6 +2537,35 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "gemini_vertex",
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "gemini_vertex",
+              "model": "gemini-3.6-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -2891,7 +2977,7 @@
         "supported_degraded": 6,
         "not_supported": 1
       },
-      "untested": 5,
+      "untested": 6,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3438,6 +3524,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -3746,7 +3860,7 @@
         "supported_degraded": 5,
         "not_supported": 15
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4293,6 +4407,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-oss-120b",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/mistral-medium-3-5",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -4601,7 +4743,7 @@
         "supported_degraded": 7,
         "not_supported": 7
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5148,6 +5290,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "mistralai/ministral-14b-2512",
+            "env": "eu_hosted"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "mistralai/mistral-medium-3-5",
+              "env": "eu_hosted"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -5456,7 +5626,7 @@
         "supported_degraded": 2,
         "not_supported": 14
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6003,6 +6173,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "openai/gpt-6-luna",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "openai/gpt-6-sol",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -6311,7 +6509,7 @@
         "supported_degraded": 3,
         "not_supported": 4
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6858,6 +7056,34 @@
           "cases_below_quality_bar": 0
         },
         {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "vllm",
+            "model": "mlx-community/Qwen3-14B-4bit",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "vllm",
+              "model": "mlx-community/Qwen3-14B-4bit",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
           "tier": "local_small",
@@ -7166,7 +7392,7 @@
         "supported_degraded": 1,
         "not_supported": 19
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     }
@@ -7175,7 +7401,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 50,
+      "sites_shipped": 52,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
@@ -7879,7 +8105,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 50,
+      "sites_shipped": 52,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
@@ -8569,7 +8795,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 50,
+      "sites_shipped": 52,
       "sites_measured": 44,
       "ready": 29,
       "usable_with_care": 14,
@@ -9252,7 +9478,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 50,
+      "sites_shipped": 52,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -9962,7 +10188,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 50,
+      "sites_shipped": 52,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -21514,6 +21740,54 @@
           "expects": "accepted",
           "graded_by": "judge",
           "file": "backend/internal/compose/aicert/corpus/report_interpret/sales_assessment_names_the_largest_open_deal_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
+      "task": "report_setup",
+      "site": "custom_report_setup",
+      "key": "report_setup/custom_report_setup",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "custom_report_setup_names_back_a_measure_it_cannot_express",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/custom_report_setup_names_back_a_measure_it_cannot_express_01.yaml"
+        },
+        {
+          "name": "custom_report_setup_picks_metrics_and_the_charts_they_draw",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/custom_report_setup_picks_metrics_and_the_charts_they_draw_01.yaml"
+        }
+      ],
+      "records": []
+    },
+    {
+      "task": "report_setup",
+      "site": "initiative_setup",
+      "key": "report_setup/initiative_setup",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "initiative_setup_asks_about_a_target_the_words_leave_open",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/initiative_setup_asks_about_a_target_the_words_leave_open_01.yaml"
+        },
+        {
+          "name": "initiative_setup_reads_a_goal_with_a_target_and_deadline",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/report_setup/initiative_setup_reads_a_goal_with_a_target_and_deadline_01.yaml"
         }
       ],
       "records": []
