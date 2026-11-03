@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/salesassessment"
@@ -202,8 +201,8 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 		out.Sentences = append(out.Sentences, crmcontracts.SalesAssessmentSentence{Text: sentence.Text, Kind: crmcontracts.SalesAssessmentSentenceKind(sentence.Kind), Cells: sentence.Cells})
 	}
 	if written.Next != nil {
-		deal, dealErr := uuid.Parse(written.Next.DealID)
-		owner, ownerErr := uuid.Parse(written.Next.OwnerID)
+		deal, dealErr := ids.Parse(written.Next.DealID)
+		owner, ownerErr := ids.Parse(written.Next.OwnerID)
 		if dealErr == nil && ownerErr == nil {
 			out.NextDecision = &crmcontracts.SalesAssessmentDecision{DealId: openapi_types.UUID(deal), OwnerId: openapi_types.UUID(owner), Text: written.Next.Text}
 		}
@@ -346,11 +345,10 @@ func (s *salesAssessments) candidates(ctx context.Context, selection crmcontract
 func (s *salesAssessments) recordedDecisions(ctx context.Context, candidates []salesassessment.CandidateIn) ([]salesassessment.DecisionIn, error) {
 	out := []salesassessment.DecisionIn{}
 	for _, candidate := range candidates {
-		deal, err := uuid.Parse(candidate.ID)
+		dealID, err := ids.Parse(candidate.ID)
 		if err != nil {
 			return nil, fmt.Errorf("a candidate deal id: %w", err)
 		}
-		dealID := ids.UUID(deal)
 		listed, err := s.decisions.List(ctx, &dealID, nil)
 		if err != nil {
 			return nil, err
