@@ -52,12 +52,16 @@ type Call = {
 };
 
 // `refuse` answers a write to a path ending in its key with that problem.
+// A logo write waits for `logoAnswer`, and like the server it refuses one
+// whose If-Match is not the stored version.
 function backend(
   allow: GrantSpec,
   rows: object[],
   calls: Call[] = [],
   refuse: Record<string, object> = {},
+  logoAnswer: Promise<void> = Promise.resolve(),
 ) {
+  let logoVersion = 4;
   // The typed client hands fetch a Request; a file upload, a path and init.
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request =
@@ -85,8 +89,16 @@ function backend(
       return jsonResponse(entity("le-new", JSON.parse(raw)), 201);
     }
     if (request.url.endsWith("/logo")) {
+      await logoAnswer;
+      if (request.headers.get("If-Match") !== String(logoVersion)) {
+        return jsonResponse(
+          { title: "Conflict", status: 409, code: "version_skew" },
+          409,
+        );
+      }
+      logoVersion += 1;
       return jsonResponse(
-        entity("le-vienna", { version: 5, logo_url: "/v1/logo.png" }),
+        entity("le-vienna", { version: logoVersion, logo_url: "/v1/logo.png" }),
       );
     }
     if (request.method === "PATCH" || request.method === "POST") {
@@ -317,13 +329,12 @@ it("stores a chosen logo at once, and saves the next edit on the version it left
   await within(dialog).findByRole("button", {
     name: en["legalEntities.logoRemove"],
   });
-  expect(
-    calls.some(
-      (call) =>
-        call.method === "POST" &&
-        call.url.endsWith("/legal-entities/le-vienna/logo"),
-    ),
-  ).toBe(true);
+  const upload = calls.find(
+    (call) =>
+      call.method === "POST" &&
+      call.url.endsWith("/legal-entities/le-vienna/logo"),
+  );
+  expect(upload?.ifMatch).toBe("4");
   await user.type(
     within(dialog).getByRole("textbox", { name: en["legalEntities.bic"] }),
     "BKAUATWW",
@@ -331,6 +342,46 @@ it("stores a chosen logo at once, and saves the next edit on the version it left
   await user.click(
     within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
   );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.find((call) => call.method === "PATCH")?.ifMatch).toBe("5");
+});
+
+it("holds Save and the close while a logo write is out", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  let answer = () => {};
+  const logoAnswer = new Promise<void>((resolve) => {
+    answer = resolve;
+  });
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, [...DEFAULT_ONLY, VIENNA], calls, {}, logoAnswer),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  await user.type(
+    within(dialog).getByRole("textbox", { name: en["legalEntities.bic"] }),
+    "BKAUATWW",
+  );
+  await user.upload(
+    within(dialog).getByLabelText(en["legalEntities.logoAdd"]),
+    new File(["png"], "logo.png", { type: "image/png" }),
+  );
+  const save = within(dialog).getByRole("button", {
+    name: en["legalEntities.save"],
+  });
+  await waitFor(() => expect(save).toBeDisabled());
+  expect(
+    within(dialog).getByRole("button", { name: en["deals.cancel"] }),
+  ).toBeDisabled();
+  await user.keyboard("{Escape}");
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+
+  answer();
+  await waitFor(() => expect(save).toBeEnabled());
+  await user.click(save);
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((call) => call.method === "PATCH")?.ifMatch).toBe("5");
 });

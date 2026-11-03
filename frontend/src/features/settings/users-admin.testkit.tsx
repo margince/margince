@@ -245,6 +245,13 @@ export function backend(
   legal: BackendEntities = DEFAULT_ENTITY_ONLY,
 ) {
   const allow = me.allow ?? {};
+  // The assignments as the server holds them, so a move shows on the next read.
+  const members = new Map(
+    Object.entries(legal.members).map(([entityId, users]) => [
+      entityId,
+      [...users],
+    ]),
+  );
   const objects: Record<string, Record<string, boolean>> = {};
   for (const [object, verbs] of Object.entries(allow)) {
     objects[object] = {
@@ -277,7 +284,8 @@ export function backend(
         admin_password_link: true,
       });
     }
-    const read = readRoute(req, allow) ?? entityRoute(req, legal);
+    const read =
+      readRoute(req, allow) ?? entityRoute(req, legal.entities, members);
     if (read !== undefined) {
       return read;
     }
@@ -288,6 +296,10 @@ export function backend(
       body = undefined;
     }
     calls.push({ method: req.method, url: req.url, body });
+    const assigned = assignMember(req, body, legal.entities, members);
+    if (assigned !== undefined) {
+      return assigned;
+    }
     // The link mint answers its own shape. With admin_password_link on, the
     // invite flow opens the link dialog itself, and a generic user row handed
     // to it renders an expiry from `undefined` — an unhandled error rather
@@ -378,18 +390,48 @@ function readRoute(
   return undefined;
 }
 
+const MEMBERS_PATH = /\/legal-entities\/([^/]+)\/members$/;
+
+// A PUT moves the user out of every list, and into the chosen one unless it is
+// the default. The default's members are the users no list names.
+function assignMember(
+  req: Request,
+  body: unknown,
+  entities: BackendEntities["entities"],
+  members: Map<string, string[]>,
+): Response | undefined {
+  const path = MEMBERS_PATH.exec(new URL(req.url).pathname);
+  if (req.method !== "PUT" || !path) return undefined;
+  const userId =
+    typeof body === "object" && body !== null
+      ? Reflect.get(body, "user_id")
+      : undefined;
+  if (typeof userId !== "string") return jsonResponse({}, 422);
+  for (const [entityId, users] of members) {
+    members.set(
+      entityId,
+      users.filter((user) => user !== userId),
+    );
+  }
+  const entityId = path[1] ?? "";
+  const chosen = entities.find((entity) => entity.id === entityId);
+  if (chosen && !chosen.is_default) {
+    members.set(entityId, [...(members.get(entityId) ?? []), userId]);
+  }
+  return new Response(null, { status: 204 });
+}
+
 function entityRoute(
   req: Request,
-  legal: BackendEntities,
+  entities: BackendEntities["entities"],
+  members: ReadonlyMap<string, readonly string[]>,
 ): Response | undefined {
   if (req.method !== "GET") return undefined;
-  const members = /\/legal-entities\/([^/]+)\/members$/.exec(
-    new URL(req.url).pathname,
-  );
-  if (members) {
-    const entityId = members[1] ?? "";
+  const listed = MEMBERS_PATH.exec(new URL(req.url).pathname);
+  if (listed) {
+    const entityId = listed[1] ?? "";
     return jsonResponse({
-      data: (legal.members[entityId] ?? []).map((userId) => ({
+      data: (members.get(entityId) ?? []).map((userId) => ({
         user_id: userId,
         legal_entity_id: entityId,
         assigned_at: "2026-10-01T08:00:00Z",
@@ -398,7 +440,7 @@ function entityRoute(
   }
   if (new URL(req.url).pathname.endsWith("/legal-entities")) {
     return jsonResponse({
-      data: legal.entities.map((entity) => ({
+      data: entities.map((entity) => ({
         address: {},
         member_count: 0,
         version: 1,

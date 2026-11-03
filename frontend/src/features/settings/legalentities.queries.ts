@@ -101,12 +101,15 @@ export function useLegalEntityLogo() {
       const payload = await postMultipart(
         `/v1/legal-entities/${encodeURIComponent(input.id)}/logo`,
         { file: input.file },
+        ifMatch(input.version).header,
       );
       return logoWrittenOf(payload);
     },
     onSuccess: invalidate,
   });
 }
+
+export type LogoWrite = ReturnType<typeof useLegalEntityLogo>;
 
 // The multipart answer arrives untyped; a body without a version is treated as
 // unknown, and the list refetch brings the entity back.

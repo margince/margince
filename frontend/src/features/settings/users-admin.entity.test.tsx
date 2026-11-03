@@ -82,6 +82,9 @@ describe("UsersAdminCard legal entity column", () => {
       url: expect.stringMatching(/\/legal-entities\/le-vienna\/members$/),
       body: { user_id: "u-active" },
     });
+    await waitFor(() =>
+      expect(within(rowFor("Ada Active")).getByText("Acme Wien")).toBeTruthy(),
+    );
   });
 
   it("shows the entity as words to an admin who may not assign one", async () => {

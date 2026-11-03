@@ -21,6 +21,7 @@ import { useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import {
   type LegalEntity,
+  type LogoWrite,
   type UpdateLegalEntity,
   useArchiveLegalEntity,
   useLegalEntityLogo,
@@ -113,7 +114,7 @@ function draftOf(entity: LegalEntity): Draft {
 // clears one sent empty. So a save never touches a field the reader did not.
 function changesOf(before: Draft, after: Draft): UpdateLegalEntity {
   const changed = (key: DraftKey) => before[key] !== after[key];
-  const pick = <K extends DraftKey>(keys: readonly K[]) =>
+  const pick = (keys: readonly DraftKey[]) =>
     Object.fromEntries(
       keys.filter(changed).map((key) => [key, after[key].trim()]),
     );
@@ -135,6 +136,10 @@ export function EditEntityDialog({
   const t = useT();
   const formId = useId();
   const update = useUpdateLegalEntity();
+  const logo = useLegalEntityLogo();
+  // Both writes are conditional on one version, so neither starts while the
+  // other is out, and the dialog stays open until the logo write answers.
+  const busy = update.isPending || logo.isPending;
   const [initial] = useState(() => draftOf(entity));
   const [draft, setDraft] = useState(initial);
   // A logo write moves the version on, and the next save must name it.
@@ -149,6 +154,7 @@ export function EditEntityDialog({
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return;
     if (!dirty) {
       onClose();
       return;
@@ -164,7 +170,7 @@ export function EditEntityDialog({
       onClose={onClose}
       fieldCount={own ? 20 : 7}
       unsaved={dirty}
-      closeDisabled={update.isPending}
+      closeDisabled={busy}
       form={
         <form id={formId} onSubmit={submit} className="form-stack">
           {own ? (
@@ -260,6 +266,8 @@ export function EditEntityDialog({
               <AreaField label={t("legalEntities.usp")} {...text("usp")} />
               <EntityLogo
                 entity={entity}
+                write={logo}
+                saving={update.isPending}
                 version={version}
                 onVersion={setVersion}
               />
@@ -272,13 +280,14 @@ export function EditEntityDialog({
       }
       actions={
         <>
-          <Button disabled={update.isPending} onClick={onClose}>
+          <Button disabled={busy} onClick={onClose}>
             {t("deals.cancel")}
           </Button>
           <Button
             type="submit"
             form={formId}
             variant="primary"
+            disabled={logo.isPending}
             pending={update.isPending}
           >
             {t("legalEntities.save")}
@@ -296,16 +305,20 @@ const ACCEPTED_IMAGES =
 // file is no text the form could hold back until Save.
 function EntityLogo({
   entity,
+  write,
+  saving,
   version,
   onVersion,
 }: Readonly<{
   entity: LegalEntity;
+  write: LogoWrite;
+  saving: boolean;
   version: number;
   onVersion: (version: number) => void;
 }>) {
   const t = useT();
-  const write = useLegalEntityLogo();
   const [src, setSrc] = useState(entity.logo_url ?? null);
+  const uploading = write.isPending && write.variables?.file !== null;
   const send = (file: File | null) =>
     write.mutate(
       { id: entity.id, version, file },
@@ -332,13 +345,14 @@ function EntityLogo({
         hint={t("legalEntities.logoHint")}
         emptyLabel={t("legalEntities.logoEmpty")}
         accept={ACCEPTED_IMAGES}
-        disabled={write.isPending}
+        disabled={write.isPending || saving}
         onPick={send}
       />
       {src && (
         <Button
           variant="ghost"
           onClick={() => send(null)}
+          disabled={saving || uploading}
           pending={write.isPending && write.variables?.file === null}
         >
           {t("legalEntities.logoRemove")}
