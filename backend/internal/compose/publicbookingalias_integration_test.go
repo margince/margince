@@ -140,26 +140,24 @@ func TestAnAliasIsRefusedWithAFieldErrorWhenInvalidReservedOrTaken(t *testing.T)
 	}
 }
 
-func TestARetiredAliasNeverSendsGuestsToAnotherHostBeforeItsCooldown(t *testing.T) {
+func TestARetiredAliasNeverMovesToAnotherHost(t *testing.T) {
 	h := newAliasHosts(t)
 	h.claim(t, h.ada, "team")
 	h.claim(t, h.ada, "ada") // rename: "team" is retired
 	if got := h.host(t, "team"); got != "" {
 		t.Fatalf("a renamed alias still opens %q", got)
 	}
-	h.refused(t, h.ben, "team", "recently_used")
-	h.now = h.now.Add(89 * 24 * time.Hour)
-	h.refused(t, h.ben, "team", "recently_used")
-	if got := h.host(t, "team"); got != "" {
-		t.Fatalf("a retired alias opens %q", got)
+	for _, later := range []time.Duration{0, 91 * 24 * time.Hour, 10 * 365 * 24 * time.Hour} {
+		h.now = h.now.Add(later)
+		h.refused(t, h.ben, "team", "taken")
+		if got := h.host(t, "team"); got != "" {
+			t.Fatalf("a retired alias opens %q", got)
+		}
 	}
-	h.now = h.now.Add(2 * 24 * time.Hour)
-	h.claim(t, h.ben, "team")
-	if got := h.host(t, "team"); got != "Ben Host" {
-		t.Fatalf("after the cooldown team opens %q", got)
-	}
-	if got := h.host(t, "ada"); got != "Ada Host" {
-		t.Fatalf("ada opens %q", got)
+	// The host who owned it may still take it back.
+	h.claim(t, h.ada, "team")
+	if got := h.host(t, "team"); got != "Ada Host" {
+		t.Fatalf("taken back, team opens %q", got)
 	}
 }
 
@@ -200,7 +198,7 @@ func TestReplaceAddressRetiresTheAliasWithTheOldSlug(t *testing.T) {
 			t.Fatalf("%s still opens %q after Replace address", address, got)
 		}
 	}
-	h.refused(t, h.ben, "ada", "recently_used")
+	h.refused(t, h.ben, "ada", "taken")
 	// The host may choose it again for the new page.
 	h.claim(t, h.ada, "ada")
 	if got := h.host(t, "ada"); got != "Ada Host" {

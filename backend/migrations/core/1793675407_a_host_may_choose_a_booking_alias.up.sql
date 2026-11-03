@@ -5,8 +5,8 @@ SET LOCAL lock_timeout = '3s';
 -- /book/alex. The random slug on booking_page keeps working beside it.
 --
 -- One row per alias ever claimed, live or retired. The unique key on alias
--- spans both, so a retired alias stays a tombstone: it cannot become another
--- host's page until its cooldown has passed (activities.claimBookingAlias).
+-- spans both, so a retired alias stays a tombstone: it never becomes another
+-- host's page; only its own host may revive it (activities.claimBookingAlias).
 -- Lowercase letters, digits and inner hyphens, 3 to 30 characters, so an
 -- alias can never equal a 32-character random slug.
 --

@@ -45,6 +45,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The server answers an aliased profile with the alias as its public address.
+const withAlias: Profile = {
+  ...bookingProfile,
+  alias: "ada",
+  public_url: "https://crm.example.test/book/ada",
+};
+
 const field = () => screen.getByRole("textbox", { name: "Short address" });
 
 it("explains that a short address is easy to guess before anything is saved", () => {
@@ -60,9 +67,11 @@ it("saves a first short address as the server will store it", async () => {
   const user = userEvent.setup();
   const writes = mount(bookingProfile);
   await user.type(field(), " Ada-Sales ");
+  // Only the path: the whole address is the server's to give.
   expect(
-    screen.getByText("Guests will use https://crm.example.test/book/ada-sales"),
+    screen.getByText("Your link will end in /book/ada-sales"),
   ).toBeTruthy();
+  expect(screen.queryByText(/crm\.example\.test\/book\/ada-sales/)).toBeNull();
   await user.click(screen.getByRole("button", { name: "Save address" }));
   await waitFor(() => expect(writes).toEqual([{ alias: "ada-sales" }]));
   expect(screen.queryByRole("dialog")).toBeNull();
@@ -70,7 +79,7 @@ it("saves a first short address as the server will store it", async () => {
 
 it("asks before a rename, because the old address stops working at once", async () => {
   const user = userEvent.setup();
-  const writes = mount({ ...bookingProfile, alias: "ada" });
+  const writes = mount(withAlias);
   await user.clear(field());
   await user.type(field(), "ada-lovelace");
   await user.click(screen.getByRole("button", { name: "Save address" }));
@@ -78,7 +87,7 @@ it("asks before a rename, because the old address stops working at once", async 
   expect(dialog.textContent).toContain(
     "https://crm.example.test/book/ada stops working at once",
   );
-  expect(dialog.textContent).toContain("Nobody else can take it for 90 days");
+  expect(dialog.textContent).toContain("Nobody else can ever take it");
   expect(writes).toEqual([]);
   await user.click(
     screen
@@ -90,7 +99,7 @@ it("asks before a rename, because the old address stops working at once", async 
 
 it("asks before removing a short address and then clears it", async () => {
   const user = userEvent.setup();
-  const writes = mount({ ...bookingProfile, alias: "ada" });
+  const writes = mount(withAlias);
   await user.click(
     screen.getByRole("button", { name: "Remove short address" }),
   );
@@ -129,15 +138,14 @@ it("shows the server's refusal on the field in the reader's words", async () => 
   await user.click(screen.getByRole("button", { name: "Save address" }));
   expect(
     await screen.findByText(
-      "Another booking page uses this address. Choose another one.",
+      "Another booking page uses or has used this address. Choose another one.",
     ),
   ).toBeTruthy();
 });
 
 it("says before Replace address that the short address stops working too", async () => {
   installFetchStub({
-    "GET /scheduling/profile": () =>
-      jsonResponse({ ...bookingProfile, alias: "ada" }),
+    "GET /scheduling/profile": () => jsonResponse(withAlias),
   });
   render(
     <StoryProviders>
@@ -149,4 +157,15 @@ it("says before Replace address that the short address stops working too", async
       "Your short address https://crm.example.test/book/ada stops working too. You can choose it again afterwards.",
     ),
   ).toBeTruthy();
+});
+
+it("names the current address by its path when no public address is configured", async () => {
+  const user = userEvent.setup();
+  mount({ ...withAlias, public_url: undefined });
+  await user.click(
+    screen.getByRole("button", { name: "Remove short address" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  expect(dialog.textContent).toContain("/book/ada stops working at once");
+  expect(dialog.textContent).not.toContain("https://");
 });

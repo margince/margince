@@ -5,8 +5,7 @@ package activities
 
 // A host's friendly booking address, such as /book/alex, beside the random
 // slug. Rows live in booking_alias. A changed, cleared or replaced alias is
-// retired, not deleted, so the address cannot move to another host while
-// guests may still hold it.
+// retired, not deleted, and stays its host's for good: guests may still hold it.
 
 import (
 	"context"
@@ -30,10 +29,7 @@ const (
 	// bookingAliasMax stays below the 32-character random slug, so an alias
 	// can never equal or shadow one.
 	bookingAliasMax = 30
-	// bookingAliasCooldown is how long a retired alias stays unavailable to
-	// any other host.
-	bookingAliasCooldown = 90 * 24 * time.Hour
-	aliasField           = "alias"
+	aliasField      = "alias"
 )
 
 var bookingAliasShape = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$`)
@@ -71,9 +67,8 @@ func validateBookingAlias(alias string) error {
 }
 
 var (
-	errAliasTaken        = aliasRefusal("taken", "Another booking page uses this address. Choose another one")
-	errAliasRecentlyUsed = aliasRefusal("recently_used", "Another booking page used this address recently. Choose another one")
-	errAliasNoPage       = aliasRefusal("no_booking_link", "Create your booking link before you choose an address")
+	errAliasTaken  = aliasRefusal("taken", "Another booking page uses this address. Choose another one")
+	errAliasNoPage = aliasRefusal("no_booking_link", "Create your booking link before you choose an address")
 )
 
 // bookingAddressAudit is the before and after image of an alias change.
@@ -185,17 +180,16 @@ func (s *Store) claimBookingAlias(ctx context.Context, tx pgx.Tx, host ids.UserI
 	if errors.Is(err, pgx.ErrNoRows) {
 		return s.insertBookingAlias(ctx, tx, host, page, alias)
 	}
-	switch {
-	case retired == nil:
+	// An alias never moves between hosts: guests may still hold the old
+	// host's address. Only the host who owned a retired alias revives it.
+	if retired == nil || owner == nil || *owner != host {
 		return errAliasTaken
-	case (owner == nil || *owner != host) && s.now().Before(retired.Add(bookingAliasCooldown)):
-		return errAliasRecentlyUsed
 	}
 	if err := s.retireBookingAliasTx(ctx, tx, host); err != nil {
 		return err
 	}
 	args = schedulingArgs{}
-	_, err = tx.Exec(ctx, `UPDATE booking_alias SET host_user_id=`+args.add(host)+`, booking_page_id=`+args.add(page)+
+	_, err = tx.Exec(ctx, `UPDATE booking_alias SET booking_page_id=`+args.add(page)+
 		`, created_at=`+args.add(s.now())+`, retired_at=NULL WHERE id=`+args.add(id), args...)
 	return err
 }

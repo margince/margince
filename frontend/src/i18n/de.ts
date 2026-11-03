@@ -19101,13 +19101,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.alias.label": "Kurzadresse",
   "scheduling.alias.help":
     "Optional. Eine Kurzadresse wie /book/alex lässt sich leicht teilen und leicht erraten. Wer sie errät, sieht deine Buchungsseite und deine freien Zeiten. Deine lange Adresse funktioniert weiter.",
-  "scheduling.alias.preview": "Gäste nutzen {url}",
+  "scheduling.alias.preview": "Dein Link endet dann auf {path}",
   "scheduling.alias.save": "Adresse speichern",
   "scheduling.alias.clear": "Kurzadresse entfernen",
   "scheduling.alias.changeTitle": "Kurzadresse ändern?",
   "scheduling.alias.clearTitle": "Kurzadresse entfernen?",
   "scheduling.alias.changeHelp":
-    "{old} funktioniert dann sofort nicht mehr. Gäste mit dieser Adresse sehen, dass die Seite nicht verfügbar ist. 90 Tage lang kann niemand sonst sie übernehmen, und du kannst sie zurückholen.",
+    "{old} funktioniert dann sofort nicht mehr. Gäste mit dieser Adresse sehen, dass die Seite nicht verfügbar ist. Niemand sonst kann sie je übernehmen, und du kannst sie jederzeit zurückholen.",
   "scheduling.alias.error.too_short": "Verwende mindestens 3 Zeichen.",
   "scheduling.alias.error.too_long": "Verwende höchstens 30 Zeichen.",
   "scheduling.alias.error.invalid":
@@ -19115,9 +19115,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.alias.error.reserved":
     "Diese Adresse ist reserviert. Wähle eine andere.",
   "scheduling.alias.error.taken":
-    "Eine andere Buchungsseite nutzt diese Adresse. Wähle eine andere.",
-  "scheduling.alias.error.recently_used":
-    "Eine andere Buchungsseite hat diese Adresse vor Kurzem genutzt. Wähle eine andere.",
+    "Eine andere Buchungsseite nutzt diese Adresse oder hat sie genutzt. Wähle eine andere.",
   "scheduling.alias.error.no_booking_link":
     "Erstelle zuerst deinen Buchungslink.",
   "scheduling.replaceAliasHelp":

@@ -40,7 +40,7 @@ import {
   usePatchSchedulingProfile,
   useSchedulingProfile,
 } from "../../lib/scheduling-profile-query";
-import { aliasAddress, BookingAliasField } from "./booking-alias";
+import { BookingAliasField, currentBookingAddress } from "./booking-alias";
 import { hoursSentence } from "./meeting-phrases";
 import { useWorkingHours } from "./working-hours";
 import "./meeting-cards.css";
@@ -482,7 +482,7 @@ export function ReplaceAddressConfirm({
       {profile?.alias && (
         <p>
           {t("scheduling.replaceAliasHelp", {
-            url: aliasAddress(profile, profile.alias),
+            url: currentBookingAddress(profile, profile.alias),
           })}
         </p>
       )}

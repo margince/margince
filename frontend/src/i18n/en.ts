@@ -18927,13 +18927,13 @@ export const en = {
   "scheduling.alias.label": "Short address",
   "scheduling.alias.help":
     "Optional. A short address such as /book/alex is easy to share and easy to guess. Anyone who guesses it sees your booking page and your free times. Your long address keeps working.",
-  "scheduling.alias.preview": "Guests will use {url}",
+  "scheduling.alias.preview": "Your link will end in {path}",
   "scheduling.alias.save": "Save address",
   "scheduling.alias.clear": "Remove short address",
   "scheduling.alias.changeTitle": "Change your short address?",
   "scheduling.alias.clearTitle": "Remove your short address?",
   "scheduling.alias.changeHelp":
-    "{old} stops working at once. Guests who have it see that the page is not available. Nobody else can take it for 90 days, and you can take it back.",
+    "{old} stops working at once. Guests who have it see that the page is not available. Nobody else can ever take it, and you can take it back at any time.",
   "scheduling.alias.error.too_short": "Use at least 3 characters.",
   "scheduling.alias.error.too_long": "Use at most 30 characters.",
   "scheduling.alias.error.invalid":
@@ -18941,9 +18941,7 @@ export const en = {
   "scheduling.alias.error.reserved":
     "This address is reserved. Choose another one.",
   "scheduling.alias.error.taken":
-    "Another booking page uses this address. Choose another one.",
-  "scheduling.alias.error.recently_used":
-    "Another booking page used this address recently. Choose another one.",
+    "Another booking page uses or has used this address. Choose another one.",
   "scheduling.alias.error.no_booking_link": "Create your booking link first.",
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",

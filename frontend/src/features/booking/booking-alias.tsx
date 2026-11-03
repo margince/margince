@@ -21,7 +21,6 @@ const ALIAS_ERRORS: Readonly<Record<string, MessageKey>> = {
   invalid: "scheduling.alias.error.invalid",
   reserved: "scheduling.alias.error.reserved",
   taken: "scheduling.alias.error.taken",
-  recently_used: "scheduling.alias.error.recently_used",
   no_booking_link: "scheduling.alias.error.no_booking_link",
 };
 
@@ -30,10 +29,17 @@ export function normalizeAlias(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-/** The address an alias makes, on the origin the profile's own link uses. */
-export function aliasAddress(profile: Profile, alias: string): string {
-  const origin = profile.public_url ? new URL(profile.public_url).origin : "";
-  return `${origin}/book/${alias}`;
+/** The path an alias makes. Only the server's public_url is a whole address. */
+export function aliasPath(alias: string): string {
+  return `/book/${alias}`;
+}
+
+/**
+ * The address guests use now: the server's public_url, or the bare path when
+ * no public origin is configured, as the other link surfaces show it.
+ */
+export function currentBookingAddress(profile: Profile, alias: string): string {
+  return profile.public_url ?? aliasPath(alias);
 }
 
 function aliasError(t: Translator, error: unknown): string | undefined {
@@ -111,9 +117,7 @@ export function BookingAliasField({ profile }: Readonly<{ profile: Profile }>) {
       </Field>
       {next !== "" && next !== current && (
         <p className="t-caption">
-          {t("scheduling.alias.preview", {
-            url: aliasAddress(profile, next),
-          })}
+          {t("scheduling.alias.preview", { path: aliasPath(next) })}
         </p>
       )}
       {!fieldError && <ErrorLine error={save.error} />}
@@ -135,7 +139,7 @@ export function BookingAliasField({ profile }: Readonly<{ profile: Profile }>) {
       >
         <p>
           {t("scheduling.alias.changeHelp", {
-            old: aliasAddress(profile, current),
+            old: currentBookingAddress(profile, current),
           })}
         </p>
       </ConfirmModal>
