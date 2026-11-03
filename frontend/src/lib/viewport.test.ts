@@ -88,7 +88,7 @@ describe("usePhoneViewport", () => {
 
 // A stylesheet cannot read a width this module names, so each block spells the
 // number. A block names the width it sits nearest, within the smallest gap
-// between two named widths, and must spell that width exactly.
+// between two named widths, and must spell that same number.
 
 const sourceRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -197,7 +197,7 @@ describe("the named widths in the stylesheets", () => {
     }
   });
 
-  it("spells each named width exactly in every block that names it", () => {
+  it("spells each named width as its own number in every block that names it", () => {
     const sheets = filesMatching(sourceRoot, /\.css$/);
     const blocks = sheets.flatMap((sheet) =>
       mediaWidths(readFileSync(sheet, "utf8")).flatMap((found) => {

@@ -10,16 +10,11 @@ import { useEffect, useState } from "react";
 // viewport.test.ts fails a phone block that spells another number.
 export const PHONE_MAX_WIDTH = 700;
 
-// The width at which the LAYOUT turns: the tree's own narrow breakpoint, which
-// thirteen stylesheets already spell as `@media (max-width: 720px)` — the modal,
-// the record head, the page zones and the worklist row among them. It is here
-// for the code that must AGREE with that fold rather than merely be laid out by
-// it: the worklist's set-aside verbs are drawn as buttons above this width and
-// answered by a swipe below it, and a component keying that on a different
-// number would draw both at the widths between the two.
-//
-// A stylesheet cannot read a TypeScript constant, so viewport.test.ts fails a
-// fold block that spells another number.
+// The width at which the layout folds, for code that must agree with the
+// stylesheets' fold. The worklist draws its set-aside verbs as buttons above it
+// and answers a swipe below it, so another number would draw both in between.
+// A stylesheet cannot read this constant, so viewport.test.ts fails a fold
+// block that spells another number.
 export const FOLD_MAX_WIDTH = 720;
 
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
