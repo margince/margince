@@ -19,7 +19,7 @@ import (
 func labelCurrent(ctx context.Context, store *Store, id ids.UUID, label string) (bool, error) {
 	var version int64
 	if err := store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL AND activity_thread_available(thread_key)`, id).Scan(&version)
+		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
 	}); err != nil {
 		return false, err
 	}

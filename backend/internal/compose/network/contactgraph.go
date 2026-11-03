@@ -296,7 +296,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 		SELECT a.id, a.subject, a.occurred_at, a.occurred_precision, a.kind, %s
 		  FROM activity a
 		  LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
-		 WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM activity_participant up
 		                WHERE up.activity_id = a.id AND up.user_id = $%d)
 		   AND EXISTS (SELECT 1 FROM activity_participant pp

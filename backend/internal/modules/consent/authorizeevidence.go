@@ -81,7 +81,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 	var found bool
 	err := tx.QueryRow(ctx, `
 		WITH anchor AS (
-			SELECT thread_key FROM activity WHERE activity_thread_available(thread_key) AND id = $6 AND (archived_at IS NULL AND activity_thread_available(thread_key))
+			SELECT thread_key FROM activity WHERE id = $6 AND archived_at IS NULL
 		)
 		SELECT EXISTS (
 			SELECT 1
@@ -90,7 +90,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			                 AND a.thread_key = anchor.thread_key
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
-			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			   AND a.archived_at IS NULL
 			   -- Authorship, from the shared spelling: the subject WROTE into
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.
@@ -136,7 +136,7 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
-			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			   AND a.archived_at IS NULL
 			   AND a.thread_key = $6
 			   AND `+authorIsTheSubject+`
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey).Scan(&found)
@@ -195,7 +195,7 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.thread_key = $2
-			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			   AND a.archived_at IS NULL
 			   AND `+correspondence.AuthenticatedInboundSQL("a")+`
 			   AND p.role IN ('to', 'cc')
 			   AND $1 <> '' AND lower(p.address) = lower($1)
@@ -243,7 +243,7 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
-			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			   AND a.archived_at IS NULL
 			   AND `+occurredday.FromSQL("a", "$6")+`
 			   AND `+authorIsTheSubject+`
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, since).Scan(&found)

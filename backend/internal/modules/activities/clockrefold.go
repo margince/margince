@@ -85,7 +85,7 @@ func PassedActivitiesTx(ctx context.Context, tx pgx.Tx, after ClockRefoldMark, a
 	}
 	out, err := refoldTargetsTx(ctx, tx, `
 		  SELECT a.id, a.occurred_at FROM activity a
-		   WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		   WHERE a.archived_at IS NULL
 		     AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
 		     AND (a.occurred_at, a.id) > ($1, $2)
 		     AND a.occurred_at <= $3 -- occurred_at raw: the keyset bound of the walk; DayActivitiesComeTx reads day entries
@@ -117,7 +117,7 @@ func DayActivitiesComeTx(
 	today, markDay := occurredday.AnchorIn(asOf, zone), occurredday.AnchorIn(mark.At, zone)
 	return refoldTargetsTx(ctx, tx, `
 		SELECT a.id, a.occurred_at FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.occurred_precision = 'day'
+		 WHERE a.archived_at IS NULL AND a.occurred_precision = 'day'
 		   AND ((a.kind <> $1 AND a.occurred_at = $2 AND $4 < $2
 		         AND a.created_at < a.occurred_at -- occurred_at raw: written ahead of its time, a row the refold re-reads
 		         AND a.occurred_at > $3) -- occurred_at raw: past the bound of the walk, at the anchor of today in zone

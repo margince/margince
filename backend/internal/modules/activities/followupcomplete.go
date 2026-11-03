@@ -112,7 +112,7 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	landed := arg(activityID)
 	where := storekit.SQLf(`a.source_system = ANY($%[2]d)
-			AND EXISTS (SELECT 1 FROM activity landed WHERE activity_thread_available(landed.thread_key) AND landed.id = $%[1]d AND %[3]s
+			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s
 			            AND landed.occurred_at > coalesce(%[5]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
 			            )
 			AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
@@ -272,9 +272,9 @@ func (s *Store) flipSystemTasks(
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		query := storekit.SQLf(`
 			SELECT a.id, a.version FROM activity a
-			WHERE activity_thread_available(a.thread_key) AND %s AND a.kind = $%d AND a.source = $%d
+			WHERE %s AND a.kind = $%d AND a.source = $%d
 			  AND (a.captured_by = $%d OR a.captured_by LIKE $%d)
-			  AND a.is_done = $%d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			  AND a.is_done = $%d AND a.archived_at IS NULL
 			ORDER BY a.id`,
 			where,
 			arg(string(crmcontracts.ActivityKindTask)), arg(systemSource),

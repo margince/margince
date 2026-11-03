@@ -34,26 +34,16 @@ func ForwardPrefixes() []string {
 // in a Postgres regular expression, so SQL can strip what ReplyPrefixes
 // names without a second copy of the list.
 func ReplyPrefixPattern() string {
-	return prefixPattern(ReplyPrefixes())
-}
-
-// ThreadPrefixPattern treats both replies and forwards as conversation prefixes.
-func ThreadPrefixPattern() string {
-	return prefixPattern(append(ReplyPrefixes(), ForwardPrefixes()...))
-}
-
-func prefixPattern(prefixes []string) string {
-	words := make([]string, 0, len(prefixes))
-	for _, prefix := range prefixes {
+	words := make([]string, 0, len(ReplyPrefixes()))
+	for _, prefix := range ReplyPrefixes() {
 		words = append(words, strings.TrimSuffix(prefix, ":"))
 	}
 	return `^(\s*(` + strings.Join(words, "|") + `)\s*:)+\s*`
 }
 
 var (
-	replyPrefixes  = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
-	threadPrefixes = regexp.MustCompile(`(?i)` + ThreadPrefixPattern())
-	innerSpaces    = regexp.MustCompile(`\s+`)
+	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
+	innerSpaces   = regexp.MustCompile(`\s+`)
 )
 
 // Normalized is a subject as the answer check compares it: reply prefixes and
@@ -70,11 +60,6 @@ func Normalized(subject string) string {
 	}, subject)
 	stripped := replyPrefixes.ReplaceAllString(subject, "")
 	return strings.ToLower(strings.Trim(innerSpaces.ReplaceAllString(stripped, " "), " "))
-}
-
-// ThreadNormalized does not change the stricter subject comparison used for answers.
-func ThreadNormalized(subject string) string {
-	return strings.TrimSpace(threadPrefixes.ReplaceAllString(Normalized(subject), ""))
 }
 
 // WithoutReplyPrefix is subject with its leading reply prefixes removed and its

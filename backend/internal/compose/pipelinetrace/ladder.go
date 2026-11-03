@@ -112,7 +112,7 @@ func (a *Assembler) ByTraceID(ctx context.Context, id ids.UUID) (Ladder, error) 
 	if err != nil {
 		return Ladder{}, err
 	}
-	if stored.ActivityHidden || (!readable && stored.ActivityID != nil) {
+	if !readable && stored.ActivityID != nil {
 		// The message is theirs and the activity is not. The stored rungs still
 		// answer — they describe the member's own message — but nothing derived
 		// from the activity may, and the id itself does not travel.
@@ -175,10 +175,8 @@ func (a *Assembler) ByActivityID(ctx context.Context, id ids.UUID) (Ladder, erro
 	if err != nil {
 		return Ladder{}, err
 	}
-	if !stored.ActivityHidden {
-		stored.ActivityID = new(id)
-	}
-	return a.assemble(ctx, view{stored: stored, owned: owned, activityHidden: stored.ActivityHidden})
+	stored.ActivityID = new(id)
+	return a.assemble(ctx, view{stored: stored, owned: owned})
 }
 
 // storedForActivity fetches the caller's own stored rungs for this message, and

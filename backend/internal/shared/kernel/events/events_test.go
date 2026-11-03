@@ -257,7 +257,6 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// audience narrows the derived signals citing the message and drops
 		// the thread's scan watermark.
 		"cg:audience-rescope": {"gw:events:crm:activity"},
-		"cg:thread-repair":    {"gw:events:crm:activity"},
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.

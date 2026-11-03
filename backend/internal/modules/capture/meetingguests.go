@@ -166,7 +166,7 @@ func settleRosterRows(
 func audienceNarrowedByAMember(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (narrowed, open bool, err error) {
 	err = tx.QueryRow(ctx, `
 		SELECT audience <> 'workspace' AND audience_reason IS NOT DISTINCT FROM $2
-		  FROM activity WHERE id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key))`, activityID, manualAudienceReason).Scan(&narrowed)
+		  FROM activity WHERE id = $1 AND restricted_at IS NULL`, activityID, manualAudienceReason).Scan(&narrowed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, false, nil
 	}

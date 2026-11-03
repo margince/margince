@@ -40,7 +40,7 @@ func SignatureFieldSourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, lim
 		SELECT f.id, f.contact_id, f.field, f.value, f.evidence_snippet, a.body
 		  FROM contact_profile_field f
 		  LEFT JOIN activity a ON a.id = `+sourceRefActivityID+`
-		       AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+		       AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		 WHERE `+repairedSignatureFields+` AND f.id > $2
 		 ORDER BY f.id
 		 LIMIT $3`, enrichSource, after, limit)

@@ -107,7 +107,7 @@ func (s *Store) readPromiseState(ctx context.Context, tx pgx.Tx, p *PromiseToTak
    FROM conversation_claim c
    JOIN activity a ON a.id = c.source_activity_id
    LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
-  WHERE c.id = $%d AND c.archived_at IS NULL AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s
+  WHERE c.id = $%d AND c.archived_at IS NULL AND a.archived_at IS NULL AND %s
     FOR UPDATE OF c`, current, claimPos, content), args...).Scan(
 		&p.Kind, &p.Status, &p.NeedsReview, &p.Current, &p.Body, &p.SourceLabel, &p.DueAt,
 		&p.Task, &p.TakenBy, &p.TakerName, &p.TakenAt)

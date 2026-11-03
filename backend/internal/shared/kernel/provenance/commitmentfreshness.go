@@ -24,9 +24,9 @@ func CurrentCommitmentClause(source, locator, due string, asOf time.Time, arg fu
  JOIN activity evidence ON evidence.id=coalesce(admitted.renewed_by, admitted.source_activity_id)
  WHERE admitted.source_activity_id=%s AND admitted.locator=%s
  AND admitted.current_work AND admitted.meaning->>'state'='open'
- AND (evidence.archived_at IS NULL AND activity_thread_available(evidence.thread_key)) AND %s
+ AND evidence.archived_at IS NULL AND %s
  AND `+MailBodyCompleteSQL("evidence")+`
- AND EXISTS (SELECT 1 FROM activity origin WHERE activity_thread_available(origin.thread_key) AND origin.id = admitted.source_activity_id AND `+MailBodyCompleteSQL("origin")+`)
+ AND EXISTS (SELECT 1 FROM activity origin WHERE origin.id = admitted.source_activity_id AND `+MailBodyCompleteSQL("origin")+`)
  AND (evidence.kind <> 'meeting' OR evidence.meeting_status IS DISTINCT FROM 'canceled')
  AND (%s OR %s >= $%d))`, source, locator, happened, occurredday.FromSQL("evidence", fmt.Sprintf("$%d", cutoff)), due, cutoff)
 }

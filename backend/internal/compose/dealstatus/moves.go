@@ -78,7 +78,7 @@ func readableActivities(
 	if content != "" {
 		where += " AND " + content
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND `+where, args...)
+	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE `+where, args...)
 	if err != nil {
 		return nil, err
 	}

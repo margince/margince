@@ -86,7 +86,7 @@ func (e *Env) WsScalar(t *testing.T, sql string, args ...any) string {
 func (e *Env) LabelCapture(ctx context.Context, id ids.UUID, label string) (bool, error) {
 	var version int64
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL AND activity_thread_available(thread_key)`, id).Scan(&version)
+		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
 	}); err != nil {
 		return false, err
 	}

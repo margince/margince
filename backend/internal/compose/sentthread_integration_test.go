@@ -223,7 +223,7 @@ func TestSentThreadJoinKeepsActorAndContentBoundaries(t *testing.T) {
 			reply := "boundary-reply@counterparty.test"
 			captureThreadMail(t, e, e.Rep1, threadMail(address, reply, "Thu, 01 Oct 2026 10:00:00 +0000", replyTo, refs...))
 			joined := threadKeyOfMessage(t, e, reply) == key
-			want := name != "agent send" && name != "full references"
+			want := name != "agent send"
 			if joined != want {
 				t.Fatalf("joined=%v, want %v", joined, want)
 			}

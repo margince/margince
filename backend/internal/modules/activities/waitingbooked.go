@@ -34,9 +34,9 @@ func bookedMeetingSQL(asOf, discover string) string {
 	        OFFSET 0) booked_walk
 	  CROSS JOIN LATERAL (
 	        SELECT booked.occurred_at FROM activity booked
-	         WHERE activity_thread_available(booked.thread_key) AND booked.id = booked_walk.activity_id
+	         WHERE booked.id = booked_walk.activity_id
 	           AND booked.kind = '` + KindMeeting + `'
-	           AND (booked.archived_at IS NULL AND activity_thread_available(booked.thread_key))
+	           AND booked.archived_at IS NULL
 	           AND booked.restricted_at IS NULL` + auth.AudienceWorkspaceOnly("booked") + `
 	           AND (` + discover + `)
 	           AND coalesce(booked.meeting_status, '') NOT IN ('canceled', 'no_show')

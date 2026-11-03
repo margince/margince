@@ -172,20 +172,16 @@ func TestAnOldInboundMessageStillDecidesTheReplyLanguageBehindManyNewerOutboundO
 		from: replyCorrespondent, to: o.seat, subject: "Angebot", body: german,
 		messageID: "angebot-1@customer.test", at: at, authenticated: true,
 	})
-	parent := o.messageIDOf(t, first)
-	var anchor ids.UUID
+	thread := e.WsScalar(t, `SELECT thread_key FROM activity WHERE id = $1`, first)
+	var anchor crmcontracts.Activity
 	for i := range 10 {
-		anchor = o.weWrite(t, owedMail{
-			to: replyCorrespondent, subject: "Angebot", body: "ok",
-			inReplyTo: parent, at: at.Add(time.Duration(i+1) * time.Hour),
-		})
+		anchor = logReplyMessage(e.Admin(), t, e, thread, "Angebot", "ok", time.Duration(i+1)*time.Hour)
 	}
-	finishThreadRepairs(t, e)
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "en" })
 	reader := e.As(o.owner, []ids.UUID{e.Team1}, integration.AdminPerms)
-	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {
+	if _, err := drafter.DraftEmailWithProvenance(reader, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
 		t.Fatal(err)
 	}
 	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"de"`) {
@@ -202,7 +198,7 @@ func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(
 	mail := func(from, cc, id, body string, offset time.Duration) ids.UUID {
 		return o.capture(t, owedMail{
 			from: from, to: o.seat, cc: cc, subject: "Angebot", body: body,
-			messageID: id, inReplyTo: "angebot-1@copied.test", at: at.Add(offset), authenticated: true,
+			messageID: id, inReplyTo: "angebot-root@kunde.test", at: at.Add(offset), authenticated: true,
 		})
 	}
 	mail("anne@copied.test", "", "angebot-1@copied.test",
@@ -210,7 +206,6 @@ func TestAReadableCopiedContactDoesNotSetTheReplyLanguageWhenTheSenderIsPrivate(
 	mail("dietmar@kunde.test", "", "angebot-2@kunde.test",
 		"Vielen Dank für das Angebot, wir prüfen es mit unserem Team und melden uns nächste Woche bei Ihnen zurück.", time.Hour)
 	anchor := mail("dietmar@kunde.test", "anne@copied.test", "angebot-3@kunde.test", "ok", 2*time.Hour)
-	finishThreadRepairs(t, e)
 	e.MakeCapturePrivate(t, "contact", sender, e.Rep2)
 
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
@@ -235,7 +230,6 @@ func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) 
 	o.contact(t, "Alex Buyer", replyCorrespondent)
 	body := "Could you send the product brochure and the approved product images?"
 	selected := o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Product materials", body: body, messageID: "materials-request@customer.test", at: time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC), authenticated: true})
-	finishThreadRepairs(t, e)
 	reader := e.As(o.owner, []ids.UUID{e.Team1}, integration.AdminPerms)
 	activity, err := e.Activities.GetActivity(reader, ids.From[ids.ActivityKind](selected), storekit.LiveOnly)
 	if err != nil {
@@ -245,17 +239,10 @@ func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) 
 		t.Fatal("captured mail has no thread key")
 	}
 	thread := *activity.ThreadKey
-	o.capture(t, owedMail{
-		from: replyCorrespondent, to: o.seat, subject: "Re: Product materials",
-		body:      "Guten Tag, bitte senden Sie uns die freigegebene Produktbroschüre und die Produktbilder für unsere Prüfung.",
-		messageID: "materials-followup@customer.test", inReplyTo: "materials-request@customer.test",
-		at: time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC), authenticated: true,
-	})
 	for i := range 7 {
 		logReplyMessage(reader, t, e, thread, "Invoice and dinner", "Later invoice and dinner details", time.Duration(i+1)*time.Hour)
 	}
 	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Invoice and dinner", body: "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.", messageID: "newer-inbound@customer.test", inReplyTo: "materials-request@customer.test", at: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), authenticated: true})
-	finishThreadRepairs(t, e)
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Product materials","body":"Guten Tag,\n\nwelche Version der Produktbroschüre und welche freigegebenen Produktbilder benötigen Sie für Ihre Prüfung?"}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	result, err := drafter.DraftEmailWithProvenance(reader, selected, draftfloor.Steering{Intent: "Answer the materials request"})

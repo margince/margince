@@ -42,7 +42,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map
  `+ControllerSendSQL+`,
  `+moveSQL(sentByReader, laterContent, mailKinds)+`, `+openRequestReminderSQL+`
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
- WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))`, args...)
+ WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading email states: %w", err)
 	}
@@ -114,7 +114,7 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[i
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id, move FROM (SELECT a.id, `+move+` AS move
- FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`)) a
+ FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`)) a
  WHERE move IS NOT NULL`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whose move each mail is: %w", err)

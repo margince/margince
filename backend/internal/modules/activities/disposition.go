@@ -159,7 +159,7 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 	var thread threadIdentity
 	var key, provider, direction *string
 	if err := tx.QueryRow(ctx,
-		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE activity_thread_available(thread_key) AND id = $1`,
+		`SELECT thread_key, kind, channel_provider, direction FROM activity WHERE id = $1`,
 		id).Scan(&key, &thread.kind, &provider, &direction); err != nil {
 		return threadIdentity{}, fmt.Errorf("activities: reading the message's thread: %w", err)
 	}

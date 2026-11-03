@@ -19,6 +19,6 @@ func StampSenderAuthenticationTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (b
 	}
 	tag, err := tx.Exec(ctx, `UPDATE activity SET inbound_sender_authenticated = true
  WHERE id = @id AND kind = 'email' AND direction = 'inbound'
- AND NOT inbound_sender_authenticated AND (restricted_at IS NULL AND activity_thread_available(thread_key))`, pgx.NamedArgs{"id": id})
+ AND NOT inbound_sender_authenticated AND restricted_at IS NULL`, pgx.NamedArgs{"id": id})
 	return tag.RowsAffected() > 0, err
 }

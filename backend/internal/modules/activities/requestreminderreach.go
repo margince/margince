@@ -71,7 +71,7 @@ type reminderRow struct {
 func openRemindersOf(ctx context.Context, tx pgx.Tx, source ids.ActivityID) ([]reminderRow, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT t.id, t.audience, t.assignee_id FROM activity t
-		 WHERE activity_thread_available(t.thread_key) AND t.source_system = $1 AND t.source_activity_id = $2
+		 WHERE t.source_system = $1 AND t.source_activity_id = $2
 		   AND t.audience_reason IS DISTINCT FROM $3
 		   AND `+openReminderClause("t")+`
 		 ORDER BY t.id
@@ -104,7 +104,7 @@ func writeReminderReachTx(
 	// nobody reads.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity SET audience = $2
-		 WHERE id = $1 AND audience = $3 AND (restricted_at IS NULL AND activity_thread_available(thread_key))
+		 WHERE id = $1 AND audience = $3 AND restricted_at IS NULL
 		   AND archived_at IS NULL AND audience_reason IS DISTINCT FROM $4`, reminder, want, stored, ReasonManual)
 	if err != nil {
 		return fmt.Errorf("activities: moving the reminder %s to %s: %w", reminder, want, err)
