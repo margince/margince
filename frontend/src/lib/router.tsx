@@ -397,6 +397,16 @@ export function useHash(): string {
 
 export function useRoute(): Route {
   const hash = useHash();
+  // The address the reader arrived on, read once.
+  //
+  // Asked again on every route read, an unserved path keeps answering
+  // not-found. A rail link changes the fragment and leaves the path alone.
+  //
+  // So the reader could not leave the page by any link on it.
+  const [arrival] = useState(() => ({
+    unserved: addressedAPathWeDoNotServe(),
+    hash: globalThis.location.hash,
+  }));
   useEffect(() => {
     if (/^#\/?brief(?:[/?]|$)/.test(hash)) {
       navigateReplacing(
@@ -405,7 +415,23 @@ export function useRoute(): Route {
       );
     }
   }, [hash]);
-  return addressedAPathWeDoNotServe()
+  useEffect(() => {
+    if (!arrival.unserved) {
+      return;
+    }
+    // The bar is moved to the base so the path the reader leaves on is one the
+    // build serves. The fragment and the query are kept: they say where they
+    // meant to go, and a reload should answer the same page.
+    const base = import.meta.env.BASE_URL || "/";
+    globalThis.history.replaceState(
+      globalThis.history.state,
+      "",
+      base.replace(/\/$/, "/") +
+        globalThis.location.search +
+        globalThis.location.hash,
+    );
+  }, [arrival.unserved]);
+  return arrival.unserved && hash === arrival.hash
     ? { screen: "not-found" }
     : parseHash(hash);
 }
