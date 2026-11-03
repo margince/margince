@@ -57,3 +57,44 @@ func TestRoomDocumentMembershipIsSpelledOnce(t *testing.T) {
 		}
 	}
 }
+
+// A row that never held bytes is a captured document link, and the room's
+// predicate leaves it out. A Documents list admits one by its category, so the
+// two rules differ by that clause and only that clause.
+//
+// Held here because the clause is what a tidy-up removes. The two predicates
+// read alike, and sharing them would hand a buyer a link to a file nobody
+// uploaded.
+func TestTheRoomsFileRuleAdmitsNoRowByItsCategory(t *testing.T) {
+	src, err := os.ReadFile(filepath.Clean("document_read.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	area := dealsFilesAreaSpelling(t, string(src))
+	if strings.Contains(area, "category") {
+		t.Errorf("inTheDealsFilesArea reads an attachment's category:\n%s\n\n"+
+			"a Documents list admits a link row that way; a room may not, because its reader "+
+			"is a buyer's download", area)
+	}
+	if !strings.Contains(area, "NOT a.bytes_withheld") {
+		t.Error("inTheDealsFilesArea no longer refuses a row with no bytes, which is what keeps a " +
+			"captured link out of a room")
+	}
+}
+
+// dealsFilesAreaSpelling returns the predicate's own text, so the checks above
+// read the rule rather than the whole file.
+func dealsFilesAreaSpelling(t *testing.T, text string) string {
+	t.Helper()
+	const decl = "var inTheDealsFilesArea = `"
+	start := strings.Index(text, decl)
+	if start < 0 {
+		t.Fatal("inTheDealsFilesArea is no longer declared as one raw string")
+	}
+	rest := text[start+len(decl):]
+	end := strings.Index(rest, "`")
+	if end < 0 {
+		t.Fatal("inTheDealsFilesArea's raw string is unterminated")
+	}
+	return rest[:end]
+}
