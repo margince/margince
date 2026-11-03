@@ -85,3 +85,16 @@ func TestADayCellCarriesItsPrecisionToTheCreateAndTheUpdate(t *testing.T) {
 		}
 	}
 }
+
+// A timed cell with nanoseconds past the stored microsecond names the instant
+// the column holds, so the row predicts unchanged.
+func TestATimedCellBelowAMicrosecondIsTheStoredInstant(t *testing.T) {
+	typed, problem := checkActivityCells(map[string]string{activityTargetOccurredAt: "2026-03-02T10:00:00.123456500Z"}, nil, activityNow)
+	if problem != nil {
+		t.Fatalf("the cell was refused: %+v", problem)
+	}
+	stored := storedActivity{OccurredAt: time.Date(2026, 3, 2, 10, 0, 0, 123_456_000, time.UTC), OccurredPrecision: activities.PrecisionInstant}
+	if !sameOccurrence(stored, typed, time.UTC) {
+		t.Error("the cell reads as a move, want the stored instant: the column keeps microseconds")
+	}
+}

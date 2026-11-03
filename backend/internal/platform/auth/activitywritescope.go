@@ -29,7 +29,8 @@ import (
 // conversation is nobody else's to edit), and their authority to CHANGE it is
 // any of:
 //
-//   - they authored or captured it (captured_by names their user id);
+//   - they authored or captured it (captured_by names their user id, or an
+//     agent logged it for them);
 //   - it is their task or their meeting (assignee_id / host_user_id);
 //   - it is a link-less, workspace-shared note;
 //   - at least one linked record is theirs to change — the same own/team
@@ -118,7 +119,18 @@ func activityWriteArms(p principal.Principal, arg func(any) int) string {
 		   OR a.host_user_id IN (%[1]s)
 		   OR NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id)
 		   OR EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND %[2]s))`,
-		memberIdentitySQL(me), linkTargetWritable(p, "l", arg), memberAuthorshipSQL("a", me, arg))
+		memberIdentitySQL(me), linkTargetWritable(p, "l", arg), activityAuthorSQL("a", me, arg))
+}
+
+// activityAuthorSQL holds when the member at position me wrote the row: under
+// their own stamp, or through an agent acting for them. The agent's stamp names
+// only its passport, so the human comes from the row's create audit entry.
+func activityAuthorSQL(alias string, me int, arg func(any) int) string {
+	return fmt.Sprintf(`(%[2]s OR (split_part(%[1]s.captured_by, ':', 1) = '%[4]s' AND EXISTS (
+	   SELECT 1 FROM audit_log made
+	    WHERE made.entity_type = 'activity' AND made.entity_id = %[1]s.id AND made.action = 'create'
+	      AND made.actor_id = %[1]s.captured_by AND made.on_behalf_of IN (%[3]s))))`,
+		alias, memberAuthorshipSQL(alias, me, arg), memberIdentitySQL(me), principal.PrincipalAgent)
 }
 
 // ActivityWritableSubset answers which of the named live, unheld activities

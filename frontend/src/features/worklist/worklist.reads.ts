@@ -1,7 +1,9 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { unwrap } from "../../lib/problem";
-import { isLiveWorkRead, worklistKey } from "../../lib/workkeys";
+import { worklistKey } from "../../lib/workkeys";
+import { worklistDayOptions } from "../../lib/worklistday";
+import type { WorklistView } from "../../lib/worklistviews";
 import type {
   TeamBoard,
   TeamExceptions,
@@ -14,6 +16,7 @@ import { represented } from "./worklistunits";
 
 export { useHandledForYou } from "../../lib/handled";
 export { worklistKey } from "../../lib/workkeys";
+export { readWorklistPage, worklistDayOptions } from "../../lib/worklistday";
 
 // The whole day in one read, at one scope or one named owner, and one filter.
 //
@@ -30,25 +33,11 @@ export function useWorklist(
   filter: WorklistFilter,
   owner?: string,
   enabled = true,
+  view?: WorklistView,
 ) {
-  const queryKey = [...worklistKey, scope, filter, owner ?? ""];
   return useInfiniteQuery({
+    ...worklistDayOptions(scope, filter, owner, view),
     enabled,
-    queryKey,
-    ...(!isLiveWorkRead(queryKey) ? { refetchOnWindowFocus: true } : {}),
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }): Promise<Worklist> => {
-      const dials = owner ? { owner, filter } : { scope, filter };
-      return unwrap(
-        await api.GET("/worklist", {
-          params: {
-            query: pageParam ? { ...dials, cursor: pageParam } : dials,
-          },
-        }),
-      );
-    },
-    // A page can empty as rows leave the snapshot; only its cursor ends the walk.
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
 }
 

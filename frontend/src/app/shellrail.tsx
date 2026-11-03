@@ -1,15 +1,16 @@
 import { Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
+import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import type { Route } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
-import { BetaBadge } from "./betabadge";
 import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
 import { NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
@@ -17,16 +18,13 @@ import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
-// One lockup at every width: a square mark, the name, and what it runs on.
+// One lockup at every width: a square mark and the name. Once the installation
+// has a name of its own, what it runs on sits under it.
 // A square is the one shape every company's mark fits at one weight.
 // Only the name is the link, and the mark repeats it, so the mark is hidden
-// from assistive tech. shell.css stretches the link over the whole card.
+// from assistive tech. The link covers the whole card (shell.css).
 function BrandBlock() {
   const t = useT();
-  /* The stage this product is at, on every branch below. It is a fact about
-   * the build, not about the company above it.
-   * Temporary: betabadge.tsx lists what its deletion takes. */
-  const marker = <BetaBadge />;
   // The installation's own name and marks (ADR-0061: one installation, one
   // company). They come from /me, which carries them to every seat. The full
   // company profile is an admin's read. A disabled observer: the auth gate
@@ -36,27 +34,33 @@ function BrandBlock() {
     installation?.logo_icon_url,
     installation?.logo_url,
   );
+  // On the link, not the heading: the link already holds the tab stop, and the
+  // measure reaches into the heading it clips. Folded, the name has no width,
+  // so hovering the mark always shows it.
+  const {
+    ref: nameRef,
+    trigger: nameTrigger,
+    tip: nameTip,
+  } = useTruncationTooltip<HTMLAnchorElement>(installation?.display_name ?? "");
   // With no profile (the shell mounted before onboarding described anybody),
   // the block falls back to the product's own mark and name. A company name is
-  // never invented to fill the line.
+  // never invented to fill the slot.
   if (!installation) {
     return (
-      <>
+      <div className="railhead">
         <span className="ws-chip" aria-hidden="true">
           <Logomark />
         </span>
-        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+        <AppLink className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
-        </a>
-        {/* No attribution here: the product's own name is already above it. */}
-        <span className="ws-company">{marker}</span>
-      </>
+        </AppLink>
+      </div>
     );
   }
   return (
-    <>
+    <div className="railhead railhead-attributed">
       {/* The company's square mark. Avatar draws the deterministic monogram
           underneath, so a company with no square mark has a face, not a gap. */}
       <span className="ws-chip ws-chip-company" aria-hidden="true">
@@ -67,24 +71,24 @@ function BrandBlock() {
           src={mark}
         />
       </span>
-      <a
+      <AppLink
         className="ws"
         href="#/home"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
+        ref={nameRef}
+        {...nameTrigger}
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
         <Heading size="small" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
-      </a>
-      <span className="ws-company">
-        <span className="ws-company-text">{t("shell.poweredBy")}</span>
-        {marker}
-      </span>
-    </>
+        {nameTip}
+      </AppLink>
+      <span className="ws-company">{t("shell.poweredBy")}</span>
+    </div>
   );
 }
 
@@ -244,9 +248,7 @@ export function WorkspaceRail({
         className={railClasses({ collapsed, sheetOpen, leveled })}
         aria-label={t("shell.railAria")}
       >
-        <div className="railhead">
-          <BrandBlock />
-        </div>
+        <BrandBlock />
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the same depth are the same level with
             another row current, and nothing should move. */}

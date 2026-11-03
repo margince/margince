@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
@@ -37,6 +38,13 @@ import (
 func attachToSettledVerdict(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, domain string, prior DomainDisposition, res *EnsureCounterpartyResult) error {
 	if prior.CompanyID == nil {
 		return nil
+	}
+	if err := lockContactForAttach(ctx, tx, res.ContactID); err != nil {
+		return err
+	}
+	visible, err := auth.VisibleTo(ctx, tx, companyEntity, prior.CompanyID.UUID)
+	if err != nil || !visible {
+		return err
 	}
 	live, err := companyIsLive(ctx, tx, *prior.CompanyID)
 	if err != nil || !live {
@@ -150,13 +158,9 @@ func adoptDispositionForCompany(ctx context.Context, tx pgx.Tx, domain string, c
 	return nil
 }
 
-// deferCompanyToTriage handles a domain with no company behind it yet: decide
-// whether the question is even worth asking, and if it is, open it.
-//
-// Nothing is created here on purpose. The contact is already committed and the
-// message is already on their timeline; what is withheld is a company row that
-// nothing yet justifies. ADR-0063's create-on-sight is what manufactured
-// "Kestner" from a man's own domain, and no later evidence removed it.
+// deferCompanyToTriage records a durable question for an unclaimed domain.
+// Classification keeps personal and service domains from becoming employers.
+
 func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, base string, res *EnsureCounterpartyResult) error {
 	// Consumer mail is answered by the domain itself and needs no crawl to
 	// settle. The sink's tier ladder usually catches it first; this repeats the

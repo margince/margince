@@ -130,7 +130,7 @@ func (s *Store) readReachAccounts(ctx context.Context, tx pgx.Tx, owner ids.UUID
 	// The total rides the SAME statement as the rows. Two statements would each
 	// take their own snapshot, so a concurrent import between them could report
 	// a page longer than the total it is a page of.
-	rows, err := tx.Query(ctx, storekit.SQLf(`
+	query := storekit.SQLf(`
 		WITH reached AS (
 		    SELECT o.id, o.display_name,
 		           count(*) AS connections,
@@ -143,7 +143,8 @@ func (s *Store) readReachAccounts(ctx context.Context, tx pgx.Tx, owner ids.UUID
 		SELECT id, display_name, connections, on_file, (SELECT count(*) FROM reached)
 		  FROM reached
 		 ORDER BY connections DESC, display_name, id
-		 LIMIT $%d`, ownerPos, visible, arg(limit)), args...)
+		 LIMIT $%d`, ownerPos, visible, arg(limit))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("contacts: reading which accounts a network reaches: %w", err)
 	}

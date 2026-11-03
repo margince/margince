@@ -26,7 +26,7 @@ const mark = (
 ): TimelineMark => ({
   precision: "instant",
   kind: "email",
-  direction: "inbound",
+  side: "theirs",
   what: "Email",
   title: "Scope question",
   detail: "From Dana Reyes",
@@ -79,7 +79,7 @@ describe("marks on the line", () => {
         at: "2026-07-11",
         when: "11 Jul",
         title: "Re: scope",
-        direction: "outbound",
+        side: "ours",
       }),
     ]);
 
@@ -98,6 +98,18 @@ describe("marks on the line", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+  });
+
+  it("keeps the mark of an event folded into a neighbour's label, which names it nowhere", () => {
+    draw(
+      [mark({ key: "m", at: "2026-07-10" })],
+      [
+        { at: "2026-07-10", activityIds: ["m"] },
+        { at: "2026-07-10T12:00:00Z", title: "Call", kind: "last" },
+      ],
+    );
+
+    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
   });
 
   it("never draws a mark outside the span the events set, so marks cannot stretch the axis", () => {
@@ -140,7 +152,7 @@ describe("marks on the line", () => {
           at: "2026-07-10",
           title: `Note ${index}`,
           kind: "note",
-          direction: undefined,
+          side: undefined,
         }),
       ),
     );
@@ -148,5 +160,24 @@ describe("marks on the line", () => {
     await user.click(screen.getByRole("button", { name: /8 entries/ }));
 
     expect(screen.getByRole("region")).toHaveTextContent("2 more in History");
+  });
+});
+
+describe("a date far ahead", () => {
+  it("is drawn past a break that names its month and year", () => {
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-07-20", title: "Kickoff", kind: "done" },
+          { key: "z", at: "2029-08-29", title: "Expected close", kind: "end" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("August 2029")).toBeInTheDocument();
+    expect(screen.queryByText("2028")).toBeNull();
   });
 });

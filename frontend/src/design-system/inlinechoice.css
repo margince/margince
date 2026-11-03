@@ -31,7 +31,7 @@
    already was. */
 .inline-editable:hover,
 .inline-editable:focus-visible {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .inline-editable:focus-visible {
   outline: var(--focus-ring-forced);

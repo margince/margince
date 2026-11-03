@@ -129,7 +129,7 @@ func reconcileAWalk(t *testing.T, ahead int) {
 	}
 }
 
-// A group cut at the decision lane's scan depth is a floor, and its category
+// A group whose source holds more than was read is a floor, and its category
 // says so too. A client summing members must never present that sum as exact.
 func TestALowerBoundGroupLeavesItsCategoryAFloor(t *testing.T) {
 	t.Parallel()
@@ -138,6 +138,7 @@ func TestALowerBoundGroupLeavesItsCategoryAFloor(t *testing.T) {
 		pairs = append(pairs, item(fmt.Sprintf("pair-%d", i), "dedupe_candidate"))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: pairs}
+	day.Counts.DuplicatesOpen = new(batchScanDepth + 1)
 
 	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 

@@ -37,6 +37,21 @@ describe("a dimension value in the reader's words", () => {
     );
   });
 
+  it("names a built-in loss reason and how a loss reason was set", () => {
+    expect(valueLabel(t, "win-loss", "loss_reason", "competitor")).toBe(
+      "Chose a competitor",
+    );
+    expect(
+      valueLabel(t, "win-loss", "loss_reason", "our_own_reason"),
+    ).toBeNull();
+    expect(valueLabel(t, "win-loss", "loss_reason_state", "unmapped")).toBe(
+      "Note not mapped",
+    );
+    expect(valueLabel(t, "win-loss", "loss_reason_state", "missing")).toBe(
+      "No reason",
+    );
+  });
+
   it("has no word for a value no screen names yet", () => {
     expect(valueLabel(t, "deals-by-stage", "status", "stalled")).toBeNull();
     expect(

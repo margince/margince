@@ -100,7 +100,7 @@ function sourceColumns({
 }
 
 // A seat that may not read deals is sent no count, and a zero would claim none.
-function DealsWithheld() {
+export function DealsWithheld() {
   const t = useT();
   return (
     <span title={t("acqSources.dealsWithheld")}>

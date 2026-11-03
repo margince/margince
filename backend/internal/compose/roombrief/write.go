@@ -60,7 +60,8 @@ Cite only the ids the summary gave you: a buyer as participant, a document as do
 If nothing is waiting and nothing is missing, say so in one sentence and stop.`
 
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("room summary")
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
+		fence.Rule("room summary")
 }
 
 // BriefRequest builds the one request this site sends. Exported so the

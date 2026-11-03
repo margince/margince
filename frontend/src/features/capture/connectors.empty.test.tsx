@@ -156,7 +156,7 @@ describe("the empty Mail and calendar card", () => {
     const link = await within(microsoft).findByRole("link", {
       name: "Open Sign-in and apps",
     });
-    expect(link).toHaveAttribute("href", "#/settings/authentication");
+    expect(link).toHaveAttribute("href", "/#/settings/authentication");
     expect(
       within(microsoft).getByText(
         "Set up the company Microsoft 365 app to turn it on.",

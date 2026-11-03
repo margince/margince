@@ -232,7 +232,7 @@ func TestARaceOnAClaimedAddressStillAnswersTheDuplicateContract(t *testing.T) {
 	incumbentID := ids.From[ids.ContactKind](ids.UUID(incumbent.Id))
 
 	err = e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, cerr := createContact(ctx, tx, ContactResolution{
+		_, cerr := createContact(ctx, tx, e.store, ContactResolution{
 			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: incumbentID,
 		}, ContactSpec{
 			FullName:   "Ida Kranz",
@@ -282,7 +282,7 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 	// A second rep who may create contacts but sees only their own rows.
 	stranger := e.asRowScope(principal.RowScopeOwn)
 	err = e.store.tx(stranger, func(tx pgx.Tx) error {
-		_, cerr := createContact(stranger, tx, ContactResolution{
+		_, cerr := createContact(stranger, tx, e.store, ContactResolution{
 			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: hiddenID,
 		}, ContactSpec{
 			FullName:   "Mara Steiner",
@@ -460,7 +460,7 @@ func TestTheChokepointRefusesToMintOverAnExactCollision(t *testing.T) {
 	var contactRefusal error
 	var contacts int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, contactRefusal = createContact(ctx, tx, ContactResolution{
+		_, contactRefusal = createContact(ctx, tx, e.store, ContactResolution{
 			Decision: DecisionExactCollision, MatchedLane: LaneEmail, ContactID: ids.New[ids.ContactKind](),
 		}, ContactSpec{FullName: "Ghost", Source: "manual", CapturedBy: "human:test"})
 		return tx.QueryRow(ctx, `SELECT count(*) FROM contact`).Scan(&contacts)

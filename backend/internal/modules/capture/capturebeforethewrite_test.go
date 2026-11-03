@@ -141,9 +141,9 @@ func (c countingTx) Exec(_ context.Context, sql string, _ ...any) (pgconn.Comman
 	return pgconn.NewCommandTag("SELECT 1"), nil
 }
 
-// probingSink answers the neighbour question with whatever a case needs, which is
-// what lets an EMAIL case reach the decision the source-system guard would
-// otherwise short-circuit.
+// probingSink answers the neighbour question with whatever a case needs. That
+// lets an email case reach the decision the source-system guard would otherwise
+// short-circuit.
 func probingSink(links []ids.ActivityID, probeErr error) *Sink {
 	return (&Sink{}).WithThreadJoin(ThreadJoiner{
 		RecordReferences: func(context.Context, pgx.Tx, ids.ActivityID, []string) error { return nil },
@@ -163,9 +163,9 @@ func anEmail() connector.NormalizedRecord {
 
 // The email branches the fix rests on, which the source-system guard cannot reach.
 //
-// An email with no stored link takes no lock — that is what keeps a workspace-wide
-// lock off the common path once the ReplyTo gate is gone, and it is the only thing
-// left doing so. An email WITH one takes it, before anything is written.
+// An email with no stored link takes no lock. That is the only thing keeping a
+// workspace-wide lock off the common path. An email with one takes it, before
+// anything is written.
 func TestAnEmailTakesTheLockOnlyWhenSomethingStoredLinksToIt(t *testing.T) {
 	t.Parallel()
 
@@ -187,9 +187,9 @@ func TestAnEmailTakesTheLockOnlyWhenSomethingStoredLinksToIt(t *testing.T) {
 	}
 }
 
-// And a probe that fails stops the capture rather than carrying on unlocked: a
-// capture that cannot tell whether it may merge must not proceed to write a row it
-// would then lock out of order.
+// And a probe that fails stops the capture rather than carrying on unlocked. A
+// capture that cannot tell whether it may merge must not write a row it would
+// then lock out of order.
 func TestAFailingNeighbourProbeStopsTheCaptureBeforeItLocks(t *testing.T) {
 	t.Parallel()
 

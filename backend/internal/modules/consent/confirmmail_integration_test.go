@@ -63,6 +63,12 @@ func (r *recordingStager) QueueConfirmationTx(_ context.Context, _ pgx.Tx, in Co
 	return ids.NewV7(), nil
 }
 
+// PresentConfirmationTx answers the rendered words unbranded; compose's own
+// suite covers the branding.
+func (r *recordingStager) PresentConfirmationTx(_ context.Context, _ pgx.Tx, in ConfirmationSend) (PresentedMail, error) {
+	return PresentedMail{Subject: in.Rendered.Subject, Text: in.Rendered.Body}, nil
+}
+
 // recordingVault keeps the sealed link, which is the only place the plaintext
 // legitimately exists between minting and dispatch.
 type recordingVault struct {

@@ -29,6 +29,12 @@ import (
 
 const publicBookingPrefix = "/v1/public/booking/"
 
+// The booking edge also serves the pages a booked meeting and a sent proposal link to.
+const (
+	publicMeetingPrefix  = "/v1/public/meeting/"
+	publicProposalPrefix = "/v1/public/proposal/"
+)
+
 // publicBookingLimits: the page is anonymous and rate limiting is its
 // only brake (api-rate-limits-and-abuse.md §1.3). Per-IP covers scripted
 // scraping of one client; per-slug covers a distributed flood aimed at
@@ -47,11 +53,11 @@ func newPublicBookingLimiters() publicBookingLimiters {
 	}
 }
 
-func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters) func(http.Handler) http.Handler {
+func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters, srv Server) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			proposal := strings.HasPrefix(r.URL.Path, "/v1/public/proposal/")
-			management := strings.HasPrefix(r.URL.Path, "/v1/public/meeting/")
+			proposal := strings.HasPrefix(r.URL.Path, publicProposalPrefix)
+			management := strings.HasPrefix(r.URL.Path, publicMeetingPrefix)
 			if !proposal && !management && !strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
 				next.ServeHTTP(w, r)
 				return
@@ -70,11 +76,24 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return
 			}
+			// A booking page's link-preview card answers in HTML whatever
+			// happens, and HEAD like GET; the generated router knows GET only.
+			_, preview := bookingPreviewSlug(r.URL.Path)
+			preview = preview && !proposal && !management
+			if preview && (r.Method != http.MethodGet && r.Method != http.MethodHead || r.URL.RawPath != "") {
+				httperr.Write(w, r, apperrors.ErrNotFound)
+				return
+			}
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
+				if preview {
+					srv.writeBookingPreviewUnavailable(w, r, slug, apperrors.ErrBudgetExceeded)
+					return
+				}
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
-			if r.Method != http.MethodGet && !limits.perSlug.Allow(slug) {
+			// Lowercased, so the case variants of one alias share a budget.
+			if r.Method != http.MethodGet && !limits.perSlug.Allow(strings.ToLower(slug)) {
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
@@ -92,6 +111,10 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 			}
 			if resolveErr != nil {
 				// Unknown and revoked slugs read identically as absent.
+				if preview {
+					srv.writeBookingPreviewUnavailable(w, r, slug, resolveErr)
+					return
+				}
 				httperr.Write(w, r, resolveErr)
 				return
 			}
@@ -112,6 +135,10 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_booking",
 			})
+			if preview {
+				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug)
+				return
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -128,7 +128,7 @@ func extensionSignalEntries(ctx context.Context, tx pgx.Tx, entity string, id id
 	limit := extensionHistoryCap
 	list, _, err := signals.ListSignalsTx(ctx, tx, signals.ListSignalsInput{
 		Limit: &limit, SubjectType: &entity, SubjectID: &id, ExtensionKindsOnly: true,
-	})
+	}, signalSummaryWords)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil, nil
 	}

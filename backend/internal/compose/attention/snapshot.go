@@ -42,11 +42,14 @@ const laneBudget = 4 * time.Second
 // unit test with no database gets, and it is why this is a nil check rather
 // than a required dependency — the alternative is every test in this package
 // carrying a seam it has no use for.
-func (s *Service) inSnapshot(ctx context.Context, fn func(context.Context) error) error {
-	if s.snapshots == nil {
-		return fn(ctx)
-	}
-	return s.snapshots.InSnapshot(ctx, fn)
+func (s *Service) inSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
+	// Metered outside the snapshot, so its acquire wait counts.
+	return meteredStages(ctx, read, func(ctx context.Context) error {
+		if s.snapshots == nil {
+			return fn(ctx)
+		}
+		return s.snapshots.InSnapshot(ctx, fn)
+	})
 }
 
 // detached answers the context a write makes its own transaction on.

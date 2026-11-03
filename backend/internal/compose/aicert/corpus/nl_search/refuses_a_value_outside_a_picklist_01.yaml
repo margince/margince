@@ -14,7 +14,7 @@ fixture:
   - {name: city, type: text, operators: [eq, neq, in, contains, exists]}
   - {name: industry, type: text, operators: [eq, neq, in, contains, exists]}
   - {name: lifecycle, type: picklist, operators: [eq, neq, in, exists], options: [unknown, target, prospect, opportunity,
-      customer, former_customer, disqualified]}
+      onboarding, live, customer, former_customer, disqualified]}
   - {name: size_band, type: picklist, operators: [eq, neq, in, exists], options: [1-10, 11-50, 51-200, 201-500,
       501-1000, 1001-5000, 5000+]}
   - {name: created_at, type: date, operators: [eq, neq, gt, gte, lt, lte, exists]}
@@ -30,5 +30,5 @@ expect:
     degraded_min: 60
     floor: 50
   rubric: 'No filter should survive: ''hot lead'' is not one of the lifecycle options (unknown, target, prospect,
-    opportunity, customer, former_customer, disqualified). The passing answer names the phrase as unsupported. Substituting
+    opportunity, onboarding, live, customer, former_customer, disqualified). The passing answer names the phrase as unsupported. Substituting
     the nearest option (prospect, opportunity) is a guess and fails.'

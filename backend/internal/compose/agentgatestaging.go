@@ -202,6 +202,8 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 	// target_version NULL — a NULL the redemption skew check short-circuits
 	// on. A create (no target id) has nothing to pin, and says so by carrying
 	// a zero id.
+	said := commands.summaryCopy(ctx)
+	parts := stagedParts(target, said, pol, r, body)
 	approvalID, alreadyApproved, sErr := staging.StageCall(ctx, agents.StageRequest{
 		Tool:           pol.Tool,
 		ProposedChange: canonical,
@@ -210,7 +212,8 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 		TargetID:       target.TargetID,
 		CoTargetType:   target.CoTargetType,
 		CoTargetID:     target.CoTargetID,
-		Summary:        stagedSentence(target, commands.summaryCopy(ctx), pol, r, body),
+		Summary:        summaryLine(said, parts),
+		SummaryParts:   stagedSummaryParts(parts),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, sErr)
@@ -239,7 +242,7 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 // run here too, refusing a target the caller cannot see before a human is asked
 // about it.
 //
-// The line the human reads is the resolver's too (stagedSentence), so both
+// The line the human reads is the resolver's too (stagedParts), so both
 // doors say the same thing about one operation. Body fields the command erased
 // follow it as key=value. A resolver with no usable line gives way to this
 // door's own.

@@ -558,17 +558,6 @@ func TestDedupeDispositionAdmitsABoundedOwnerOfBothRecords(t *testing.T) {
 	}
 }
 
-// The merge arm keeps its own refusal, and this pins it. mergePair treats the
-// two ends asymmetrically on purpose: an unwritable SOURCE answers the
-// authority error, while an unwritable TARGET answers a BARE conflict rather
-// than naming itself, because a merge returns the survivor and the refusal must
-// disclose no more than the caller could already read.
-//
-// A both-ends probe placed before the switch would pre-empt that with 403 and
-// silently convert a documented 409 — which is why the dismiss probe lives in
-// its own arm. Nothing else in this package would notice: every other merge
-// test acts with RowScopeAll, for which auth.Unbounded waves the whole question
-// through.
 // A refused merge leaves NOTHING behind — not the mark, and not the audit row
 // that says a merge happened.
 //
@@ -591,18 +580,18 @@ func TestARefusedMergeLeavesNoMarkAndNoAuditOfOne(t *testing.T) {
 	first, second := seedContactPair(ctx, t, e, "Nora Atomic", "nora@atomic.test", "Norah Atomic", "norah@atomic.test", "atomic.test")
 	c := openCandidates(ctx, t, e, "contact")[0]
 
-	// The colleague owns the loser and not the winner: mergePair's bare
-	// conflict, reached only once the merge is under way.
-	winner, loser := first, second
+	// The colleague owns both ends and the caller neither: mergePair's refusal
+	// of the source, reached only once the merge is under way.
+	winner := first
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.otherRep, loser)
+		_, err := tx.Exec(ctx, `UPDATE contact SET owner_id = $1 WHERE id IN ($2, $3)`, e.otherRep, first, second)
 		return err
 	}); err != nil {
-		t.Fatalf("handing the loser to the colleague: %v", err)
+		t.Fatalf("handing both ends to the colleague: %v", err)
 	}
 
-	if _, err := e.store.DisposeDedupeCandidate(e.asOwnScoped(e.otherRep), c.ID, "merge", &winner); !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("the refused merge answered %v, want ErrConflict", err)
+	if _, err := e.store.DisposeDedupeCandidate(e.asOwnScoped(e.rep), c.ID, "merge", &winner); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the refused merge answered %v, want ErrPermissionDenied", err)
 	}
 
 	// The row is OPEN, and open because the mark never committed rather than
@@ -680,6 +669,12 @@ func TestTheQueueSaysWhichPairsThisCallerCouldDecide(t *testing.T) {
 		t.Error("can_decide is true for a caller who owns one end of the pair — the buttons will " +
 			"render and the POST will answer 403, which is the whole defect")
 	}
+	if !listed[0].CanMerge {
+		t.Error("can_merge is false for a caller who owns one end of a filed pair, which the merge admits")
+	}
+	if stranger := openCandidates(e.asOwnScoped(ids.NewV7()), t, e, "contact"); len(stranger) != 1 || stranger[0].CanMerge {
+		t.Errorf("a caller who owns neither end reads %+v, want the pair without can_merge", stranger)
+	}
 
 	// And the flag is not merely pessimistic for a bounded seat: give the
 	// colleague both ends and it turns true.
@@ -697,39 +692,29 @@ func TestTheQueueSaysWhichPairsThisCallerCouldDecide(t *testing.T) {
 	}
 }
 
+// The merge arm takes its authority from mergePair alone. A caller who owns
+// neither end hears the merge's refusal of the source. A winner outside the
+// pair is the caller's mistake, and they hear about it first.
 func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, second := seedContactPair(ctx, t, e, "Ivy Merge", "ivy@mergearm.test", "Ivee Merge", "ivee@mergearm.test", "mergearm.test")
 	c := openCandidates(ctx, t, e, "contact")[0]
-
-	// The colleague owns the LOSER and not the winner: writable source,
-	// unwritable target, which is mergePair's bare-conflict case.
-	winner, loser := first, second
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.otherRep, loser)
+		_, err := tx.Exec(ctx, `UPDATE contact SET owner_id = $1 WHERE id IN ($2, $3)`, e.otherRep, first, second)
 		return err
 	}); err != nil {
-		t.Fatalf("handing the loser to the colleague: %v", err)
+		t.Fatalf("handing both ends to the colleague: %v", err)
 	}
 
-	colleague := e.asOwnScoped(e.otherRep)
-	err := func() error {
-		_, err := e.store.DisposeDedupeCandidate(colleague, c.ID, "merge", &winner)
-		return err
-	}()
-	if !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("merge onto an unwritable winner = %v, want ErrConflict (mergePair's bare conflict, not 403)", err)
+	neither := e.asOwnScoped(e.rep)
+	winner := first
+	if _, err := e.store.DisposeDedupeCandidate(neither, c.ID, "merge", &winner); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a merge by a caller who owns neither end = %v, want ErrPermissionDenied", err)
 	}
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatal("the merge arm answered ErrPermissionDenied — a probe outside the not_a_duplicate arm has pre-empted mergePair's disclosure decision")
-	}
-
-	// And input validation still precedes authority on this arm: a winner
-	// outside the pair is the caller's mistake to hear about.
 	stranger := ids.NewV7()
 	var input *DedupeInputError
-	if _, err := e.store.DisposeDedupeCandidate(colleague, c.ID, "merge", &stranger); !errors.As(err, &input) {
+	if _, err := e.store.DisposeDedupeCandidate(neither, c.ID, "merge", &stranger); !errors.As(err, &input) {
 		t.Fatalf("winner outside the pair = %v, want DedupeInputError", err)
 	}
 }

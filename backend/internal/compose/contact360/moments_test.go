@@ -189,12 +189,13 @@ func TestEveryOfferedActionEitherGoesSomewhereOrSaysWhyItCannot(t *testing.T) {
 // it fails rather than shipping another quiet nothing.
 var dispatchedByTheContactPage = map[crmcontracts.ContactMomentDestinationSurface]bool{
 	"booking": true,
-	crmcontracts.ContactMomentDestinationSurfaceComposer:     true,
-	crmcontracts.ContactMomentDestinationSurfaceResearch:     true,
-	crmcontracts.ContactMomentDestinationSurfaceMeetingBrief: true,
-	crmcontracts.ContactMomentDestinationSurfaceRecord:       true,
-	crmcontracts.ContactMomentDestinationSurfaceActivityLog:  true,
-	crmcontracts.ContactMomentDestinationSurfaceTask:         true,
+	crmcontracts.ContactMomentDestinationSurfaceComposer:      true,
+	crmcontracts.ContactMomentDestinationSurfaceResearch:      true,
+	crmcontracts.ContactMomentDestinationSurfaceMeetingBrief:  true,
+	crmcontracts.ContactMomentDestinationSurfaceRecord:        true,
+	crmcontracts.ContactMomentDestinationSurfaceActivityLog:   true,
+	crmcontracts.ContactMomentDestinationSurfacePrivacyNotice: true,
+	crmcontracts.ContactMomentDestinationSurfaceTask:          true,
 }
 
 // assertActionsAreHonest holds the rule for one moment: available means

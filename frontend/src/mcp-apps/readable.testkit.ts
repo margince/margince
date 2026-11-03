@@ -5,10 +5,11 @@ const RECORD_ID =
 const COLUMN_NAME = /\b[a-z]+(_[a-z]+)+\b/;
 
 /** expectReadable holds a drawn card to words a reader can use: a heading, a
- *  line under it, and no record id or column name anywhere. */
+ *  body under it, and no record id or column name anywhere. A decision card's
+ *  body is the card itself. */
 export function expectReadable(root: HTMLElement): void {
   expect(root.querySelector("h1")?.textContent).toBeTruthy();
-  expect(root.querySelector(".panel-body")?.textContent).toBeTruthy();
+  expect(root.querySelector(".panel-body, .dcard")?.textContent).toBeTruthy();
   expect(root.textContent).not.toMatch(RECORD_ID);
   expect(root.textContent).not.toMatch(COLUMN_NAME);
 }

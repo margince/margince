@@ -27,6 +27,10 @@ const LABELS: DecisionCardLabels = {
   expired: "Abgelaufen.",
   draftSubject: "Betreff",
   draftBody: "Nachricht",
+  summaryWords: {
+    field: (name) => name,
+    more: (count) => `${count} more not shown`,
+  },
   noContent: "Nichts zu lesen.",
   loading: "Wird gelesen",
 };

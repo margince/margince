@@ -29,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -49,10 +50,13 @@ type scriptedVerdictBrain struct {
 	// than only the answer.
 	servedModel string
 	calls       int
+	// fresh records, call by call, whether the caller asked for a fresh answer.
+	fresh []bool
 }
 
-func (s *scriptedVerdictBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (s *scriptedVerdictBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	s.calls++
+	s.fresh = append(s.fresh, ai.FreshAnswerAsked(ctx))
 	askedFor := fencedIDs(req.System, req.Messages[0].Content, "id")
 	if len(askedFor) == 0 {
 		return model.Response{}, fmt.Errorf("verdict prompt declared no data boundary, or fenced no sender: %q", req.System)
@@ -211,6 +215,11 @@ func TestVerdictBelowTheFloorAbstainsAndAsksAHuman(t *testing.T) {
 	}
 	if brain.calls < 2 {
 		t.Fatalf("%d model calls, want at least 2 — a below-floor answer must be re-asked solo before it retires", brain.calls)
+	}
+	// The result cache would hand the first answer back to an identical request.
+	// So only a re-ask that asks for a fresh answer is a second question.
+	if brain.fresh[0] || !brain.fresh[1] {
+		t.Fatalf("fresh-answer flags by call = %v, want the first call plain and the re-ask fresh", brain.fresh)
 	}
 
 	// And the question reaches a human.

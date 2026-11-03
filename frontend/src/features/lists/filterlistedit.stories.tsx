@@ -68,7 +68,7 @@ function listFilter(list: List = liveList, listsOn = true) {
 // a save changes, and "Save to" waits for a change.
 export const EditingAListFilter: Story = { render: listFilter() };
 
-// Changed: "Save to {name}" is the page's one emerald verb, and Discard puts
+// Changed: "Save to {name}" is the page's one accent verb, and Discard puts
 // the list's own filter back.
 export const Changed: Story = {
   render: listFilter(),

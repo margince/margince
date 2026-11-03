@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -154,7 +155,7 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		}); err != nil {
 			return err
 		}
-		out, err = readActivity(ctx, tx, id, storekit.LiveOnly)
+		out, err = readActivityAt(ctx, tx, id, storekit.LiveOnly, s.now())
 		return err
 	})
 	if err != nil {
@@ -316,6 +317,15 @@ func readActivityContent(ctx context.Context, tx pgx.Tx, id ids.ActivityID, arch
 	return readActivity(ctx, tx, id, archived)
 }
 
+// readActivityContentAt is readActivityContent judging awaiting_outcome at asOf.
+// It probes itself because gates/restrictedreaders_test.go credits a probe one call deep.
+func readActivityContentAt(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
+	if err := auth.EnsureActivityContentVisible(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivityAt(ctx, tx, id, archived, asOf)
+}
+
 // GetActivityContent is GetActivity for a caller about to USE the content —
 // draft a reply, quote the thread — rather than show the row: a limited
 // conversation the caller may discover answers ErrNotFound here, never a row
@@ -326,7 +336,7 @@ func (s *Store) GetActivityContent(ctx context.Context, id ids.ActivityID, archi
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = ReadActivityContentTx(ctx, tx, id, archived)
+		out, err = readActivityContentAt(ctx, tx, id, archived, s.now())
 		return err
 	})
 	if err != nil {

@@ -17,17 +17,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// PreviewLeadPromotion answers what PromoteLead would do to this lead —
-// merge into a contact we already hold, or create one — by running the same
-// PO-F-1 ladder promoteTarget runs, without writing (ADR-0119/A170).
-//
-// It returns a contact, so it is a read and carries the row-scope gate: a
-// matched contact outside the caller's scope is withheld, and the response
-// still says `merge`, because the outcome is a fact about the lead. A caller
-// must never read an absent contact as `create`.
+// PreviewLeadPromotion uses the promotion ladder and withholds contacts the caller cannot change.
 func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcontracts.PromoteLeadPreview, error) {
+	return s.PreviewLeadPromotionWithOptions(ctx, id, PromotionPreviewOptions{})
+}
+
+// PreviewLeadPromotionWithOptions withholds hidden matches and ineligible deal choices.
+func (s *Store) PreviewLeadPromotionWithOptions(ctx context.Context, id ids.LeadID, options PromotionPreviewOptions) (crmcontracts.PromoteLeadPreview, error) {
 	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return crmcontracts.PromoteLeadPreview{}, err
 	}
@@ -64,39 +63,21 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 		if leadIdentityName(lead) == "" {
 			return &PromoteNeedsIdentityError{}
 		}
+		_, typed, _, err := s.promotionEmployer(ctx, tx, lead, false)
+		if err != nil {
+			return err
+		}
+		if typed != "" {
+			out.TypedCompany = &typed
+		}
 		match, err := s.previewTarget(ctx, tx, lead)
 		if err != nil {
 			return err
 		}
-		if match.Decision != DecisionExactCollision {
-			return nil
-		}
-		out.Outcome = crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeMerge
-		// Two gates before a contact is returned: the object grant (may this
-		// role read contacts at all) and WRITE authority over the row — the
-		// same probe promotion itself takes, because merging changes the
-		// matched contact. A readable contact the caller may not change is
-		// withheld here exactly as promotion will refuse it, so the preview
-		// never promises a merge the act then declines.
-		grantErr := auth.Require(ctx, contactEntity, principal.ActionRead)
-		if grantErr != nil && !errors.Is(grantErr, apperrors.ErrPermissionDenied) {
-			return grantErr
-		}
-		writable, err := auth.WritableBy(ctx, tx, contactEntity, match.ContactID.UUID)
-		if err != nil {
+		if err := s.promotionDealsPreview(ctx, tx, lead, options, match, &out); err != nil {
 			return err
 		}
-		if grantErr != nil || !writable {
-			withheld := true
-			out.ContactWithheld = &withheld
-			return nil
-		}
-		contact, err := readContact(ctx, tx, match.ContactID, storekit.LiveOnly, active)
-		if err != nil {
-			return fmt.Errorf("read merge-target contact: %w", err)
-		}
-		out.Contact = &contact
-		return nil
+		return promotionContactMatch(ctx, tx, match, active, &out)
 	})
 	return out, err
 }
@@ -162,4 +143,30 @@ func (s *Store) leadContactCandidate(ctx context.Context, tx pgx.Tx, lead crmcon
 	// QueueNameCollisions, because a promotion creates. Exact adoption stays
 	// the exact lane's alone: a review match never lands the lead on a contact.
 	return ContactCandidate{FullName: name, Emails: emails, ConsumerMail: consumerMail, QueueNameCollisions: true}, nil
+}
+
+func promotionContactMatch(ctx context.Context, tx pgx.Tx, match ContactResolution, active []fieldcatalog.Column, out *crmcontracts.PromoteLeadPreview) error {
+	if match.Decision != DecisionExactCollision {
+		return nil
+	}
+	out.Outcome = crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeMerge
+	grantErr := auth.Require(ctx, contactEntity, principal.ActionRead)
+	if grantErr != nil && !errors.Is(grantErr, apperrors.ErrPermissionDenied) {
+		return grantErr
+	}
+	writable, err := auth.WritableBy(ctx, tx, contactEntity, match.ContactID.UUID)
+	if err != nil {
+		return err
+	}
+	if grantErr != nil || !writable {
+		withheld := true
+		out.ContactWithheld = &withheld
+		return nil //nolint:nilerr // A withheld match is a valid preview, not a failed qualification.
+	}
+	contact, err := readContact(ctx, tx, match.ContactID, storekit.LiveOnly, active)
+	if err != nil {
+		return fmt.Errorf("read merge-target contact: %w", err)
+	}
+	out.Contact = &contact
+	return nil
 }

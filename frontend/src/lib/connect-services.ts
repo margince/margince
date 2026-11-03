@@ -6,6 +6,7 @@ import { createElement } from "react";
 import type { components } from "../api/schema";
 import type { Choice } from "../design-system/choicelist";
 import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   type FlowAccount,
   providerFor,
@@ -21,6 +22,25 @@ type Provider = components["schemas"]["CaptureConnection"]["provider"];
 export const SERVICE_ICON: Record<Service, LucideIcon> = {
   mail: Mail,
   calendar: CalendarDays,
+};
+
+/**
+ * What each service is called and what it brings in, as catalog keys.
+ *
+ * Keys rather than words, so a caller translates them with its own translator.
+ * Two screens show the same row. A settings page also says when it last
+ * synced; onboarding says what the step is for instead. Spelled twice, a
+ * renamed key reaches one of them.
+ */
+export const SERVICE_WORDS: Record<
+  Service,
+  { name: MessageKey; desc: MessageKey }
+> = {
+  mail: { name: "connectors.svc.newMail", desc: "connectors.svc.newMailDesc" },
+  calendar: {
+    name: "connectors.svc.calendar",
+    desc: "connectors.svc.calendarDesc",
+  },
 };
 
 /**

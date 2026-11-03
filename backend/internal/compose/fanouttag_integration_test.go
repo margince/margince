@@ -28,12 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// fanOutProbeArgs is a fixture DISPATCHER. It exists because both chokepoints
-// resolve the River client from the context of the job being worked, so the
-// only honest way to drive them is from inside a real one. Like
-// timeout_probe (jobtimeout_integration_test.go) it cannot live in
-// api/jobs.yaml — the generated closed union names a Go type per declared
-// kind, and no production type answers for a fixture.
+// Test-only jobs stay out of the generated production catalog.
+// The probe runs inside River so dispatch resolves the real client.
 type fanOutProbeArgs struct{}
 
 func (fanOutProbeArgs) Kind() string { return "fan_out_probe" }
@@ -100,13 +96,7 @@ func TestARealFanOutInsertCarriesTheSweepTagIntoRiversTagsColumn(t *testing.T) {
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	t.Cleanup(func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	})
+	t.Cleanup(integration.StartedJobRunner(t, runner))
 
 	if err := runner.Enqueue(ctx, fanOutProbeArgs{}, nil); err != nil {
 		t.Fatalf("enqueueing the probe dispatcher: %v", err)

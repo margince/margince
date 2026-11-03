@@ -124,3 +124,26 @@ export const FirstEmployerDark: Story = {
   render: panel(NO_JOB),
   play: openTheDialog,
 };
+
+// Opened from a signature's company: the picker starts on that name.
+export const FromSignatureCompany: Story = {
+  render: panel({
+    ...NO_JOB,
+    profile_fields: [
+      {
+        field: "company_name",
+        value: "Nordlicht Logistik GmbH",
+        evidence_snippet: "Dana Buyer\nHead of Fleet\nNordlicht Logistik GmbH",
+        source: "capture_enrich",
+        captured_by: "agent:enrich",
+        captured_at: "2026-08-28T09:12:00Z",
+        claim_key: "profile_field:company_name",
+      },
+    ],
+  }),
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    await user.click(await canvas.findByRole("button", { name: "Link" }));
+  },
+};

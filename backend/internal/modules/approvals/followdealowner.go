@@ -123,7 +123,7 @@ func lockProposalsFollowingDeal(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	deal, prev, next := arg(dealID), arg(from), arg(to)
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT id, kind, on_behalf_of, requested_decider_id,
 		       coalesce(summary, ''), coalesce(target_entity_type, ''), target_entity_id FROM approval
 		 WHERE status = 'pending' AND expires_at > now()
@@ -138,8 +138,8 @@ func lockProposalsFollowingDeal(
 		   )
 		 `+lockOrder+`
 		 FOR UPDATE`,
-		deal, prev, next, arg(kindDealFollowUp), arg(kindHeldDraft)),
-		args...)
+		deal, prev, next, arg(kindDealFollowUp), arg(kindHeldDraft))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("lock the proposals following the deal's owner: %w", err)
 	}

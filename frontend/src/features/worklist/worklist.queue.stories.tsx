@@ -5,11 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
 import { StoryProviders, stubWithSession } from "../../testing/story-utils";
 import { row } from "./worklist.fixtures";
-import { ReviewPanel } from "./worklist.queue";
+import { ViewPanel } from "./worklist.queue";
 
-const meta: Meta<typeof ReviewPanel> = {
-  title: "Records/Worklist/Review totals",
-  component: ReviewPanel,
+// The Decisions and System views draw their rows in one panel named by the view.
+const meta: Meta<typeof ViewPanel> = {
+  title: "Records/Worklist/View panel",
+  component: ViewPanel,
   decorators: [
     (Story, context) => {
       stubWithSession({}, {});
@@ -29,6 +30,7 @@ const meta: Meta<typeof ReviewPanel> = {
     },
   ],
   args: {
+    view: "decisions",
     items: [
       row({
         source: "dedupe_candidate",
@@ -36,54 +38,42 @@ const meta: Meta<typeof ReviewPanel> = {
         destination: "review",
       }),
     ],
-    shortfall: { loaded: 1, total: 3, floor: false },
-    more: false,
     rows: {
       positions: new Map(),
       owner: "",
       selectedId: "",
       onSelect: fn(),
       onOpenEmail: fn(),
-      onFilter: fn(),
+      onView: fn(),
       picks: { offered: false, picked: new Set(), toggle: fn() },
     },
   },
 };
 export default meta;
-type Story = StoryObj<typeof ReviewPanel>;
-export const Departures: Story = {
-  args: { changed: true },
+type Story = StoryObj<typeof ViewPanel>;
+export const Decisions: Story = {
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByText(/1 of 3 snapshot items shown/),
-    ).toBeVisible();
+    await expect(within(canvasElement).getByText("Decisions")).toBeVisible();
   },
 };
-export const DeparturesDark: Story = {
-  ...Departures,
+export const DecisionsDark: Story = {
+  ...Decisions,
   globals: { theme: "dark" },
 };
-export const MorePages: Story = { args: { more: true } };
-export const Finished: Story = {};
-export const Bounded: Story = {
-  args: { shortfall: { loaded: 1, total: 1, floor: true } },
-};
-export const FilteredWithMore: Story = {
-  args: { shortfall: null, more: true },
-  play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByText(/More pages may contain review items/),
-    ).toBeVisible();
+export const System: Story = {
+  args: {
+    view: "system",
+    items: [row({ source: "capture_health", category: "system" })],
   },
 };
-
-export const DeparturesGermanDark: Story = {
-  ...DeparturesDark,
+export const SystemDark: Story = { ...System, globals: { theme: "dark" } };
+export const DecisionsGerman: Story = {
+  ...Decisions,
   parameters: { locale: "de" },
   play: undefined,
 };
-export const DeparturesVietnamese: Story = {
-  ...Departures,
+export const DecisionsVietnamese: Story = {
+  ...Decisions,
   parameters: { locale: "vi" },
   play: undefined,
 };

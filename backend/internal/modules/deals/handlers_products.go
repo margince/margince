@@ -116,3 +116,25 @@ func billingClassificationOf[M ~string, I ~int](model *M, months *I) (*string, *
 	}
 	return outModel, outMonths
 }
+
+func (h Handlers) ListDealProducts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	products, err := h.store.ListDealProducts(r.Context(), pathID[ids.DealKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products})
+}
+
+func (h Handlers) ReplaceDealProducts(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.ReplaceDealProductsRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	products, err := h.store.ReplaceDealProducts(r.Context(), pathID[ids.DealKind](id), req.Products)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealProductListResponse{Data: products})
+}

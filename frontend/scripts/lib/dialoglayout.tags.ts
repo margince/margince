@@ -5,12 +5,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  bindingOf,
   classVariants,
   declarationOf,
   type Given,
 } from "../../src/testing/classnames";
 import { srcDir } from "./dialoglayout.corpus";
 import { bindings, declarations } from "./dialoglayout.names";
+import { fnOf, givenTo } from "./dialoglayout.props";
 import { resolveRelative, sourceFileAt } from "./source-tree";
 
 export const opening = (n: ts.Node) => {
@@ -97,6 +99,15 @@ export const within = (n: ts.Node, outer: ts.Node) =>
   n.end <= outer.end;
 
 export { declarations } from "./dialoglayout.names";
+export {
+  domainOf,
+  fnOf,
+  givenTo,
+  literalTypes,
+  presetOf,
+  propReadBy,
+  spreads,
+} from "./dialoglayout.props";
 
 const frontendDir = join(srcDir, "..");
 
@@ -145,28 +156,75 @@ function handedThrough(x: ts.Expression): ts.Identifier | undefined {
   return first && ts.isIdentifier(first) ? first : undefined;
 }
 
-// What an alias names, read from the scope it sits in.
+// The module and export a `lazy` loader imports: `default`, or the member its
+// `.then((m) => ({ default: m.X }))` hands on. A helper wrapping the loader
+// (`lazy(routed(() => import(…)))`) is read through.
+function loadedBy(
+  x: ts.Expression,
+): { spec: string; name: string } | undefined {
+  if (!ts.isCallExpression(x) || called(x.expression) !== "lazy") {
+    return undefined;
+  }
+  const inside = x.arguments.flatMap((a) => [a, ...descendants(a)]);
+  const load = inside.find(
+    (n): n is ts.CallExpression =>
+      ts.isCallExpression(n) &&
+      n.expression.kind === ts.SyntaxKind.ImportKeyword,
+  );
+  const [spec] = load?.arguments ?? [];
+  if (!spec || !ts.isStringLiteralLike(spec)) return undefined;
+  const picked = inside.find(
+    (n): n is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(n) &&
+      n.name.getText() === "default" &&
+      ts.isPropertyAccessExpression(n.initializer),
+  );
+  const member = picked?.initializer;
+  const name =
+    member && ts.isPropertyAccessExpression(member)
+      ? member.name.text
+      : "default";
+  return { spec: spec.text, name };
+}
+
+// The component a wrapper call stands for. `memo(X)` and `forwardRef(X)` hand
+// X's own element tree through, and reading the binding as an element of its
+// own judged none of X's rows. `lazy` stands for what its loader imports.
+function wrappedBy(
+  source: ts.SourceFile,
+  x: ts.Expression,
+  hops: number,
+): { def: ts.Node | undefined } | undefined {
+  const handed = handedThrough(x);
+  if (handed) return { def: alias(handed, hops) };
+  const lazy = loadedBy(x);
+  const file = lazy && moduleFor(source.fileName, lazy.spec);
+  return lazy && file
+    ? { def: follow(sourceFileAt(file), lazy.name, hops) }
+    : undefined;
+}
+
+// What an alias names, read from the scope it sits in. A name alone reads the
+// file's top level: for `const Glyph = Icon` in a component taking an `Icon`
+// prop, that is a top-level `Icon`, not the prop.
 //
-// `declarations` keeps one entry per name for a whole file, nested scopes
-// included. Following a name alone answered whichever declaration came first
-// in the text: for `const Glyph = Icon` in a component taking an `Icon` prop,
-// a top-level `Icon`.
-//
-// A name its own scope does not declare is an import, still followable, or a
-// binding this walk cannot enter and answers nothing for.
+// A name the file never binds is an import, still followable. A parameter or a
+// destructured name is a binding this walk cannot enter, and answers nothing.
 function alias(name: ts.Identifier, hops: number): ts.Node | undefined {
   const scoped = declarationOf(name);
   if (!scoped) {
     const source = name.getSourceFile();
-    return bindings(source).has(name.text)
+    return !bindingOf(name) && bindings(source).has(name.text)
       ? follow(source, name.text, hops)
       : undefined;
   }
   const next = ts.isVariableDeclaration(scoped)
     ? scoped.initializer
     : undefined;
-  const through = next && handedThrough(next);
-  if (through && hops > 0) return alias(through, hops - 1);
+  const source = name.getSourceFile();
+  const wrapped =
+    next && hops > 0 ? wrappedBy(source, next, hops - 1) : undefined;
+  if (wrapped) return wrapped.def;
   return next && ts.isIdentifier(next) && hops > 0
     ? alias(next, hops - 1)
     : scoped;
@@ -181,12 +239,8 @@ function follow(
   const link = bindings(source).get(name);
   const to = local && ts.isVariableDeclaration(local) && local.initializer;
   if (to && ts.isIdentifier(to) && hops > 0) return alias(to, hops - 1);
-  // `memo(X)` and `forwardRef(X)` hand X's own element tree through, and
-  // reading the binding as an element of its own judged none of X's rows. Only
-  // a named argument is followed, which leaves `lazy` unknown: its loader is
-  // an arrow carrying no component.
-  const handed = to && handedThrough(to);
-  if (handed && hops > 0) return alias(handed, hops - 1);
+  const wrapped = to && hops > 0 ? wrappedBy(source, to, hops - 1) : undefined;
+  if (wrapped) return wrapped.def;
 
   if (local || hops === 0 || !link) return local;
   const renamed = link.spec === "" && link.name !== name;
@@ -207,8 +261,20 @@ export const definedName = (def: ts.Node) =>
 export const keyOf = (def: ts.Node) =>
   `${def.getSourceFile().fileName}#${definedName(def)}`;
 
-export const defOf = (n: ts.Node) =>
-  upper(n) ? definition(n.getSourceFile(), tag(n)) : undefined;
+export const defOf = (n: ts.Node) => {
+  const name = opening(n)?.tagName;
+  if (!upper(n) || !name) return undefined;
+  return ts.isIdentifier(name)
+    ? definitionOf(name)
+    : definition(n.getSourceFile(), tag(n));
+};
+
+// What a name means where it is written: its own scope first, then the file's
+// top level and imports, which `definition` caches.
+export const definitionOf = (name: ts.Identifier) =>
+  bindingOf(name)
+    ? alias(name, 6)
+    : definition(name.getSourceFile(), name.text);
 
 /** The key of what `name` is in `design-system/<file>.tsx`. */
 export function primitiveKey(file: string, name: string): string {
@@ -216,143 +282,6 @@ export function primitiveKey(file: string, name: string): string {
   const def = definition(sourceFileAt(path), name);
   if (!def) throw new Error(`${path} no longer defines ${name}`);
   return keyOf(def);
-}
-
-export const fnOf = (def: ts.Node) =>
-  ts.isVariableDeclaration(def) && def.initializer ? def.initializer : def;
-
-const propsOf = (def: ts.Node) => {
-  const fn = fnOf(def);
-  return ts.isFunctionLike(fn) ? fn.parameters[0]?.name : undefined;
-};
-
-// A destructured prop by the name a call hands it: `{ tone: t }` is `tone`.
-const propKey = (b: ts.BindingElement) => (b.propertyName ?? b.name).getText();
-
-// The name a member or attribute is spelled with, not a value read:
-// `cfg.intent`, `{ intent: x }`, `intent="…"`, a method or field.
-const spelled = (e: ts.Identifier) => {
-  const p = e.parent;
-  return (
-    (ts.isPropertyAccessExpression(p) ||
-      ts.isPropertyAssignment(p) ||
-      ts.isJsxAttribute(p) ||
-      ts.isMethodDeclaration(p) ||
-      ts.isPropertyDeclaration(p) ||
-      ts.isPropertySignature(p)) &&
-    p.name === e
-  );
-};
-
-const readers = new WeakMap<ts.Node, (e: ts.Node) => string | undefined>();
-
-/** The prop of `def` an expression reads: a destructured binding by its local
- * name, `children` always, or `props.x`. */
-export function propReadBy(def: ts.Node) {
-  const known = readers.get(def);
-  if (known) return known;
-  const first = propsOf(def);
-  const locals = new Map([["children", "children"]]);
-  if (first && ts.isObjectBindingPattern(first)) {
-    for (const b of first.elements) locals.set(b.name.getText(), propKey(b));
-  }
-  const props = first && ts.isIdentifier(first) ? first.text : undefined;
-  const read = (e: ts.Node) => {
-    if (ts.isIdentifier(e)) return spelled(e) ? undefined : locals.get(e.text);
-    if (!ts.isPropertyAccessExpression(e)) return undefined;
-    return e.expression.getText() === props ? e.name.text : undefined;
-  };
-  readers.set(def, read);
-  return read;
-}
-
-// Whether an expression reads a prop `def` is handed, or that prop `name`.
-export function givenTo(def: ts.Node) {
-  const read = propReadBy(def);
-  return (e: ts.Node, name?: string) => {
-    const prop = read(e);
-    return prop !== undefined && (name === undefined || prop === name);
-  };
-}
-
-/** Whether spreading `x` hands on what `def` is handed as `name`: its props
- * object, or the rest it destructures `name` into. */
-export function spreads(def: ts.Node, x: ts.Node, name?: string): boolean {
-  const first = propsOf(def);
-  if (!first || !ts.isIdentifier(x)) return false;
-  if (ts.isIdentifier(first)) return first.text === x.text;
-  if (!ts.isObjectBindingPattern(first)) return false;
-  const rest = first.elements.find((b) => !!b.dotDotDotToken);
-  if (!rest || rest.name.getText() !== x.text) return false;
-  return !first.elements.some((b) => b !== rest && propKey(b) === name);
-}
-
-/** The literal a component's destructured prop defaults to. */
-export function presetOf(def: ts.Node, name: string): string | undefined {
-  const first = propsOf(def);
-  if (!first || !ts.isObjectBindingPattern(first)) return undefined;
-  const b = first.elements.find((e) => propKey(e) === name);
-  return b?.initializer && ts.isStringLiteral(b.initializer)
-    ? b.initializer.text
-    : undefined;
-}
-
-// The string literals a type admits: a union of them, a local alias of one,
-// or `(typeof LIST)[number]` over a local `as const` list.
-export function literalTypes(
-  type: ts.TypeNode | undefined,
-): string[] | undefined {
-  if (!type) return undefined;
-  if (ts.isParenthesizedTypeNode(type)) return literalTypes(type.type);
-  if (ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal)) {
-    return [type.literal.text];
-  }
-  if (ts.isUnionTypeNode(type)) {
-    const each = type.types.map(literalTypes);
-    return each.every((t) => t) ? each.flatMap((t) => t ?? []) : undefined;
-  }
-  if (ts.isTypeReferenceNode(type)) {
-    const alias = type
-      .getSourceFile()
-      .statements.find(
-        (s): s is ts.TypeAliasDeclaration =>
-          ts.isTypeAliasDeclaration(s) &&
-          s.name.text === type.typeName.getText(),
-      );
-    return alias && literalTypes(alias.type);
-  }
-  return ts.isIndexedAccessTypeNode(type) ? listed(type) : undefined;
-}
-
-function listed(type: ts.IndexedAccessTypeNode): string[] | undefined {
-  const list =
-    type.indexType.getText() === "number"
-      ? /^\(?typeof (\w+)\)?$/.exec(type.objectType.getText())?.[1]
-      : undefined;
-  const held = list ? declarations(type.getSourceFile()).get(list) : undefined;
-  const init =
-    held && ts.isVariableDeclaration(held) ? held.initializer : undefined;
-  const array = init && ts.isAsExpression(init) ? init.expression : init;
-  if (!array || !ts.isArrayLiteralExpression(array)) return undefined;
-  const items = array.elements.filter(ts.isStringLiteral).map((e) => e.text);
-  return items.length === array.elements.length ? items : undefined;
-}
-
-/** The values a component's prop is typed to take, where its type spells them. */
-export function domainOf(def: ts.Node, name: string): string[] | undefined {
-  const fn = fnOf(def);
-  let type = ts.isFunctionLike(fn) ? fn.parameters[0]?.type : undefined;
-  while (type && ts.isTypeReferenceNode(type) && type.typeArguments?.length) {
-    type = type.typeArguments[0];
-  }
-  const member =
-    type && ts.isTypeLiteralNode(type)
-      ? type.members.find(
-          (m): m is ts.PropertySignature =>
-            ts.isPropertySignature(m) && m.name.getText() === name,
-        )
-      : undefined;
-  return literalTypes(member?.type);
 }
 
 // The JSX an expression evaluates to, through parentheses and conditions.

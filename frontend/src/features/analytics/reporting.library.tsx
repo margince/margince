@@ -1,21 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { AppLink } from "../../design-system/applink";
 import { Button, SegmentedControl } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate, useRoute } from "../../lib/router";
+import { useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
-import { executionLabel } from "./reporting.model";
+import { CustomReportDrawer } from "./reporting.custombuilder";
+import { CustomReportPreview } from "./reporting.custompreview";
+import { REPORTING_PERIODS } from "./reporting.filters";
+import { InitiativeReports } from "./reporting.initiatives";
+import { executionLabel, type ReportingSelection } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { PreparedReports } from "./reporting.preparedpanel";
+import { ProductReports } from "./reporting.productpanel";
 import { ReportingReportDetail } from "./reporting.report";
 
 export function ReportingLibrary({
@@ -23,12 +30,14 @@ export function ReportingLibrary({
   ownLens = false,
 }: Readonly<{ scope?: AnalyticsScope; ownLens?: boolean }>) {
   const t = useT();
+  const [params] = useUrlParams();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const canCreate = useCanWrite("report_definition", "create");
   const canSeeSchedules = useCan("report_schedule", "read");
   const [filter, setFilter] = useState("all");
+  const [building, setBuilding] = useState(false);
   const route = useRoute();
   const { cursor, next: setCursor, back, canBack } = useReportingPages();
   const query = useQuery({
@@ -47,6 +56,7 @@ export function ReportingLibrary({
       );
     },
   });
+  if (route.id2 === "preview") return <CustomReportPreview />;
   if (route.id2)
     return (
       <ReportingReportDetail
@@ -57,6 +67,8 @@ export function ReportingLibrary({
     );
   return (
     <>
+      <ProductReports />
+      <InitiativeReports />
       {scope && (
         <PreparedReports
           scope={{
@@ -74,20 +86,33 @@ export function ReportingLibrary({
             {/* The two ways a report starts: a Performance view kept as it is,
               or a question of the reader's own. */}
             {canCreate ? (
-              <Button
-                onClick={() =>
-                  navigate({ screen: "analytics", id: "performance" })
-                }
+              <AppLink
+                className="btn btn-ghost"
+                href={analyticsSectionHref("performance", params)}
               >
                 {t("reporting.createReport")}
+              </AppLink>
+            ) : null}
+            {canCreate && scope ? (
+              <Button variant="primary" onClick={() => setBuilding(true)}>
+                {t("reporting.newCustomReport")}
               </Button>
             ) : null}
-            <Button onClick={() => openAnalyticsSection("questions")}>
-              {t("reporting.newCustomReport")}
-            </Button>
+            <AppLink
+              className="btn btn-ghost"
+              href={analyticsSectionHref("questions", params)}
+            >
+              {t("reporting.askQuestion")}
+            </AppLink>
           </>
         }
       >
+        {building && scope && (
+          <CustomReportDrawer
+            initial={newReportSelection(scope, params)}
+            onClose={() => setBuilding(false)}
+          />
+        )}
         <PanelBody>
           {canSeeSchedules && (
             <SegmentedControl
@@ -232,4 +257,25 @@ export function ReportingLibrary({
       </Panel>
     </>
   );
+}
+
+/**
+ * Where a new custom report starts: the page's period and scope, the default
+ * pipeline, and no product, initiative, country, industry or value basis.
+ */
+function newReportSelection(
+  scope: AnalyticsScope,
+  params: ReadonlyMap<string, string>,
+): ReportingSelection {
+  const period =
+    REPORTING_PERIODS.find((value) => value === params.get("period")) ??
+    "this_quarter";
+  return {
+    scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
+    period,
+    target_basis: period === "this_quarter" ? "fiscal_quarter" : "month",
+    close_window: "all_open",
+    metrics: ["bookings_won", "open_pipeline"],
+    blocks: ["bookings_trend", "stage_distribution"],
+  };
 }

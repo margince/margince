@@ -553,3 +553,35 @@ func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testi
 		t.Fatalf("the router offers %d actions, want 2", len(mixed.Actions))
 	}
 }
+
+// A router names only its actions that run at once and cannot be undone. A
+// client asks the user before those, and not before the others.
+func TestARouterAsksTheUserFirstOnlyForActionsItCannotUndo(t *testing.T) {
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	archive := targetSpec("fake_archive", principal.ScopeWrite, mcp.TierAutoExecute)
+	archive.AskUserFirst = true
+	r.Register(&argsTool{spec: archive})
+	r.Register(&argsTool{spec: targetSpec("fake_rename", principal.ScopeWrite, mcp.TierAutoExecute)})
+	// A human already approves this call, so the client is not told to ask.
+	merge := targetSpec("fake_merge", principal.ScopeWrite, mcp.TierConfirmationRequired)
+	merge.AskUserFirst = true
+	r.Register(&argsTool{spec: merge})
+	r.Register(fakeRouter{name: "change", targets: map[string]string{
+		"archive": "fake_archive", "rename": "fake_rename", "merge": "fake_merge",
+	}})
+
+	spec, ok := r.Spec("change")
+	if !ok {
+		t.Fatal("the router is not registered")
+	}
+	described := DescribeForClient(spec)
+	if !strings.Contains(described, "the action archive cannot be undone") {
+		t.Errorf("the router does not ask first for archive: %s", described)
+	}
+	if strings.Contains(described, "the actions ") {
+		t.Errorf("the router asks first for rename, which can be undone: %s", described)
+	}
+	if strings.Contains(described, "merge cannot be undone") {
+		t.Errorf("the router asks first for merge, which a human already approves: %s", described)
+	}
+}

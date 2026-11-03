@@ -5,26 +5,27 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useT } from "../../i18n";
-import { openAnalyticsSection } from "../../lib/analytics.address";
+import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useUrlParams } from "../../lib/urlstate";
 import { ReportingCharts } from "./reporting.charts";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
-import { type ReportingEvidenceRef, reportingQuery } from "./reporting.model";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
+import { reportingQuery } from "./reporting.model";
 import {
   PREPARED_REPORTS,
   type PreparedReport,
   preparedSelection,
 } from "./reporting.prepared";
-import {
-  useReportingCatalog,
-  useReportingPipelines,
-} from "./reporting.queries";
+import { useReportingCatalog } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
@@ -37,7 +38,7 @@ export function PreparedReports({
 }: Readonly<{ scope: ReportingSelection["scope"]; ownLens: boolean }>) {
   const t = useT();
   const catalog = useReportingCatalog();
-  const pipelines = useReportingPipelines();
+  const pipelines = usePipelines();
   const [open, setOpen] = useState<string | null>(null);
 
   return (
@@ -68,9 +69,8 @@ export function PreparedReports({
                               report,
                               metrics,
                               scope,
-                              loaded.data.find(
-                                (pipeline) => pipeline.is_default,
-                              )?.id,
+                              loaded.find((pipeline) => pipeline.is_default)
+                                ?.id,
                             )
                           : null
                       }
@@ -104,6 +104,7 @@ function PreparedRow({
   onPreview: () => void;
 }>) {
   const t = useT();
+  const [params] = useUrlParams();
   const canCreate = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
   // A question none of whose metrics this reader may read has nothing to show.
@@ -118,9 +119,12 @@ function PreparedRow({
           <p className="t-caption">{t(report.purpose)}</p>
         </div>
         {report.kind === "section" ? (
-          <Button onClick={() => openAnalyticsSection(report.section)}>
+          <AppLink
+            className="btn btn-ghost"
+            href={analyticsSectionHref(report.section, params)}
+          >
             {t("reporting.prepared.open")}
-          </Button>
+          </AppLink>
         ) : (
           <>
             <Button onClick={onPreview} aria-expanded={previewing}>
@@ -153,7 +157,9 @@ function PreparedPreview({
   selection,
 }: Readonly<{ selection: ReportingSelection }>) {
   const t = useT();
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
+  const { evidence, openEvidence, closeEvidence } = useSelectionEvidence(
+    JSON.stringify(selection),
+  );
   const evaluation = useQuery({
     queryKey: ["reporting-evaluation", selection],
     queryFn: async () =>
@@ -170,12 +176,12 @@ function PreparedPreview({
     >
       {(result) => (
         <>
-          <ReportingCharts evaluation={result} onEvidence={setEvidence} />
+          <ReportingCharts evaluation={result} onEvidence={openEvidence} />
           {evidence && (
             <ReportingEvidenceDrawer
               evaluation={result}
               reference={evidence}
-              onClose={() => setEvidence(null)}
+              onClose={closeEvidence}
             />
           )}
         </>

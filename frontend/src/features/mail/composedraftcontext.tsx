@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import {
   type PickableProject,
@@ -81,16 +82,9 @@ function relatedValue(dealId: string, projectId: string): string {
   return projectId ? `project:${projectId}` : "";
 }
 
-// What the draft was written from, in the two shapes State D draws: a "Based
-// on" line naming the inputs in order, and a row of "Why this draft?" chips.
-//
-// Both render the SAME reasons — they are one answer read two ways, which is
-// why the server sends parts rather than a sentence. The line is for scanning
-// before reading the draft; the chips are for checking one input after.
-//
-// A reason carrying evidence is pressable and opens the record it names. One
-// without — the rep's own instruction — is flat, because there is nothing to
-// open and a chip that looks pressable and is not is worse than a plain one.
+// What the draft was written from: a "Based on" line and one chip per input.
+// It stays shut under a "Why this draft" hint, so the words come first. A chip
+// with evidence opens its record; one without is flat.
 export function DraftReasons({
   reasons,
   onOpenRecord,
@@ -106,35 +100,36 @@ export function DraftReasons({
     return null;
   }
   return (
-    <div className="compose-reasons">
-      <p className="t-caption">
-        {t("compose.basedOn", {
-          inputs: reasons.map((reason) => reason.label).join(" · "),
-        })}
-      </p>
-      <p>{t("compose.whyThisDraft")}</p>
-      <ul className="chips">
-        {reasons.map((reason) => (
-          <li key={`${reason.kind}:${reason.label}`}>
-            {reason.label}
-            {/* The record behind the reason, through the one citation
+    <Disclosure className="compose-reasons" summary={t("compose.whyThisDraft")}>
+      <div className="compose-reasons-card">
+        <p className="t-caption">
+          {t("compose.basedOn", {
+            inputs: reasons.map((reason) => reason.label).join(" · "),
+          })}
+        </p>
+        <ul className="chips">
+          {reasons.map((reason) => (
+            <li key={`${reason.kind}:${reason.label}`}>
+              {reason.label}
+              {/* The record behind the reason, through the one citation
                 renderer. It used to be a link-button wrapping the LABEL and
                 calling onOpenRecord with whatever kind the reason carried —
                 so a reason grounded in a conversation offered a control that
                 routed nowhere, and a reason grounded in nothing at all still
                 looked pressable because the guard only asked whether a
                 handler existed. The citation asks what the record IS. */}
-            {reason.evidence_ref && (
-              <Citations
-                evidence={[reason.evidence_ref]}
-                onOpenRecord={onOpenRecord}
-                onOpenEmail={onOpenEmail}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+              {reason.evidence_ref && (
+                <Citations
+                  evidence={[reason.evidence_ref]}
+                  onOpenRecord={onOpenRecord}
+                  onOpenEmail={onOpenEmail}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Disclosure>
   );
 }
 

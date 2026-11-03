@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "1115d307cce94d0a66a5d1e8d45fb87e8a3ea9d6e9da9479fd6dd03e61879bf3"
+const JobContractHash = "a2860ad810d07c54c739c3f5c4a76b4dc1a88d6e910554c4be69df2907c43aa6"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -130,6 +130,15 @@ var specs = map[string]Spec{
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 5 * time.Minute},
+	},
+	"assurance_deal_rescan": {
+		Kind:      "assurance_deal_rescan",
+		GoType:    "AssuranceDealRescanArgs",
+		Role:      Worker,
+		Queue:     "assurance_rescan",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "Deal"}, {Name: "Workspace"}},
 	},
 	"assurance_run": {
 		Kind:      "assurance_run",
@@ -276,6 +285,28 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"captured_deal_refile": {
+		Kind:        "captured_deal_refile",
+		GoType:      "CapturedDealRefileArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "AsOf", Scalar: true, Reason: "Fixed horizon instant for a resumable pass, never a message timestamp supplied by a sender."}, {Name: "Ceiling"}, {Name: "Correlation"}, {Name: "Event"}, {Name: "Scope", Scalar: true, Reason: "Record identities and a boolean selecting the recovery census; no correspondence travels in the job."}, {Name: "Workspace"}},
+	},
+	"captured_deal_refile_sweep": {
+		Kind:       "captured_deal_refile_sweep",
+		GoType:     "CapturedDealRefileSweepArgs",
+		Role:       Dispatcher,
+		Fleet:      true,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "captured_deal_refile",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 1 * time.Hour},
 	},
 	"check_company_vat": {
 		Kind:         "check_company_vat",
@@ -1046,6 +1077,7 @@ var queues = map[string]int{
 	"accounting_read":   2,
 	"agent_scheduler":   2,
 	"ai_capture":        2,
+	"assurance_rescan":  1,
 	"capture_part_slim": 1,
 	"comms_send":        3,
 	"data_task":         1,

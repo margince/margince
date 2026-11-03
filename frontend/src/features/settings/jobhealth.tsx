@@ -19,15 +19,16 @@ import {
   identifierNumber,
   ordinalNumber,
 } from "../../format/format";
-import { formatAge } from "../../format/interval";
+import { formatAge, formatInterval } from "../../format/interval";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
+import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { HealthCard } from "./healthcard";
-import { DeadWorkCallout } from "./jobhealthdead";
 import { jobKindNameKey } from "./jobkinds";
+import { healthConditions } from "./systemhealth.copy";
 
 // GET /admin/job-health — the operator's only window onto the background
 // system, for Settings → Maintenance. Until this card existed a stalled queue
@@ -62,20 +63,27 @@ function JobKind({ kind }: Readonly<{ kind: string }>) {
   return <KeyedName name={name === undefined ? kind : t(name)} code={kind} />;
 }
 
-const COUNTED = ["waiting", "running", "retrying", "dead"] as const;
+const COUNTED = [
+  "waiting",
+  "running",
+  "retrying",
+  "discarded",
+  "cancelled",
+] as const;
 type Counted = (typeof COUNTED)[number];
 
 const COUNT_HEADER: Record<Counted, MessageKey> = {
   waiting: "jobs.col.waiting",
   running: "jobs.col.running",
   retrying: "jobs.col.retrying",
-  dead: "jobs.col.dead",
+  discarded: "jobs.state.discarded",
+  cancelled: "jobs.state.cancelled",
 };
 
 // A retry or a dead job above zero is the figure an operator came to find.
 const COUNT_TONE: Partial<Record<Counted, "warning" | "danger">> = {
   retrying: "warning",
-  dead: "danger",
+  discarded: "danger",
 };
 
 // Every count, zeros included: "0 dead" is the reassurance an operator came for.
@@ -90,12 +98,10 @@ function kindColumns(
       align: "end",
       render: (kind) => {
         const tone = COUNT_TONE[count];
-        const shown = formatNumber(kind[count], locale);
-        return tone && kind[count] > 0 ? (
-          <Badge tone={tone}>{shown}</Badge>
-        ) : (
-          shown
-        );
+        const value = kind[count];
+        if (value === undefined) return t("health.unknown");
+        const shown = formatNumber(value, locale);
+        return tone && value > 0 ? <Badge tone={tone}>{shown}</Badge> : shown;
       },
     }),
   );
@@ -110,7 +116,21 @@ function kindColumns(
       header: t("jobs.col.queue"),
       render: (kind) => <code>{kind.queue}</code>,
     },
+    {
+      key: "condition",
+      header: t("jobs.col.state"),
+      render: (kind) =>
+        t(healthConditions[kind.condition ?? "unknown"] ?? "health.unknown"),
+    },
     ...counts,
+    {
+      key: "expectation",
+      header: t("jobs.col.expectation"),
+      render: (kind) =>
+        kind.expectation_seconds === undefined
+          ? t("health.unknown")
+          : formatInterval(kind.expectation_seconds, locale),
+    },
     {
       key: "oldest",
       header: t("jobs.col.oldestWait"),
@@ -285,7 +305,8 @@ function FailureSection({
 function JobHealthBody({
   health,
   zone,
-}: Readonly<{ health: JobHealth; zone: string }>) {
+  showHistory,
+}: Readonly<{ health: JobHealth; zone: string; showHistory: boolean }>) {
   const t = useT();
 
   if (health.kinds.length === 0 && health.recent_failures.length === 0) {
@@ -301,7 +322,6 @@ function JobHealthBody({
 
   return (
     <>
-      <DeadWorkCallout health={health} />
       <KindSection
         label={t("jobs.workspaceKinds")}
         kinds={health.kinds.filter((kind) => !kind.fleet_wide)}
@@ -313,7 +333,9 @@ function JobHealthBody({
         kinds={health.kinds.filter((kind) => kind.fleet_wide)}
         emptyText={t("jobs.dispatcherEmpty")}
       />
-      <FailureSection failures={health.recent_failures} zone={zone} />
+      {showHistory && (
+        <FailureSection failures={health.recent_failures} zone={zone} />
+      )}
     </>
   );
 }
@@ -322,11 +344,13 @@ function JobHealthBody({
 // it the call could only answer 403, so it is not made.
 export function useJobHealth() {
   const canSee = useCan("job_health", "read");
+  const scope = useHealthScope();
+  const visible = useHealthVisible();
   const query = useQuery({
-    queryKey: ["job-health"],
-    enabled: canSee,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/admin/job-health"));
+    queryKey: ["job-health", scope],
+    enabled: canSee && visible && scope !== undefined,
+    queryFn: async ({ signal }) => {
+      const data = unwrap(await api.GET("/admin/job-health", { signal }));
       // Rejected, not defaulted: `?? []` would draw the idle state, a claim about
       // the installation this response never made.
       if (
@@ -343,7 +367,9 @@ export function useJobHealth() {
   return { canSee, query };
 }
 
-export function JobHealthCard() {
+export function JobHealthCard({
+  showHistory = true,
+}: Readonly<{ showHistory?: boolean }>) {
   const t = useT();
   // The reader's own zone: a stalled-queue time is only useful against the
   // clock on their wall.
@@ -358,7 +384,9 @@ export function JobHealthCard() {
       canSee={canSee}
       query={query}
     >
-      {(health) => <JobHealthBody health={health} zone={zone} />}
+      {(health) => (
+        <JobHealthBody health={health} zone={zone} showHistory={showHistory} />
+      )}
     </HealthCard>
   );
 }

@@ -15,6 +15,7 @@ const BUCKETS: Record<MovementBucket, true> = {
   amount: true,
   category: true,
   stage_weight: true,
+  record_changed: true,
   won: true,
   lost: true,
   reopened_or_archived: true,

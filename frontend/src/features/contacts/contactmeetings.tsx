@@ -1,6 +1,7 @@
-import { Link } from "lucide-react";
+import { Link, Sparkles } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import {
@@ -21,6 +22,7 @@ import {
 } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { entityTimelineKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
@@ -33,6 +35,7 @@ import {
   useMeetingProposals,
   WaitingSection,
 } from "./contactmeetings.waiting";
+import { momentDrafts } from "./contactpage.drawers";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -99,8 +102,10 @@ function MeetingMomentAction({
     return null;
   }
   const blocked = action.state === "blocked";
+  const drafts = momentDrafts(action);
   return (
     <Button
+      variant={drafts ? "ai" : "ghost"}
       onClick={() => onAction(action)}
       reason={
         blocked
@@ -108,6 +113,7 @@ function MeetingMomentAction({
           : undefined
       }
     >
+      {drafts && <Sparkles aria-hidden="true" />}
       {action.label}
     </Button>
   );
@@ -226,6 +232,18 @@ export function ContactMeetingsTab({
       variant="aiQuiet"
     />
   );
+  const contactId = view?.contact.id;
+  const heldVerbs = (activity: Activity) => (
+    <>
+      {contactId && (
+        <RecordMeetingOutcome
+          activity={activity}
+          invalidateKeys={entityTimelineKeys("contact", contactId)}
+        />
+      )}
+      {briefOf(activity)}
+    </>
+  );
   return (
     <div className="record-stack pe-meetings">
       <Panel
@@ -293,7 +311,7 @@ export function ContactMeetingsTab({
         detail={{ onRetry: () => void listed.refetch() }}
         footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
       >
-        {held.length > 0 && <HeldMeetingsTable held={held} verbs={briefOf} />}
+        {held.length > 0 && <HeldMeetingsTable held={held} verbs={heldVerbs} />}
       </RailPanel>
     </div>
   );

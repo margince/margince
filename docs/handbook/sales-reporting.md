@@ -1,24 +1,70 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly -->
+<!-- describes: frontend/src/features/analytics frontend/src/features/settings/lossreasons.tsx backend/internal/modules/deals/lossreasonmapping.go backend/internal/modules/reporting backend/internal/modules/forecasting backend/internal/compose/analyticsquery backend/internal/compose/weekly backend/internal/compose/reportingstagecohort.go backend/internal/compose/reportingleadcohort.go -->
 # Performance and saved sales reports
 
 ## Where do I start my sales review?
 
-Open **Analytics → Performance**. Choose **Sales** for sales won, pipeline stages, sales by salesperson and time in stage, or **SDR** for meetings confirmed as held and accepted opportunities. Choose your record scope and time span. Stage charts need a single pipeline. A rep's own scope shows their own results; you need wider access to compare owners.
+Open **Analytics → Performance** for sales won, pipeline stages, sales by salesperson and time in stage. The **SDR outcomes** tab shows meetings confirmed as held and accepted opportunities. Choose your record scope and time span. Stage charts need a single pipeline. A rep's own scope shows their own results; you need wider access to compare owners.
 
 Sales won follows the close time span you picked and the deal owner of today. If a deal gets a new owner, its live sales and target results move to the new owner. Saved snapshots keep the owner and results from that time. Open pipeline and stage age show the pipeline as it is now, with the time window for expected closes printed next to the chart.
 
 Above the figures, a few sentences sum up the position. They say what was won against the target, where the quarter should end, and what is still open. They are written from the figures below them, and a figure that was not measured is left out.
 
-The row of figures at the top shows sales won and open pipeline, with the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click sales won or open pipeline to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
+The row of figures at the top shows sales won, the closed win rate, qualified pipeline created and open pipeline. Open pipeline also gives the number of open deals and the date it was read. With the time span set to this quarter, it also shows **Forecast landing**. That is where the deal forecast expects this fiscal quarter to end, and it needs forecast access. Click a figure to open the records behind it. Click **Forecast landing** to open the **Forecast** section, where each part links to its deals.
+
+The line under **Forecast landing** names what it counts, such as **Won + weighted open deals**. A report saved before this line existed says **Basis not recorded**.
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
-“This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts. The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
+“This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
+
+A week starts on Monday at 00:00. At that exact moment the week holds nothing yet, and Analytics says so instead of showing zeros. With “This week”, a monthly target still counts the whole month up to the cutoff.
+
+The dates next to the numbers name the time span measured. A custom time span can be up to 12 months long. If the end date is today or later, real results stop at the reporting cutoff of today, shown above the charts. Future sales are not counted. A time span that is all in the future is refused; choose a start date before the cutoff.
 
 Targets use the month or fiscal quarter that holds the real cutoff, even when the custom end date you asked for is later. A saved edition keeps its own cutoff.
 
-Every chart can also be read as numbers. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
+Every chart can also be read as numbers. The round **i** button beside a chart's title opens its reporting details. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
+
+## How do I read one product's sales?
+
+Open **Analytics → Reports** and pick the product under **Product sales**. Sales review opens for that product alone, with a **Product sales** chip above the figures. Nothing is set up and nothing is written. A product report is the company report read for one product.
+
+On Sales review or Performance, open **Filters** and pick a **Product**, a **Country · company address**, an **Industry** and a **Value basis**. Each choice shows as a chip. The **×** on a chip removes that one filter. Every figure, chart, record list and export follows the same chips.
+
+A deal counts for a product when the accepted offer has a line for it, or when someone set the deal's products by hand. **Sales won** for a product is the value of that product's lines on the accepted offers of the deals won in the period. It is converted the way the deal's own amount is. A won deal with no priced link to the product stays in the count and adds nothing to the value. Open pipeline for a product is the whole open deal, because an open deal has no accepted offer to split.
+
+**Country · company address** reads the checked address of the deal's company. **Industry** reads the company's industry. A lead with no company keeps the industry a rep typed.
+
+**Commercial mix** splits the value of the deals won in the period by what each product is. The kinds are **Software**, **Implementation** and **Other**, set on the product under **Settings → Products and offers**. The part of a deal that no product line carries is **Unallocated**. A product with no kind shows as **Unclassified product**.
+
+The split keeps the kind a product had when the deal was priced. A later change on the rate card does not rewrite a closed deal. **Value basis** narrows sales won to one kind. Open value has no such split and says so.
+
+A figure that cannot follow a product, an address or an industry, such as meetings held, says so instead of answering for everything. With any of these filters chosen, no target is compared. A target is set for a whole scope.
+
+## How far is this quarter from its target?
+
+With the time span set to this quarter, **This quarter against its target** sits under the row of figures. It holds the forecast landing against the sales won target of the same scope and quarter:
+
+- **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
+- **Left to win** is the target minus sales won so far, and never below zero.
+- **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
+- **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
+
+When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
+
+- No sales won target is set for this scope, pipeline and quarter. A missing target is not a target of zero.
+- A deal amount has no exchange rate, so the totals would be too low.
+- You cannot see every deal in the scope, or the amount of one.
+- **Show individual performance** is off, and one colleague besides you makes up the figures.
+- The manager's call is below the sales already won.
+- The time span is not this quarter, or the scope is several teams at once.
+- One pipeline is picked, and the target covers all pipelines, or the landing is a manager's call.
+- The target was set in a currency that is no longer the base currency.
+
+When another time span, pipeline or team would compare, a button under the notice switches the page to it.
+
+This comparison is not **Deal value needed** on the **Forecast** page. That figure holds the pipeline against a call or past quarters, never against a target.
 
 ## What does each graph mean?
 
@@ -30,7 +76,9 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
 - **Stage age:** the middle age and the age that 75% of open deals stay under, for open deals of today. Small groups
   are held back. These numbers describe the whole group; they do not warn you that one deal has stopped moving.
 - **SDR outcomes:** meetings held and accepted opportunities for each week, counted
-  apart. A held meeting keeps the host that was recorded when it was held. An older meeting with no such record, or only part of one, is given to its host of today. The details for the number say when this happens. An accepted opportunity stays with
+  apart. A held meeting keeps the host that was recorded when it was held, and the day it was held on. A meeting entered with only a date stays on that date when it is moved later. An older meeting with no such record, or only part of one, is given to its host of today.
+
+  Some older meetings were saved before Margince kept whether a start had a time. One of those that starts at 12:00 UTC may count on the day next to it. The details for the number say when either happens. An accepted opportunity stays with
   the SDR who created it after the deal gets a new owner. These two lines do not
   show a rate of turning one into the other.
 - **Leads:** new leads by origin and lead status changes by the new status. Leads qualified into a deal show out of all that came in. First response time is the middle wait. Lead figures take no pipeline.
@@ -45,7 +93,35 @@ Every chart can also be read as numbers. Select a mark, with a click or the keys
 
 Open **Definitions** to see how each number is worked out, the rules for credit, the required fields and what the numbers cover. A value that is not there, only in part, or held back is not a measured zero. Qualified pipeline needs an admin to set up the qualifying stages first; they count only from then on.
 
+## Why were deals lost?
+
+Ask a question about won and lost deals, and group it by **Loss reason from the list**. Group by **How the loss reason was set** to see where each answer came from:
+
+- **Picked at close**: the reason was picked when the deal was closed.
+- **Mapped from a note**: an administrator matched the deal's older note to a reason.
+- **Note not mapped**: the deal has only a note, and nobody has matched it yet.
+
+Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
+
+## Where do deals and leads stop moving?
+
+Open **Analytics → Stage conversion** and choose one pipeline. Each row is a stage. It counts the deals that entered that stage in your time span, each deal once. It says what each did next: a later stage, won, lost, back to an earlier stage, or another pipeline. A deal that left a stage back to it again shows under **Back in this stage**. A deal that came back from a won or lost close shows under **Reopened after a close**.
+
+**Still open** deals have not left the stage yet. They never count as lost, and the rate leaves them out. **Moved on** is the share of deals that went to a later stage or were won, out of those that left the stage. A stage shows no rate until 5 deals have left it.
+
+Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Next move imported or unknown**, and the rate leaves them out too.
+
+Moves that an import brought in are left out. Such a move shows what happened in the system the deal came from, not how your team sells. So an imported move never starts an entry, and a deal whose next move was imported shows as **Next move imported or unknown**. Margince did not always keep whether an import brought a move in. Moves saved before then still count, and the figure is marked as partial, because some of them may be imports.
+
+Each deal counts for the team member who owned it when it entered the stage, also after it gets a new owner. The days next to an outcome are the middle time a deal spent in the stage before it. The days next to **Still open** are the middle time in the stage so far.
+
+On **Analytics → Leads**, **What became of new leads** does the same for the leads that came in during your time span. It counts how many had a handoff accepted, were qualified or disqualified, or are still open. Each lead counts for the team member who owned it when it came in. Leads that came in before Margince kept that owner count for the whole workspace, but for no team member or team.
+
 ## How do I save or share a report?
+
+To build a report of your own, open **Reports** and choose **New custom report**. **Customize report** on a sales review opens the same window with what you are reading. The window holds the report name and the question it answers. Below come **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** shows the report before it is saved. There, **Customize report** returns to the window and **Save report** keeps the report under **Reports**.
+
+The **Assessment** card writes the report's figures up in a few sentences. It names only figures the report measured.
 
 Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. Drag a graph by its handle to change its place, or press Tab to reach the handle and use the arrow keys. **Preview** shows a graph with this report's figures before you add it.
 
@@ -60,6 +136,12 @@ Under **History and schedules**, **Versions** lists who saved each version and w
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
+
+## How do I record a decision from a review?
+
+Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.
+
+When the work is done, choose **Record outcome** and say what was completed. The task closes with that note. The deal does not change: completed work is not a sale.
 
 ## How do I keep a weekly or monthly edition?
 
@@ -79,7 +161,7 @@ Choose a year and a first month; only months that can start a fiscal quarter are
 
 A team lead, management or an admin sets targets. Every other seat with access to **Targets** sees its own targets, the targets of its teams and the company targets. It sees no button to add one. When none is set yet, the list says who sets them. Your own progress shows under **Analytics** → **My outcomes**.
 
-Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
+Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. The `label` column names each figure as the screen does, in your language. The `metric` column keeps a fixed id that stays the same in every language. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 
 Any user who reads a report can see the definitions of its numbers. Admins open **Reporting setup** on its own to set up qualifying stages and the daily history of the pipeline.
 

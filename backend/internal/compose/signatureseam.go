@@ -23,7 +23,7 @@ func (r signatureReader) SignatureFor(ctx context.Context, userID ids.UUID) (act
 		return activities.SenderSignature{}, err
 	}
 	return activities.SenderSignature{
-		Body: signature.Body, Title: signature.Title, Phone: signature.Phone, Template: signature.Template,
+		Body: signature.Body, HTML: signature.HTML, Title: signature.Title, Phone: signature.Phone, Template: signature.Template,
 		LogoKey: signature.LogoKey,
 	}, nil
 }

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
+<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
@@ -19,19 +19,33 @@ A contact's **Network** tab shows which colleagues have written with them, best 
 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
+### What does Reach on the Overview count?
+**Reach** on a contact's **How it stands** card counts the colleagues in touch with them. In touch means both sides wrote in the last 90 days, and the line under it names them.
+
+A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named.
+
 ### How strength is worked out
-Relationship strength in Margince comes from one rule, worked out from captured mail **each time you look**:
+Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
-- **Recency** is cut by half every 30 days since the last exchange.
+- **Recency** is cut by half every 30 days since the contact last wrote to you or had a meeting or call with you. Your own mail they have not answered does not reset it.
 - **Frequency** counts up to 20 interactions in 90 days; any more add
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
-**You cannot change it by hand.** It shows what happened in captured mail.
+**You cannot change it by hand.** It shows what happened in captured interactions.
 
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
+
+A recent contact can still score **Weak**. The contact page then names what holds the score down:
+
+- few shared interactions in 90 days;
+- an exchange that goes mostly one way;
+- no reply from the contact among the shared interactions;
+- interactions, such as meetings or replies from other contacts, that count as no message either way.
+
+The score counts only interactions that everyone in Margince can see. So "no replies counted" does not mean the contact never replied.
 
 The route also shows which way the mail goes: "{total} two-way exchanges in 90 days" against "{total} interactions in 90 days, one-sided". So six real exchanges never read the same as six sends with no answer.
 
@@ -48,6 +62,27 @@ The contact's **Network** tab also shows who can reach them, in four groups: **Y
 It counts and never shows the messages: "{total} interactions in 90 days · {inbound} in, {outbound} out", with "Counts only. The messages stay on the timeline."
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
+
+### Why do two colleagues see different last-message dates for one contact?
+
+A contact's last-message dates count only the messages you can open. The same rule holds for:
+
+- the date of their last message on the contact's Overview, and the line that says which sides
+  have written;
+- the "No reply to the last message" card;
+- the dates on that contact's Worklist rows.
+
+What this means for you:
+
+
+- A reply on a private thread you are part of counts for you. A colleague who cannot open that
+  thread does not see the reply, and their dates, card and rows stay as they were.
+- When no message you can open has a reply, the Overview shows **None you can open**. A reply you
+  cannot open may still exist.
+- Relationship strength and the colleague network are shared numbers. They count only messages the
+  whole workspace can see, so every colleague reads the same number.
+- In History, a message is shown as theirs or yours by who wrote it. A colleague's mail that reached
+  you as a copy is still your team's.
 
 ### When does the Worklist suggest a quiet contact?
 
@@ -301,7 +336,11 @@ An address Margince cannot split stays whole under **Registered address** in the
   checked shows as not checked, not as failed.
 - **Hierarchy rollup**: the numbers of a parent company, with the companies under it that you can read added in.
   Any you cannot read are **named as excluded**. Where no exchange rate is
-  there, it shows no total and does not guess a rate.
+  there, it shows no total and does not guess a rate. **Won this quarter**
+  counts deals by the day they were won. Pick **Year**, **Quarter** or
+  **Month**, or step back with the arrows, to see an earlier period. The
+  **Weighted deal value today** is always the open deals as they stand now,
+  whatever period you pick.
 
 The dossier, the scan and the growth fit are yours alone. An agent cannot read any of them, because each is made from one reader's own view.
 

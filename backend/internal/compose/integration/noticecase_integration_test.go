@@ -15,14 +15,18 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,7 +38,7 @@ func driveNoticeCase(t *testing.T, e *apptest.AppEnv, contactID string) {
 	if err != nil {
 		t.Fatalf("parsing the contact id: %v", err)
 	}
-	consumer := compose.NewNoticeCaseOpen(e.Pool, time.Now, slog.New(slog.DiscardHandler))
+	consumer := compose.NewNoticeCaseOpen(e.Pool, func() time.Time { return clocktest.Now(t) }, slog.New(slog.DiscardHandler))
 	if err := consumer.HandleEvent(context.Background(), events.Envelope{
 		Type:   "contact.created",
 		Entity: events.EntityRef{Type: "contact", ID: id},
@@ -47,8 +51,15 @@ func noticeCaseFor(t *testing.T, e *apptest.AppEnv, contactID string) (rule, sta
 	t.Helper()
 	row := e.Owner.QueryRow(context.Background(), `
 		SELECT rule, state, due_at FROM privacy_notice_case WHERE contact_id = $1`, contactID)
-	if err := row.Scan(&rule, &state, &due); err != nil {
-		return "", "", time.Time{}, false
+	var deadline *time.Time
+	if err := row.Scan(&rule, &state, &deadline); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", time.Time{}, false
+		}
+		t.Fatal(err)
+	}
+	if deadline != nil {
+		due = *deadline
 	}
 	return rule, state, due, true
 }
@@ -79,7 +90,7 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 	}
 	// A calendar month by the rule's own arithmetic, not 31 days: from 1 October
 	// it runs 31 days and can gain the hour a clock change hands back.
-	now := time.Now()
+	now := clocktest.Now(t)
 	if !due.After(now) || due.After(consent.AddMonths(now, 1).Add(time.Hour)) {
 		t.Errorf("the notice falls due %v, want inside a calendar month of the acquisition (%v)", due, now)
 	}
@@ -182,8 +193,8 @@ func contactAcquiredAs(t *testing.T, e *apptest.AppEnv, name, kind string) strin
 		t.Fatalf("create contact → %d", status)
 	}
 	tag, err := e.Owner.Exec(context.Background(), `
-		UPDATE contact_acquisition_evidence SET kind = $2 WHERE contact_id = $1`,
-		contact.ID, kind)
+		UPDATE contact_acquisition_evidence SET kind = @kind, occurred_at = @at WHERE contact_id = @contact`,
+		pgx.NamedArgs{"contact": contact.ID, "kind": kind, "at": clocktest.Now(t)})
 	if err != nil {
 		t.Fatalf("stating how the contact was obtained: %v", err)
 	}
@@ -287,7 +298,7 @@ func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Long Ago Contact", "purchased_or_imported")
 
-	acquired := time.Now().Add(-300 * 24 * time.Hour).UTC()
+	acquired := clocktest.Now(t).Add(-300 * 24 * time.Hour).UTC()
 	tag, err := e.Owner.Exec(context.Background(), `
 		UPDATE contact_acquisition_evidence SET occurred_at = $2 WHERE contact_id = $1`,
 		contact, acquired)
@@ -304,7 +315,7 @@ func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
 	if !found {
 		t.Fatal("no duty was recorded for a bought contact")
 	}
-	if due.After(time.Now()) {
+	if due.After(clocktest.Now(t)) {
 		t.Errorf("a contact acquired on %v is owed a disclosure due %v, which is still in "+
 			"the future: the deadline runs one month from the ACQUISITION, so a duty this old "+
 			"has been overdue for months and a case showing time left is the one wrong answer "+
