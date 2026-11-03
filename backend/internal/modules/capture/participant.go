@@ -474,12 +474,11 @@ func ParticipantListAttested(rec connector.NormalizedRecord) bool {
 // for the activity.host_user_id column — nil for every other kind, and for a
 // principal carrying no user.
 //
-// It records WHOSE CALENDAR the row came from, not a claim that they organized
-// the invitation: an attendee's own connector captures an event somebody else
-// called, and this names that attendee. The brief lanes read it to say whose
-// meeting a row is. It is not an authorization input — no read is granted from
-// it alone, because a label saying "this came off your calendar" is ownership,
-// not membership.
+// It records WHOSE CALENDAR the row came from, not who organized the meeting.
+// An attendee's own connector captures an event somebody else called. A later
+// replay hands the row to its organizer (activities.ClaimOrganizerHostTx). The
+// brief lanes read it to say whose meeting a row is. No read is granted from it
+// alone: "this came off your calendar" is ownership, not membership.
 func meetingHostUserID(ctx context.Context, kind string) *ids.UUID {
 	if kind != meetingKind {
 		return nil

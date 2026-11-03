@@ -52480,7 +52480,8 @@ export interface components {
             /**
              * Format: uuid
              * @description Whose calendar a meeting came off. Sent by `source: meeting` and
-             *     `source: meeting_outcome`.
+             *     `source: meeting_outcome`. When two colleagues' calendars hold one meeting,
+             *     it is the one who organized it, whichever calendar synced first.
              *
              *     It names the row's OWNER, which is what lets a manager's view say whose
              *     appointment each one is rather than presenting a team's calendars as one
@@ -54175,7 +54176,8 @@ export interface components {
              *     `kind` is always `user`.
              *
              *     A fact about the meeting, kept apart from `owner`, which says who answers
-             *     for the row and stays the calendar's seat. Absent where no calendar claims
+             *     for the row: the calendar's seat, or the organizer once their own calendar
+             *     holds a meeting another colleague's synced first. Absent where no calendar claims
              *     the meeting and no colleague organized it. `label` follows
              *     `WorklistOwner.label`: absent where this caller may not resolve the name.
              */

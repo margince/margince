@@ -34,8 +34,8 @@ type MeetingOrganizers interface {
 
 // nameTheOrganizers makes a meeting row's host the colleague who organized
 // the meeting, where one did. The calendar a meeting came off can be an
-// invited colleague's, which synced first. The row's owner stays that
-// calendar's seat: who answers for the row is not what this changes.
+// invited colleague's, which synced first. The row's owner is the stored host.
+// On a synced meeting that is the organizer once their calendar holds it too.
 func (s *Service) nameTheOrganizers(ctx context.Context, rows []crmcontracts.WorklistItem) error {
 	if s.organizers == nil {
 		return nil

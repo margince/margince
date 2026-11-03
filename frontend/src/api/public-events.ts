@@ -1032,6 +1032,11 @@ export interface components {
              * @description The activity's new assignee (absent when this update did not touch it).
              */
             assignee_id?: string;
+            /**
+             * Format: uuid
+             * @description The meeting's new host seat, when a calendar meeting was handed to the colleague who organized it (absent otherwise).
+             */
+            host_user_id?: string;
             /** @description The activity's new completion state (absent when this update did not touch it). */
             is_done?: boolean;
             /**

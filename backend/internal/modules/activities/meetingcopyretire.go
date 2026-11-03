@@ -26,9 +26,8 @@ const meetingCopyReason = "meeting_duplicate"
 // sync may call it: the fold acts on a colleague's row, which no human grant
 // covers. The audit row names the survivor, so unarchiving undoes it.
 func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || (actor.Type != principal.PrincipalSystem && actor.Type != principal.PrincipalConnector) {
-		return fmt.Errorf("activities: only a system job or a calendar sync retires a meeting copy: %w", apperrors.ErrPermissionDenied)
+	if err := requireFoldActor(ctx, "retires a meeting copy"); err != nil {
+		return err
 	}
 	if err := TransferIdentities(ctx, tx, duplicate, survivor); err != nil {
 		return err
@@ -53,6 +52,17 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	archived := crmcontracts.PublicEventActivityArchived{}
 	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
 	return storekit.EmitEvent(ctx, tx, auditID, duplicate.UUID, archived)
+}
+
+// requireFoldActor admits a system job or a calendar sync to a write on a
+// colleague's meeting row, which no human grant covers. verb completes "only a
+// system job or a calendar sync ...".
+func requireFoldActor(ctx context.Context, verb string) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok || (actor.Type != principal.PrincipalSystem && actor.Type != principal.PrincipalConnector) {
+		return fmt.Errorf("activities: only a system job or a calendar sync %s: %w", verb, apperrors.ErrPermissionDenied)
+	}
+	return nil
 }
 
 // carryMissingParticipantsTx copies onto the survivor each party of the copy

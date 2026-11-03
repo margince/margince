@@ -55,6 +55,18 @@ func (s *Sink) WithMeetingFolder(fold MeetingFolder) *Sink {
 	return &c
 }
 
+// MeetingHostKeeper names a calendar meeting's organizer as its host when the
+// organizer is a colleague whose own calendar holds it. compose injects it.
+type MeetingHostKeeper func(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) error
+
+// WithMeetingHostKeeper returns a copy that hands a meeting it replays to its
+// organizer. A guest's calendar often syncs a meeting first and becomes its host.
+func (s *Sink) WithMeetingHostKeeper(keep MeetingHostKeeper) *Sink {
+	c := *s
+	c.keepMeetingHost = keep
+	return &c
+}
+
 // admitCalendarVerb holds the door a calendar verb carries no record through:
 // the two rules admitRecord states for a write, about who is calling.
 //
@@ -146,7 +158,13 @@ func (s *Sink) settleMeetingReplay(
 	if err := s.stampLaterGuests(ctx, tx, id, rec); err != nil {
 		return err
 	}
-	return s.moveOnReplay(ctx, tx, id, rec, viaIdentity)
+	if err := s.moveOnReplay(ctx, tx, id, rec, viaIdentity); err != nil {
+		return err
+	}
+	if s.keepMeetingHost == nil {
+		return nil
+	}
+	return s.keepMeetingHost(ctx, tx, id)
 }
 
 // foldOwnDuplicate answers the row this capture is about when the identity
