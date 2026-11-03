@@ -59,9 +59,12 @@ func refuseRemovedEmail(ctx context.Context, tx pgx.Tx, email string) error {
 	return nil
 }
 
-// typedLoginAddress leaves the domain as typed. The raw arm is the only one
-// that answers for a seat whose email_domain_folded is unwritten, and
-// FoldLoginDomainsTx writes those a page at a time.
+// typedLoginAddress lowercases and trims the address, and leaves its domain
+// un-IDNA-folded.
+//
+// The raw arm is the only one that answers for a seat whose
+// email_domain_folded is unwritten, and FoldLoginDomainsTx writes those a page
+// at a time.
 func typedLoginAddress(email string) string { return strings.ToLower(strings.TrimSpace(email)) }
 
 // memberLoginArgs binds one typed address for a seat-login comparison: the

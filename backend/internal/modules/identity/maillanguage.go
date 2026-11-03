@@ -27,8 +27,13 @@ func (h Handlers) mailCopy(ctx context.Context, recipient ...string) mailcopy.Co
 		if len(recipient) > 0 && recipient[0] != "" {
 			var chosen *string
 			args := []any{typedLoginAddress(recipient[0]), owndomain.OfAddress(recipient[0])}
+			// One mailbox can hold a seat per domain spelling, and the login's
+			// unique index blocks only an exact duplicate. Read without an
+			// order, the locale answered was either seat's.
 			err := tx.QueryRow(ctx, "SELECT locale FROM app_user u WHERE "+
-				storekit.SeatLoginIsSQL("u", "$1", "$2")+" AND "+ActivatableMemberSQL("u"), args...).Scan(&chosen)
+				storekit.SeatLoginIsSQL("u", "$1", "$2")+" AND "+
+				ActivatableMemberSQL("u")+" "+
+				storekit.SeatLoginPrefersTypedSQL("u", "$1"), args...).Scan(&chosen)
 			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 				return err
 			}

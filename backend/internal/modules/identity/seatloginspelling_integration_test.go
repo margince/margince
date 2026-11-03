@@ -51,8 +51,12 @@ func TestASeatSignsInWithEitherSpellingOfItsDomain(t *testing.T) {
 }
 
 // A seat stored before the folded column existed still signs in with the
-// spelling it was stored under. Nothing backfills app_user.email_domain_folded,
-// so the raw arm of the comparison is the only one that can answer for it.
+// spelling it was stored under.
+//
+// FoldLoginDomainsTx writes app_user.email_domain_folded a page at a time.
+//
+// Until it reaches a seat, the raw arm of the comparison is the only one that
+// can answer for it.
 func TestASeatWithNoFoldedDomainStillSignsIn(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-login-unfolded")
 	ctx := context.Background()

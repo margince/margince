@@ -161,11 +161,16 @@ func mergedFormerSurvivor(ctx context.Context, tx pgx.Tx, email string) (ids.Use
 	if !found {
 		return survivor, false, nil
 	}
+	// The seed can hold a seat per domain spelling, so the lineage can reach
+	// two live roots. `typed` rides the recursion to say which spelling the
+	// caller used, and the root spelled that way is the one answered.
 	err := tx.QueryRow(ctx, `WITH RECURSIVE lineage AS (
- SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at FROM app_user s
+ SELECT s.id,s.merged_into_user_id,s.removed_at,s.archived_at,
+        (lower(s.email) = @`+memberEmailField+`) AS typed FROM app_user s
    WHERE `+storekit.SeatLoginIsSQL("s", "@"+memberEmailField, "@"+memberDomainField)+`
- UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
- ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL`, memberLoginArgs(email)).Scan(&survivor)
+ UNION SELECT u.id,u.merged_into_user_id,u.removed_at,u.archived_at,l.typed FROM app_user u JOIN lineage l ON u.id=l.merged_into_user_id
+ ) SELECT id FROM lineage WHERE merged_into_user_id IS NULL AND removed_at IS NULL AND archived_at IS NULL
+   ORDER BY typed DESC, id LIMIT 1`, memberLoginArgs(email)).Scan(&survivor)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return survivor, false, errRemovedEmail
 	}
