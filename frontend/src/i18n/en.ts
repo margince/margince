@@ -1875,7 +1875,6 @@ export const en = {
   "scheduling.calendarDisconnectedTitle": "Your calendar refused Margince",
   "scheduling.calendarDisconnectedHelp":
     "Every invitation waiting on this calendar is paused. Reconnect it with permission to add events, and they go out on their own.",
-  "scheduling.reconnectCalendar": "Reconnect calendar",
   "scheduling.retry": "Retry invitation",
   "scheduling.book": "Confirm meeting",
   "scheduling.pausedUnavailable":

@@ -1954,7 +1954,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dein Kalender hat Margince abgewiesen",
   "scheduling.calendarDisconnectedHelp":
     "Alle Einladungen, die auf diesen Kalender warten, sind angehalten. Verbinde ihn wieder mit der Erlaubnis, Termine anzulegen, dann gehen sie von selbst raus.",
-  "scheduling.reconnectCalendar": "Kalender neu verbinden",
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
   "scheduling.pausedUnavailable":
