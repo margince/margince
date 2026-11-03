@@ -251,6 +251,8 @@ type Service struct {
 	taskOwner ids.UUID
 	// noticeOwners is the live team audience for requested decisions and disclosures.
 	noticeOwners []ids.UUID
+	// suggestionsOfReader narrows only the suggestion lane to the reader's companies.
+	suggestionsOfReader bool
 	// teamRoster is the roster scope=team resolved with, which degradableRoster
 	// answers from rather than asking again; nil under every other scope.
 	teamRoster *rosterRead

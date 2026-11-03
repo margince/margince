@@ -10,6 +10,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -568,4 +569,28 @@ func (o overdueSaying) CommitmentsDuePerAssignee(context.Context, time.Time) (ma
 
 func (o overdueFailing) CommitmentsDuePerAssignee(context.Context, time.Time) (map[ids.UUID]int, error) {
 	return nil, errors.New("count unavailable")
+}
+
+// The board reads the waiting scan narrowed to its roster, as the team
+// worklist does. A workspace-wide scan spends its bound on other seats' newer
+// waits, and an older wait of a member falls past it.
+func TestTheBoardNarrowsTheWaitingScanToItsTeam(t *testing.T) {
+	t.Parallel()
+	svc := boardService(
+		TeamMember{UserID: theReader, DisplayName: "Aa Reader"},
+		TeamMember{UserID: theColleague, DisplayName: "Bb Colleague"},
+	)
+	var asked []WaitingFor
+	svc.waiting = waitingAsked{asked: &asked}
+
+	if _, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam)); err != nil {
+		t.Fatalf("the board refused a team-scoped reader: %v", err)
+	}
+	if len(asked) != 1 {
+		t.Fatalf("the board read the waiting lane %d times, want once", len(asked))
+	}
+	if got := asked[0]; !got.Team || got.Owner != nil || got.Unowned ||
+		!slices.Equal(got.Seats, []ids.UUID{theReader, theColleague}) {
+		t.Errorf("the board read the waiting lane as %+v, want the team's two seats", got)
+	}
 }

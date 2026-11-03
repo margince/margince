@@ -18,9 +18,9 @@ import {
   DECK_VERDICT_KEYS,
 } from "../design-system/decisiondeck.verdicts";
 import {
-  INLINE_COMMIT_KEY,
+  FIELD_COMMIT_KEY,
   isParagraphCommit,
-} from "../design-system/inlinetext";
+} from "../design-system/fieldeditdialog";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { PRINTABLE_KEYS } from "../testing/keys";
@@ -120,19 +120,19 @@ describe("the chords the handlers bind", () => {
   });
 
   it("saves a paragraph on the key its caps name, and only with a modifier", () => {
-    const keys = [...PRINTABLE_KEYS, INLINE_COMMIT_KEY, "Tab", "Escape"];
+    const keys = [...PRINTABLE_KEYS, FIELD_COMMIT_KEY, "Tab", "Escape"];
     const chord = (key: string, metaKey: boolean, ctrlKey: boolean) =>
       isParagraphCommit({ key, metaKey, ctrlKey });
     expect(keys.filter((key) => chord(key, true, false))).toEqual([
-      INLINE_COMMIT_KEY,
+      FIELD_COMMIT_KEY,
     ]);
     expect(keys.filter((key) => chord(key, false, true))).toEqual([
-      INLINE_COMMIT_KEY,
+      FIELD_COMMIT_KEY,
     ]);
     expect(keys.filter((key) => chord(key, false, false))).toEqual([]);
     expect(capsBeside(renderDialog(), "Save multi-line field")).toEqual([
       modifierCap(platform),
-      capOf(INLINE_COMMIT_KEY),
+      capOf(FIELD_COMMIT_KEY),
     ]);
   });
 });

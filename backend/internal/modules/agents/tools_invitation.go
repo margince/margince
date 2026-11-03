@@ -6,6 +6,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -31,7 +32,7 @@ func RegisterMeetingInvitationTool(r *Registry, inviter MeetingInviter, records 
 	r.Register(inviteMeetingTool{inviter, records, r.language})
 }
 
-var inviteMeetingCopy = toolCopy{Purpose: "Create a real calendar invitation for one contact and notify their chosen address.", Limits: "Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification.", Instead: "Use book_meeting only to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times.", Retain: "Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation."}
+var inviteMeetingCopy = toolCopy{Purpose: "Create a real calendar invitation for one contact, plus any further attendees, and have the provider notify every one.", Limits: "Requires a connected writable calendar and a contact email the acting host may use. It checks actual busy time and returns pending until the provider confirms. Does not prove the guest agreed or received the notification.", Instead: "Use log_activity to record a meeting without inviting anyone. Use check_availability with reliable=true to propose calendar-checked times.", Retain: "Keep the invitation id and inspect its status before claiming it is booked. Retrying an uncertain delivery must use the existing invitation."}
 
 func (t inviteMeetingTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -74,8 +75,27 @@ func NewMeetingInvitationCall(records datasource.SystemOfRecordProvider, languag
 	return bind[crmcontracts.MeetingInvitationRequest](invitationResolver{&bookMeetingResolver{links: namedLinks{records: records}, language: language}}, in)
 }
 
+// invitationBooking reads every record the invitation files on, so the guards
+// probe the further links under the caller's row scope too.
 func invitationBooking(in crmcontracts.MeetingInvitationRequest) BookMeetingCommand {
-	return BookMeetingCommand{Start: in.Start, End: in.End, Subject: in.Subject, Links: []RecordLink{{EntityType: importObjectContact, EntityID: ids.UUID(in.ContactId)}}}
+	links := []RecordLink{{EntityType: importObjectContact, EntityID: ids.UUID(in.ContactId)}}
+	if in.Links != nil {
+		for _, link := range *in.Links {
+			links = append(links, RecordLink{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
+		}
+	}
+	return BookMeetingCommand{Start: in.Start, End: in.End, Subject: in.Subject, Links: links}
+}
+
+// invitationRecipients lists the invitation's addresses, primary first.
+func invitationRecipients(in crmcontracts.MeetingInvitationRequest) string {
+	recipients := []string{string(in.AttendeeEmail)}
+	if in.AttendeeEmails != nil {
+		for _, address := range *in.AttendeeEmails {
+			recipients = append(recipients, string(address))
+		}
+	}
+	return strings.Join(recipients, ", ")
 }
 
 func (r invitationResolver) Guards(ctx context.Context, in crmcontracts.MeetingInvitationRequest) error {
@@ -87,6 +107,6 @@ func (r invitationResolver) Guards(ctx context.Context, in crmcontracts.MeetingI
 
 func (r invitationResolver) Subject(ctx context.Context, in crmcontracts.MeetingInvitationRequest) (StageInfo, error) {
 	out, err := r.booking.Subject(ctx, invitationBooking(in))
-	out.Summary += " → " + string(in.AttendeeEmail) + " · " + in.Location + "\n\n" + in.Description
+	out.Summary += " → " + invitationRecipients(in) + " · " + in.Location + "\n\n" + in.Description
 	return out, err
 }

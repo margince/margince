@@ -74,7 +74,7 @@ function DealTagsSection({ deal }: Readonly<{ deal: Deal }>) {
 /**
  * Every field of the deal in one drawer, with the editors that change them.
  * They cover the fields, custom fields, who of ours is on it, its tags and its lists.
- * The page's left column reads these; this is where they are written.
+ * The page's left column changes some of the same fields through the same save.
  */
 export function DealDetailsDrawer({
   deal,

@@ -160,7 +160,7 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
+		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))`,
 		contactID, r.Email)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)

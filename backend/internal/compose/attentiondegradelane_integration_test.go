@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -105,7 +106,7 @@ type stuckSuggestions struct {
 	pool *pgxpool.Pool
 }
 
-func (s stuckSuggestions) CountOpen(ctx context.Context) (int, error) {
+func (s stuckSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
@@ -113,7 +114,7 @@ func (s stuckSuggestions) CountOpen(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return s.attentionDealSuggestions.CountOpen(ctx)
+	return s.attentionDealSuggestions.CountOpen(ctx, owners)
 }
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {

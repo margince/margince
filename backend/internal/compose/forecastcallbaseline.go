@@ -178,5 +178,6 @@ func assuranceScanner(pool *pgxpool.Pool, store *assurance.Store) *assurance.Sca
 	return assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, AssuranceConfig()).
 		WithSignalSubjects(AssuranceSignalSubjects).
 		WithCallSubjects(assuranceCallSubjects(pool)).
-		WithDealSubjects(assuranceDealSubjects)
+		WithDealSubjects(assuranceDealSubjects).
+		WithReviewDelivery(queueReviewDeliveries(store))
 }
