@@ -4909,6 +4909,12 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/ReportingValueBasis'
+        - name: initiative_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
       description: Evaluate reporting
   /analytics/evidence:
     get:
@@ -5047,6 +5053,12 @@ paths:
           required: false
           schema:
             $ref: '#/components/schemas/ReportingValueBasis'
+        - name: initiative_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
         - name: metric
           in: query
           required: true
@@ -18703,7 +18715,7 @@ components:
             reads as a settled answer instead of a mistake.
         references:
           type: string
-          enum: [tag, app_user, team, company, pipeline, stage, project]
+          enum: [tag, app_user, team, company, pipeline, stage, project, product]
           description: |-
             The record type this field's ids point at — present for every `id`
             field, absent for every other type. Offer the record rather than a
@@ -18922,6 +18934,8 @@ components:
         - stage_conversion
         - lead_cohort_outcomes
         - bookings_mix
+        - qualified_opportunities_created
+        - initiative_pipeline
     ReportingBlockKind:
       type: string
       description: |-
@@ -18990,6 +19004,9 @@ components:
     ReportingProductId:
       type: string
       format: uuid
+    ReportingInitiativeId:
+      type: string
+      format: uuid
     ReportingCountry:
       type: string
       pattern: '^[A-Z]{2}$'
@@ -19043,6 +19060,8 @@ components:
             - all_open
         product_id:
           allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        initiative_id:
+          allOf: [{$ref: '#/components/schemas/ReportingInitiativeId'}]
         country:
           $ref: '#/components/schemas/ReportingCountry'
         industry:
@@ -19089,7 +19108,9 @@ components:
             $ref: '#/components/schemas/ReportingCard'
     ReportingCardKind:
       type: string
-      description: A chart kind, or `question`, a custom analytics question the card asks for each reader.
+      description: |-
+        A chart kind, `question`, a custom analytics question the card asks for each reader, or
+        `assessment`, the report's figures written up in a few sentences.
       enum:
         - bookings_trend
         - stage_distribution
@@ -19104,6 +19125,7 @@ components:
         - stage_cohort
         - lead_cohort
         - question
+        - assessment
     ReportingCardQuestion:
       type: object
       additionalProperties: false
@@ -19216,6 +19238,13 @@ components:
           allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
         product_label:
           type: string
+        initiative_id:
+          allOf: [{$ref: '#/components/schemas/ReportingInitiativeId'}]
+        initiative_label:
+          type: string
+        initiative_launch_at:
+          type: string
+          format: date-time
         country:
           $ref: '#/components/schemas/ReportingCountry'
         industry:

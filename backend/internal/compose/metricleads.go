@@ -82,7 +82,7 @@ func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reportin
 	if err != nil {
 		return "", false, err
 	}
-	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope + dimensions, withheld, nil
+	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope + dimensions + initiativeMemberSQL(ctx, b, "l", string(recordTypeLead)), withheld, nil
 }
 
 func orUnnarrowed(clause string) string {
