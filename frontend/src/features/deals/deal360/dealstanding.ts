@@ -11,6 +11,7 @@ import {
   activityIsAhead,
   type OccurredPrecision,
 } from "../../../format/activitywhen";
+import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
 import { messageFromOutside } from "../../../lib/messagevoice";
 import { ghostCount } from "./dealcommittee";
@@ -88,19 +89,35 @@ export type Momentum =
   | Readonly<{ state: "quiet" }>;
 
 /**
+ * Whether the buyer's wait date still pauses the deal on `now`. The server's
+ * stall rule ends the pause on that day, so the page must not outlast it.
+ */
+export function waitHolds(
+  waitUntil: string | null | undefined,
+  zone: string,
+  now: Date,
+): waitUntil is string {
+  return (
+    Boolean(waitUntil) && calendarDaysUntil(waitUntil ?? "", zone, now) > 0
+  );
+}
+
+/**
  * Whether the deal is moving. `stalled` is the server's flag. The server
  * already lifts it while the buyer asked us to wait. So a wait date reads as
- * on hold only on a deal that is not stalled.
+ * on hold only on a deal that is not stalled, and only until that day.
  */
 export function momentumOf(
   deal: Pick<Deal, "stalled" | "wait_until" | "last_activity_at">,
+  zone: string,
+  now: Date,
 ): Momentum {
   if (deal.stalled) {
     return deal.last_activity_at
       ? { state: "stalled", since: deal.last_activity_at }
       : { state: "stalled" };
   }
-  if (deal.wait_until) {
+  if (waitHolds(deal.wait_until, zone, now)) {
     return { state: "on_hold", until: deal.wait_until };
   }
   if (deal.last_activity_at) {

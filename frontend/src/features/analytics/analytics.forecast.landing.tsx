@@ -3,11 +3,30 @@ import { EmptyState, StatCard } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
-import { type Locale, useT } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 
 type Readings = components["schemas"]["ForecastReadings"];
 type Landing = NonNullable<Readings["landing"]>;
 type Sufficiency = NonNullable<Readings["sufficiency"]>;
+
+// The central 80% of finishes under the chances in use. It says nothing about
+// whether the chances are right, so it never brackets the landing in words.
+export type ForecastRange = Readonly<{ lowMinor: number; highMinor: number }>;
+
+// Both ends or neither: one end alone is not a range a reader can act on.
+export function rangeOf(
+  lowMinor: number | undefined,
+  highMinor: number | undefined,
+): ForecastRange | undefined {
+  if (lowMinor === undefined || highMinor === undefined) return undefined;
+  return { lowMinor, highMinor };
+}
 
 // Basis points to whole percent, which is the only rounding this surface does.
 //
@@ -16,20 +35,71 @@ type Sufficiency = NonNullable<Readings["sufficiency"]>;
 // a percent of coverage is precision nobody acts on.
 const BASIS_POINTS_PER_PERCENT = 100;
 
-// Where the period lands, and the two halves that make it.
-//
-// Drawn as a sentence and not only a figure, because the sum is the part a
-// reader has to trust: "won plus still to come" says what was added, and a
-// manager's call says that nothing was added at all.
+type Money = (minor: number) => string;
+
+/**
+ * The two lines that say what a landing counts: its basis first, then the
+ * figure that stands beside it. A call replaces the projection and is never
+ * added to what is won; a call beside a projection is named, not added.
+ * Without a landing the basis is unknown and said so, never guessed.
+ */
+export function landingBasisLines(
+  landing: Landing | undefined,
+  callMinor: number | undefined,
+  money: Money,
+  t: Translator,
+): Readonly<{ basis: string; beside?: string; warning: boolean }> {
+  if (!landing) return { basis: t("forecast.basis.unknown"), warning: false };
+  const basis = t(`forecast.basis.${landing.measure}`);
+  if (landing.caveat === "call_below_actual")
+    return {
+      basis,
+      beside: t("forecast.callBelowLine", { won: money(landing.won_minor) }),
+      warning: true,
+    };
+  if (landing.caveat === "call_absent")
+    return { basis, beside: t("forecast.callAbsentLine"), warning: false };
+  if (landing.measure === "manager_call")
+    return {
+      basis,
+      beside:
+        landing.system_minor == null
+          ? undefined
+          : t("forecast.recordsProject", {
+              amount: money(landing.system_minor),
+            }),
+      warning: false,
+    };
+  return {
+    basis,
+    beside:
+      callMinor == null
+        ? t("forecast.split", {
+            won: money(landing.won_minor),
+            remaining: money(landing.remaining_minor),
+          })
+        : t("forecast.callNotAdded", { call: money(callMinor) }),
+    warning: false,
+  };
+}
+
+// Where the period lands, labelled with what it counts. The modelled range is
+// its own reading beside it, never this figure's uncertainty.
 export function LandingCard({
   landing,
   currency,
   locale,
-}: Readonly<{ landing: Landing; currency: string; locale: Locale }>) {
+  callMinor,
+}: Readonly<{
+  landing: Landing;
+  currency: string;
+  locale: Locale;
+  // A standing call beside a projection, stated and never added.
+  callMinor?: number;
+}>) {
   const t = useT();
-  // Compact, because a slot of a strip is about a hundred points wide and a
-  // full amount clips there — and a WORD where the pair cannot be said as money
-  // at all, because a slot compared across a row must not answer with a glyph.
+  // Compact, because a slot is about a hundred points wide and a full amount
+  // clips there. A word where the pair cannot be said as money.
   const money = (minor: number) =>
     formatMoneyOrWord(
       minor,
@@ -38,39 +108,25 @@ export function LandingCard({
       t("format.notForecast"),
       formatMoneyCompact,
     );
-
-  // A call REPLACES the projection rather than adding to what is won, so the
-  // two cases get different sentences. One sentence with a swapped number
-  // would tell a reader the call was the remainder, which is the misreading
-  // this whole shape exists to prevent.
-  //
-  // ONE label over both, with the measure leading the detail: "Landing" is the
-  // reading, and which measure produced it qualifies the reading the way a
-  // basis does. A label that changed with the measure made one figure read as
-  // two different readings between two periods.
-  const detail =
-    landing.measure === "manager_call"
-      ? t("forecast.landingFromCall", { won: money(landing.won_minor) })
-      : t("forecast.landingFrom", {
-          won: money(landing.won_minor),
-          remaining: money(landing.remaining_minor),
-        });
-
+  const lines = landingBasisLines(landing, callMinor, money, t);
   return (
     <>
       <StatCard
-        // The strip these two sit at the end of folds to rows on a phone, and
-        // the fold is the ROW's: a slot that did not declare it would keep its
-        // box while its neighbours lost theirs.
+        // The strip folds to rows on a phone, and the fold is the ROW's: a
+        // slot that did not declare it would keep its box.
         narrow="row"
         label={t("forecast.landing")}
         value={money(landing.amount_minor)}
-        detail={detail}
+        tone={lines.warning ? "warning" : undefined}
+        detail={
+          <>
+            <span>{lines.basis}</span>
+            {lines.beside && <span>{lines.beside}</span>}
+          </>
+        }
       />
-
-      {/* Its OWN heading, not the card's: the caveat sat under a repeat of
-          `forecast.landing` and read as a second copy of the figure's label
-          rather than as a remark about it. */}
+      {/* Its own heading, not the card's, so the caveat reads as a remark
+          about the figure rather than a second copy of its label. */}
       {landing.caveat && (
         <Callout
           tone="warning"
@@ -81,6 +137,90 @@ export function LandingCard({
         </Callout>
       )}
     </>
+  );
+}
+
+/**
+ * The modelled finish as a reading of its own: won money plus each priced
+ * open deal won or lost by its chance. It names what it includes and leaves
+ * out, and says when no range was drawn.
+ */
+export function ModelRangeCard({
+  label,
+  range,
+  wonMinor,
+  unpriced,
+  fxMissing,
+  money,
+  onOpen,
+}: Readonly<{
+  label: string;
+  range: ForecastRange | undefined;
+  wonMinor?: number;
+  unpriced: number;
+  fxMissing: number;
+  money: Money;
+  onOpen?: () => void;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  if (!range)
+    return (
+      <StatCard
+        narrow="row"
+        label={label}
+        value={t("forecast.model.none")}
+        detail={t("forecast.model.noneDetail")}
+      />
+    );
+  const left = [
+    unpriced > 0 &&
+      plural("forecast.model.unpriced", unpriced, {
+        count: formatNumber(unpriced, locale),
+      }),
+    fxMissing > 0 &&
+      plural("forecast.model.fxMissing", fxMissing, {
+        count: formatNumber(fxMissing, locale),
+      }),
+  ].filter((line): line is string => typeof line === "string");
+  return (
+    <StatCard
+      narrow="row"
+      label={label}
+      // Equal ends leave nothing to the model, so they read as one amount.
+      value={
+        range.lowMinor === range.highMinor
+          ? money(range.lowMinor)
+          : t("forecast.model.value", {
+              low: money(range.lowMinor),
+              high: money(range.highMinor),
+            })
+      }
+      detail={
+        <>
+          <span>{t("forecast.model.detail")}</span>
+          <span>
+            {left[0] ??
+              (wonMinor == null
+                ? undefined
+                : t("forecast.model.includes", { won: money(wonMinor) }))}
+          </span>
+        </>
+      }
+      basis={
+        <>
+          <p>{t("forecast.model.basis")}</p>
+          {wonMinor != null && (
+            <p>{t("forecast.model.includes", { won: money(wonMinor) })}</p>
+          )}
+          {left.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </>
+      }
+      onOpen={onOpen}
+    />
   );
 }
 

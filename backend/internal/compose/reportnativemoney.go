@@ -9,7 +9,9 @@ package compose
 // together: a spec offering a native measure and forgetting to declare it gets
 // no refusal at all, so the two are one idea rather than a check and a field.
 
-import "slices"
+import (
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+)
 
 // moneyDefaultBy is the DEFAULT grouping of a report whose default plan sums
 // money: the report's own dimension, then currency (REPORT-VOCAB-1).
@@ -26,43 +28,44 @@ func moneyDefaultBy(dimension string) []string {
 	return []string{dimension, fieldCurrency}
 }
 
-// refuseUngroupedNativeMoney holds "a native minor-unit sum is grouped by
-// currency" as a RULE rather than as a default.
-//
-// The default plans already append currency, so an agent asking the default
-// question gets a well-defined per-currency figure. But a caller naming its own
-// group_by — which the MCP schema resource invites, listing group_by and
-// aggregates as free choices — drops the split and the engine adds euros to
-// dollars: two deals at 2,500,000 EUR and 1,000,000 USD answer 3,500,000 of
-// nothing, where the honest converted total is 3,420,000 EUR.
-//
-// Refused rather than converted. Converting here would answer a question the
-// caller did not ask, in a currency they did not name, and a plain integer that
-// silently changed meaning is what this is about.
-//
-// The frontend already holds this rule for the plans the screen sends
-// (analytics.reports.test.tsx, "groups every native money plan by currency"). Two
-// spellings of one invariant, and until now only one of them could fail.
+// refuseUngroupedNativeMoney holds the currency rule for a caller naming its own
+// group_by: two deals at 2,500,000 EUR and 1,000,000 USD must not answer
+// 3,500,000 of nothing. Refused rather than converted, because converting
+// answers a question in a currency the caller did not name. The rule is
+// analyticsquery.PerRowCurrency, shared with the typed query.
 func refuseUngroupedNativeMoney(
-	spec reportSpec, groupBy []string, aggregates []reportAggregate,
+	spec reportSpec, groupBy []string, filters map[string]any, aggregates []reportAggregate,
 ) error {
-	if len(spec.nativeMeasures) == 0 || slices.Contains(groupBy, fieldCurrency) {
-		return nil
-	}
 	for _, agg := range aggregates {
-		// count OF a measure is how many rows could compute it — a
-		// dimensionless integer, not money. Counting euros and dollars
-		// together answers "how many priced deals", which means the same thing
-		// in every currency, so it needs no split. Every other function
-		// COMBINES the values.
-		if agg.Fn == aggFnCount {
-			continue
-		}
-		if agg.Field != "" && spec.nativeMeasures[agg.Field] {
-			return &NativeMoneyNeedsCurrencyError{Field: agg.Field}
+		money := spec.perRowCurrency(agg.Field)
+		if money != nil && money.Mixes(analyticsquery.AggFn(agg.Fn), groupBy, filters[money.By]) {
+			return &NativeMoneyNeedsCurrencyError{Field: agg.Field, refusal: money.Refusal(analyticsquery.AggFn(agg.Fn), agg.Field)}
 		}
 	}
 	return nil
+}
+
+// convertedMeasure names, for each per-row money measure, the measure holding
+// the same amount in the installation's base currency.
+var convertedMeasure = map[string]string{
+	fieldAmountMinor:         fieldAmountBaseMinor,
+	fieldWeightedAmountMinor: fieldWeightedBaseMinor,
+}
+
+// perRowCurrency says how a measure of this spec is denominated, nil unless it
+// is declared native. It names the converted measure only when this spec
+// offers it, so a refusal never points at a measure the caller cannot ask for.
+func (s reportSpec) perRowCurrency(measure string) *analyticsquery.PerRowCurrency {
+	if !s.nativeMeasures[measure] {
+		return nil
+	}
+	money := &analyticsquery.PerRowCurrency{By: fieldCurrency}
+	if base, ok := convertedMeasure[measure]; ok {
+		if _, offered := s.measures[base]; offered {
+			money.Base = base
+		}
+	}
+	return money
 }
 
 // nativeMoney names the measures a spec denominates per row.

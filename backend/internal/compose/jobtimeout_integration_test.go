@@ -5,25 +5,8 @@
 
 package compose_test
 
-// The declared timeout is what River actually applies. Proving this needed an
-// injectable seam before jobs.Govern existed (PR #394's job-health test
-// settled for asserting the constant and saying so in its own name); it now
-// needs only the same wrapper production registers, over a fixture kind and a
-// real River client.
-//
-// The fixture kind, timeout_probe, cannot live in api/jobs.yaml: adding it
-// there (say, `timeout_probe: {go_type: TimeoutProbeArgs}`) would fail to
-// COMPILE with `undefined: TimeoutProbeArgs` — declaredJobArgs
-// (internal/compose/jobkinds_gen.go) is a closed union naming every
-// declared kind's Go type by name, generated from the contract, and no
-// production type answers for this fixture. It also cannot register
-// through addDeclaredWorker (nothing outside the contract can reach that
-// path). The escape hatch is the forbidigo exclusion for _test.go files:
-// this registers directly through river.AddWorker + jobs.Govern with a
-// hand-built Spec, which is legitimate because everything downstream of
-// Govern — governedWorker, the Timeout() River calls, the Work() it wraps —
-// is the exact path production's addDeclaredWorker also drives. Only the Spec
-// is hand-built rather than read from the compiled table.
+// A fixture worker exercises the timeout River applies through jobs.Govern.
+// It stays out of the generated production catalog.
 
 import (
 	"context"
@@ -140,13 +123,7 @@ func newProbeRunner(t *testing.T, workers *river.Workers) (*jobs.Runner, func())
 	if err := runner.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	cleanup := func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}
+	cleanup := integration.StartedJobRunner(t, runner)
 	return runner, cleanup
 }
 

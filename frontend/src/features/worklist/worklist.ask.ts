@@ -12,6 +12,7 @@ import type { WorklistItem } from "./worklist.queries";
 const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
   approval: "worklist.ask.approval",
   dedupe_candidate: "worklist.ask.dedupe_candidate",
+  contact_case: "worklist.ask.contact_case",
   deal_suggestion: "worklist.ask.deal_suggestion",
   tag_suggestion: "worklist.ask.tag_suggestion",
   task: "worklist.ask.task",

@@ -111,7 +111,7 @@ describe("the licence pill leads to the seats settings page", () => {
     await waitFor(() => {
       const pill = opened.querySelector("a.arwarning");
       expect(pill?.textContent).toBe("No license");
-      expect(pill?.getAttribute("href")).toBe("#/settings/seats");
+      expect(pill?.getAttribute("href")).toBe("/#/settings/seats");
     });
   });
 
@@ -122,7 +122,7 @@ describe("the licence pill leads to the seats settings page", () => {
     await waitFor(() => {
       const pill = opened.querySelector("a.arwarning");
       expect(pill?.textContent).toBe("License refused");
-      expect(pill?.getAttribute("href")).toBe("#/settings/seats");
+      expect(pill?.getAttribute("href")).toBe("/#/settings/seats");
     });
   });
 });

@@ -301,9 +301,12 @@ func roomEventJSON(t *testing.T, id string, flagged bool, attendees ...string) [
 // customer touch and drafted a recap to a colleague.
 func TestABookedRoomDoesNotMakeAColleaguesOnlyMeetingExternal(t *testing.T) {
 	for _, flagged := range []bool{true, false} {
-		raw := roomEventJSON(t, "evt-room", flagged, gcalOwner, "peer@myco.com")
-		if got := mustParse(t, raw).ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
-			t.Errorf("resource flag %v: OwnerDomainOnly = %q, want myco.com: the room is no outside guest", flagged, got)
+		for _, domain := range []string{"resource.calendar.google.com", "RESOURCE.CALENDAR.GOOGLE.COM", "resource.calendar.google.com.", "resource．calendar.google.com"} {
+			raw := roomEventJSON(t, "evt-room", flagged, gcalOwner, "peer@myco.com")
+			raw = []byte(strings.ReplaceAll(string(raw), "resource.calendar.google.com", domain))
+			if got := mustParse(t, raw).ToRecord(connectorName, raw).OwnerDomainOnly; got != "myco.com" {
+				t.Errorf("resource flag %v, domain %q: OwnerDomainOnly=%q want myco.com", flagged, domain, got)
+			}
 		}
 	}
 }

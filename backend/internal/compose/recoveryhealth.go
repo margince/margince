@@ -49,7 +49,9 @@ func (h recoveryHealthHandlers) GetRecoveryHealth(w http.ResponseWriter, r *http
 // restoreDrillReport takes both windows from the drill's own methods, which
 // derive them from the row's timestamps.
 func restoreDrillReport(d continuity.Drill) *crmcontracts.RestoreDrill {
+	assessment := continuity.AssessDrill(&d)
 	report := &crmcontracts.RestoreDrill{
+		RecoveryWithinTarget: assessment.RecoveryWithinTarget, DataLossWithinTarget: assessment.DataLossWithinTarget,
 		StartedAt:       d.StartedAt,
 		FinishedAt:      d.FinishedAt,
 		RestoredTo:      d.RestoredTo,

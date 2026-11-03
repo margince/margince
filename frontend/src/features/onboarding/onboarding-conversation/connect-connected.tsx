@@ -24,10 +24,11 @@ import {
   useConnectAccount,
 } from "../../../lib/connect-account";
 import type { Service } from "../../../lib/connect-flow-draft";
-import { SERVICE_ICON } from "../../../lib/connect-services";
+import { SERVICE_ICON, SERVICE_WORDS } from "../../../lib/connect-services";
 import {
   accountHealth,
   healthBadge,
+  isConnectedAtAll,
   needsReconnect,
   serviceBadge,
   serviceReason,
@@ -73,7 +74,7 @@ export function ConnectedStep({
   const [calendarBusy, setCalendarBusy] = useState(false);
   const way: WayProps = {
     caption:
-      account.calendar?.status === "connected"
+      account.calendar && isConnectedAtAll(account.calendar)
         ? t("ob.conv.connect.connectedCaption", {
             page: t("settings.tab.connections"),
           })
@@ -333,11 +334,7 @@ function ConnectedService({
   return (
     <ServiceRow
       icon={SERVICE_ICON[service]}
-      name={t(
-        service === "mail"
-          ? "connectors.svc.newMail"
-          : "connectors.svc.calendar",
-      )}
+      name={t(SERVICE_WORDS[service].name)}
       caption={caption}
       status={{ tone: badge.tone, label: t(badge.label), live: badge.live }}
     />

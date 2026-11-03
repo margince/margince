@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import {
   Button,
   EmptyState,
@@ -328,9 +329,12 @@ export function AiUsageCard() {
       titleAction={<MonthSwitch month={month} onMonth={setMonth} />}
       footer={
         canReadPrices && (
-          <a className="link-button" href={routeHash(settingsHref("models"))}>
+          <AppLink
+            className="link-button"
+            href={routeHash(settingsHref("models"))}
+          >
             {t("aiusage.pricesLink")}
-          </a>
+          </AppLink>
         )
       }
     >

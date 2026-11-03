@@ -59,14 +59,20 @@ function suggestionRow(id = "sg-1") {
 }
 
 describe("a suggested deal on the Worklist", () => {
-  it("stands To review with its evidence under the row", async () => {
+  it("stands in the Decisions view with its evidence under the row", async () => {
     stub(day({ queue: [suggestionRow()] }), {
       data: [suggestion],
       page: { has_more: false },
     });
+    globalThis.location.hash = "#/worklist?view=decisions";
     renderWorklist();
 
-    const review = panelNamed(await screen.findByText(en["worklist.review"]));
+    const review = panelNamed(
+      await screen.findByText(en["worklist.view.decisions"], {
+        selector: "h2, h3",
+      }),
+    );
+    globalThis.location.hash = "";
     expect(
       await within(review).findByText("Sent: Angebot_2026.pdf"),
     ).toBeTruthy();

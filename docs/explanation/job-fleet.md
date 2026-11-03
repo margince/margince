@@ -23,7 +23,7 @@ DECLARATION                                    RUNTIME
 backend/api/jobs.yaml
    │  make gen  (backend/tools/gen-jobs)
    ├──► platform/jobs/specs_gen.go   the Spec table every reader walks
-   └──► compose/jobkinds_gen.go      the closed union + the role assertions
+   └──► compose/jobkinds_gen.go      registration markers + the role assertions
                                                 │
    river periodic tick ◄── periodicFor(cfg, Args{}) ── cadence: from the declaration
         │  leader-elected, so replicas never tick twice
@@ -155,7 +155,7 @@ edited by hand:
 
 - **`internal/platform/jobs/specs_gen.go`**: the `Spec` table. Every reader in the tree walks it: the
   fan-out helpers, the `/metrics` list, the `job-health` endpoint, the census.
-- **`internal/compose/jobkinds_gen.go`**: the closed union `declaredJobArgs`, the two functions that
+- **`internal/compose/jobkinds_gen.go`**: the exact-type registration constraint `declaredJobArgs`, the two functions that
   register workers and accept only types in it, and one compile-time check per kind. That check
   matches the kind's args type with its declared role.
 
@@ -163,10 +163,10 @@ Both carry the same `sha256` of `api/jobs.yaml`. So when only one of the two was
 visible without checking the two tables (the census checks it:
 `bothGeneratedHalvesCameFromOneContract`).
 
-The set is a closed union instead of a marker interface for one reason. A new type can declare a marker
-for itself, and the set of kinds must be the file's to state. A kind that is not declared cannot be named at the
-place that calls `addDeclaredWorker` at all. The failure is `does not satisfy declaredJobArgs`, on the
-line the writer is typing to register it.
+The generated marker names its own args type, so an embedding wrapper cannot use it to register.
+A type absent from the catalog fails at the call to `addDeclaredWorker`. The registration census refuses a marker
+written outside the generated file and checks every declaration against the catalog.
+
 
 ---
 
@@ -205,7 +205,7 @@ So `timeout` has no default, and a missing value is not one of its forms. It tak
 `declaredTimeoutSeconds` never reports zero on `/metrics`, because zero would look like the 60-second
 default in River, and the declaration exists to tell the two apart. A kind declared as none reports `-1`.
 
-Two more gates hold the same line at boot. Neither the closed union nor `Govern` can see a generated
+Two more gates hold the same line at boot. Neither the registration constraint nor `Govern` can see a generated
 file edited by hand, or a test that registers into a test-only `*river.Workers`:
 
 - **`jobs.MustBeTotal`** names every kind this role means to work that the contract does not declare,
@@ -521,7 +521,7 @@ census carries its own floor, `declaredJobKindFloor`, beside the runner it reads
 | `jobcensus_test.go` | everything the others cannot see. It builds the real runner as compose does (with no client) and puts it beside the contract. It catches a kind declared and never wired, a `{derived: …}` time limit whose Go constant moved, an args field nobody declared, and a fan-out child that does not write its unit key. Also a kind whose args own the options and that adds rows on the wrong queue, one args type that answers to a second kind, and a declared queue whose size compose does not build |
 
 The census is the only gate that holds **both** ends of the contract at once. Every other gate holds a
-single end. The closed union stops a kind that is not declared from compiling. `MustBeTotal` refuses a boot
+single end. The registration constraint stops a kind that is not declared from compiling. `MustBeTotal` refuses a boot
 that has one even so, and `Govern` makes the declared time limit the one River applies. None of them
 can see a kind that was declared and never wired.
 

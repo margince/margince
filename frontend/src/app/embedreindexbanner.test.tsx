@@ -73,12 +73,17 @@ function mount(
   return { fetchMock, client };
 }
 
-function statusRequests(fetchMock: ReturnType<typeof vi.fn>): number {
+function requestsTo(
+  fetchMock: ReturnType<typeof vi.fn>,
+  route: "/embeddings/reindex/identities" | "/embeddings/reindex/status",
+): number {
   return fetchMock.mock.calls.filter(([input]) =>
-    String(input instanceof Request ? input.url : input).includes(
-      "/embeddings/reindex/status",
-    ),
+    String(input instanceof Request ? input.url : input).includes(route),
   ).length;
+}
+
+function identityRequests(fetchMock: ReturnType<typeof vi.fn>): number {
+  return requestsTo(fetchMock, "/embeddings/reindex/identities");
 }
 
 // Settled means /me answered AND the render that reads it committed, so an
@@ -118,7 +123,7 @@ it('shows "Reindex needed" for ops too', async () => {
 it("renders nothing without the read grant, even when the binding changed", async () => {
   // The GRANT is what denies here, not the role or the seat — the fixture below
   // holds a full seat and says nothing about roles. A principal with nothing
-  // actionable on this surface never even probes the status read.
+  // actionable on this surface never even probes the identities read.
   const { fetchMock } = mount(
     { embedding_reindex: [] },
     {
@@ -131,7 +136,7 @@ it("renders nothing without the read grant, even when the binding changed", asyn
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   expect(
     fetchMock.mock.calls.some(([input]) =>
-      String(input).includes("/embeddings/reindex/status"),
+      String(input).includes("/embeddings/reindex/identities"),
     ),
   ).toBe(false);
   expect(screen.queryByText("Reindex needed")).toBeNull();
@@ -180,7 +185,7 @@ it("renders nothing when the store is current", async () => {
   expect(screen.queryByRole("status")).toBeNull();
 });
 
-it("renders nothing while the status probe is pending or errors", async () => {
+it("renders nothing while the identities probe is pending or errors", async () => {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(
       input instanceof Request ? input.url : String(input),
@@ -211,30 +216,40 @@ it("renders nothing while the status probe is pending or errors", async () => {
   expect(screen.queryByText("Reindex needed")).toBeNull();
 });
 
-it("asks for the status on a bound lane and the read grant, and draws the mismatch", async () => {
+it("asks for the identities on a bound lane and the read grant, and draws the mismatch", async () => {
   const { fetchMock } = mount(REINDEX_READER, MISMATCH, {
     settingsAvailability: { embedding_reindex: true },
   });
   expect(await screen.findByText("Reindex needed")).toBeTruthy();
-  expect(statusRequests(fetchMock)).toBe(1);
+  expect(identityRequests(fetchMock)).toBe(1);
+});
+
+// The status read counts the backlog, which the banner never shows; the shell
+// loads on every route, so it must never pay for that scan.
+it("never asks for the status read, which scans the backlog", async () => {
+  const { fetchMock } = mount(REINDEX_READER, MISMATCH, {
+    settingsAvailability: { embedding_reindex: true },
+  });
+  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(requestsTo(fetchMock, "/embeddings/reindex/status")).toBe(0);
 });
 
 it("asks nothing while /me has not answered", async () => {
   const { fetchMock } = mount(REINDEX_READER, MISMATCH, { pending: true });
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   await act(async () => {});
-  expect(statusRequests(fetchMock)).toBe(0);
+  expect(identityRequests(fetchMock)).toBe(0);
   expect(screen.queryByText("Reindex needed")).toBeNull();
 });
 
-// No embeddings model bound: the status read answers 501 there, so a grant
+// No embeddings model bound: the identities read answers 501 there, so a grant
 // holder asking for it would log a refusal on every shell route.
 it("asks nothing when the installation binds no embeddings model", async () => {
   const { fetchMock, client } = mount(REINDEX_READER, MISMATCH, {
     settingsAvailability: { embedding_reindex: false },
   });
   await settleMe(client);
-  expect(statusRequests(fetchMock)).toBe(0);
+  expect(identityRequests(fetchMock)).toBe(0);
   expect(screen.queryByText("Reindex needed")).toBeNull();
 });
 
@@ -244,6 +259,6 @@ it("asks nothing when /me carries no settings availability at all", async () => 
     settingsAvailability: null,
   });
   await settleMe(client);
-  expect(statusRequests(fetchMock)).toBe(0);
+  expect(identityRequests(fetchMock)).toBe(0);
   expect(screen.queryByText("Reindex needed")).toBeNull();
 });

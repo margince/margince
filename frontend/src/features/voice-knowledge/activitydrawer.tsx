@@ -31,6 +31,7 @@ import { problemCodeOf } from "../../lib/problem";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
 import { worklistKey } from "../worklist/worklist.queries";
+import { WebFormSubmission } from "./webformsubmission";
 import "../../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -223,7 +224,7 @@ function ActivityBody({
         )}
         <CustomFieldLines activity={activity} />
       </div>
-      {withheldOrBody(activity, t)}
+      {withheldOrBody(activity, filed, t)}
       {activity.content_state !== "withheld" && (
         <>
           <Panel title={t("files.title")}>
@@ -248,7 +249,11 @@ function ActivityBody({
               readOnly={!canUpdate || Boolean(activity.archived_at)}
               update={update}
               onClose={() => setOpened(null)}
-              onOpenSource={() => setOpened(null)}
+              // The follow-up's source is this activity, already open under
+              // it, so opening it returns there.
+              openerFor={(ref) =>
+                ref.id === activity.id ? () => setOpened(null) : undefined
+              }
             />
           )}
         </>
@@ -384,6 +389,7 @@ function colleaguesOf(activity: Activity): string[] {
 
 function withheldOrBody(
   activity: Activity,
+  filed: readonly ActivityLink[],
   t: ReturnType<typeof useT>,
 ): ReactNode {
   if (activity.content_state === "withheld") {
@@ -397,6 +403,10 @@ function withheldOrBody(
         {null}
       </SurfaceState>
     );
+  }
+  // The body says the same as text; the fields read better as fields.
+  if (activity.web_form) {
+    return <WebFormSubmission sent={activity.web_form} filed={filed} />;
   }
   const body = activity.body?.trim();
   if (!body) {

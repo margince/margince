@@ -5,7 +5,6 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -64,15 +63,14 @@ func legacySummaryPattern(template string) *regexp.Regexp {
 // kind, in the language it was written in.
 func rewordedDaySummary(kind, summary string) (string, bool) {
 	for lang, legacy := range legacySignalSummaryByLang {
-		said := signalSummaryCopyFor(lang)
 		switch kind {
 		case kindGhostedThread:
 			if legacySummaryPattern(legacy.ghostedThread).MatchString(summary) {
-				return fmt.Sprintf(said.ghostedThread, ghostedThresholdDays), true
+				return ghostedThreadParts{Days: ghostedThresholdDays}.worded(lang), true
 			}
 		case kindProjectGoneQuiet:
 			if m := legacySummaryPattern(legacy.projectQuiet).FindStringSubmatch(summary); m != nil {
-				return fmt.Sprintf(said.projectQuiet, m[1], projects.DefaultProjectQuietDays), true
+				return projectQuietParts{Project: m[1], Days: projects.DefaultProjectQuietDays}.worded(lang), true
 			}
 		}
 	}

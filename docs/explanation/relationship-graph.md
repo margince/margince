@@ -206,6 +206,13 @@ The real test sits in the **reciprocity part**, not in a role filter. A team mem
 copied has messages in one direction, so reciprocity puts them well below someone in a real exchange.
 They show up, ranked at their real level, and do not drop out.
 
+Copy still is not writing. Each edge also keeps `sent_count_90d`, the mail and chat messages the
+team member sent the contact as `from` (`graphMemberSent` in `search/graphedge.go`). A logged call or
+meeting is not a message sent. A contact's Reach row reads its two-way verdict and its one-way writers
+from this count, so a team member who was only copied is neither. A reader without activity access
+gets the edge without the count. A row folded before the column existed holds NULL, and readers keep
+the outbound count's reading until the row is folded again.
+
 **What does not make an edge**, and why:
 
 - **Anything outside `email`, `call`, `meeting`** (`relstrength.IsInteractionKind`, written into SQL

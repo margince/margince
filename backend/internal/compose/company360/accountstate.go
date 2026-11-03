@@ -139,7 +139,7 @@ func (a *assembly) readStateStrip() error {
 		})
 		strip.Signal.Kind = facts.Worst.Kind
 		strip.Signal.Severity = crmcontracts.Company360StateStripSignalSeverity(facts.Worst.Severity)
-		strip.Signal.Summary = facts.Worst.Summary
+		strip.Signal.Summary = a.svc.signalWords.ForReader(a.ctx, facts.Worst.Kind, facts.Worst.SummaryParams, facts.Worst.Summary)
 	}
 	a.out.StateStrip = &strip
 	return nil

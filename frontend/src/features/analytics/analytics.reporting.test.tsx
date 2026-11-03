@@ -20,7 +20,6 @@ afterEach(() => {
 });
 
 it.each([
-  "#/analytics",
   "#/analytics/performance",
   "#/analytics/win-loss",
   "#/analytics/stage-age",
@@ -47,7 +46,7 @@ it("opens the saved report library with the same reporting implementation", asyn
   render(<AnalyticsScreen />);
   await user.click(await screen.findByRole("button", { name: "Reports" }));
   expect(
-    await screen.findByRole("button", { name: "Create from Performance" }),
+    await screen.findByRole("link", { name: "Create from Performance" }),
   ).toBeTruthy();
 });
 

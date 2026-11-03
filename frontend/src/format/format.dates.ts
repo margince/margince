@@ -23,12 +23,18 @@ export function monthName(month: number, locale: Locale): string {
  * The month a calendar grid is showing, such as "August 2026".
  *
  * A month a reader is looking at, not a moment. The grid is built from local
- * dates, so this reads the local date back instead of pinning a zone.
+ * dates, so this reads the local date back instead of pinning a zone. A
+ * caller placing a UTC-dated moment names that zone.
  */
-export function monthAndYear(month: Date, locale: Locale): string {
+export function monthAndYear(
+  month: Date,
+  locale: Locale,
+  zone?: string,
+): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     month: "long",
     year: "numeric",
+    timeZone: zone,
   }).format(month);
 }
 

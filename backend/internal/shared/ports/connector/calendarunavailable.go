@@ -21,9 +21,9 @@ const CalendarUnavailableCode = "calendar_unavailable"
 // shape that cannot be trusted. A partial picture would double-book the host,
 // so availability refuses instead.
 //
-// Calendar and Reason are for the operator's log only. The client gets the
-// fixed sentence from MessageFault, because the calendar id is the host's
-// account and the reason is text a remote party chose.
+// The client gets the fixed sentence from MessageFault, because the calendar id
+// is the host's account and the reason is text a remote party chose. Only the
+// host's own availability read adds Calendar, for the host to fix it.
 type CalendarUnavailableError struct {
 	Calendar string
 	// Reason is the provider's machine code, or a short label when it named

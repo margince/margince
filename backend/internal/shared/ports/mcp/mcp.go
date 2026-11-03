@@ -128,6 +128,11 @@ type ToolSpec struct {
 	// volume budget refuses such a call outright instead of asking the connecting
 	// human for a release, so no inbox question is ever opened on its behalf.
 	ConfirmsInConversation bool
+	// AskUserFirst marks a tool whose effect cannot be taken back from the
+	// conversation. While it runs at once, its listing tells the client to get
+	// the user's yes first. Nothing enforces that; a human-approved call already
+	// has its yes.
+	AskUserFirst bool
 	// UI names the interactive view that renders this tool's result, and is
 	// nil on a tool that has none. It carries no authority: a view is a second
 	// renderer for an answer this tool already gives in text, never a second
@@ -159,9 +164,10 @@ type ToolSpec struct {
 
 // ToolAction is one choice a router offers.
 type ToolAction struct {
-	Action string
-	Verb   string
-	Tier   RiskTier
+	Action       string
+	Verb         string
+	Tier         RiskTier
+	AskUserFirst bool
 }
 
 // ReadOnly reports whether the tool only reads — the protocol's

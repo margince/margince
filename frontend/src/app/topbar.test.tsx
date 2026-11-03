@@ -234,7 +234,7 @@ describe("Top bar trail", () => {
 
     expect(stopTexts()).toEqual(["Contacts", "Anna Weber"]);
     const back = within(trail()).getByRole("link", { name: "Contacts" });
-    expect(back.getAttribute("href")).toBe("#/contacts");
+    expect(back.getAttribute("href")).toBe("/#/contacts");
     // The record itself is the page: not a link, and the one current claim.
     const stops = within(trail()).getAllByRole("listitem");
     const last = stops[stops.length - 1];
@@ -269,7 +269,7 @@ describe("Top bar trail", () => {
       within(trail())
         .getByRole("link", { name: "Settings" })
         .getAttribute("href"),
-    ).toBe("#/settings");
+    ).toBe("/#/settings");
     expect(within(trail()).queryByRole("link", { name: "Account" })).toBeNull();
   });
 
@@ -297,7 +297,7 @@ describe("Top bar trail", () => {
       within(trail())
         .getByRole("link", { name: "Settings" })
         .getAttribute("href"),
-    ).toBe("#/settings");
+    ).toBe("/#/settings");
   });
 
   // AC-shell-1k: every route resolves to real copy. A hash nobody answers used
@@ -373,7 +373,7 @@ describe("Top bar trail below Filters and views", () => {
       within(trail())
         .getByRole("link", { name: "Filters and views" })
         .getAttribute("href"),
-    ).toBe("#/filters");
+    ).toBe("/#/filters");
   });
 
   it("names an opened view once the page has read it, with one read between them", async () => {
@@ -421,7 +421,7 @@ describe("Top bar trail below Filters and views", () => {
       within(trail())
         .getByRole("link", { name: liveList.name })
         .getAttribute("href"),
-    ).toBe(`#/lists/${LIVE_ID}`);
+    ).toBe(`/#/lists/${LIVE_ID}`);
     expect(reads(seen, `/lists/${LIVE_ID}`)).toHaveLength(1);
   });
 

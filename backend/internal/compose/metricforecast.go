@@ -10,8 +10,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -24,27 +27,27 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	scope := forecasting.Scope{Kind: string(frame.Scope.Kind), ID: (*ids.UUID)(frame.Scope.Id)}
-	deals, _, withheld, err := forecastDealsForPipeline(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
+	assembly, err := assembleForecast(ctx, tx, period, scope, frame.EvaluatedAt, base, (*ids.UUID)(frame.PipelineId))
+	if errors.As(err, new(auth.IndividualPerformanceOffError)) {
+		// The landing alone is withheld; the evaluation's other figures stand.
+		if e.compared != nil {
+			e.compared.operands = &reporting.ForecastOperands{Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End}, ColleagueWithheld: true}
+		}
+		return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+	}
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	readings, err := forecasting.Compute(period, period.LocalDay(frame.EvaluatedAt), deals)
-	if err != nil {
-		return nil, crmcontracts.ReportingCoverage{}, err
-	}
+	readings, withheld := assembly.Readings, assembly.Limited
 	measure, err := ForecastForwardMeasure(ctx, tx)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	var called *int64
-	if frame.PipelineId == nil {
-		call, err := e.forecast.CurrentCallTx(ctx, tx, period, scope)
-		if err == nil {
-			called = &call.AmountMinor
-		} else if !forecasting.IsNoStandingCall(err) {
-			return nil, crmcontracts.ReportingCoverage{}, err
-		}
+	call, seen, err := forecastCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
 	}
+	called := seenCall(call, seen)
 	landing, err := forecasting.ProjectLanding(readings, measure, called)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -53,6 +56,31 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
+	qualifiedMinor, enforced, err := forecastQualifiedOpen(ctx, tx, readings)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	var qualifiedOpen *int64
+	if enforced {
+		qualifiedOpen = &qualifiedMinor
+	}
+	facts, err = forecastOpenFacts(frame, facts, readings, qualifiedOpen)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	facts, err = forecastRangeFacts(frame, facts, readings.Range)
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
+	// A reader with no capture, such as the weekly digest, compares nothing.
+	if e.compared != nil {
+		operands := forecastOperands(period, readings, landing, qualifiedOpen, frame.PipelineId != nil && measure == forecasting.MeasureManagerCall)
+		if err := guardForecastOperands(ctx, tx, period, scope, frame, readings, operands); err != nil {
+			return nil, crmcontracts.ReportingCoverage{}, err
+		}
+		e.compared.operands = operands
+		e.compared.basis = reportingForecastBasis(period, readings, landing, called)
+	}
 	for i := range facts {
 		if facts[i].SourceType == reportingForecastProjection {
 			scope := frame.Scope
@@ -60,6 +88,29 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		}
 	}
 	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
+}
+
+// forecastCallSeen is the call GET /forecast shows this seat, by the same
+// rule. A call covers every pipeline, so a reading of one pipeline has none.
+// The reporting landing and a live share both read the call through it.
+func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (int64, bool, error) {
+	if onePipeline {
+		return 0, false, nil
+	}
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
+	if err != nil {
+		return 0, false, err
+	}
+	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
+	return call.AmountMinor, seen, err
+}
+
+// seenCall is the call amount a landing takes: nil when no call was seen.
+func seenCall(amount int64, seen bool) *int64 {
+	if !seen {
+		return nil
+	}
+	return &amount
 }
 
 func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
@@ -142,4 +193,149 @@ func forecastAuthoredFacts(frame crmcontracts.ReportingContext, out []reporting.
 		out = append(out, reporting.Fact{Metric: reportingForecastLanding, ContextID: reading.context, SourceType: reportingForecastProjection, Provenance: string(landing.Measure), Money: reading.amount, Row: crmcontracts.ReportingEvidenceRow{Key: reading.context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[reading.context]), Value: &value}})
 	}
 	return out, nil
+}
+
+const (
+	forecastOpenContext      = "forecast_open"
+	forecastQualifiedContext = "forecast_open_qualified"
+	forecastRangeLowContext  = "forecast_range_low"
+	forecastRangeHighContext = "forecast_range_high"
+)
+
+// forecastRangeFacts adds the two ends of the forecast's range as authored
+// totals beside the landing. The metric and its evidence then state the range
+// GET /forecast states.
+func forecastRangeFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, drawn *forecasting.Range) ([]reporting.Fact, error) {
+	if drawn == nil {
+		return out, nil
+	}
+	for _, end := range []struct {
+		context string
+		amount  int64
+	}{{forecastRangeLowContext, drawn.LowMinor}, {forecastRangeHighContext, drawn.HighMinor}} {
+		if end.amount > reportingExactInteger {
+			return nil, errors.New("forecast exceeds exact reporting range")
+		}
+		value := float64(end.amount)
+		out = append(out, reporting.Fact{
+			Metric: reportingForecastLanding, ContextID: end.context, SourceType: reportingForecastProjection,
+			Money: new(end.amount),
+			Row: crmcontracts.ReportingEvidenceRow{
+				Key: end.context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[end.context]), Value: &value,
+			},
+		})
+	}
+	return out, nil
+}
+
+// forecastQualifiedOpen is the open money the qualified forecast keeps, and
+// false while it is switched off. With enforcement on, every deal read carries
+// a qualification, so only a quarter with no deal needs the setting itself.
+func forecastQualifiedOpen(ctx context.Context, tx pgx.Tx, readings forecasting.Readings) (int64, bool, error) {
+	if readings.Qualified != nil {
+		return readings.Qualified.OpenMinor, true, nil
+	}
+	if len(readings.Contributions) > 0 {
+		return 0, false, nil
+	}
+	enforced, err := config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
+	return 0, enforced, err
+}
+
+// forecastOpenFacts adds the open totals a target comparison divides, as
+// authored totals beside the landing. A deal with no exchange rate leaves the
+// total unknown rather than short.
+func forecastOpenFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, readings forecasting.Readings, qualifiedOpen *int64) ([]reporting.Fact, error) {
+	totals := map[string]*int64{forecastOpenContext: &readings.OpenMinor}
+	if qualifiedOpen != nil {
+		totals[forecastQualifiedContext] = qualifiedOpen
+	}
+	for _, context := range []string{forecastOpenContext, forecastQualifiedContext} {
+		amount, ok := totals[context]
+		if !ok {
+			continue
+		}
+		if *amount > reportingExactInteger {
+			return nil, errors.New("forecast exceeds exact reporting range")
+		}
+		fact := reporting.Fact{Metric: reportingForecastLanding, ContextID: context, SourceType: reportingForecastProjection, Row: crmcontracts.ReportingEvidenceRow{Key: context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[context])}}
+		if readings.FxMissingCount == 0 {
+			value := float64(*amount)
+			fact.Money, fact.Row.Value = amount, &value
+		}
+		out = append(out, fact)
+	}
+	return out, nil
+}
+
+// forecastOperands are the figures a target comparison rests on, read from
+// the same readings as the landing.
+func forecastOperands(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, qualifiedOpen *int64, callOverPipeline bool) *reporting.ForecastOperands {
+	ref := func(context string) crmcontracts.ReportingEvidenceRef {
+		return crmcontracts.ReportingEvidenceRef{Metric: reportingForecastLanding, ContextId: context}
+	}
+	out := &reporting.ForecastOperands{
+		Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
+		Measure: crmcontracts.ReportingTargetComparisonBasis(landing.Measure), LandingMinor: landing.AmountMinor,
+		WonMinor: readings.WonMinor, OpenMinor: readings.OpenMinor, QualifiedOpenMinor: qualifiedOpen,
+		FxMissing: readings.FxMissingCount > 0, CallOverPipeline: callOverPipeline,
+		CallBelowWon: landing.Caveat == forecasting.CaveatCallBelowActual,
+		Operands:     crmcontracts.ReportingComparisonOperands{Won: ref("forecast_won"), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
+	}
+	if qualifiedOpen != nil {
+		qualified := ref(forecastQualifiedContext)
+		out.Operands.QualifiedOpenPipeline = &qualified
+	}
+	return out
+}
+
+// reportingForecastBasis is what the landing and its range rest on, in the shape
+// GET /forecast gives the landing.
+func reportingForecastBasis(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, called *int64) *crmcontracts.ReportingForecastBasis {
+	// A deal with no rate is priced but left out of every total.
+	included := int64(readings.PricedCount - readings.FxMissingCount)
+	return &crmcontracts.ReportingForecastBasis{
+		Landing:        forecasting.LandingToWire(landing),
+		Period:         crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
+		CallMinor:      called,
+		EligibleCount:  int64(readings.EligibleCount),
+		PricedCount:    int64(readings.PricedCount),
+		FxMissingCount: int64(readings.FxMissingCount),
+		IncludedCount:  &included,
+	}
+}
+
+// guardForecastOperands marks what the comparison may not show. One is a
+// population the reader cannot fully see. The other is a total one colleague
+// besides the reader makes up, while individual performance is off. The
+// totals are open, won, and every deal read, which the landing rests on.
+func guardForecastOperands(ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope, frame crmcontracts.ReportingContext, readings forecasting.Readings, operands *reporting.ForecastOperands) error {
+	narrowed, err := forecastPopulationNarrowed(ctx, tx, period, scope, (*ids.UUID)(frame.PipelineId))
+	if err != nil {
+		return err
+	}
+	operands.Narrowed = narrowed
+	var open, won, read []ids.UUID
+	for _, contribution := range readings.Contributions {
+		if contribution.Owner == "" {
+			continue
+		}
+		owner, err := ids.Parse(contribution.Owner)
+		if err != nil {
+			return err
+		}
+		read = append(read, owner)
+		if contribution.InOpen {
+			open = append(open, owner)
+		}
+		if contribution.InWon {
+			won = append(won, owner)
+		}
+	}
+	err = requireNoLoneColleague(ctx, tx, [][]ids.UUID{open, won, read})
+	if errors.As(err, new(auth.IndividualPerformanceOffError)) {
+		operands.ColleagueWithheld = true
+		return nil
+	}
+	return err
 }

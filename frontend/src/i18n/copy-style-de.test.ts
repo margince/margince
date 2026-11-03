@@ -58,6 +58,7 @@ const SPOKEN_BY_THE_READER = new Set<string>([
   "commitment.takeOver",
   "directSend.acknowledge",
   "book.consentWording",
+  "worklist.ready.confirm",
 ]);
 const SPOKEN_BY_THE_READER_PREFIX = "prefs.wording";
 

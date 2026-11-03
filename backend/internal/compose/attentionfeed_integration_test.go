@@ -129,9 +129,8 @@ func TestAStagedProposalReachesTheDecisionLane(t *testing.T) {
 	}
 }
 
-// A near-match found by the real dedupe ladder. The pair is what the reader
-// compares, so a candidate that arrives without both faces named is a card
-// nobody can answer.
+// A near-match found by the real dedupe ladder reaches the lane as a contact
+// case, with both contacts named, and the pair itself does not.
 func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	e := integration.Setup(t)
 	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Lucy Vo"}); err != nil {
@@ -142,15 +141,23 @@ func TestADetectedDuplicateReachesTheDecisionLane(t *testing.T) {
 	}
 
 	day := assembleFeed(e.Admin(), t, e, time.Now().UTC())
-	if got := sourcesOn(day.NeedsYou); len(got) != 1 || got[0] != "dedupe_candidate" {
-		t.Fatalf("the decision lane = %v, want the pair the create detected", got)
+	if got := sourcesOn(day.NeedsYou); len(got) != 1 || got[0] != "contact_case" {
+		t.Fatalf("the decision lane = %v, want the case the create detected", got)
 	}
 	item := day.NeedsYou[0]
-	if item.Pair == nil {
-		t.Fatal("the pair is absent: a merge card names both records or it cannot be answered")
+	if item.ContactCase == nil || len(item.ContactCase.Members) != 2 {
+		t.Fatalf("the case reads %+v, want both contacts", item.ContactCase)
 	}
-	if item.Pair.Left.Label == "" || item.Pair.Right.Label == "" {
-		t.Errorf("the pair reads %q vs %q, want both records named", item.Pair.Left.Label, item.Pair.Right.Label)
+	for _, member := range item.ContactCase.Members {
+		if member.Label == "" {
+			t.Errorf("a member is unnamed: %+v", member)
+		}
+	}
+	if item.Id != item.ContactCase.AnchorId.String() {
+		t.Errorf("the row id %s is not the case anchor %s", item.Id, item.ContactCase.AnchorId)
+	}
+	if day.Counts.DuplicatesOpen == nil || *day.Counts.DuplicatesOpen != 1 {
+		t.Errorf("duplicates_open = %v, want the one case", day.Counts.DuplicatesOpen)
 	}
 }
 

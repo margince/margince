@@ -41,7 +41,7 @@ import "./composed.css";
 export type TimelineGroup = {
   /** The newest member's id; the list keys on it. */
   id: string;
-  kind: "thread" | "bulk" | "single";
+  kind: "thread" | "bulk" | "newsletters" | "single";
   /** Newest first, like the list itself. */
   entries: TimelineEntry[];
   /** This group may continue past what the page holds. */
@@ -104,6 +104,12 @@ export type TimelineEntry = {
    */
   direction?: "inbound" | "outbound" | null;
   /**
+   * Which side wrote it, when known. `direction` is only how the copy moved.
+   * A colleague's inbound copy is still `ours`. The adapter fills it from
+   * correspondenceSide (lib/messagevoice.ts); absent falls back to direction.
+   */
+  side?: "ours" | "theirs";
+  /**
    * Who was on the other end, already resolved to names by the caller.
    *
    * "We sent" answers half a question. The half a reader came for is who it
@@ -127,6 +133,11 @@ export type TimelineEntry = {
    * this component was one of them.
    */
   emailSummary?: EmailSummary;
+  /**
+   * Whose move a chat message is, the server's own reading by the rules the
+   * mail badge follows. Present only on a readable `message` row.
+   */
+  messageMove?: EmailSummary["move"];
   /**
    * Opens the canonical detail for this message. The caller owns it, because
    * the screen mounts the drawer, not the list. Absent leaves the row readable
@@ -259,12 +270,25 @@ export const TIMELINE_ICON = {
 // get. A mail we did not write is not a place to render a friendly label over
 // a different address.
 
-// directionClass tracks the row to one side of the spine: ours or theirs.
-export function directionClass(direction: TimelineEntry["direction"]): string {
-  if (direction === "outbound") {
+// sideOf answers which side wrote an entry: known authorship first, then
+// transport direction. Every authorship reading on the timeline goes through it.
+export function sideOf(entry: TimelineEntry): "ours" | "theirs" | undefined {
+  if (entry.side) {
+    return entry.side;
+  }
+  if (entry.direction === "outbound") {
+    return "ours";
+  }
+  return entry.direction === "inbound" ? "theirs" : undefined;
+}
+
+// sideClass tracks the row to one side of the spine: ours or theirs.
+export function sideClass(entry: TimelineEntry): string {
+  const side = sideOf(entry);
+  if (side === "ours") {
     return "tl-out";
   }
-  return direction === "inbound" ? "tl-in" : "";
+  return side === "theirs" ? "tl-in" : "";
 }
 
 export function noteClass(entry: TimelineEntry): string {
@@ -288,7 +312,15 @@ export function isConversationKind(kind: string): boolean {
  * conversation, never on the members of an expanded thread.
  */
 export function entryMove(entry: TimelineEntry): MessageKey | undefined {
-  return moveLabel(entry.emailSummary, entry.withheld === true);
+  const move = entryMoveValue(entry);
+  return moveLabel(move ? { move } : undefined, entry.withheld === true);
+}
+
+// entryMoveValue is the server's move for a mail or a chat message alike.
+function entryMoveValue(
+  entry: TimelineEntry,
+): EmailSummary["move"] | undefined {
+  return entry.emailSummary?.move ?? entry.messageMove;
 }
 
 export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
@@ -299,7 +331,7 @@ export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   }
   return (
     <Badge
-      tone={entry.emailSummary?.move === "needs_reply" ? "warning" : undefined}
+      tone={entryMoveValue(entry) === "needs_reply" ? "warning" : undefined}
     >
       {t(move)}
     </Badge>
@@ -358,9 +390,13 @@ export function entryTimeOfDay(
 // five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
-  const base =
-    group.kind === "bulk" ? "timeline.group.bulk" : "timeline.group.thread";
-  const total = translatePlural(locale, base, count, {
+  const base = {
+    bulk: "timeline.group.bulk",
+    newsletters: "timeline.group.newsletters",
+    thread: "timeline.group.thread",
+    single: "timeline.group.thread",
+  } as const satisfies Record<TimelineGroup["kind"], string>;
+  const total = translatePlural(locale, base[group.kind], count, {
     count: formatNumber(count, locale),
   });
   if (group.kind !== "thread") {
@@ -387,9 +423,10 @@ export function threadSides(entries: readonly TimelineEntry[]): {
     if (entry.automaticKind) {
       continue;
     }
-    if (entry.direction === "inbound") {
+    const side = sideOf(entry);
+    if (side === "theirs") {
       theirs++;
-    } else if (entry.direction === "outbound") {
+    } else if (side === "ours") {
       ours++;
     }
   }
@@ -410,6 +447,10 @@ export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {
 // the contact writing.
 export function AutomaticFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
+  // A relay send's own tag already says Margince sent it, and for whom.
+  if (entry.provenance.kind === "system" && entry.provenance.relay) {
+    return null;
+  }
   const label = automaticLabel(entry);
   return label ? <Badge>{t(label)}</Badge> : null;
 }

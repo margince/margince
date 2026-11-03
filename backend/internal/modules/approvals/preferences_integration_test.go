@@ -59,9 +59,9 @@ func TestAPersonalMutePreservesAnotherReadersQueueAndTheSharedProposal(t *testin
 		t.Fatal(err)
 	}
 	if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		targeted, readErr := e.svc.PendingForTarget(ctx, tx, *proposal.TargetType, *proposal.TargetID, 10)
-		if readErr == nil && len(targeted) != 1 {
-			t.Fatalf("target review lost muted proposal: %v", targeted)
+		targeted, readErr := e.svc.PendingForTarget(ctx, tx, *proposal.TargetType, *proposal.TargetID)
+		if readErr == nil && len(targeted.Approvals) != 1 {
+			t.Fatalf("target review lost muted proposal: %v", targeted.Approvals)
 		}
 		return readErr
 	}); err != nil {

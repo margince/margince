@@ -85,7 +85,7 @@ func seedSubjectAddress(t *testing.T, e *channelConsentEnv) {
 func issueLink(t *testing.T, e *channelConsentEnv) IssuedConfirm {
 	t.Helper()
 	seedSubjectAddress(t, e)
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact, "")
 	if err != nil {
 		t.Fatalf("mint a confirm link: %v", err)
 	}
@@ -476,7 +476,7 @@ func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact, "")
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
 func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	_, err := e.store.IssueConfirmToken(e.ctx, e.contact)
+	_, err := e.store.IssueConfirmToken(e.ctx, e.contact, "")
 	if _, ok := errors.AsType[*ValidationError](err); !ok {
 		t.Fatalf("err = %v, want a validation error", err)
 	}
@@ -556,7 +556,7 @@ func TestEachConfirmLinkAnswersInItsOwnShape(t *testing.T) {
 	// And the record branch still answers its own shape, with the
 	// discriminator on it. Without this the union could be satisfied by
 	// tagging everything as a subscription.
-	recordLink, err := e.store.IssueConfirmToken(e.ctx, e.contact)
+	recordLink, err := e.store.IssueConfirmToken(e.ctx, e.contact, "")
 	if err != nil {
 		t.Fatalf("mint a record link: %v", err)
 	}

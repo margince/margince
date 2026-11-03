@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useRef, useState } from "react";
 import type { components } from "../api/schema";
+import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -303,7 +304,7 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
       : "";
   const provenance = useTooltip<HTMLAnchorElement>(added);
   return (
-    <a
+    <AppLink
       ref={provenance.ref}
       className="tagspanel-open"
       href={`#/tags/${tag.tag_id}`}
@@ -311,7 +312,7 @@ function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
     >
       <TagPill name={tag.name} tone={tag.color} archived={tag.archived} />
       {provenance.tip}
-    </a>
+    </AppLink>
   );
 }
 

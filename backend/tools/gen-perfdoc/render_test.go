@@ -178,3 +178,18 @@ func budgetIndex(t *testing.T, id string) int {
 	t.Fatalf("%s is not a published budget", id)
 	return -1
 }
+
+func TestTheStrictHomeSectionCountsFailuresAndNamesEachReason(t *testing.T) {
+	page := render(fixtureRecords(t))
+	for _, want := range []string{
+		"## Strict Home acceptance",
+		"**Failed** on 2 of 3 rows.",
+		"| R02 | `worklist` | rep | 2899 ms | 750 ms | 30 | **FAILED**: p95 2899 ms, over 750 ms |",
+		"| R05 | `home_brief` | rep | 26.0 ms | 200 ms | 30 | pass |",
+		"| R06 | `admin_rail_embed_reindex_identities` | admin |  | 100 ms | 0 | **FAILED**: no data |",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the page lacks %q", want)
+		}
+	}
+}

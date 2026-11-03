@@ -11,10 +11,14 @@ package magic
 // answer a decision is a second place for the two answers to disagree.
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -23,6 +27,9 @@ import (
 // Handlers binds the route to the read.
 type Handlers struct {
 	svc *Service
+	// home serves a reader's receipt over the default window while it holds;
+	// nil reads every receipt fresh.
+	home *homecache.Cache
 }
 
 // NewHandlers binds the route.
@@ -37,7 +44,7 @@ func (h Handlers) GetMagic(
 	if params.Limit != nil {
 		limit = *params.Limit
 	}
-	out, err := h.svc.Read(r.Context(), params.Since, limit)
+	out, err := h.receipt(r.Context(), params.Since, limit)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -60,4 +67,33 @@ func (h Handlers) GetMagicLineRecords(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// WithHomeCache serves a reader's receipt over the default window from c while
+// it holds.
+func (h Handlers) WithHomeCache(c *homecache.Cache) Handlers {
+	h.home = c
+	return h
+}
+
+// receipt is the read GetMagic answers. A window the caller names is a question
+// about the past, read fresh; the default window is what Home opens on.
+func (h Handlers) receipt(ctx context.Context, since *time.Time, limit int) (crmcontracts.MagicReceipt, error) {
+	reader, cacheable := homecache.ReaderOf(ctx)
+	if h.home == nil || !cacheable || since != nil {
+		return h.svc.Read(ctx, since, limit)
+	}
+	// A new brief moves the window, so the window is part of the question.
+	window, err := h.svc.windowKey(ctx)
+	if err != nil {
+		return crmcontracts.MagicReceipt{}, err
+	}
+	key := fmt.Sprintf("limit=%d&window=%s", limit, window)
+	fresh := func(ctx context.Context) (crmcontracts.MagicReceipt, error) { return h.svc.Read(ctx, nil, limit) }
+	return homecache.Serve(ctx, h.home, reader, homecache.Magic, key, fresh, startsNoWalk)
+}
+
+// startsNoWalk is a receipt's walk: it starts none.
+func startsNoWalk(crmcontracts.MagicReceipt) (*ids.UUID, error) {
+	return nil, nil //nolint:nilnil // a receipt has no walk, which Store reads as nil
 }

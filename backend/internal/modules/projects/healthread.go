@@ -114,9 +114,10 @@ func (s *Store) CurrentHealthTx(
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := tx.QueryRow(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT `+healthColumns+` FROM project_health_assessment a WHERE `+currentHealthWhere,
-		arg(id)), args...)
+		arg(id))
+	row := tx.QueryRow(ctx, query, args...)
 	out, err := scanHealth(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		//nolint:nilnil // "nobody has judged this project" IS the answer, not a

@@ -328,7 +328,7 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeNull();
     const decide = within(waiting).getByRole("link", { name: "Decide" });
     expect(decide.getAttribute("href")).toBe(
-      "#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
+      "/#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
     );
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
     expect(within(waiting).queryByText("Undo")).toBeNull();

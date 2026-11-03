@@ -227,11 +227,9 @@ func registeredNames(descs []connector.Descriptor) map[string]bool {
 // exists only in the database still gets its connectors registered.
 //
 // Precisely what this pins, and no more: that CaptureSyncRegistry hands a
-// resolver to BOTH vendors' registrations. Registration is on the resolver
-// EXISTING (googleAppReachable and registerMicrosoftConnectors ask whether
-// anything could supply an app, not whether something does), so this passes with
-// an empty store on purpose — the environment is empty here to take the other
-// source away, not to stand in for a configured installation.
+// resolver to both vendors' registrations. appReachable registers on the
+// resolver existing, not on it finding an app, so an empty store passes. The
+// environment is empty only to take that source away.
 //
 // That is the seam this ticket is about. The dispatcher walks
 // registry.Connectors(), so a vendor the worker never registered is a mailbox
@@ -240,7 +238,7 @@ func registeredNames(descs []connector.Descriptor) map[string]bool {
 // Google resolved a stored app, and nothing failed to say so.
 //
 // Whether a resolver then RESOLVES is a different question, held elsewhere:
-// TestAStoredAppRegistersTheGoogleConnectors over googleAppReachable's sources,
+// TestAStoredAppRegistersTheGoogleConnectors over appReachable's sources,
 // and TestEveryMicrosoftMethodReachesTheSameResolvedApp end to end through the
 // Graph authorizer.
 func TestTheWorkerCarriesARuntimeResolverForEveryVendor(t *testing.T) {

@@ -296,7 +296,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			SELECT `+candidateColumns+`
 			  FROM activity a
 			  LEFT JOIN activity_participant p ON p.activity_id = a.id
@@ -304,7 +304,8 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 			 WHERE %[2]s
 			 GROUP BY `+candidateGroupBy+`
 			 ORDER BY a.occurred_at
-			 LIMIT $%[3]d`, body, waiting, arg(limit), prior), args...)
+			 LIMIT $%[3]d`, body, waiting, arg(limit), prior)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
@@ -365,7 +366,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		body := arg(bodyLimit)
 		prior := arg(priorBodyLimit)
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			SELECT `+candidateColumns+`
 			  FROM activity a
 			  LEFT JOIN activity_participant p ON p.activity_id = a.id
@@ -397,7 +398,8 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			           AND judged.channel_provider = coalesce(a.channel_provider, ''))
 			 GROUP BY `+candidateGroupBy+`
 			 ORDER BY a.occurred_at DESC
-			 LIMIT $%[3]d`, body, arg(ruleset), arg(limit), prior), args...)
+			 LIMIT $%[3]d`, body, arg(ruleset), arg(limit), prior)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

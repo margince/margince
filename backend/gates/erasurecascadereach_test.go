@@ -7,6 +7,7 @@ package gates
 
 import (
 	"go/ast"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -35,6 +36,18 @@ import (
 func TestEveryFileTheCascadeExecutesSQLFromIsCensused(t *testing.T) {
 	t.Parallel()
 	reached := filesReachableFrom(t, "internal/modules/privacy", "EraseContact")
+	delegated := false
+	for path := range reached {
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		delegated = delegated || gatekit.CallsAny(file, []string{"PurgePartySourcesForEmailsTx"})
+	}
+	if !delegated {
+		t.Fatal("subject erasure no longer calls the party-source owner's purge seam")
+	}
+	maps.Copy(reached, filesReachableFrom(t, "internal/modules/capture", "PurgePartySourcesForEmailsTx"))
 
 	cascade := map[string]bool{}
 	for _, path := range erasureCascadeFiles {

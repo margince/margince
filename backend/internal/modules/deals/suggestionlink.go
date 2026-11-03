@@ -49,6 +49,15 @@ func LinkSuggestionTx(ctx context.Context, tx pgx.Tx, suggestion, deal ids.UUID,
 
 // LockMatchingDealTx keeps the authorized target on the cited company through the link transaction.
 func LockMatchingDealTx(ctx context.Context, tx pgx.Tx, company, deal ids.UUID) error {
+	return holdMatchingDeal(ctx, tx, company, deal, false)
+}
+
+// LockOpenMatchingDealTx holds an eligible company deal through qualification.
+func LockOpenMatchingDealTx(ctx context.Context, tx pgx.Tx, company, deal ids.UUID) error {
+	return holdMatchingDeal(ctx, tx, company, deal, true)
+}
+
+func holdMatchingDeal(ctx context.Context, tx pgx.Tx, company, deal ids.UUID, openOnly bool) error {
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return err
 	}
@@ -57,7 +66,11 @@ func LockMatchingDealTx(ctx context.Context, tx pgx.Tx, company, deal ids.UUID) 
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	query := fmt.Sprintf(`SELECT id FROM deal WHERE id = $%d AND company_id = $%d AND archived_at IS NULL FOR UPDATE`, arg(deal), arg(company))
+	where := "archived_at IS NULL"
+	if openOnly {
+		where += " AND status = 'open'"
+	}
+	query := fmt.Sprintf(`SELECT id FROM deal WHERE id = $%d AND company_id = $%d AND %s FOR UPDATE`, arg(deal), arg(company), where)
 	var locked ids.UUID
 	if err := tx.QueryRow(ctx, query, args...).Scan(&locked); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -65,5 +78,8 @@ func LockMatchingDealTx(ctx context.Context, tx pgx.Tx, company, deal ids.UUID) 
 		}
 		return err
 	}
-	return nil
+	if openOnly {
+		return auth.EnsureChangeable(ctx, tx, dealTable, deal)
+	}
+	return auth.EnsureWritable(ctx, tx, dealTable, deal)
 }

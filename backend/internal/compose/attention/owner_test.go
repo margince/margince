@@ -219,7 +219,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		Undelivered:        lane(item("undelivered", "undelivered")),
 		NeedsYou: []crmcontracts.AttentionItem{
 			item("approval", "approval"), item("pair", "dedupe_candidate"), item("suggestion", "deal_suggestion"),
-			item("tag-suggestion", "tag_suggestion"),
+			item("tag-suggestion", "tag_suggestion"), item("case", "contact_case"),
 		},
 		RelationshipDecay: lane(item("decay", "relationship_decay")),
 		CaptureHealth:     lane(item("capture", "capture_health")),

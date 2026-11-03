@@ -59,13 +59,13 @@ func (s *Store) MarkWorklistRowsDone(ctx context.Context, rows []WorklistRowRef)
 		// marked done again holds until its subject moves after the new press.
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		if _, err := tx.Exec(ctx, sprintf(`
+		query := sprintf(`
 			INSERT INTO worklist_done (reader_id, source, row_id, done_at, set_by)
 			VALUES ($%[1]d, $%[2]d, $%[3]d, $%[4]d, $%[5]d)
 			ON CONFLICT (reader_id, source, row_id)
 			DO UPDATE SET done_at = EXCLUDED.done_at, set_by = EXCLUDED.set_by`,
-			arg(reader), arg(row.Source), arg(row.RowID), arg(s.now().UTC()), arg(capturedBy)),
-			args...); err != nil {
+			arg(reader), arg(row.Source), arg(row.RowID), arg(s.now().UTC()), arg(capturedBy))
+		if _, err := tx.Exec(ctx, query, args...); err != nil {
 			return fmt.Errorf("activities: marking a worklist row done: %w", err)
 		}
 		return recordDone(ctx, tx, reader, row, doneActionDone)
@@ -85,10 +85,11 @@ func (s *Store) ReopenWorklistRows(ctx context.Context, rows []WorklistRowRef) e
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		tag, err := tx.Exec(ctx, sprintf(`
+		query := sprintf(`
 			DELETE FROM worklist_done
 			 WHERE reader_id = $%[1]d AND source = $%[2]d AND row_id = $%[3]d`,
-			arg(reader), arg(row.Source), arg(row.RowID)), args...)
+			arg(reader), arg(row.Source), arg(row.RowID))
+		tag, err := tx.Exec(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("activities: reopening a worklist row: %w", err)
 		}
@@ -120,12 +121,13 @@ func (s *Store) DoneRows(ctx context.Context, tx pgx.Tx, among []WorklistRowRef)
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	rows, err := tx.Query(ctx, sprintf(`
+	query := sprintf(`
 		SELECT source, row_id, done_at FROM worklist_done
 		 WHERE reader_id = $%[1]d
 		   AND (source = $%[2]d
 		     OR (source, row_id) IN (SELECT * FROM unnest($%[3]d::text[], $%[4]d::text[])))`,
-		arg(reader), arg(string(crmcontracts.WorklistItemSourceBatch)), arg(sources), arg(rowIDs)), args...)
+		arg(reader), arg(string(crmcontracts.WorklistItemSourceBatch)), arg(sources), arg(rowIDs))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading worklist rows marked done: %w", err)
 	}

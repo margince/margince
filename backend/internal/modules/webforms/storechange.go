@@ -29,6 +29,8 @@ type UpdateInput struct {
 	ConsentRequired      *bool
 	ConsentPolicyVersion *string
 	ConsentWording       *string
+	PrivacyNotice        *string
+	PrivacyNoticeURL     *string
 	RedirectURL          *string
 	SuccessMessage       *string
 	State                *string
@@ -43,6 +45,8 @@ const (
 	colOwnerID              = "owner_id"
 	colConsentPolicyVersion = "consent_policy_version"
 	colConsentWording       = "consent_wording"
+	colPrivacyNotice        = "privacy_notice"
+	colPrivacyNoticeURL     = "privacy_notice_url"
 	colRedirectURL          = "redirect_url"
 	colSuccessMessage       = "success_message"
 )
@@ -53,6 +57,8 @@ func clearableColumns(f Form) map[string]storekit.Clearable {
 		colOwnerID:              {Column: colOwnerID, Current: f.OwnerID},
 		colConsentPolicyVersion: {Column: colConsentPolicyVersion, Current: f.ConsentPolicyVersion},
 		colConsentWording:       {Column: colConsentWording, Current: f.ConsentWording},
+		colPrivacyNotice:        {Column: colPrivacyNotice, Current: f.PrivacyNotice},
+		colPrivacyNoticeURL:     {Column: colPrivacyNoticeURL, Current: f.PrivacyNoticeURL},
 		colRedirectURL:          {Column: colRedirectURL, Current: f.RedirectURL},
 		colSuccessMessage:       {Column: colSuccessMessage, Current: f.SuccessMessage},
 	}
@@ -79,6 +85,8 @@ func (in UpdateInput) merged(f Form) (Form, error) {
 	assign(&f.OwnerID, in.OwnerID)
 	assign(&f.ConsentPolicyVersion, in.ConsentPolicyVersion)
 	assign(&f.ConsentWording, in.ConsentWording)
+	assign(&f.PrivacyNotice, in.PrivacyNotice)
+	assign(&f.PrivacyNoticeURL, in.PrivacyNoticeURL)
 	assign(&f.RedirectURL, in.RedirectURL)
 	assign(&f.SuccessMessage, in.SuccessMessage)
 	if in.FieldMap != nil {
@@ -115,6 +123,10 @@ func clearField(f *Form, field string) {
 		f.ConsentPolicyVersion = nil
 	case colConsentWording:
 		f.ConsentWording = nil
+	case colPrivacyNotice:
+		f.PrivacyNotice = nil
+	case colPrivacyNoticeURL:
+		f.PrivacyNoticeURL = nil
 	case colRedirectURL:
 		f.RedirectURL = nil
 	case colSuccessMessage:
@@ -132,6 +144,9 @@ func (in UpdateInput) check(f Form) error {
 		return badInput("sender_secret", "only a builder form takes a pasted secret; a server form rotates its own")
 	case in.SenderSecret != nil && *in.SenderSecret == "":
 		return badInput("sender_secret", "must not be empty")
+	}
+	if err := checkPrivacyNotice(f.PrivacyNotice, f.PrivacyNoticeURL); err != nil {
+		return err
 	}
 	return checkSettings(f.FieldMap, f.ConsentRequired, f.ConsentWording, f.RedirectURL, f.SuccessMessage, in.SenderSecret)
 }
@@ -227,6 +242,8 @@ func patchFor(current, next Form) *storekit.Patch {
 		colLeadOrigin:           {current.LeadOrigin, next.LeadOrigin},
 		colConsentPolicyVersion: {current.ConsentPolicyVersion, next.ConsentPolicyVersion},
 		colConsentWording:       {current.ConsentWording, next.ConsentWording},
+		colPrivacyNotice:        {current.PrivacyNotice, next.PrivacyNotice},
+		colPrivacyNoticeURL:     {current.PrivacyNoticeURL, next.PrivacyNoticeURL},
 		colRedirectURL:          {current.RedirectURL, next.RedirectURL},
 		colSuccessMessage:       {current.SuccessMessage, next.SuccessMessage},
 	} {

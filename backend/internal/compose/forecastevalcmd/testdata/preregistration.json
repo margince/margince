@@ -1,0 +1,17 @@
+{
+  "dataset_digest": "fdf9e8b488c96b24cf88091bf9384324ba8fff489b749623b93367c25e34563b",
+  "train_end": "2027-02-07",
+  "validation_end": "2027-04-18",
+  "horizon_edges": [30, 60],
+  "settle_days": 5,
+  "eligible_population": "the test corpus: workspace scope, EUR, forecast_v3",
+  "minimum_outcomes": 1,
+  "minimum_calibration_deals": 5,
+  "improvement_threshold": "test value",
+  "calibration_threshold": "test value",
+  "max_excluded_share": "test value",
+  "evaluation_cost": "test value",
+  "serving_proposal": "test value",
+  "filled_by": "test maintainer",
+  "reviewed_by": "test reviewer"
+}

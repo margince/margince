@@ -27,7 +27,7 @@ function originStory(publicOrigin: PublicOrigin) {
     );
     return (
       <StoryProviders>
-        <PublicOriginCard />
+        <PublicOriginCard status={publicOrigin} />
       </StoryProviders>
     );
   };

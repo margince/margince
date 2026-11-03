@@ -150,7 +150,7 @@ func pulses(ctx context.Context, tx pgx.Tx, entityType string, listIDs []ids.Lis
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT v.list_id, b.since,
 		       count(ev.id) FILTER (WHERE ev.action = $%[1]d),
 		       count(ev.id) FILTER (WHERE ev.action = $%[2]d)
@@ -159,8 +159,8 @@ func pulses(ctx context.Context, tx pgx.Tx, entityType string, listIDs []ids.Lis
 		LEFT JOIN list_member_event ev ON ev.list_id = v.list_id AND ev.occurred_at > b.since
 		     AND ev.action IN ($%[1]d, $%[2]d) AND %[3]s
 		WHERE v.user_id = $%[4]d AND v.list_id = ANY($%[5]d) AND b.since IS NOT NULL
-		GROUP BY v.list_id, b.since`, arg(memberEntered), arg(memberLeft), visible, arg(p.UserID), arg(listIDs), visitBaseline),
-		args...)
+		GROUP BY v.list_id, b.since`, arg(memberEntered), arg(memberLeft), visible, arg(p.UserID), arg(listIDs), visitBaseline)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -192,14 +192,15 @@ func (s *Store) joinedSinceVisit(ctx context.Context, l listRow) ([]ids.UUID, er
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(`
+		query := fmt.Sprintf(`
 			SELECT ev.entity_id FROM list_visit v
 			JOIN list_member_event ev ON ev.list_id = v.list_id AND ev.action = $%[1]d
 			  AND ev.occurred_at > (%[2]s) AND %[3]s
 			WHERE v.user_id = $%[4]d AND v.list_id = $%[5]d
 			  AND EXISTS (SELECT 1 FROM list_live_member s WHERE s.list_id = ev.list_id AND s.entity_id = ev.entity_id)
 			GROUP BY ev.entity_id ORDER BY max(ev.occurred_at) DESC LIMIT $%[6]d`,
-			arg(memberEntered), visitBaseline, visible, arg(p.UserID), arg(l.ID), arg(joinedCap)), args...)
+			arg(memberEntered), visitBaseline, visible, arg(p.UserID), arg(l.ID), arg(joinedCap))
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

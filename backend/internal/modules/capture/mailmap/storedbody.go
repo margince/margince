@@ -5,6 +5,7 @@ package mailmap
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
@@ -121,4 +122,58 @@ func RecoverStoredBody(raw []byte, stored string) (body string, completeness cap
 	}
 	body, completeness = msg.storedBody()
 	return body, completeness, body != stored
+}
+
+// RecoverMisdecodedText re-derives the subject and body from raw where a parser
+// wrote them without reading the message's charset.
+//
+// Two tells, both narrow. A subject still carrying an encoded-word marker was
+// never decoded. A body differing from the re-parse only where it holds a
+// question mark against a non-ASCII rune read the wrong charset.
+//
+// Anything else is left alone, because an edit would be overwritten.
+func RecoverMisdecodedText(raw []byte, storedSubject, storedBody string) (subject, body string, ok bool) {
+	msg, err := Parse(raw, "")
+	if err != nil {
+		return "", "", false
+	}
+	subject, body = storedSubject, storedBody
+	if undecodedWord(storedSubject) && msg.subject != "" && msg.subject != storedSubject {
+		subject, ok = msg.subject, true
+	}
+	parsed, _ := msg.storedBody()
+	if misdecodedRunes(storedBody, parsed) {
+		body, ok = parsed, true
+	}
+	return subject, body, ok
+}
+
+// undecodedWord reports whether text still carries an RFC 2047 encoded word,
+// which a reader sees as the marker rather than as the letters it stands for.
+func undecodedWord(text string) bool {
+	return strings.Contains(text, "=?") && strings.Contains(text, "?=")
+}
+
+// misdecodedRunes reports whether stored is parsed with its non-ASCII runes
+// replaced by question marks, one for one.
+//
+// One for one is what makes this safe. A charset the old parser could not read
+// gave a question mark per byte, one rune each in the charsets this repairs.
+// A differing length means something else changed, so nothing may touch it.
+func misdecodedRunes(stored, parsed string) bool {
+	was, now := []rune(stored), []rune(parsed)
+	if len(was) != len(now) || len(was) == 0 {
+		return false
+	}
+	replaced := false
+	for i := range was {
+		switch {
+		case was[i] == now[i]:
+		case was[i] == '?' && now[i] > 127:
+			replaced = true
+		default:
+			return false
+		}
+	}
+	return replaced
 }

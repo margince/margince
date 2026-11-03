@@ -8,9 +8,19 @@
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-6) var(--space-6) var(--space-5);
-  background:
+  /* The edge glows from the same corner as the wash. A transparent border lets
+     the last layer show through it, and the middle layer keeps the ground. */
+  border-color: transparent;
+  background-image:
     radial-gradient(560px 320px at 0 0, var(--standing-wash), transparent 70%),
-    var(--bgElevated);
+    linear-gradient(var(--ground), var(--ground)),
+    radial-gradient(
+      320px 200px at 0 0,
+      var(--standing-edge, var(--groundEdge)),
+      var(--groundEdge)
+    );
+  background-clip: padding-box, padding-box, border-box;
+  background-origin: padding-box, padding-box, border-box;
 }
 .standing-sheet-head {
   display: flex;

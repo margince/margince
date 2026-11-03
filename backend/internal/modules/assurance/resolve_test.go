@@ -4,6 +4,7 @@
 package assurance
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -116,5 +117,57 @@ func TestAContactCannotClaimTheConditionCleared(t *testing.T) {
 	// pass both assertions above.
 	if _, err := checkResolution(Resolution{Outcome: OutcomeFixedRecord}, now); err != nil {
 		t.Errorf("a real answer was refused: %v", err)
+	}
+}
+
+// A deferral hides a finding as a suppressing answer does. It stays out of the
+// bundle and out of tasks until it comes back, so it takes the same ceiling.
+// Without one, deferring for two years hides a finding for two years.
+func TestADeferralIsCappedAtNinetyDays(t *testing.T) {
+	t.Parallel()
+	now := when()
+
+	tooFar := now.Add(2 * 365 * 24 * time.Hour)
+	if _, err := checkResolution(Resolution{
+		Outcome: OutcomeRemindLater, RemindAt: &tooFar,
+	}, now); err == nil {
+		t.Error("a two-year deferral was accepted, so the finding is hidden for two years")
+	}
+
+	// The ceiling itself stands, so a caller may defer for the longest the
+	// answer allows without guessing at an epsilon.
+	atCeiling := now.Add(MaxSuppression)
+	if _, err := checkResolution(Resolution{
+		Outcome: OutcomeRemindLater, RemindAt: &atCeiling,
+	}, now); err != nil {
+		t.Errorf("a deferral to the ceiling itself was refused: %v", err)
+	}
+
+	inside := now.Add(14 * 24 * time.Hour)
+	if _, err := checkResolution(Resolution{
+		Outcome: OutcomeRemindLater, RemindAt: &inside,
+	}, now); err != nil {
+		t.Errorf("a two-week deferral was refused: %v", err)
+	}
+}
+
+// The readers cap what was already written, because answers given before the
+// refusal above still name a moment past the ceiling.
+func TestTheLiveDeferralReadsTheCeilingFromWhenItWasGiven(t *testing.T) {
+	t.Parallel()
+	sql := LiveRemindAtSQL("r", "$7")
+
+	for _, want := range []string{"r.remind_at", "r.created_at", "$7", "LEAST("} {
+		if !strings.Contains(sql, want) {
+			t.Errorf("the live deferral reads %q, which names no %s", sql, want)
+		}
+	}
+	// Measured from when the answer was given, not from now: an answer given in
+	// May may hide its finding until August, whenever it is read.
+	if strings.Contains(sql, "now()") {
+		t.Errorf("the live deferral reads %q, which measures the ceiling from the read", sql)
+	}
+	if days := MaxSuppressionDays(); days != 90 {
+		t.Errorf("the ceiling is %d days, want the 90 MaxSuppression names", days)
 	}
 }

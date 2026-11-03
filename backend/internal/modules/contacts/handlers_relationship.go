@@ -133,10 +133,16 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in := UpsertPartnerInput{
-		CompanyID:   pathID[ids.CompanyKind](id),
-		PartnerRole: string(req.PartnerRole),
-		IfVersion:   ifVersion,
+	in := UpsertPartnerInput{CompanyID: pathID[ids.CompanyKind](id), IfVersion: ifVersion}
+	if req.PartnerKinds != nil {
+		kinds := make([]string, 0, len(*req.PartnerKinds))
+		for _, kind := range *req.PartnerKinds {
+			kinds = append(kinds, string(kind))
+		}
+		in.PartnerKinds = &kinds
+	}
+	if req.PartnerRole != nil {
+		in.PartnerRole = string(*req.PartnerRole)
 	}
 	if req.CertStatus != nil {
 		status := string(*req.CertStatus)
@@ -146,18 +152,7 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		tier := string(*req.MarginTier)
 		in.MarginTier = &tier
 	}
-	if req.RelationshipStage != nil {
-		// Membership-check the enum at the seam: the decoder accepts any
-		// string, and an unknown stage must answer 422 here, not surface
-		// as the DB CHECK's constraint-violated fallback.
-		if !req.RelationshipStage.Valid() {
-			httperr.Write(w, r, httperr.Validation("relationship_stage", "invalid_value",
-				"relationship_stage is not one of the partner lifecycle stages"))
-			return
-		}
-		stage := string(*req.RelationshipStage)
-		in.RelationshipStage = &stage
-	}
+	in.RelationshipStage = req.RelationshipStage
 	in.NextStep = req.NextStep
 	if req.NextStepDueAt != nil {
 		in.NextStepDueAt = &req.NextStepDueAt.Time
@@ -200,10 +195,15 @@ func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontr
 }
 
 func (h Handlers) ListPartners(w http.ResponseWriter, r *http.Request, params crmcontracts.ListPartnersParams) {
-	in := ListPartnersInput{Limit: params.Limit, Sort: params.Sort}
-	if params.PartnerRole != nil {
-		role := string(*params.PartnerRole)
-		in.PartnerRole = &role
+	in := ListPartnersInput{Limit: params.Limit, Sort: params.Sort, RelationshipStage: params.RelationshipStage}
+	switch {
+	case params.PartnerKind != nil:
+		in.PartnerKind = new(string(*params.PartnerKind))
+	case params.PartnerRole != nil:
+		in.PartnerKind = new(string(*params.PartnerRole))
+	}
+	if params.StageMeaning != nil {
+		in.StageMeaning = new(string(*params.StageMeaning))
 	}
 	if params.CertStatus != nil {
 		status := string(*params.CertStatus)

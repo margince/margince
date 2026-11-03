@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { DealMailChip } from "../../design-system/dealcard";
 import { EmailReference } from "../../design-system/emailreference";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -123,10 +124,10 @@ export function DealMailAside({
           <p className="dealmail__none">{t("deal.mail.none")}</p>
         )}
       </QueryStates>
-      <a className="link-button dealmail__all" href={href}>
+      <AppLink className="link-button dealmail__all" href={href}>
         {t("deal.mail.viewAll")}
         <ArrowRight aria-hidden="true" />
-      </a>
+      </AppLink>
     </div>
   );
 }
