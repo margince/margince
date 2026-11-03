@@ -25,6 +25,7 @@ import { SkipReason } from "../../../components/bulkwords";
 import { ChoiceList } from "../../../design-system/choicelist";
 import { ErrorLine } from "../../../design-system/errorline";
 import { useToast } from "../../../design-system/toast";
+import { useTruncationTooltip } from "../../../design-system/tooltip";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
@@ -259,23 +260,9 @@ function CloseTasksPreview({
   return (
     <div className="closetasks-preview">
       <ul aria-label={t("deals.closeTasks.listLabel")}>
-        {tasks.slice(0, PREVIEW_ROWS).map((task) => {
-          const subject = task.subject ?? t("deals.closeTasks.untitled");
-          return (
-            <li key={task.id}>
-              <span className="closetasks-subject" title={subject}>
-                {subject}
-              </span>
-              <span className="t-caption">
-                {task.due_at
-                  ? t("co.next.due", {
-                      when: formatDate(task.due_at, locale, zone),
-                    })
-                  : t("co.next.undated")}
-              </span>
-            </li>
-          );
-        })}
+        {tasks.slice(0, PREVIEW_ROWS).map((task) => (
+          <CloseTaskRow key={task.id} task={task} zone={zone} />
+        ))}
       </ul>
       {hidden > 0 && (
         <p className="t-caption">
@@ -285,5 +272,29 @@ function CloseTasksPreview({
         </p>
       )}
     </div>
+  );
+}
+
+// One task: its subject on one line, the full text in a tip when clipped.
+function CloseTaskRow({
+  task,
+  zone,
+}: Readonly<{ task: Activity; zone: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const subject = task.subject ?? t("deals.closeTasks.untitled");
+  const { ref, trigger, tip } = useTruncationTooltip<HTMLSpanElement>(subject);
+  return (
+    <li>
+      <span className="closetasks-subject" ref={ref} {...trigger}>
+        {subject}
+        {tip}
+      </span>
+      <span className="t-caption">
+        {task.due_at
+          ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
+          : t("co.next.undated")}
+      </span>
+    </li>
   );
 }

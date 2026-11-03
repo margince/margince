@@ -143,7 +143,7 @@ or lost stage asks first:
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
 
-If the deal has open tasks, the dialog lists them under the question, each with its due date (the first five, then a count of the rest), and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
+If the deal has open tasks, the dialog lists them under the question, each with its due date or **No due date** (the first five, then a count of the rest), and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
 
 ### Losing
 

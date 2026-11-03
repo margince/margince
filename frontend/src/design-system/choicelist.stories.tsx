@@ -57,6 +57,31 @@ export const Answered: Story = {
   render: () => <Live initial="only_chosen" />,
 };
 
+// What the answers act on, under the question and inside its group.
+export const WithDetail: Story = {
+  render: () => (
+    <ChoiceList
+      legend="What happens to the 2 open tasks on this deal?"
+      detail={
+        <ul className="t-caption">
+          <li>Send the final invoice</li>
+          <li>Return the loan device</li>
+        </ul>
+      }
+      value=""
+      onChange={() => {}}
+      choices={[
+        { value: "complete", label: "Complete all" },
+        { value: "keep", label: "Keep" },
+      ]}
+    />
+  ),
+};
+export const WithDetailDark: Story = {
+  ...WithDetail,
+  globals: { theme: "dark" },
+};
+
 // The unanswered group: no option carries the dot, so nothing claims to be the
 // default. A question with a pre-selected answer is a question somebody can save
 // without ever having read it.
