@@ -148,7 +148,7 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/corpusask.go:askCorpusLane":               "passages retrieved from across the workspace's documents, which is several records by construction",
 	"internal/compose/fxrefresh.go:extract":                     "a published exchange-rate page. No record, and no personal data to erase",
 	"internal/compose/salesassessmentservice.go:write":          "a report's measured figures over a population, which is many records by construction, and no_payload keeps the call out of capture",
-	"internal/compose/reportsetupservice.go:Propose":            "a description the reader typed and the catalog they may choose from; no record is read, so there is none to cite",
+	"internal/compose/reportsetupservice.go:ProposeSetup":       "a description the reader typed and the catalog they may choose from; no record is read, so there is none to cite",
 	"internal/compose/filterproposal.go:ProposeFilter":          "a sentence the reader typed and the workspace's filter vocabulary; no record is read, so there is none to cite",
 	"internal/compose/sitereaddebug.go:CompleteValidated":       "a recording WRAPPER rather than a site: it forwards the caller's context unchanged, so whatever subject the caller named travels through it",
 	"internal/compose/sitereaddebug.go:debugTriage":             "the operator debug lane, run against a URL before any record is chosen",

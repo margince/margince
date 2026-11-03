@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/components/mailcoveragenotice.tsx frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -106,10 +106,11 @@ its own word:
 
 You also see its last good sync. A failed check does not move that time.
 
-### Why does a record say it may be missing mail?
+### Does a record show all my mail?
 
 Dates on a contact or deal describe the mail on record. They do not prove that nobody replied outside these records.
-**Check connections** opens your mailboxes. A good sync or a finished history import does not prove that every Inbox and Sent message is on record.
+A good sync or a finished history import does not prove that every Inbox and Sent message is on record.
+A connection problem shows on **Settings → Connections**.
 A task you kept stays even when some mail is missing.
 
 ### Why did my Gmail or Outlook connection stop working?

@@ -17,28 +17,61 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// bookableStore books through a connected calendar, with a booking page on for
+// each host.
+func bookableStore(t *testing.T, e *Env, hosts ...ids.UUID) *activities.Store {
+	t.Helper()
+	store := e.Activities.WithSchedulingCalendar(&apptest.BookingCalendar{SchedulingCalendar: compose.SchedulingCalendarForTest(e.Pool)}).WithMeetingVault(keyvault.NewMemory()).
+		WithPublicBaseURL("https://crm.example.test").
+		WithWorkingHours(func(context.Context, ids.UserID) (activities.WorkingHours, error) {
+			return activities.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Location: time.UTC}, nil
+		})
+	for _, host := range hosts {
+		e.GrantRole(t, host, roleRep)
+		if _, err := store.SaveSchedulingProfile(e.As(host, nil, SchedulerPerms), crmcontracts.SchedulingProfile{
+			Enabled: true, Provider: "gcal", CalendarId: "work", DurationMinutes: 30, HorizonDays: 30, Title: "Meeting",
+		}); err != nil {
+			t.Fatalf("enabling %s's booking page: %v", host, err)
+		}
+	}
+	return store
+}
+
+// inviteeContact is a contact owned by owner with an address to invite.
+func inviteeContact(t *testing.T, e *Env, name string, owner ids.UUID) ids.UUID {
+	t.Helper()
+	id := e.SeedContact(t, name, &owner)
+	e.WsExec(t, `INSERT INTO contact_email(contact_id,email,is_primary,source,captured_by) VALUES ($1,$2,true,'manual','human:test')`, id, id.String()+"@client.test")
+	return id
+}
+
 func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	e := Setup(t)
-	slotStart := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
+	slotStart := apptest.NextBookableMorning()
+	store := bookableStore(t, e, e.Rep1, e.Rep2)
 
-	// Every booking names a record, because a meeting attached to nothing is
-	// refused before the calendar rules run. The contact is incidental here —
-	// what this test is about is whose calendar, not whose record.
-	attendee := e.SeedContact(t, "Calendar Client", &e.Rep1)
+	// Every booking names an invitee, because a meeting with nobody is refused
+	// before the calendar rules run. The contact is incidental here: this test
+	// is about whose calendar, not whose record.
+	attendee := inviteeContact(t, e, "Calendar Client", e.Rep1)
 	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: attendee}}
 
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, SchedulerPerms)
-	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
+	if _, err := store.BookMeeting(rep1, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); err != nil {
 		t.Fatalf("self-booking: %v", err)
 	}
-	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
+	if _, err := store.BookMeeting(rep1, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("booking rep2's calendar as rep1 → %v, want ErrPermissionDenied", err)
@@ -46,7 +79,7 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	// An unbounded row scope is not a delegate: ops reads every calendar
 	// and still books only its own.
 	ops := e.As(ids.NewV7(), nil, OpsPerms)
-	if _, err := e.Activities.BookMeeting(ops, activities.BookMeetingInput{
+	if _, err := store.BookMeeting(ops, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("booking rep2's calendar as ops → %v, want ErrPermissionDenied", err)
@@ -54,13 +87,13 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	// The admin may book on behalf — and hits the conflict guard like
 	// anyone else.
 	admin := e.Admin()
-	if _, err := e.Activities.BookMeeting(admin, activities.BookMeetingInput{
+	if _, err := store.BookMeeting(admin, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); err != nil {
 		t.Fatalf("admin booking for rep2: %v", err)
 	}
 	var slotTaken *activities.SlotTakenError
-	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
+	if _, err := store.BookMeeting(rep1, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); !errors.As(err, &slotTaken) {
 		t.Fatalf("double self-booking → %v, want SlotTakenError", err)
@@ -69,16 +102,17 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 
 func TestAvailabilityBusyReadHonorsRowScope(t *testing.T) {
 	e := Setup(t)
-	slotStart := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
+	slotStart := apptest.NextBookableMorning()
+	store := bookableStore(t, e, e.Rep1)
 
 	// rep1's meeting is linked to a contact rep1 captured PRIVATELY — visible
 	// to rep1 alone. A contact who is merely owned is readable by every seat
 	// with the grant, so capture privacy is what keeps the meeting out of a
 	// colleague's row scope.
-	target := e.SeedContact(t, "Scoped Client", &e.Rep1)
+	target := inviteeContact(t, e, "Scoped Client", e.Rep1)
 	e.MakeCapturePrivate(t, "contact", target, e.Rep1)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, SchedulerPerms)
-	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
+	if _, err := store.BookMeeting(rep1, activities.BookMeetingInput{
 		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: target}},
 	}); err != nil {

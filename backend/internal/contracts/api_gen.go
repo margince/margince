@@ -190,6 +190,27 @@ func (e AccessPreviewRowScope) Valid() bool {
 	}
 }
 
+// Defines values for AccountCoverageView.
+const (
+	AccountCoverageViewSilent         AccountCoverageView = "silent"
+	AccountCoverageViewSingleThreaded AccountCoverageView = "single_threaded"
+	AccountCoverageViewUntouched      AccountCoverageView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the AccountCoverageView enum.
+func (e AccountCoverageView) Valid() bool {
+	switch e {
+	case AccountCoverageViewSilent:
+		return true
+	case AccountCoverageViewSingleThreaded:
+		return true
+	case AccountCoverageViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AccountDraftReasonKind.
 const (
 	AccountDraftReasonKindCommitment   AccountDraftReasonKind = "commitment"
@@ -15331,6 +15352,33 @@ func (e MeetingPreparationState) Valid() bool {
 	}
 }
 
+// Defines values for MeetingRecordLinkEntityType.
+const (
+	MeetingRecordLinkEntityTypeCompany MeetingRecordLinkEntityType = "company"
+	MeetingRecordLinkEntityTypeContact MeetingRecordLinkEntityType = "contact"
+	MeetingRecordLinkEntityTypeDeal    MeetingRecordLinkEntityType = "deal"
+	MeetingRecordLinkEntityTypeLead    MeetingRecordLinkEntityType = "lead"
+	MeetingRecordLinkEntityTypeProject MeetingRecordLinkEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MeetingRecordLinkEntityType enum.
+func (e MeetingRecordLinkEntityType) Valid() bool {
+	switch e {
+	case MeetingRecordLinkEntityTypeCompany:
+		return true
+	case MeetingRecordLinkEntityTypeContact:
+		return true
+	case MeetingRecordLinkEntityTypeDeal:
+		return true
+	case MeetingRecordLinkEntityTypeLead:
+		return true
+	case MeetingRecordLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingResponse.
 const (
 	MeetingResponseAccepted    MeetingResponse = "accepted"
@@ -25156,6 +25204,48 @@ func (e GetAiTaskFlowParamsWindow) Valid() bool {
 	}
 }
 
+// Defines values for GetAccountCoverageParamsScopeKind.
+const (
+	GetAccountCoverageParamsScopeKindOwner     GetAccountCoverageParamsScopeKind = "owner"
+	GetAccountCoverageParamsScopeKindTeam      GetAccountCoverageParamsScopeKind = "team"
+	GetAccountCoverageParamsScopeKindWorkspace GetAccountCoverageParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsScopeKind enum.
+func (e GetAccountCoverageParamsScopeKind) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsScopeKindOwner:
+		return true
+	case GetAccountCoverageParamsScopeKindTeam:
+		return true
+	case GetAccountCoverageParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAccountCoverageParamsView.
+const (
+	GetAccountCoverageParamsViewSilent         GetAccountCoverageParamsView = "silent"
+	GetAccountCoverageParamsViewSingleThreaded GetAccountCoverageParamsView = "single_threaded"
+	GetAccountCoverageParamsViewUntouched      GetAccountCoverageParamsView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsView enum.
+func (e GetAccountCoverageParamsView) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsViewSilent:
+		return true
+	case GetAccountCoverageParamsViewSingleThreaded:
+		return true
+	case GetAccountCoverageParamsViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSalesDecisionsParamsStatus.
 const (
 	ListSalesDecisionsParamsStatusDone ListSalesDecisionsParamsStatus = "done"
@@ -25762,33 +25852,6 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	case GetAvailability200JSONResponseBodyCalendarBackingNone:
 		return true
 	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BookMeetingJSONBodyLinksEntityType.
-const (
-	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
-	BookMeetingJSONBodyLinksEntityTypeContact BookMeetingJSONBodyLinksEntityType = "contact"
-	BookMeetingJSONBodyLinksEntityTypeDeal    BookMeetingJSONBodyLinksEntityType = "deal"
-	BookMeetingJSONBodyLinksEntityTypeLead    BookMeetingJSONBodyLinksEntityType = "lead"
-	BookMeetingJSONBodyLinksEntityTypeProject BookMeetingJSONBodyLinksEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the BookMeetingJSONBodyLinksEntityType enum.
-func (e BookMeetingJSONBodyLinksEntityType) Valid() bool {
-	switch e {
-	case BookMeetingJSONBodyLinksEntityTypeCompany:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeContact:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeDeal:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeLead:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeProject:
 		return true
 	default:
 		return false
@@ -28237,6 +28300,97 @@ type AccessPreviewMemberStatus string
 
 // AccessPreviewRowScope defines model for AccessPreview.RowScope.
 type AccessPreviewRowScope string
+
+// AccountCoverage defines model for AccountCoverage.
+type AccountCoverage struct {
+	// ActivityReadable False when the reader may not read activity: the two account views are then empty and uncounted.
+	ActivityReadable  bool                  `json:"activity_readable"`
+	AsOf              time.Time             `json:"as_of"`
+	Counts            AccountCoverageCounts `json:"counts"`
+	FrameworkRevision int64                 `json:"framework_revision"`
+	Rows              []AccountCoverageRow  `json:"rows"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	Thresholds AccountCoverageThresholds `json:"thresholds"`
+
+	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
+	Truncated *bool               `json:"truncated,omitempty"`
+	View      AccountCoverageView `json:"view"`
+
+	// Withheld Deals of the view whose committee the reader could not read whole, left out rather than judged.
+	Withheld *int `json:"withheld,omitempty"`
+}
+
+// AccountCoverageView defines model for AccountCoverage.View.
+type AccountCoverageView string
+
+// AccountCoverageAccount defines model for AccountCoverageAccount.
+type AccountCoverageAccount struct {
+	Id      openapi_types.UUID  `json:"id"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+}
+
+// AccountCoverageCounts defines model for AccountCoverageCounts.
+type AccountCoverageCounts struct {
+	Silent         *int `json:"silent,omitempty"`
+	SingleThreaded int  `json:"single_threaded"`
+	Untouched      *int `json:"untouched,omitempty"`
+}
+
+// AccountCoverageDeal defines model for AccountCoverageDeal.
+type AccountCoverageDeal struct {
+	AmountMinor       *int64              `json:"amount_minor,omitempty"`
+	ClosedAt          *time.Time          `json:"closed_at,omitempty"`
+	Currency          *string             `json:"currency,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	Id                openapi_types.UUID  `json:"id"`
+	Name              string              `json:"name"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Stage             *string             `json:"stage,omitempty"`
+}
+
+// AccountCoverageRow defines model for AccountCoverageRow.
+type AccountCoverageRow struct {
+	Company AccountCoverageAccount `json:"company"`
+
+	// DaysSilent Days since the newest exchange either way, or since the won deal closed when there was none.
+	DaysSilent *int                 `json:"days_silent,omitempty"`
+	Deal       *AccountCoverageDeal `json:"deal,omitempty"`
+
+	// EngagedSeats Contacts engaged on the deal, for a single-threaded row.
+	EngagedSeats *int       `json:"engaged_seats,omitempty"`
+	LastInbound  *time.Time `json:"last_inbound,omitempty"`
+	LastOutbound *time.Time `json:"last_outbound,omitempty"`
+
+	// NamedSeats Contacts named on the deal, engaged or not.
+	NamedSeats *int `json:"named_seats,omitempty"`
+
+	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
+
+	// OpenDeals Open deals on the account, for an untouched row.
+	OpenDeals *int                 `json:"open_deals,omitempty"`
+	WonDeal   *AccountCoverageDeal `json:"won_deal,omitempty"`
+}
+
+// AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+type AccountCoverageThresholds struct {
+	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty"`
+
+	// SilentDays A won account with no exchange within this many days is silent. Default 30.
+	SilentDays *int `json:"silent_days,omitempty"`
+
+	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
+	UntouchedDays *int `json:"untouched_days,omitempty"`
+
+	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
+	WonWithinDays *int `json:"won_within_days,omitempty"`
+}
 
 // AccountDraftReason One thing the draft was written from, named so the reader can check it rather than
 // take the draft on trust. Structured rather than a phrase, because the composer
@@ -31415,6 +31569,18 @@ type AssuranceFreshness struct {
 // AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 type AssuranceFreshnessState string
 
+// AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+type AssuranceReviewDeliveries struct {
+	// Delivered Reviews that have their task, including a task somebody already completed while the review stays open.
+	Delivered int `json:"delivered"`
+
+	// Failed Reviews whose task could not be delivered after every retry.
+	Failed int `json:"failed"`
+
+	// Pending Reviews whose task is queued or retrying.
+	Pending int `json:"pending"`
+}
+
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
 	Status AssuranceRunAcceptedStatus `json:"status"`
@@ -32328,7 +32494,7 @@ type AttentionItem struct {
 	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
 	ReminderDue *bool `json:"reminder_due,omitempty"`
 
-	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
@@ -44177,7 +44343,10 @@ type ForecastAssurance struct {
 
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
-	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// ReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+	ReviewDeliveries AssuranceReviewDeliveries `json:"review_deliveries"`
+	RunId            openapi_types.UUID        `json:"run_id"`
 
 	// Sources Every source the run tried, and how far it reached into each.
 	Sources []ForecastAssuranceSource `json:"sources"`
@@ -49462,12 +49631,21 @@ type MeetingInvitationChangeAction string
 // MeetingInvitationRequest defines model for MeetingInvitationRequest.
 type MeetingInvitationRequest struct {
 	AttendeeEmail openapi_types.Email `json:"attendee_email"`
-	ContactId     openapi_types.UUID  `json:"contact_id"`
-	Description   string              `json:"description"`
-	End           time.Time           `json:"end"`
-	Location      string              `json:"location"`
-	Start         time.Time           `json:"start"`
-	Subject       string              `json:"subject"`
+
+	// AttendeeEmails Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+	// Each address is resolved to a contact, a colleague or a lead the host can see; an
+	// address matching nobody is invited as named by the host. Contacts and leads must hold
+	// transactional consent; colleagues and host-named addresses are not asked.
+	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
+	ContactId      openapi_types.UUID     `json:"contact_id"`
+	Description    string                 `json:"description"`
+	End            time.Time              `json:"end"`
+
+	// Links Further records to file the meeting on, beside the invitee.
+	Links    *[]MeetingRecordLink `json:"links,omitempty"`
+	Location string               `json:"location"`
+	Start    time.Time            `json:"start"`
+	Subject  string               `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -49772,6 +49950,15 @@ type MeetingReadyRequest struct {
 	// undo sends the revision it confirmed, and takes back only that confirmation.
 	PreparationRevision string `json:"preparation_revision"`
 }
+
+// MeetingRecordLink defines model for MeetingRecordLink.
+type MeetingRecordLink struct {
+	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
+}
+
+// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
@@ -54562,6 +54749,8 @@ type ReportingFramework struct {
 
 // ReportingFrameworkInput defines model for ReportingFrameworkInput.
 type ReportingFrameworkInput struct {
+	// AccountCoverage What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	AccountCoverage *AccountCoverageThresholds      `json:"account_coverage,omitempty"`
 	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
 	Qualification   []ReportingQualification        `json:"qualification"`
 	Reason          string                          `json:"reason"`
@@ -64186,6 +64375,19 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetAccountCoverageParams defines parameters for GetAccountCoverage.
+type GetAccountCoverageParams struct {
+	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId   *openapi_types.UUID                `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	View      *GetAccountCoverageParamsView      `form:"view,omitempty" json:"view,omitempty"`
+}
+
+// GetAccountCoverageParamsScopeKind defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsScopeKind string
+
+// GetAccountCoverageParamsView defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsView string
+
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
 	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
@@ -64824,10 +65026,12 @@ type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
-	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
-	// build emails these addresses or adds them to a calendar event, and the
-	// created activity does not carry them either. Supply them for the caller's
-	// own record of intent, and tell the attendee yourself.
+	// AttendeeEmails Who the meeting is with. Every address is an attendee on the queued calendar
+	// event. Each address is resolved to a contact, a
+	// colleague or a lead the host can see; an address matching nobody is invited as
+	// named by the host. Contacts and leads must hold transactional consent;
+	// colleagues and host-named addresses are not asked. At most 25 attendees in
+	// total.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -64841,14 +65045,11 @@ type BookMeetingJSONBody struct {
 	// required: a meeting belonging to no record appears on no timeline and is one
 	// nobody will find again, which is the same reason `SendCompanyEmailRequest`
 	// carries the bound. Each one is row-scope probed and written as its own row,
-	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-	// before it stages.
-	Links []struct {
-		EntityId   openapi_types.UUID                 `json:"entity_id"`
-		EntityType BookMeetingJSONBodyLinksEntityType `json:"entity_type"`
-	} `json:"links"`
-	Start   time.Time `json:"start"`
-	Subject *string   `json:"subject,omitempty"`
+	// so the list is bounded at 25. The first `contact` link (else the first `lead`
+	// link) is the invitee the meeting is filed on.
+	Links   []MeetingRecordLink `json:"links"`
+	Start   time.Time           `json:"start"`
+	Subject *string             `json:"subject,omitempty"`
 }
 
 // BookMeetingParams defines parameters for BookMeeting.
@@ -64873,18 +65074,7 @@ type BookMeetingParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
-	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
-	// not yet used, and within 15 minutes of the decision. Anything else is refused with
-	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-	// human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
-
-// BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
-type BookMeetingJSONBodyLinksEntityType string
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
@@ -84355,6 +84545,12 @@ type ServerInterface interface {
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+	// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+	// facts behind its verdict. Counts for every view come with each answer; rows come for
+	// the view asked for. The thresholds are the framework's, and the answer prints them.
+	// (GET /analytics/account-coverage)
+	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
 	// The Sales review's assessment of one selection: a few sentences on what the measured
 	// figures show, each citing the cells it rests on, and one next decision on a deal the
 	// reader may see. Written by the model and kept per reader until the figures or the
@@ -84688,7 +84884,7 @@ type ServerInterface interface {
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
-	// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+	// Book a meeting at a chosen slot and queue its calendar invitation.
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
@@ -87625,6 +87821,15 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+// facts behind its verdict. Counts for every view come with each answer; rows come for
+// the view asked for. The thresholds are the framework's, and the answer prints them.
+// (GET /analytics/account-coverage)
+func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The Sales review's assessment of one selection: a few sentences on what the measured
 // figures show, each citing the cells it rests on, and one next decision on a deal the
 // reader may see. Written by the model and kept per reader until the figures or the
@@ -88282,7 +88487,7 @@ func (_ Unimplemented) GetAvailability(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+// Book a meeting at a chosen slot and queue its calendar invitation.
 // (POST /bookings)
 func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -96440,6 +96645,71 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetAccountCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAccountCoverageParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAccountCoverage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AssessSalesReview operation middleware
 func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
 
@@ -101616,8 +101886,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101643,25 +101911,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -136036,6 +136285,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage/summary", wrapper.GetAiUsageSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/account-coverage", wrapper.GetAccountCoverage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/assessment", wrapper.AssessSalesReview)

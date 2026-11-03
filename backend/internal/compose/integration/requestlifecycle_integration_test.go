@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -43,7 +45,13 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := ids.UUID(message.Id)
-	if _, err := store.SetCaptureLabel(ctx, id, "meeting"); err != nil {
+	var version int64
+	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.SetCaptureLabel(ctx, id, "meeting", version); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.SetOwedVerdict(ctx, id, activities.OwedVerdictAsksUs, "prompts-test", at.Add(time.Minute)); err != nil {

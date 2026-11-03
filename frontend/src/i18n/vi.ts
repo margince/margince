@@ -821,6 +821,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Người chủ trì",
   "approval.preview.intendedAttendee":
     "Người dự kiến tham dự (không được thông báo)",
+  "approval.preview.hostNamedAttendee":
+    "Chỉ mời theo địa chỉ (không kiểm tra sự đồng ý)",
   "approval.preview.htmlBody": "Nội dung có định dạng",
   "approval.preview.correspondence":
     "Phân loại thư từ liên quan là hồ sơ kinh doanh.",
@@ -1194,6 +1196,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có gì để vẽ cho kỳ và chỉ số của báo cáo này. Vẫn thêm biểu đồ, hoặc đổi kỳ trong Tùy chỉnh báo cáo.",
   "reporting.chooseChart": "Biểu đồ cần thêm",
   "reporting.exportCsv": "Xuất CSV",
+  "reporting.coverageThresholds": "Ngưỡng độ phủ công ty",
+  "reporting.coverageThresholdsHelp":
+    "Những gì phần Độ phủ công ty xem là rủi ro. Ngưỡng áp dụng từ lần đọc tiếp theo.",
+  "reporting.maxEngagedSeats": "Tối đa liên hệ gắn bó",
+  "reporting.untouchedDays": "Số ngày không trao đổi trong pipeline",
+  "reporting.silentDays": "Số ngày không trao đổi sau khi thắng",
+  "reporting.wonWithinDays": "Số ngày một lần thắng còn được tính",
   "reporting.captureContexts": "Ghi nhận lịch sử pipeline hằng ngày",
   "reporting.captureHelp":
     "Chọn nhóm và pipeline cố định để dựng lịch sử biến động. Cần hai lần chụp hằng ngày so sánh được với nhau.",
@@ -2575,6 +2584,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.phone": "Số điện thoại",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
   "history.field.invitation_status": "Trạng thái lời mời",
+  "history.field.attendees": "Khách được mời",
   "history.field.proposal_status": "Trạng thái đề xuất cuộc họp",
   "history.field.meeting_status": "Kết quả cuộc họp",
   "history.field.candidate_company_key": "Công ty khớp",
@@ -2833,8 +2843,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deal",
-  "board.weighted": "có trọng số {value}",
-  "board.convertedAt": "Đã quy đổi · tỷ giá ngày {date}",
+  "board.weightedLabel": "có trọng số",
+  "board.ratesOn": "Tỷ giá {date}",
+  "board.unpriced_one": "{count} chưa định giá",
+  "board.unpriced_other": "{count} chưa định giá",
+  "board.totalsTip":
+    "{total} đang mở, {weighted} có trọng số theo {probability}.",
+  "board.unpricedTip_one":
+    "{count} deal chưa có giá và không được tính vào hai tổng.",
+  "board.unpricedTip_other":
+    "{count} deal chưa có giá và không được tính vào hai tổng.",
+  "board.convertedTip": "Đã quy đổi theo tỷ giá ngày {date}.",
   "board.matchesIn_one": "{count} kết quả ở cột {columns}",
   "board.matchesIn_other": "{count} kết quả ở cột {columns}",
   "board.showMatches": "Đến cột",
@@ -5318,9 +5337,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.unassigned": "Chưa giao",
   "lead.terminalDisqualified": "Đã loại. Lead này ở chế độ chỉ xem.",
   "lead.marker": "Lead",
-  "lead.assign": "Giao",
   "lead.assignToMe": "Giao cho tôi",
-  "lead.assignTo": "Giao lead này cho",
   "lead.assignChoose": "Chọn một đồng nghiệp",
   "lead.assignNobodyElse": "Không có thành viên nào khác để giao lead này.",
   "lead.saveOverride": "Lưu ghi đè",
@@ -5530,7 +5547,63 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Tên",
   "legalEntities.legalName": "Tên pháp lý",
   "legalEntities.country": "Quốc gia",
-  "legalEntities.countryHint": "Hai chữ cái, ví dụ AT.",
+  "legalEntities.edit": "Sửa",
+  "legalEntities.archive": "Lưu trữ",
+  "legalEntities.editTitle": "Sửa {name}",
+  "legalEntities.save": "Lưu",
+  "legalEntities.defaultFromCompany":
+    "Pháp nhân mặc định lấy tên, tên pháp lý, địa chỉ, mã số thuế, thông tin đăng ký, sản phẩm và logo từ hồ sơ công ty. Hãy đổi các mục đó ở đó.",
+  "legalEntities.sectionAddress": "Địa chỉ",
+  "legalEntities.line1": "Số nhà và đường",
+  "legalEntities.line2": "Địa chỉ dòng 2",
+  "legalEntities.postalCode": "Mã bưu chính",
+  "legalEntities.city": "Thành phố",
+  "legalEntities.region": "Tỉnh hoặc bang",
+  "legalEntities.sectionRegister": "Thuế và đăng ký",
+  "legalEntities.vatId": "Mã số thuế",
+  "legalEntities.registerCourt": "Cơ quan đăng ký",
+  "legalEntities.registerNumber": "Số đăng ký",
+  "legalEntities.sectionBank": "Tài khoản ngân hàng",
+  "legalEntities.bankHolder": "Chủ tài khoản",
+  "legalEntities.iban": "Số IBAN",
+  "legalEntities.bic": "Mã BIC",
+  "legalEntities.sectionDocuments": "Tài liệu",
+  "legalEntities.defaultLanguage": "Ngôn ngữ tài liệu",
+  "legalEntities.defaultLanguageHint":
+    "Hai chữ cái, ví dụ de. Để trống để dùng ngôn ngữ của mẫu.",
+  "legalEntities.imprint": "Thông tin pháp lý",
+  "legalEntities.imprintHint":
+    "Thông tin pháp lý pháp nhân này in ra, tối đa 4.000 ký tự.",
+  "legalEntities.sectionOffering": "Pháp nhân bán gì",
+  "legalEntities.offerSummary": "Sản phẩm",
+  "legalEntities.icp": "Khách hàng lý tưởng",
+  "legalEntities.valueProposition": "Giá trị mang lại",
+  "legalEntities.usp": "Điểm khác biệt",
+  "legalEntities.sectionLogo": "Logo công ty",
+  "legalEntities.logoAdd": "Thêm logo",
+  "legalEntities.logoReplace": "Thay logo",
+  "legalEntities.logoHint":
+    "PNG, JPEG, GIF, WebP, ICO hoặc SVG. Logo được lưu ngay khi bạn chọn.",
+  "legalEntities.logoEmpty": "Thả ảnh vào đây hoặc chọn ảnh",
+  "legalEntities.logoRemove": "Gỡ logo",
+  "legalEntities.countryPlaceholder": "Chọn quốc gia",
+  "legalEntities.countryInstallation": "Quốc gia của bản cài đặt",
+  "legalEntities.countryInstallationHint":
+    "Giữ quốc gia của bản cài đặt, trừ khi công ty này đặt trụ sở ở nơi khác.",
+  "legalEntities.archiveTitle": "Lưu trữ {name}?",
+  "legalEntities.archiveBody":
+    "Pháp nhân này rời khỏi danh sách và không ai được gán vào nữa.",
+  "legalEntities.hasMembers":
+    "Vẫn còn đồng nghiệp làm việc cho pháp nhân này. Hãy gán họ sang pháp nhân khác ở trang Thành viên trước.",
+  "legalEntities.assessedAgainst":
+    "Vẫn còn công ty được đánh giá theo sản phẩm của pháp nhân này. Hãy chọn pháp nhân khác cho các công ty đó trước.",
+  "legalEntities.nameTaken": "Một pháp nhân khác đã có tên này.",
+  "legalEntities.invalidIban":
+    "IBAN này không hợp lệ. Hãy kiểm tra các chữ số.",
+  "legalEntities.invalidBic":
+    "BIC này không hợp lệ. BIC có 8 hoặc 11 chữ cái và chữ số.",
+  "legalEntities.invalidCountry": "Hãy chọn một quốc gia trong danh sách.",
+  "legalEntities.invalidLanguage": "Nhập mã ngôn ngữ hai chữ cái, ví dụ de.",
   "lossReasons.title": "Lý do thua",
   "lossReasons.sub":
     "Các lý do để chọn khi một deal bị thua. Báo cáo đếm deal thua theo các lý do này.",
@@ -6513,7 +6586,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "field.phoneHome": "Nhà riêng",
   "field.phoneOther": "Khác",
   "field.primary": "Chính",
-  "field.removeRow": "Gỡ",
   "field.removeRowLabel": "Gỡ hàng {n}",
   "field.moveRowUp": "Chuyển hàng {n} lên",
   "field.moveRowDown": "Chuyển hàng {n} xuống",
@@ -7481,6 +7553,48 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",
   "analytics.sectionDelivery": "Triển khai",
+  "analytics.sectionAccounts": "Độ phủ công ty",
+  "analytics.accounts.views": "Các góc nhìn rủi ro",
+  "analytics.accounts.singleThreaded": "Deal chỉ có một liên hệ",
+  "analytics.accounts.untouched": "Chưa liên hệ trong pipeline",
+  "analytics.accounts.silent": "Đã thắng nhưng im lặng",
+  "analytics.accounts.pending": "Đang kiểm tra các công ty",
+  "analytics.accounts.thresholds":
+    "Rủi ro nghĩa là: tối đa {seats} liên hệ gắn bó với deal, không trao đổi trong {untouched} ngày khi còn trong pipeline, không trao đổi trong {silent} ngày sau khi thắng trong vòng {won} ngày.",
+  "analytics.accounts.singleThreadedPurpose":
+    "Deal đang mở mà gần đây chỉ có tối đa {seats} liên hệ ở công ty trao đổi thư hoặc gặp bạn.",
+  "analytics.accounts.untouchedPurpose":
+    "Công ty có deal đang mở và không có trao đổi hai chiều trong {days} ngày qua.",
+  "analytics.accounts.silentPurpose":
+    "Công ty có deal thắng trong {won} ngày qua, không có deal đang mở, và không có trao đổi hai chiều trong {days} ngày qua.",
+  "analytics.accounts.noActivityGrant":
+    "Việc kiểm tra các công ty cần quyền đọc hoạt động.",
+  "analytics.accounts.none": "Không có gì rủi ro ở đây.",
+  "analytics.accounts.truncated":
+    "Có nhiều công ty hơn mức lần đọc này kiểm tra: số đếm chỉ gồm những công ty lớn nhất. Hãy thu hẹp các hồ sơ bạn đã chọn.",
+  "analytics.accounts.withheld_one":
+    "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
+  "analytics.accounts.withheld_other":
+    "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
+  "analytics.accounts.account": "Công ty",
+  "analytics.accounts.deal": "Deal",
+  "analytics.accounts.owner": "Phụ trách",
+  "analytics.accounts.engagedSeats": "Liên hệ gắn bó",
+  "analytics.accounts.seatsOf": "{engaged} trên {named}",
+  "analytics.accounts.openDeals": "Deal đang mở",
+  "analytics.accounts.wonDeal": "Deal đã thắng",
+  "analytics.accounts.lastExchange": "Trao đổi gần nhất",
+  "analytics.accounts.never": "Chưa bao giờ",
+  "analytics.accounts.daysAgo": "{date}, {days} ngày trước",
+  "analytics.accounts.evidencePurpose": "Căn cứ của nhận định này.",
+  "analytics.accounts.factSeats":
+    "{engaged} trên {named} liên hệ được nêu trong deal đã trao đổi thư hoặc gặp bạn trong 90 ngày qua.",
+  "analytics.accounts.factStage": "Deal đang ở giai đoạn {stage}.",
+  "analytics.accounts.factOpen_one": "{count} deal đang mở ở công ty này.",
+  "analytics.accounts.factOpen_other": "{count} deal đang mở ở công ty này.",
+  "analytics.accounts.factWon": "{deal} đã thắng vào {date}.",
+  "analytics.accounts.factInbound": "Họ viết lần cuối: {date}.",
+  "analytics.accounts.factOutbound": "Bạn viết lần cuối: {date}.",
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
@@ -7814,6 +7928,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateDeals_other":
     "{count} deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.deliveryFailed_one":
+    "Không thể giao 1 lượt xem xét khách hàng cho người chịu trách nhiệm về deal dưới dạng công việc. Lần kiểm tra tiếp theo sẽ thử lại.",
+  "review.deliveryFailed_other":
+    "Không thể giao {count} lượt xem xét khách hàng cho người chịu trách nhiệm về deal dưới dạng công việc. Lần kiểm tra tiếp theo sẽ thử lại.",
   "review.outOfDateWorkspace":
     "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateSignals_one":
@@ -9211,6 +9329,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
   "jobs.kind.assurance_deal_rescan":
     "Kiểm tra dự báo cho một giao dịch đã thay đổi",
+  "jobs.kind.assurance_review_delivery":
+    "Công việc cho một lần xem xét khách hàng",
   "jobs.kind.brief_generate": "Bản tin sáng",
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",
@@ -13226,6 +13346,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.invite": "Mời",
   "users.setRole": "Chọn vai trò…",
   "users.roleOf": "vai trò của {name}",
+  "users.entityLabel": "Pháp nhân",
+  "users.entityOf": "pháp nhân của {name}",
+  "users.entitySaved": "{name} giờ làm việc cho {entity}",
   "users.rolesReplace":
     "Vai trò được chọn sẽ thay thế toàn bộ vai trò hiện có.",
   "users.deactivate": "Vô hiệu hóa",
@@ -19256,16 +19379,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Bắt đầu làm việc",
   "project.standing.peek.today": "Hôm nay",
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
-  "mailCoverage.title": "Lịch sử email có thể chưa đầy đủ",
-  "mailCoverage.unknown":
-    "Việc thu thập email chưa xác minh đầy đủ giai đoạn này. Các ngày này dựa trên trao đổi đã ghi nhận; phản hồi có thể nằm ngoài hồ sơ.",
-  "mailCoverage.partial":
-    "Thu thập đã thành công, nhưng chưa xác minh đầy đủ lịch sử Hộp thư đến và thư Đã gửi. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
-  "mailCoverage.unavailable":
-    "Không thể thu thập email cho một phần lịch sử này. Phản hồi có thể nằm ngoài hồ sơ.",
-  "mailCoverage.withheld":
-    "Bạn không có quyền kiểm tra phạm vi thu thập email. Thiếu thư trong hồ sơ không chứng minh rằng chưa có ai phản hồi.",
-  "mailCoverage.connections": "Kiểm tra kết nối",
   "connectors.syncTimeUnknown": "Chưa có thông tin về lần đồng bộ thành công",
   "brief.coverage.source.deal_advice": "Bước tiếp theo cho cơ hội",
   "tasks.origin.accepted_recommendation":
