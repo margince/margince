@@ -22,17 +22,22 @@ type salesDecisionHandlers struct {
 
 // ListSalesDecisions implements GET /analytics/decisions.
 func (h salesDecisionHandlers) ListSalesDecisions(w http.ResponseWriter, r *http.Request, params crmcontracts.ListSalesDecisionsParams) {
-	var deal *ids.UUID
+	filter := decisionFilter{selection: &crmcontracts.ReportingSelection{
+		ProductId: params.ProductId, InitiativeId: params.InitiativeId,
+		Country: params.Country, Industry: params.Industry,
+	}}
 	if params.DealId != nil {
 		id := ids.UUID(*params.DealId)
-		deal = &id
+		filter.deal = &id
 	}
-	var status *string
 	if params.Status != nil {
 		value := string(*params.Status)
-		status = &value
+		filter.status = &value
 	}
-	out, err := h.decisions.List(r.Context(), deal, status)
+	if params.ScopeKind != nil {
+		filter.selection.Scope = crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(*params.ScopeKind), Id: params.ScopeId}
+	}
+	out, err := h.decisions.List(r.Context(), filter)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

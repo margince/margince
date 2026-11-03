@@ -6924,6 +6924,11 @@ paths:
       x-agent-access: human-only
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The decisions recorded from a sales review, newest first, as tasks the reader may see.
+      description: >-
+        The review's selection narrows the list to the decisions on its deals: the deals its
+        scope owns, of its product, country and industry, and members of its initiative. The
+        selection's period does not narrow it, because a deal belongs to a period only through
+        the figure that reads it.
       parameters:
         - name: deal_id
           in: query
@@ -6931,6 +6936,24 @@ paths:
         - name: status
           in: query
           schema: { type: string, enum: [open, done] }
+        - name: scope_kind
+          in: query
+          schema: { type: string, enum: [owner, team, workspace, managed_teams] }
+        - name: scope_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: product_id
+          in: query
+          schema: { $ref: '#/components/schemas/ReportingProductId' }
+        - name: initiative_id
+          in: query
+          schema: { $ref: '#/components/schemas/ReportingInitiativeId' }
+        - name: country
+          in: query
+          schema: { $ref: '#/components/schemas/ReportingCountry' }
+        - name: industry
+          in: query
+          schema: { $ref: '#/components/schemas/ReportingIndustry' }
       responses:
         '200':
           description: The decisions.

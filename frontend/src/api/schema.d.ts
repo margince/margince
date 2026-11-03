@@ -4600,7 +4600,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The decisions recorded from a sales review, newest first, as tasks the reader may see. */
+        /**
+         * The decisions recorded from a sales review, newest first, as tasks the reader may see.
+         * @description The review's selection narrows the list to the decisions on its deals: the deals its scope owns, of its product, country and industry, and members of its initiative. The selection's period does not narrow it, because a deal belongs to a period only through the figure that reads it.
+         */
         get: operations["listSalesDecisions"];
         put?: never;
         /**
@@ -62593,6 +62596,12 @@ export interface operations {
             query?: {
                 deal_id?: string;
                 status?: "open" | "done";
+                scope_kind?: "owner" | "team" | "workspace" | "managed_teams";
+                scope_id?: string;
+                product_id?: components["schemas"]["ReportingProductId"];
+                initiative_id?: components["schemas"]["ReportingInitiativeId"];
+                country?: components["schemas"]["ReportingCountry"];
+                industry?: components["schemas"]["ReportingIndustry"];
             };
             header?: never;
             path?: never;

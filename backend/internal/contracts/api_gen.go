@@ -25303,6 +25303,30 @@ func (e ListSalesDecisionsParamsStatus) Valid() bool {
 	}
 }
 
+// Defines values for ListSalesDecisionsParamsScopeKind.
+const (
+	ListSalesDecisionsParamsScopeKindManagedTeams ListSalesDecisionsParamsScopeKind = "managed_teams"
+	ListSalesDecisionsParamsScopeKindOwner        ListSalesDecisionsParamsScopeKind = "owner"
+	ListSalesDecisionsParamsScopeKindTeam         ListSalesDecisionsParamsScopeKind = "team"
+	ListSalesDecisionsParamsScopeKindWorkspace    ListSalesDecisionsParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ListSalesDecisionsParamsScopeKind enum.
+func (e ListSalesDecisionsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSalesDecisionsParamsScopeKindManagedTeams:
+		return true
+	case ListSalesDecisionsParamsScopeKindOwner:
+		return true
+	case ListSalesDecisionsParamsScopeKindTeam:
+		return true
+	case ListSalesDecisionsParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EvaluateReportingParamsScopeKind.
 const (
 	EvaluateReportingParamsScopeKindOwner     EvaluateReportingParamsScopeKind = "owner"
@@ -64501,12 +64525,21 @@ type GetAccountCoverageParamsView string
 
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
-	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
-	Status *ListSalesDecisionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+	DealId       *openapi_types.UUID                `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+	Status       *ListSalesDecisionsParamsStatus    `form:"status,omitempty" json:"status,omitempty"`
+	ScopeKind    *ListSalesDecisionsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId      *openapi_types.UUID                `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	ProductId    *ReportingProductId                `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId *ReportingInitiativeId             `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Country      *ReportingCountry                  `form:"country,omitempty" json:"country,omitempty"`
+	Industry     *ReportingIndustry                 `form:"industry,omitempty" json:"industry,omitempty"`
 }
 
 // ListSalesDecisionsParamsStatus defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParamsStatus string
+
+// ListSalesDecisionsParamsScopeKind defines parameters for ListSalesDecisions.
+type ListSalesDecisionsParamsScopeKind string
 
 // RecordSalesDecisionParams defines parameters for RecordSalesDecision.
 type RecordSalesDecisionParams struct {
@@ -96923,6 +96956,84 @@ func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "product_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "product_id", r.URL.Query(), &params.ProductId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "product_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "product_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "initiative_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "initiative_id", r.URL.Query(), &params.InitiativeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "initiative_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "initiative_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "industry" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "industry", r.URL.Query(), &params.Industry, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "industry"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "industry", Err: err})
 		}
 		return
 	}

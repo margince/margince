@@ -349,7 +349,7 @@ func (s *salesAssessments) recordedDecisions(ctx context.Context, candidates []s
 		if err != nil {
 			return nil, fmt.Errorf("a candidate deal id: %w", err)
 		}
-		listed, err := s.decisions.List(ctx, &dealID, nil)
+		listed, err := s.decisions.List(ctx, decisionFilter{deal: &dealID})
 		if err != nil {
 			return nil, err
 		}

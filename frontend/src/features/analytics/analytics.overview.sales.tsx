@@ -262,7 +262,7 @@ function SalesReviewBody({
           onEvidence={openEvidence}
         />
       )}
-      <DecisionsPanel />
+      <DecisionsPanel review={selection} />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
       {answered && (

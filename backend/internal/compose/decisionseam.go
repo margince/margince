@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -45,12 +47,21 @@ const (
 // salesDecisions is the seam between the sales review and the activities
 // store. It owns no table: a decision is a task, read back as a decision.
 type salesDecisions struct {
-	db         *database.DB
-	activities *activities.Store
+	db          *database.DB
+	activities  *activities.Store
+	initiatives *initiatives.Store
 }
 
 func newSalesDecisions(db *database.DB) salesDecisions {
-	return salesDecisions{db: db, activities: activities.NewStore(db)}
+	return salesDecisions{db: db, activities: activities.NewStore(db), initiatives: newInitiativeStore(db.Pool())}
+}
+
+// decisionFilter narrows the decision list. Selection, when it names a scope
+// or a dimension, keeps the decisions on the deals that review reads.
+type decisionFilter struct {
+	deal      *ids.UUID
+	status    *string
+	selection *crmcontracts.ReportingSelection
 }
 
 // Record writes the decision as a task on the deal, or returns the open
@@ -144,13 +155,24 @@ func (s salesDecisions) Outcome(ctx context.Context, id ids.UUID, result string)
 	return decisionOf(updated), nil
 }
 
-// List reads the decisions the reader may see, newest first, on one deal or
-// on every deal.
-func (s salesDecisions) List(ctx context.Context, deal *ids.UUID, status *string) ([]crmcontracts.SalesDecision, error) {
+// List answers the decisions the filter keeps, newest first.
+func (s salesDecisions) List(ctx context.Context, filter decisionFilter) ([]crmcontracts.SalesDecision, error) {
 	kind, source, limit := "task", decisionSourceSystem, decisionListLimit
 	in := activities.ListActivitiesInput{Kind: &kind, SourceSystem: &source, Limit: &limit}
-	if deal != nil {
-		in.LinkedToDeals = []ids.UUID{*deal}
+	if filter.deal != nil {
+		in.LinkedToDeals = []ids.UUID{*filter.deal}
+	}
+	if filter.selection != nil && reportingSelectionNarrows(*filter.selection) {
+		reviewed, err := s.reviewedDeals(ctx, *filter.selection, in.LinkedToDeals)
+		if err != nil {
+			return nil, err
+		}
+		// No deal in the review is no decision, answered without a query. A
+		// nil link list would read as no narrowing at all.
+		if len(reviewed) == 0 {
+			return []crmcontracts.SalesDecision{}, nil
+		}
+		in.LinkedToDeals = reviewed
 	}
 	tasks, _, err := s.activities.ListActivities(ctx, in)
 	if err != nil {
@@ -159,12 +181,33 @@ func (s salesDecisions) List(ctx context.Context, deal *ids.UUID, status *string
 	out := make([]crmcontracts.SalesDecision, 0, len(tasks))
 	for _, task := range tasks {
 		decision := decisionOf(task)
-		if status != nil && string(decision.Status) != *status {
+		if filter.status != nil && string(decision.Status) != *filter.status {
 			continue
 		}
 		out = append(out, decision)
 	}
 	return out, nil
+}
+
+// reviewedDeals is the selection's deals, kept to the named ones when the
+// caller names any.
+func (s salesDecisions) reviewedDeals(ctx context.Context, selection crmcontracts.ReportingSelection, named []ids.UUID) ([]ids.UUID, error) {
+	var deals []ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		deals, err = reportingSelectionDeals(ctx, tx, s.initiatives, selection)
+		return err
+	})
+	if err != nil || len(named) == 0 {
+		return deals, err
+	}
+	kept := make([]ids.UUID, 0, len(named))
+	for _, deal := range named {
+		if slices.Contains(deals, deal) {
+			kept = append(kept, deal)
+		}
+	}
+	return kept, nil
 }
 
 // openDecisionTx finds the open task that already records this decision on

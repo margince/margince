@@ -67,7 +67,7 @@ func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
 	if err := e.Pool.QueryRow(context.Background(), `SELECT updated_at FROM deal WHERE id = $1`, deal).Scan(&before); err != nil {
 		t.Fatal(err)
 	}
-	listed, err := seam.List(ctx, &deal, nil)
+	listed, err := seam.List(ctx, decisionFilter{deal: &deal})
 	if err != nil {
 		t.Fatalf("listing the deal's decisions: %v", err)
 	}
@@ -102,11 +102,57 @@ func TestADecisionIsOneTaskUntilItsOutcomeIsRecorded(t *testing.T) {
 		t.Fatalf("after the outcome the same decision gave %+v, created=%v; want a new task", third, created)
 	}
 	openOnly := "open"
-	listed, err = seam.List(ctx, &deal, &openOnly)
+	listed, err = seam.List(ctx, decisionFilter{deal: &deal, status: &openOnly})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(listed) != 2 || listed[0].Id != third.Id {
 		t.Fatalf("the open decisions are %+v, want the new task first and the handed one", listed)
+	}
+}
+
+// A review's selection keeps the decisions on its deals: the deals its scope
+// owns, of its industry. A selection that holds no deal answers no decision,
+// never the unnarrowed list.
+func TestTheDecisionListFollowsTheReviewSelection(t *testing.T) {
+	e := setupForecast(t)
+	start := clocktest.Now(t).UTC().Truncate(time.Second)
+	_, _, open := seedInitiativeDeals(t, e, start)
+	ctx := initiativeManager(e)
+	seam := newSalesDecisions(InstallationDB(e.Pool))
+	for _, name := range []string{"Linden press", "Tern portal"} {
+		if _, _, err := seam.Record(ctx, crmcontracts.SalesDecisionInput{
+			Decision: "Name the budget owner", DealId: openapi_types.UUID(open[name]),
+			OwnerId: openapi_types.UUID(e.Rep1), ReviewOn: openapi_types.Date{Time: start.AddDate(0, 0, 7)},
+		}); err != nil {
+			t.Fatalf("recording the decision on %s: %v", name, err)
+		}
+	}
+	decided := func(selection crmcontracts.ReportingSelection) []openapi_types.UUID {
+		t.Helper()
+		listed, err := seam.List(ctx, decisionFilter{selection: &selection})
+		if err != nil {
+			t.Fatalf("listing under %+v: %v", selection, err)
+		}
+		deals := []openapi_types.UUID{}
+		for _, decision := range listed {
+			deals = append(deals, decision.DealId)
+		}
+		return deals
+	}
+	manufacturing, retail := "manufacturing", "retail"
+	rep1, rep3 := openapi_types.UUID(e.Rep1), openapi_types.UUID(e.Rep3)
+
+	if got := decided(crmcontracts.ReportingSelection{Industry: &manufacturing}); len(got) != 1 || got[0] != openapi_types.UUID(open["Linden press"]) {
+		t.Errorf("the manufacturing review lists decisions on %v, want only Linden press's", got)
+	}
+	if got := decided(crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: &rep1}}); len(got) != 2 {
+		t.Errorf("Rep1's review lists decisions on %v, want both of Rep1's deals", got)
+	}
+	if got := decided(crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: &rep3}}); len(got) != 0 {
+		t.Errorf("Rep3's review lists decisions on %v, want none: Rep3 owns no deal", got)
+	}
+	if got := decided(crmcontracts.ReportingSelection{Industry: &retail}); len(got) != 0 {
+		t.Errorf("a review of an industry with no deal lists decisions on %v, want none", got)
 	}
 }

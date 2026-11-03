@@ -36,6 +36,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "view", Values: []string{"single_threaded", "untouched", "silent"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/decisions": {
+		{Name: "scope_kind", Values: []string{"owner", "team", "workspace", "managed_teams"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"open", "done"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/editions/{id}/evidence": {

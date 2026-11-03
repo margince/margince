@@ -28,6 +28,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
+import type { ReportingSelection } from "./reporting.model";
 
 export type SalesDecision = components["schemas"]["SalesDecision"];
 type DecisionInput = components["schemas"]["SalesDecisionInput"];
@@ -35,15 +36,31 @@ type DecisionInput = components["schemas"]["SalesDecisionInput"];
 const DECISIONS_KEY = "sales-decisions";
 
 /** The decisions recorded from sales reviews, newest first, on one deal or all. */
-export function useSalesDecisions(dealId?: string) {
+/** The part of a review's selection that narrows its decisions to its deals. */
+export type DecisionReview = Pick<
+  ReportingSelection,
+  "scope" | "product_id" | "initiative_id" | "country" | "industry"
+>;
+
+/** The list's query for a review, or the whole list without one. */
+export function decisionQuery(dealId?: string, review?: DecisionReview) {
+  return {
+    deal_id: dealId,
+    scope_kind: review?.scope.kind,
+    scope_id: review?.scope.id ?? undefined,
+    product_id: review?.product_id ?? undefined,
+    initiative_id: review?.initiative_id ?? undefined,
+    country: review?.country ?? undefined,
+    industry: review?.industry ?? undefined,
+  };
+}
+
+export function useSalesDecisions(dealId?: string, review?: DecisionReview) {
+  const query = decisionQuery(dealId, review);
   return useQuery({
-    queryKey: [DECISIONS_KEY, dealId ?? ""],
+    queryKey: [DECISIONS_KEY, query],
     queryFn: async () =>
-      unwrap(
-        await api.GET("/analytics/decisions", {
-          params: { query: { deal_id: dealId } },
-        }),
-      ).data,
+      unwrap(await api.GET("/analytics/decisions", { params: { query } })).data,
     staleTime: 30_000,
   });
 }
@@ -53,11 +70,13 @@ export function useSalesDecisions(dealId?: string) {
  * with its owner, deal and review date. Recording an outcome closes one and
  * changes no deal.
  */
-export function DecisionsPanel() {
+export function DecisionsPanel({
+  review,
+}: Readonly<{ review?: DecisionReview }> = {}) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const decisions = useSalesDecisions();
+  const decisions = useSalesDecisions(undefined, review);
   const canRecord = useCanWrite("activity", "create");
   const canClose = useCanWrite("activity", "update");
   const [recording, setRecording] = useState(false);

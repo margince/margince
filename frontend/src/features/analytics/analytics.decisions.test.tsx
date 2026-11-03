@@ -79,3 +79,48 @@ it("lists the open decision and records its outcome without touching the deal", 
   await waitFor(() => expect(outcome).toHaveBeenCalledTimes(1));
   expect(outcome.mock.calls[0]?.[0]).toEqual({ result: "Buyer met" });
 });
+
+it("asks for the decisions of the review's deals", async () => {
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /me": meRoute({ report_definition: ["read"], activity: ["read"] }),
+    "GET /analytics/decisions": () => jsonResponse({ data: [open] }),
+  });
+  const routed = globalThis.fetch;
+  const asked: URL[] = [];
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    asked.push(
+      new URL(
+        input instanceof Request ? input.url : String(input),
+        "http://app.test",
+      ),
+    );
+    return routed(input, init);
+  }) as typeof fetch;
+  render(
+    <StoryProviders>
+      <DecisionsPanel
+        review={{
+          scope: { kind: "team", id: "33333333-3333-4333-8333-333333333333" },
+          product_id: "44444444-4444-4444-8444-444444444444",
+          country: "DE",
+        }}
+      />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByText("Call the buyer about the budget"),
+  ).toBeInTheDocument();
+  const list = asked.find((url) =>
+    url.pathname.endsWith("/analytics/decisions"),
+  );
+  expect(list?.searchParams.get("scope_kind")).toBe("team");
+  expect(list?.searchParams.get("scope_id")).toBe(
+    "33333333-3333-4333-8333-333333333333",
+  );
+  expect(list?.searchParams.get("product_id")).toBe(
+    "44444444-4444-4444-8444-444444444444",
+  );
+  expect(list?.searchParams.get("country")).toBe("DE");
+  expect(list?.searchParams.has("industry")).toBe(false);
+});
