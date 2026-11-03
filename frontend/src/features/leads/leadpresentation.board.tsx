@@ -194,6 +194,8 @@ export function LeadBoard({
   const withheld =
     terminalCountsWithheldBecause(query) ??
     terminalCountsRefusedBecause(counts.data);
+  // No count is stated while the report is withheld, refused, pending or failed.
+  const countsShown = !withheld && counts.data instanceof Map;
   const terminalRows = useTerminalLeads(
     query,
     openTerminal ?? "promoted",
@@ -306,7 +308,7 @@ export function LeadBoard({
           report renders as 0 and a failed row read as an empty column, and
           both read as fact. "Nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
-      {counts.isError && (
+      {!withheld && counts.isError && (
         <ErrorLine
           actions={
             <Button variant="ghost" onClick={() => counts.refetch()}>
@@ -326,9 +328,9 @@ export function LeadBoard({
           }
         >
           {t(
-            withheld
-              ? "lead.boardTerminalRowsUnavailableNoCount"
-              : "lead.boardTerminalRowsUnavailable",
+            countsShown
+              ? "lead.boardTerminalRowsUnavailable"
+              : "lead.boardTerminalRowsUnavailableNoCount",
           )}
         </ErrorLine>
       )}

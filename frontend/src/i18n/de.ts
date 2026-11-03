@@ -5354,7 +5354,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.boardCountsNoConnectorSource":
     "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
   "lead.boardCountsOwnerNotMeasurable":
-    "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, sie auszuwerten.",
+    "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, diese Anzahl auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
     "Diese Leads konnten nicht geladen werden. Die Anzahl oben stimmt weiterhin.",
   "lead.boardTerminalRowsUnavailableNoCount":

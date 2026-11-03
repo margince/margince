@@ -144,7 +144,9 @@ export function useTerminalLeads(
   const params = terminalLeadsQueryParams(query, status);
   const dialStatus = query.filters.status;
   return useInfiniteQuery({
-    queryKey: [...leadTerminalKey(status), params],
+    // The dial's own status, which `params` overwrites, keeps an excluded
+    // column off the cached rows of an unfiltered one.
+    queryKey: [...leadTerminalKey(status), params, dialStatus ?? null],
     enabled: enabled && (!dialStatus || dialStatus === status),
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {

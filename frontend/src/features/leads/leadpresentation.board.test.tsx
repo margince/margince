@@ -67,23 +67,26 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// Draws the board, and redraws it under other dials with the same cache.
 function drawBoard(query: ListQuery) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  const board = (dials: ListQuery) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <LeadBoard
-          query={query}
+          query={dials}
           rows={[lead]}
           onMoved={() => undefined}
           hasMore={false}
           loadMore={() => undefined}
         />
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const { rerender } = render(board(query));
+  return { redraw: (dials: ListQuery) => rerender(board(dials)) };
 }
 
 // The figure a column states, to the eye or to a screen reader.
@@ -96,6 +99,12 @@ function column(stage: string): HTMLElement {
   );
   if (found === null) throw new Error(`no board column for ${stage}`);
   return found;
+}
+
+function headOf(stage: string): HTMLElement {
+  const head = column(stage).querySelector<HTMLElement>(".board-col-head");
+  if (head === null) throw new Error(`no head for ${stage}`);
+  return head;
 }
 
 afterEach(() => {
@@ -251,5 +260,61 @@ describe("the lead board's terminal columns under the queue's dials", () => {
         screen.queryByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
       ).toBeNull(),
     );
+  });
+
+  it("claim no count above leads that did not load while the counts failed too", async () => {
+    serve(() =>
+      json(
+        { title: "Unavailable", status: 503, code: "service_unavailable" },
+        503,
+      ),
+    );
+    drawBoard(mine());
+    await screen.findByText(en["lead.boardCountsUnavailable"]);
+    fireEvent.click(headOf("promoted"));
+
+    expect(
+      await screen.findByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
+    ).toBeTruthy();
+    expect(document.body.textContent).not.toContain(
+      en["lead.boardTerminalRowsUnavailable"],
+    );
+  });
+
+  it("drop a counts failure once a dial withholds the counts", async () => {
+    serve(() =>
+      json(
+        { title: "Unavailable", status: 503, code: "service_unavailable" },
+        503,
+      ),
+    );
+    const board = drawBoard(mine());
+    await screen.findByText(en["lead.boardCountsUnavailable"]);
+
+    board.redraw({ ...mine(), q: "nordwind" });
+    expect(column("promoted").textContent).toContain(
+      en["lead.boardCountsNoSearch"],
+    );
+    expect(screen.queryByText(en["lead.boardCountsUnavailable"])).toBeNull();
+  });
+
+  it("show no cached cards in a column a status dial excludes", async () => {
+    serve(() =>
+      json({
+        rows: [{ status: "promoted", leads: 1 }],
+        data: [{ ...lead, id: "l-q", status: "promoted" }],
+        page: { has_more: false, next_cursor: null },
+      }),
+    );
+    const board = drawBoard(mine());
+    fireEvent.click(headOf("promoted"));
+    await waitFor(() =>
+      expect(column("promoted").querySelector('[data-lead="l-q"]')).not.toBe(
+        null,
+      ),
+    );
+
+    board.redraw(mine({ status: "new" }));
+    expect(column("promoted").querySelector('[data-lead="l-q"]')).toBeNull();
   });
 });
