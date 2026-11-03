@@ -322,7 +322,13 @@ export function InitiativeDrawer({
         live={live}
         saved={saved}
         goal={goal}
-        memberCount={(members.data?.leads ?? 0) + (members.data?.deals ?? 0)}
+        // A pick made here belongs before it is saved, so it counts beside
+        // what the server already holds.
+        memberCount={
+          (members.data?.leads ?? 0) +
+          (members.data?.deals ?? 0) +
+          picked.length
+        }
         pending={{
           goal: saveGoal.isPending,
           members: saveMembers.isPending,
