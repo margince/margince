@@ -1898,6 +1898,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hủy cuộc họp này và thông báo cho người tham dự?",
   "scheduling.retry": "Thử lại lời mời",
   "scheduling.book": "Xác nhận cuộc họp",
+  "scheduling.pausedUnavailable":
+    "{host} hiện không nhận đặt lịch qua trang này.",
   "scheduling.unavailable":
     "Trang đặt lịch này không khả dụng. Liên hệ người chủ trì.",
   "scheduling.publicUrlMissing":

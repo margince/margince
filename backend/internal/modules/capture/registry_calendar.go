@@ -65,6 +65,12 @@ var calendarWriteScopes = map[string][]string{
 	"graphcal": {"Calendars.ReadWrite"},
 }
 
+// CalendarWriteGranted says whether a connection's granted scopes let it write
+// events on provider's calendar. It is the one read-only detector.
+func CalendarWriteGranted(provider string, scopes []string) bool {
+	return calendarWriteGranted(provider, scopes)
+}
+
 func calendarWriteGranted(provider string, scopes []string) bool {
 	for _, grant := range calendarWriteScopes[provider] {
 		if slices.Contains(scopes, grant) {

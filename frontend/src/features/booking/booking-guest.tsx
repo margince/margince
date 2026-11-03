@@ -82,6 +82,9 @@ export function BookingGuestScreen({
       company_name: value.company_name ?? "",
       proposal: "proposal" in value ? value.proposal : null,
       video_app: videoAppOf(value, preview),
+      // The server's own answer for a guest page; the host's preview reads
+      // only the switch, since it may show a page that is not live yet.
+      paused: "paused" in value ? value.paused : !value.enabled,
     }),
     queryFn: async () => {
       if (preview) {
@@ -138,7 +141,7 @@ export function BookingGuestScreen({
     preview ? profile.data : undefined,
   ];
   const readable =
-    profile.isSuccess && !needsCalendar && (preview || profile.data.enabled);
+    profile.isSuccess && !needsCalendar && (preview || !profile.data.paused);
   const slots = useQuery({
     queryKey: [...readKey, visible?.from, visible?.to, locale],
     enabled: readable,
@@ -222,7 +225,7 @@ export function BookingGuestScreen({
     setSelected(null);
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
-  const publicUnavailable = !preview && !profile.data?.enabled;
+  const publicUnavailable = !preview && profile.data?.paused !== false;
   useBookingTitle(preview ? null : guestTitle(t, profile.data));
   return (
     <div className="book-guest-page">
@@ -354,9 +357,9 @@ export function BookingGuestScreen({
 // missing page keeps a generic title, as its link-preview card does.
 function guestTitle(
   t: ReturnType<typeof useT>,
-  host: { enabled: boolean; host_name: string } | undefined,
+  host: { paused: boolean; host_name: string } | undefined,
 ): string {
-  return host?.enabled && host.host_name
+  return host && !host.paused && host.host_name
     ? t("book.pageTitle", { host: host.host_name })
     : t("book.pageTitleGeneric");
 }

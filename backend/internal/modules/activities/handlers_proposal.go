@@ -59,6 +59,7 @@ func (h Handlers) proposalForRequest(w http.ResponseWriter, r *http.Request, tok
 // proposal's own video choice, nil on the host's standing page.
 func publicProfile(profile crmcontracts.SchedulingProfile, requested *bool) crmcontracts.PublicSchedulingProfile {
 	out := crmcontracts.PublicSchedulingProfile{Title: profile.Title, Location: profile.Location, DurationMinutes: profile.DurationMinutes, Enabled: profile.Enabled, LogoUrl: profile.LogoUrl}
+	out.Paused = publicPagePaused(profile)
 	if profile.HostName != nil {
 		out.HostName = *profile.HostName
 	}
@@ -188,4 +189,10 @@ func (h Handlers) AcceptPublicMeetingProposal(w http.ResponseWriter, r *http.Req
 		slog.WarnContext(r.Context(), "booking: inquiry basis could not be recorded", "activity_id", out.Id, "err", err)
 	}
 	httperr.WriteJSON(w, http.StatusAccepted, guestInvitationView(out))
+}
+
+// publicPagePaused is the one answer to whether a booking page takes bookings
+// now: the profile read, the availability read and the booking call share it.
+func publicPagePaused(profile crmcontracts.SchedulingProfile) bool {
+	return !profile.Enabled || profile.Provider == ""
 }

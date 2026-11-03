@@ -224,7 +224,7 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		writeStoreErr(w, r, err)
 		return
 	}
-	if !profile.Enabled || profile.Provider == "" {
+	if publicPagePaused(profile) {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
@@ -315,7 +315,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if !profile.Enabled || profile.Provider == "" {
+	if publicPagePaused(profile) {
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
