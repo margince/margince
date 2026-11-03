@@ -113,20 +113,18 @@ func (s *Sink) admitPartiesAs(ctx context.Context, activity ids.ActivityID, sour
 		return ctx, false, err
 	}
 	var failed error
-	deferred := false
 	for _, party := range parties {
 		if err := s.admitOneParty(acting, activity, source, party); err != nil {
 			if errors.Is(err, errPartyAuthorityChanged) {
 				return ctx, false, nil
 			}
 			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-				deferred = true
 				continue
 			}
 			failed = errors.Join(failed, err)
 		}
 	}
-	return acting, failed == nil && !deferred, failed
+	return acting, failed == nil, failed
 }
 
 func (s *Sink) admitOneParty(ctx context.Context, activity ids.ActivityID, source partySource, party admissionParty) error {
@@ -186,7 +184,7 @@ func (s *Sink) admitCapturedParties(ctx context.Context, rec connector.Normalize
 func (s *Sink) readAdmissionParties(ctx context.Context, activity ids.ActivityID, source partySource) ([]admissionParty, bool, error) {
 	var parties []admissionParty
 	ready := false
-	err := s.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 			return err
 		}

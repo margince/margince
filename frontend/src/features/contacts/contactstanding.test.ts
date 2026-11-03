@@ -363,6 +363,60 @@ describe("contactDims", () => {
     });
   });
 
+  describe("a colleague who wrote without a reply", () => {
+    type Colleague = NonNullable<
+      NonNullable<Contact360["network"]>["colleagues"]
+    >[number];
+    const colleague = (name: string, over: Partial<Colleague>): Colleague => ({
+      user_id: `u-${name}`,
+      display_name: name,
+      strength_bucket: "weak",
+      interactions_90d: 1,
+      inbound_90d: 0,
+      outbound_90d: 1,
+      sent_90d: 1,
+      two_way: false,
+      ...over,
+    });
+    const reach = (colleagues: Colleague[]) =>
+      contactDims({ ...VIEW, network: { colleagues } }, t, "en").find(
+        (dim) => dim.key === "reach",
+      );
+    const inTouch = colleague("Bea Owner", {
+      interactions_90d: 2,
+      inbound_90d: 1,
+      two_way: true,
+    });
+
+    it("names a colleague who wrote without a reply after those in touch", () => {
+      expect(reach([inTouch, colleague("Carl Writer", {})])).toMatchObject({
+        value: "1 colleague in touch",
+        sub: "Bea Owner · also wrote: Carl Writer",
+        tone: "warning",
+      });
+    });
+
+    it("does not name a colleague who was only copied", () => {
+      expect(
+        reach([inTouch, colleague("Cleo Copied", { sent_90d: 0 })]),
+      ).toMatchObject({ value: "1 colleague in touch", sub: "Bea Owner" });
+    });
+
+    it("reads no two-way contact when colleagues only wrote", () => {
+      expect(reach([colleague("Carl Writer", {})])).toMatchObject({
+        value: "No two-way contact",
+        sub: "Carl Writer wrote, no reply yet",
+        tone: "neutral",
+      });
+    });
+
+    it("treats a missing sent_90d as not written", () => {
+      expect(
+        reach([colleague("Old Payload", { sent_90d: undefined })]),
+      ).toMatchObject({ value: "No colleague in touch", sub: undefined });
+    });
+  });
+
   it("says none open and no colleague in touch rather than zero", () => {
     const dims = contactDims(
       { ...VIEW, claims: [], network: { colleagues: [] } },

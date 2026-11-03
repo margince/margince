@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/initiatives"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -50,13 +51,16 @@ var reportingMetrics = []metricSpec{
 	{crmcontracts.ReportingMetricDefinition{Id: reportingPartnerActivity, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingPartnerActivity].En}, objectPartner, readReportingPartnerActivity},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingStageConversion, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingStageCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingStageConversion].En}, string(recordTypeDeal), readReportingStageConversion},
 	{crmcontracts.ReportingMetricDefinition{Id: reportingLeadCohortOutcomes, Version: "1", Unit: "percent", TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingLeadCohort, reportingMetricReading}, Definition: reportingDefinitionWords[reportingLeadCohortOutcomes].En}, string(recordTypeLead), readReportingLeadCohort},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingBookingsMix, Version: "1", Unit: reportingMoney, TemporalBasis: reportingEventPeriod, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingBookingsMix].En}, string(recordTypeDeal), readReportingBookingsMix},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingQualifiedOpportunitiesCreated, Version: "1", Unit: reportingCountUnit, TemporalBasis: reportingEventPeriod, SupportsTarget: true, Blocks: []crmcontracts.ReportingBlockKind{reportingTargetProgress, reportingMetricReading}, Definition: reportingDefinitionWords[reportingQualifiedOpportunitiesCreated].En}, string(recordTypeDeal), readReportingQualifiedCount},
+	{crmcontracts.ReportingMetricDefinition{Id: reportingInitiativePipeline, Version: "1", Unit: reportingMoney, TemporalBasis: reportingStateAt, Blocks: []crmcontracts.ReportingBlockKind{reportingBreakdown, reportingMetricReading}, Definition: reportingDefinitionWords[reportingInitiativePipeline].En}, string(recordTypeDeal), readReportingInitiativePipeline},
 }
 
 // reportingPresets are the selections the Analytics screen opens on. A preset
 // names metrics and charts only: each metric's meaning and read grant stay in
 // reportingMetrics.
 var reportingPresets = []crmcontracts.ReportingPreset{
-	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge}},
+	{Id: crmcontracts.ReportingPresetIdSales, Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated, reportingBookingsMix}, Blocks: []crmcontracts.ReportingBlockKind{crmcontracts.ReportingBlockKindBookingsTrend, crmcontracts.ReportingBlockKindStageDistribution, reportingOwnerAttainment, reportingStageAge, reportingBreakdown}},
 	{Id: crmcontracts.ReportingPresetIdSdr, Metrics: []crmcontracts.ReportingMetricID{reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse}, Blocks: []crmcontracts.ReportingBlockKind{reportingSdrOutcomes, reportingTargetProgress}},
 	// A team's prospecting, counted once for the team: the handoff feedback
 	// beside it comes from GET /analytics/sdr-team.
@@ -106,6 +110,9 @@ func readablePresets(offered []crmcontracts.ReportingMetricDefinition) []crmcont
 
 type metricEvaluator struct {
 	forecast *forecasting.Store
+	// initiatives answers the membership of a selected initiative; nil where
+	// no initiative can be selected, as in the weekly figures.
+	initiatives *initiatives.Store
 	// compared receives what the forecast reader measured for a target
 	// comparison. Evaluate gives each evaluation its own.
 	compared *forecastCapture
@@ -158,6 +165,16 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	if err != nil {
 		return reporting.Evaluation{}, err
 	}
+	if err := requireInitiativeRead(ctx, frame); err != nil {
+		return reporting.Evaluation{}, err
+	}
+	members, err := loadInitiativeMembership(ctx, tx, e.initiatives, frame)
+	if err != nil {
+		return reporting.Evaluation{}, err
+	}
+	if members != nil {
+		ctx = withInitiativeMembership(ctx, members)
+	}
 	e.compared = &forecastCapture{}
 	out := reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame, Selection: selection, Metrics: []crmcontracts.ReportingMetric{}, Charts: []crmcontracts.ReportingChart{}}, Facts: []reporting.Fact{}}
 	for _, spec := range reportingMetrics {
@@ -168,8 +185,8 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			return out, err
 		}
 		// A team too small to hide one colleague's work shows none of its totals.
-		if thinTeam {
-			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, thinTeamCoverage(frame)))
+		if gap, unread := unreadMetric(frame, spec.definition.Id, thinTeam); unread {
+			out.Result.Metrics = append(out.Result.Metrics, projectReportingMetric(spec.definition, frame, []reporting.Fact{}, gap))
 			continue
 		}
 		facts, coverage, err := e.readIsolated(ctx, tx, spec, frame, framework)
@@ -203,6 +220,12 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 	if err := explainWithheldOwners(ctx, tx, &out); err != nil {
 		return out, err
 	}
+	return out, e.projectMovementCharts(ctx, tx, frame, &out)
+}
+
+// projectMovementCharts reads the pipeline movement behind each chart that
+// asks for it, each under its own savepoint.
+func (e metricEvaluator) projectMovementCharts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, out *reporting.Evaluation) error {
 	for index, chart := range out.Result.Charts {
 		// A chart whose metric is withheld whole keeps that coverage, and its
 		// movement and the facts behind it are never read.
@@ -217,7 +240,7 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 			return err
 		})
 		if err != nil {
-			return out, err
+			return err
 		}
 		if failed {
 			chart.Coverage = calculationFailed(frame)
@@ -228,5 +251,14 @@ func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmc
 		out.Result.Charts[index] = projected
 		out.Facts = append(out.Facts, facts...)
 	}
-	return out, nil
+	return nil
+}
+
+// unreadMetric is the coverage of a metric the evaluation does not read: a
+// thin team's, or one that cannot follow the selection's dimensions.
+func unreadMetric(frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, thinTeam bool) (crmcontracts.ReportingCoverage, bool) {
+	if thinTeam {
+		return thinTeamCoverage(frame), true
+	}
+	return reportingDimensionGap(frame, metric)
 }

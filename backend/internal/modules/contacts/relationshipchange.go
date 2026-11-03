@@ -229,20 +229,31 @@ func changeInputsFor(
 	// the overall one — inheriting today's recency would make every band look
 	// unchanged and the whole derivation silent.
 	rows, err := tx.Query(ctx, `
-		SELECT l.contact_id,
+		SELECT a.link_contact,
 		       max(a.occurred_at),
+		       max(a.engaged_at),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+` AND `+relstrength.WeWroteSQL("a")+`),
 		       max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+`),
+		       max(a.engaged_before),
 		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.TheyWroteSQL("l.contact_id", "a")+`),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`)
-		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = ANY($1)
-		 WHERE `+strengthCountsAt(5)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+
-		auth.AudienceWorkspaceOnly("a")+foldWithin+`
-		 GROUP BY l.contact_id`,
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+afterEngagedBefore+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+afterEngagedBefore+` AND `+relstrength.WeWroteSQL("a")+`)
+		  FROM (SELECT `+foldColumns+`, l.contact_id AS link_contact,
+		               max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
+		                 OVER (PARTITION BY l.contact_id) AS engaged_at,
+		               max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+` AND `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
+		                 OVER (PARTITION BY l.contact_id) AS engaged_before
+		          FROM activity a
+		          JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = ANY($1)
+		         WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+
+		auth.AudienceWorkspaceOnly("a")+foldWithin+`) a
+		 GROUP BY a.link_contact`,
 		foldArgs...,
 	)
 	if err != nil {
@@ -253,8 +264,12 @@ func changeInputsFor(
 		var contactID ids.ContactID
 		var in relstrength.ChangeInputs
 		if err := rows.Scan(&contactID,
-			&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
-			&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
+			&in.Current.LastTouch, &in.Current.LastEngaged,
+			&in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
+			&in.Current.LateCount90d, &in.Current.LateOutbound90d,
+			&in.Previous.LastTouch, &in.Previous.LastEngaged,
+			&in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
+			&in.Previous.LateCount90d, &in.Previous.LateOutbound90d,
 		); err != nil {
 			return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
 		}
@@ -262,3 +277,7 @@ func changeInputsFor(
 	}
 	return out, rows.Err()
 }
+
+// afterEngagedBefore is afterEngaged for the earlier window: after the
+// contact's last part before asOf.
+var afterEngagedBefore = relstrength.AfterEngagedSQL("a", "engaged_before")

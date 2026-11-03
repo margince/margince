@@ -26,6 +26,22 @@ Targets use the month or fiscal quarter that holds the real cutoff, even when th
 
 Every chart can also be read as numbers. The round **i** button beside a chart's title opens its reporting details. Select a mark, with a click or the keys, to open the records behind it; press `Esc` to close the side panel. A record you may not see stays hidden. Stage age records stay inside the reporting scope you picked.
 
+## How do I read one product's sales?
+
+Open **Analytics → Reports** and pick the product under **Product sales**. Sales review opens for that product alone, with a **Product sales** chip above the figures. Nothing is set up and nothing is written. A product report is the company report read for one product.
+
+On Sales review or Performance, open **Filters** and pick a **Product**, a **Country · company address**, an **Industry** and a **Value basis**. Each choice shows as a chip. The **×** on a chip removes that one filter. Every figure, chart, record list and export follows the same chips.
+
+A deal counts for a product when the accepted offer has a line for it, or when someone set the deal's products by hand. **Sales won** for a product is the value of that product's lines on the accepted offers of the deals won in the period. It is converted the way the deal's own amount is. A won deal with no priced link to the product stays in the count and adds nothing to the value. Open pipeline for a product is the whole open deal, because an open deal has no accepted offer to split.
+
+**Country · company address** reads the checked address of the deal's company. **Industry** reads the company's industry. A lead with no company keeps the industry a rep typed.
+
+**Commercial mix** splits the value of the deals won in the period by what each product is. The kinds are **Software**, **Implementation** and **Other**, set on the product under **Settings → Products and offers**. The part of a deal that no product line carries is **Unallocated**. A product with no kind shows as **Unclassified product**.
+
+The split keeps the kind a product had when the deal was priced. A later change on the rate card does not rewrite a closed deal. **Value basis** narrows sales won to one kind. Open value has no such split and says so.
+
+A figure that cannot follow a product, an address or an industry, such as meetings held, says so instead of answering for everything. With any of these filters chosen, no target is compared. A target is set for a whole scope.
+
 ## How far is this quarter from its target?
 
 With the time span set to this quarter, **This quarter against its target** sits under the row of figures. It holds the forecast landing against the sales won target of the same scope and quarter:
@@ -103,6 +119,10 @@ On **Analytics → Leads**, **What became of new leads** does the same for the l
 
 ## How do I save or share a report?
 
+To build a report of your own, open **Reports** and choose **New custom report**. **Customize report** on a sales review opens the same window with what you are reading. The window holds the report name and the question it answers. Below come **Reporting selection**, **Charts and order** with **Include the assessment**, and a **Custom question** over the open deals. **Preview report** shows the report before it is saved. There, **Customize report** returns to the window and **Save report** keeps the report under **Reports**.
+
+The **Assessment** card writes the report's figures up in a few sentences. It names only figures the report measured.
+
 Choose **Save report**, name it and choose **Visible to**. A **Purpose** tells readers what the report is for and shows under its name. Use **Customize report** to change numbers and graphs. Under **Charts and order**, put graphs into titled sections, each graph taking a whole row or half of one. Drag a graph by its handle to change its place, or press Tab to reach the handle and use the arrow keys. **Preview** shows a graph with this report's figures before you add it.
 
 **Add question** places a saved custom report with no filters, answered for each reader. Pick one of yours from the list, or paste the link to anyone's. An edition keeps the answer its sender was given, if a retention rule for editions exists. A reader of the edition sees only the rows whose records they may open.
@@ -116,6 +136,24 @@ Under **History and schedules**, **Versions** lists who saved each version and w
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
+
+## What does the panel beside the chart say?
+
+**Assessment** sits beside the leading chart of the sales review. It reads the measured figures and writes a few sentences on what they show. Each is marked as an observation, a reported fact or a guess. It names one next decision on a deal you may open, or says that none is supported.
+
+**View evidence** lists the figures each sentence rests on and opens their records. **Record decision** turns the next decision into a task with the deal and owner filled in. **Refresh assessment** asks again. Without an AI model, the panel shows the summary written from the figures and says so.
+
+## Can I describe a report or an initiative in words?
+
+Yes. In the custom report window, write under **What would you like to understand?** and choose **Suggest filters and charts**. In a new initiative, write under **Describe the initiative** and choose **Suggest the goal**. Margince reads your words against what you may choose: a product, an industry, a company address, a date range, the figures and the graphs.
+
+The proposal shows the words each value came from. It lists the questions your words leave open, and the parts it could not use. **Use proposal** puts the proposed values into the fields, over what you had chosen; a name you typed stays. Nothing is saved until you save. Without an AI model, the button says so and you choose by hand.
+
+## How do I record a decision from a review?
+
+Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.
+
+When the work is done, choose **Record outcome** and say what was completed. The task closes with that note. The deal does not change: completed work is not a sale.
 
 ## How do I keep a weekly or monthly edition?
 

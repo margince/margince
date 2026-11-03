@@ -4888,6 +4888,33 @@ paths:
             items:
               $ref: '#/components/schemas/ReportingBlockKind'
             maxItems: 20
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingCountry'
+        - name: industry
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingIndustry'
+        - name: value_basis
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingValueBasis'
+        - name: initiative_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
       description: Evaluate reporting
   /analytics/evidence:
     get:
@@ -5005,6 +5032,33 @@ paths:
             items:
               $ref: '#/components/schemas/ReportingBlockKind'
             maxItems: 20
+        - name: product_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingCountry'
+        - name: industry
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingIndustry'
+        - name: value_basis
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReportingValueBasis'
+        - name: initiative_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
         - name: metric
           in: query
           required: true
@@ -8952,9 +9006,11 @@ components:
       description: |-
         The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
         no times and a write changes nothing, because either would rest on a partial picture of the
-        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
-        calendar and the provider's reason are in the server log only. It clears once the host
-        repairs the calendar or the provider answers again.
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings. When
+        the host, signed in themselves, reads their own availability, `details.calendar` names the
+        calendar id that failed; an agent, any other reader and every public page get no calendar.
+        The provider's reason is in the server log only. It clears once the host repairs the calendar
+        or the provider answers again.
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
@@ -10313,6 +10369,11 @@ components:
           items: {$ref: '#/components/schemas/ActivityReference'}
         computed_at: {type: string, format: date-time, description: When this value was last recomputed (fixed-clock reproducible).}
         last_interaction: {type: [string, 'null'], format: date-time, description: Timestamp of the most recent qualifying interaction; null when there are none.}
+        last_engaged:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
         inbound_90d: {type: integer, minimum: 0, description: Count of qualifying inbound interactions in the trailing 90-day window.}
         outbound_90d: {type: integer, minimum: 0, description: Count of qualifying outbound interactions in the trailing 90-day window.}
     ActivityReference:
@@ -12350,7 +12411,25 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+            When they last wrote to us, among the messages the caller can open (see `last_touch_basis`). Null means no message the caller can open records a reply from them. It does not prove that none exists: a message the caller cannot open is never counted, and nothing here hints that one exists. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+        last_touch_basis:
+          type: string
+          enum: [readable_by_caller]
+          description: >-
+            Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+        last_inbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The activity behind `last_inbound_at`, picked by the same query. Evidence cites this id rather than matching a time against the capped `activities` page. Null when `last_inbound_at` is null; absent with it.
+        last_outbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The activity behind `last_outbound_at`, picked by the same query. Null when that is null; absent with it.
+        last_live_inbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The activity behind `last_live_inbound_at`, picked by the same query. Null when that is null; absent with it.
         dead_addresses:
           type: array
           items: {type: string}
@@ -12360,11 +12439,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+            When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question. Counts the messages the caller can open, like `last_inbound_at`.
         relationship_direction:
           $ref: '#/components/schemas/RelationshipDirection'
           description: >-
-            Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`.
+            Which sides have written in the messages the caller can open, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`.
         last_live_inbound_at:
           type: [string, 'null']
           format: date-time
@@ -13297,7 +13376,8 @@ components:
         two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
-        outbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where this colleague wrote to them.}
+        outbound_90d: {type: integer, minimum: 0, description: "Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent."}
+        sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d."}
         last_inbound_at: {type: [string, 'null'], format: date-time, description: When they last replied to this colleague. Null means they never have.}
         last_outbound_at: {type: [string, 'null'], format: date-time, description: When this colleague last wrote to them.}
     ContactNetwork:
@@ -16186,7 +16266,8 @@ components:
         company_name: {type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
         logo_url: {type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.}
         slug: {type: string, readOnly: true}
-        public_url: {type: string, readOnly: true}
+        alias: {type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`."}
+        public_url: {type: string, readOnly: true, description: 'The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.'}
         replace_link: {type: boolean, writeOnly: true}
         email_reminder: {type: boolean, description: Send one operational email reminder one hour before future meetings.}
         video_call: {type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.}
@@ -18653,7 +18734,7 @@ components:
             reads as a settled answer instead of a mistake.
         references:
           type: string
-          enum: [tag, app_user, team, company, pipeline, stage, project]
+          enum: [tag, app_user, team, company, pipeline, stage, project, product]
           description: |-
             The record type this field's ids point at — present for every `id`
             field, absent for every other type. Offer the record rather than a
@@ -18871,6 +18952,9 @@ components:
         - partner_activity
         - stage_conversion
         - lead_cohort_outcomes
+        - bookings_mix
+        - qualified_opportunities_created
+        - initiative_pipeline
     ReportingBlockKind:
       type: string
       description: |-
@@ -18936,6 +19020,21 @@ components:
         end_at:
           type: string
           format: date-time
+    ReportingProductId:
+      type: string
+      format: uuid
+    ReportingInitiativeId:
+      type: string
+      format: uuid
+    ReportingCountry:
+      type: string
+      pattern: '^[A-Z]{2}$'
+    ReportingIndustry:
+      type: string
+      maxLength: 120
+    ReportingValueBasis:
+      type: string
+      enum: [all, software, implementation]
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -18978,6 +19077,16 @@ components:
           enum:
             - fiscal_quarter
             - all_open
+        product_id:
+          allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        initiative_id:
+          allOf: [{$ref: '#/components/schemas/ReportingInitiativeId'}]
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         metrics:
           type: array
           items:
@@ -19018,7 +19127,9 @@ components:
             $ref: '#/components/schemas/ReportingCard'
     ReportingCardKind:
       type: string
-      description: A chart kind, or `question`, a custom analytics question the card asks for each reader.
+      description: |-
+        A chart kind, `question`, a custom analytics question the card asks for each reader, or
+        `assessment`, the report's figures written up in a few sentences.
       enum:
         - bookings_trend
         - stage_distribution
@@ -19033,6 +19144,7 @@ components:
         - stage_cohort
         - lead_cohort
         - question
+        - assessment
     ReportingCardQuestion:
       type: object
       additionalProperties: false
@@ -19141,6 +19253,23 @@ components:
             The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
         close_interval:
           $ref: '#/components/schemas/ReportingWindow'
+        product_id:
+          allOf: [{$ref: '#/components/schemas/ReportingProductId'}]
+        product_label:
+          type: string
+        initiative_id:
+          allOf: [{$ref: '#/components/schemas/ReportingInitiativeId'}]
+        initiative_label:
+          type: string
+        initiative_launch_at:
+          type: string
+          format: date-time
+        country:
+          $ref: '#/components/schemas/ReportingCountry'
+        industry:
+          $ref: '#/components/schemas/ReportingIndustry'
+        value_basis:
+          $ref: '#/components/schemas/ReportingValueBasis'
         timezone:
           type: string
         currency:
@@ -22352,6 +22481,7 @@ components:
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, description: 'Percent, e.g. 19.00 (DE USt.); per-line override allowed.'}
         active: {type: boolean}
@@ -22379,6 +22509,7 @@ components:
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit or send null to leave it unclassified.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
@@ -22395,6 +22526,7 @@ components:
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
+        component_kind: {type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.'}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}

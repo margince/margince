@@ -20,13 +20,11 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // threadMergedTables names every table mergeThreadsTx rewrites, for the
@@ -74,13 +72,12 @@ func mergeThreadsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 }
 
 // threadJoiner wires capture's thread join to the modules that own its tables.
-func threadJoiner(pools ...*pgxpool.Pool) capture.ThreadJoiner {
+func threadJoiner() capture.ThreadJoiner {
 	return capture.ThreadJoiner{
-		Repair: func(ctx context.Context, tx pgx.Tx, limit int, run ids.UUID, key string) (int, int, bool, error) {
-			return capture.ThreadRepairBatchTx(ctx, tx, limit, run, threadRepairApplier(pools...), key)
-		},
-		InheritSeat: inheritThreadSeatTx, InheritBasis: inheritThreadBasisTx,
 		RecordReferences: activities.RecordMailReferencesTx,
 		SentBySeat:       activities.SentFromHereBySeatTx,
+		Neighbours:       activities.MailNeighboursTx,
+		Earliest:         activities.EarliestThreadKeyTx,
+		Merge:            mergeThreadsTx,
 	}
 }

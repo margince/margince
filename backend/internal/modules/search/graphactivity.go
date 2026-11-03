@@ -124,7 +124,7 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 	}
 	err := tx.QueryRow(ctx, `
 		SELECT coalesce(a.subject, a.channel_provider, a.kind), a.kind, a.occurred_at, a.occurred_precision = 'day'
-		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+filed, args...).
+		  FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL`+filed, args...).
 		Scan(&title, &kind, &occurredAt, &dateOnly)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

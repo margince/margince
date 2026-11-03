@@ -45,7 +45,7 @@ func noonMeetingScope() string {
         WHERE au.entity_type = 'activity' AND au.entity_id = a.id AND au.after ? 'occurred_at'
         ORDER BY au.occurred_at DESC, au.id DESC LIMIT 1) last ON true
  WHERE a.kind = 'meeting' AND a.meeting_status IS NOT NULL AND a.occurred_precision = 'instant'
-   AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key))
+   AND a.restricted_at IS NULL
    AND (a.occurred_at AT TIME ZONE $1)::time = TIME '12:00:00'
    AND last.action = 'update' AND last.actor_type = 'human' AND last.set_status AND last.moved = a.occurred_at AND last.original IS NOT NULL
    AND (last.original AT TIME ZONE $1)::date = (a.occurred_at AT TIME ZONE $1)::date
@@ -151,7 +151,7 @@ func restoreArchivedMeetingStartTx(ctx context.Context, tx pgx.Tx, m NoonMeeting
 		return false, err
 	}
 	tag, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = $2, meeting_status = coalesce($5, meeting_status)
-		WHERE id = $1 AND version = $3 AND occurred_at = $4 AND archived_at IS NOT NULL AND (restricted_at IS NULL AND activity_thread_available(thread_key))`,
+		WHERE id = $1 AND version = $3 AND occurred_at = $4 AND archived_at IS NOT NULL AND restricted_at IS NULL`,
 		m.ID, m.Original, m.Version, m.Noon, status)
 	if err != nil {
 		return false, fmt.Errorf("activities: restoring an archived meeting's start: %w", err)

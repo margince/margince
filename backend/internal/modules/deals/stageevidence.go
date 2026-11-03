@@ -247,7 +247,7 @@ func withholdQuotationOfGoneText(ctx context.Context, tx pgx.Tx, in *EvidenceInp
 	}
 	var readable bool
 	err := tx.QueryRow(ctx, `
-		SELECT body IS NOT NULL AND (restricted_at IS NULL AND activity_thread_available(thread_key)) FROM activity WHERE activity_thread_available(thread_key) AND id = $1`,
+		SELECT body IS NOT NULL AND restricted_at IS NULL FROM activity WHERE id = $1`,
 		in.SourceID).Scan(&readable)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("reading whether the quoted activity still has its text: %w", err)

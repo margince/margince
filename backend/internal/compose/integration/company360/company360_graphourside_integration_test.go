@@ -92,6 +92,16 @@ func seedTouch(t *testing.T, e *integration.Env, owner *pgx.Conn, kind string, c
 	foldEdges(t, e, id)
 }
 
+// seedReply records one mail the contact sent us, at the instant seedTouch uses.
+func seedReply(t *testing.T, e *integration.Env, owner *pgx.Conn, contact ids.UUID) {
+	t.Helper()
+	id := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
+		VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', 'inbound', 'manual', 'connector:gmail')`)
+	integration.LinkActivity(t, owner, id, "contact", contact)
+	integration.LinkActivitySender(t, owner, id, contact)
+	foldEdges(t, e, id)
+}
+
 // foldEdges runs the recompute the cg:graph-edge consumer runs, so a test sees
 // the projection the worker would have built.
 func foldEdges(t *testing.T, e *integration.Env, activityID ids.UUID) {
@@ -453,6 +463,9 @@ func TestCompanyGraphCapsColleaguesAgainstTheContactsItDraws(t *testing.T) {
 			seedTouch(t, e, owner, "email", &insiderA, contact)
 			seedTouch(t, e, owner, "email", &insiderB, contact)
 		}
+		// A send scores only once the contact has answered it, so each drawn
+		// contact replies at the same instant as the sends.
+		seedReply(t, e, owner, contact)
 	}
 
 	graph, err := svc.Graph(e.As(e.Rep1, []ids.UUID{e.Team1}, graphRepPerms),

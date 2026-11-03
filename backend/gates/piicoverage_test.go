@@ -213,16 +213,7 @@ var piiTables = map[string]piiHandling{
 	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
 	"raw_capture":          {erasureWrite: true, sarRead: true},
 	"capture_party_source": {erasureWrite: true, sarRead: true},
-	"capture_thread_topic": {erasureWrite: true, sarRead: true},
-	"capture_import":       {erasureWrite: true, sarRead: true},
-	// Unpublished work duplicates the activity facts; invalidation hides it until bounded deletion.
-	"capture_thread_repair_node":  {erasureWrite: true, sarRead: false},
-	"capture_thread_repair":       {erasureWrite: true, sarRead: false},
-	"capture_thread_barrier":      {erasureWrite: true, sarRead: false},
-	"capture_thread_pending":      {erasureWrite: true, sarRead: false},
-	"capture_thread_reply":        {erasureWrite: true, sarRead: false},
-	"capture_thread_invalidation": {erasureWrite: true, sarRead: true},
-	"embedding":                   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
+	"embedding":            {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// The 24-hour capture trace names its counterparty — by address for mail,
 	// by DISPLAY NAME for a channel where there is no address to write — and
 	// keeps a clamped subject line. It was absent from this registry for as
@@ -514,7 +505,6 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
-	"internal/modules/privacy/sarthreads.go",
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",

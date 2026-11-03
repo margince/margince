@@ -74,7 +74,7 @@ func RetractSignatureFieldsTx(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 // limited. A widening that committed since leaves the fields standing.
 func sourceStillNarrowedTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (bool, error) {
 	var audience string
-	err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, activityID).Scan(&audience)
+	err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1 FOR SHARE`, activityID).Scan(&audience)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return true, nil
 	}

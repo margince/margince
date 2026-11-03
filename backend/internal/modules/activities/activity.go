@@ -257,30 +257,7 @@ func (s *Store) logActivityAndReadTranscript(
 	return out, created, nil
 }
 
-// meetingHost is who HELD a meeting, which is not the same question as who
-// typed it up.
-//
-// A meeting names the one place an activity says which of US was there, and it
-// is what a rep's week is counted from. Left unset it falls to captured_by, so
-// a colleague who minutes somebody else's meeting takes it into their own week
-// — the case the attribution audit named, and the one the connector import
-// already answers because a calendar knows whose it was.
-//
-// A caller may name somebody else: that IS the minuting case, and the host is a
-// label rather than an authority — what the caller may read was decided before
-// this field is filled in. Silence defaults to the acting human, because a
-// meeting somebody logs with no host named is almost always their own; a system
-// or agent principal has no week to count it into and leaves it null rather
-// than inventing one.
-//
-// A meeting that names its source author was not logged by the caller: an
-// import writes another system's history, and the caller is whoever ran it.
-// Defaulting to the caller there makes the importer host of every imported
-// meeting, which fills their own "upcoming meetings". The host is then the
-// author's seat when the source names one — RefuseUnknownSeat refuses the write
-// before the insert if it is no seat here — and nobody when the source names
-// only an author with no seat. Same rule as stampLoggedParticipants. The host
-// claims no slot either way: claims_host_slot stays the booking doors' alone.
+// An importer records another system's history; the actor alone proves no attendance.
 func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 	if in.HostUserID != nil || in.Kind != KindMeeting {
 		return in.HostUserID
@@ -289,7 +266,7 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 		host := ids.From[ids.UserKind](*in.Author.AuthorID)
 		return &host
 	}
-	if in.Author.AuthorName != nil {
+	if in.Author.AuthorName != nil || isImportedActivity(in) {
 		return nil
 	}
 	actor, ok := principal.Actor(ctx)
@@ -304,11 +281,6 @@ func meetingHost(ctx context.Context, in LogActivityInput) *ids.UserID {
 // store-opened (LogActivity) and caller-opened (LogActivityTx) entry
 // points.
 func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmcontracts.Activity, bool, error) {
-	if in.ThreadKey != "" {
-		if err := auth.EnsureThreadAvailable(ctx, tx, in.ThreadKey); err != nil {
-			return crmcontracts.Activity{}, false, err
-		}
-	}
 	if err := prepareLoggedActivity(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
@@ -473,7 +445,7 @@ func replayedSourceActivity(ctx context.Context, tx pgx.Tx, source, key string, 
 	var existing ids.ActivityID
 	err := tx.QueryRow(ctx,
 		`SELECT id FROM activity
-		   WHERE activity_thread_available(thread_key) AND source_system = $1 AND source_id = $2`,
+		   WHERE source_system = $1 AND source_id = $2`,
 		source, key).Scan(&existing)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

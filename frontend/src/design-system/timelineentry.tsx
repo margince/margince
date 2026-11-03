@@ -89,6 +89,12 @@ export type TimelineEntry = {
    */
   direction?: "inbound" | "outbound" | null;
   /**
+   * Which side wrote it, when known. `direction` is only how the copy moved.
+   * A colleague's inbound copy is still `ours`. The adapter fills it from
+   * correspondenceSide (lib/messagevoice.ts); absent falls back to direction.
+   */
+  side?: "ours" | "theirs";
+  /**
    * Who was on the other end, already resolved to names by the caller.
    *
    * "We sent" answers half a question. The half a reader came for is who it
@@ -245,12 +251,25 @@ export const TIMELINE_ICON = {
 // get. A mail we did not write is not a place to render a friendly label over
 // a different address.
 
-// directionClass tracks the row to one side of the spine: ours or theirs.
-export function directionClass(direction: TimelineEntry["direction"]): string {
-  if (direction === "outbound") {
+// sideOf answers which side wrote an entry: known authorship first, then
+// transport direction. Every authorship reading on the timeline goes through it.
+export function sideOf(entry: TimelineEntry): "ours" | "theirs" | undefined {
+  if (entry.side) {
+    return entry.side;
+  }
+  if (entry.direction === "outbound") {
+    return "ours";
+  }
+  return entry.direction === "inbound" ? "theirs" : undefined;
+}
+
+// sideClass tracks the row to one side of the spine: ours or theirs.
+export function sideClass(entry: TimelineEntry): string {
+  const side = sideOf(entry);
+  if (side === "ours") {
     return "tl-out";
   }
-  return direction === "inbound" ? "tl-in" : "";
+  return side === "theirs" ? "tl-in" : "";
 }
 
 export function noteClass(entry: TimelineEntry): string {
@@ -385,9 +404,10 @@ export function threadSides(entries: readonly TimelineEntry[]): {
     if (entry.automaticKind) {
       continue;
     }
-    if (entry.direction === "inbound") {
+    const side = sideOf(entry);
+    if (side === "theirs") {
       theirs++;
-    } else if (entry.direction === "outbound") {
+    } else if (side === "ours") {
       ours++;
     }
   }

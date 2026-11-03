@@ -98,7 +98,7 @@ func LastTouchFor(
 	// The walk starts from the accounts and is aggregated once. Its cost is the
 	// page's own activity, not how far back a quiet account's last message is.
 	touched := "FROM (" + activities.CompanyReachedActivities(wantedPos) + ") reach " +
-		"JOIN activity a ON a.id = reach.activity_id WHERE (a.archived_at IS NULL AND activity_thread_available(a.thread_key))"
+		"JOIN activity a ON a.id = reach.activity_id WHERE a.archived_at IS NULL"
 	if scope != "" {
 		touched += " AND " + scope
 	}
