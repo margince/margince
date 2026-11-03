@@ -7705,8 +7705,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.accounts.silentPurpose":
     "Unternehmen mit einem in den letzten {won} Tagen gewonnenen Deal, ohne offenen Deal und ohne Austausch in beide Richtungen in den letzten {days} Tagen.",
   "analytics.accounts.noActivityGrant":
-    "Diese Ansicht braucht die Berechtigung, Aktivitäten zu lesen. Die Ansicht der Deals mit einem Kontakt geht weiterhin.",
+    "Die Prüfung der Unternehmen braucht die Berechtigung, Aktivitäten zu lesen.",
   "analytics.accounts.none": "Hier ist nichts gefährdet.",
+  "analytics.accounts.truncated":
+    "Mehr Unternehmen, als dieser Lesevorgang prüft: Die Zahlen decken die größten ab. Grenze die gewählten Datensätze ein.",
   "analytics.accounts.withheld_one":
     "{count} weiterer Deal hat Kontakte, die du nicht sehen darfst, und wird darum nicht beurteilt.",
   "analytics.accounts.withheld_other":

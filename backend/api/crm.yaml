@@ -49702,6 +49702,7 @@ components:
           maxItems: 200
           items: { $ref: '#/components/schemas/AccountCoverageRow' }
         withheld: { type: integer, description: "Deals of the view whose committee the reader could not read whole, left out rather than judged." }
+        truncated: { type: boolean, description: "True when a view had more candidates than the read judges, so its count covers the largest ones and not every one." }
       additionalProperties: false
     AccountCoverageCounts:
       type: object

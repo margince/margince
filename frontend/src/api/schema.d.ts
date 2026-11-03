@@ -35422,6 +35422,8 @@ export interface components {
             rows: components["schemas"]["AccountCoverageRow"][];
             /** @description Deals of the view whose committee the reader could not read whole, left out rather than judged. */
             withheld?: number;
+            /** @description True when a view had more candidates than the read judges, so its count covers the largest ones and not every one. */
+            truncated?: boolean;
         };
         AccountCoverageCounts: {
             single_threaded: number;

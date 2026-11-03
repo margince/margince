@@ -48,6 +48,14 @@ func seedCoverageAccounts(t *testing.T, e *forecastEnv, now time.Time) coverageF
 	f.oneNamed = deal("Tern portal", f.untouched, "open", 120000)
 	f.noSeats = deal("Globex renewal", globex, "open", 30000)
 	deal("Acme rollout", f.wonSilent, "won", 90000)
+	// An old win and a deal with no account land in no view.
+	old := company("Initech")
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, company_id, amount_minor, currency, fx_rate_to_base, fx_rate_date, status, closed_at, expected_close_date, source, captured_by)
+		VALUES ($1, 'Initech launch', $2, $3, $4, $5, 50000, 'EUR', 1, current_date, 'won', $6, (now() + interval '30 days')::date, 'manual', 'human:x')`,
+		e.pipeline, e.stages[pipelineTestStage], e.Rep1, old, now.AddDate(0, 0, -200))
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency, fx_rate_to_base, fx_rate_date, expected_close_date, source, captured_by)
+		VALUES ($1, 'Orphan deal', $2, $3, $4, 70000, 'EUR', 1, current_date, (now() + interval '30 days')::date, 'manual', 'human:x')`,
+		e.pipeline, e.stages[pipelineTestStage], e.Rep1)
 	for _, seat := range []string{"Buyer", "Champion"} {
 		contact := e.seedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, seat)
 		e.seedID(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by) VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, contact, f.touched)
@@ -134,11 +142,14 @@ func TestTheAccountCoverageViewsJudgeEachAccountOnce(t *testing.T) {
 	if silent.Rows[0].WonDeal == nil || silent.Rows[0].WonDeal.Name != "Acme rollout" || silent.Rows[0].DaysSilent == nil || *silent.Rows[0].DaysSilent != 10 {
 		t.Fatalf("the silent row is %+v, want the won deal and ten days since its close", silent.Rows[0])
 	}
+	if single.Truncated != nil && *single.Truncated {
+		t.Fatalf("a population under the cap reads as truncated")
+	}
 }
 
-// Without the activity grant the two account views are not judged: the
-// answer says so and counts them as nothing rather than as zero.
-func TestTheAccountCoverageReadWithoutActivityAnswersTheDealViewAlone(t *testing.T) {
+// Without the activity grant nothing is judged: every verdict reads who
+// wrote, so the answer says so rather than counting zero.
+func TestTheAccountCoverageReadWithoutActivityJudgesNothing(t *testing.T) {
 	e := setupForecast(t)
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedCoverageAccounts(t, e, now)
@@ -149,12 +160,9 @@ func TestTheAccountCoverageReadWithoutActivityAnswersTheDealViewAlone(t *testing
 	}
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1}, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})
 
-	out := coverageOf(t, e, ctx, now, crmcontracts.GetAccountCoverageParamsViewUntouched)
-	if out.ActivityReadable || out.Counts.Untouched != nil || out.Counts.Silent != nil || len(out.Rows) != 0 {
-		t.Fatalf("without activity the answer is %+v, want the account views unjudged", out)
-	}
-	if out.Counts.SingleThreaded != 2 {
-		t.Fatalf("the single-threaded count is %d", out.Counts.SingleThreaded)
+	out := coverageOf(t, e, ctx, now, crmcontracts.GetAccountCoverageParamsViewSingleThreaded)
+	if out.ActivityReadable || out.Counts.Untouched != nil || out.Counts.Silent != nil || len(out.Rows) != 0 || out.Counts.SingleThreaded != 0 || out.Withheld != nil {
+		t.Fatalf("without activity the answer is %+v, want nothing judged", out)
 	}
 }
 

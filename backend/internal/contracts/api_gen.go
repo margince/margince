@@ -28315,7 +28315,10 @@ type AccountCoverage struct {
 
 	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
 	Thresholds AccountCoverageThresholds `json:"thresholds"`
-	View       AccountCoverageView       `json:"view"`
+
+	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
+	Truncated *bool               `json:"truncated,omitempty"`
+	View      AccountCoverageView `json:"view"`
 
 	// Withheld Deals of the view whose committee the reader could not read whole, left out rather than judged.
 	Withheld *int `json:"withheld,omitempty"`

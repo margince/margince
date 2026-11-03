@@ -18,7 +18,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -33,7 +32,7 @@ type coverageScope struct {
 
 // scopedPopulation renders the population clause and the deal and company
 // row scopes as one `WHERE` fragment over aliases d and c.
-func scopedPopulation(ctx context.Context, pop coveragePopulation) (*coverageScope, error) {
+func scopedPopulation(ctx context.Context, pop *coveragePopulation) (*coverageScope, error) {
 	scope := &coverageScope{where: "true", args: append([]any{}, pop.args...)}
 	scope.arg = func(v any) int {
 		scope.args = append(scope.args, v)
@@ -62,7 +61,7 @@ func scopedPopulation(ctx context.Context, pop coveragePopulation) (*coverageSco
 
 // openDealsOf lists the population's open deals, largest first, with the
 // account each belongs to.
-func openDealsOf(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
+func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	scope, err := scopedPopulation(ctx, pop)
 	if err != nil {
 		return nil, err
@@ -96,13 +95,14 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmc
 		row.Deal = &deal
 		out = append(out, row)
 	}
+	pop.noteCap(len(out))
 	return out, rows.Err()
 }
 
 // accountsInPipeline lists the accounts with an open deal in the population,
 // with how many and how much, largest first. The sum is in the installation
 // currency and absent when a deal carries no rate.
-func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
+func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	scope, err := scopedPopulation(ctx, pop)
 	if err != nil {
 		return nil, err
@@ -130,6 +130,7 @@ func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop coveragePopulation) 
 		row.OpenDeals = &open
 		out = append(out, row)
 	}
+	pop.noteCap(len(out))
 	return out, rows.Err()
 }
 
@@ -137,20 +138,23 @@ func accountsInPipeline(ctx context.Context, tx pgx.Tx, pop coveragePopulation) 
 // closed within the window and which hold no open deal. The open-deal test
 // is not row-scoped. An open deal a colleague holds still means the account
 // is in pipeline, and nothing about that deal is shown.
-func wonAccounts(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
+func wonAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	scope, err := scopedPopulation(ctx, pop)
 	if err != nil {
 		return nil, err
 	}
 	since := scope.arg(pop.now.AddDate(0, 0, -*pop.thresholds.WonWithinDays))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT ON (c.id) c.id, c.display_name, c.owner_id,
-		       d.id, d.name, d.amount_minor, d.currency, d.owner_id, d.closed_at
-		  FROM deal d
-		  JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
-		 WHERE d.status = 'won' AND d.archived_at IS NULL AND d.closed_at >= $%d AND %s
-		   AND NOT EXISTS (SELECT 1 FROM deal o WHERE o.company_id = c.id AND o.status = 'open' AND o.archived_at IS NULL)
-		 ORDER BY c.id, d.closed_at DESC, d.id
+		SELECT * FROM (
+		  SELECT DISTINCT ON (c.id) c.id, c.display_name, c.owner_id,
+		         d.id, d.name, d.amount_minor, d.currency, d.owner_id, d.closed_at
+		    FROM deal d
+		    JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
+		   WHERE d.status = 'won' AND d.archived_at IS NULL AND d.closed_at >= $%d AND %s
+		     AND NOT EXISTS (SELECT 1 FROM deal o WHERE o.company_id = c.id AND o.status = 'open' AND o.archived_at IS NULL)
+		   ORDER BY c.id, d.closed_at DESC, d.id
+		) won
+		 ORDER BY won.closed_at DESC
 		 LIMIT %d`, since, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the won accounts: %w", err)
@@ -166,14 +170,14 @@ func wonAccounts(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmc
 		row.WonDeal = &won
 		out = append(out, row)
 	}
+	pop.noteCap(len(out))
 	return out, rows.Err()
 }
 
-// coverageCompanyIDs are the accounts of a candidate list, in its order.
-func coverageCompanyIDs(rows []crmcontracts.AccountCoverageRow) []ids.UUID {
-	out := make([]ids.UUID, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, ids.UUID(row.Company.Id))
+// noteCap records that a candidate read filled its cap, so the counts are
+// over the largest candidates rather than every one.
+func (pop *coveragePopulation) noteCap(read int) {
+	if read >= coverageCandidates {
+		pop.truncated = true
 	}
-	return out
 }

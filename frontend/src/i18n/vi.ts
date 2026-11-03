@@ -7503,8 +7503,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.accounts.silentPurpose":
     "Công ty có deal thắng trong {won} ngày qua, không có deal đang mở, và không có trao đổi hai chiều trong {days} ngày qua.",
   "analytics.accounts.noActivityGrant":
-    "Góc nhìn này cần quyền đọc hoạt động. Góc nhìn deal chỉ có một liên hệ vẫn dùng được.",
+    "Việc kiểm tra các công ty cần quyền đọc hoạt động.",
   "analytics.accounts.none": "Không có gì rủi ro ở đây.",
+  "analytics.accounts.truncated":
+    "Có nhiều công ty hơn mức lần đọc này kiểm tra: số đếm chỉ gồm những công ty lớn nhất. Hãy thu hẹp các hồ sơ bạn đã chọn.",
   "analytics.accounts.withheld_one":
     "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
   "analytics.accounts.withheld_other":

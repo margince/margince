@@ -7703,8 +7703,10 @@ export const en = {
   "analytics.accounts.silentPurpose":
     "Accounts with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
   "analytics.accounts.noActivityGrant":
-    "This view needs permission to read activities. The single-contact view still works.",
+    "Judging accounts needs permission to read activities.",
   "analytics.accounts.none": "Nothing at risk here.",
+  "analytics.accounts.truncated":
+    "More accounts than this read judges: the counts cover the largest ones. Narrow the records you chose.",
   "analytics.accounts.withheld_one":
     "{count} more deal has contacts you may not see, so it is not judged.",
   "analytics.accounts.withheld_other":

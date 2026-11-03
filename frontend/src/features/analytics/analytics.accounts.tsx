@@ -103,7 +103,7 @@ export function AccountCoverageView({
           <Panel title={labels[view]}>
             <PanelBody>
               <p className="t-caption">{viewPurpose(view, coverage, t)}</p>
-              {!coverage.activity_readable && view !== "single_threaded" ? (
+              {!coverage.activity_readable ? (
                 <Callout
                   tone="info"
                   title={t("analytics.accounts.noActivityGrant")}
@@ -116,6 +116,9 @@ export function AccountCoverageView({
                   timezone={timezone}
                   onOpen={setOpen}
                 />
+              )}
+              {coverage.truncated && (
+                <p className="t-caption">{t("analytics.accounts.truncated")}</p>
               )}
               {coverage.withheld !== undefined &&
                 coverage.withheld > 0 &&

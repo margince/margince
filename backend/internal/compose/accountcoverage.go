@@ -72,7 +72,7 @@ func (s accountCoverage) Read(ctx context.Context, params crmcontracts.GetAccoun
 		if err != nil {
 			return err
 		}
-		pop := coveragePopulation{clause: population, args: args, now: now, thresholds: out.Thresholds}
+		pop := &coveragePopulation{clause: population, args: args, now: now, thresholds: out.Thresholds}
 		return s.judge(ctx, tx, pop, &out)
 	})
 	return out, err
@@ -98,12 +98,20 @@ type coveragePopulation struct {
 	args       []any
 	now        time.Time
 	thresholds crmcontracts.AccountCoverageThresholds
+	// truncated is set by a candidate read that hit its cap, so the answer
+	// can say its counts cover the largest candidates and not every one.
+	truncated bool
 }
 
 // judge runs every view for its count and keeps the rows of the one asked
 // for. An answer costs three statements and one touch read. That buys counts
 // a reader can trust on every segment.
-func (s accountCoverage) judge(ctx context.Context, tx pgx.Tx, pop coveragePopulation, out *crmcontracts.AccountCoverage) error {
+func (s accountCoverage) judge(ctx context.Context, tx pgx.Tx, pop *coveragePopulation, out *crmcontracts.AccountCoverage) error {
+	// Every verdict reads activity: who wrote, and whether anybody did. A
+	// reader without that grant gets no verdict rather than a count of zero.
+	if !out.ActivityReadable {
+		return nil
+	}
 	single, withheld, err := singleThreadedDeals(ctx, tx, pop)
 	if err != nil {
 		return err
@@ -112,9 +120,6 @@ func (s accountCoverage) judge(ctx context.Context, tx pgx.Tx, pop coveragePopul
 	out.Withheld = &withheld
 	if out.View == crmcontracts.AccountCoverageViewSingleThreaded {
 		out.Rows = capRows(single)
-	}
-	if !out.ActivityReadable {
-		return nil
 	}
 	untouched, err := untouchedAccounts(ctx, tx, pop)
 	if err != nil {
@@ -126,6 +131,7 @@ func (s accountCoverage) judge(ctx context.Context, tx pgx.Tx, pop coveragePopul
 	}
 	untouchedCount, silentCount := len(untouched), len(silent)
 	out.Counts.Untouched, out.Counts.Silent = &untouchedCount, &silentCount
+	out.Truncated = &pop.truncated
 	switch out.View {
 	case crmcontracts.AccountCoverageViewUntouched:
 		out.Rows = capRows(untouched)
@@ -145,7 +151,7 @@ func capRows(rows []crmcontracts.AccountCoverageRow) []crmcontracts.AccountCover
 // singleThreadedDeals are the open deals of the population with at most the
 // threshold's engaged seats. A deal whose committee the reader cannot read
 // whole is counted as withheld and judged by nobody.
-func singleThreadedDeals(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmcontracts.AccountCoverageRow, int, error) {
+func singleThreadedDeals(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, int, error) {
 	candidates, err := openDealsOf(ctx, tx, pop)
 	if err != nil {
 		return nil, 0, err
@@ -183,7 +189,7 @@ func singleThreadedDeals(ctx context.Context, tx pgx.Tx, pop coveragePopulation)
 
 // untouchedAccounts are the accounts with an open deal in the population and
 // no exchange either way within the threshold.
-func untouchedAccounts(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
+func untouchedAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	candidates, err := accountsInPipeline(ctx, tx, pop)
 	if err != nil {
 		return nil, err
@@ -193,7 +199,7 @@ func untouchedAccounts(ctx context.Context, tx pgx.Tx, pop coveragePopulation) (
 
 // silentAccounts are the accounts with a deal won within the window, no open
 // deal, and no exchange either way within the threshold.
-func silentAccounts(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
+func silentAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crmcontracts.AccountCoverageRow, error) {
 	candidates, err := wonAccounts(ctx, tx, pop)
 	if err != nil {
 		return nil, err
@@ -205,7 +211,7 @@ func silentAccounts(ctx context.Context, tx pgx.Tx, pop coveragePopulation) ([]c
 // threshold, or who never had one, and fills the moments the drawer shows.
 // The exchange is the company page's own last-touch read, so an account
 // answered by a colleague is not silent here either.
-func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.AccountCoverageRow, pop coveragePopulation, days int) ([]crmcontracts.AccountCoverageRow, error) {
+func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.AccountCoverageRow, pop *coveragePopulation, days int) ([]crmcontracts.AccountCoverageRow, error) {
 	if len(candidates) == 0 {
 		return nil, nil
 	}
