@@ -10,19 +10,24 @@ package compose
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func (v *viabilityEnv) enforcementHandlers() assurance.Handlers {
 	return assurance.NewHandlers(assurance.NewStore(InstallationDB(v.Pool)), AssuranceExceptionsIn,
-		func() time.Time { return v.now }).WithSettings(StoredConfig(v.Pool)).WithPreview(EnforcementPreview(v.Pool))
+		func() time.Time { return v.now }).WithSettings(StoredConfig(v.Pool)).WithPreview(EnforcementPreview)
 }
 
 func (v *viabilityEnv) enforcement(t *testing.T) crmcontracts.ForecastAssuranceEnforcement {
@@ -73,5 +78,43 @@ func TestSwitchingOnIsBoundToThePreviewTheAdminSaw(t *testing.T) {
 	}
 	if got := v.enforcement(t); got.State != crmcontracts.ForecastAssuranceEnforcementStateEnforcing || got.Preview != nil {
 		t.Fatalf("after switching on: %+v, want enforcing with no preview", got)
+	}
+}
+
+// The binding lives in the setting's writer, so no caller can switch on past
+// it: the store recomputes the preview in the transaction that saves the
+// setting, and a refused switch saves nothing.
+func TestTheEnforcementWriterRecomputesThePreviewItSavesAgainst(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	store := assurance.NewStore(InstallationDB(v.Pool))
+	cfg := StoredConfig(v.Pool)
+
+	stale := "a digest no preview produced"
+	err := store.SetQualifiedForecastEnforced(v.Admin(), cfg, true,
+		assurance.PreviewBinding{Seen: &stale, Preview: EnforcementPreview})
+	var refused *httperr.DetailedError
+	if !errors.As(err, &refused) || refused.Code != "preview_stale" {
+		t.Fatalf("switching on against a stale digest answered %v, want preview_stale", err)
+	}
+	if got := v.enforcement(t).State; got != crmcontracts.ForecastAssuranceEnforcementStateObserving {
+		t.Fatalf("a refused switch left the forecast %s, want observing", got)
+	}
+
+	current := v.enforcement(t).Preview.Digest
+	recomputed := 0
+	counting := func(ctx context.Context, tx pgx.Tx) (assurance.EnforcementPreview, error) {
+		recomputed++
+		return EnforcementPreview(ctx, tx)
+	}
+	if err := store.SetQualifiedForecastEnforced(v.Admin(), cfg, true,
+		assurance.PreviewBinding{Seen: &current, Preview: counting}); err != nil {
+		t.Fatalf("switching on against the current digest: %v", err)
+	}
+	if recomputed != 1 {
+		t.Errorf("the writer recomputed the preview %d times, want once", recomputed)
+	}
+	if got := v.enforcement(t).State; got != crmcontracts.ForecastAssuranceEnforcementStateEnforcing {
+		t.Errorf("after switching on: %s, want enforcing", got)
 	}
 }

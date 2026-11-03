@@ -281,7 +281,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// is a job rather than a request, so the handler set is a read.
 		assuranceHandlers: assurance.NewHandlers(answeringAssuranceStore(pool), AssuranceExceptionsIn,
 			func() time.Time { return time.Now().UTC() },
-		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks).WithPreview(EnforcementPreview(pool)),
+		).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks).WithPreview(EnforcementPreview),
 		// One assembler, shared with the test that drives this handler: the
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the

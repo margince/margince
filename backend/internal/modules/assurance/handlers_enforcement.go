@@ -7,6 +7,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -37,8 +39,9 @@ type EnforcementPreview struct {
 	Digest  string
 }
 
-// PreviewFunc builds the preview. Compose supplies it, because it reads deals.
-type PreviewFunc func(ctx context.Context) (EnforcementPreview, error)
+// PreviewFunc builds the preview inside the caller's transaction. Compose
+// supplies it, because it reads deals.
+type PreviewFunc func(ctx context.Context, tx pgx.Tx) (EnforcementPreview, error)
 
 // WithPreview binds what previews switching enforcement on.
 func (h Handlers) WithPreview(preview PreviewFunc) Handlers {
@@ -75,20 +78,8 @@ func (h Handlers) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// The lock first: a setting the environment fixes says so, rather than
-	// asking for a preview that would not unlock it either.
-	if _, err := config.LockedChange(h.settings, QualifiedForecastEnforced,
-		func(boot bool) bool { return boot == req.Enabled }); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	if req.Enabled {
-		if err := h.ensurePreviewCurrent(r.Context(), req.PreviewDigest); err != nil {
-			httperr.Write(w, r, err)
-			return
-		}
-	}
-	if err := h.store.SetQualifiedForecastEnforced(r.Context(), h.settings, req.Enabled); err != nil {
+	binding := PreviewBinding{Seen: req.PreviewDigest, Preview: h.preview}
+	if err := h.store.SetQualifiedForecastEnforced(r.Context(), h.settings, req.Enabled, binding); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -124,7 +115,7 @@ func (h Handlers) enforcementState(ctx context.Context) (crmcontracts.ForecastAs
 	// it. A reader in a narrower scope would learn counts they cannot open.
 	if h.preview != nil && state == crmcontracts.ForecastAssuranceEnforcementStateObserving &&
 		auth.RequireAdmin(ctx) == nil {
-		preview, err := h.preview(ctx)
+		preview, err := h.store.ReadPreview(ctx, h.preview)
 		if err != nil {
 			return out, err
 		}
@@ -133,32 +124,4 @@ func (h Handlers) enforcementState(ctx context.Context) (crmcontracts.ForecastAs
 		}
 	}
 	return out, nil
-}
-
-// ensurePreviewCurrent refuses switching on unless the caller saw the preview
-// that is true now. Switching on again while enforcing changes nothing, so it
-// needs no preview.
-func (h Handlers) ensurePreviewCurrent(ctx context.Context, seen *string) error {
-	if h.preview == nil {
-		return nil
-	}
-	on, err := config.StoredVal(ctx, h.settings, QualifiedForecastEnforced)
-	if err != nil || on {
-		return err
-	}
-	if err := auth.RequireAdmin(ctx); err != nil {
-		return err
-	}
-	current, err := h.preview(ctx)
-	if err != nil {
-		return err
-	}
-	if seen == nil || *seen != current.Digest {
-		return &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "preview_stale",
-			Detail: "The deals this would leave out changed since you looked. " +
-				"Check the new numbers, then switch it on again.",
-		}
-	}
-	return nil
 }

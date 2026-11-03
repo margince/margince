@@ -101,7 +101,7 @@ func TestADealWithNoNextStepIsLeftOutWithNoReview(t *testing.T) {
 		t.Fatalf("an unsupported deal got a review; the rep fixes it on the deal")
 	}
 	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		v.Admin(), StoredConfig(v.Pool), true, assurance.PreviewBinding{}); err != nil {
 		t.Fatal(err)
 	}
 	q := v.forecast(t).Qualified
@@ -136,7 +136,7 @@ func TestAVerdictThatLandsAfterTheCheckMakesTheDealUnknown(t *testing.T) {
 	reply := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
 	v.check(t)
 	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		v.Admin(), StoredConfig(v.Pool), true, assurance.PreviewBinding{}); err != nil {
 		t.Fatal(err)
 	}
 	if q := v.forecast(t).Qualified; q == nil || q.UnknownCount != 0 {

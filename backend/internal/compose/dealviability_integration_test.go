@@ -204,7 +204,7 @@ func TestASilentDealWithAFarCloseDateLeavesTheQualifiedForecastAndGetsOneReview(
 	}
 
 	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		v.Admin(), StoredConfig(v.Pool), true, assurance.PreviewBinding{}); err != nil {
 		t.Fatalf("enforcing: %v", err)
 	}
 	after := v.forecast(t)
@@ -251,7 +251,7 @@ func TestACompletedReviewTaskIsNotMintedAgainAndAReplyAloneKeepsTheReview(t *tes
 		t.Fatalf("receipt reasons %q, want requalification pending and no customer silence", got)
 	}
 	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		v.Admin(), StoredConfig(v.Pool), true, assurance.PreviewBinding{}); err != nil {
 		t.Fatal(err)
 	}
 	if q := v.forecast(t).Qualified; q == nil || q.ExcludedCount != 1 {
@@ -263,7 +263,7 @@ func TestEvidenceThatMovedSinceTheCheckMakesTheDealUnknown(t *testing.T) {
 	v := setupViability(t)
 	v.check(t)
 	if err := assurance.NewStore(InstallationDB(v.Pool)).SetQualifiedForecastEnforced(
-		v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		v.Admin(), StoredConfig(v.Pool), true, assurance.PreviewBinding{}); err != nil {
 		t.Fatal(err)
 	}
 	// The supported deal's customer writes again after the check. The receipt
@@ -312,7 +312,7 @@ func TestAReviewAnswerIsAnOverrideThatEndsOrNothing(t *testing.T) {
 	v := setupViability(t)
 	v.check(t)
 	store := assurance.NewStore(InstallationDB(v.Pool))
-	if err := store.SetQualifiedForecastEnforced(v.Admin(), StoredConfig(v.Pool), true); err != nil {
+	if err := store.SetQualifiedForecastEnforced(v.Admin(), StoredConfig(v.Pool), true, assurance.PreviewBinding{}); err != nil {
 		t.Fatal(err)
 	}
 	var review ids.UUID
