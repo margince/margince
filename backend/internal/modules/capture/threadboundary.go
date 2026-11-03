@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -51,7 +52,7 @@ func (s *Sink) subjectThreadKeyTx(ctx context.Context, tx pgx.Tx, rec connector.
 	if stored {
 		return rec.ThreadKey, nil
 	}
-	parentKey, differs, found, err := s.heldParentTx(ctx, tx, seat, rec.ReplyTo[0], mailsubject.Normalized(subject))
+	parentKey, differs, found, err := s.heldParentTx(ctx, tx, seat, rec.ReplyTo[0], threadTopic(subject))
 	if err != nil || !found {
 		return rec.ThreadKey, err
 	}
@@ -79,7 +80,7 @@ func (s *Sink) heldParentTx(
 			return "", false, false, err
 		}
 	}
-	parentTopic := storekit.NormalisedSubjectSQL("a.subject")
+	parentTopic := threadTopicSQL("a.subject")
 	err = tx.QueryRow(ctx, `
 		SELECT a.thread_key, `+parentTopic+` <> '' AND $4 <> '' AND `+parentTopic+` <> $4
 		  FROM activity a
@@ -114,9 +115,28 @@ func carryThreadVerdictsTx(ctx context.Context, tx pgx.Tx, from, to string) erro
 	return nil
 }
 
-// sameTopicSQL is true unless both activities have a topic and the two differ, as the
-// answer check compares subjects. The thread join reads it to keep a split apart.
+// sameTopicSQL is true unless both activities have a topic and the two differ. The
+// thread join reads it to keep a split apart.
 func sameTopicSQL(alias, other string) string {
-	topic, otherTopic := storekit.NormalisedSubjectSQL(alias+".subject"), storekit.NormalisedSubjectSQL(other+".subject")
+	topic, otherTopic := threadTopicSQL(alias+".subject"), threadTopicSQL(other+".subject")
 	return "(" + topic + " = '' OR " + otherTopic + " IN ('', " + topic + "))"
+}
+
+// projectKeyTag is a bracketed project key in a normalised subject, the shape
+// projectKeyShaped admits. A reply that keeps or drops one is the same topic.
+const projectKeyTag = `\[[a-z][a-z0-9_-]{1,23}\]`
+
+var projectKeyTags = regexp.MustCompile(projectKeyTag)
+
+// threadTopic is a subject as a conversation boundary compares it: normalised as
+// the answer check reads it, without its project-key tags. threadTopicSQL spells
+// the same steps.
+func threadTopic(subject string) string {
+	return strings.Join(strings.Fields(projectKeyTags.ReplaceAllString(mailsubject.Normalized(subject), " ")), " ")
+}
+
+// threadTopicSQL is threadTopic over a subject column.
+func threadTopicSQL(subject string) string {
+	return `btrim(regexp_replace(regexp_replace(` + storekit.NormalisedSubjectSQL(subject) +
+		`, '` + projectKeyTag + `', ' ', 'g'), ' +', ' ', 'g'))`
 }

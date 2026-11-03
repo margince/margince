@@ -5382,6 +5382,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.scoreLoading": "Score-Faktoren werden geladen…",
   "lead.scoreNoFactors": "Bisher fließen keine Faktoren in diesen Score ein.",
   "lead.scoreSources": "Aktivitäten: {count}",
+  "lead.scoreSourcesHead": "Aktivitäten hinter diesem Faktor",
+  "lead.scoreSourceNoSubject": "Kein Betreff",
   "lead.factor.decision_maker_title": "Titel des Entscheidungstragenden",
   "lead.factor.reply": "Lead hat geantwortet",
   "lead.factor.meeting_held": "Termin stattgefunden",
@@ -7382,6 +7384,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.analytics_decision":
+    "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
     "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
   "tasks.origin.commitment":
@@ -13131,7 +13135,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.candidate.applyHint":
     "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, behalte deinen aktuellen Schreibstil und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
   "voice.candidate.firstHint":
-    "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, verwirf sie und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
+    "Wenn diese Version nach dir klingt, verwende sie. Die Einrichtung ist fertig, sobald du eine Version verwendest. Wenn nicht, verwirf sie, füge weitere Schreibproben hinzu und baue neu auf. Der nächste Aufbau lernt aus diesen Schreibproben.",
   "voice.candidate.reason.uncomparable":
     "Das vorherige Stimmprofil konnte nicht verglichen werden. Prüfe diese Version, bevor du es ersetzt.",
   "voice.candidate.reason.identity":
@@ -14595,7 +14599,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.caption.waitsAdmin": "Wartet auf einen Admin.",
   "setup.caption.mailReconnect": "Verbindung abgelaufen.",
   "setup.caption.calendarReconnect": "Abgelaufen oder kann nicht buchen.",
-  "setup.caption.voice": "Braucht 800 eigene Wörter.",
+  "setup.caption.voice": "Braucht noch etwa {n} eigene Wörter.",
+  "setup.caption.voiceSamples": "Braucht eigene Schreibproben.",
+  "setup.caption.voiceReview":
+    "Dein Schreibstil ist trainiert und wartet auf deine Prüfung.",
+  "setup.caption.voiceBuilding":
+    "Dein Schreibstil wird aufgebaut. Das läuft weiter, auch wenn du die Seite verlässt.",
+  "setup.caption.voiceDeferred":
+    "Der Aufbau deines Schreibstils wartet auf den Start.",
+  "setup.caption.voiceFailed": "Der letzte Aufbau wurde nicht fertig.",
+  "setup.caption.voiceReady": "Deine Schreibproben reichen für den Aufbau.",
+  "setup.caption.voiceUnknown": "Dein Schreibstil konnte nicht geprüft werden.",
+  "setup.action.voiceReview": "Schreibstil prüfen",
+  "setup.action.voiceProgress": "Fortschritt ansehen",
+  "setup.action.voiceRetry": "Erneut versuchen",
+  "setup.action.voiceBuild": "Schreibstil aufbauen",
+  "setup.action.voiceOpen": "Schreibstil öffnen",
   "setup.caption.booking": "Kunden buchen deine freie Zeit.",
   "setup.caption.bookingNeedsCalendar": "Braucht einen Kalender.",
   "setup.reminder.progress": "Fortschritt der Einrichtung",
@@ -16616,13 +16635,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.lastRecordedExchange":
     "seit dem letzten erfassten Austausch mit diesem Kontakt",
   "contact.standing.lastInbound": "Letzte eingegangene Nachricht",
+  "contact.standing.noneAccessible": "Keine, die du öffnen kannst",
   "contact.standing.direction.twoWay": "Beide Seiten haben geschrieben.",
   "contact.standing.direction.inboundOnly":
-    "Bisher hat nur der Kontakt geschrieben. Dein Team hat noch nichts gesendet.",
+    "In den Nachrichten, die du öffnen kannst, hat nur der Kontakt geschrieben. Von deinem Team ist nichts dabei.",
   "contact.standing.direction.outboundOnly":
-    "Nur ausgehende Nachrichten deines Teams sind erfasst. Eine Antwort ist nicht erfasst.",
+    "In den Nachrichten, die du öffnen kannst, hat nur dein Team geschrieben. Eine Antwort ist nicht dabei.",
   "contact.standing.direction.none":
-    "Noch keine Nachrichten, in keiner Richtung.",
+    "Keine Nachrichten in den Daten, die du öffnen kannst.",
   "contact.subtitle.at": "bei",
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
@@ -17795,6 +17815,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.lastFromCompany": "Letzte Nachricht von diesem Unternehmen",
   "worklist.pane.lastToCompany": "Letzte Nachricht an dieses Unternehmen",
   "worklist.pane.never": "Nie",
+  "worklist.pane.noneAccessible": "Keine, die du öffnen kannst",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
   "worklist.why.title": "Warum das Aufmerksamkeit braucht",
@@ -19098,6 +19119,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Erstelle einen, um eine Seite zu teilen, auf der Gäste eine Zeit wählen.",
   "scheduling.replaceAddress": "Adresse ersetzen",
+  "scheduling.alias.label": "Kurzadresse",
+  "scheduling.alias.help":
+    "Optional. Eine Kurzadresse wie /book/alex lässt sich leicht teilen und leicht erraten. Wer sie errät, sieht deine Buchungsseite und deine freien Zeiten. Deine lange Adresse funktioniert weiter.",
+  "scheduling.alias.preview": "Dein Link endet dann auf {path}",
+  "scheduling.alias.save": "Adresse speichern",
+  "scheduling.alias.clear": "Kurzadresse entfernen",
+  "scheduling.alias.changeTitle": "Kurzadresse ändern?",
+  "scheduling.alias.clearTitle": "Kurzadresse entfernen?",
+  "scheduling.alias.changeHelp":
+    "{old} funktioniert dann sofort nicht mehr. Gäste mit dieser Adresse sehen, dass die Seite nicht verfügbar ist. Niemand sonst kann sie je übernehmen, und du kannst sie jederzeit zurückholen.",
+  "scheduling.alias.error.too_short": "Verwende mindestens 3 Zeichen.",
+  "scheduling.alias.error.too_long": "Verwende höchstens 30 Zeichen.",
+  "scheduling.alias.error.invalid":
+    "Verwende Buchstaben, Ziffern und Bindestriche. Beginne und ende mit einem Buchstaben oder einer Ziffer.",
+  "scheduling.alias.error.reserved":
+    "Diese Adresse ist reserviert. Wähle eine andere.",
+  "scheduling.alias.error.taken":
+    "Eine andere Buchungsseite nutzt diese Adresse oder hat sie genutzt. Wähle eine andere.",
+  "scheduling.alias.error.no_booking_link":
+    "Erstelle zuerst deinen Buchungslink.",
+  "scheduling.replaceAliasHelp":
+    "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
@@ -19641,6 +19684,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.owed_verdict": "Prüfung unbeantworteter Nachrichten",
   "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
   "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
+  "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
+  "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
@@ -19901,6 +19946,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
   "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
+  "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
+  "analytics.decisions.purpose":
+    "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
+  "analytics.decisions.record": "Entscheidung festhalten",
+  "analytics.decisions.review": "Entscheidungen prüfen",
+  "analytics.decisions.none": "Noch keine Entscheidung festgehalten.",
+  "analytics.decisions.decision": "Entscheidung",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Verantwortlich",
+  "analytics.decisions.reviewOn": "Prüfen am",
+  "analytics.decisions.status": "Status",
+  "analytics.decisions.done": "Erledigt",
+  "analytics.decisions.open": "Offen",
+  "analytics.decisions.recordOutcome": "Ergebnis festhalten",
+  "analytics.decisions.resultLine": "Ergebnis: {result}",
+  "analytics.decisions.chooseDeal": "Deal wählen",
+  "analytics.decisions.chooseOwner": "Verantwortlichen wählen",
+  "analytics.decisions.expected": "Erwartetes Ergebnis",
+  "analytics.decisions.recordNote":
+    "Dieselbe offene Entscheidung am selben Deal ein zweites Mal festzuhalten gibt diese Aufgabe zurück.",
+  "analytics.decisions.confirm": "Festhalten",
+  "analytics.decisions.whatWasDone": "Welche Arbeit wurde erledigt?",
+  "analytics.decisions.outcomeNote":
+    "Erledigte Arbeit qualifiziert oder gewinnt den Deal nicht.",
+  "analytics.decisions.saveOutcome": "Ergebnis speichern",
   "analytics.overview.filtersToggle": "Filter",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Abschluss: {window}",

@@ -17,6 +17,7 @@ import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { DecisionsPanel } from "./analytics.decisions";
 import {
   SalesHero,
   StockCharts,
@@ -252,6 +253,8 @@ function SalesReviewBody({
           emptyLabel={t("analytics.overview.salesNothing")}
         />
       </div>
+      {/* Past the first screen, so the decision and the first action stay on it. */}
+      <DecisionsPanel />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
       {answered && (

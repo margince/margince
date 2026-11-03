@@ -276,6 +276,7 @@ var tableOwners = map[string]string{
 	"meeting_proposal":      "internal/modules/activities",
 	"meeting_invitation":    "internal/modules/activities",
 	"booking_page":          "internal/modules/activities",
+	"booking_alias":         "internal/modules/activities",
 	// approvals. The autonomy policy is what each rep decided about a KIND of
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
