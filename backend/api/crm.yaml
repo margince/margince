@@ -10389,6 +10389,43 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SchedulingProfile' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/profile/alias:
+    put:
+      tags: [Activities]
+      operationId: putSchedulingAlias
+      security:
+        - cookieAuth: []
+      summary: Choose, change or clear the caller's friendly booking address.
+      description: |
+        Sets the caller's own alias, so their booking page also answers at `/book/{alias}`.
+        The random address keeps working. The value is trimmed and lowercased. It must be 3 to
+        30 characters of letters, digits and inner hyphens, and must not be a reserved name
+        (`contact`, `preview`, `company-logo`) or start with `contact-`, `meeting-`,
+        `proposal-` or `manage-`. An empty value clears the alias.
+
+        An alias is unique across the installation. A changed or cleared alias is retired, not
+        released: only the same host may take it back at once, and another host may claim it
+        90 days after it was retired. **Replace address** retires the alias too. Refusals answer
+        422 on `alias` with the codes `too_short`, `too_long`, `invalid`, `reserved`, `taken`,
+        `recently_used` or `no_booking_link` (the caller has no booking link yet).
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingAliasRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The configuration with its new public address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingProfile' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -51710,10 +51747,16 @@ components:
         company_name: { type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         logo_url: { type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. }
         slug: { type: string, readOnly: true }
-        public_url: { type: string, readOnly: true }
+        alias: { type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`." }
+        public_url: { type: string, readOnly: true, description: 'The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.' }
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
         video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
+    SchedulingAliasRequest:
+      type: object
+      required: [alias]
+      properties:
+        alias: { type: string, maxLength: 200, description: 'The friendly address to claim; empty clears it. Validated and normalized by the server.' }
     MeetingInvitationRequest:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]

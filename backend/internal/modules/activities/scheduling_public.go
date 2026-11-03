@@ -47,12 +47,18 @@ type BookingPage struct {
 // itself, not read off a row an anonymous caller chose. An unknown or revoked
 // slug reads as absent, and so does a host whose account is not live. Every
 // public booking read, the preview card included, resolves here.
+//
+// The segment is a random slug, matched exactly, or a host's live alias,
+// matched lowercased. They cannot collide: a slug is 32 characters and an
+// alias at most 30 (scheduling_alias.go).
 func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPage, error) {
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
 			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
-   WHERE p.slug = $1 AND p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u"),
+   WHERE p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u")+`
+   AND (p.slug = $1 OR p.id = (SELECT a.booking_page_id FROM booking_alias a
+     WHERE a.alias = lower($1) AND a.retired_at IS NULL AND a.host_user_id = p.host_user_id))`,
 			slug).Scan(&page.HostUserID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

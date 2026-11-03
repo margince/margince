@@ -18587,6 +18587,29 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Tạo một liên kết để chia sẻ trang cho khách chọn giờ.",
   "scheduling.replaceAddress": "Thay địa chỉ",
+  "scheduling.alias.label": "Địa chỉ ngắn",
+  "scheduling.alias.help":
+    "Không bắt buộc. Địa chỉ ngắn như /book/alex dễ chia sẻ và cũng dễ đoán. Ai đoán được sẽ thấy trang đặt lịch và các giờ trống của bạn. Địa chỉ dài của bạn vẫn hoạt động.",
+  "scheduling.alias.preview": "Khách sẽ dùng {url}",
+  "scheduling.alias.save": "Lưu địa chỉ",
+  "scheduling.alias.clear": "Gỡ địa chỉ ngắn",
+  "scheduling.alias.changeTitle": "Đổi địa chỉ ngắn?",
+  "scheduling.alias.clearTitle": "Gỡ địa chỉ ngắn?",
+  "scheduling.alias.changeHelp":
+    "{old} sẽ ngừng hoạt động ngay. Khách có địa chỉ này sẽ thấy trang không còn khả dụng. Trong 90 ngày không ai khác lấy được địa chỉ này, và bạn có thể lấy lại.",
+  "scheduling.alias.error.too_short": "Dùng ít nhất 3 ký tự.",
+  "scheduling.alias.error.too_long": "Dùng tối đa 30 ký tự.",
+  "scheduling.alias.error.invalid":
+    "Dùng chữ cái, chữ số và dấu gạch ngang. Bắt đầu và kết thúc bằng chữ cái hoặc chữ số.",
+  "scheduling.alias.error.reserved":
+    "Địa chỉ này đã được dành riêng. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.taken":
+    "Một trang đặt lịch khác đang dùng địa chỉ này. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.recently_used":
+    "Một trang đặt lịch khác vừa dùng địa chỉ này. Hãy chọn địa chỉ khác.",
+  "scheduling.alias.error.no_booking_link": "Hãy tạo liên kết đặt lịch trước.",
+  "scheduling.replaceAliasHelp":
+    "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",

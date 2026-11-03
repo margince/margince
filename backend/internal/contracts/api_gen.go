@@ -55519,8 +55519,16 @@ type ScheduledSendHeldReason string
 // a human reschedules or cancels it.
 type ScheduledSendStatus string
 
+// SchedulingAliasRequest defines model for SchedulingAliasRequest.
+type SchedulingAliasRequest struct {
+	// Alias The friendly address to claim; empty clears it. Validated and normalized by the server.
+	Alias string `json:"alias"`
+}
+
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
+	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
+	Alias             *string   `json:"alias,omitempty"`
 	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int       `json:"buffer_minutes"`
 	CalendarId        string    `json:"calendar_id"`
@@ -55542,10 +55550,12 @@ type SchedulingProfile struct {
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
 	NoticeMinutes int                       `json:"notice_minutes"`
 	Provider      SchedulingProfileProvider `json:"provider"`
-	PublicUrl     *string                   `json:"public_url,omitempty"`
-	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
-	Slug          *string                   `json:"slug,omitempty"`
-	Title         string                    `json:"title"`
+
+	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
+	PublicUrl   *string `json:"public_url,omitempty"`
+	ReplaceLink *bool   `json:"replace_link,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Title       string  `json:"title"`
 
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -71949,6 +71959,9 @@ type ChangeMeetingInvitationJSONRequestBody = MeetingInvitationChange
 // PutSchedulingProfileJSONRequestBody defines body for PutSchedulingProfile for application/json ContentType.
 type PutSchedulingProfileJSONRequestBody = SchedulingProfile
 
+// PutSchedulingAliasJSONRequestBody defines body for PutSchedulingAlias for application/json ContentType.
+type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
+
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
@@ -86154,6 +86167,9 @@ type ServerInterface interface {
 	// Configure and activate the caller's booking page.
 	// (PUT /scheduling/profile)
 	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Choose, change or clear the caller's friendly booking address.
+	// (PUT /scheduling/profile/alias)
+	PutSchedulingAlias(w http.ResponseWriter, r *http.Request)
 	// List the acting host's open proposals and personal links for one contact.
 	// (GET /scheduling/proposals)
 	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
@@ -91713,6 +91729,12 @@ func (_ Unimplemented) GetSchedulingProfile(w http.ResponseWriter, r *http.Reque
 // Configure and activate the caller's booking page.
 // (PUT /scheduling/profile)
 func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose, change or clear the caller's friendly booking address.
+// (PUT /scheduling/profile/alias)
+func (_ Unimplemented) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129206,6 +129228,26 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// PutSchedulingAlias operation middleware
+func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutSchedulingAlias(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
 
@@ -137572,6 +137614,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/profile/alias", wrapper.PutSchedulingAlias)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)

@@ -7022,6 +7022,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/scheduling/profile/alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose, change or clear the caller's friendly booking address.
+         * @description Sets the caller's own alias, so their booking page also answers at `/book/{alias}`.
+         *     The random address keeps working. The value is trimmed and lowercased. It must be 3 to
+         *     30 characters of letters, digits and inner hyphens, and must not be a reserved name
+         *     (`contact`, `preview`, `company-logo`) or start with `contact-`, `meeting-`,
+         *     `proposal-` or `manage-`. An empty value clears the alias.
+         *
+         *     An alias is unique across the installation. A changed or cleared alias is retired, not
+         *     released: only the same host may take it back at once, and another host may claim it
+         *     90 days after it was retired. **Replace address** retires the alias too. Refusals answer
+         *     422 on `alias` with the codes `too_short`, `too_long`, `invalid`, `reserved`, `taken`,
+         *     `recently_used` or `no_booking_link` (the caller has no booking link yet).
+         */
+        put: operations["putSchedulingAlias"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/scheduling/invitations": {
         parameters: {
             query?: never;
@@ -37382,12 +37412,19 @@ export interface components {
             /** @description The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
             readonly slug?: string;
+            /** @description The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`. */
+            readonly alias?: string;
+            /** @description The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured. */
             readonly public_url?: string;
             replace_link?: boolean;
             /** @description Send one operational email reminder one hour before future meetings. */
             email_reminder?: boolean;
             /** @description Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. */
             video_call?: boolean;
+        };
+        SchedulingAliasRequest: {
+            /** @description The friendly address to claim; empty clears it. Validated and normalized by the server. */
+            alias: string;
         };
         MeetingInvitationRequest: {
             /** Format: uuid */
@@ -66254,6 +66291,40 @@ export interface operations {
         };
         responses: {
             /** @description Saved configuration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingProfile"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    putSchedulingAlias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingAliasRequest"];
+            };
+        };
+        responses: {
+            /** @description The configuration with its new public address. */
             200: {
                 headers: {
                     [name: string]: unknown;

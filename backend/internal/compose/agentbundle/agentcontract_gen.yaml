@@ -16248,7 +16248,8 @@ components:
         company_name: {type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
         logo_url: {type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.}
         slug: {type: string, readOnly: true}
-        public_url: {type: string, readOnly: true}
+        alias: {type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`."}
+        public_url: {type: string, readOnly: true, description: 'The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.'}
         replace_link: {type: boolean, writeOnly: true}
         email_reminder: {type: boolean, description: Send one operational email reminder one hour before future meetings.}
         video_call: {type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.}
