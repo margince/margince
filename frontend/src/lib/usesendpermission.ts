@@ -74,7 +74,7 @@ export function useSendPermission(args: {
   const enabled = (args.enabled ?? true) && askable;
 
   // The recipients, the records and the claimed context are the whole
-  // question, so they are the whole key: changing any of them must re-ask
+  // question, so they are the whole key. Changing any of them must re-ask
   // rather than serve the answer to a different message.
   const queryKey = [
     "send-permission",

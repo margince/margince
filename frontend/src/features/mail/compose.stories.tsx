@@ -281,9 +281,9 @@ export const ColleaguesMailbox: Story = {
   },
 };
 
-// A filled, confirmed send comes back 409 consent_not_granted, so the modal
-// stays open with the engine's own reason for the refused address in the one
-// send status, and the action the server says this rep may take.
+// A filled, confirmed send comes back 409 consent_not_granted. The modal stays
+// open, and the send status shows the engine's reason for the refused address
+// with the action the server offers this rep.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>

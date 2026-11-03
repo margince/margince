@@ -19,20 +19,18 @@ import {
 
 // What the engine decided about this message, said where the rep is writing it.
 //
-// ONE STATUS, and a rep sees exactly one: checking, ready, a missing detail of
-// the message, a missing fact on record, a missing permission, a stop, or a
-// check that did not complete. The engine's answer picks it, never the rep
-// classifying their own message. A refused Send outranks the preview before it
+// A rep sees one status at a time: checking, ready, a missing detail, a
+// missing fact, a missing permission, a stop, or an unfinished check. The engine's answer picks it, never the rep. A refused Send outranks the preview before it
 // until the message changes or a newer check answers.
 //
-// TWO RULES HOLD THE DESIGN, and both are about what a rep learns from the
+// Two rules hold the design, and both are about what a rep learns from the
 // screen rather than about the engine:
 //
-// NEVER RENDER A CONTROL THAT CANNOT BE USED. A disabled override on a refusal
+// Never render a control that cannot be used. A disabled override on a refusal
 // nobody may lift invites a support ticket and teaches reps that the product
 // argues with them.
 //
-// ALWAYS NAME WHAT IS MISSING. "Choose the deal for this follow-up" and "she
+// Name what is missing. "Choose the deal for this follow-up" and "she
 // asked us to stop" are different sentences and must never blur into "no
 // consent". A refusal that does not say whose it is reads as arbitrary.
 
@@ -178,8 +176,8 @@ export function SendPermission({
   refusal?: SendRefusalAnswer | null;
   /**
    * Offered only where the preview's deciding recipient may be overruled.
-   * Absent means the surface cannot take an override — a read-only approval
-   * card, say — and the state renders as a plain explanation.
+   * Absent means the surface cannot take an override, as on a read-only
+   * approval card. The state then renders as a plain explanation.
    */
   onOverride?: () => void;
   /**
@@ -242,7 +240,7 @@ export function SendPermission({
   );
 }
 
-// Which recipients the explanation is about. A message to several people
+// Which recipients the explanation is about. A message to several recipients
 // must not read as if one recipient's refusal were everybody's.
 function AffectedRecipients({
   status,

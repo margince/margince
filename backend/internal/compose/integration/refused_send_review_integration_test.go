@@ -806,7 +806,7 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 			"engine is offered the send, not a note asking somebody else to",
 			problem.Details.AvailableActions)
 	}
-	// The engine's own reason per address, so the composer says why THIS
+	// The engine's own reason per address, so the composer says why this
 	// recipient stopped instead of one consent sentence for every refusal.
 	if len(problem.Details.Refusals) != 1 ||
 		problem.Details.Refusals[0].Address != "subject@consent.test" ||

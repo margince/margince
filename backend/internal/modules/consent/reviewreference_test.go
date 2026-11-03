@@ -12,9 +12,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// A refused send names each refused address with its own reason, so a sender
-// writing to two people learns that one objected and the other lacks a deal
-// link, and never reads one cause as everybody's.
+// A refused send names each refused address with its own reason. A sender
+// writing to two recipients learns that one objected and the other lacks a
+// deal link.
 func TestARefusalNamesEachRefusedRecipientWithItsOwnReason(t *testing.T) {
 	refusal := &SendRefusedError{
 		ReviewID: ids.NewV7(),

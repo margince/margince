@@ -9,7 +9,7 @@ import { SendPermission } from "./sendpermission";
 // What the engine decided about a message, said where the rep is writing it.
 //
 // One component for every surface that stages a send: the composer, the
-// scheduled-send queue and the approval card. A rep sees exactly one status,
+// scheduled-send queue and the approval card. A rep sees one status,
 // chosen by the engine's answer or by the refusal a pressed Send came back with. The allowed state renders
 // NOTHING, which is why it has no story: the overwhelming majority of sends
 // should cost no attention at all.
@@ -107,7 +107,7 @@ export const MissingDealLink: Story = {
   ),
 };
 
-/** A refused Send to several people names the one that stopped it. */
+/** A refused Send to several recipients names the one that stopped it. */
 export const RefusedSendForSeveral: Story = {
   render: () => (
     <SendPermission

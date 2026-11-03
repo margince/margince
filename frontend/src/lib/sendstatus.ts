@@ -4,9 +4,8 @@ import {
   refusalKindOf,
 } from "../format/sendpermissionreason";
 
-// ONE ANSWER about the message being written, from the two places the server
-// gives one: the preview asked while the rep writes, and the refusal a pressed
-// Send came back with. The composer used to draw both, so a red refusal stayed
+// One answer about the message being written. The server gives one in two
+// places: the preview asked while the rep writes, and a refused Send. The composer used to draw both, so a red refusal stayed
 // on screen beside a later check that said the message may go.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -53,8 +52,8 @@ function severityOf(recipient: RefusedRecipient): number {
 /**
  * The status of a refusal a pressed Send came back with.
  *
- * A refusal whose reasons this build could not read is still a refusal: it
- * reads as a stop with no cause named, never as a gap or as ready.
+ * A refusal whose reasons this build cannot read is still a refusal. It reads
+ * as a stop with no cause named, never as a gap or as ready.
  */
 export function refusedStatus(
   refusals: readonly RefusedRecipient[],

@@ -249,25 +249,11 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	return out
 }
 
-// BlockingRefusals is the refused recipients whose answer actually stopped the
-// send. A deny the rollout mode only records did not stop it, so a sender told
-// about it would hunt for a cause that changed nothing.
-func BlockingRefusals(set commsauthz.DecisionSet) []RefusedRecipient {
-	var out []RefusedRecipient
-	for _, d := range set.Denied() {
-		if d.WouldRefuse(d.Mode) {
-			out = append(out, refusedRecipientOf(d))
-		}
-	}
-	return out
-}
-
 func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 	refusal := RefusedRecipient{
-		// NORMALIZED ON THE WAY IN, because the erasure sweeps match on it.
-		// An address stored with the whitespace or the casing a caller
-		// typed is one a lowercased, trimmed comparison walks past — and
-		// what it walks past is an erased subject's mailbox.
+		// Normalized on the way in, because the erasure sweeps match on it.
+		// A lowercased, trimmed comparison walks past an address stored as
+		// typed. What it walks past is an erased subject's mailbox.
 		Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
 		SubjectKind: d.SubjectKind,
 		ReasonCode:  d.ReasonCode,
@@ -388,52 +374,6 @@ func (g *Gate) RecordRefusal(ctx context.Context, set commsauthz.DecisionSet, in
 	return out, err
 }
 
-// SendRefusedError is a refusal that left a review behind.
-//
-// It WRAPS the original refusal rather than replacing it, so every reader that
-// already knows what apperrors.ErrConsentNotGranted means keeps working — the
-// 409 mapping, the job-fault table, the tests. What it adds is the one thing
-// the rep was missing: a reference to the record of what happened, which is how
-// they get from "this was refused" to "here is what was refused and for whom".
-type SendRefusedError struct {
-	ReviewID ids.UUID
-	Cause    error
-	// Actions is what THIS caller may do about the refusal, decided where the
-	// refusal is recorded because that is where the principal is known. Empty
-	// for a caller with nothing to do but stop and report, which is the answer
-	// for an agent: both moves are human-only.
-	Actions []string
-	// Overrulable names the contact and category of each vouch the overrule
-	// action needs. Empty unless Actions offers it.
-	Overrulable []OverrulableRecipient
-	// Refusals is each refused recipient with the engine's reason, so the
-	// sender is told which address stopped and why rather than one sentence
-	// for all of them. The caller named every one of these addresses.
-	Refusals []RefusedRecipient
-}
-
-func (e *SendRefusedError) Error() string {
-	return e.Cause.Error() + " (review " + e.ReviewID.String() + ")"
-}
-
-// Unwrap keeps the refusal's own identity reachable, which is what lets the
-// existing 409 mapping and every errors.Is on it go on working.
-func (e *SendRefusedError) Unwrap() error { return e.Cause }
-
-// NO FieldFault, deliberately, though every other typed refusal in this module
-// carries one.
-//
-// A field fault answers 422 and names an input the caller should change. This
-// refusal is neither: the caller's input was fine, the engine refused the send
-// on consent grounds, and that answer is a 409 with the code every client and
-// every test already recognises. Implementing FieldFault here changed the
-// status from 409 to 422 across the send surface — the transport prefers a
-// module's declared fault over a wrapped sentinel — which would have broken
-// clients to deliver a reference.
-//
-// The reference travels in the message instead, which is where a human reads
-// it and where the MCP surface renders it too.
-
 // ReviewForInitiator reads one review back for the colleague who pressed send, and
 // for nobody else.
 //
@@ -489,50 +429,3 @@ func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
 	}
 	return &seat
 }
-
-// FaultReference implements apperrors.ReferencedFault: the review this refusal
-// opened, what this caller may do, and what an overrule must cover, as fields.
-// It adds no FieldFault: the refusal stays the 409 every client recognises,
-// not a 422 about the caller's input.
-func (e *SendRefusedError) FaultReference() map[string]any {
-	if e.ReviewID.IsZero() {
-		return nil
-	}
-	reference := map[string]any{
-		fieldReviewID: e.ReviewID.String(),
-		// Both moves are human-only; an agent gets an empty list and the
-		// reference, which a human reading its transcript can pick up.
-		"available_actions": e.Actions,
-	}
-	if len(e.Overrulable) > 0 {
-		overrulable := make([]map[string]string, 0, len(e.Overrulable))
-		for _, o := range e.Overrulable {
-			overrulable = append(overrulable, map[string]string{"contact_id": o.ContactID.String(), "category": o.Category})
-		}
-		reference["overrulable"] = overrulable
-	}
-	if len(e.Refusals) > 0 {
-		reference["refusals"] = refusalReference(e.Refusals)
-	}
-	return reference
-}
-
-// refusalReference is what a sender may read of each refused recipient: the
-// address they wrote, the reason and the category. The subject id stays off
-// the wire, because the sender may not be able to read that record.
-func refusalReference(refusals []RefusedRecipient) []map[string]string {
-	out := make([]map[string]string, 0, len(refusals))
-	for _, r := range refusals {
-		entry := map[string]string{"address": r.Address, "reason_code": r.ReasonCode}
-		if r.Category != "" {
-			entry["category"] = r.Category
-		}
-		out = append(out, entry)
-	}
-	return out
-}
-
-// Unreferenced answers the refusal without the reference, which is what decides
-// the status. It is the wrapped cause rather than this value, or classification
-// would come straight back here.
-func (e *SendRefusedError) Unreferenced() error { return e.Cause }

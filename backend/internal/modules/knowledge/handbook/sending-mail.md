@@ -177,20 +177,10 @@ Margince does not ask for a reason when you reply to their own message.
 
 The consent check reads the reason, and it runs *before* you send. Beside
 **Send** the composer shows **Ready to send** once the check allows it. When it
-does not, the warning bar above **Send** shows one answer for the message:
-
-- **This message needs one more detail**: something about the message is
-  missing, such as the deal a follow-up is about.
-- **No recorded reason to contact this recipient**: nothing on record supports
-  this kind of message.
-- **Consent needed for this message**: the message needs the recipient's consent
-  or confirmation, and none is on record.
-- **Message cannot be sent**: a stop, such as an objection or an address that
-  does not take mail.
-
-When you write to several people, the bar names the address it is about and how
-many other recipients are affected. A check with no answer never counts as
-permission: "The send check did not complete. Sending runs the check again."
+does not, the warning bar above **Send** shows one answer for the message, with
+its fix: see the list below. With several recipients, the bar names the address
+the answer applies to. A check with no answer never counts as permission: "The
+send check did not complete. Sending runs the check again."
 
 When **Send** is refused, the refusal takes the place of the earlier answer in
 the same bar. It goes away when you change the recipients or the reason, or when
@@ -206,7 +196,7 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **Consent needed for this message**: there is no consent for this kind of message. Press **Open contact**, or **Overrule with a reason** where it is offered.
 - **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Record this reason**. It is recorded at once under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
 - **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.
-- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
+- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 Also called: email blocked, cannot email customer, send refused.
 

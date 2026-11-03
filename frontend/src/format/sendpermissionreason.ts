@@ -7,7 +7,7 @@ export type RefusalSurface = Readonly<{
 }>;
 
 /**
- * Which of the composer's states a refusal is, so the title names the kind of
+ * Which of the composer's states a refusal is. The title names the kind of
  * gap: a detail of the message, a fact on record, a permission, or a stop.
  */
 export type RefusalKind =

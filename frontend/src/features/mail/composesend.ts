@@ -232,9 +232,9 @@ function sendRequest(
 }
 
 /**
- * Whether a refused Send still describes the message on screen. It does until
- * the question changes (a recipient, a record, the reason) or the check
- * answers anew, so a corrected message never sits under the old refusal.
+ * Whether a refused Send still describes the message on screen. It stops
+ * when the question changes (a recipient, a record, the reason). It also stops
+ * when the check answers anew, so a corrected message loses the old refusal.
  */
 export function refusalIsCurrent(
   asked: SendRequest["asked"] | undefined,
@@ -365,7 +365,7 @@ export function useComposeSend({
     context: claimedContext,
     enabled: open && !isChannelReply,
   });
-  // A consent refusal joins the engine's answer as ONE status, and only while
+  // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.
   const refusedNow =
     refusal === "consent" && refusalIsCurrent(send.variables?.asked, answer);

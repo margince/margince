@@ -22,9 +22,9 @@ import {
   WHY_LABEL,
 } from "./compose.testkit";
 
-// The composer shows ONE status for the message: the engine's preview while
-// the rep writes, and the refusal a pressed Send came back with until the
-// message changes or a newer check answers. Never two answers at once.
+// The composer shows one status for the message. It is the engine's preview
+// while the rep writes. After a refused Send it is that refusal, until the
+// message changes or a newer check answers.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 

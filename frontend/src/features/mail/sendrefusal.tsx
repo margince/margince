@@ -19,7 +19,7 @@ export function SendRefusalRemedies({
   const t = useT();
   return (
     <>
-      {/* Keyed by the review, so a second refusal about a DIFFERENT message
+      {/* Keyed by the review, so a second refusal about a different message
           gets a fresh control rather than the first one's success state. */}
       {review && <SendReviewActions key={review.reviewId} review={review} />}
       {/* The other answer to the same question, for a rep who holds the
@@ -42,9 +42,9 @@ export function SendRefusalRemedies({
 }
 
 // The refusals that are not about the recipients. A mailbox connected before
-// this product could send holds a read-only grant and the provider will not
-// widen one in place, so reconnecting is the whole fix. And a message carrying
-// an unsubscribe link carries ONE recipient's consent credential, so it may
+// this product could send holds a read-only grant. The provider will not widen
+// one in place, so reconnecting is the whole fix. And a message carrying
+// an unsubscribe link carries one recipient's consent credential, so it may
 // only ever have one addressee.
 export function SendRefusal({ refusal }: Readonly<{ refusal: Refusal }>) {
   const t = useT();
