@@ -45,10 +45,14 @@ They stay apart so that the role serving requests cannot change the schema.
 
 ## The first company
 
-An installation with no company seeds one from `bootstrap_admin`, and the
-password arrives by reference rather than as a literal: `password_file` naming a
-path, or `password` as `${file:/path}` or `${env:NAME}`. It has to be at least
-twelve characters.
+What the API counts is active workspaces, not companies: none seeds the first
+company and its admin from `bootstrap_admin`, one binds to what is there, and
+more than one is refused. A restart never reconciles bootstrap values into a
+workspace that already exists.
+
+The password arrives by reference rather than as a literal: `password_file`
+naming a path, or `password` as `${file:/path}` or `${env:NAME}`. It has to be
+at least twelve characters.
 
 Mount the secret and point `password_file` at it. In a container the literal in
 an environment variable is readable by anyone who can inspect the container,
@@ -57,9 +61,9 @@ which is a wider audience than the file is.
 Seeding also wants `workspace.name`: the API refuses a `bootstrap_admin` that
 has none, so an empty database takes both.
 
-The entrypoint also accepts `MARGINCE_ADMIN_PASSWORD` directly, and reads it
-once: when a company already exists it says so and leaves it alone, so the
-variable can stay set in a deployment without a restart reseeding anything.
+The entrypoint also accepts `MARGINCE_ADMIN_PASSWORD` directly. A boot that
+finds an active workspace binds to it and seeds nothing, so the variable can
+stay set in a deployment without a restart reseeding anything.
 
 Taking that route pins the path. The entrypoint writes the value to
 `/app/secrets/admin-password`, and `password_file` has to name that same one,
