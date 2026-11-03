@@ -1,0 +1,46 @@
+name: initiative_setup_reads_a_goal_with_a_target_and_deadline
+task: report_setup
+site: initiative_setup
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# A manager describes a push on one product in one country with a money
+# target and a deadline. The proposal resolves the product by its name, the
+# country by its code, and the objective with its target and deadline.
+fixture:
+  description: "Push the Linden press line in Germany: 250000 EUR of sales won by the end of December."
+  today: "2026-11-03"
+  lang: en
+  products:
+    - {label: linden, name: "Linden press line"}
+    - {label: tern, name: "Tern customer portal"}
+  catalog:
+    industries:
+      - {id: manufacturing, label: Manufacturing}
+      - {id: software, label: Software}
+    periods: [this_month, this_quarter]
+    metrics:
+      - {id: bookings_won, label: "Sales won", charts: [bookings_trend, metric_reading]}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: [metric_reading]}
+    charts:
+      - {id: bookings_trend, label: bookings_trend}
+      - {id: metric_reading, label: metric_reading}
+    objectives:
+      - {id: bookings_won, label: "Sales won"}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities"}
+expect:
+  outcome: accepted
+  answer:
+    product: linden
+    country: DE
+    objective: bookings_won
+    unsupported: 0
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the proposal reads the goal as written. The product must be
+    the Linden press line, the country Germany as DE, and the objective Sales
+    won with a target of 250000 and a deadline of 2026-12-31. A period, an
+    industry or a metric list the words never asked for scores low. Naming
+    the Tern portal, or inventing a product id, fails the scenario.

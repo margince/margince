@@ -208,6 +208,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// The Sales review's assessment caches per reader, so it carries the
 		// routing version like the other cached writers.
 		compose.WithSalesAssessment(modelPath.ReportInterpret, routingVersion),
+		compose.WithReportSetup(modelPath.ReportSetup),
 		// The ask to a colleague rides the drafting lane: it is the same task
 		// with a different reader, which is what a site is for.
 		compose.WithIntroRequestDraft(modelPath.DraftReply),
