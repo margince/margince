@@ -60,6 +60,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
   "filters.propose.unusedItem",
+  "reporting.setup.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
