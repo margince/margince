@@ -3655,6 +3655,14 @@ func (stubs) CreateTask(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "CreateTask")
 }
 
+func (stubs) ListTaxRates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTaxRatesParams) {
+	httperr.NotImplemented(w, r, "ListTaxRates")
+}
+
+func (stubs) RecordTaxRate(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "RecordTaxRate")
+}
+
 func (stubs) ListTeams(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListTeamsParams) {
 	httperr.NotImplemented(w, r, "ListTeams")
 }

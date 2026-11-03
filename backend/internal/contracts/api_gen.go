@@ -9181,6 +9181,27 @@ func (e CreateProductRequestComponentKind) Valid() bool {
 	}
 }
 
+// Defines values for CreateProductRequestTaxCategory.
+const (
+	CreateProductRequestTaxCategoryExempt   CreateProductRequestTaxCategory = "exempt"
+	CreateProductRequestTaxCategoryReduced  CreateProductRequestTaxCategory = "reduced"
+	CreateProductRequestTaxCategoryStandard CreateProductRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the CreateProductRequestTaxCategory enum.
+func (e CreateProductRequestTaxCategory) Valid() bool {
+	switch e {
+	case CreateProductRequestTaxCategoryExempt:
+		return true
+	case CreateProductRequestTaxCategoryReduced:
+		return true
+	case CreateProductRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -16885,6 +16906,27 @@ func (e ProductComponentKind) Valid() bool {
 	}
 }
 
+// Defines values for ProductTaxCategory.
+const (
+	ProductTaxCategoryExempt   ProductTaxCategory = "exempt"
+	ProductTaxCategoryReduced  ProductTaxCategory = "reduced"
+	ProductTaxCategoryStandard ProductTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the ProductTaxCategory enum.
+func (e ProductTaxCategory) Valid() bool {
+	switch e {
+	case ProductTaxCategoryExempt:
+		return true
+	case ProductTaxCategoryReduced:
+		return true
+	case ProductTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProgressDealRequestWonWithoutContractReason.
 const (
 	ProgressDealRequestWonWithoutContractReasonImported       ProgressDealRequestWonWithoutContractReason = "imported"
@@ -17743,6 +17785,24 @@ func (e RecordTagAssignerKind) Valid() bool {
 	case RecordTagAssignerKindHuman:
 		return true
 	case RecordTagAssignerKindImport:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordTaxRateRequestCategory.
+const (
+	RecordTaxRateRequestCategoryReduced  RecordTaxRateRequestCategory = "reduced"
+	RecordTaxRateRequestCategoryStandard RecordTaxRateRequestCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the RecordTaxRateRequestCategory enum.
+func (e RecordTaxRateRequestCategory) Valid() bool {
+	switch e {
+	case RecordTaxRateRequestCategoryReduced:
+		return true
+	case RecordTaxRateRequestCategoryStandard:
 		return true
 	default:
 		return false
@@ -21331,6 +21391,24 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TaxRateCategory.
+const (
+	TaxRateCategoryReduced  TaxRateCategory = "reduced"
+	TaxRateCategoryStandard TaxRateCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the TaxRateCategory enum.
+func (e TaxRateCategory) Valid() bool {
+	switch e {
+	case TaxRateCategoryReduced:
+		return true
+	case TaxRateCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamBoardMemberActivation.
 const (
 	TeamBoardMemberActivationActive  TeamBoardMemberActivation = "active"
@@ -22387,6 +22465,27 @@ func (e UpdateProductRequestComponentKind) Valid() bool {
 	case UpdateProductRequestComponentKindOther:
 		return true
 	case UpdateProductRequestComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateProductRequestTaxCategory.
+const (
+	UpdateProductRequestTaxCategoryExempt   UpdateProductRequestTaxCategory = "exempt"
+	UpdateProductRequestTaxCategoryReduced  UpdateProductRequestTaxCategory = "reduced"
+	UpdateProductRequestTaxCategoryStandard UpdateProductRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateProductRequestTaxCategory enum.
+func (e UpdateProductRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateProductRequestTaxCategoryExempt:
+		return true
+	case UpdateProductRequestTaxCategoryReduced:
+		return true
+	case UpdateProductRequestTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -27703,6 +27802,30 @@ func (e ListPartnersParamsCertStatus) Valid() bool {
 	case ListPartnersParamsCertStatusCertified:
 		return true
 	case ListPartnersParamsCertStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListProductsParamsTaxCategory.
+const (
+	ListProductsParamsTaxCategoryExempt       ListProductsParamsTaxCategory = "exempt"
+	ListProductsParamsTaxCategoryReduced      ListProductsParamsTaxCategory = "reduced"
+	ListProductsParamsTaxCategoryStandard     ListProductsParamsTaxCategory = "standard"
+	ListProductsParamsTaxCategoryUnclassified ListProductsParamsTaxCategory = "unclassified"
+)
+
+// Valid indicates whether the value is a known member of the ListProductsParamsTaxCategory enum.
+func (e ListProductsParamsTaxCategory) Valid() bool {
+	switch e {
+	case ListProductsParamsTaxCategoryExempt:
+		return true
+	case ListProductsParamsTaxCategoryReduced:
+		return true
+	case ListProductsParamsTaxCategoryStandard:
+		return true
+	case ListProductsParamsTaxCategoryUnclassified:
 		return true
 	default:
 		return false
@@ -41503,6 +41626,9 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
+	// TaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
+	TaxCategory *CreateProductRequestTaxCategory `json:"tax_category,omitempty"`
+
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit           *string `json:"unit,omitempty"`
 	UnitPriceMinor int64   `json:"unit_price_minor"`
@@ -41516,6 +41642,9 @@ type CreateProductRequestBillingModel string
 
 // CreateProductRequestComponentKind What kind of value the product is. Omit or send null to leave it unclassified.
 type CreateProductRequestComponentKind string
+
+// CreateProductRequestTaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
+type CreateProductRequestTaxCategory string
 
 // CreateProjectHealthAssessmentRequest defines model for CreateProjectHealthAssessmentRequest.
 type CreateProjectHealthAssessmentRequest struct {
@@ -52349,6 +52478,9 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
+	// TaxCategory Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.
+	TaxCategory *ProductTaxCategory `json:"tax_category,omitempty"`
+
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
@@ -52372,6 +52504,9 @@ type ProductBillingModel string
 
 // ProductComponentKind What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.
 type ProductComponentKind string
+
+// ProductTaxCategory Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.
+type ProductTaxCategory string
 
 // ProductListResponse defines model for ProductListResponse.
 type ProductListResponse struct {
@@ -53983,6 +54118,19 @@ type RecordTagsResponse struct {
 	Data     []RecordTag `json:"data"`
 	Withheld bool        `json:"withheld"`
 }
+
+// RecordTaxRateRequest defines model for RecordTaxRateRequest.
+type RecordTaxRateRequest struct {
+	Category RecordTaxRateRequestCategory `json:"category"`
+	Country  string                       `json:"country"`
+
+	// Rate Percent, for example "19" or "7.70".
+	Rate      string             `json:"rate"`
+	ValidFrom openapi_types.Date `json:"valid_from"`
+}
+
+// RecordTaxRateRequestCategory defines model for RecordTaxRateRequest.Category.
+type RecordTaxRateRequestCategory string
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -58828,6 +58976,35 @@ type TaskReminderClaimRequest struct {
 	RemindAt time.Time `json:"remind_at"`
 }
 
+// TaxRate defines model for TaxRate.
+type TaxRate struct {
+	Category TaxRateCategory `json:"category"`
+
+	// Country Lower-case ISO 3166-1 alpha-2.
+	Country   string             `json:"country"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Rate Percent with two decimals, for example "19.00".
+	Rate      string             `json:"rate"`
+	ValidFrom openapi_types.Date `json:"valid_from"`
+}
+
+// TaxRateCategory defines model for TaxRate.Category.
+type TaxRateCategory string
+
+// TaxRateListResponse defines model for TaxRateListResponse.
+type TaxRateListResponse struct {
+	Data []TaxRate `json:"data"`
+}
+
+// TaxRateRecorded defines model for TaxRateRecorded.
+type TaxRateRecorded struct {
+	// ClassifiedProducts How many unclassified products this rate put in its category. Only the first rate of a category of the installation's own country classifies any.
+	ClassifiedProducts int     `json:"classified_products"`
+	Rate               TaxRate `json:"rate"`
+}
+
 // Team Mirrors the `team` table.
 type Team struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -60609,8 +60786,11 @@ type UpdateProductRequest struct {
 	Description    *string                            `json:"description,omitempty"`
 	Name           *string                            `json:"name,omitempty"`
 	Sku            *string                            `json:"sku,omitempty"`
-	Unit           *string                            `json:"unit,omitempty"`
-	UnitPriceMinor *int64                             `json:"unit_price_minor,omitempty"`
+
+	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
+	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
+	Unit           *string                          `json:"unit,omitempty"`
+	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty"`
 }
 
 // UpdateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -60621,6 +60801,9 @@ type UpdateProductRequestBillingModel string
 
 // UpdateProductRequestComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
 type UpdateProductRequestComponentKind string
+
+// UpdateProductRequestTaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
+type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
 // `key` is absent for a different reason: the server mints it from the name and
@@ -69834,7 +70017,13 @@ type ListProductsParams struct {
 
 	// Q Case-insensitive name/SKU substring match.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// TaxCategory Only products in this tax category; `unclassified` lists those nobody has classified yet.
+	TaxCategory *ListProductsParamsTaxCategory `form:"tax_category,omitempty" json:"tax_category,omitempty"`
 }
+
+// ListProductsParamsTaxCategory defines parameters for ListProducts.
+type ListProductsParamsTaxCategory string
 
 // CreateProductParams defines parameters for CreateProduct.
 type CreateProductParams struct {
@@ -71310,6 +71499,12 @@ type CreateTaskParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListTaxRatesParams defines parameters for ListTaxRates.
+type ListTaxRatesParams struct {
+	// Country ISO 3166-1 alpha-2.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
 }
 
 // ListTeamsParams defines parameters for ListTeams.
@@ -73190,6 +73385,9 @@ type MergeTagsJSONRequestBody = MergeTagsRequest
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = CreateTaskRequest
+
+// RecordTaxRateJSONRequestBody defines body for RecordTaxRate for application/json ContentType.
+type RecordTaxRateJSONRequestBody = RecordTaxRateRequest
 
 // CreateTeamJSONRequestBody defines body for CreateTeam for application/json ContentType.
 type CreateTeamJSONRequestBody = CreateTeamRequest
@@ -81548,6 +81746,14 @@ func (a *Product) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["tax_category"]; found {
+		err = json.Unmarshal(raw, &a.TaxCategory)
+		if err != nil {
+			return fmt.Errorf("error reading 'tax_category': %w", err)
+		}
+		delete(object, "tax_category")
+	}
+
 	if raw, found := object["unit"]; found {
 		err = json.Unmarshal(raw, &a.Unit)
 		if err != nil {
@@ -81679,6 +81885,13 @@ func (a Product) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.TaxCategory != nil {
+		object["tax_category"], err = json.Marshal(a.TaxCategory)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tax_category': %w", err)
+		}
 	}
 
 	object["unit"], err = json.Marshal(a.Unit)
@@ -87537,6 +87750,12 @@ type ServerInterface interface {
 	// Create a task — a commitment with an owner, on the records it is about.
 	// (POST /tasks)
 	CreateTask(w http.ResponseWriter, r *http.Request, params CreateTaskParams)
+	// The tax rate sheet, every recorded rate, newest first within each country and category.
+	// (GET /tax-rates)
+	ListTaxRates(w http.ResponseWriter, r *http.Request, params ListTaxRatesParams)
+	// Record a standard or reduced tax rate for a country from a day on.
+	// (POST /tax-rates)
+	RecordTaxRate(w http.ResponseWriter, r *http.Request)
 	// List workspace teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
@@ -93288,6 +93507,18 @@ func (_ Unimplemented) RestoreTag(w http.ResponseWriter, r *http.Request, id Id)
 // Create a task — a commitment with an owner, on the records it is about.
 // (POST /tasks)
 func (_ Unimplemented) CreateTask(w http.ResponseWriter, r *http.Request, params CreateTaskParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The tax rate sheet, every recorded rate, newest first within each country and category.
+// (GET /tax-rates)
+func (_ Unimplemented) ListTaxRates(w http.ResponseWriter, r *http.Request, params ListTaxRatesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a standard or reduced tax rate for a country from a day on.
+// (POST /tax-rates)
+func (_ Unimplemented) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -125606,6 +125837,19 @@ func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "tax_category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tax_category", r.URL.Query(), &params.TaxCategory, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tax_category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tax_category", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProducts(w, r, params)
 	}))
@@ -132743,6 +132987,65 @@ func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// ListTaxRates operation middleware
+func (siw *ServerInterfaceWrapper) ListTaxRates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTaxRatesParams
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTaxRates(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordTaxRate operation middleware
+func (siw *ServerInterfaceWrapper) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordTaxRate(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListTeams operation middleware
 func (siw *ServerInterfaceWrapper) ListTeams(w http.ResponseWriter, r *http.Request) {
 
@@ -139460,6 +139763,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/tasks", wrapper.CreateTask)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tax-rates", wrapper.ListTaxRates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tax-rates", wrapper.RecordTaxRate)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/teams", wrapper.ListTeams)

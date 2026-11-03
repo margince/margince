@@ -20,6 +20,7 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
 import { type Translator, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -91,6 +92,25 @@ export async function searchProductCandidates(
   return data.data.map((p) => ({ id: p.id, name: p.name }));
 }
 
+type TaxCategory = NonNullable<Product["tax_category"]>;
+
+const TAX_CATEGORIES: readonly TaxCategory[] = [
+  "standard",
+  "reduced",
+  "exempt",
+];
+
+const TAX_CATEGORY_LABEL: Readonly<Record<TaxCategory, MessageKey>> = {
+  standard: "taxRates.category.standard",
+  reduced: "taxRates.category.reduced",
+  exempt: "taxRates.category.exempt",
+};
+
+// taxCategoryOf narrows a form value to a category, undefined for unset.
+function taxCategoryOf(value: unknown): TaxCategory | undefined {
+  return TAX_CATEGORIES.find((category) => category === value);
+}
+
 // Built per render: option labels are shown as given, so they arrive translated.
 function productFields(
   t: Translator,
@@ -127,6 +147,21 @@ function productFields(
       options: currencyOptions(leadingCurrencies),
     },
     { key: "default_tax_rate", label: "product.taxRate", type: "number" },
+    {
+      // Which rate of the country an offer is issued from applies. Unset is
+      // a real answer: nobody has classified it, and a line takes the rate
+      // above.
+      key: "tax_category",
+      label: "product.taxCategory",
+      type: "select",
+      options: [
+        { value: "", label: t("product.taxCategoryUnset") },
+        ...TAX_CATEGORIES.map((category) => ({
+          value: category,
+          label: t(TAX_CATEGORY_LABEL[category]),
+        })),
+      ],
+    },
     {
       // The empty option is a real answer, and every product written before
       // this field existed carries it: nobody has said whether the price
@@ -180,6 +215,7 @@ function editableProduct(p: Product) {
     unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
     billing_model: p.billing_model ?? "",
     component_kind: p.component_kind ?? "",
+    tax_category: p.tax_category ?? "",
     billing_interval_months:
       p.billing_interval_months == null
         ? ""
@@ -259,6 +295,7 @@ export function ProductsAdmin() {
             : null,
           ...billingOf(values),
           component_kind: componentKindOf(values.component_kind) ?? null,
+          tax_category: taxCategoryOf(values.tax_category) ?? null,
           source: "manual",
         },
       }),
@@ -299,6 +336,7 @@ export function ProductsAdmin() {
               : undefined,
             ...billingPatchOf(values),
             component_kind: componentKindOf(values.component_kind) ?? null,
+            tax_category: taxCategoryOf(values.tax_category) ?? null,
           },
         }),
       );
@@ -448,6 +486,18 @@ export function ProductsAdmin() {
             label: "product.activeFilter",
             allLabel: "product.activeFilterAll",
             options: [{ value: "true", label: "product.active" }],
+          },
+          {
+            key: "tax_category",
+            label: "product.taxCategoryFilter",
+            allLabel: "product.taxCategoryFilterAll",
+            options: [
+              { value: "unclassified", label: "product.taxCategoryUnset" },
+              ...TAX_CATEGORIES.map((category) => ({
+                value: category,
+                label: TAX_CATEGORY_LABEL[category],
+              })),
+            ],
           },
         ]}
       />
