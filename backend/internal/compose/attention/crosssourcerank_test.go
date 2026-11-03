@@ -185,3 +185,29 @@ var (
 	waitContact  = ids.MustParse("00000000-0000-7000-8000-00000000b001")
 	leadOwed     = ids.MustParse("00000000-0000-7000-8000-00000000c001")
 )
+
+// A deal Scout says should exist is a possible opportunity: below what a
+// customer or a promise is waiting on, above the database's own tidying.
+func TestADealSuggestionRanksBelowCustomersAndPromisesAndAboveCleanup(t *testing.T) {
+	t.Parallel()
+
+	got := aWholeDay(
+		[]WaitingCustomer{{
+			ActivityID: waitActivity,
+			Subject:    "Can you confirm the retrofit price?",
+			Since:      rankInstant.Add(-72 * time.Hour),
+			ContactID:  waitContact,
+			Engaged:    true,
+		}},
+		crmcontracts.Attention{
+			AsOf:        rankInstant,
+			Commitments: lane(item("promise", "conversation_claim", withDue(rankInstant.Add(-time.Hour)))),
+			NeedsYou: []crmcontracts.AttentionItem{
+				item("merge", "approval", withKind("merge_contacts")),
+				item("scout", sourceDealSuggestion, withKind("open_deal")),
+			},
+		},
+	)
+
+	assertOrder(t, got, waitActivity.String(), "promise", "scout", "merge")
+}

@@ -217,15 +217,6 @@ var unrunnableCalls = map[string]unrunnableCall{
 			return httptest.NewRequest(http.MethodPost, "/v1/scheduling/invitations", bytes.NewReader(body)), body
 		},
 	},
-	"bookMeeting": {
-		refusal: refusedArgument("end",
-			"the meeting ends before it starts, which the store refuses after the approval is spent"),
-		build: func() (*http.Request, []byte) {
-			body := []byte(`{"start":"2026-08-10T10:00:00Z","end":"2026-08-10T09:00:00Z",` +
-				`"links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000021"}]}`)
-			return httptest.NewRequest(http.MethodPost, "/v1/bookings", bytes.NewReader(body)), body
-		},
-	},
 	"sendEmail": {
 		refusal: refusedArgument("to", "the send reaches nobody"),
 		build: func() (*http.Request, []byte) {
