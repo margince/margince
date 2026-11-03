@@ -3047,6 +3047,18 @@ func (stubs) UpdateProduct(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "UpdateProduct")
 }
 
+func (stubs) ListProductTranslations(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListProductTranslations")
+}
+
+func (stubs) DeleteProductTranslation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, language string) {
+	httperr.NotImplemented(w, r, "DeleteProductTranslation")
+}
+
+func (stubs) PutProductTranslation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, language string) {
+	httperr.NotImplemented(w, r, "PutProductTranslation")
+}
+
 func (stubs) ListProjects(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListProjectsParams) {
 	httperr.NotImplemented(w, r, "ListProjects")
 }

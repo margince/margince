@@ -234,7 +234,7 @@ internal/compose/integration/workflow_approval_staging_integration_test.go 1
 internal/compose/integration/workflow_dispatch_bench_test.go 2
 internal/compose/integration/workflow_integration_test.go 4
 internal/compose/invitedtaskassignee_integration_test.go 1
-internal/compose/jobs_storedobject_integration_test.go 5
+internal/compose/jobs_storedobject_integration_test.go 1
 internal/compose/jobtimeout_integration_test.go 1
 internal/compose/lastcontact_integration_test.go 1
 internal/compose/leadladder_manual_integration_test.go 2

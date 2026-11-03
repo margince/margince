@@ -5253,6 +5253,7 @@ public.idx_mfa_recovery_code_user CREATE INDEX idx_mfa_recovery_code_user ON pub
 public.idx_oauth_authorization_code_user CREATE INDEX idx_oauth_authorization_code_user ON public.oauth_authorization_code USING btree (user_id)
 public.idx_oauth_grant_user CREATE INDEX idx_oauth_grant_user ON public.oauth_grant USING btree (user_id)
 public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL)
+public.idx_offer_legal_entity CREATE INDEX idx_offer_legal_entity ON public.offer USING btree (legal_entity_id) WHERE (legal_entity_id IS NOT NULL)
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
@@ -5875,18 +5876,21 @@ public.legal_entity.legal_entity_country_shape CHECK (((country IS NULL) OR (cou
 public.legal_entity.legal_entity_default_has_no_offering CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL))))
 public.legal_entity.legal_entity_default_is_permanent CHECK (((NOT is_default) OR (archived_at IS NULL)))
 public.legal_entity.legal_entity_default_reads_the_anchor CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))
+public.legal_entity.legal_entity_default_signs_with_the_installation CHECK (((NOT is_default) OR (signature_template IS NULL)))
 public.legal_entity.legal_entity_iban_shape CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'::text)))
 public.legal_entity.legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))
 public.legal_entity.legal_entity_language_shape CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$'::text)))
 public.legal_entity.legal_entity_names_itself CHECK ((is_default OR ((btrim(COALESCE(display_name, ''::text)) <> ''::text) AND (btrim(COALESCE(legal_name, ''::text)) <> ''::text) AND (country IS NOT NULL))))
 public.legal_entity.legal_entity_offering_bounded CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))
 public.legal_entity.legal_entity_pkey PRIMARY KEY (id)
+public.legal_entity.legal_entity_signature_template_bounded CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000)))
 public.legal_entity.legal_entity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.legal_entity.legal_name text gen=- def=-
 public.legal_entity.logo_object_key text gen=- def=-
 public.legal_entity.offer_summary text gen=- def=-
 public.legal_entity.register_court text gen=- def=-
 public.legal_entity.register_number text gen=- def=-
+public.legal_entity.signature_template text gen=- def=-
 public.legal_entity.trg_legal_entity_default_is_permanent CREATE TRIGGER trg_legal_entity_default_is_permanent BEFORE DELETE OR UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION legal_entity_refuse_default_retirement()
 public.legal_entity.trg_legal_entity_updated CREATE TRIGGER trg_legal_entity_updated BEFORE UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.legal_entity.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6428,6 +6432,8 @@ public.offer.gross_minor bigint NOT NULL gen=- def=0
 public.offer.id uuid NOT NULL gen=- def=uuidv7()
 public.offer.intro_text text gen=- def=-
 public.offer.issuer_snapshot jsonb gen=- def=-
+public.offer.language text gen=- def=-
+public.offer.legal_entity_id uuid gen=- def=-
 public.offer.net_minor bigint NOT NULL gen=- def=0
 public.offer.offer_accepted_at CHECK (((status <> 'accepted'::text) OR (accepted_at IS NOT NULL)))
 public.offer.offer_buyer_company_fkey FOREIGN KEY (buyer_company_id) REFERENCES company(id) ON DELETE SET NULL (buyer_company_id)
@@ -6435,6 +6441,8 @@ public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE
 public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
 public.offer.offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor)))
 public.offer.offer_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.offer.offer_language_shape CHECK (((language IS NULL) OR (language ~ '^[a-z]{2}$'::text)))
+public.offer.offer_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.offer.offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
@@ -6770,6 +6778,23 @@ public.product.unit_price_minor bigint NOT NULL gen=- def=-
 public.product.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.product.version bigint NOT NULL gen=- def=1
 public.product_pkey CREATE UNIQUE INDEX product_pkey ON public.product USING btree (id)
+public.product_translation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.product_translation.captured_by text NOT NULL gen=- def=-
+public.product_translation.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.product_translation.description text gen=- def=-
+public.product_translation.language text NOT NULL gen=- def=-
+public.product_translation.name text NOT NULL gen=- def=-
+public.product_translation.product_id uuid NOT NULL gen=- def=-
+public.product_translation.product_translation_bounded CHECK (((length(name) <= 500) AND ((description IS NULL) OR (length(description) <= 4000))))
+public.product_translation.product_translation_language_shape CHECK ((language ~ '^[a-z]{2}$'::text))
+public.product_translation.product_translation_name_present CHECK ((btrim(name) <> ''::text))
+public.product_translation.product_translation_pkey PRIMARY KEY (product_id, language)
+public.product_translation.product_translation_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE
+public.product_translation.product_translation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.product_translation.trg_product_translation_updated CREATE TRIGGER trg_product_translation_updated BEFORE UPDATE ON public.product_translation FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.product_translation.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.product_translation.version bigint NOT NULL gen=- def=1
+public.product_translation_pkey CREATE UNIQUE INDEX product_translation_pkey ON public.product_translation USING btree (product_id, language)
 public.project acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.project.archived_at timestamp with time zone gen=- def=-
 public.project.captured_by text NOT NULL gen=- def=-

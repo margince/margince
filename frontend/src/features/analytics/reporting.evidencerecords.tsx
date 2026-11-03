@@ -122,7 +122,7 @@ export function EvidenceRecords({
         actions={
           <Button
             onClick={() => {
-              reloadReportingFigures(client);
+              void reloadReportingFigures(client);
               onClose();
             }}
           >

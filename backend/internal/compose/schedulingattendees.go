@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -23,8 +24,8 @@ import (
 )
 
 // attendeeCandidates are the records that hold one address. contacts are
-// already bounded by the host's row scope; held says whether any live contact
-// holds it at all, seen or not.
+// already bounded by the host's row scope. held is the consent gate's answer
+// to whether any contact or lead holds it, seen or not.
 type attendeeCandidates struct {
 	contacts  []ids.UUID
 	colleague ids.UUID
@@ -47,6 +48,10 @@ func (c schedulingCalendar) ResolveAttendees(ctx context.Context, host ids.UserI
 		if err != nil {
 			return nil, err
 		}
+		found.held, err = consentGateFor(c.pool).AddressHasSubject(ctx, address)
+		if err != nil {
+			return nil, err
+		}
 		attendee, err := c.resolveAttendee(hostCtx, address, found)
 		if err != nil {
 			return nil, err
@@ -57,7 +62,7 @@ func (c schedulingCalendar) ResolveAttendees(ctx context.Context, host ids.UserI
 }
 
 func (c schedulingCalendar) resolveAttendee(hostCtx context.Context, address string, found attendeeCandidates) (connector.CalendarAttendee, error) {
-	held := found.held || len(found.leads) > 0
+	held := found.held
 	store := contacts.NewStore(InstallationDB(c.pool))
 	for _, id := range found.contacts {
 		visible, err := hostSees(store.GetContact(hostCtx, ids.From[ids.ContactKind](id), storekit.LiveOnly))
@@ -103,8 +108,6 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 		rows, err := tx.Query(ctx, `
 			SELECT 'contact', e.contact_id FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)
-			UNION SELECT 'held', '00000000-0000-0000-0000-000000000000'::uuid
-			 WHERE EXISTS (SELECT 1 FROM contact_email WHERE email = $1 AND archived_at IS NULL)
 			UNION SELECT 'user', u.id FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
 			UNION SELECT 'lead', l.id FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
 			ORDER BY 1, 2`, args...)
@@ -121,8 +124,6 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 			switch kind {
 			case "contact":
 				found.contacts = append(found.contacts, id)
-			case "held":
-				found.held = true
 			case "user":
 				found.colleague = id
 			default:
@@ -135,14 +136,24 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 }
 
 // consentAddresses checks every attendee once more before the provider sends,
-// and answers the addresses the consent gate must clear. The primary invitee
+// and answers the addresses the consent gate must clear. Any attendee whose
+// address carries a stop that binds an invitation refuses the whole send. The primary invitee
 // is checked against its own contact or lead. A further attendee is resolved
 // afresh, and the stricter of its queued and its current answer wins. An
 // address gated when it was queued stays gated after its contact or lead lost
 // it. The gate then refuses it as a subject it cannot find.
 func (c schedulingCalendar) consentAddresses(ctx context.Context, host ids.UserID, in connector.CalendarAppointment) ([]string, error) {
+	gate := consentGateFor(c.pool)
 	gated := make([]string, 0, len(in.Attendees))
 	for i, address := range in.Attendees {
+		// A stop on the address binds every attendee, whatever record holds it.
+		suppressed, err := gate.InvitationSuppressed(ctx, address)
+		if err != nil {
+			return nil, err
+		}
+		if suppressed {
+			return nil, fmt.Errorf("compose: %s is suppressed: %w", address, apperrors.ErrConsentNotGranted)
+		}
 		if i == 0 || len(in.Roster) != len(in.Attendees) {
 			if err := c.checkAppointmentRecipient(ctx, host, in, address); err != nil {
 				return nil, err

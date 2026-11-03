@@ -88,6 +88,8 @@ export function InterventionPanel({
   const { locale } = useLocale();
   const { list, state, unreadSources } = interventions;
   const findings = list?.data ?? [];
+  if (findings.length === 0 && state !== "failed" && unreadSources === 0)
+    return null;
   const forecast = (extra?: readonly [string, string]) =>
     analyticsSectionHref(
       "forecast",

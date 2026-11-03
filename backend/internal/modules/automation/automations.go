@@ -50,12 +50,10 @@ func NewAutomationStore(db *database.DB) *AutomationStore {
 	return &AutomationStore{db: db, now: time.Now}
 }
 
-// WithClock overrides the store's clock — the fixture a Preview proof
-// pins so "MatchesNow"/"WouldHaveFired" are measured against seeded
-// timestamps, never the wall clock (P3: no real-clock flakiness in a
-// test), mirroring TimeScanner's own NewTimeScannerWithClock. Returns
-// the store for chaining, like WithFieldCatalog above.
-func (s *AutomationStore) WithClock(now func() time.Time) *AutomationStore {
+// SetClock overrides the store's clock and returns the store. A Preview test
+// pins it so "MatchesNow" and "WouldHaveFired" read seeded timestamps, never
+// the wall clock.
+func (s *AutomationStore) SetClock(now func() time.Time) *AutomationStore {
 	s.now = now
 	return s
 }
