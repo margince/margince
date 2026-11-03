@@ -52,12 +52,13 @@ func linkEvidence(refs []EvidenceRef, origin string) {
 // `<name>_minor` beside the `currency` it is counted in. A forecast's figures
 // sit beside the `base_currency` they were converted to.
 const (
-	minorSuffix   = "_minor"
-	displaySuffix = "_display"
-	fieldCurrency = "currency"
+	minorSuffix       = "_minor"
+	displaySuffix     = "_display"
+	fieldCurrency     = "currency"
+	fieldBaseCurrency = "base_currency"
 )
 
-var currencyMembers = []string{fieldCurrency, "base_currency"}
+var currencyMembers = []string{fieldCurrency, fieldBaseCurrency}
 
 // withReadableAmounts adds `<name>_display` ("72000.00 USD") beside every
 // `<name>_minor` that sits next to a currency. A model then reads money in major
@@ -76,7 +77,7 @@ func withReadableAmounts(data json.RawMessage) json.RawMessage {
 	if err := decoder.Decode(&tree); err != nil {
 		return data
 	}
-	if !addDisplays(tree) {
+	if !addDisplays(tree, "") {
 		return data
 	}
 	out, err := json.Marshal(tree)
@@ -86,22 +87,35 @@ func withReadableAmounts(data json.RawMessage) json.RawMessage {
 	return out
 }
 
-// addDisplays walks the tree and reports whether it added any figure.
+// addDisplays walks the tree and reports whether it added any figure. inherited
+// is the base_currency an enclosing object converted its figures to. An
+// object's own currency wins over it. Only base_currency passes down, because
+// a row's currency describes that row and not what it holds. Below a row that
+// names its own currency, nothing is inherited: its parts may be in either.
 //
 //craft:ignore naked-any the node is a decoded JSON value of unknown shape, and the walk is what reads its type
-func addDisplays(node any) bool {
+func addDisplays(node any, inherited string) bool {
 	added := false
 	switch typed := node.(type) {
 	case map[string]any:
-		if currency := currencyOf(typed); currency != "" {
+		currency := currencyOf(typed)
+		if currency == "" {
+			currency = inherited
+		}
+		if currency != "" {
 			added = addPairDisplays(typed, currency)
 		}
+		if base, ok := typed[fieldBaseCurrency].(string); ok && base != "" {
+			inherited = base
+		} else if own, ok := typed[fieldCurrency].(string); ok && own != "" {
+			inherited = ""
+		}
 		for _, child := range typed {
-			added = addDisplays(child) || added
+			added = addDisplays(child, inherited) || added
 		}
 	case []any:
 		for _, child := range typed {
-			added = addDisplays(child) || added
+			added = addDisplays(child, inherited) || added
 		}
 	}
 	return added

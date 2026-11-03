@@ -67,6 +67,54 @@ func TestEveryAmountBesideACurrencyGetsAReadableFigure(t *testing.T) {
 	}
 }
 
+// readableTree runs a result through withReadableAmounts and decodes it.
+func readableTree(t *testing.T, in string) map[string]any {
+	t.Helper()
+	var tree map[string]any
+	if err := json.Unmarshal(withReadableAmounts(json.RawMessage(in)), &tree); err != nil {
+		t.Fatal(err)
+	}
+	return tree
+}
+
+// A forecast's parts sit under the base_currency their reading was converted
+// to, with no currency of their own, and read in it.
+func TestReadableAmountsInheritBaseCurrency(t *testing.T) {
+	tree := readableTree(t, `{"base_currency":"EUR","landing":{"amount_minor":3100000},`+
+		`"buckets":[{"name":"won","amount_minor":250}]}`)
+	landing, _ := tree["landing"].(map[string]any)
+	if got := landing["amount_display"]; got != "31000.00 EUR" {
+		t.Errorf("landing.amount_display = %v, want 31000.00 EUR", got)
+	}
+	buckets, _ := tree["buckets"].([]any)
+	if len(buckets) != 1 {
+		t.Fatalf("buckets = %v, want one", tree["buckets"])
+	}
+	if bucket, _ := buckets[0].(map[string]any); bucket["amount_display"] != "2.50 EUR" {
+		t.Errorf("a bucket inside a list reads %v, want 2.50 EUR", bucket["amount_display"])
+	}
+}
+
+// A row's own currency names that row's money, not what the row holds. A
+// child of a row with only a currency gets no figure, and a child's own
+// currency wins over an inherited base_currency.
+func TestReadableAmountsDoNotInheritRowCurrency(t *testing.T) {
+	tree := readableTree(t, `{"base_currency":"EUR","deal":{"currency":"USD","amount_minor":100,`+
+		`"line":{"amount_minor":200},"own":{"currency":"JPY","amount_minor":300}}}`)
+	deal, _ := tree["deal"].(map[string]any)
+	if got := deal["amount_display"]; got != "1.00 USD" {
+		t.Errorf("deal.amount_display = %v, want its own 1.00 USD", got)
+	}
+	line, _ := deal["line"].(map[string]any)
+	if got, has := line["amount_display"]; has {
+		t.Errorf("a child of a row naming only its own currency reads %v, want no figure", got)
+	}
+	own, _ := deal["own"].(map[string]any)
+	if got := own["amount_display"]; got != "300 JPY" {
+		t.Errorf("a child with its own currency reads %v, want 300 JPY", got)
+	}
+}
+
 func TestAResultWithNoAmountKeepsItsExactBytes(t *testing.T) {
 	in := json.RawMessage(`{"z":1,  "a":"currency"}`)
 	if out := withReadableAmounts(in); string(out) != string(in) {

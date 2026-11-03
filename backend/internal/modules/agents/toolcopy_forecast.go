@@ -51,7 +51,8 @@ var forecastReadingsCopy = toolCopy{
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
 		"in the reader's own zone is a different total — and `eligible_count`, `priced_count` " +
 		"and `fx_missing_count` are the counts `coverage_note` is written from. Every `_minor` " +
-		"figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
+		"figure has a `_display` beside it in major units of `base_currency`. Quote the " +
+		"`_display`, never the `_minor` integer.",
 }
 
 var forecastMovementCopy = toolCopy{
@@ -72,8 +73,9 @@ var forecastMovementCopy = toolCopy{
 		"where it went.",
 	Retain: "`reopened_or_archived` carries a deal that left the population entirely — " +
 		"archived, or no longer visible to this caller — with its whole prior contribution, so " +
-		"no money disappears without a row that says where it went. Every `_minor` figure is in " +
-		"minor units of forecast_readings' `base_currency`: 3100000 in EUR is EUR 31,000.",
+		"no money disappears without a row that says where it went. Every `_minor` figure has a " +
+		"`_display` beside it in major units of `base_currency`. Quote the `_display`, never " +
+		"the `_minor` integer.",
 }
 
 var forecastInputChecksCopy = toolCopy{
@@ -145,5 +147,6 @@ var readForecastCopy = toolCopy{
 		"is the forecast. For a board-pack section, use read_analytics: query with save, then " +
 		"compose.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure " +
-		"is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
+		"has a `_display` beside it in major units of `base_currency`. Quote the `_display`, " +
+		"never the `_minor` integer.",
 }

@@ -262,7 +262,10 @@ func (t forecastMovement) Handle(ctx context.Context, in json.RawMessage) (json.
 
 // ForecastMovementResult is what forecast_movement answers with.
 type ForecastMovementResult struct {
-	Reading      string `json:"reading"`
+	Reading string `json:"reading"`
+	// BaseCurrency is what every amount here, the buckets' and deals' too, was
+	// converted to when the snapshots were frozen.
+	BaseCurrency string `json:"base_currency"`
 	OpeningMinor int64  `json:"opening_minor"`
 	ClosingMinor int64  `json:"closing_minor"`
 	// Buckets is a COMPLETE account: opening plus every entry equals closing.

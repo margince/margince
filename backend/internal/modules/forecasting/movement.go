@@ -65,6 +65,9 @@ func MovementBuckets() []string {
 // approximation — and it is the whole point: a waterfall whose bars do not
 // reach the closing bar is a picture that has to be explained away.
 type Movement struct {
+	// BaseCurrency is what both snapshots converted every amount to. Store.Movement
+	// refuses two snapshots in different base currencies.
+	BaseCurrency string
 	OpeningMinor int64
 	ClosingMinor int64
 	Buckets      []Bucket
@@ -165,6 +168,7 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 	definitionChanged := from.DefinitionVersion != to.DefinitionVersion
 
 	out := Movement{
+		BaseCurrency: to.BaseCurrency,
 		OpeningMinor: totalOf(reading, from.Contributions),
 		ClosingMinor: totalOf(reading, to.Contributions),
 	}

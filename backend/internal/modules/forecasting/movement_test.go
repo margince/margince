@@ -360,3 +360,15 @@ func TestADealThatWasLostBetweenSnapshotsLeavesAsLost(t *testing.T) {
 	}
 	reconciles(t, m)
 }
+
+// A movement names the base currency its two snapshots converted to, so every
+// amount in it can be read in that currency.
+func TestAMovementNamesItsBaseCurrency(t *testing.T) {
+	t.Parallel()
+	from, to := side(DefinitionVersion, open("d1", 10_000)), side(DefinitionVersion, open("d1", 12_000))
+	from.BaseCurrency, to.BaseCurrency = "EUR", "EUR"
+
+	if got := Classify(ReadingWeighted, from, to).BaseCurrency; got != "EUR" {
+		t.Errorf("the movement's base currency = %q, want EUR", got)
+	}
+}

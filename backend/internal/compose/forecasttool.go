@@ -314,6 +314,7 @@ func movementToolReader(pool *pgxpool.Pool) agents.MovementReader {
 func movementToolResult(reading forecasting.Reading, in forecasting.Movement) agents.ForecastMovementResult {
 	out := agents.ForecastMovementResult{
 		Reading:      string(reading),
+		BaseCurrency: in.BaseCurrency,
 		OpeningMinor: in.OpeningMinor,
 		ClosingMinor: in.ClosingMinor,
 		// Empty, never nil: "nothing moved" is a real answer, and null reads as

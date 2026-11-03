@@ -10,16 +10,16 @@
   "totals": {
     "tools": 38,
     "resources": 13,
-    "tool_catalog_bytes": 162415,
+    "tool_catalog_bytes": 162459,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 41918,
+    "approx_wire_tokens_total": 41929,
     "largest_tool_bytes": 11741,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 35673,
+      "description_bytes": 35717,
       "input_schema_bytes": 67597,
       "output_schema_bytes": 49641,
-      "description_plus_input_schema_bytes": 103270
+      "description_plus_input_schema_bytes": 103314
     }
   },
   "tools": {
@@ -6774,7 +6774,7 @@
           "readOnlyHint": true,
           "title": "Read the forecast and how it moved"
         },
-        "description": "Read the forecast under the installation's fiscal calendar and base currency. readings: what a period is expected to close — `won`, `evidence`, `best_case`, `open` and `weighted` — and `snapshots`, the period's frozen states, newest first. movement: why the forecast changed between two snapshots, as named causes that sum to the whole difference. input_summary: whether the inputs are sound enough to quote, and how much of the pipeline last night's check reached. input_exceptions: the open input problems, most material first. input_sources: which connectors the check could read, and how far back. `won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline whose close date somebody confirmed. `coverage_note` says what the totals leave out; quote it with any total. movement needs `from` then `to`, both from ONE readings answer's `snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is not the same answer: it says nothing of where the difference went. In movement, `definition` means the snapshots used different rules and `model` a re-scored probability: neither is sales movement. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other that nobody could look. An empty input_exceptions cannot be told from a clean pipeline; input_sources tells them apart, and needs a coverage grant sellers lack. read_reports and find_records with engine query also produce numbers, and neither is the forecast. For a board-pack section, use read_analytics: query with save, then compose. Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
+        "description": "Read the forecast under the installation's fiscal calendar and base currency. readings: what a period is expected to close — `won`, `evidence`, `best_case`, `open` and `weighted` — and `snapshots`, the period's frozen states, newest first. movement: why the forecast changed between two snapshots, as named causes that sum to the whole difference. input_summary: whether the inputs are sound enough to quote, and how much of the pipeline last night's check reached. input_exceptions: the open input problems, most material first. input_sources: which connectors the check could read, and how far back. `won` counts deals by the day they ACTUALLY closed. `evidence` is committed pipeline whose close date somebody confirmed. `coverage_note` says what the totals leave out; quote it with any total. movement needs `from` then `to`, both from ONE readings answer's `snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is not the same answer: it says nothing of where the difference went. In movement, `definition` means the snapshots used different rules and `model` a re-scored probability: neither is sales movement. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other that nobody could look. An empty input_exceptions cannot be told from a clean pipeline; input_sources tells them apart, and needs a coverage grant sellers lack. read_reports and find_records with engine query also produce numbers, and neither is the forecast. For a board-pack section, use read_analytics: query with save, then compose. Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure has a `_display` beside it in major units of `base_currency`. Quote the `_display`, never the `_minor` integer.",
         "inputSchema": {
           "properties": {
             "as_of": {
