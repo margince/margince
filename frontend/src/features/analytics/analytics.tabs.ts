@@ -37,6 +37,8 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
     targets: useCan("sales_target", "read"),
     framework: useCan("reporting_framework", "read"),
     coverage: useCan("data_coverage", "read"),
+    deal: useCan("deal", "read"),
+    company: useCan("company", "read"),
   };
   const readsViews = can.reports && can.framework;
   // Until the seat's grants are known, every grant reads as refused, and the
@@ -47,19 +49,15 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
   const requested = sectionFromAddress(segment, "overview", params.get("view"));
   const views = readsViews ? viewTabs(catalog.data) : [];
   const opens = readsViews && opensOverview(catalog.data);
-  const available = SECTIONS.filter((candidate) => {
-    if (candidate === "overview") return opens;
-    if (viewOfSection(candidate)) return views.includes(candidate);
-    if (candidate === "reports") return can.reports;
-    if (candidate === "targets") return can.targets;
-    if (candidate === "definitions") return can.framework;
-    if (candidate === "outcomes") return defaultScope === "owner";
-    // The read starts only with the ops grant; the tab appears after the
-    // server has answered.
-    if (candidate === "coverage")
-      return can.coverage && coverageProbe.isSuccess;
-    return true;
-  });
+  const available = SECTIONS.filter((candidate) =>
+    admits(candidate, {
+      opens,
+      views,
+      can,
+      ownLens: defaultScope === "owner",
+      coverageAnswered: coverageProbe.isSuccess,
+    }),
+  );
   const section = landOn(requested, available, {
     views,
     resolvingViews: !grantsKnown || (readsViews && catalog.isPending),
@@ -76,6 +74,49 @@ export function useAnalyticsSections(defaultScope: ScopeKind | undefined) {
 
 // Overview is offered while the catalog is on its way, so the bare address
 // flashes no other tab. After that, it is offered when a preset is published.
+type Grants = Readonly<{
+  reports: boolean;
+  targets: boolean;
+  framework: boolean;
+  coverage: boolean;
+  deal: boolean;
+  company: boolean;
+}>;
+
+/** Whether a seat gets a section: its grant, or the answer that fills it. */
+function admits(
+  candidate: Section,
+  seat: Readonly<{
+    opens: boolean;
+    views: readonly Section[];
+    can: Grants;
+    ownLens: boolean;
+    coverageAnswered: boolean;
+  }>,
+): boolean {
+  if (viewOfSection(candidate)) return seat.views.includes(candidate);
+  switch (candidate) {
+    case "overview":
+      return seat.opens;
+    case "reports":
+      return seat.can.reports;
+    case "targets":
+      return seat.can.targets;
+    case "definitions":
+      return seat.can.framework;
+    case "outcomes":
+      return seat.ownLens;
+    case "accounts":
+      return seat.can.deal && seat.can.company;
+    // The read starts only with the ops grant; the tab appears after the
+    // server has answered.
+    case "coverage":
+      return seat.can.coverage && seat.coverageAnswered;
+    default:
+      return true;
+  }
+}
+
 function opensOverview(
   catalog: Parameters<typeof overviewViews>[0] | undefined,
 ): boolean {
@@ -95,6 +136,7 @@ const TAB_SECTIONS: readonly Section[] = [
   "conversion",
   "forecast",
   "pipeline",
+  "accounts",
   "outcomes",
   "delivery",
 ];
