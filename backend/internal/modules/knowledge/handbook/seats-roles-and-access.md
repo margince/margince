@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-rolecell.tsx frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: frontend/src/features/settings/users-rolecell.tsx frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -21,6 +21,14 @@ To invite a colleague to Margince, open **Settings → Members** and choose **In
 5. Check the **User access** preview, then choose **Invite**.
 You need the permission to manage users. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
+
+### What if the invitation email did not arrive?
+If the mail server refuses the invitation email, the colleague's row in **Settings → Members** shows **Invitation email failed**.
+1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
+2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
+3. The note "Invitation sent again to {name}" confirms it. The mark goes away once the new email has gone out.
+Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
+Also called: invite failed, invitation not received, resend invite.
 
 ### How do I change someone's role or make someone an admin?
 To change a colleague's role in Margince, open **Settings → Members** and press the role on their row.

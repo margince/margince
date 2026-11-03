@@ -11,25 +11,36 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// stubSuggestions records the owner set each read was narrowed to; listed and
+// counted stay unset until that read is made.
 type stubSuggestions struct {
 	rows     []crmcontracts.DealSuggestion
 	open     int
 	err      error
 	countErr error
+
+	listed, counted *ownerSetSeen
 }
 
-func (s *stubSuggestions) OpenSuggestions(_ context.Context, limit int) ([]crmcontracts.DealSuggestion, error) {
+type ownerSetSeen struct{ owners *storekit.OwnerSet }
+
+func (s *stubSuggestions) OpenSuggestions(
+	_ context.Context, owners *storekit.OwnerSet, limit int,
+) ([]crmcontracts.DealSuggestion, error) {
+	s.listed = &ownerSetSeen{owners}
 	if s.err != nil {
 		return nil, s.err
 	}
 	return s.rows[:min(limit, len(s.rows))], nil
 }
 
-func (s *stubSuggestions) CountOpen(context.Context) (int, error) {
+func (s *stubSuggestions) CountOpen(_ context.Context, owners *storekit.OwnerSet) (int, error) {
+	s.counted = &ownerSetSeen{owners}
 	if s.countErr != nil {
 		return 0, s.countErr
 	}
@@ -104,6 +115,18 @@ func TestASuggestionRowOffersItsVerbsAndNamesTheCompany(t *testing.T) {
 	}
 	if len(item.Actions) != 3 || item.Actions[0] != "decide" || item.Actions[1] != actionDismiss {
 		t.Fatalf("actions = %v, want decide, dismiss and open", item.Actions)
+	}
+}
+
+func TestADealSuggestionNamesTheCompanyOwnerAsDecider(t *testing.T) {
+	owned := suggestionRow("meeting_held")
+	owner := openapi_types.UUID(ids.NewV7())
+	owned.OwnerId = &owner
+	if got := suggestionItem(owned).RequestedDeciderId; got == nil || *got != owner {
+		t.Fatalf("decider = %v, want the company owner %v", got, owner)
+	}
+	if got := suggestionItem(suggestionRow("meeting_held")).RequestedDeciderId; got != nil {
+		t.Fatalf("decider = %v on an unowned company's suggestion, want none", *got)
 	}
 }
 

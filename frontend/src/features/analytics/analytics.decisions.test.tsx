@@ -79,3 +79,20 @@ it("lists the open decision and records its outcome without touching the deal", 
   await waitFor(() => expect(outcome).toHaveBeenCalledTimes(1));
   expect(outcome.mock.calls[0]?.[0]).toEqual({ result: "Buyer met" });
 });
+
+it("can record the first manual decision without drawing an empty table", async () => {
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /me": meRoute({ activity: ["read", "create"], deal: ["read"] }),
+    "GET /analytics/decisions": () => jsonResponse({ data: [] }),
+  });
+  render(
+    <StoryProviders>
+      <DecisionsPanel />
+    </StoryProviders>,
+  );
+  const action = await screen.findByRole("button", { name: "Record decision" });
+  expect(screen.queryByRole("table")).toBeNull();
+  await userEvent.setup().click(action);
+  expect(await screen.findByRole("dialog")).toBeVisible();
+});

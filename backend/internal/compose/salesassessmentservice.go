@@ -23,8 +23,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The assessment's bounds. One model call may take this long, the next
@@ -73,6 +75,10 @@ func (s *salesAssessments) withLane(lane completer, routingVersion string) *sale
 // evaluation is read under their own grants first, so a selection they may
 // not read refuses before any model is asked. Refresh forces a new call.
 func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.ReportingSelection, refresh bool) (crmcontracts.SalesAssessment, error) {
+	return s.AssessView(ctx, selection, refresh, nil, nil)
+}
+
+func (s *salesAssessments) AssessView(ctx context.Context, selection crmcontracts.ReportingSelection, refresh bool, view *crmcontracts.SalesAssessmentView, receipt *reporting.EvidenceExpectation) (crmcontracts.SalesAssessment, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
@@ -80,11 +86,7 @@ func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.Re
 	if !ok {
 		return crmcontracts.SalesAssessment{}, auth.RequireHuman(ctx)
 	}
-	evaluation, err := s.reports.Evaluate(ctx, selection)
-	if err != nil {
-		return crmcontracts.SalesAssessment{}, err
-	}
-	in, err := s.gather(ctx, selection, evaluation)
+	evaluation, in, err := s.prepareAssessment(ctx, selection, view, receipt, actor.UserID)
 	if err != nil {
 		return crmcontracts.SalesAssessment{}, err
 	}
@@ -92,13 +94,19 @@ func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.Re
 	key := assessmentKey(actor.UserID.String(), lang, s.routingVersion, selection, in)
 	if !refresh {
 		if out, found := s.cached(key); found {
+			out.EvaluationKey = evaluation.EvaluationKey
 			return out, nil
 		}
 	}
 	release, join := s.claim(key)
 	if join != nil {
-		<-join
+		select {
+		case <-join:
+		case <-ctx.Done():
+			return crmcontracts.SalesAssessment{}, ctx.Err()
+		}
 		if out, found := s.cached(key); found {
+			out.EvaluationKey = evaluation.EvaluationKey
 			return out, nil
 		}
 	}
@@ -108,6 +116,39 @@ func (s *salesAssessments) Assess(ctx context.Context, selection crmcontracts.Re
 		s.keep(key, out)
 	}
 	return out, nil
+}
+
+func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmcontracts.ReportingSelection, view *crmcontracts.SalesAssessmentView, receipt *reporting.EvidenceExpectation, reader ids.UUID) (crmcontracts.ReportingEvaluation, salesassessment.Input, error) {
+	var evaluation crmcontracts.ReportingEvaluation
+	var in salesassessment.Input
+	if view != nil && !view.Valid() {
+		return evaluation, in, apperrors.ErrInvalidArgument
+	}
+	if view != nil && *view == crmcontracts.SalesAssessmentViewProspecting && (selection.Scope.Kind != ScopeKindOwner || (selection.Scope.Id != nil && selection.Scope.Id.String() != reader.String())) {
+		return evaluation, in, apperrors.ErrPermissionDenied
+	}
+	var err error
+	if receipt == nil {
+		evaluation, err = s.reports.Evaluate(ctx, selection)
+	} else {
+		evaluation, err = s.reports.EvaluatedReceipt(ctx, selection, *receipt)
+	}
+	if err != nil {
+		return evaluation, in, err
+	}
+	in, err = s.gather(ctx, selection, evaluation)
+	if err != nil {
+		return evaluation, in, err
+	}
+	in.View = string(crmcontracts.SalesAssessmentViewSales)
+	if view != nil {
+		in.View = string(*view)
+	}
+	if in.View != string(crmcontracts.SalesAssessmentViewSales) {
+		in.Candidates = nil
+		in.Decisions = nil
+	}
+	return evaluation, in, nil
 }
 
 // claim takes the key for this reader's call, or hands back the channel a
@@ -164,7 +205,7 @@ func (s *salesAssessments) keep(key string, out crmcontracts.SalesAssessment) {
 }
 
 // write asks the model, or serves the deterministic floor: no sentences,
-// and generated_by says so, so the page writes the summary it can.
+// and generated_by identifies the source while measured actions stay usable.
 func (s *salesAssessments) write(ctx context.Context, evaluation crmcontracts.ReportingEvaluation, in salesassessment.Input, lang string) crmcontracts.SalesAssessment {
 	out := crmcontracts.SalesAssessment{
 		EvaluationKey: evaluation.EvaluationKey,
@@ -209,6 +250,18 @@ func foldAssessment(out crmcontracts.SalesAssessment, written salesassessment.Wr
 	}
 	confidence := crmcontracts.SalesAssessmentConfidence(written.Confidence)
 	out.Confidence = &confidence
+	paragraphs := make([]crmcontracts.SalesAssessmentParagraph, 0, len(written.Paragraphs))
+	for _, paragraph := range written.Paragraphs {
+		lines := crmcontracts.SalesAssessmentParagraph{}
+		for _, sentence := range paragraph {
+			lines = append(lines, crmcontracts.SalesAssessmentSentence{Text: sentence.Text, Kind: crmcontracts.SalesAssessmentSentenceKind(sentence.Kind), Cells: sentence.Cells})
+		}
+		paragraphs = append(paragraphs, lines)
+	}
+	out.Paragraphs = &paragraphs
+	if len(written.ActionIDs) > 0 {
+		out.ActionIds = &written.ActionIDs
+	}
 	if served != "" {
 		out.ModelUsed = &served
 	}
@@ -240,16 +293,32 @@ func assessmentKey(reader, lang, routingVersion string, selection crmcontracts.R
 // with their figures as text, the deals behind the open pipeline the reader
 // may see, and the decisions recorded on them.
 func (s *salesAssessments) gather(ctx context.Context, selection crmcontracts.ReportingSelection, evaluation crmcontracts.ReportingEvaluation) (salesassessment.Input, error) {
-	in := salesassessment.Input{Frame: assessmentFrame(evaluation.Context)}
-	for _, metric := range evaluation.Metrics {
-		in.Cells = append(in.Cells, assessmentCell("metric:"+string(metric.Id), string(metric.Id), metric.Value, metric.Unit, evaluation.Context.Interval, metric.Coverage))
+	zone, err := time.LoadLocation(evaluation.Context.Timezone)
+	if err != nil {
+		return salesassessment.Input{}, fmt.Errorf("reporting timezone: %w", apperrors.ErrInvalidArgument)
 	}
+	in := salesassessment.Input{Frame: assessmentFrame(evaluation.Context, zone)}
+	for _, action := range reportingOverviewActions(evaluation) {
+		in.Actions = append(in.Actions, salesassessment.ActionIn{ID: action.Id, Label: action.Label, Count: action.Count, Cell: "metric:" + string(action.Evidence.Metric)})
+	}
+	names := reporting.ExplanationCopy(evaluation.Context)
+	for _, metric := range evaluation.Metrics {
+		window := evaluation.Context.Interval
+		if metric.Id == reportingForecastLanding {
+			if metric.ForecastBasis == nil {
+				continue
+			}
+			window = metric.ForecastBasis.Period
+		}
+		in.Cells = append(in.Cells, assessmentCell("metric:"+string(metric.Id), names.Say(reportingMetricNames[metric.Id]), metric.Value, metric.Unit, assessmentWindow(window, zone), metric.Coverage))
+	}
+	in.Cells = append(in.Cells, assessmentForecastCells(evaluation, zone)...)
 	for _, chart := range evaluation.Charts {
 		if chart.Kind != reportingBreakdown {
 			continue
 		}
 		for _, point := range chart.Points {
-			in.Cells = append(in.Cells, assessmentCell("point:"+string(chart.Metric)+":"+point.Key, string(chart.Metric)+" · "+point.Label, point.Value, chart.Unit, evaluation.Context.Interval, chart.Coverage))
+			in.Cells = append(in.Cells, assessmentCell("point:"+string(chart.Metric)+":"+point.Key, names.Say(reportingMetricNames[chart.Metric])+" · "+point.Label, point.Value, chart.Unit, assessmentWindow(evaluation.Context.Interval, zone), chart.Coverage))
 		}
 	}
 	candidates, err := s.candidates(ctx, selection, evaluation)
@@ -261,12 +330,13 @@ func (s *salesAssessments) gather(ctx context.Context, selection crmcontracts.Re
 	return in, err
 }
 
-func assessmentFrame(context crmcontracts.ReportingContext) salesassessment.FrameIn {
+func assessmentFrame(context crmcontracts.ReportingContext, zone *time.Location) salesassessment.FrameIn {
 	frame := salesassessment.FrameIn{
+		Timezone: context.Timezone,
 		Period:   context.PeriodKind,
-		Window:   context.Interval.StartAt.Format(time.DateOnly) + " to " + context.Interval.EndAt.Format(time.DateOnly),
+		Window:   assessmentWindow(context.Interval, zone),
 		Currency: context.Currency,
-		Today:    context.EvaluatedAt.Format(time.DateOnly),
+		Today:    context.EvaluatedAt.In(zone).Format(time.DateOnly),
 	}
 	if context.Scope.Label != nil {
 		frame.Scope = *context.Scope.Label
@@ -286,10 +356,20 @@ func assessmentFrame(context crmcontracts.ReportingContext) salesassessment.Fram
 	return frame
 }
 
-func assessmentCell(id, label string, value *float64, unit string, window crmcontracts.ReportingWindow, coverage crmcontracts.ReportingCoverage) salesassessment.CellIn {
-	cell := salesassessment.CellIn{ID: id, Label: label, Unit: unit, Coverage: string(coverage.Status), Window: window.StartAt.Format(time.DateOnly) + " to " + window.EndAt.Format(time.DateOnly)}
+func assessmentWindow(window crmcontracts.ReportingWindow, zone *time.Location) string {
+	return window.StartAt.In(zone).Format(time.DateOnly) + " to " + window.EndAt.In(zone).Format(time.DateOnly)
+}
+
+func assessmentCell(id, label string, value *float64, unit string, window string, coverage crmcontracts.ReportingCoverage) salesassessment.CellIn {
+	cell := salesassessment.CellIn{ID: id, Label: label, Unit: unit, Coverage: string(coverage.Status), Window: window}
+	if coverage.Reason != nil {
+		cell.CoverageDetail = *coverage.Reason
+	}
 	if coverage.Withheld {
 		cell.Coverage = "withheld"
+	}
+	if value == nil && coverage.Status == crmcontracts.ReportingStatusNoData && (unit == "count" || values.ValidCurrency(unit)) {
+		value = new(float64)
 	}
 	if value != nil {
 		cell.Value = figureText(*value, unit)
@@ -302,8 +382,8 @@ func assessmentCell(id, label string, value *float64, unit string, window crmcon
 // figureText writes a figure the way the page prints it: money in major
 // units, a count or rate as it is.
 func figureText(value float64, unit string) string {
-	if unit != "" && unit != "count" && unit != "ratio" && unit != "percent" && unit != "days" {
-		return strconv.FormatFloat(value/100, 'f', 0, 64) + " " + unit
+	if values.ValidCurrency(unit) {
+		return values.MajorUnits(int64(value), unit) + " " + unit
 	}
 	return strconv.FormatFloat(value, 'f', -1, 64) + " " + unit
 }

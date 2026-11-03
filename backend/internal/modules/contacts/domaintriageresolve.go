@@ -43,6 +43,9 @@ type ResolveDomainTriageInput struct {
 	Source    string
 	Evidence  string
 	ReadID    ids.UUID
+	// SiteUnreadable marks an unreadable-site answer whose site was never
+	// read, as against one that was read and named nobody.
+	SiteUnreadable bool
 
 	// DossierName is the company name the site stated. Empty falls back to the
 	// domain's registrable label, which is what the pre-triage path always
@@ -106,7 +109,7 @@ func (s *Store) ResolveUnreadableDomainTriage(ctx context.Context, in ResolveDom
 		}
 		// No site, no name that explains the domain: nothing has EARNED a
 		// company. Left open, marked, and answerable later.
-		return markDispositionUnevidenced(ctx, tx, in.Domain, in.Evidence)
+		return markDispositionUnevidenced(ctx, tx, in.Domain, in.Evidence, in.SiteUnreadable)
 	})
 	if err != nil {
 		return ResolveDomainTriageResult{}, err
@@ -407,16 +410,7 @@ func domainEmploymentCandidates(ctx context.Context, tx pgx.Tx, domain string) (
 	rows, err := tx.Query(ctx, `
 		SELECT p.id
 		FROM contact p
-		WHERE p.archived_at IS NULL
-		  AND p.merged_into_id IS NULL
-		  AND EXISTS (
-			SELECT 1 FROM contact_email pe
-			WHERE pe.contact_id = p.id
-			  -- An address somebody no longer uses must not attach them to a
-			  -- new employer: a former colleague would be re-hired by a domain
-			  -- they left.
-			  AND pe.archived_at IS NULL
-			  AND `+owndomain.CoversSQL("pe.email_domain_folded", "$1")+`)
+		WHERE `+domainEmploymentCandidateSQL("p", "$1")+`
 		ORDER BY p.id
 		FOR UPDATE OF p`, owndomain.Fold(domain))
 	if err != nil {

@@ -78,12 +78,14 @@ var changeActivitiesCopy = toolCopy{
 }
 
 var scheduleMeetingCopy = toolCopy{
-	Purpose: "Put a meeting on the calendar. book places it on the calendar of the seat this " +
-		"passport acts for and tells nobody else. invite sends the invitation to its attendees.",
+	Purpose: "Put a meeting on the host's calendar. invite creates the calendar event and the " +
+		"provider sends the invitation to every attendee: the contact, and any further addresses.",
 	Limits: "invite reaches attendees outside the workspace, so name them and the time and get " +
-		"the user's yes first. Read check_availability before booking a time.",
-	Instead: "Use change_activities with log to record a meeting that already happened.",
-	Retain:  "Keep the meeting's id to send its invitation.",
+		"the user's yes first; the call stages for approval. Read check_availability before " +
+		"choosing a time.",
+	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +
+		"that already happened.",
+	Retain: "Keep the invitation id and inspect its status before claiming it was delivered.",
 }
 
 var changeStateCopy = toolCopy{

@@ -21,7 +21,7 @@ func TestFailedAttemptsDoNotAdvanceSuccessfulMailCoverage(t *testing.T) {
 	reg.Register(haltingConnector{recovered: &recovered})
 	at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 	good := at
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	if err := syncOnceOf(ctx, t, reg, haltingProvider); err != nil {
 		t.Fatal(err)
 	}

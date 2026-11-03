@@ -107,7 +107,7 @@ func TestTheListSummarizesEachRulesOwnCountedRuns(t *testing.T) {
 	quiet := fx.seedAutomation(t, "quiet_rule")
 	_, retriedAt := fx.runOf(t, rule, "applied")
 	_, siblingFailedAt := fx.runOf(t, sibling, "failed")
-	store := NewAutomationStore(db).WithClock(func() time.Time { return retriedAt })
+	store := NewAutomationStore(db).SetClock(func() time.Time { return retriedAt })
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
 
 	runs := listedRuns(ctx, t, store)
@@ -152,7 +152,7 @@ func TestTheListCountsRunsInsideTheWindowOnly(t *testing.T) {
 		{"both runs are too old", retriedAt.Add(recentRunsWindow + time.Microsecond), 0},
 	}
 	for _, c := range cases {
-		store := NewAutomationStore(db).WithClock(func() time.Time { return c.now })
+		store := NewAutomationStore(db).SetClock(func() time.Time { return c.now })
 		got := listedRuns(ctx, t, store)[rule]
 		if got.RecentRuns != c.want || got.LastRunAt == nil || !got.LastRunAt.Equal(retriedAt) {
 			t.Errorf("%s: %d runs, last %v; want %d, last still the retry at %v",

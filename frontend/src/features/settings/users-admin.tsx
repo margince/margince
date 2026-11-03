@@ -34,6 +34,7 @@ import {
   useAssignableRoles,
 } from "../../lib/roles.queries";
 import { usePageReadOnly } from "./settingsnav";
+import { useEntityColumn } from "./users-entitycell";
 import { InviteUserForm } from "./users-invite-form";
 import {
   matchingMembers,
@@ -177,6 +178,7 @@ function MembersCard({
             allMembers={read.data.list}
             roles={read.data.roles}
             management={management}
+            canChangeRole={canChangeRole}
             refusalOf={(member, list, roles) =>
               roleRefusal(member, {
                 roster: list,
@@ -200,12 +202,14 @@ function MembersTable({
   allMembers,
   roles,
   management,
+  canChangeRole,
   refusalOf,
 }: Readonly<{
   list: User[];
   allMembers: User[];
   roles: readonly AssignableRole[];
   management: boolean;
+  canChangeRole: boolean;
   refusalOf: (
     member: User,
     list: readonly User[],
@@ -214,6 +218,7 @@ function MembersTable({
 }>) {
   const t = useT();
   const teamNames = useTeamNames(management);
+  const entity = useEntityColumn(management, canChangeRole);
   const member: DataTableColumn<User> = {
     key: "member",
     header: t("users.col.member"),
@@ -245,6 +250,7 @@ function MembersTable({
           header: t("users.teamsLabel"),
           render: (u) => <MemberTeams ids={u.team_ids} names={teamNames} />,
         },
+        ...(entity ? [entity] : []),
         activity,
         {
           key: "verbs",
@@ -301,7 +307,10 @@ function MemberIdentity({ member }: Readonly<{ member: User }>) {
           ) : (
             member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>
           )}
-          <MemberStatus status={member.status} />
+          <MemberStatus
+            status={member.status}
+            mailFailed={member.invite_email_state === "failed"}
+          />
         </span>
         <span className="t-caption">
           {member.service_extension
@@ -345,8 +354,21 @@ const STATUS_KIND = {
   deactivated: "neutral",
 } as const satisfies Readonly<Record<string, StatusKind>>;
 
-function MemberStatus({ status }: Readonly<{ status: string }>) {
+// An invitation whose mail the relay refused reaches nobody until an admin
+// resends it, so it asks for action where a plain invitation does not.
+function MemberStatus({
+  status,
+  mailFailed,
+}: Readonly<{ status: string; mailFailed: boolean }>) {
   const t = useT();
+  if (status === "invited" && mailFailed) {
+    return (
+      <StatusBadge
+        kind="attention"
+        label={t("users.status.inviteMailFailed")}
+      />
+    );
+  }
   if (
     status !== "invited" &&
     status !== "suspended" &&

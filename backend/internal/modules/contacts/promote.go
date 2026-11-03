@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -177,8 +176,8 @@ func carryLeadConsent(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contact
 // recording trigger + evidence + the resulting contact), and the paired
 // lead.promoted + contact.* events — all inside the caller's transaction,
 // still under the lead row lock taken by PromoteLead.
-func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, contactID ids.ContactID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Contact, error) {
-	now := time.Now().UTC()
+func (s *Store) finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, contactID ids.ContactID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Contact, error) {
+	now := s.clock().UTC()
 	setBy, err := statusSetByFor(ctx)
 	if err != nil {
 		return crmcontracts.Contact{}, err
@@ -204,7 +203,8 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	}
 	after := map[string]any{
 		leadStatusColumn: "promoted", fieldKeyPromotedContact: contactID,
-		"trigger": in.Trigger, "dedupe_outcome": outcome,
+		"promoted_at": now,
+		"trigger":     in.Trigger, "dedupe_outcome": outcome,
 	}
 	if in.EvidenceActivityID != nil {
 		after["evidence_activity_id"] = *in.EvidenceActivityID
@@ -215,8 +215,8 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	if dealID != nil {
 		after["qualified_deal_id"] = *dealID
 	}
-	auditID, err := storekit.Audit(ctx, tx, "promote", "lead", id.UUID,
-		map[string]any{leadStatusColumn: lead.Status}, after)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "promote", "lead", id.UUID,
+		map[string]any{leadStatusColumn: lead.Status}, after, map[string]any{"qualification_owner_id": lead.OwnerId})
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit lead promote: %w", err)
 	}

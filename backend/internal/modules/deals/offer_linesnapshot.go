@@ -33,7 +33,10 @@ const zeroPct = "0.00"
 // snapshot is copied ONCE, here — a later product edit never touches the
 // line (B-E03.17). The rate-card price only carries over when the
 // currencies agree; a silent conversion would fabricate a number.
-func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
+//
+// The name is the product's text in the offer's language where it has one,
+// and product.name otherwise.
+func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency, language string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
 	if productID == nil {
 		return in, nil
 	}
@@ -53,6 +56,13 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 		return lineSnapshotDefaults{}, fmt.Errorf("read product for snapshot: %w", err)
 	}
 	if in.Description == nil {
+		names, err := productNamesInTx(ctx, tx, language, []ids.UUID{productID.UUID})
+		if err != nil {
+			return lineSnapshotDefaults{}, err
+		}
+		if name, ok := names[productID.UUID]; ok {
+			pName = name
+		}
 		in.Description = &pName
 	}
 	if in.Unit == nil {
@@ -94,8 +104,8 @@ func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discoun
 	return unitVal, discount, tax
 }
 
-func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency string, in OfferLineInputRow) (resolvedOfferLine, error) {
-	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, lineSnapshotDefaults{
+func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency, language string, in OfferLineInputRow) (resolvedOfferLine, error) {
+	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, language, lineSnapshotDefaults{
 		Description: in.Description, Unit: in.Unit, Price: in.UnitPriceMinor, TaxRate: in.TaxRate,
 		BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
 	})

@@ -77,7 +77,9 @@ export function MonthlyTargets({
           const card = targetCard(
             metric,
             context,
-            metricName(metric.id),
+            metric.id === "leads_promoted"
+              ? t("analytics.team.arrivalQualified")
+              : metricName(metric.id),
             t,
             locale,
           );

@@ -10459,6 +10459,45 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	}
 }
 
+// Defines values for DomainQuestionContextSiteRead.
+const (
+	DomainQuestionContextSiteReadRead   DomainQuestionContextSiteRead = "read"
+	DomainQuestionContextSiteReadUnread DomainQuestionContextSiteRead = "unread"
+)
+
+// Valid indicates whether the value is a known member of the DomainQuestionContextSiteRead enum.
+func (e DomainQuestionContextSiteRead) Valid() bool {
+	switch e {
+	case DomainQuestionContextSiteReadRead:
+		return true
+	case DomainQuestionContextSiteReadUnread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DomainQuestionSuggestionBasis.
+const (
+	DomainQuestionSuggestionBasisContactEmployer DomainQuestionSuggestionBasis = "contact_employer"
+	DomainQuestionSuggestionBasisNameTwin        DomainQuestionSuggestionBasis = "name_twin"
+	DomainQuestionSuggestionBasisRedirectTarget  DomainQuestionSuggestionBasis = "redirect_target"
+)
+
+// Valid indicates whether the value is a known member of the DomainQuestionSuggestionBasis enum.
+func (e DomainQuestionSuggestionBasis) Valid() bool {
+	switch e {
+	case DomainQuestionSuggestionBasisContactEmployer:
+		return true
+	case DomainQuestionSuggestionBasisNameTwin:
+		return true
+	case DomainQuestionSuggestionBasisRedirectTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessChangeMode.
 const (
 	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
@@ -15352,6 +15391,33 @@ func (e MeetingPreparationState) Valid() bool {
 	}
 }
 
+// Defines values for MeetingRecordLinkEntityType.
+const (
+	MeetingRecordLinkEntityTypeCompany MeetingRecordLinkEntityType = "company"
+	MeetingRecordLinkEntityTypeContact MeetingRecordLinkEntityType = "contact"
+	MeetingRecordLinkEntityTypeDeal    MeetingRecordLinkEntityType = "deal"
+	MeetingRecordLinkEntityTypeLead    MeetingRecordLinkEntityType = "lead"
+	MeetingRecordLinkEntityTypeProject MeetingRecordLinkEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MeetingRecordLinkEntityType enum.
+func (e MeetingRecordLinkEntityType) Valid() bool {
+	switch e {
+	case MeetingRecordLinkEntityTypeCompany:
+		return true
+	case MeetingRecordLinkEntityTypeContact:
+		return true
+	case MeetingRecordLinkEntityTypeDeal:
+		return true
+	case MeetingRecordLinkEntityTypeLead:
+		return true
+	case MeetingRecordLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingResponse.
 const (
 	MeetingResponseAccepted    MeetingResponse = "accepted"
@@ -18408,6 +18474,7 @@ const (
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
+	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -18446,6 +18513,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadsCreated:
 		return true
 	case ReportingMetricIDLeadsPromoted:
+		return true
+	case ReportingMetricIDLeadsQualified:
 		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
@@ -19183,6 +19252,27 @@ func (e SalesAssessmentSentenceKind) Valid() bool {
 	}
 }
 
+// Defines values for SalesAssessmentView.
+const (
+	SalesAssessmentViewProspecting SalesAssessmentView = "prospecting"
+	SalesAssessmentViewSales       SalesAssessmentView = "sales"
+	SalesAssessmentViewTeam        SalesAssessmentView = "team"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentView enum.
+func (e SalesAssessmentView) Valid() bool {
+	switch e {
+	case SalesAssessmentViewProspecting:
+		return true
+	case SalesAssessmentViewSales:
+		return true
+	case SalesAssessmentViewTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesDecisionStatus.
 const (
 	SalesDecisionStatusDone SalesDecisionStatus = "done"
@@ -19471,6 +19561,30 @@ func (e ScheduledSendStatus) Valid() bool {
 	}
 }
 
+// Defines values for SchedulingProfileBlocker.
+const (
+	SchedulingProfileBlockerCalendarReadOnly    SchedulingProfileBlocker = "calendar_read_only"
+	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
+	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
+	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
+func (e SchedulingProfileBlocker) Valid() bool {
+	switch e {
+	case SchedulingProfileBlockerCalendarReadOnly:
+		return true
+	case SchedulingProfileBlockerCalendarUnavailable:
+		return true
+	case SchedulingProfileBlockerNoCalendar:
+		return true
+	case SchedulingProfileBlockerNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SchedulingProfileProvider.
 const (
 	SchedulingProfileProviderEmpty    SchedulingProfileProvider = ""
@@ -19569,13 +19683,16 @@ func (e SdrSummaryWorkflow) Valid() bool {
 
 // Defines values for SdrTeamMemberTargetsMetric.
 const (
-	SdrTeamMemberTargetsMetricLeadsPromoted SdrTeamMemberTargetsMetric = "leads_promoted"
+	SdrTeamMemberTargetsMetricLeadsPromoted  SdrTeamMemberTargetsMetric = "leads_promoted"
+	SdrTeamMemberTargetsMetricLeadsQualified SdrTeamMemberTargetsMetric = "leads_qualified"
 )
 
 // Valid indicates whether the value is a known member of the SdrTeamMemberTargetsMetric enum.
 func (e SdrTeamMemberTargetsMetric) Valid() bool {
 	switch e {
 	case SdrTeamMemberTargetsMetricLeadsPromoted:
+		return true
+	case SdrTeamMemberTargetsMetricLeadsQualified:
 		return true
 	default:
 		return false
@@ -19591,6 +19708,21 @@ const (
 func (e SdrTeamReviewMembershipBasis) Valid() bool {
 	switch e {
 	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewQualificationBasis.
+const (
+	SdrTeamReviewQualificationBasisFirstQualification SdrTeamReviewQualificationBasis = "first_qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewQualificationBasis enum.
+func (e SdrTeamReviewQualificationBasis) Valid() bool {
+	switch e {
+	case SdrTeamReviewQualificationBasisFirstQualification:
 		return true
 	default:
 		return false
@@ -22488,6 +22620,7 @@ const (
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
 	UserAllowedActionsRemove            UserAllowedActions = "remove"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
+	UserAllowedActionsResendInvite      UserAllowedActions = "resend_invite"
 )
 
 // Valid indicates whether the value is a known member of the UserAllowedActions enum.
@@ -22510,6 +22643,29 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsRemove:
 		return true
 	case UserAllowedActionsRemoveMfa:
+		return true
+	case UserAllowedActionsResendInvite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserInviteEmailState.
+const (
+	UserInviteEmailStateFailed  UserInviteEmailState = "failed"
+	UserInviteEmailStateSending UserInviteEmailState = "sending"
+	UserInviteEmailStateSent    UserInviteEmailState = "sent"
+)
+
+// Valid indicates whether the value is a known member of the UserInviteEmailState enum.
+func (e UserInviteEmailState) Valid() bool {
+	switch e {
+	case UserInviteEmailStateFailed:
+		return true
+	case UserInviteEmailStateSending:
+		return true
+	case UserInviteEmailStateSent:
 		return true
 	default:
 		return false
@@ -25825,33 +25981,6 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	case GetAvailability200JSONResponseBodyCalendarBackingNone:
 		return true
 	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BookMeetingJSONBodyLinksEntityType.
-const (
-	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
-	BookMeetingJSONBodyLinksEntityTypeContact BookMeetingJSONBodyLinksEntityType = "contact"
-	BookMeetingJSONBodyLinksEntityTypeDeal    BookMeetingJSONBodyLinksEntityType = "deal"
-	BookMeetingJSONBodyLinksEntityTypeLead    BookMeetingJSONBodyLinksEntityType = "lead"
-	BookMeetingJSONBodyLinksEntityTypeProject BookMeetingJSONBodyLinksEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the BookMeetingJSONBodyLinksEntityType enum.
-func (e BookMeetingJSONBodyLinksEntityType) Valid() bool {
-	switch e {
-	case BookMeetingJSONBodyLinksEntityTypeCompany:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeContact:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeDeal:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeLead:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeProject:
 		return true
 	default:
 		return false
@@ -32401,6 +32530,11 @@ type AttentionItem struct {
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
 
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -32494,7 +32628,7 @@ type AttentionItem struct {
 	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
 	ReminderDue *bool `json:"reminder_due,omitempty"`
 
-	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
@@ -41128,10 +41262,11 @@ type CreateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -41166,11 +41301,18 @@ type CreateLossReasonRequest struct {
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
-	BuyerCompanyId *openapi_types.UUID   `json:"buyer_company_id,omitempty"`
-	Currency       string                `json:"currency"`
-	IntroText      *string               `json:"intro_text,omitempty"`
-	LineItems      *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source         string                `json:"source"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+	Currency       string              `json:"currency"`
+	IntroText      *string             `json:"intro_text,omitempty"`
+
+	// Language The language new lines take product names in. Unset is the entity's, else the template's.
+	Language *string `json:"language,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. Defaults to the entity the author works for;
+	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
+	Source        string                `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -43118,11 +43260,16 @@ type DisqualifyLeadRequest struct {
 
 // DomainQuestion defines model for DomainQuestion.
 type DomainQuestion struct {
-	AskedAt      time.Time  `json:"asked_at"`
-	Deferred     bool       `json:"deferred"`
-	Domain       string     `json:"domain"`
-	EffectiveUrl *string    `json:"effective_url,omitempty"`
-	EvidenceAt   *time.Time `json:"evidence_at,omitempty"`
+	AskedAt  time.Time `json:"asked_at"`
+	Deferred bool      `json:"deferred"`
+	Domain   string    `json:"domain"`
+
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+	EffectiveUrl  *string                `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time             `json:"evidence_at,omitempty"`
 
 	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
 	Note          *string   `json:"note,omitempty"`
@@ -43130,11 +43277,70 @@ type DomainQuestion struct {
 	RedirectChain *[]string `json:"redirect_chain,omitempty"`
 }
 
+// DomainQuestionContact defines model for DomainQuestionContact.
+type DomainQuestionContact struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// DomainQuestionContext Whose mail raised a company question, and which existing company the evidence points
+// at. Every contact and company named here passed the reader's own row scope; a sender the
+// reader may not see is counted in `contact_count` and never named.
+type DomainQuestionContext struct {
+	// ContactCount How many contacts sent the mail behind the question, seen or not.
+	ContactCount int `json:"contact_count"`
+
+	// Contacts Up to three senders of the question's mail the reader may see, newest mail first.
+	Contacts []DomainQuestionContact `json:"contacts"`
+
+	// HiddenSenders True when contacts sent the mail but the reader may see none of them.
+	HiddenSenders bool `json:"hidden_senders"`
+
+	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
+	// live contact with an address on the domain, less workspace seats and anyone who already
+	// holds a primary employment. Those keep the employer they have.
+	LinkedContactCount int `json:"linked_contact_count"`
+
+	// OriginActivityId The newest mail behind the question, which the reader may read.
+	OriginActivityId *openapi_types.UUID `json:"origin_activity_id,omitempty"`
+
+	// SenderAddress The From address of the newest mail behind the question, which the reader may read.
+	SenderAddress *string `json:"sender_address,omitempty"`
+
+	// SiteRead Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+	SiteRead *DomainQuestionContextSiteRead `json:"site_read,omitempty"`
+
+	// SuggestedCompany An existing company the evidence points at. Sent only when exactly one live company the
+	// reader may see qualifies. Nothing is linked until the reader confirms it with
+	// `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+	SuggestedCompany *DomainQuestionSuggestion `json:"suggested_company,omitempty"`
+}
+
+// DomainQuestionContextSiteRead Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+type DomainQuestionContextSiteRead string
+
 // DomainQuestionPage defines model for DomainQuestionPage.
 type DomainQuestionPage struct {
 	Data []DomainQuestion `json:"data"`
 	Page PageInfo         `json:"page"`
 }
+
+// DomainQuestionSuggestion An existing company the evidence points at. Sent only when exactly one live company the
+// reader may see qualifies. Nothing is linked until the reader confirms it with
+// `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+type DomainQuestionSuggestion struct {
+	// Basis - `name_twin`: an existing company has exactly the name the site states.
+	// - `redirect_target`: the site redirects to a domain this company already owns.
+	// - `contact_employer`: a sender already has this company as their current employer.
+	Basis DomainQuestionSuggestionBasis `json:"basis"`
+	Id    openapi_types.UUID            `json:"id"`
+	Name  string                        `json:"name"`
+}
+
+// DomainQuestionSuggestionBasis - `name_twin`: an existing company has exactly the name the site states.
+// - `redirect_target`: the site redirects to a domain this company already owns.
+// - `contact_employer`: a sender already has this company as their current employer.
+type DomainQuestionSuggestionBasis string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
 type DraftSteering struct {
@@ -43440,8 +43646,9 @@ type EmailSignature struct {
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
-	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
+	// TemplateActive The member's mail has a signature template: their legal entity's own, or else the
+	// workspace's. Every send this member makes then signs with that template, filled in
+	// with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -43476,8 +43683,10 @@ type EmailSignatureTemplate struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+	// sender works for, sized for mail, in the message itself; the default entity's logo is
+	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+	// imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
 	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
@@ -46952,6 +47161,20 @@ type InviteDealRoomParticipantRequest struct {
 	Source     string                         `json:"source"`
 }
 
+// InviteEmailHandoff What became of an invitation email at the time of the answer, as on the Deal Room invite.
+type InviteEmailHandoff struct {
+	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
+	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+	// refuses the address is reported a moment later as the member's
+	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	Queued bool `json:"queued"`
+
+	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
+	// set-password link can be mailed at all. False means the admin passes the link on by
+	// hand (`issueUserPasswordLink`).
+	Sendable bool `json:"sendable"`
+}
+
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
 type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
@@ -48120,8 +48343,14 @@ type LegalEntity struct {
 	RegisterCourt *string `json:"register_court,omitempty"`
 
 	// RegisterNumber The entity's commercial register number.
-	RegisterNumber *string   `json:"register_number,omitempty"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	RegisterNumber *string `json:"register_number,omitempty"`
+
+	// SignatureTemplate The mail signature layout of a sender assigned to this entity, with the placeholders
+	// of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
+	// workspace's template. Always null on the default entity, which signs with the
+	// workspace's template (`/email-signature-template`).
+	SignatureTemplate *string   `json:"signature_template,omitempty"`
+	UpdatedAt         time.Time `json:"updated_at"`
 
 	// VatId The entity's VAT identification number.
 	VatId   *string `json:"vat_id,omitempty"`
@@ -49629,12 +49858,21 @@ type MeetingInvitationChangeAction string
 // MeetingInvitationRequest defines model for MeetingInvitationRequest.
 type MeetingInvitationRequest struct {
 	AttendeeEmail openapi_types.Email `json:"attendee_email"`
-	ContactId     openapi_types.UUID  `json:"contact_id"`
-	Description   string              `json:"description"`
-	End           time.Time           `json:"end"`
-	Location      string              `json:"location"`
-	Start         time.Time           `json:"start"`
-	Subject       string              `json:"subject"`
+
+	// AttendeeEmails Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+	// Each address is resolved to a contact, a colleague or a lead the host can see; an
+	// address matching nobody is invited as named by the host. Contacts and leads must hold
+	// transactional consent; colleagues and host-named addresses are not asked.
+	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
+	ContactId      openapi_types.UUID     `json:"contact_id"`
+	Description    string                 `json:"description"`
+	End            time.Time              `json:"end"`
+
+	// Links Further records to file the meeting on, beside the invitee.
+	Links    *[]MeetingRecordLink `json:"links,omitempty"`
+	Location string               `json:"location"`
+	Start    time.Time            `json:"start"`
+	Subject  string               `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -49939,6 +50177,15 @@ type MeetingReadyRequest struct {
 	// undo sends the revision it confirmed, and takes back only that confirmation.
 	PreparationRevision string `json:"preparation_revision"`
 }
+
+// MeetingRecordLink defines model for MeetingRecordLink.
+type MeetingRecordLink struct {
+	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
+}
+
+// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
@@ -50834,9 +51081,26 @@ type Offer struct {
 	Id         openapi_types.UUID `json:"id"`
 	IntroText  *string            `json:"intro_text,omitempty"`
 
-	// IssuerSnapshot Seller legal block captured at send time.
+	// IssuerSnapshot Seller legal block captured at send time, so a later change to the legal entity
+	// leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+	// document prints), `base_currency`, and, on an offer sent since offers name their
+	// legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+	// `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+	// `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+	// the entity has no value for is absent.
 	IssuerSnapshot *map[string]interface{} `json:"issuer_snapshot,omitempty"`
-	LineItems      *[]OfferLineItem        `json:"line_items,omitempty"`
+
+	// Language The language the offer's new lines take product names in (ISO 639-1). It defaults to
+	// the issuing legal entity's `default_language`, else the language of the offer's
+	// template. Null on an offer created before offers had one: its lines take
+	// `Product.name`. The template's own fixed labels follow the template, not this.
+	Language *string `json:"language,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer: its name, address, VAT ID, bank details and
+	// logo are printed on the PDF. Null on an offer created before offers named one, which
+	// is issued by the default entity.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
 	// NetMinor Σ line nets; derived, never client-set.
 	NetMinor *int64 `json:"net_minor,omitempty"`
@@ -52008,6 +52272,22 @@ type ProductListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// ProductTranslation defines model for ProductTranslation.
+type ProductTranslation struct {
+	Description *string `json:"description,omitempty"`
+
+	// Language ISO 639-1, lower case.
+	Language  string    `json:"language"`
+	Name      string    `json:"name"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int64     `json:"version"`
+}
+
+// ProductTranslationListResponse defines model for ProductTranslationListResponse.
+type ProductTranslationListResponse struct {
+	Data []ProductTranslation `json:"data"`
+}
+
 // ProgressDealRequest What `progress_deal` takes besides the deal, which the path names.
 type ProgressDealRequest struct {
 	// ApprovalId The approval a human gave this exact call, on its retry.
@@ -52909,6 +53189,10 @@ type PublicMeetingProposal struct {
 		End   time.Time `json:"end"`
 		Start time.Time `json:"start"`
 	} `json:"options"`
+
+	// Profile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+	// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+	// `video_app`), so the guest learns nothing about the calendar behind the page.
 	Profile PublicSchedulingProfile `json:"profile"`
 	Used    bool                    `json:"used"`
 }
@@ -52930,7 +53214,9 @@ type PublicOriginStatus struct {
 	Reachable *bool `json:"reachable,omitempty"`
 }
 
-// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+// PublicSchedulingProfile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+// `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
 	CompanyName     string `json:"company_name"`
 	DurationMinutes int    `json:"duration_minutes"`
@@ -52940,7 +53226,10 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
-	Title   string  `json:"title"`
+
+	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
+	Paused bool   `json:"paused"`
+	Title  string `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -52975,6 +53264,13 @@ type PutOnboardingStateRequestSourceMode string
 
 // PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is where a creator who will not work in it invites that colleague. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
+
+// PutProductTranslationRequest defines model for PutProductTranslationRequest.
+type PutProductTranslationRequest struct {
+	// Description Left out or empty, the language has a name and no description.
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
@@ -54435,6 +54731,8 @@ type ReportingCardQuestion struct {
 
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
+	AssessmentViews *[]SalesAssessmentView `json:"assessment_views,omitempty"`
+
 	// EditionRetentionDays How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
 	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
 	Metrics              []ReportingMetricDefinition `json:"metrics"`
@@ -54627,11 +54925,12 @@ type ReportingEditionQuestionStatus string
 
 // ReportingEvaluation defines model for ReportingEvaluation.
 type ReportingEvaluation struct {
-	Charts        []ReportingChart   `json:"charts"`
-	Context       ReportingContext   `json:"context"`
-	EvaluationKey string             `json:"evaluation_key"`
-	Metrics       []ReportingMetric  `json:"metrics"`
-	Selection     ReportingSelection `json:"selection"`
+	Charts          []ReportingChart           `json:"charts"`
+	Context         ReportingContext           `json:"context"`
+	EvaluationKey   string                     `json:"evaluation_key"`
+	Metrics         []ReportingMetric          `json:"metrics"`
+	OverviewActions *[]ReportingOverviewAction `json:"overview_actions,omitempty"`
+	Selection       ReportingSelection         `json:"selection"`
 }
 
 // ReportingEvidence defines model for ReportingEvidence.
@@ -54696,6 +54995,9 @@ type ReportingExecutionList struct {
 // landing's uncertainty, and it omits the deals counted by `eligible_count` minus
 // `priced_count` and by `fx_missing_count`.
 type ReportingForecastBasis struct {
+	// CallAt Submission time of the compatible manager call.
+	CallAt *time.Time `json:"call_at,omitempty"`
+
 	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
@@ -54711,6 +55013,9 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
+	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
 
 	// Period The fiscal quarter the landing and the range project, half-open.
 	Period ReportingWindow `json:"period"`
@@ -54822,6 +55127,14 @@ type ReportingMetricDefinitionTemporalBasis string
 
 // ReportingMetricID defines model for ReportingMetricID.
 type ReportingMetricID string
+
+// ReportingOverviewAction An application-supplied action over the exact records named by its evidence reference.
+type ReportingOverviewAction struct {
+	Count    int                  `json:"count"`
+	Evidence ReportingEvidenceRef `json:"evidence"`
+	Id       string               `json:"id"`
+	Label    string               `json:"label"`
+}
 
 // ReportingPeriodBasis The calendar a kept question's period filters keep their dates in.
 type ReportingPeriodBasis struct {
@@ -55667,6 +55980,9 @@ type RunReportRequestAggregatesFn string
 
 // SalesAssessment defines model for SalesAssessment.
 type SalesAssessment struct {
+	// ActionIds Prioritized identifiers from the evaluation's overview_actions. No generated destinations or counts.
+	ActionIds *[]string `json:"action_ids,omitempty"`
+
 	// Cells The figures the sentences may cite, as the model read them.
 	Cells      []SalesAssessmentCell      `json:"cells"`
 	Confidence *SalesAssessmentConfidence `json:"confidence,omitempty"`
@@ -55682,10 +55998,13 @@ type SalesAssessment struct {
 	// lane. `deterministic` — the structured fallback, used when no lane is configured
 	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
 	// reader deciding how much to trust a sentence needs to know which wrote it.
-	GeneratedBy  WrittenBy                 `json:"generated_by"`
-	ModelUsed    *string                   `json:"model_used,omitempty"`
-	NextDecision *SalesAssessmentDecision  `json:"next_decision,omitempty"`
-	Sentences    []SalesAssessmentSentence `json:"sentences"`
+	GeneratedBy  WrittenBy                `json:"generated_by"`
+	ModelUsed    *string                  `json:"model_used,omitempty"`
+	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
+
+	// Paragraphs Connected evidence-cited prose. Sentences retains a bounded projection for older clients.
+	Paragraphs *[]SalesAssessmentParagraph `json:"paragraphs,omitempty"`
+	Sentences  []SalesAssessmentSentence   `json:"sentences"`
 }
 
 // SalesAssessmentConfidence defines model for SalesAssessment.Confidence.
@@ -55706,11 +56025,22 @@ type SalesAssessmentDecision struct {
 	Text    string             `json:"text"`
 }
 
+// SalesAssessmentParagraph defines model for SalesAssessmentParagraph.
+type SalesAssessmentParagraph = []SalesAssessmentSentence
+
 // SalesAssessmentRequest defines model for SalesAssessmentRequest.
 type SalesAssessmentRequest struct {
+	// Receipt Binds the explanation to the displayed evaluation and refuses changed inputs.
+	Receipt *struct {
+		At                time.Time `json:"at"`
+		FrameworkRevision int64     `json:"framework_revision"`
+		Key               string    `json:"key"`
+	} `json:"receipt,omitempty"`
+
 	// Refresh Ask the model again, whatever is kept.
-	Refresh   *bool              `json:"refresh,omitempty"`
-	Selection ReportingSelection `json:"selection"`
+	Refresh   *bool                `json:"refresh,omitempty"`
+	Selection ReportingSelection   `json:"selection"`
+	View      *SalesAssessmentView `json:"view,omitempty"`
 }
 
 // SalesAssessmentSentence defines model for SalesAssessmentSentence.
@@ -55723,6 +56053,9 @@ type SalesAssessmentSentence struct {
 
 // SalesAssessmentSentenceKind defines model for SalesAssessmentSentence.Kind.
 type SalesAssessmentSentenceKind string
+
+// SalesAssessmentView defines model for SalesAssessmentView.
+type SalesAssessmentView string
 
 // SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
 type SalesDecision struct {
@@ -56141,10 +56474,16 @@ type SchedulingAliasRequest struct {
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
 	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
-	Alias             *string   `json:"alias,omitempty"`
-	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
-	BufferMinutes     int       `json:"buffer_minutes"`
-	CalendarId        string    `json:"calendar_id"`
+	Alias *string `json:"alias,omitempty"`
+
+	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+	// the page names no calendar (a page saved before the profile existed reads this way).
+	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+	// the connection is gone or refused. Answered on the host's own profile read only.
+	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
+	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
+	BufferMinutes     int                       `json:"buffer_minutes"`
+	CalendarId        string                    `json:"calendar_id"`
 
 	// CompanyName The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	CompanyName     *string `json:"company_name,omitempty"`
@@ -56173,6 +56512,12 @@ type SchedulingProfile struct {
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+// the page names no calendar (a page saved before the profile existed reads this way).
+// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+// the connection is gone or refused. Answered on the host's own profile read only.
+type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
@@ -56318,9 +56663,10 @@ type SdrTeamMeetings struct {
 
 // SdrTeamMember One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included.
 type SdrTeamMember struct {
-	Accepted *int               `json:"accepted,omitempty"`
-	Id       openapi_types.UUID `json:"id"`
-	Label    string             `json:"label"`
+	Accepted    *int                 `json:"accepted,omitempty"`
+	EventTarget *SdrTeamMemberTarget `json:"event_target,omitempty"`
+	Id          openapi_types.UUID   `json:"id"`
+	Label       string               `json:"label"`
 
 	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.
 	MeetingsHeld *int `json:"meetings_held,omitempty"`
@@ -56328,12 +56674,15 @@ type SdrTeamMember struct {
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
 
-	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
-	Qualified *int                 `json:"qualified,omitempty"`
-	Recycled  *int                 `json:"recycled,omitempty"`
-	Rejected  *int                 `json:"rejected,omitempty"`
-	Submitted *int                 `json:"submitted,omitempty"`
-	Target    *SdrTeamMemberTarget `json:"target,omitempty"`
+	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the arrival-cohort reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
+	Qualified *int `json:"qualified,omitempty"`
+
+	// QualifiedEvents First qualifications in the period credited to the owner at qualification. Counts attributed events only; qualification_unattributed identifies partial history.
+	QualifiedEvents *int                 `json:"qualified_events,omitempty"`
+	Recycled        *int                 `json:"recycled,omitempty"`
+	Rejected        *int                 `json:"rejected,omitempty"`
+	Submitted       *int                 `json:"submitted,omitempty"`
+	Target          *SdrTeamMemberTarget `json:"target,omitempty"`
 
 	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`.
 	Unanswered *int `json:"unanswered,omitempty"`
@@ -56368,6 +56717,9 @@ type SdrTeamReview struct {
 	Interval ReportingWindow  `json:"interval"`
 	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
 
+	// MemberEventTargets Monthly targets for first qualification events, separate from arrival-cohort targets.
+	MemberEventTargets *SdrTeamMemberTargets `json:"member_event_targets,omitempty"`
+
 	// MemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
 	MemberTargets *SdrTeamMemberTargets `json:"member_targets,omitempty"`
 	Members       []SdrTeamMember       `json:"members"`
@@ -56383,6 +56735,15 @@ type SdrTeamReview struct {
 
 	// ObservedThrough The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
 	ObservedThrough time.Time `json:"observed_through"`
+
+	// QualificationBasis Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+	QualificationBasis *SdrTeamReviewQualificationBasis `json:"qualification_basis,omitempty"`
+
+	// QualificationTargetUnattributed First qualifications in the target month whose historical owner was not recorded.
+	QualificationTargetUnattributed *int `json:"qualification_target_unattributed,omitempty"`
+
+	// QualificationUnattributed First qualifications in the period whose historical owner was not recorded. Member figures cover only the attributed events.
+	QualificationUnattributed *int `json:"qualification_unattributed,omitempty"`
 
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
@@ -56402,6 +56763,9 @@ type SdrTeamReview struct {
 
 // SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
 type SdrTeamReviewMembershipBasis string
+
+// SdrTeamReviewQualificationBasis Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+type SdrTeamReviewQualificationBasis string
 
 // SdrTeamReviewWithheldFigures defines model for SdrTeamReview.WithheldFigures.
 type SdrTeamReviewWithheldFigures string
@@ -59997,10 +60361,11 @@ type UpdateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // UpdateListRequest defines model for UpdateListRequest.
@@ -60079,11 +60444,17 @@ type UpdateOfferRequest struct {
 	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
 	// Changing the currency on a draft with no priced lines is free, and re-sending the
 	// currency the offer already holds is not a change.
-	Currency   *string             `json:"currency,omitempty"`
-	IntroText  *string             `json:"intro_text,omitempty"`
-	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
-	TermsText  *string             `json:"terms_text,omitempty"`
-	ValidUntil *openapi_types.Date `json:"valid_until,omitempty"`
+	Currency  *string `json:"currency,omitempty"`
+	IntroText *string `json:"intro_text,omitempty"`
+
+	// Language The language lines added from now on take product names in. Lines already on the offer keep theirs.
+	Language *string `json:"language,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	TemplateId    *openapi_types.UUID `json:"template_id,omitempty"`
+	TermsText     *string             `json:"terms_text,omitempty"`
+	ValidUntil    *openapi_types.Date `json:"valid_until,omitempty"`
 }
 
 // UpdateOfferTemplateRequest Full replace via PUT (unlike updateProduct's merge-PATCH) — every writable field must be supplied; omitting one resets it, it is not left unchanged.
@@ -60399,7 +60770,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -60415,6 +60786,12 @@ type User struct {
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
+
+	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
+	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
+
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -60450,6 +60827,9 @@ type User struct {
 
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
+
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -62797,6 +63177,11 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -65006,10 +65391,12 @@ type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
-	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
-	// build emails these addresses or adds them to a calendar event, and the
-	// created activity does not carry them either. Supply them for the caller's
-	// own record of intent, and tell the attendee yourself.
+	// AttendeeEmails Who the meeting is with. Every address is an attendee on the queued calendar
+	// event. Each address is resolved to a contact, a
+	// colleague or a lead the host can see; an address matching nobody is invited as
+	// named by the host. Contacts and leads must hold transactional consent;
+	// colleagues and host-named addresses are not asked. At most 25 attendees in
+	// total.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -65023,14 +65410,11 @@ type BookMeetingJSONBody struct {
 	// required: a meeting belonging to no record appears on no timeline and is one
 	// nobody will find again, which is the same reason `SendCompanyEmailRequest`
 	// carries the bound. Each one is row-scope probed and written as its own row,
-	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-	// before it stages.
-	Links []struct {
-		EntityId   openapi_types.UUID                 `json:"entity_id"`
-		EntityType BookMeetingJSONBodyLinksEntityType `json:"entity_type"`
-	} `json:"links"`
-	Start   time.Time `json:"start"`
-	Subject *string   `json:"subject,omitempty"`
+	// so the list is bounded at 25. The first `contact` link (else the first `lead`
+	// link) is the invitee the meeting is filed on.
+	Links   []MeetingRecordLink `json:"links"`
+	Start   time.Time           `json:"start"`
+	Subject *string             `json:"subject,omitempty"`
 }
 
 // BookMeetingParams defines parameters for BookMeeting.
@@ -65055,18 +65439,7 @@ type BookMeetingParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
-	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
-	// not yet used, and within 15 minutes of the decision. Anything else is refused with
-	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-	// human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
-
-// BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
-type BookMeetingJSONBodyLinksEntityType string
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
@@ -65168,6 +65541,9 @@ type ListDomainQuestionsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Domain Return only the question about this domain; normalized to its registrable form.
+	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 }
 
 // KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
@@ -72503,6 +72879,9 @@ type CreateProductJSONRequestBody = CreateProductRequest
 
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = UpdateProductRequest
+
+// PutProductTranslationJSONRequestBody defines body for PutProductTranslation for application/json ContentType.
+type PutProductTranslationJSONRequestBody = PutProductTranslationRequest
 
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProjectRequest
@@ -80551,6 +80930,22 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "issuer_snapshot")
 	}
 
+	if raw, found := object["language"]; found {
+		err = json.Unmarshal(raw, &a.Language)
+		if err != nil {
+			return fmt.Errorf("error reading 'language': %w", err)
+		}
+		delete(object, "language")
+	}
+
+	if raw, found := object["legal_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.LegalEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_entity_id': %w", err)
+		}
+		delete(object, "legal_entity_id")
+	}
+
 	if raw, found := object["line_items"]; found {
 		err = json.Unmarshal(raw, &a.LineItems)
 		if err != nil {
@@ -80793,6 +81188,20 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		object["issuer_snapshot"], err = json.Marshal(a.IssuerSnapshot)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'issuer_snapshot': %w", err)
+		}
+	}
+
+	if a.Language != nil {
+		object["language"], err = json.Marshal(a.Language)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'language': %w", err)
+		}
+	}
+
+	if a.LegalEntityId != nil {
+		object["legal_entity_id"], err = json.Marshal(a.LegalEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_entity_id': %w", err)
 		}
 	}
 
@@ -84876,7 +85285,7 @@ type ServerInterface interface {
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
-	// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+	// Book a meeting at a chosen slot and queue its calendar invitation.
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
@@ -86559,6 +86968,15 @@ type ServerInterface interface {
 	// Update a product (partial). Existing offer lines keep their price snapshot.
 	// (PATCH /products/{id})
 	UpdateProduct(w http.ResponseWriter, r *http.Request, id Id, params UpdateProductParams)
+	// The product's name and description in further languages.
+	// (GET /products/{id}/translations)
+	ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove the product's text in one language.
+	// (DELETE /products/{id}/translations/{language})
+	DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
+	// Set the product's name and description in one language.
+	// (PUT /products/{id}/translations/{language})
+	PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
 	// List projects (live by default; cursor-paginated).
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
@@ -87078,6 +87496,9 @@ type ServerInterface interface {
 	// Retire an account while preserving historical attribution.
 	// (POST /users/{id}/remove)
 	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Mail an invited member a new set-password link. Admin-only, human-only.
+	// (POST /users/{id}/resend-invite)
+	ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id)
 	// Preview removing a member or merging them into another account.
 	// (GET /users/{id}/retirement-preview)
 	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
@@ -88479,7 +88900,7 @@ func (_ Unimplemented) GetAvailability(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+// Book a meeting at a chosen slot and queue its calendar invitation.
 // (POST /bookings)
 func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -91845,6 +92266,24 @@ func (_ Unimplemented) UpdateProduct(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The product's name and description in further languages.
+// (GET /products/{id}/translations)
+func (_ Unimplemented) ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the product's text in one language.
+// (DELETE /products/{id}/translations/{language})
+func (_ Unimplemented) DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the product's name and description in one language.
+// (PUT /products/{id}/translations/{language})
+func (_ Unimplemented) PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List projects (live by default; cursor-paginated).
 // (GET /projects)
 func (_ Unimplemented) ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams) {
@@ -92880,6 +93319,12 @@ func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id
 // Retire an account while preserving historical attribution.
 // (POST /users/{id}/remove)
 func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mail an invited member a new set-password link. Admin-only, human-only.
+// (POST /users/{id}/resend-invite)
+func (_ Unimplemented) ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101878,8 +102323,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101905,25 +102348,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -102763,6 +103187,19 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "domain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "domain", r.URL.Query(), &params.Domain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "domain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
 		}
 		return
 	}
@@ -125266,6 +125703,120 @@ func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListProductTranslations operation middleware
+func (siw *ServerInterfaceWrapper) ListProductTranslations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProductTranslations(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProductTranslation(w, r, id, language)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) PutProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutProductTranslation(w, r, id, language)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -132999,6 +133550,38 @@ func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ResendUserInvite operation middleware
+func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResendUserInvite(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewMemberRetirement operation middleware
 func (siw *ServerInterfaceWrapper) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request) {
 
@@ -138310,6 +138893,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/products/{id}", wrapper.UpdateProduct)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/products/{id}/translations", wrapper.ListProductTranslations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/products/{id}/translations/{language}", wrapper.DeleteProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/products/{id}/translations/{language}", wrapper.PutProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects", wrapper.ListProjects)
 	})
 	r.Group(func(r chi.Router) {
@@ -138827,6 +139419,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/remove", wrapper.RemoveMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/resend-invite", wrapper.ResendUserInvite)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/retirement-preview", wrapper.PreviewMemberRetirement)
