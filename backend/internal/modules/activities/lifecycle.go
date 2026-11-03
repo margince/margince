@@ -59,7 +59,7 @@ type UpdateActivityInput struct {
 	customColumns []fieldcatalog.Column
 }
 
-const archiveReasonKey = "reason"
+const evidenceReasonKey = "reason"
 
 // UpdateActivity keeps an authorized edit and its audit in one transaction.
 func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in UpdateActivityInput) (crmcontracts.Activity, error) {
@@ -483,7 +483,7 @@ func archiveActivityInTx(
 	}
 	var evidence map[string]any
 	if o.reason != "" {
-		evidence = map[string]any{archiveReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
+		evidence = map[string]any{evidenceReasonKey: o.reason, ruleVersionEvidenceKey: o.ruleVersion}
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {

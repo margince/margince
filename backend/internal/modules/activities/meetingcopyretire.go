@@ -44,7 +44,7 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		return fmt.Errorf("activities: archiving a meeting copy: %w", err)
 	}
-	evidence := map[string]any{archiveReasonKey: meetingCopyReason, "survivor": survivor.String()}
+	evidence := map[string]any{evidenceReasonKey: meetingCopyReason, "survivor": survivor.String()}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", duplicate.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return err
@@ -95,6 +95,6 @@ func IsMeetingCopyArchive(evidence []byte) bool {
 	if json.Unmarshal(evidence, &recorded) != nil {
 		return false
 	}
-	reason, ok := recorded[archiveReasonKey].(string)
+	reason, ok := recorded[evidenceReasonKey].(string)
 	return ok && reason == meetingCopyReason
 }

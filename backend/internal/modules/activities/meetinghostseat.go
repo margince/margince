@@ -123,7 +123,7 @@ func (s *Store) ClaimOrganizerHostTx(ctx context.Context, tx pgx.Tx, id ids.Acti
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		return false, fmt.Errorf("activities: naming a meeting's organizer as its host: %w", err)
 	}
-	evidence := map[string]any{"reason": organizerHostReason}
+	evidence := map[string]any{evidenceReasonKey: organizerHostReason}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", id.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return false, err

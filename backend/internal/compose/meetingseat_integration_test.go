@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -314,5 +315,38 @@ func TestAStrangerSeatDoesNotMoveTheMeetingOnReplay(t *testing.T) {
 	if got := readMeetingStart(t, e, captured); !got.Equal(meetingStart) {
 		t.Errorf("the meeting starts %s after a stranger's content-matching replay, want it left at %s",
 			got, meetingStart)
+	}
+}
+
+// The host keeper names an organizer as host only when the organizer's own
+// calendar holds the meeting. A seat named organizer by another calendar's
+// copy does not take the meeting, even when its own sync asks.
+func TestAnOrganizerWhoseCalendarLacksTheMeetingDoesNotHostIt(t *testing.T) {
+	e := integration.Setup(t)
+	captured := captureMeeting(t, e, e.AdminUser)
+	keep := keepOrganizerHost(activities.NewStore(InstallationDB(e.Pool)))
+	host := func() *ids.UUID {
+		t.Helper()
+		var seat *ids.UUID
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(), `SELECT host_user_id FROM activity WHERE id = $1`, captured).Scan(&seat)
+		}); err != nil {
+			t.Fatalf("reading the meeting's host: %v", err)
+		}
+		return seat
+	}
+	before := host()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, user_id, role)
+			VALUES ($1, $2, 'organizer')`, captured, e.Rep3); err != nil {
+			return err
+		}
+		return keep(calendarOwnerCtx(e, e.Rep3), tx, ids.From[ids.ActivityKind](captured))
+	}); err != nil {
+		t.Fatalf("naming a colleague organizer and keeping the host: %v", err)
+	}
+	if after := host(); !reflect.DeepEqual(after, before) {
+		t.Errorf("the host moved from %v to %v, to an organizer whose own calendar does not hold the meeting", before, after)
 	}
 }

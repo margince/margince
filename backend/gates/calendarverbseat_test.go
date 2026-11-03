@@ -46,6 +46,9 @@ var verbGuardConstructor = map[string]string{
 	"WithMeetingCloser": "CancelCapturedMeetingFor",
 	"WithMeetingMover":  "MoveCapturedMeetingFor",
 	"WithMeetingFolder": "foldCapturedMeeting",
+	// The host keeper's standing is in its query: it names only an organizer
+	// whose own calendar imported the meeting, whoever's sync asks.
+	"WithMeetingHostKeeper": "keepOrganizerHost",
 }
 
 func TestComposeWiresNoUnguardedCalendarVerb(t *testing.T) {
