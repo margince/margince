@@ -97,6 +97,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
+	opts = append(opts, agents.WithDealTaskSettler(newDealCloseTasks(activities.NewStore(db), db)))
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)
 	agents.RegisterCoreTools(registry, provider, provider, provider, newConsumerMailSeam(db),
 		openDuplicatesFor(pool), tagOfferSeam(db))
