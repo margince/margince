@@ -37,7 +37,7 @@ func TestTheTaxRateDownTakesBackTheGrantItsUpGave(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793734536")); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793743940")); err != nil {
 		t.Fatalf("up to the migration before the tax rate one: %v", err)
 	}
 	if _, err := conn.Exec(ctx, `INSERT INTO role (key, name, is_system, permissions)
@@ -45,7 +45,7 @@ func TestTheTaxRateDownTakesBackTheGrantItsUpGave(t *testing.T) {
 		ON CONFLICT (key) DO UPDATE SET permissions = '{"objects":{}}'::jsonb`); err != nil {
 		t.Fatalf("seeding the admin role: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1793741150")
+	through := namespaceThroughVersion(t, core, "1793747478")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}
