@@ -4701,6 +4701,8 @@ export const en = {
   "activity.detail.response.declined": "Declined",
   "activity.detail.response.tentative": "Maybe",
   "activity.detail.response.needsAction": "No answer",
+  "meeting.attendeesMore_one": "and {count} more",
+  "meeting.attendeesMore_other": "and {count} more",
   "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
   "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",

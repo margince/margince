@@ -118,5 +118,6 @@ func nextMeetingSection(
 			ContactId: attendee.ContactId, DisplayName: attendee.FullName,
 		})
 	}
+	meeting.OtherParticipants, meeting.ParticipantsMore = scanned.OtherParticipants(), scanned.MoreCount()
 	return &meeting, nil
 }

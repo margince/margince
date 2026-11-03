@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { EntityRef } from "../../components/entityref";
+import { MeetingOthers } from "../../components/meetingothers";
 import { Badge } from "../../design-system/atoms";
 import { formatDateTime, formatNumber } from "../../format/format";
 import type { Locale, usePlural, useT } from "../../i18n";
@@ -152,9 +153,12 @@ export function manualMoveRows({
     );
   }
   if (meeting && onPrepareMeeting) {
+    const named = meeting.participants.length > 0;
+    const others = meeting.other_participants ?? [];
     const who =
-      meeting.participants.length > 0
-        ? meeting.participants.map((participant, at) => (
+      named || others.length > 0 || meeting.participants_more ? (
+        <>
+          {meeting.participants.map((participant, at) => (
             <span key={participant.contact_id}>
               {at > 0 && ", "}
               <EntityRef
@@ -163,8 +167,14 @@ export function manualMoveRows({
                 name={participant.display_name}
               />
             </span>
-          ))
-        : undefined;
+          ))}
+          <MeetingOthers
+            others={others}
+            more={meeting.participants_more}
+            afterContacts={named}
+          />
+        </>
+      ) : undefined;
     rows.push(
       <TodoRow
         key="move:meeting"

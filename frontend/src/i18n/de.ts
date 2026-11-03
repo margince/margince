@@ -4732,6 +4732,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.declined": "Abgesagt",
   "activity.detail.response.tentative": "Vielleicht",
   "activity.detail.response.needsAction": "Keine Antwort",
+  "meeting.attendeesMore_one": "und {count} weiterer Gast",
+  "meeting.attendeesMore_other": "und {count} weitere Gäste",
   "activity.detail.guestsLeftOut_one":
     "und {count} weiterer Gast, nicht aufgeführt",
   "activity.detail.guestsLeftOut_other":

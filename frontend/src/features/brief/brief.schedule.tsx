@@ -3,6 +3,7 @@
 
 import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
+import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -213,6 +214,11 @@ function NextMeetingRow({ next }: Readonly<{ next: NextMeeting }>) {
             name={participant.full_name}
           />
         ))}
+        <MeetingOthers
+          others={next.other_participants}
+          more={next.participants_more}
+          afterContacts={(next.participants?.length ?? 0) > 0}
+        />
       </span>
     </PanelRow>
   );

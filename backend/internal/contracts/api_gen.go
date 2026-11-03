@@ -15241,6 +15241,24 @@ func (e MeetingInvitationChangeAction) Valid() bool {
 	}
 }
 
+// Defines values for MeetingOtherParticipantKind.
+const (
+	MeetingOtherParticipantKindAddress   MeetingOtherParticipantKind = "address"
+	MeetingOtherParticipantKindColleague MeetingOtherParticipantKind = "colleague"
+)
+
+// Valid indicates whether the value is a known member of the MeetingOtherParticipantKind enum.
+func (e MeetingOtherParticipantKind) Valid() bool {
+	switch e {
+	case MeetingOtherParticipantKindAddress:
+		return true
+	case MeetingOtherParticipantKindColleague:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingPlanReadiness.
 const (
 	MeetingPlanReadinessMeetingPlanReadinessOutline  MeetingPlanReadiness = "outline"
@@ -36050,10 +36068,16 @@ type Company360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses Margince knows no contact for. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
 	// Participants The attendees on file, row-scoped. Empty is honest — a meeting can be booked before anyone is linked to it.
 	Participants []Company360MeetingParticipant `json:"participants"`
-	StartsAt     time.Time                      `json:"starts_at"`
-	Subject      string                         `json:"subject"`
+
+	// ParticipantsMore How many more attendees there are than the eight named. Absent when every attendee is named.
+	ParticipantsMore *int      `json:"participants_more,omitempty"`
+	StartsAt         time.Time `json:"starts_at"`
+	Subject          string    `json:"subject"`
 }
 
 // Company360NextStep One open task on the account, ordered overdue → due → undated.
@@ -39098,13 +39122,19 @@ type Contact360NextMeeting struct {
 	// OccurredPrecision How to read `starts_at`. `day` means only its date is known, and the meeting stays next for that whole date.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OtherParticipants The attendees who are not contacts: colleagues, and addresses Margince knows no contact for, such as a lead's. Named after the contacts, within the same eight. A reader who may open the meeting sees these on it too.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
 	Participants *[]struct {
 		ContactId openapi_types.UUID `json:"contact_id"`
 		FullName  string             `json:"full_name"`
 	} `json:"participants,omitempty"`
-	StartsAt time.Time `json:"starts_at"`
-	Subject  *string   `json:"subject,omitempty"`
+
+	// ParticipantsMore How many more attendees there are than the eight named. Absent when every attendee is named.
+	ParticipantsMore *int      `json:"participants_more,omitempty"`
+	StartsAt         time.Time `json:"starts_at"`
+	Subject          *string   `json:"subject,omitempty"`
 }
 
 // Contact360SinceLastVisit What changed on this contact since the caller last acknowledged seeing them.
@@ -49812,6 +49842,17 @@ type MeetingInvitationRequest struct {
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// MeetingOtherParticipant One attendee of a meeting who is not a contact.
+type MeetingOtherParticipant struct {
+	Kind MeetingOtherParticipantKind `json:"kind"`
+
+	// Name A colleague's display name, or the name the invitation gave an address, else the address.
+	Name string `json:"name"`
+}
+
+// MeetingOtherParticipantKind defines model for MeetingOtherParticipant.Kind.
+type MeetingOtherParticipantKind string
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
 // KNOWN about it.

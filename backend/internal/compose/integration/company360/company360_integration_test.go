@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -832,5 +833,64 @@ func TestCompany360NextStepsCarryTheTaskOwnWordsOnlyWithTheirSource(t *testing.T
 	}
 	if got["Call back"] != "second try" {
 		t.Errorf("the typed task lost its words when an unrelated message narrowed: %q", got["Call back"])
+	}
+}
+
+// The next meeting names the colleagues and the addresses on it as well as its
+// contacts, and counts whoever is past the eight it names. A booking stores a
+// colleague by seat and a lead or a typed address by its address.
+func TestCompany360NextMeetingNamesColleaguesAndAddresses(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	svc := company360Service(e)
+	company := e.SeedCompany(t, "Northwind", &e.Rep1)
+	buyer := e.SeedContact(t, "Ines Duarte", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, buyer, company)
+	meeting := seedMeeting(t, owner, e.WS, "Fleet renewal", company360Clock.Add(24*time.Hour))
+	integration.LinkActivity(t, owner, meeting, "contact", buyer)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'attendee')`, meeting, buyer)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`, meeting, e.Rep3)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, display_name, role)
+		VALUES ($1, 'lena@prospect.test', 'Lena Prospect', 'attendee'), ($1, 'notes@northwind.test', NULL, 'attendee')`, meeting)
+
+	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	view, err := svc.Assemble(reader, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	if view.NextMeeting == nil || len(view.NextMeeting.Participants) != 1 {
+		t.Fatalf("next meeting = %+v, want the one contact named", view.NextMeeting)
+	}
+	if view.NextMeeting.OtherParticipants == nil {
+		t.Fatal("the colleague and the two addresses on the meeting are not named")
+	}
+	var others []string
+	for _, other := range *view.NextMeeting.OtherParticipants {
+		others = append(others, string(other.Kind)+":"+other.Name)
+	}
+	var rep3 string
+	if err := owner.QueryRow(context.Background(), `SELECT display_name FROM app_user WHERE id = $1`, e.Rep3).Scan(&rep3); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"colleague:" + rep3, "address:Lena Prospect", "address:notes@northwind.test"}
+	if strings.Join(others, "|") != strings.Join(want, "|") {
+		t.Errorf("other participants = %v, want %v", others, want)
+	}
+	if view.NextMeeting.ParticipantsMore != nil {
+		t.Errorf("participants_more = %d with four attendees, want absent", *view.NextMeeting.ParticipantsMore)
+	}
+
+	for i := range 8 {
+		address := "guest" + string(rune('a'+i)) + "@northwind.test"
+		e.WsExec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'attendee')`, meeting, address)
+	}
+	view, err = svc.Assemble(reader, ids.From[ids.CompanyKind](company))
+	if err != nil {
+		t.Fatalf("assemble: %v", err)
+	}
+	named := len(view.NextMeeting.Participants) + len(*view.NextMeeting.OtherParticipants)
+	if named != 8 || view.NextMeeting.ParticipantsMore == nil || *view.NextMeeting.ParticipantsMore != 4 {
+		t.Errorf("twelve attendees name %d and count %v more, want 8 named and 4 more", named, view.NextMeeting.ParticipantsMore)
 	}
 }

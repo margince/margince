@@ -4608,6 +4608,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.declined": "Từ chối",
   "activity.detail.response.tentative": "Có thể",
   "activity.detail.response.needsAction": "Chưa trả lời",
+  "meeting.attendeesMore_one": "và {count} khách khác",
+  "meeting.attendeesMore_other": "và {count} khách khác",
   "activity.detail.guestsLeftOut_one":
     "và {count} khách khác không được liệt kê",
   "activity.detail.guestsLeftOut_other":
