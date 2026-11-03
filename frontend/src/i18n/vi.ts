@@ -5574,6 +5574,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalEntities.imprint": "Thông tin pháp lý",
   "legalEntities.imprintHint":
     "Thông tin pháp lý pháp nhân này in ra, tối đa 4.000 ký tự.",
+  "legalEntities.signatureTemplate": "Mẫu chữ ký email (HTML)",
+  "legalEntities.signatureTemplateHint":
+    "Thư của đồng nghiệp làm việc cho pháp nhân này dùng mẫu này. Dùng {name}, {title}, {phone}, {logo} và {imprint}. Để trống sẽ dùng mẫu của công ty.",
   "legalEntities.sectionOffering": "Pháp nhân bán gì",
   "legalEntities.offerSummary": "Sản phẩm",
   "legalEntities.icp": "Khách hàng lý tưởng",
@@ -8169,7 +8172,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.label": "Mẫu (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Dùng {name}, {title}, {phone} và {logo} (logo công ty nhúng trong thư). Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, cùng màu chữ và cỡ chữ theo pixel trên span. Để trống sẽ tắt mẫu.",
+    "Dùng {name}, {title}, {phone}, {logo} và {imprint}. {logo} là logo của pháp nhân mà thành viên làm việc cho, nhúng trong thư, và {imprint} là thông tin pháp lý của pháp nhân đó. Pháp nhân có mẫu riêng sẽ dùng mẫu đó. Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, cùng màu chữ và cỡ chữ theo pixel trên span. Để trống sẽ tắt mẫu.",
   "settings.signatureFormat": "Định dạng",
   "settings.signatureFormatText": "Văn bản thuần",
   "settings.signatureFormatHtml": "Mã HTML",

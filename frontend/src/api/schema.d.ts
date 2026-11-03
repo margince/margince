@@ -7973,8 +7973,10 @@ export interface paths {
         /**
          * The workspace's signature template.
          * @description The layout every member's mail signs with when it is set, filled in with each member's
-         *     own name, title and phone. Read by a seat that may read installation settings; changed
-         *     by admin/ops. Governed by the `installation_settings` RBAC object.
+         *     own name, title and phone. A member assigned to a legal entity that has its own
+         *     `signature_template` signs with that one instead. Read by a seat that may read
+         *     installation settings; changed by admin/ops. Governed by the `installation_settings`
+         *     RBAC object.
          */
         get: operations["getEmailSignatureTemplate"];
         /** Set the workspace's signature template (admin/ops). */
@@ -11351,7 +11353,9 @@ export interface paths {
          *
          *     On the default entity, the fields it reads from the company profile are refused as
          *     422 `legal_entity_field_on_company_form`: change them on the company form instead.
-         *     Its `country`, `default_language`, bank details and `imprint` are its own.
+         *     Its `signature_template` is refused as 422 `legal_entity_field_on_installation`: it
+         *     signs with the workspace's template (`/email-signature-template`). Its `country`,
+         *     `default_language`, bank details and `imprint` are its own.
          *
          *     An archived entity is refused as 404.
          */
@@ -34564,8 +34568,9 @@ export interface components {
             /** @description The member's phone number, filled into the workspace template's `{phone}`. */
             phone: string;
             /**
-             * @description The workspace has a signature template. Every send this member makes then signs
-             *     with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
+             * @description The member's mail has a signature template: their legal entity's own, or else the
+             *     workspace's. Every send this member makes then signs with that template, filled in
+             *     with their name, title and phone, instead of `body`, unless effective personal `html` is set.
              *     An agent's send carries no sign-off.
              */
             template_active: boolean;
@@ -34576,8 +34581,10 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /**
              * @description The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-             *     `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-             *     mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+             *     `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+             *     sender works for, sized for mail, in the message itself; the default entity's logo is
+             *     the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+             *     imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
              *     and spans with a colour and a pixel size, and drops everything else. Empty means
              *     none: each member uses personal HTML, plain text or the closing line.
              */
@@ -46545,6 +46552,13 @@ export interface components {
             bic?: string | null;
             /** @description The legal notice the entity prints, up to 4000 characters. */
             imprint?: string | null;
+            /**
+             * @description The mail signature layout of a sender assigned to this entity, with the placeholders
+             *     of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
+             *     workspace's template. Always null on the default entity, which signs with the
+             *     workspace's template (`/email-signature-template`).
+             */
+            signature_template?: string | null;
             offering?: components["schemas"]["LegalEntityOffering"];
             /** @description Where the entity's logo is streamed from. Null when it has none. */
             logo_url?: string | null;
@@ -46599,6 +46613,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            signature_template?: string;
             offering?: components["schemas"]["LegalEntityOffering"];
         };
         /** @description A field left out keeps its value; a field sent as an empty string is cleared. */
@@ -46615,6 +46630,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            signature_template?: string;
             offering?: components["schemas"]["LegalEntityOffering"];
         };
         LegalEntityMember: {

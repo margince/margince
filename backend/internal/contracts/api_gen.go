@@ -41172,10 +41172,11 @@ type CreateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -43548,8 +43549,9 @@ type EmailSignature struct {
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
-	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
+	// TemplateActive The member's mail has a signature template: their legal entity's own, or else the
+	// workspace's. Every send this member makes then signs with that template, filled in
+	// with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -43584,8 +43586,10 @@ type EmailSignatureTemplate struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+	// sender works for, sized for mail, in the message itself; the default entity's logo is
+	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+	// imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
 	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
@@ -48228,8 +48232,14 @@ type LegalEntity struct {
 	RegisterCourt *string `json:"register_court,omitempty"`
 
 	// RegisterNumber The entity's commercial register number.
-	RegisterNumber *string   `json:"register_number,omitempty"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	RegisterNumber *string `json:"register_number,omitempty"`
+
+	// SignatureTemplate The mail signature layout of a sender assigned to this entity, with the placeholders
+	// of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
+	// workspace's template. Always null on the default entity, which signs with the
+	// workspace's template (`/email-signature-template`).
+	SignatureTemplate *string   `json:"signature_template,omitempty"`
+	UpdatedAt         time.Time `json:"updated_at"`
 
 	// VatId The entity's VAT identification number.
 	VatId   *string `json:"vat_id,omitempty"`
@@ -60123,10 +60133,11 @@ type UpdateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // UpdateListRequest defines model for UpdateListRequest.

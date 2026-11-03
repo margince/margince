@@ -229,6 +229,12 @@ it("saves only the fields an edit changed, on the version it read", async () => 
     within(dialog).getByRole("textbox", { name: en["legalEntities.iban"] }),
     "AT61 1904 3002 3457 3201",
   );
+  await user.type(
+    within(dialog).getByRole("textbox", {
+      name: en["legalEntities.signatureTemplate"],
+    }),
+    "<p>Acme Wien</p>",
+  );
   await user.click(
     within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
   );
@@ -238,6 +244,7 @@ it("saves only the fields an edit changed, on the version it read", async () => 
   expect(patch?.ifMatch).toBe("4");
   expect(patch?.body).toEqual({
     iban: "AT61 1904 3002 3457 3201",
+    signature_template: "<p>Acme Wien</p>",
     address: { city: "Graz" },
   });
 });
@@ -259,6 +266,12 @@ it("offers the default only the fields it keeps itself", async () => {
   expect(
     within(dialog).getByRole("textbox", { name: en["legalEntities.iban"] }),
   ).toBeInTheDocument();
+  // It signs with the workspace template, which has its own card.
+  expect(
+    within(dialog).queryByRole("textbox", {
+      name: en["legalEntities.signatureTemplate"],
+    }),
+  ).toBeNull();
   expect(
     within(dialog).getByRole("combobox", { name: /Country/ }),
   ).toHaveTextContent(en["legalEntities.countryInstallation"]);

@@ -5717,6 +5717,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.imprint": "Impressum",
   "legalEntities.imprintHint":
     "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu 4.000 Zeichen.",
+  "legalEntities.signatureTemplate": "E-Mail-Signaturvorlage (HTML)",
+  "legalEntities.signatureTemplateHint":
+    "Mails von Mitgliedern, die für diesen Rechtsträger arbeiten, tragen diese Vorlage. Nutze {name}, {title}, {phone}, {logo} und {imprint}. Leer nutzt die Vorlage des Unternehmens.",
   "legalEntities.sectionOffering": "Was er verkauft",
   "legalEntities.offerSummary": "Angebot",
   "legalEntities.icp": "Idealer Kunde",
@@ -8387,7 +8390,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.label": "Vorlage (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Nutze {name}, {title}, {phone} und {logo}, das in die E-Mail eingebettete Unternehmenslogo. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
+    "Nutze {name}, {title}, {phone}, {logo} und {imprint}. {logo} ist das in die E-Mail eingebettete Logo des Rechtsträgers, für den das Mitglied arbeitet, {imprint} sein Impressum. Ein Rechtsträger mit eigener Vorlage nutzt diese. Absätze, Zeilenumbrüche, fett, kursiv, unterstrichen, Links sowie Farbe und Pixelgröße auf einem span bleiben erhalten. Ein leeres Feld deaktiviert die Vorlage.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Nur Text",
   "settings.signatureFormatHtml": "HTML",

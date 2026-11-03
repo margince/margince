@@ -5700,6 +5700,9 @@ export const en = {
   "legalEntities.imprint": "Imprint",
   "legalEntities.imprintHint":
     "The legal notice this entity prints, up to 4,000 characters.",
+  "legalEntities.signatureTemplate": "Email signature template (HTML)",
+  "legalEntities.signatureTemplateHint":
+    "Mail from colleagues who work for this entity signs with this template. Use {name}, {title}, {phone}, {logo} and {imprint}. Empty uses the company’s template.",
   "legalEntities.sectionOffering": "What it sells",
   "legalEntities.offerSummary": "Offer",
   "legalEntities.icp": "Ideal customer",
@@ -8365,7 +8368,7 @@ export const en = {
   "signatureTemplate.label": "Template (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+    "Use {name}, {title}, {phone}, {logo} and {imprint}. {logo} is the logo of the sender’s legal entity, embedded in the mail, and {imprint} is its imprint. A legal entity with its own template uses that one. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Plain text",
   "settings.signatureFormatHtml": "HTML",

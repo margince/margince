@@ -47,6 +47,7 @@ type Draft = Readonly<{
   iban: string;
   bic: string;
   imprint: string;
+  signature_template: string;
   offer_summary: string;
   icp: string;
   value_proposition: string;
@@ -79,6 +80,7 @@ const FLAT_KEYS = [
   "iban",
   "bic",
   "imprint",
+  "signature_template",
 ] as const satisfies readonly DraftKey[];
 
 const orEmpty = (value: string | null | undefined) => value ?? "";
@@ -103,6 +105,7 @@ function draftOf(entity: LegalEntity): Draft {
     iban: orEmpty(entity.iban),
     bic: orEmpty(entity.bic),
     imprint: orEmpty(entity.imprint),
+    signature_template: orEmpty(entity.signature_template),
     offer_summary: orEmpty(offering.offer_summary),
     icp: orEmpty(offering.icp),
     value_proposition: orEmpty(offering.value_proposition),
@@ -168,7 +171,7 @@ export function EditEntityDialog({
         name: entity.display_name || t("legalEntities.defaultUnnamed"),
       })}
       onClose={onClose}
-      fieldCount={own ? 20 : 7}
+      fieldCount={own ? 21 : 7}
       unsaved={dirty}
       closeDisabled={busy}
       form={
@@ -248,6 +251,15 @@ export function EditEntityDialog({
             hint={t("legalEntities.imprintHint")}
             {...text("imprint")}
           />
+          {/* The default entity signs with the workspace template, which has
+              its own card under Mail. */}
+          {own && (
+            <AreaField
+              label={t("legalEntities.signatureTemplate")}
+              hint={t("legalEntities.signatureTemplateHint")}
+              {...text("signature_template")}
+            />
+          )}
           {own && (
             <>
               <SectionHeader
