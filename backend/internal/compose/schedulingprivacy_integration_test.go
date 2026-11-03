@@ -29,9 +29,11 @@ import (
 type privateCalendar struct{ activities.SchedulingCalendar }
 
 func (privateCalendar) Check(context.Context, ids.UserID, string) error { return nil }
+
 func (privateCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
 	return crmcontracts.SchedulingProfileBlockerNone, nil
 }
+
 func (privateCalendar) CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error {
 	return nil
 }

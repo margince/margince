@@ -26,6 +26,7 @@ type BookingCalendar struct {
 
 func (*BookingCalendar) Check(context.Context, ids.UserID, string) error { return nil }
 
+// Blocker answers none: this calendar is connected and writable.
 func (*BookingCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
 	return crmcontracts.SchedulingProfileBlockerNone, nil
 }

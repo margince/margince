@@ -280,11 +280,13 @@ func (c *invitationCalendar) InviteeAddress(_ context.Context, _ ids.UserID, kin
 	return c.invitees[id], id, nil
 }
 
+// Blocker reads a refused Check as an unusable calendar, as the seam does.
 func (c *invitationCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
+	blocker := crmcontracts.SchedulingProfileBlockerNone
 	if c.checkErr != nil {
-		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+		blocker = crmcontracts.SchedulingProfileBlockerCalendarUnavailable
 	}
-	return crmcontracts.SchedulingProfileBlockerNone, nil
+	return blocker, nil
 }
 
 func (c *invitationCalendar) List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error) {
