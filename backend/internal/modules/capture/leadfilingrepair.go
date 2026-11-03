@@ -41,7 +41,7 @@ const leadFilingReason = "captured_activity_filed_under_lead"
 var leadFilingCandidatesSQL = `
 	SELECT a.id FROM activity a
 	 WHERE a.captured_by LIKE 'connector:%'
-	   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+	   AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	   AND a.audience_reason IS DISTINCT FROM 'no_record'
 	   AND NOT EXISTS (SELECT 1 FROM capture_trace t
 	                    WHERE t.source_system = a.source_system AND t.source_id = a.source_id

@@ -74,7 +74,7 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		}
 		// The question's freshness is the newest mail the decider reads, not a
 		// reader row. The sole direct recipient may hold no row at all.
-		latest := `(SELECT max(question_mail.occurred_at) FROM activity question_mail WHERE activity_thread_available(question_mail.thread_key) AND ` +
+		latest := `(SELECT max(question_mail.occurred_at) FROM activity question_mail WHERE ` +
 			vendorMailSQL("question_mail", "d.domain", asOf, bind) + `)`
 		deferred := `EXISTS (SELECT 1 FROM worklist_done wd WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (` + latest + ` IS NULL OR ` + latest + ` <= wd.done_at))`
 		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + open + `

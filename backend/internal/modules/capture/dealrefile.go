@@ -42,7 +42,7 @@ func DealRefileCeilingTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 		return ids.Nil, err
 	}
 	var ceiling ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE (archived_at IS NULL AND activity_thread_available(thread_key)) AND restricted_at IS NULL ORDER BY id DESC LIMIT 1`).Scan(&ceiling)
+	err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE archived_at IS NULL AND restricted_at IS NULL ORDER BY id DESC LIMIT 1`).Scan(&ceiling)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}

@@ -154,27 +154,3 @@ func TestAStaleEventQueuesNothing(t *testing.T) {
 		}
 	}
 }
-
-func TestThreadPublicationWakesDeferredCorrespondenceReaders(t *testing.T) {
-	key := "topic@example.test"
-	body, err := json.Marshal(crmcontracts.PublicEventActivityUpdated{ChangedFields: crmcontracts.PublicEventActivityChangedFields{ThreadKey: &key}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	env := enrichEvent(t, "activity.updated", "activity", body)
-	env.Actor.ID = "connector:gmail"
-	if quietTrigger().queues(t.Context(), env) {
-		t.Fatal("an unpublished move queued readers")
-	}
-	env.Actor.ID = "system:thread_repair"
-	if !quietTrigger().queues(t.Context(), env) {
-		t.Fatal("publication did not wake deferred readers")
-	}
-	scope, err := activityRefileScope(env)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(scope.Activities) != 1 || scope.Activities[0] != env.Entity.ID {
-		t.Fatalf("publication refile scope=%v", scope)
-	}
-}

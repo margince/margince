@@ -417,7 +417,7 @@ func readActivityText(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]st
 	}
 	var body *string
 	if err := tx.QueryRow(ctx, fmt.Sprintf(
-		`SELECT a.body FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))%s`,
+		`SELECT a.body FROM activity a WHERE a.id = $%d AND a.archived_at IS NULL%s`,
 		idPos, scope), args...).Scan(&body); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errNothingToRead

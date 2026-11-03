@@ -88,19 +88,12 @@ func sqlLiterals(t *testing.T, path string) []string {
 	return out
 }
 
-// Erasure spans privacy and its durable owner drains. Enumerating those files
-// catches extracted scrubs without letting retention writes count as erasure.
+// erasureCascadeFiles are the files EraseContact's own transaction executes SQL
+// from: the Art. 17 cascade. It is a list because a gate pinned to one path stops
+// covering a table once its scrub moves to a neighbour file. It is not the whole
+// privacy package: retention.go also writes subject tables, and a retention sweep
+// must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
-	// Erasure invalidates immediately; the durable worker clears inaccessible staged projections in bounded units.
-	"internal/modules/capture/activitypurge.go",
-	"internal/modules/capture/threadprivacy.go",
-	"internal/modules/capture/threadinvalidation.go",
-	"internal/modules/capture/threadrepairrefresh.go",
-	"internal/modules/capture/threadinvalidationfault.go",
-	"internal/modules/capture/threadrepair.go",
-	"internal/modules/capture/threadrepairapply.go",
-	"internal/modules/capture/threadrepairload.go",
-	"internal/modules/capture/threadtopiccache.go",
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
 	"internal/modules/capture/partysourceerase.go",
 	"internal/modules/privacy/partyprojections.go",

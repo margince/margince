@@ -75,7 +75,7 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 		  FROM activity a
 		  JOIN activity_participant ap ON ap.activity_id = a.id AND ap.user_id = $%d
 		   AND `+auth.ParticipantStandsSQL("ap", "a")+`
-		 WHERE a.id <> $%d AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.id <> $%d AND a.archived_at IS NULL
 		   AND %s
 		   AND %s
 		   AND EXISTS (SELECT 1 FROM activity_link l

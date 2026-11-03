@@ -186,43 +186,27 @@ func (s Server) captureSummary(ctx context.Context) (crmcontracts.HealthSource, 
 	add("capture_thread_uncertain", healthWaitingHuman, categories.UncertainThreads, "threads", "mailbox_owner")
 	add("capture_unread", healthUnverified, categories.UnreadMailboxes, "mailboxes", "mailbox_owner")
 	add("capture_held", healthProcessing, held.Count, "records", "operator")
-	unobserved, repairCondition, repairFailures := captureRepairSummary(sweeps, categories.QuarantinedRepairs)
-	if unobserved {
-		source.Availability = healthUnobserved
+	repairUnverified := false
+	for _, sweep := range sweeps {
+		if sweep.LastRun == nil {
+			source.Availability = healthUnobserved
+			continue
+		}
+		if sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeFailed || sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeSkipped {
+			repairUnverified = true
+		}
 	}
-	add("capture_repair_unverified", repairCondition, repairFailures, "runs", "operator")
+	if repairUnverified {
+		add("capture_repair_unverified", healthUnverified, 1, "runs", "operator")
+	}
 	for _, kind := range capture.ConcernKinds {
 		condition := captureConcernCondition(kind)
 		add("capture_connection_"+kind, condition, concerns[kind], "items", "mailbox_owner")
 	}
 	if classifier.Exhausted > 0 {
 		source.Condition, source.Code = healthTechnical, "capture_exhausted"
-	} else if categories.QuarantinedRepairs > 0 {
-		source.Condition, source.Code = healthTechnical, "capture_repair_unverified"
 	}
 	return source, findings, nil
-}
-
-func captureRepairSummary(sweeps []crmcontracts.CaptureSweepHealth, quarantined int) (bool, crmcontracts.HealthSourceCondition, int) {
-	unobserved, failed := false, false
-	for _, sweep := range sweeps {
-		if sweep.LastRun == nil {
-			unobserved = true
-			continue
-		}
-		if sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeFailed || sweep.LastRun.Outcome == crmcontracts.CaptureSweepRunOutcomeSkipped {
-			failed = true
-		}
-	}
-	count := quarantined
-	if failed {
-		count++
-	}
-	condition := healthUnverified
-	if quarantined > 0 {
-		condition = healthTechnical
-	}
-	return unobserved, condition, count
 }
 
 func (s Server) intakeSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {

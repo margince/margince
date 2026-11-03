@@ -209,7 +209,6 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 	if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
-	finishThreadRepairs(t, f.e)
 	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, f.messages[1]); got != 1 {
 		t.Fatal("held work prevented source erasure")
 	}

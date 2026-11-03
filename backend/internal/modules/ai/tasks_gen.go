@@ -43,6 +43,10 @@ const (
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
+	// TaskReportInterpret is Read a confirmed report evaluation's measured cells and open decisions and write an observation, why it matters and a next decision, each tied to a cited cell. Its site, sales_assessment, is listed under sites when it is built, because a planned task declares none.
+	TaskReportInterpret Task = "report_interpret"
+	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Its sites, initiative_setup and custom_report_setup, are named here and listed under sites when they are built, because a planned task declares none.
+	TaskReportSetup Task = "report_setup"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
 	// TaskSignalExtract is SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human.
@@ -97,6 +101,8 @@ var taskDisplayNames = map[Task]string{
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
 	TaskRateExtract:                   "Exchange rate extraction",
+	TaskReportInterpret:               "Assessing a sales report",
+	TaskReportSetup:                   "Setting up a report from a description",
 	TaskRequestSettlement:             "Checking whether the reply answered the request",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website research",
@@ -139,6 +145,8 @@ var taskSummaries = map[Task]string{
 	TaskOwedVerdict:                   "Decides whether an unanswered message actually asks us for something, or only informs us.",
 	TaskProposeRoles:                  "Suggests each contact's buying role — who signs, who champions, who can block.",
 	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
+	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on. Not in use yet.",
+	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving. Not in use yet.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
 	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
 	TaskSiteExtract:                   "Reads a company's website in depth, quoting the pages each fact comes from.",
@@ -182,7 +190,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "6ed8e3193662a530a20a5f5122853e651655e1b10ac994132384c1ff583251ff"
+const TaskContractHash = "ae007cfddec88009603cd197cda5c765405a952dbbd8b9bd96a3693663d7c88f"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -208,6 +216,8 @@ func AllTasks() []Task {
 		TaskOwedVerdict,
 		TaskProposeRoles,
 		TaskRateExtract,
+		TaskReportInterpret,
+		TaskReportSetup,
 		TaskRequestSettlement,
 		TaskSignalExtract,
 		TaskSiteExtract,
@@ -246,6 +256,8 @@ var taskLadders = map[Task][]Tier{
 	TaskOwedVerdict:                   {TierLocalSmall, TierCheapCloud},
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
+	TaskReportInterpret:               {TierPremium, TierCheapCloud},
+	TaskReportSetup:                   {TierCheapCloud, TierPremium},
 	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
 	TaskSignalExtract:                 {TierFrontier},
 	TaskSiteExtract:                   {TierPremium},
@@ -293,6 +305,8 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskOwedVerdict:                   ExecutionModeBackground,
 	TaskProposeRoles:                  ExecutionModeInteractive,
 	TaskRateExtract:                   ExecutionModeBackground,
+	TaskReportInterpret:               ExecutionModeInteractive,
+	TaskReportSetup:                   ExecutionModeInteractive,
 	TaskRequestSettlement:             ExecutionModeBackground,
 	TaskSignalExtract:                 ExecutionModeBackground,
 	TaskSiteExtract:                   ExecutionModeBackground,
@@ -359,6 +373,8 @@ var taskStatus = map[Task]string{
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
+	TaskReportInterpret:               "planned",
+	TaskReportSetup:                   "planned",
 	TaskRequestSettlement:             "shipped",
 	TaskSignalExtract:                 "shipped",
 	TaskSiteExtract:                   "shipped",
@@ -547,6 +563,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
 	TaskOwedVerdict:                   true,
+	TaskReportInterpret:               true,
 	TaskRequestSettlement:             true,
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
@@ -637,6 +654,8 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
+	TaskReportInterpret:               {TokenBudget: 0, Conditional: false},
+	TaskReportSetup:                   {TokenBudget: 0, Conditional: false},
 	TaskRequestSettlement:             {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},
 	TaskSiteExtract:                   {TokenBudget: 0, Conditional: false},

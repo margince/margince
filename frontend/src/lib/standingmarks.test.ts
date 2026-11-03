@@ -49,7 +49,7 @@ describe("activityMarks", () => {
     expect(mark).toMatchObject({
       key: "a",
       kind: "email",
-      direction: "inbound",
+      side: "theirs",
       what: "Email",
       title: "Scope question",
       detail: "From Dana Reyes",
@@ -132,5 +132,43 @@ describe("activityMarks", () => {
     );
 
     expect(marks.map((mark) => mark.key)).toEqual(["ok"]);
+  });
+
+  it("draws the side that wrote a message, not the way its copy travelled", () => {
+    const colleagueCopy = row({
+      id: "copy",
+      kind: "email",
+      occurred_at: "2026-08-02T10:00:00Z",
+      direction: "inbound",
+      voice: {
+        author: {
+          kind: "colleague",
+          display_name: "Alex Seller",
+          is_reader: false,
+        },
+        contact_role: "cc",
+      },
+    });
+    const contactReply = row({
+      id: "reply",
+      kind: "email",
+      occurred_at: "2026-08-03T10:00:00Z",
+      direction: "outbound",
+      voice: {
+        author: {
+          kind: "contact_record",
+          display_name: "Casey Example",
+          is_reader: false,
+        },
+        contact_role: "author",
+      },
+    });
+    const [copy, reply] = activityMarks([colleagueCopy, contactReply], words);
+
+    expect(copy).toMatchObject({ side: "ours", detail: "Sent" });
+    expect(reply).toMatchObject({
+      side: "theirs",
+      detail: "From Casey Example",
+    });
   });
 });
