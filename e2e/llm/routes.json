@@ -160,7 +160,6 @@
     "schedule_meeting": {
       "field": "action",
       "actions": {
-        "book": "book_meeting",
         "invite": "invite_meeting"
       }
     },
