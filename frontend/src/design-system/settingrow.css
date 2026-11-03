@@ -158,6 +158,17 @@
   text-align: left;
 }
 
+/* A phone narrows both empty sentences to the rows' own inset. A rung, because
+   panel.css alone pays a pane's role inset to a state arm. */
+@media (max-width: 700px) {
+  .settinglist > .empty,
+  .settinglist > * > .empty,
+  .settingrow-stack > .settingrow-control > .empty,
+  .settingrow-stack > .settingrow-control > * > .empty {
+    padding-inline: var(--space-3);
+  }
+}
+
 /* A `Switch` in a row's ANSWER column, and the refusal it stacks under itself.
  *
  * `Switch` lays its own `reason` out as a left-aligned column under the track,

@@ -173,7 +173,7 @@
 }
 /* Except the plate, whose ground and dashed edge are what it says with. */
 .panel-body > .empty-plate {
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) var(--padCard);
   text-align: center;
   background: var(--groundHover);
 }
@@ -528,5 +528,5 @@
 }
 .staging-card {
   border-radius: var(--r-md);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--padPane);
 }

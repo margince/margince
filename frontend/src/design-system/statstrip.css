@@ -253,6 +253,13 @@
 .stat-strip[data-density="plate"] .stat-card-detail {
   grid-area: basis;
 }
+/* On a phone a cell's words start where the card's own do. */
+@media (max-width: 700px) {
+  .stat-strip[data-density="plate"] > .stat-card,
+  .stat-strip[data-density="plate"] > * > .stat-card {
+    padding-inline: var(--space-3);
+  }
+}
 /* The whole cell is the door, and the label keeps the cell's full width: the
    door's word stays its accessible name, and only its arrow shows, in the
    corner, while the cell is pointed at or holds focus. */

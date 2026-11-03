@@ -214,7 +214,7 @@
  * into the band where a card's own chrome belongs.
  */
 .dcard[data-layout="deck"] {
-  padding: var(--space-5);
+  padding: var(--padPanel);
   min-height: 260px;
   display: flex;
   flex-direction: column;
@@ -234,8 +234,8 @@
    header element — and because a lapsed card takes both of them back, which is
    the pair of rules below. */
 .dcard[data-layout="deck"] > .dcard-meta {
-  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
-  padding: var(--space-3) var(--space-5);
+  margin: calc(-1 * var(--padPanel)) calc(-1 * var(--padPanel)) var(--space-4);
+  padding: var(--space-3) var(--padPanel);
   min-height: 48px;
   background: var(--aiLight);
   border-bottom: 1px solid var(--aiMed);
@@ -281,8 +281,8 @@
    the AI edge colour — the same band the moment card's footer draws in the
    accent. */
 .dcard[data-layout="deck"] .dcard-verbs {
-  margin: auto calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
-  padding: var(--space-3) var(--space-5);
+  margin: auto calc(-1 * var(--padPanel)) calc(-1 * var(--padPanel));
+  padding: var(--space-3) var(--padPanel);
   border-top: 1px solid var(--aiMed);
 }
 

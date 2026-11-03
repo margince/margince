@@ -950,7 +950,7 @@
 /* The type is .t-eyebrow; the padding is the panel's own, because the heading
    sits between full-bleed rows and has to line up with their content. */
 .co-timeline-day-heading {
-  padding: var(--space-3) var(--space-5) 0;
+  padding: var(--space-3) var(--padPanel) 0;
 }
 
 /* The growth-fit bars: the band taken apart, one row per dimension. The

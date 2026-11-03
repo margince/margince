@@ -56,7 +56,7 @@
 }
 .recorddetails-note {
   margin: 0;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--padCard);
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-control);
   font: var(--fontBodySmall);
