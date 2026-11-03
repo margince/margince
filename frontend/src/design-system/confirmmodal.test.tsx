@@ -142,6 +142,8 @@ describe("ConfirmModal", () => {
     expect(onConfirm).not.toHaveBeenCalled();
     await user.keyboard("{Control>}{Enter}{/Control}");
     expect(onConfirm).toHaveBeenCalledTimes(1);
+    await user.keyboard("{Meta>}{Enter}{/Meta}");
+    expect(onConfirm).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("textbox", { name: "Note" })).toHaveValue(
       "Moved\n",
     );

@@ -141,12 +141,17 @@ export function ChoiceList<Value extends string>(
   // caller should have to think about, and two ChoiceLists on one page with the
   // same hand-written name would silently become one question.
   const name = useId();
+  // Content inside a fieldset is skipped as focus moves between answers, so
+  // each answer names the detail as its description.
+  const detailId = useId();
+  const describedBy = detail == null ? undefined : detailId;
   const answer = (choice: Choice<Value>) => {
     const shared = {
       className: "choicelist-choice",
       name,
       value: choice.value,
       disabled: disabled || choice.disabled,
+      "aria-describedby": describedBy,
       label: <ChoiceText choice={choice} tick={layout === "tiles"} />,
     };
     if (props.multiple === true) {
@@ -195,7 +200,11 @@ export function ChoiceList<Value extends string>(
       <legend className={hideLegend ? "sr-only" : "choicelist-legend"}>
         {legend}
       </legend>
-      {detail != null && <div className="choicelist-detail">{detail}</div>}
+      {detail != null && (
+        <div id={detailId} className="choicelist-detail">
+          {detail}
+        </div>
+      )}
       {runsOf(choices).map((run) =>
         run.group === undefined ? (
           <Fragment key={run.choices[0]?.value}>

@@ -118,6 +118,40 @@ describe("ChoiceList", () => {
     expect(option).toBeTruthy();
   });
 
+  it("describes every answer by the detail, so it is heard while choosing", () => {
+    render(
+      <ChoiceList
+        legend="What happens to the 2 open tasks?"
+        detail={<p>Send the contract</p>}
+        value="only_chosen"
+        choices={CHOICES}
+        onChange={() => {}}
+      />,
+    );
+
+    for (const radio of screen.getAllByRole("radio")) {
+      const describedBy = radio.getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(describedBy)?.textContent).toBe(
+        "Send the contract",
+      );
+    }
+  });
+
+  it("leaves the answers undescribed without a detail", () => {
+    render(
+      <ChoiceList
+        legend="Which conversations go into the CRM?"
+        value="only_chosen"
+        choices={CHOICES}
+        onChange={() => {}}
+      />,
+    );
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio.hasAttribute("aria-describedby")).toBe(false);
+    }
+  });
+
   it("refuses every answer when the group is disabled", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
