@@ -18,14 +18,17 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -63,7 +66,7 @@ func (s accountCoverage) Read(ctx context.Context, params crmcontracts.GetAccoun
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		resolved, population, err := AnalyticsPopulationClause(ctx, tx, requestedScopeOf(params), "d", arg, unownedIsPartOfDefault)
+		resolved, population, err := AnalyticsPopulationClause(ctx, tx, requestedScopeOf(params.ScopeKind, params.ScopeId), "d", arg, unownedIsPartOfDefault)
 		if err != nil {
 			return err
 		}
@@ -72,19 +75,23 @@ func (s accountCoverage) Read(ctx context.Context, params crmcontracts.GetAccoun
 		if err != nil {
 			return err
 		}
-		pop := &coveragePopulation{clause: population, args: args, now: now, thresholds: out.Thresholds}
+		zone, err := identity.ZoneAppliedTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		pop := &coveragePopulation{clause: population, args: args, now: now, zone: zone, thresholds: out.Thresholds}
 		return s.judge(ctx, tx, pop, &out)
 	})
 	return out, err
 }
 
-func requestedScopeOf(params crmcontracts.GetAccountCoverageParams) RequestedScope {
+func requestedScopeOf(kind *crmcontracts.GetAccountCoverageParamsScopeKind, scopeID *openapi_types.UUID) RequestedScope {
 	var requested RequestedScope
-	if params.ScopeKind != nil {
-		requested.Kind = string(*params.ScopeKind)
+	if kind != nil {
+		requested.Kind = string(*kind)
 	}
-	if params.ScopeId != nil {
-		id := ids.UUID(*params.ScopeId)
+	if scopeID != nil {
+		id := ids.UUID(*scopeID)
 		requested.ID = &id
 	}
 	return requested
@@ -97,6 +104,7 @@ type coveragePopulation struct {
 	clause     string
 	args       []any
 	now        time.Time
+	zone       *time.Location
 	thresholds crmcontracts.AccountCoverageThresholds
 	// truncated is set by a candidate read that hit its cap. The answer then
 	// says its counts cover the largest candidates and not every one.
@@ -231,15 +239,14 @@ func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.Accou
 	if err != nil {
 		return nil, fmt.Errorf("read when the accounts last exchanged a word: %w", err)
 	}
-	cutoff := pop.now.AddDate(0, 0, -days)
 	var rows []crmcontracts.AccountCoverageRow
 	for _, candidate := range candidates {
 		touch := touches[ids.From[ids.CompanyKind](ids.UUID(candidate.Company.Id))]
-		if touch.Contact != nil && !touch.Contact.At.Before(cutoff) {
+		if touch.Contact != nil && elapsed.Days(touch.Contact.At, pop.now, pop.zone) < days {
 			continue
 		}
 		candidate.LastInbound, candidate.LastOutbound = touch.InboundAt, touch.OutboundAt
-		if since, ok := silentDays(touch, candidate, pop.now); ok {
+		if since, ok := silentDays(touch, candidate, pop.now, pop.zone); ok {
 			candidate.DaysSilent = &since
 		}
 		rows = append(rows, candidate)
@@ -247,14 +254,15 @@ func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.Accou
 	return rows, nil
 }
 
-// silentDays counts from the newest exchange, or from the won deal's close
-// when there was none. An account with neither has no count to print.
-func silentDays(touch company360.LastTouch, row crmcontracts.AccountCoverageRow, now time.Time) (int, bool) {
+// silentDays counts calendar days in the record zone from the newest exchange,
+// or from the won deal's close when there was none. An account with neither has
+// no count to print.
+func silentDays(touch company360.LastTouch, row crmcontracts.AccountCoverageRow, now time.Time, zone *time.Location) (int, bool) {
 	switch {
 	case touch.Contact != nil:
-		return int(now.Sub(touch.Contact.At).Hours() / 24), true
+		return max(elapsed.Days(touch.Contact.At, now, zone), 0), true
 	case row.WonDeal != nil && row.WonDeal.ClosedAt != nil:
-		return int(now.Sub(*row.WonDeal.ClosedAt).Hours() / 24), true
+		return max(elapsed.Days(*row.WonDeal.ClosedAt, now, zone), 0), true
 	}
 	return 0, false
 }
