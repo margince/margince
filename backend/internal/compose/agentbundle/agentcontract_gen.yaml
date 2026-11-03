@@ -3223,7 +3223,11 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3274,7 +3278,11 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3315,7 +3323,11 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3434,77 +3446,6 @@ paths:
                     enum: [calendar, none, unknown]
                     description: |-
                       What these slots were computed FROM, which decides what an empty window means.
-        '422': {$ref: '#/components/responses/ValidationError'}
-        '502': {$ref: '#/components/responses/CalendarUnavailable'}
-  /bookings:
-    post:
-      tags: [Activities, AI]
-      operationId: bookMeeting
-      summary: Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-      description: |-
-        Records the meeting on the timeline. No invite is sent. Use the explicit
-        scheduling invitation command to create an event and notify the attendee.
-
-        Needs the passport permission Send messages.
-
-        Runs at once.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [start, end, links]
-              properties:
-                host_user_id: {type: string, format: uuid}
-                start: {type: string, format: date-time}
-                end: {type: string, format: date-time}
-                subject: {type: string}
-                attendee_emails:
-                  type: array
-                  items: {type: string, format: email}
-                  description: |-
-                    Who the meeting is with. **Accepted and not delivered to**: nothing in this
-                    build emails these addresses or adds them to a calendar event, and the
-                    created activity does not carry them either. Supply them for the caller's
-                    own record of intent, and tell the attendee yourself.
-                links:
-                  type: array
-                  minItems: 1
-                  maxItems: 25
-                  description: |-
-                    Entities to associate the resulting meeting activity with. At least one is
-                    required: a meeting belonging to no record appears on no timeline and is one
-                    nobody will find again, which is the same reason `SendCompanyEmailRequest`
-                    carries the bound. Each one is row-scope probed and written as its own row,
-                    so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-                    before it stages.
-                  items:
-                    type: object
-                    required: [entity_type, entity_id]
-                    properties:
-                      entity_type: {type: string, enum: [contact, company, deal, lead, project]}
-                      entity_id: {type: string, format: uuid}
-                consent: {$ref: '#/components/schemas/CaptureConsent'}
-      responses:
-        '201':
-          description: Meeting booked; the logged meeting activity.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/Activity'}
-        '403':
-          description: Approval token missing for the booking, or RBAC denied.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-        '409':
-          description: 'Slot no longer available (`code: slot_taken`).'
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /automations/catalog:
@@ -3770,8 +3711,10 @@ paths:
       summary: The workspace's signature template.
       description: |-
         The layout every member's mail signs with when it is set, filled in with each member's
-        own name, title and phone. Read by a seat that may read installation settings; changed
-        by admin/ops. Governed by the `installation_settings` RBAC object.
+        own name, title and phone. A member assigned to a legal entity that has its own
+        `signature_template` signs with that one instead. Read by a seat that may read
+        installation settings; changed by admin/ops. Governed by the `installation_settings`
+        RBAC object.
       responses:
         '200':
           description: The template.
@@ -14420,8 +14363,10 @@ components:
           maxLength: 4000
           description: |-
             The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+            sender works for, sized for mail, in the message itself; the default entity's logo is
+            the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
             none: each member uses personal HTML, plain text or the closing line.
     CompanyGraphEdge:
@@ -14700,6 +14645,19 @@ components:
             type: string
             enum: [contacts, deals, signal_route, our_side]
         signal_route: {$ref: '#/components/schemas/CompanyGraphSignalRoute'}
+    SalesAssessmentView:
+      type: string
+      enum: [sales, prospecting, team]
+    ReportingOverviewAction:
+      description: An application-supplied action over the exact records named by its evidence reference.
+      type: object
+      additionalProperties: false
+      required: [id, label, evidence, count]
+      properties:
+        id: {type: string}
+        label: {type: string}
+        count: {type: integer, minimum: 1}
+        evidence: {$ref: '#/components/schemas/ReportingEvidenceRef'}
     Relationship:
       type: object
       description: |-
@@ -16283,6 +16241,26 @@ components:
         location: {type: string, maxLength: 1000}
         description: {type: string, maxLength: 5000}
         video_call: {type: boolean, description: Add a video call link from the connected calendar. Absent follows the host's profile setting.}
+        attendee_emails:
+          type: array
+          maxItems: 24
+          items: {type: string, format: email}
+          description: |-
+            Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+            Each address is resolved to a contact, a colleague or a lead the host can see; an
+            address matching nobody is invited as named by the host. Contacts and leads must hold
+            transactional consent; colleagues and host-named addresses are not asked.
+        links:
+          type: array
+          maxItems: 25
+          description: Further records to file the meeting on, beside the invitee.
+          items: {$ref: '#/components/schemas/MeetingRecordLink'}
+    MeetingRecordLink:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        entity_type: {type: string, enum: [contact, company, deal, lead, project]}
+        entity_id: {type: string, format: uuid}
     MeetingInvitation:
       type: object
       required: [id, status, start, end, subject, location, version]
@@ -18944,6 +18922,7 @@ components:
         - leads_created
         - lead_status_moves
         - leads_promoted
+        - leads_qualified
         - lead_first_response
         - leads_awaiting_response
         - partner_pipeline
@@ -19633,6 +19612,14 @@ components:
         the field existed; a reader then says the basis is unknown and never guesses one.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_pipeline_minor:
+          type: integer
+          format: int64
+          description: Open deal value eligible for the forecast period, in base minor units.
+        call_at:
+          type: string
+          format: date-time
+          description: Submission time of the compatible manager call.
         landing:
           $ref: '#/components/schemas/ForecastLanding'
         period:
@@ -19709,6 +19696,10 @@ components:
         - metrics
         - charts
       properties:
+        overview_actions:
+          type: array
+          maxItems: 3
+          items: {$ref: '#/components/schemas/ReportingOverviewAction'}
         evaluation_key: {type: string}
         context:
           $ref: '#/components/schemas/ReportingContext'
@@ -19772,6 +19763,9 @@ components:
         - metrics
         - presets
       properties:
+        assessment_views:
+          type: array
+          items: {$ref: '#/components/schemas/SalesAssessmentView'}
         schedule_ready:
           type: boolean
           description: Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
@@ -20908,7 +20902,7 @@ components:
       type: object
       description: >-
         What the most recent nightly input check found, and how much of the pipeline it was able to reach.
-      required: [run_id, as_of, status, eligible_deals, sources, freshness]
+      required: [run_id, as_of, status, eligible_deals, sources, freshness, review_deliveries]
       properties:
         run_id: {type: string, format: uuid}
         as_of: {type: string, format: date-time}
@@ -20931,6 +20925,27 @@ components:
           description: Every source the run tried, and how far it reached into each.
           items: {$ref: '#/components/schemas/ForecastAssuranceSource'}
         freshness: {$ref: '#/components/schemas/AssuranceFreshness'}
+        review_deliveries: {$ref: '#/components/schemas/AssuranceReviewDeliveries'}
+      additionalProperties: false
+    AssuranceReviewDeliveries:
+      type: object
+      description: >-
+        The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+      required: [pending, failed, delivered]
+      properties:
+        pending:
+          type: integer
+          minimum: 0
+          description: Reviews whose task is queued or retrying.
+        failed:
+          type: integer
+          minimum: 0
+          description: Reviews whose task could not be delivered after every retry.
+        delivered:
+          type: integer
+          minimum: 0
+          description: >-
+            Reviews that have their task, including a task somebody already completed while the review stays open.
       additionalProperties: false
     AssuranceFreshness:
       type: object
@@ -22391,44 +22406,6 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Team'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    CaptureConsent:
-      type: object
-      description: |-
-        The consent passthrough every capture surface (booking, public forms, imports) must carry. Names the purpose and the exact
-        wording/version shown, so the resulting grant is demonstrable (Art 7(1)).
-      required: [policy_version]
-      properties:
-        purpose_id:
-          type: string
-          format: uuid
-          description: |-
-            The purpose the grant lands on. OMIT IT on a surface that is confined to one purpose
-            — the booking doors are, to the `transactional` lane — and the server resolves that
-            lane's own id for this installation.
-        policy_version: {type: string, maxLength: 200, description: Version id of the consent wording shown to the subject.}
-        wording:
-          type: [string, 'null']
-          maxLength: 2000
-          description: |-
-            The exact wording shown, stored with the consent event for demonstrability.
-        marketing:
-          type: object
-          description: |-
-            An affirmative marketing tick the subject made on the same form. It does NOT record a
-            grant: the surface mails a single-use confirmation link to the address on the booking
-            and the grant exists only once the subject spends it. That is what lets an anonymous
-            form carry the question at all — a stranger who knows an address can cause one
-            confirmation mail to be sent to its owner, never a subscription in their name.
-          required: [purpose_id, policy_version, wording]
-          properties:
-            purpose_id:
-              type: string
-              format: uuid
-              description: |-
-                The marketing purpose being asked about. It must require double opt-in; a purpose
-                that does not is refused, because there would be nothing for the mailed link to ask.
-            policy_version: {type: string, maxLength: 200, description: Version id of the marketing wording shown to the subject.}
-            wording: {type: string, maxLength: 2000, description: 'The exact marketing wording shown, carried onto the grant the confirmation records.'}
     AutomationCatalogEntry:
       type: object
       description: An automation *type* in the closed starter library.
@@ -22890,7 +22867,26 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         buyer_company_id: {type: [string, 'null'], format: uuid}
         buyer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Buyer legal block captured at send time.}
-        issuer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Seller legal block captured at send time.}
+        issuer_snapshot:
+          type: [object, 'null']
+          additionalProperties: true
+          readOnly: true
+          description: |-
+            Seller legal block captured at send time, so a later change to the legal entity
+            leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+            document prints), `base_currency`, and, on an offer sent since offers name their
+            legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+            `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+            `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+            the entity has no value for is absent.
+        legal_entity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: |-
+            The legal entity that issues the offer: its name, address, VAT ID, bank details and
+            logo are printed on the PDF. Null on an offer created before offers named one, which
+            is issued by the default entity.
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
@@ -22980,6 +22976,12 @@ components:
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
         template_id: {type: [string, 'null'], format: uuid}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: |-
+            The legal entity that issues the offer. Defaults to the entity the author works for;
+            for an agent, the human it acts for. An unknown or archived entity is refused as 422.
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
@@ -23004,6 +23006,10 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
       additionalProperties: false
     MorningBrief:
       type: object

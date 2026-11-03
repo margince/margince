@@ -47,6 +47,7 @@ export function DoNext() {
   const state = read === "empty" && incomplete ? "unavailable" : read;
   const total = page?.summary?.total ?? 0;
   const worklist = routeHash({ screen: "worklist" });
+  if (state === "empty") return null;
   return (
     <Panel
       title={t("analytics.doNext.title")}

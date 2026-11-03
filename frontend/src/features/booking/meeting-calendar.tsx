@@ -118,13 +118,15 @@ function useCalendarDraft(
   const { provider, ready, selected, calendars } = calendar;
   const dirty =
     JSON.stringify(calendarFields(form)) !==
-      JSON.stringify(calendarFields(baseline)) ||
-    (provider !== "" && provider !== baseline.provider);
+    JSON.stringify(calendarFields(baseline));
   const writable =
     ready && !!selected?.writable && !calendars.isFetching && !!provider;
   useSaveDraft({
     // A calendar that is not ready cannot be saved; its row's Reconnect says so.
     dirty: dirty && ready,
+    // The live calendar the card picked by itself: shown as the answer, not an edit.
+    offered: ready && provider !== "" && provider !== baseline.provider,
+    offer: provider,
     // The card says why beside the choice.
     invalid: !selected || !writable,
     save: async () => {

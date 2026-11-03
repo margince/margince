@@ -5,6 +5,8 @@ package deals
 
 import (
 	"bytes"
+	"image"
+	"image/png"
 	"regexp"
 	"strconv"
 	"testing"
@@ -93,7 +95,7 @@ func TestRenderOfferPDF_IncludesOfferDataAndStoredTotals(t *testing.T) {
 	o := testRenderOffer(123456, 23456, 146912)
 	buyerBlock := map[string]any{"company_id": "company-1", "display_name": "Acme GmbH"}
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), buyerBlock, "Margince GmbH", "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), buyerBlock, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}
@@ -118,11 +120,11 @@ func TestRenderOfferPDF_LocaleDrivesLabels(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 	lines := testRenderLines()
 
-	dePDF, err := RenderOfferPDF(o, lines, nil, "Margince GmbH", "de-DE", nil)
+	dePDF, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF(de-DE) error = %v", err)
 	}
-	enPDF, err := RenderOfferPDF(o, lines, nil, "Margince GmbH", "en", nil)
+	enPDF, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "en", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF(en) error = %v", err)
 	}
@@ -156,7 +158,7 @@ func TestRenderOfferPDF_UsesStoredTotalsNeverRecomputes(t *testing.T) {
 	mismatchedNet := int64(999999)
 	o := testRenderOffer(mismatchedNet, 1, 1000000)
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}
@@ -186,7 +188,7 @@ func TestRenderOfferPDF_GermanDiacriticsRenderCorrectlyNotAsMojibake(t *testing.
 	buyerBlock := map[string]any{"display_name": "Müller GmbH", "legal_name": "Müller Größe & Prüfung GmbH"}
 	issuerName := "Straße Verträge GmbH"
 
-	pdf, err := RenderOfferPDF(o, lines, buyerBlock, issuerName, "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, lines, buyerBlock, issuedBy(issuerName), "de-DE", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}
@@ -216,7 +218,7 @@ func TestRenderOfferPDF_GermanDiacriticsRenderCorrectlyNotAsMojibake(t *testing.
 func TestRenderOfferPDF_OmitsBuyerSectionWhenBuyerBlockNil(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 
-	withBuyer, err := RenderOfferPDF(o, testRenderLines(), map[string]any{"display_name": "Acme GmbH"}, "Margince GmbH", "de-DE", nil)
+	withBuyer, err := RenderOfferPDF(o, testRenderLines(), map[string]any{"display_name": "Acme GmbH"}, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +226,7 @@ func TestRenderOfferPDF_OmitsBuyerSectionWhenBuyerBlockNil(t *testing.T) {
 		t.Fatalf("a non-nil buyer block must render the buyer section heading:\n%s", withBuyer)
 	}
 
-	withoutBuyer, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", nil)
+	withoutBuyer, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +239,7 @@ func TestRenderOfferPDF_OmitsBuyerSectionWhenBuyerBlockNil(t *testing.T) {
 	// UUID: the id identifies the record to us and nothing to the customer
 	// holding the page.
 	idOnly, err := RenderOfferPDF(o, testRenderLines(),
-		map[string]any{"company_id": "company-1"}, "Margince GmbH", "de-DE", nil)
+		map[string]any{"company_id": "company-1"}, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,7 +259,7 @@ func TestRenderOfferPDF_NeverPrintsTheInternalCompanyID(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 	rendered, err := RenderOfferPDF(o, testRenderLines(),
 		map[string]any{"company_id": "company-1", "display_name": "Acme GmbH"},
-		"Margince GmbH", "de-DE", nil)
+		issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -289,11 +291,11 @@ func TestRenderOfferPDF_TwoTemplatesWithDistinctLayoutsProduceDifferentBytes(t *
 	layoutA := map[string]any{"header": "Alpha Consulting GmbH", "footer": "Alpha footer"}
 	layoutB := map[string]any{"header": "Beta Solutions GmbH", "footer": "Beta footer"}
 
-	pdfA, err := RenderOfferPDF(o, lines, nil, "Margince GmbH", "de-DE", layoutA)
+	pdfA, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "de-DE", layoutA)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF(layoutA) error = %v", err)
 	}
-	pdfB, err := RenderOfferPDF(o, lines, nil, "Margince GmbH", "de-DE", layoutB)
+	pdfB, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "de-DE", layoutB)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF(layoutB) error = %v", err)
 	}
@@ -333,7 +335,7 @@ func TestRenderOfferPDF_TwoTemplatesWithDistinctLayoutsProduceDifferentBytes(t *
 func TestRenderOfferPDF_EmptyLayoutOmitsHeaderFooterTermsSections(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +356,7 @@ func TestRenderOfferPDF_LayoutIgnoresNonStringAndUnknownKeys(t *testing.T) {
 		"header":   12345, // wrong type — must be ignored, not stringified
 	}
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", layout)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", layout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +384,7 @@ func TestRenderOfferPDF_LayoutIgnoresNonStringAndUnknownKeys(t *testing.T) {
 func TestPDFDrawnTextExcludesTheWallClockStamp(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -412,7 +414,7 @@ func TestPDFDrawnTextSurvivesDrawnTextThatSaysEndstream(t *testing.T) {
 	o.TermsText = &terms
 	layout := map[string]any{"footer": "Footer after the terms"}
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", layout)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", layout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +438,7 @@ func TestRenderOfferPDF_PrintsTheOffersOwnIntroAndTerms(t *testing.T) {
 	o.IntroText, o.TermsText = &intro, &terms
 	layout := map[string]any{"header": "Letterhead line", "footer": "Registered in Berlin"}
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "en-US", layout)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "en-US", layout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,11 +466,57 @@ func TestRenderOfferPDF_BlankIntroAndTermsDrawNoSection(t *testing.T) {
 	blank := ""
 	o.IntroText, o.TermsText = &blank, &blank
 
-	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, "Margince GmbH", "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if bytes.Contains(pdfDrawnText(t, pdf), []byte("Bedingungen")) {
 		t.Fatalf("blank terms must omit the terms heading:\n%s", pdfDrawnText(t, pdf))
+	}
+}
+
+// issuedBy is an issuer block that carries a name and nothing else.
+func issuedBy(name string) PDFIssuer {
+	return PDFIssuer{Name: name}
+}
+
+// Every offer prints its issuer's legal block, and embeds the issuer's logo.
+// A logo that does not decode leaves the document without one.
+func TestRenderOfferPDF_PrintsTheIssuerBlockAndEmbedsItsLogo(t *testing.T) {
+	o := testRenderOffer(100000, 19000, 119000)
+	var logo bytes.Buffer
+	if err := png.Encode(&logo, image.NewRGBA(image.Rect(0, 0, 4, 2))); err != nil {
+		t.Fatal(err)
+	}
+	issuer := PDFIssuer{
+		Name: "Acme Wien GmbH", Address: []string{"Kärntner Ring 12", "1010 Wien", "AT"},
+		VatID: "ATU12345678", RegisterCourt: "HG Wien", RegisterNumber: "FN 123456 a",
+		BankAccountHolder: "Acme Wien GmbH", IBAN: "AT611904300234573201", BIC: "BKAUATWW",
+		Logo: logo.Bytes(),
+	}
+	pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuer, "de-DE", nil)
+	if err != nil {
+		t.Fatalf("RenderOfferPDF() error = %v", err)
+	}
+	drawn := pdfDrawnText(t, pdf)
+	for _, want := range []string{
+		"1010 Wien", "USt-IdNr.: ATU12345678", "Handelsregister: HG Wien FN 123456 a",
+		"Bankverbindung: Acme Wien GmbH \xb7 AT611904300234573201 \xb7 BKAUATWW",
+	} {
+		if !bytes.Contains(drawn, []byte(want)) {
+			t.Errorf("the PDF does not print %q:\n%s", want, drawn)
+		}
+	}
+	if !bytes.Contains(pdf, []byte("/Subtype /Image")) {
+		t.Error("the PDF embeds no logo")
+	}
+
+	issuer.Logo = []byte("not a png")
+	broken, err := RenderOfferPDF(o, testRenderLines(), nil, issuer, "de-DE", nil)
+	if err != nil {
+		t.Fatalf("a logo that does not decode failed the render: %v", err)
+	}
+	if bytes.Contains(broken, []byte("/Subtype /Image")) {
+		t.Error("a logo that does not decode was embedded")
 	}
 }

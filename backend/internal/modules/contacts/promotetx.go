@@ -108,7 +108,7 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
-	out.Contact, err = finalizeLeadPromotion(ctx, tx, id, in, lead, contactID, out.Merged, mergeFields, active, out.DealID, carried)
+	out.Contact, err = s.finalizeLeadPromotion(ctx, tx, id, in, lead, contactID, out.Merged, mergeFields, active, out.DealID, carried)
 	return out, err
 }
 

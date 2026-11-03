@@ -75,7 +75,7 @@ func (f *sdrFixture) returned(ctx context.Context, t *testing.T, owner ids.UUID)
 func (f *sdrFixture) logMeeting(t *testing.T, name string, start time.Time, status string) ids.UUID {
 	t.Helper()
 	clock := func() time.Time { return f.at }
-	customer, err := contacts.NewStore(InstallationDB(f.e.Pool)).WithClock(clock).CreateContact(f.ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
+	customer, err := contacts.NewStore(InstallationDB(f.e.Pool)).SetClock(clock).CreateContact(f.ctx, contacts.CreateContactInput{FullName: name, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
