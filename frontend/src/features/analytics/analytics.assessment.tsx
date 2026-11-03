@@ -54,7 +54,7 @@ export function useSalesAssessment(
 }
 
 /**
- * The assessment beside the leading chart: what the figures show, each
+ * The assessment under the summary and actions: what the figures show, each
  * sentence resting on the cells it cites, and the one decision to make next.
  * Without a model, or when its reply could not be grounded, the panel shows
  * the page's own summary and says so.
