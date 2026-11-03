@@ -259,6 +259,57 @@ func placeStatutoryHold(t *testing.T, message ids.UUID) {
 // A restore hands the classifier text it never saw, so the label it gave the
 // header-only body is no longer an answer about this message. Clearing it
 // returns the row to the backlog, which selects on capture_label IS NULL.
+// A verdict from the replaced text does not land after the restore.
+//
+// Clearing the label returns the row to the backlog, and that same clear
+// satisfies the `capture_label IS NULL` check a late write needs. Without the
+// version it read, an in-flight pass labels the row from text it no longer
+// holds, and the row leaves the backlog again.
+func TestAVerdictFromTheReplacedBodyIsRefused(t *testing.T) {
+	o := setupOwed(t)
+	o.now = clocktest.Now(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	ask := "Can we meet on Tuesday to sign?"
+	headerOnly := "From: pat@customer.example\nTo: " + o.seat
+
+	message := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signing",
+		messageID: "restore-stale@customer.example", body: readInFull(ask),
+		encoding: "base64", authenticated: true, at: o.now.Add(-48 * time.Hour),
+	})
+	o.asLegacy(t, message, headerOnly)
+
+	// The row as a classify batch read it, before the restore ran.
+	readAt := activityVersion(t, o.e, message)
+
+	restoration := activities.MailBodyRestoration{
+		Activity: message, StoredBody: headerOnly,
+		Body: headerOnly + "\n\n" + ask, Completeness: "complete", Version: readAt,
+	}
+	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
+	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+		restored, _, err := activities.RestoreMailBodyTx(system, tx, restoration)
+		if err == nil && !restored {
+			t.Fatal("the restore wrote nothing, so the label question does not arise")
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	applied, err := o.e.Activities.SetCaptureLabel(
+		o.judge(), message, "noise", readAt)
+	if err != nil {
+		t.Fatalf("offering the stale verdict: %v", err)
+	}
+	if applied {
+		t.Error("a verdict read from the replaced body was applied")
+	}
+	if label := o.captureLabel(t, message); label != nil {
+		t.Errorf("label after the refused verdict = %q, want none", *label)
+	}
+}
+
 func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
@@ -271,7 +322,10 @@ func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 		body: readInFull(ask), encoding: "base64", authenticated: true, at: o.now.Add(-48 * time.Hour),
 	})
 	o.asLegacy(t, message, headerOnly)
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "noise"); err != nil {
+	// Read rather than assumed: asLegacy rewrote the body, so the row is past
+	// the version a freshly captured message carries.
+	if _, err := o.e.Activities.SetCaptureLabel(
+		o.judge(), message, "noise", activityVersion(t, o.e, message)); err != nil {
 		t.Fatalf("labelling the header-only body: %v", err)
 	}
 	if label := o.captureLabel(t, message); label == nil || *label != "noise" {
