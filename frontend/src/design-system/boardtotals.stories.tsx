@@ -68,8 +68,8 @@ export const WithNotes: Story = {
   },
 };
 
-// The board's totals name two currencies, so no stage draws a bar.
-export const MixedCurrencies: Story = {
+// No shared scale, as on a board whose totals name two currencies: no bar.
+export const WithoutScale: Story = {
   args: { money: stage({}), scaleMinor: 0, zone: UTC_ZONE },
 };
 

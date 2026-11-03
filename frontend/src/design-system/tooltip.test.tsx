@@ -14,7 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
-import { useTruncationTooltip } from "./tooltip";
+import { useTooltip, useTruncationTooltip } from "./tooltip";
 
 // The specs for the tip that reveals a string its row could not fit. The
 // promise the three call sites depend on is narrow and worth stating twice: the
@@ -133,6 +133,38 @@ describe("a string too long for its row", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
     // Still focused: Escape dismissed the tip, it did not leave the row.
     expect(row).toHaveFocus();
+  });
+});
+
+// The icon action's shape: the tip's anchor wraps the control that takes focus.
+function WrappedButton() {
+  const tip = useTooltip<HTMLSpanElement>("Archive");
+  return (
+    <span ref={tip.ref} {...tip.trigger}>
+      <button type="button">x</button>
+      {tip.tip}
+    </span>
+  );
+}
+
+describe("a tip whose anchor wraps a focusable control", () => {
+  it("stays up while that control keeps focus, after the pointer has left", () => {
+    takeHoverClock();
+    armHoverIntent();
+    render(<WrappedButton />);
+    const button = screen.getByRole("button");
+    act(() => button.focus());
+
+    fireEvent.pointerEnter(button);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    fireEvent.pointerLeave(button);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Archive");
   });
 });
 

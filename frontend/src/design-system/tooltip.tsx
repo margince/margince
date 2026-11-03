@@ -311,7 +311,7 @@ function useTip<T extends HTMLElement>(
   // A tip the anchor's focus still asks for outlasts the pointer leaving it;
   // blur or Escape closes it instead.
   const closeForPointer = useCallback(() => {
-    if (anchor.current !== document.activeElement) {
+    if (!anchor.current?.contains(document.activeElement)) {
       setOpen(false);
     }
   }, []);
