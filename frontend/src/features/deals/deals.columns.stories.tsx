@@ -83,11 +83,14 @@ export const PartialCoverage: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Fleet retrofit")).toBeVisible();
     await expect(canvas.getByText("Solar pilot")).toBeVisible();
+    await expect(canvas.getByText("1 not priced")).toBeVisible();
+    await expect(canvas.getByText(/^Rates /)).toBeVisible();
+    const total = canvas.getByText("€900");
+    await expect(total).toBeVisible();
+    total.focus();
     await expect(
-      canvas.getByText("1 deal not priced · excluded"),
-    ).toBeVisible();
-    await expect(canvas.getByText(/01\/10\/2026/)).toBeVisible();
-    await expect(canvas.getByText(/€900/)).toBeVisible();
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent(/1 deal has no price.*01\/10\/2026/);
   },
 };
 

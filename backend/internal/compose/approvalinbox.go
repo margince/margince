@@ -72,7 +72,7 @@ func (i approvalInbox) ListApprovals(ctx context.Context, q agents.ApprovalQuery
 	if status == "" {
 		status = approvals.StatusPending
 	}
-	in := approvals.ListInput{Status: &status, Limit: q.Limit, Cursor: q.Cursor, IncludeMuted: q.IncludeMuted}
+	in := approvals.ListInput{Status: &status, Actionable: true, Limit: q.Limit, Cursor: q.Cursor, IncludeMuted: q.IncludeMuted}
 	if q.Kind != "" {
 		in.Kind = &q.Kind
 	}
