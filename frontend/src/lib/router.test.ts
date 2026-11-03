@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { parseHash, routeHash, routeIdentity } from "./router";
+/** @vitest-environment happy-dom */
+import { act, cleanup, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { routeIdentity } from "./routeidentity";
+import { parseHash, routeHash, useRoute, watchAddress } from "./router";
 
 // The hash router's parse/serialize round-trip, pinned so a 3rd path segment
 // (the share screen's #/share/<type>/<id>) can be added without silently
@@ -242,4 +245,86 @@ it("gives the old and new company contacts addresses one identity", () => {
   expect(routeIdentity(parseHash("#/companies/o-1/contacts"))).toBe(
     routeIdentity(parseHash("#/companies/o-1/contacts")),
   );
+});
+
+// A record's entry sits under `/r/<type>/<id>` and the list's under `/`. A
+// browser fires only `popstate` for a move between them. happy-dom also queues
+// a `hashchange` after replaceState, which a browser never does. It is held
+// while `holding` is set.
+describe("Back and Forward across a path change", () => {
+  const COMPANY = "01a00000-0000-7000-8000-000000000003";
+  let holding = true;
+  const holdHashchange = (event: Event) => {
+    if (holding) {
+      event.stopImmediatePropagation();
+    }
+  };
+
+  beforeEach(() => {
+    holding = true;
+    globalThis.addEventListener("hashchange", holdHashchange);
+  });
+
+  afterEach(() => {
+    cleanup();
+    globalThis.history.replaceState(null, "", "/");
+    globalThis.removeEventListener("hashchange", holdHashchange);
+  });
+
+  it("redraws the list when Back leaves the record's path", () => {
+    globalThis.history.replaceState(
+      null,
+      "",
+      `/r/companies/${COMPANY}#/companies/${COMPANY}`,
+    );
+    const view = renderHook(useRoute);
+    expect(view.result.current).toMatchObject({
+      screen: "companies",
+      id: COMPANY,
+    });
+
+    act(() => {
+      globalThis.history.replaceState(null, "", "/#/companies?q=Acme");
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(view.result.current).toEqual(parseHash("#/companies"));
+    expect(globalThis.location.pathname).toBe("/");
+  });
+
+  it("reopens the record when Forward enters the record's path", () => {
+    globalThis.history.replaceState(null, "", "/#/companies?q=Acme");
+    const view = renderHook(useRoute);
+    expect(view.result.current.screen).toBe("companies");
+
+    act(() => {
+      globalThis.history.replaceState(null, "", `/#/companies/${COMPANY}`);
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(view.result.current).toMatchObject({
+      screen: "companies",
+      id: COMPANY,
+    });
+    expect(globalThis.location.pathname).toBe(`/r/companies/${COMPANY}`);
+  });
+
+  it("announces one move once when both events arrive for it", () => {
+    globalThis.history.replaceState(null, "", "/#/companies");
+    const told = vi.fn();
+    const stop = watchAddress(told);
+    try {
+      globalThis.history.pushState(null, "", "/#/companies?q=Acme");
+      globalThis.dispatchEvent(new PopStateEvent("popstate"));
+      holding = false;
+      globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
+
+      expect(told).toHaveBeenCalledTimes(1);
+      expect(globalThis.history.state).toMatchObject({
+        marginceDepth: { depth: 1, at: "#/companies?q=Acme" },
+      });
+    } finally {
+      stop();
+    }
+  });
 });

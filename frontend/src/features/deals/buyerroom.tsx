@@ -10,7 +10,11 @@ import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { forgetHashCredential, takeHashCredential } from "../../lib/router";
+import {
+  forgetHashCredential,
+  takeHashCredential,
+  watchAddress,
+} from "../../lib/router";
 import { BuyerBoard } from "./buyerroomboard";
 import {
   BuyerFrame,
@@ -54,14 +58,14 @@ export function BuyerRoomScreen() {
     takeHashCredential(ROOM_ROUTE),
   );
   useEffect(() => {
-    const onHashChange = () => {
+    // watchAddress and not a raw `hashchange`: a Back or Forward that changes
+    // the path fires only `popstate`, and the router hears both.
+    return watchAddress(() => {
       const next = takeHashCredential(ROOM_ROUTE);
       if (next) {
         setCredential(next);
       }
-    };
-    globalThis.addEventListener?.("hashchange", onHashChange);
-    return () => globalThis.removeEventListener?.("hashchange", onHashChange);
+    });
   }, []);
   // A link in hand outranks a kept session from the first render: a tab that
   // still holds room A's session must not show room A for a breath while

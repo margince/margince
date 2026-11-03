@@ -44,7 +44,8 @@ function stamp(value: number): void {
 /**
  * Note the entry the reader is on.
  *
- * `moved`: the app just moved by `hashchange`. `replaced`: the app rewrote the
+ * `moved`: the browser moved to another entry (`popstate` or `hashchange`,
+ * counted once per move by lib/router.tsx). `replaced`: the app rewrote the
  * address of the entry it is on. `start`: the app begins watching the address.
  * A stamp written at another address is trusted only after a replace.
  * Otherwise it was copied from the previous entry (happy-dom does this), so

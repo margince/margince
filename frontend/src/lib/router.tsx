@@ -130,107 +130,6 @@ export function routeHash(route: Route): string {
 }
 
 /**
- * How many leading segments of an address identify WHAT is on screen.
- *
- * Anything beyond that depth chooses a VIEW of the same thing — a tab — and
- * moving between views must not throw the page away: the screen keeps its state,
- * the chrome above the tab strip keeps its DOM nodes, and the arrival animation
- * (design-system/enter.css) plays for the panel that actually changed instead of
- * for the header, the readings and the tab bar the reader just clicked.
- *
- * `WHOLE_ADDRESS` — every segment names the thing — is what almost every screen
- * wants, and the exceptions are only the screens that put a TAB in the URL. So
- * this table looks like it does nothing, and that is the point: it is the one
- * place a new tabbed screen declares itself, and a screen added to the union
- * cannot inherit an answer nobody chose, because `Record` makes the set
- * complete. Lower a screen's depth ONLY for a segment that selects a view of
- * what is already on screen — a flow step, an outcome, or a second record id is
- * a different thing, and remounting is right for those.
- */
-const WHOLE_ADDRESS = 4;
-
-const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
-  home: WHOLE_ADDRESS,
-  // #/contacts/<contact>/<tab> — the six contact tabs are a view of one contact,
-  // and they are the reason this table exists.
-  contacts: 2,
-  // #/companies/<account>/<tab> — the account's tabs are a view of one
-  // account, exactly as the contact's are above.
-  companies: 2,
-  partners: WHOLE_ADDRESS,
-  // #/leads/<lead>/<tab> — the lead's two tabs are a view of one lead.
-  leads: 2,
-  deals: WHOLE_ADDRESS,
-  projects: WHOLE_ADDRESS,
-  // #/worklist/<owner> and #/worklist/unassigned are real addresses the Brief
-  // team board navigates to, and App.tsx hands that segment to the screen as
-  // `opensOn`. The screen reads it in useState INITIALISERS, so the remount is
-  // what applies it: lower this and a manager clicking a colleague's name keeps
-  // reading their OWN queue under that colleague's address, with no error and
-  // nothing on screen to say so.
-  //
-  // Held by features/worklist/worklist.identity.test.tsx. Selecting a row is
-  // local state and never touches the address. That makes lowering this look
-  // free, but the depth protects the address, not the pane.
-  worklist: WHOLE_ADDRESS,
-  // #/analytics/<section> — the picker chooses a view of one screen, so
-  // switching sections re-renders the panel instead of throwing the screen away.
-  analytics: 1,
-  // Not a tab, however much the sidebar looks like one: every settings entry is
-  // its own page, and the admin half is a segment deeper.
-  settings: WHOLE_ADDRESS,
-  filters: WHOLE_ADDRESS,
-  scheduled: WHOLE_ADDRESS,
-  offers: WHOLE_ADDRESS,
-  "legal-reviews": WHOLE_ADDRESS,
-  search: WHOLE_ADDRESS,
-  // A different tag is a different page, not a tab of one: the whole address
-  // keys it, so opening a second word starts a fresh read rather than showing
-  // the first one's counts under the second one's name.
-  tags: WHOLE_ADDRESS,
-  lists: WHOLE_ADDRESS,
-  share: WHOLE_ADDRESS,
-  onboarding: WHOLE_ADDRESS,
-  client: WHOLE_ADDRESS,
-  book: WHOLE_ADDRESS,
-  preferences: WHOLE_ADDRESS,
-  // Token AND purpose name the thing: the same reader may hold links for
-  // two different kinds of mail, and they are two different pages.
-  unsubscribe: WHOLE_ADDRESS,
-  confirm: WHOLE_ADDRESS,
-  room: WHOLE_ADDRESS,
-  "oauth-consent": WHOLE_ADDRESS,
-  "reset-password": WHOLE_ADDRESS,
-  ext: WHOLE_ADDRESS,
-  // Every segment of `#/x/<key>` names the thing: the key IS which fork screen
-  // this is, so moving between two of them must remount rather than re-render
-  // one with the other's state. One depth serves every fork screen, which is
-  // this seam's one real limit — a fork screen wanting a TAB in its address
-  // keeps that tab's state inside its own component, because declaring a depth
-  // here would mean editing this file, which is what the seam exists to stop.
-  x: WHOLE_ADDRESS,
-  "not-found": WHOLE_ADDRESS,
-};
-
-/**
- * The address with its view-only segments dropped: what is on screen, not which
- * view of it.
- *
- * Built out of `routeHash` rather than joined by hand, so there is still one
- * spelling of an address in this module and a truncated one cannot drift from a
- * whole one.
- */
-export function routeIdentity(route: Route): string {
-  const depth = IDENTITY_DEPTH[route.screen];
-  return routeHash({
-    screen: route.screen,
-    id: depth > 1 ? route.id : undefined,
-    id2: depth > 2 ? route.id2 : undefined,
-    id3: depth > 3 ? route.id3 : undefined,
-  });
-}
-
-/**
  * Go to an address.
  *
  * `dials` is the QUERY half — which view of the screen, not which screen. It is
@@ -261,7 +160,7 @@ export function navigate(route: Route, dials?: UrlParams): void {
  * and the offset saved under it would be lost. Carrying the current
  * state through keeps the entry the same entry.
  *
- * It fires no `hashchange`, so the store has to be told; lib/urlstate.ts's
+ * It fires no event, so the store has to be told; lib/urlstate.ts's
  * `replaceParams` is the same write for the QUERY half and says the same thing.
  */
 export function navigateReplacing(route: Route, dials?: UrlParams): void {
@@ -377,6 +276,18 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
 // Notify subscribers synchronously so an app navigation cannot fetch the previous route.
 const watchers = new Set<() => void>();
 
+// The whole address (path, query and fragment) as of the last announcement.
+// The browser tells this module about a Back or Forward with two events, and
+// it fires both for a fragment-only move: `popstate` and then `hashchange`.
+// The second one finds the address it already announced and does nothing, so
+// one move is one announcement and one history entry counted.
+let lastAddress: string | undefined;
+
+function liveAddress(): string {
+  const { pathname, search, hash } = globalThis.location;
+  return `${pathname}${search}${hash}`;
+}
+
 function announce(): void {
   publishRecordAddress();
   // A replace keeps the entry, and the address noted for it must follow. With
@@ -384,6 +295,9 @@ function announce(): void {
   if (watchers.size > 0) {
     noteHistoryEntry("replaced");
   }
+  // Read after publishRecordAddress has rewritten the path, so the event that
+  // trails this move finds the rewritten address and counts as the same move.
+  lastAddress = liveAddress();
   // A copy, so a watcher that unsubscribes while being told does not change the
   // set underneath the loop.
   for (const watcher of [...watchers]) {
@@ -392,6 +306,9 @@ function announce(): void {
 }
 
 function addressChanged(): void {
+  if (liveAddress() === lastAddress) {
+    return;
+  }
   // A second link pasted into an open tab is a hash change and nothing else:
   // the screen does not remount for one, and whatever renders next is decided
   // above the route. So the credential comes out of the new address before
@@ -401,29 +318,48 @@ function addressChanged(): void {
   announce();
 }
 
+// Both events, because neither covers every move. `hashchange` fires only when
+// two entries differ in the fragment alone. A record's entry sits under
+// `/r/<type>/<id>` (lib/recordaddress.ts), so Back from a record to the list at
+// `/` changes the path, and the browser fires `popstate` and no `hashchange`.
+// `popstate` is the one that fires on every Back and Forward, but not on an
+// assignment to `location.hash` everywhere.
 function subscribe(onChange: () => void): () => void {
   if (watchers.size === 0) {
     publishRecordAddress();
     // The entry the app starts on, so the first move is counted from it.
     noteHistoryEntry("start");
+    lastAddress = liveAddress();
     globalThis.addEventListener("hashchange", addressChanged);
+    globalThis.addEventListener("popstate", addressChanged);
   }
   watchers.add(onChange);
   return () => {
     watchers.delete(onChange);
     if (watchers.size === 0) {
       globalThis.removeEventListener("hashchange", addressChanged);
+      globalThis.removeEventListener("popstate", addressChanged);
     }
   };
+}
+
+/**
+ * Run `onChange` each time the address moves. The router has already taken
+ * any credential out of it and counted the history entry.
+ *
+ * A raw `hashchange` listener misses a Back or Forward that changes the path.
+ * This one hears every move the router hears.
+ */
+export function watchAddress(onChange: () => void): () => void {
+  return subscribe(onChange);
 }
 
 /**
  * Tell the address store the hash moved, for a move this app made itself.
  *
  * Only lib/urlstate.ts needs it: it writes the address directly, so nothing has
- * dispatched anything yet. A second announcement when the browser's own
- * `hashchange` lands costs nothing — the snapshot is a string, and an unchanged
- * one re-renders nobody.
+ * dispatched anything yet. An event that lands for the same address afterwards
+ * finds it already announced and does nothing.
  */
 export function announceAddressChanged(): void {
   announce();
@@ -435,8 +371,8 @@ export function announceAddressChanged(): void {
  * Exported because an address has two halves with two owners. The path names
  * what is on screen and is this module's. The query names which view of it (how
  * a list is narrowed, ordered and paged) and belongs to lib/urlstate.ts.
- * Both must re-render on the same event, and a second subscription to
- * `hashchange` would be a second answer to where the reader is.
+ * Both must re-render on the same announcement, and a second subscription to
+ * the browser's events would be a second answer to where the reader is.
  */
 export function useHash(): string {
   // Taken during the FIRST render of whoever reads the address, ahead of the
