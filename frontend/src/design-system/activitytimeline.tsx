@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
+import { correspondenceSide } from "../lib/messagevoice";
 import { markdownLines } from "./markdown-text";
 import {
   type ContactOn,
@@ -159,6 +160,8 @@ export function activityTimeline(
       body: activity.body,
       transcript: isTranscriptActivity(activity),
       direction: activity.direction,
+      // Who wrote it, by the shared rule: known authorship over transport.
+      side: correspondenceSide(activity),
       counterparts:
         contacts && who
           ? withWhom(namesOf(contacts), who.t, who.locale)
