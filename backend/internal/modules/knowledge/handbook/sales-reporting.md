@@ -137,7 +137,7 @@ To read a report, a user needs access to the report and access to the numbers un
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
-## What does the assessment panel say?
+## What does the panel under the summary say?
 
 **Assessment** sits below the summary and the actions of the sales review. It reads the measured figures and writes a few sentences on what they show. Each is marked as an observation, a reported fact or a guess. It names one next decision on a deal you may open, or says that none is supported.
 
