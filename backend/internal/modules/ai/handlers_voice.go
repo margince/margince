@@ -317,6 +317,7 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		return crmcontracts.VoiceProfile{}, err
 	}
 	summary := view.Summary
+	remaining := FirstBuildWordsRemaining(summary.TotalWords)
 	version := int(p.Version)
 	profileVersion := p.ProfileVersion
 	voiceProfileMD := p.VoiceProfileMD
@@ -327,23 +328,24 @@ func (h Handlers) wireVoiceProfile(ctx context.Context, p VoiceProfile) (crmcont
 		updatedAt = *p.UpdatedAt
 	}
 	wire := crmcontracts.VoiceProfile{
-		Id:                  openapi_types.UUID(p.ID),
-		Status:              crmcontracts.VoiceProfileStatus(p.Status),
-		VoiceProfileMd:      &voiceProfileMD,
-		ProfileVersion:      &profileVersion,
-		PersonalityMd:       p.PersonalityMD,
-		AutoLearningEnabled: p.AutoLearningEnabled,
-		ActiveSourceHash:    p.ActiveSourceHash,
-		CandidateVersion:    view.CandidateVersion,
-		LastBuiltAt:         p.LastBuiltAt,
-		Maturity:            &maturity,
-		QualityBand:         &qualityBand,
-		Source:              p.Source,
-		CapturedBy:          &p.CapturedBy,
-		Version:             version,
-		CreatedAt:           p.CreatedAt,
-		UpdatedAt:           updatedAt,
-		ArchivedAt:          p.ArchivedAt,
+		Id:                       openapi_types.UUID(p.ID),
+		Status:                   crmcontracts.VoiceProfileStatus(p.Status),
+		VoiceProfileMd:           &voiceProfileMD,
+		ProfileVersion:           &profileVersion,
+		PersonalityMd:            p.PersonalityMD,
+		AutoLearningEnabled:      p.AutoLearningEnabled,
+		ActiveSourceHash:         p.ActiveSourceHash,
+		CandidateVersion:         view.CandidateVersion,
+		FirstBuildWordsRemaining: &remaining,
+		LastBuiltAt:              p.LastBuiltAt,
+		Maturity:                 &maturity,
+		QualityBand:              &qualityBand,
+		Source:                   p.Source,
+		CapturedBy:               &p.CapturedBy,
+		Version:                  version,
+		CreatedAt:                p.CreatedAt,
+		UpdatedAt:                updatedAt,
+		ArchivedAt:               p.ArchivedAt,
 	}
 	if view.LatestBuild != nil {
 		latest := wireVoiceBuild(*view.LatestBuild)

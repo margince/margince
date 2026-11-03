@@ -102,20 +102,22 @@ export function VoiceDnaCard() {
           // DNA at all, and everything the profile unlocks stayed unreachable.
           <div className="vdna-page">
             <VoiceStart />
-            <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
-              <PanelBody>
-                <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-                <VoiceKinds />
-                {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
-              </PanelBody>
-              {/* The first sample mints the profile, so adding it takes the
+            <VoiceSection id={VOICE_SECTIONS.sharpen}>
+              <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
+                <PanelBody>
+                  <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
+                  <VoiceKinds />
+                  {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
+                </PanelBody>
+                {/* The first sample mints the profile, so adding it takes the
                   create grant rather than the update one. */}
-              {canCreate && (
-                <SettingList bleed="settings">
-                  <VoiceCorpusIntake first intake={intake} />
-                </SettingList>
-              )}
-            </Panel>
+                {canCreate && (
+                  <SettingList bleed="settings">
+                    <VoiceCorpusIntake first intake={intake} />
+                  </SettingList>
+                )}
+              </Panel>
+            </VoiceSection>
           </div>
         )
       }

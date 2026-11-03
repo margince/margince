@@ -23,11 +23,8 @@ export function reportFailure(
   };
 }
 
-// The two ADR-0066 maturity thresholds, mirrored so the build control can say
-// how far a corpus still has to go. The server decides what state a profile is
-// in (VoiceProfile.maturity); these only phrase the distance to the next one.
-export const VOICE_FIRST_BUILD_WORDS = 800;
-
+// The ADR-0066 full-build threshold, mirrored to phrase how far a provisional
+// corpus still has to go. The first-build distance comes from the server.
 const VOICE_FULL_BUILD_WORDS = 4000;
 
 /** How a build ended, and the server's own words about it when it has any. */
@@ -157,14 +154,14 @@ export function useVoiceBuild(profile: VoiceProfile, onBuilt: () => void) {
   // threshold. The word counts below only phrase the distance to the next state.
   const tooThin = profile.maturity === "collecting";
   // The distance is quoted only from a corpus total that loaded. A failed
-  // fetch would read as zero words and announce "about 800 more words" when
-  // the cause was the failure. The button's state follows maturity, which
-  // comes from a different request.
+  // fetch would read as zero words and announce a distance caused by the
+  // failure. The first-build distance is the profile's own server fact.
   const words = corpus.isSuccess ? corpus.data.summary.total_words : null;
+  const remaining = profile.first_build_words_remaining ?? null;
   const blocked =
-    tooThin && words !== null
+    tooThin && remaining !== null
       ? t("settings.voice.buildNeedsWords", {
-          n: formatNumber(Math.max(0, VOICE_FIRST_BUILD_WORDS - words), locale),
+          n: formatNumber(remaining, locale),
         })
       : null;
   const reach =
@@ -179,6 +176,7 @@ export function useVoiceBuild(profile: VoiceProfile, onBuilt: () => void) {
     error,
     tooThin,
     words,
+    remaining,
     blocked,
     reach,
     progress: buildStatusLine(

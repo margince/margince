@@ -65,10 +65,32 @@ export function voiceSetupState(profile: VoiceProfile | null): VoiceSetupState {
   }
 }
 
-/** Whether a build of this profile is still on its way to a result. */
-export function voiceBuildPending(profile: VoiceProfile | null): boolean {
-  const status = profile?.latest_build?.status;
-  return status === "queued" || status === "running" || status === "deferred";
+const BUILD_POLL_MS = 10_000;
+// Past the deferral's due time, so the re-read finds the build already re-queued.
+const DEFERRED_SLACK_MS = 5_000;
+// The longest delay a browser timer holds; a later due time waits for a visit.
+const MAX_TIMER_MS = 2_147_483_647;
+
+/**
+ * When the profile read should run again on its own, or false for never.
+ * A running build is polled. A deferred one is read once when it is due, since
+ * polling a deferral would re-read all day from every page the reminder sits on.
+ */
+export function voiceRefetchDelay(
+  profile: VoiceProfile | null,
+  now: number,
+): number | false {
+  const build = profile?.latest_build;
+  if (build?.status === "queued" || build?.status === "running") {
+    return BUILD_POLL_MS;
+  }
+  if (build?.status !== "deferred" || !build.next_attempt_at) {
+    return false;
+  }
+  const due = Date.parse(build.next_attempt_at) - now;
+  return due > 0 && due + DEFERRED_SLACK_MS <= MAX_TIMER_MS
+    ? due + DEFERRED_SLACK_MS
+    : false;
 }
 
 /**

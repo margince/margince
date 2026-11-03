@@ -2,9 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem, unwrap } from "./problem";
-import { voiceBuildPending } from "./voice-setup";
-
-const BUILD_POLL_MS = 10_000;
+import { voiceRefetchDelay } from "./voice-setup";
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
@@ -22,7 +20,7 @@ export function useVoiceProfile(enabled = true) {
     // A build outlives the page that started it. While one is on its way the
     // profile is re-read, so setup and the page show its result unprompted.
     refetchInterval: (query) =>
-      voiceBuildPending(query.state.data ?? null) ? BUILD_POLL_MS : false,
+      voiceRefetchDelay(query.state.data ?? null, Date.now()),
     queryFn: async (): Promise<VoiceProfile | null> => {
       const data = unwrap(await api.GET("/voice-profiles"));
       return data.data[0] ?? null;

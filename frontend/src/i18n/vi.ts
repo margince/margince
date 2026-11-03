@@ -14215,7 +14215,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.caption.waitsAdmin": "Đang chờ quản trị viên.",
   "setup.caption.mailReconnect": "Kết nối đã hết hạn.",
   "setup.caption.calendarReconnect": "Đã hết hạn hoặc không thể đặt lịch.",
-  "setup.caption.voice": "Cần 800 từ do bạn viết.",
+  "setup.caption.voice": "Cần thêm khoảng {n} từ do bạn viết.",
+  "setup.caption.voiceSamples": "Cần văn mẫu do chính bạn viết.",
   "setup.caption.voiceReview":
     "Giọng văn của bạn đã được huấn luyện và chờ bạn xem lại.",
   "setup.caption.voiceBuilding":

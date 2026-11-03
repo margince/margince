@@ -9,12 +9,7 @@ import { useJumpTo } from "../../design-system/jumpbar";
 import { Meter } from "../../design-system/readings";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import {
-  BuildButton,
-  useVoiceBuild,
-  VOICE_FIRST_BUILD_WORDS,
-  type VoiceBuild,
-} from "./voice-dna.build";
+import { BuildButton, useVoiceBuild, type VoiceBuild } from "./voice-dna.build";
 import { type VoiceInsightsData, VoicePortrait } from "./voice-insights";
 import { bandLabel } from "./voice-samples";
 import "./voice-dna.css";
@@ -169,12 +164,12 @@ function FirstBuild({
   return (
     <div className="vdna-firstbuild">
       <VoiceSteps done={ready ? 1 : 0} />
-      {!ready && run.words !== null && (
+      {!ready && run.words !== null && run.remaining !== null && (
         <Meter
           dense
           tone="ai"
           value={run.words}
-          max={VOICE_FIRST_BUILD_WORDS}
+          max={run.words + run.remaining}
           label={run.blocked ?? ""}
         />
       )}
@@ -297,7 +292,12 @@ function VoiceSteps({ done }: Readonly<{ done: number }>) {
 export function VoiceStart() {
   const t = useT();
   return (
-    <section className="vdna-hero" aria-label={t("settings.voice.heroLabel")}>
+    <section
+      id={VOICE_SECTIONS.voice}
+      tabIndex={-1}
+      className="vdna-hero"
+      aria-label={t("settings.voice.heroLabel")}
+    >
       <div className="vdna-hero-text">
         <div className="vdna-portrait">
           <Heading size="large" as="h2" className="vdna-identity">

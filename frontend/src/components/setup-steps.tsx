@@ -5,7 +5,8 @@ import { Button } from "../design-system/atoms";
 import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { StatusBadge } from "../design-system/statusbadge";
 import { accountNameOf } from "../format/connectorprovider";
-import { type Translator, useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { deferralDetail } from "../lib/deferral-detail";
 import { navigate } from "../lib/router";
@@ -35,7 +36,7 @@ const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
 const WHY: Readonly<Record<SetupStepId, MessageKey>> = {
   mail: "setup.caption.mail",
   calendar: "setup.caption.calendar",
-  voice: "setup.caption.voice",
+  voice: "setup.caption.voiceSamples",
   booking: "setup.caption.booking",
 };
 
@@ -77,7 +78,7 @@ const VOICE_COPY: Readonly<
     action: "setup.action.voiceBuild",
   },
   needsSamples: {
-    caption: "setup.caption.voice",
+    caption: "setup.caption.voiceSamples",
     action: "setup.action.voice",
   },
   unknown: {
@@ -93,14 +94,19 @@ function voiceCopy(step: SetupStep) {
   ];
 }
 
-// A failed or deferred build quotes what the server recorded about it.
-function voiceCaption(t: Translator, step: SetupStep): string {
+// A failed or deferred build quotes what the server recorded about it, and a
+// thin corpus quotes the server's count of words still missing.
+function voiceCaption(t: Translator, locale: Locale, step: SetupStep): string {
   const build = step.voice?.build;
   const recorded =
     build &&
     (step.voice?.state === "failed" || step.voice?.state === "deferred")
       ? deferralDetail(t, build)
       : null;
+  const remaining = step.voice?.wordsRemaining;
+  if (step.voice?.state === "needsSamples" && remaining) {
+    return t("setup.caption.voice", { n: formatNumber(remaining, locale) });
+  }
   const caption = t(voiceCopy(step).caption);
   return recorded ? `${caption} ${recorded}` : caption;
 }
@@ -116,9 +122,12 @@ function reasonKey(step: SetupStep): MessageKey {
 
 function useCaption(): (step: SetupStep) => string {
   const t = useT();
+  const { locale } = useLocale();
   return (step) => {
     if (step.state !== "done") {
-      return step.id === "voice" ? voiceCaption(t, step) : t(reasonKey(step));
+      return step.id === "voice"
+        ? voiceCaption(t, locale, step)
+        : t(reasonKey(step));
     }
     if (step.account) {
       const provider = t(accountNameOf(step.account.provider));

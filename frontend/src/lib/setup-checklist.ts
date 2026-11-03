@@ -61,6 +61,8 @@ export type SetupStep = Readonly<{
   voice?: Readonly<{
     state: VoiceSetupState;
     build: VoiceBuildFacts | null;
+    /** The server's count of words still missing for a first build. */
+    wordsRemaining: number | null;
   }> | null;
 }>;
 
@@ -200,7 +202,11 @@ function voiceStep(voice: NonNullable<SetupReads["voice"]>): Draft {
   const state = voiceSetupState(voice.profile);
   return {
     ...draft("voice", "voice", { done: state === "active" }),
-    voice: { state, build: voice.profile?.latest_build ?? null },
+    voice: {
+      state,
+      build: voice.profile?.latest_build ?? null,
+      wordsRemaining: voice.profile?.first_build_words_remaining ?? null,
+    },
   };
 }
 

@@ -14597,7 +14597,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.caption.waitsAdmin": "Wartet auf einen Admin.",
   "setup.caption.mailReconnect": "Verbindung abgelaufen.",
   "setup.caption.calendarReconnect": "Abgelaufen oder kann nicht buchen.",
-  "setup.caption.voice": "Braucht 800 eigene Wörter.",
+  "setup.caption.voice": "Braucht noch etwa {n} eigene Wörter.",
+  "setup.caption.voiceSamples": "Braucht eigene Schreibproben.",
   "setup.caption.voiceReview":
     "Dein Schreibstil ist trainiert und wartet auf deine Prüfung.",
   "setup.caption.voiceBuilding":

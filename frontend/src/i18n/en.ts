@@ -14536,7 +14536,8 @@ export const en = {
   "setup.caption.waitsAdmin": "Waits on an administrator.",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
-  "setup.caption.voice": "Needs 800 words you wrote.",
+  "setup.caption.voice": "Needs about {n} more words you wrote.",
+  "setup.caption.voiceSamples": "Needs writing samples of your own.",
   "setup.caption.voiceReview": "Your voice is trained and ready to review.",
   "setup.caption.voiceBuilding":
     "Building your voice. It continues if you leave.",

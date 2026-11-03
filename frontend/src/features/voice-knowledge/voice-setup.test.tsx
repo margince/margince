@@ -90,6 +90,7 @@ function runningBuild(): VoiceBuild {
 // activation would, and every read answers from it.
 type Server = { profile: VoiceProfile; versions: VoiceProfileVersion[] };
 let server: Server;
+let noProfile = false;
 let applyStatus = 200;
 
 function json(body: unknown, status = 200) {
@@ -161,7 +162,7 @@ function answer(request: Request): Response {
     });
   }
   if (path === "/voice-profiles")
-    return json({ data: [server.profile], page: PAGE });
+    return json({ data: noProfile ? [] : [server.profile], page: PAGE });
   if (path === "/voice-profiles/vp-1/sources")
     return json({ data: [], summary: SUMMARY });
   if (path === "/voice-profiles/vp-1/versions")
@@ -224,6 +225,7 @@ async function setupPanel() {
 }
 
 beforeEach(() => {
+  noProfile = false;
   applyStatus = 200;
   globalThis.location.hash = "#/settings/voice";
   vi.stubGlobal(
@@ -249,7 +251,7 @@ describe("finishing setup with a trained voice awaiting review", () => {
         "Your voice is trained and ready to review.",
       ),
     ).toBeTruthy();
-    expect(within(setup).queryByText("Needs 800 words you wrote.")).toBeNull();
+    expect(within(setup).queryByText(/more words you wrote/)).toBeNull();
     expect(
       within(setup).queryByRole("button", { name: "Add samples" }),
     ).toBeNull();
@@ -371,5 +373,47 @@ describe("finishing setup with a trained voice awaiting review", () => {
       }),
     ).toBeTruthy();
     expect(await screen.findByText("Voice v1 ready for review")).toBeTruthy();
+  });
+
+  it("quotes the server's count of missing words for a thin corpus", async () => {
+    server = {
+      profile: {
+        ...PROFILE,
+        maturity: "collecting",
+        first_build_words_remaining: 380,
+      },
+      versions: [],
+    };
+    renderBoth();
+
+    expect(
+      await within(await setupPanel()).findByText(
+        "Needs about 380 more words you wrote.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("lands Add samples on the intake when no profile exists yet", async () => {
+    noProfile = true;
+    server = firstCandidate();
+    const user = userEvent.setup();
+    renderBoth();
+    const setup = await setupPanel();
+    expect(
+      within(setup).getByText("Needs writing samples of your own."),
+    ).toBeTruthy();
+
+    await user.click(
+      within(setup).getByRole("button", { name: "Add samples" }),
+    );
+
+    await waitFor(() =>
+      expect(document.activeElement?.id).toBe("vdna-sharpen"),
+    );
+    const intake = document.getElementById("vdna-sharpen");
+    expect(
+      intake && within(intake).getByRole("button", { name: /Add text/ }),
+    ).toBeTruthy();
+    expect(globalThis.location.hash).not.toContain("focus=");
   });
 });
