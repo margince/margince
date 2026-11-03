@@ -108,6 +108,46 @@ export const LinkValue: Story = {
   },
 };
 
+// A link that does not wrap (an address cut with an ellipsis) stays inside its
+// column, and its bubble stays in view.
+export const LongLinkValue: Story = {
+  args: {
+    editLabel: "Change Email",
+    link: true,
+    children: (
+      <a
+        className="link-button"
+        href="mailto:procurement.department.central@industrial-automation.example"
+        style={{
+          display: "block",
+          minInlineSize: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        procurement.department.central@industrial-automation.example
+      </a>
+    ),
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ inlineSize: "14rem" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const pill = canvasElement.querySelector(".editable-value");
+    const column = pill?.parentElement;
+    await expect(pill && column).toBeTruthy();
+    await expect(
+      (pill?.getBoundingClientRect().right ?? 0) <=
+        (column?.getBoundingClientRect().right ?? 0) + 1,
+    ).toBe(true);
+  },
+};
+
 export const InFieldGrid: Story = {
   render: (args) => <Rows onEdit={args.onEdit} />,
 };

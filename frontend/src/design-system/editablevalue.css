@@ -2,13 +2,15 @@
 /* SPDX-FileCopyrightText: 2026 Gradion */
 
 /* The margins cancel the face's padding, so the text sits on the column edge
-   a read-only value beside it starts from. */
+   a read-only value beside it starts from; the cap holds a link that cannot wrap. */
 .editable-value {
-  --editableFill: var(--groundHover);
+  /* A step past the hover ground, so a pill in a hovered row or card still shows. */
+  --editableFill: color-mix(in srgb, var(--hoverShade) 70%, var(--groundHover));
   display: inline-flex;
   align-items: flex-start;
   gap: var(--space-1);
   min-inline-size: 0;
+  max-inline-size: calc(100% + var(--space-2));
   margin-block: calc(-1 * var(--space-1));
   margin-inline-start: calc(-1 * var(--space-2));
   padding: 0;
@@ -17,16 +19,6 @@
   background: transparent;
   text-align: start;
   cursor: pointer;
-}
-
-/* Dark's row hover is a quarter shade, too faint to mark a pill on its own. */
-:root[data-theme="dark"] .editable-value {
-  --editableFill: color-mix(in srgb, var(--hoverShade) 60%, var(--ground));
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .editable-value {
-    --editableFill: color-mix(in srgb, var(--hoverShade) 60%, var(--ground));
-  }
 }
 
 .editable-value-face {

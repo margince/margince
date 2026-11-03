@@ -5438,9 +5438,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.terminalDisqualified":
     "Disqualifiziert. Dieser Lead ist schreibgeschützt.",
   "lead.marker": "Lead",
-  "lead.assign": "Zuweisen",
   "lead.assignToMe": "Mir zuweisen",
-  "lead.assignTo": "Diesen Lead zuweisen an",
   "lead.assignChoose": "Teammitglied wählen",
   "lead.assignNobodyElse":
     "Kein weiteres Teammitglied, dem dieser Lead zugewiesen werden kann.",

@@ -1,33 +1,6 @@
 /* SPDX-License-Identifier: BUSL-1.1 */
 /* SPDX-FileCopyrightText: 2026 Gradion */
 
-/* A value that opens an edit form somewhere else, drawn as text. Padding and
- * the matching negative margin cancel, so the text lands on the column edge a
- * read-only value beside it starts from. */
-.inline-editable {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  background: transparent;
-  border: 0;
-  padding: 2px 4px;
-  margin: -2px -4px;
-  border-radius: var(--r-sm);
-  /* A button centres its lines; a value that wraps reads from its start edge. */
-  text-align: start;
-  cursor: pointer;
-  transition: background-color var(--dur-state);
-}
-.inline-editable:hover,
-.inline-editable:focus-visible {
-  background: var(--groundHover);
-}
-.inline-editable:focus-visible {
-  outline: var(--focus-ring-forced);
-  outline-offset: 2px;
-  box-shadow: var(--focus-glow);
-}
-
 /* A suggested value stands in for an empty field, muted: the fact is the
    record's, but not yet this field's. */
 .inlinetext-suggested {
