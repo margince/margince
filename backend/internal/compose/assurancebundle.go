@@ -71,6 +71,10 @@ type bundleDeps struct {
 // so failing the job here would leave River retrying a pass whose real output
 // already landed, and the retry would re-scan and re-mint. What a failure costs
 // instead is one deal's task, which the next night's cycle mints again.
+//
+// A review is delivered by its own job (jobs_assurancereview.go). This pass
+// only files under a delivered review's task, and completes the review tasks
+// that have nothing left open.
 func bundleRunFindings(
 	ctx context.Context, deps bundleDeps, runID ids.UUID,
 ) (minted int, err error) {
@@ -127,6 +131,9 @@ func bundleRunFindings(
 			minted++
 		}
 	}
+	if err := settleReviewTasks(ctx, deps); err != nil {
+		failed = append(failed, err)
+	}
 	if len(failed) > 0 {
 		return minted, errors.Join(failed...)
 	}
@@ -166,9 +173,10 @@ func bundleableFindings(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
 ) ([]assurance.Exception, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT `+exceptionSelect(rawFindingMoney)+`
+		SELECT `+exceptionSelect(rawFindingMoney)+`, d.name, d.owner_id
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
+		  JOIN deal d ON d.id = e.subject_id
 		  `+findingPricedJoin(rawFindingMoney.affected)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
@@ -182,10 +190,11 @@ func bundleableFindings(
 	}
 	defer rows.Close()
 
-	// scanException, shared with AssuranceExceptions: one select list, one
-	// scanner. Two copies of a positional scan drift into reading a currency
-	// into a status, and nothing fails loudly when they do.
-	return pgx.CollectRows(rows, scanException)
+	// The labelled scanner AssuranceExceptions uses, so the owner is the deal's
+	// live owner there and here. The finding's own owner_id is the scan's
+	// snapshot, and a deal handed over since would send its task to the former
+	// owner.
+	return pgx.CollectRows(rows, scanLabelledException)
 }
 
 // cycleScopeForRun names the cycle a run's findings bundle into.
@@ -236,7 +245,11 @@ func bundleSubject(
 	ctx context.Context, deps bundleDeps, runID, cycle ids.UUID, subject subjectFindings,
 ) (bool, error) {
 	if review, ok := reviewFinding(subject); ok {
-		return bundleReview(ctx, deps, cycle, subject, review)
+		episode, err := readEpisodeTask(ctx, deps, review.ID)
+		if err != nil {
+			return false, err
+		}
+		return false, fileUnderDeliveredReview(ctx, deps, cycle, subject, review, episode)
 	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {

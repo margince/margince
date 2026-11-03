@@ -31569,6 +31569,18 @@ type AssuranceFreshness struct {
 // AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 type AssuranceFreshnessState string
 
+// AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+type AssuranceReviewDeliveries struct {
+	// Delivered Reviews that have their task, including a task somebody already completed while the review stays open.
+	Delivered int `json:"delivered"`
+
+	// Failed Reviews whose task could not be delivered after every retry.
+	Failed int `json:"failed"`
+
+	// Pending Reviews whose task is queued or retrying.
+	Pending int `json:"pending"`
+}
+
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
 	Status AssuranceRunAcceptedStatus `json:"status"`
@@ -44329,7 +44341,10 @@ type ForecastAssurance struct {
 
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
-	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// ReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+	ReviewDeliveries AssuranceReviewDeliveries `json:"review_deliveries"`
+	RunId            openapi_types.UUID        `json:"run_id"`
 
 	// Sources Every source the run tried, and how far it reached into each.
 	Sources []ForecastAssuranceSource `json:"sources"`

@@ -7860,6 +7860,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateDeals_other":
     "{count} deal đã thay đổi kể từ lần kiểm tra này.",
+  "review.deliveryFailed_one":
+    "1 lần xem xét khách hàng chưa thể giao thành công việc cho người phụ trách. Lần kiểm tra tới sẽ thử lại.",
+  "review.deliveryFailed_other":
+    "{count} lần xem xét khách hàng chưa thể giao thành công việc cho người phụ trách. Lần kiểm tra tới sẽ thử lại.",
   "review.outOfDateWorkspace":
     "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateSignals_one":
@@ -9257,6 +9261,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
   "jobs.kind.assurance_deal_rescan":
     "Kiểm tra dự báo cho một giao dịch đã thay đổi",
+  "jobs.kind.assurance_review_delivery":
+    "Công việc cho một lần xem xét khách hàng",
   "jobs.kind.brief_generate": "Bản tin sáng",
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",

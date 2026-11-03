@@ -8056,6 +8056,10 @@ export const en = {
   "review.outOfDate": "Out of date",
   "review.outOfDateDeals_one": "1 deal changed since this check.",
   "review.outOfDateDeals_other": "{count} deals changed since this check.",
+  "review.deliveryFailed_one":
+    "1 customer review could not be handed to its owner as a task. The next check tries again.",
+  "review.deliveryFailed_other":
+    "{count} customer reviews could not be handed to their owners as tasks. The next check tries again.",
   "review.outOfDateWorkspace":
     "A stage or forecast call changed since this check.",
   "review.outOfDateSignals_one": "1 buying signal changed since this check.",
@@ -9535,6 +9539,7 @@ export const en = {
   "jobs.kind.assurance_run": "Forecast check on request",
   "jobs.kind.assurance_sweep": "Forecast check",
   "jobs.kind.assurance_deal_rescan": "Forecast check of a changed deal",
+  "jobs.kind.assurance_review_delivery": "Task for a customer review",
   "jobs.kind.brief_generate": "Morning brief",
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",

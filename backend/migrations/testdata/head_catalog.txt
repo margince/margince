@@ -1327,6 +1327,7 @@ public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))
 public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL)))
+public.assurance_exception.assurance_exception_delivery_state_check CHECK ((delivery_state = ANY (ARRAY['pending'::text, 'failed'::text, 'delivered'::text])))
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
@@ -1338,6 +1339,9 @@ public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.currency currency_code gen=- def=-
+public.assurance_exception.delivered_assignee_id uuid gen=- def=-
+public.assurance_exception.delivery_attempts integer NOT NULL gen=- def=0
+public.assurance_exception.delivery_state text gen=- def=-
 public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
