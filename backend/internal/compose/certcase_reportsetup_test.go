@@ -45,7 +45,7 @@ func runReportSetup(t *testing.T, site, expected string, build func(product func
 }
 
 func TestTheInitiativeSetupCaseJudgesTheResolvedGoal(t *testing.T) {
-	expected := `{"product":"linden","country":"DE","objective":"bookings_won","unsupported":0}`
+	expected := `{"product":"linden","country":"DE","objective":"bookings_won","target_value":250000,"deadline":"2026-12-31","unsupported":0}`
 	for _, tc := range []struct {
 		name  string
 		build func(product func(string) string) string
@@ -59,9 +59,16 @@ func TestTheInitiativeSetupCaseJudgesTheResolvedGoal(t *testing.T) {
 			want: aitasks.OutcomeAccepted,
 		},
 		{
+			name: "a target the words never gave is a wrong answer",
+			build: func(product func(string) string) string {
+				return `{"name":"Linden push","filters":[{"field":"product","value":"` + product("linden") + `","phrase":"Linden press line"},{"field":"country","value":"DE","phrase":"in Germany"}],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","target_value":300000,"deadline":"2026-12-31","phrase":"sales won"},"clarifications":[],"unsupported":[]}`
+			},
+			want: aitasks.OutcomeWrongAnswer,
+		},
+		{
 			name: "the other product is a wrong answer",
 			build: func(product func(string) string) string {
-				return `{"name":"Tern push","filters":[{"field":"product","value":"` + product("tern") + `","phrase":"Linden"},{"field":"country","value":"DE","phrase":"in Germany"}],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","phrase":"sales won"},"clarifications":[],"unsupported":[]}`
+				return `{"name":"Tern push","filters":[{"field":"product","value":"` + product("tern") + `","phrase":"Linden"},{"field":"country","value":"DE","phrase":"in Germany"}],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","target_value":250000,"deadline":"2026-12-31","phrase":"sales won"},"clarifications":[],"unsupported":[]}`
 			},
 			want: aitasks.OutcomeWrongAnswer,
 		},
@@ -88,7 +95,7 @@ func TestTheInitiativeSetupCaseJudgesTheResolvedGoal(t *testing.T) {
 }
 
 func TestTheCustomReportSetupCaseJudgesMetricsAndWhatIsNamedBack(t *testing.T) {
-	expected := `{"product":"linden","period":"this_quarter","metrics":["bookings_won","open_pipeline"],"unsupported":1}`
+	expected := `{"product":"linden","period":"this_quarter","metrics":["bookings_won","open_pipeline"],"charts":["bookings_trend"],"unsupported":1}`
 	accepted := runReportSetup(t, reportsetup.SiteCustomReport, expected, func(product func(string) string) string {
 		return `{"name":"Linden this quarter","filters":[{"field":"product","value":"` + product("linden") + `","phrase":"Linden"},{"field":"period","value":"this_quarter","phrase":"this quarter"}],"metrics":[{"id":"bookings_won","phrase":"sales won"},{"id":"open_pipeline","phrase":"open pipeline"}],"charts":[{"id":"bookings_trend","phrase":"over time"}],"objective":null,"clarifications":[],"unsupported":[{"phrase":"discount per rep","reason":"No metric holds a discount."}]}`
 	})
@@ -96,7 +103,7 @@ func TestTheCustomReportSetupCaseJudgesMetricsAndWhatIsNamedBack(t *testing.T) {
 		t.Fatalf("outcome %s (%s)", accepted.Result, accepted.Detail)
 	}
 	mapped := runReportSetup(t, reportsetup.SiteCustomReport, expected, func(product func(string) string) string {
-		return `{"name":"Linden this quarter","filters":[{"field":"product","value":"` + product("linden") + `","phrase":"Linden"},{"field":"period","value":"this_quarter","phrase":"this quarter"}],"metrics":[{"id":"bookings_won","phrase":"sales won"},{"id":"open_pipeline","phrase":"open pipeline"}],"charts":[],"objective":null,"clarifications":[],"unsupported":[]}`
+		return `{"name":"Linden this quarter","filters":[{"field":"product","value":"` + product("linden") + `","phrase":"Linden"},{"field":"period","value":"this_quarter","phrase":"this quarter"}],"metrics":[{"id":"bookings_won","phrase":"sales won"},{"id":"open_pipeline","phrase":"open pipeline"}],"charts":[{"id":"bookings_trend","phrase":"over time"}],"objective":null,"clarifications":[],"unsupported":[]}`
 	})
 	if mapped.Result != aitasks.OutcomeWrongAnswer || !strings.Contains(mapped.Detail, "named back") {
 		t.Fatalf("a reply naming nothing back was %s (%s)", mapped.Result, mapped.Detail)

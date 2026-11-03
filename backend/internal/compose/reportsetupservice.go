@@ -141,11 +141,16 @@ func (s *reportSetups) gather(ctx context.Context, site, description string) (re
 }
 
 func setupCatalog(catalog crmcontracts.ReportingCatalog, lang textlang.Lang) reportsetup.Catalog {
-	out := reportsetup.Catalog{Periods: setupPeriods}
+	out := reportsetup.Catalog{Periods: setupPeriods, Countries: contacts.AssignedCountryCodes()}
 	var charts []string
 	for _, metric := range catalog.Metrics {
 		option := reportsetup.MetricOption{ID: string(metric.Id), Label: metric.Label}
 		for _, block := range metric.Blocks {
+			// The metric details table is drawn for every report and placed
+			// by no one, so it is not a chart the words can ask for.
+			if block == reportingMetricReading {
+				continue
+			}
 			option.Charts = append(option.Charts, string(block))
 			if !slices.Contains(charts, string(block)) {
 				charts = append(charts, string(block))

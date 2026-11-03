@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -46,7 +47,10 @@ type reportSetupExpectation struct {
 	Country     string   `json:"country"`
 	Period      string   `json:"period"`
 	Metrics     []string `json:"metrics"`
+	Charts      []string `json:"charts"`
 	Objective   string   `json:"objective"`
+	Target      int64    `json:"target_value"`
+	Deadline    string   `json:"deadline"`
 	Unsupported int      `json:"unsupported"`
 }
 
@@ -74,6 +78,7 @@ func (c reportSetupCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		return nil, fmt.Errorf("%s: the fixture needs a description, as production never asks without one", site)
 	}
 	in := reportsetup.Input{Site: c.site, Description: f.Description, Today: f.Today, Lang: f.Lang, Catalog: f.Catalog}
+	in.Catalog.Countries = contacts.AssignedCountryCodes()
 	labels := map[string]string{}
 	for _, product := range f.Products {
 		if err := refuseUnnameable(product.Label, "product", labels); err != nil {
@@ -102,6 +107,23 @@ type reportSetupCase struct {
 	in       reportsetup.Input
 	labels   map[string]string
 	expected reportSetupExpectation
+}
+
+// judgeObjectiveFigures asks whether the target and the deadline are the
+// ones the words gave: none when the words gave none.
+func judgeObjectiveFigures(got *reportsetup.Objective, want reportSetupExpectation) (aitasks.Outcome, bool) {
+	var target int64
+	var deadline string
+	if got != nil {
+		target, deadline = got.TargetValue, got.Deadline
+	}
+	if target != want.Target {
+		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: fmt.Sprintf("the target is %d, want %d", target, want.Target)}, true
+	}
+	if deadline != want.Deadline {
+		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: fmt.Sprintf("the deadline is %q, want %q", deadline, want.Deadline)}, true
+	}
+	return aitasks.Outcome{}, false
 }
 
 func (c *reportSetupCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
@@ -140,6 +162,12 @@ func (c *reportSetupCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	}
 	if strings.Join(got.Metrics, ",") != strings.Join(want.Metrics, ",") {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: fmt.Sprintf("the metrics are %v, want %v", got.Metrics, want.Metrics)}
+	}
+	if strings.Join(got.Blocks, ",") != strings.Join(want.Charts, ",") {
+		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: fmt.Sprintf("the charts are %v, want %v", got.Blocks, want.Charts)}
+	}
+	if outcome, wrong := judgeObjectiveFigures(got.Objective, want); wrong {
+		return outcome
 	}
 	if len(got.Unsupported) < want.Unsupported {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: fmt.Sprintf("%d phrases named back, want at least %d", len(got.Unsupported), want.Unsupported)}

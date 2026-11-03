@@ -147,7 +147,7 @@ A forecast link can share a live view or a stored capture. The user who gets it 
 
 Yes. In the custom report window, write under **What would you like to understand?** and choose **Suggest filters and charts**. In a new initiative, write under **Describe the initiative** and choose **Suggest the goal**. Margince reads your words against what you may choose: a product, an industry, a company address, a date range, the figures and the graphs.
 
-The proposal shows the words each value came from. It lists the questions your words leave open, and the parts it could not use. **Use proposal** fills the fields, and what you typed stays. Nothing is saved until you save. Without an AI model, the button says so and you choose by hand.
+The proposal shows the words each value came from. It lists the questions your words leave open, and the parts it could not use. **Use proposal** puts the proposed values into the fields, over what you had chosen; a name you typed stays. Nothing is saved until you save. Without an AI model, the button says so and you choose by hand.
 
 ## How do I record a decision from a review?
 

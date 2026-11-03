@@ -18,19 +18,19 @@ fixture:
       - {id: manufacturing, label: Manufacturing}
     periods: [this_month, last_month, this_quarter]
     metrics:
-      - {id: bookings_won, label: "Sales won", charts: [bookings_trend, metric_reading]}
-      - {id: open_pipeline, label: "Open pipeline", charts: [stage_distribution, metric_reading]}
-      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: [metric_reading]}
+      - {id: bookings_won, label: "Sales won", charts: [bookings_trend]}
+      - {id: open_pipeline, label: "Open pipeline", charts: [stage_distribution]}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: []}
     charts:
       - {id: bookings_trend, label: bookings_trend}
       - {id: stage_distribution, label: stage_distribution}
-      - {id: metric_reading, label: metric_reading}
 expect:
   outcome: accepted
   answer:
     product: linden
     period: this_quarter
     metrics: [bookings_won, open_pipeline]
+    charts: [bookings_trend, stage_distribution]
     unsupported: 0
   bands:
     certified_min: 70
