@@ -11,7 +11,7 @@ import {
   useAssignLegalEntity,
   useEntityOfUser,
   useLegalEntities,
-} from "./legalentities.queries";
+} from "../../lib/legalentities.queries";
 import type { User } from "./users-members";
 
 /**

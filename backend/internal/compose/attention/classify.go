@@ -102,6 +102,7 @@ func base(
 		MayBeDone:         item.MayBeDone,
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
+		DomainContext:     item.DomainContext,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
 		// label is what the group says. Forwarding only the first is how the

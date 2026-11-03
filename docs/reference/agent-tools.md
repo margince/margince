@@ -83,7 +83,7 @@ Open the row to see each action, the verb it runs and its tier, for example `mer
 | `preview_import` | 🟢 | `write` | no | Preview an import |
 | `resolve_duplicates` | 🟢 | `write` | no | 🔀 Merge two records, or keep both <details><summary>actions</summary>`dismiss` (`decide_duplicate`, 🟢) `merge` (`merge_records`, 🟢)</details> |
 | `update_record` | 🟢 | `write` | no | Update a record |
-| `schedule_meeting` | dynamic | `send` | yes | 🔀 Book a meeting, or invite to it <details><summary>actions</summary>`book` (`book_meeting`, 🟢) `invite` (`invite_meeting`, 🟡)</details> |
+| `schedule_meeting` | 🟡 | `send` | yes | 🔀 Invite to a meeting <details><summary>actions</summary>`invite` (`invite_meeting`, 🟡)</details> |
 | `send_outbound` | 🟢 | `send` | yes | 🔀 Send a message <details><summary>actions</summary>`chat_reply` (`send_message`, 🟢) `email_new` (`send_company_email`, 🟢) `email_reply` (`send_email`, 🟢)</details> |
 | `enrich` | 🟡 | `enrich` | yes | Look up a company on the web |
 

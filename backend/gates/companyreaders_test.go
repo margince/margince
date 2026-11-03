@@ -218,7 +218,7 @@ var notTheCompanyTable = gatekit.Waive(map[string]string{
 // the issue that will close it.
 var deferredCompanyReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/offer_render.go:resolveRenderBuyerBlock": "the buyer block of a rendered offer — the account's display name and legal name, on the document a buyer signs. Gated on offer:read and offer:update and never on company. Deferred rather than fixed because the answer is a product ruling and not a patch: an offer with its buyer block withheld is not a smaller document, it is a wrong one, and refusing the render would stop a seat sending an offer they are otherwise entitled to send. Whether offer:update implies seeing the buyer's name is the question. #5586",
-	"internal/modules/deals/offer_lifecycle.go:sendSnapshots":        "the same two columns, snapshotted onto the offer at SEND time so the document cannot change under a buyer afterwards. Same gate, same open question, and the pair must be answered together — snapshotting what the render may not show would put the two surfaces into disagreement about one offer. #5586",
+	"internal/modules/deals/offer_issuer.go:sendSnapshots":           "the same two columns, snapshotted onto the offer at SEND time so the document cannot change under a buyer afterwards. Same gate, same open question, and the pair must be answered together — snapshotting what the render may not show would put the two surfaces into disagreement about one offer. #5586",
 })
 
 var companyVerdicts = []namedVerdict{

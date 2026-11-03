@@ -26,7 +26,7 @@ func TestProjectCurrencyDerivationKeepsTheSamePricesAndCoverage(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
-	e.Deals.WithClock(func() time.Time { return date })
+	e.Deals.SetClock(func() time.Time { return date })
 	if err := e.Deals.SeedDefaults(ctx); err != nil {
 		t.Fatal(err)
 	}

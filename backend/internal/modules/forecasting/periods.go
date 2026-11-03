@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
 // Period is one forecasting window, resolved in the installation's own zone and
@@ -79,18 +81,24 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 	if fiscalStartMonth < 1 || fiscalStartMonth > 12 {
 		return Period{}, fmt.Errorf("forecasting: fiscal year start month %d is outside 1..12", fiscalStartMonth)
 	}
-	// A week is not a division of the financial year, so the month arithmetic
-	// below cannot answer it. Refused rather than defaulted: monthsIn returns 3
-	// for anything it does not recognise, so an unrefused week would resolve to
-	// a QUARTER and every reading would silently be the wrong window.
-	if kind == PeriodWeek {
+	// Each kind names its grain. A week is not a division of the financial year,
+	// and any other kind is refused rather than read as a quarter.
+	var grain reportperiod.Grain
+	switch kind {
+	case PeriodQuarter:
+		grain = reportperiod.GrainQuarter
+	case PeriodMonth:
+		grain = reportperiod.GrainMonth
+	case PeriodWeek:
 		return Period{}, errors.New("forecasting: a week is resolved by ResolveWeek from the Monday weekly.WeekStartOf returns, " +
 			"not from the financial year")
+	default:
+		return Period{}, fmt.Errorf("forecasting: no period kind %q", kind)
 	}
-	local := at.In(zone)
-	startYear, startMonth := periodStart(kind, local, fiscalStartMonth)
-	start := time.Date(startYear, startMonth, 1, 0, 0, 0, 0, zone)
-	end := start.AddDate(0, monthsIn(kind), 0)
+	start, end, ok := reportperiod.Containing(grain, at, zone, fiscalStartMonth)
+	if !ok {
+		return Period{}, fmt.Errorf("forecasting: no %s period holds %s", kind, at)
+	}
 	return Period{
 		Start:     start,
 		End:       end,
@@ -213,30 +221,6 @@ func daysInOrder(earlier, later time.Time) bool {
 // how the two come to disagree the day somebody edits one of them.
 func (p Period) ContainsInstant(at time.Time) bool {
 	return p.ContainsDay(p.LocalDay(at))
-}
-
-func monthsIn(kind PeriodKind) int {
-	if kind == PeriodMonth {
-		return 1
-	}
-	return 3
-}
-
-// periodStart answers the year and month a window opens in.
-func periodStart(kind PeriodKind, local time.Time, fiscalStartMonth int) (int, time.Month) {
-	if kind == PeriodMonth {
-		return local.Year(), local.Month()
-	}
-	// Months elapsed since the financial year opened, which is what decides
-	// which quarter of THAT year we are in. The +12 keeps the modulo positive
-	// for a date before the current calendar year's opening month.
-	elapsed := (int(local.Month()) - fiscalStartMonth + 12) % 12
-	// Walk back from the first of this month by the months into the quarter,
-	// rather than doing month arithmetic that can land on a day the target
-	// month does not have (the 31st of a 30-day month rolls forward).
-	firstOfMonth := time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, local.Location())
-	opening := firstOfMonth.AddDate(0, -(elapsed % 3), 0)
-	return opening.Year(), opening.Month()
 }
 
 // ComparablePeriodsNeeded is how many completed periods a historical median

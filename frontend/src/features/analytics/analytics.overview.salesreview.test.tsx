@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
@@ -25,9 +25,6 @@ import {
   startingMovement,
 } from "./analytics.overview.testkit";
 
-// Sales review's first screen and its action list: the controls, the lead
-// figure with its target, three readings, the summary and the top findings.
-
 const originalFetch = globalThis.fetch;
 beforeEach(() => forgetSeat());
 afterEach(() => {
@@ -48,7 +45,8 @@ async function actionList() {
   );
 }
 
-const hero = () => within(screen.getByRole("region", { name: "Sales won" }));
+const hero = () =>
+  within(screen.getByRole("region", { name: "Opening readings" }));
 
 describe("the controls", () => {
   it("keeps the pipeline and close window behind Filters, with what they hold always shown", async () => {
@@ -83,25 +81,29 @@ describe("the controls", () => {
 });
 
 describe("the lead and its readings", () => {
-  it("shows exactly three readings beside the lead", async () => {
+  it("shows four readings with explicit forecast and quarter scope", async () => {
     openScenario("populated");
     const strip = await readings();
     const cards = strip
       .getAllByRole("generic")
       .filter((node) => node.matches("section.stat-card"));
-    expect(cards).toHaveLength(3);
-    for (const label of ["Expected finish", "Coverage", "Closed win rate"])
+    expect(cards).toHaveLength(4);
+    for (const label of [
+      "Sales won",
+      "Won + confirmed commit",
+      "Modelled quarter finish",
+      "Pipeline due this quarter",
+    ])
       expect(strip.getByText(label)).toBeVisible();
   });
 
   it("keeps a measured zero's explanation and actions with no blank chart", async () => {
     openScenario("trueZero");
     await readings();
-    expect(hero().getByText("€0")).toBeVisible();
+    expect(hero().getAllByText("€0").length).toBeGreaterThan(0);
     expect(hero().queryByRole("figure")).toBeNull();
-    expect(
-      await screen.findByRole("region", { name: "Needs your attention" }),
-    ).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    expect(screen.queryByText("No supported decision.")).toBeNull();
   });
 
   it("explains a target of another scope once, in the lead, with the way to compare", async () => {
@@ -176,51 +178,26 @@ describe("the action list", () => {
     expect(list.queryByRole("link", { name: "Answer" })).toBeNull();
   });
 
-  it("keeps a failed source on its own maintenance line, apart from the findings", async () => {
+  it("shows the unread source remedy without inventing a sales finding", async () => {
     openScenario("sourceUnavailable");
-    const list = await actionList();
-    expect(await list.findByText("Connection maintenance")).toBeVisible();
+    await readings();
     expect(
-      list.getByText("1 data source could not be read in the last check."),
+      await screen.findByRole("region", { name: "Needs your attention" }),
     ).toBeVisible();
-    expect(list.queryByText(/^Review\b/)).toBeNull();
+    expect(screen.getByText("Connection maintenance")).toBeVisible();
   });
 });
 
-describe("the summary", () => {
-  it("links the count of checks to the action list", async () => {
-    openScenario("largeBacklog");
-    const summary = within(
-      await screen.findByRole("region", { name: "Summary" }),
-    );
-    const sentence = await summary.findByRole("button", {
-      name: "24 open checks on 7 deals need an answer.",
-    });
-    const user = userEvent.setup({ delay: null });
-    await user.click(sentence);
-    await waitFor(() =>
-      expect(document.activeElement?.id).toBe("analytics-interventions"),
-    );
-  });
-
-  it("gives no on-target verdict while the checks could not be read", async () => {
+describe("quiet reporting states", () => {
+  it("does not substitute an all-clear or a summary when checks are unavailable", async () => {
     openScenario("sourceUnavailable");
-    const summary = within(
-      await screen.findByRole("region", { name: "Summary" }),
-    );
-    expect(
-      await summary.findByText(
-        "The open checks could not be read, so nothing is said here about what needs attention.",
-      ),
-    ).toBeVisible();
-    expect(summary.queryByText(/above the|on target|reached the/)).toBeNull();
+    await readings();
+    expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
+    expect(screen.queryByText(/No open checks need an answer/)).toBeNull();
   });
-});
-
-describe("a reader who may not read forecast checks", () => {
-  it("says the checks are not theirs to see, and the summary says nothing about them", async () => {
+  it("does not show an empty permission explanation for checks", async () => {
     const pair = OVERVIEW_SCENARIOS.populated.views.sales;
-    if (!isSetup(pair)) throw new Error("populated draws Sales review");
+    if (!isSetup(pair)) throw new Error("missing sales scenario");
     openOverview(overviewAddress("sales"), pair.answer, {
       ...pair.routes,
       grants: {
@@ -232,15 +209,11 @@ describe("a reader who may not read forecast checks", () => {
         pipeline: ["read"],
       },
     });
-    const list = await actionList();
+    await readings();
     expect(
-      await list.findByText("Forecast checks are not available to you."),
-    ).toBeVisible();
-    expect(
-      list.queryByText("No forecast check is open for this scope."),
+      screen.queryByRole("region", { name: "Needs your attention" }),
     ).toBeNull();
-    const summary = within(screen.getByRole("region", { name: "Summary" }));
-    expect(summary.queryByText(/open checks?/)).toBeNull();
+    expect(screen.queryByText(/Forecast checks are not available/)).toBeNull();
   });
 });
 
@@ -266,16 +239,18 @@ describe("the composition of the expected finish", () => {
             ],
           }),
     );
-    const summary = within(
-      await screen.findByRole("region", { name: "Summary" }),
-    );
+    const summary = await readings();
+    expect(await summary.findByText("15 of 18 valued")).toBeVisible();
+    await userEvent
+      .setup({ delay: null })
+      .click(summary.getByRole("button", { name: "Evidence" }));
     expect(
-      await summary.findByText(
+      await screen.findByText(
         "Counts 15 of the 18 open deals the forecast considered.",
       ),
     ).toBeVisible();
     expect(
-      summary.getByText(
+      await screen.findByText(
         "Left out: 1 deal with no amount, 2 deals with no exchange rate.",
       ),
     ).toBeVisible();

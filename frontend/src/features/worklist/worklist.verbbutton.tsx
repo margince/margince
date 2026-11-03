@@ -8,6 +8,7 @@
 import { Button } from "../../design-system/atoms";
 import { useTooltip } from "../../design-system/tooltip";
 import type { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import type { SnoozeEvent, SnoozeSpan } from "./worklist.dispositions";
 import type { WorklistDisposition } from "./worklist.queries";
 
@@ -51,19 +52,49 @@ const VERB_HINTS: Partial<
   Record<WorklistDisposition, "worklist.disposition.hint.not_mine">
 > = { not_mine: "worklist.disposition.hint.not_mine" };
 
+// A source whose Done only defers the row names the verb for what it does.
+// A company question pressed Done is still unanswered, and new mail about the
+// domain brings it back.
+const SOURCE_VERBS: Partial<
+  Record<string, Partial<Record<WorklistDisposition, VerbCopy>>>
+> = {
+  domain_question: {
+    handled: {
+      label: "worklist.disposition.verb.notNow",
+      hint: "worklist.disposition.hint.notNow",
+    },
+  },
+};
+
+type VerbCopy = Readonly<{ label: MessageKey; hint?: MessageKey }>;
+
+export function verbCopy(
+  disposition: WorklistDisposition,
+  source: string,
+): VerbCopy {
+  return (
+    SOURCE_VERBS[source]?.[disposition] ?? {
+      label: `worklist.disposition.verb.${disposition}`,
+      hint: VERB_HINTS[disposition],
+    }
+  );
+}
+
 // One judgement as a button, with its hint on hover and focus where it has one.
 export function DispositionButton({
   disposition,
+  source,
   writing,
   onPress,
   t,
 }: Readonly<{
   disposition: WorklistDisposition;
+  source: string;
   writing: PutDownAnswer | undefined;
   onPress: () => void;
   t: ReturnType<typeof useT>;
 }>) {
-  const hint = VERB_HINTS[disposition];
+  const { label, hint } = verbCopy(disposition, source);
   const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(
     hint ? t(hint) : "",
   );
@@ -74,7 +105,7 @@ export function DispositionButton({
       {...(hint ? { ref, ...trigger } : {})}
       onClick={onPress}
     >
-      {t(`worklist.disposition.verb.${disposition}` as const)}
+      {t(label)}
       {hint && tip}
     </Button>
   );

@@ -43,7 +43,7 @@ func setupClosedDealEnv(t *testing.T) closeDayEnv {
 		StampCorrespondence:     func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		StartDeliveryForWonDeal: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		ContractVisible:         func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
-	}).WithClock(func() time.Time { return now })
+	}).SetClock(func() time.Time { return now })
 
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	env := closeDayEnv{configEnv: e, today: today, oldDay: today.AddDate(0, 0, -10), oldTotal: 5000}
