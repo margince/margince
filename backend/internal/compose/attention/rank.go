@@ -43,7 +43,8 @@ const (
 	// levelAgreed is work already agreed: an assigned task, or a deal drifting
 	// below the material bar.
 	levelAgreed = 4
-	// levelBlocking is a decision that holds up customer work.
+	// levelBlocking is a decision that holds up customer work, or a deal the
+	// evidence says should exist.
 	levelBlocking = 5
 	// levelRoutine is data hygiene. It never outranks anything above it,
 	// however large the pile.

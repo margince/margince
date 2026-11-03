@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
-import { MailCoverageNotice } from "../../components/mailcoveragenotice";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
@@ -126,7 +125,6 @@ export function DealStatusCardPanel({
           more={more}
         />
         {standing(cardHead(card, deal, t, onOpenEmail))}
-        <MailCoverageNotice coverage={card.mail_coverage} />
         {/* The record page says what the brief says through How it stands and
             its cards; the board's drawer has neither, so only it reads the
             brief. */}

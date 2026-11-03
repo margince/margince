@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -17,7 +18,7 @@ func TestCustomerWorkIsUsefulWithoutAnAIFinding(t *testing.T) {
 	detail := "Buyer asked for the two-year option."
 	item := crmcontracts.WorklistItem{Title: &title, Detail: &detail}
 	for _, language := range mailcopy.Languages() {
-		rendered := mailWorkItem(item, mailcopy.For(string(language)), nil)
+		rendered := mailWorkText(item, mailcopy.For(string(language)), nil)
 		if !strings.Contains(rendered, title) || !strings.Contains(rendered, detail) {
 			t.Fatalf("%s lost the customer context: %s", language, rendered)
 		}
@@ -25,7 +26,7 @@ func TestCustomerWorkIsUsefulWithoutAnAIFinding(t *testing.T) {
 }
 
 func TestAnUnnamedWorkItemCannotBecomeACountOnlyTeaser(t *testing.T) {
-	if got := mailWorkItem(crmcontracts.WorklistItem{}, mailcopy.For("en"), nil); got != "" {
+	if got := mailWorkText(crmcontracts.WorklistItem{}, mailcopy.For("en"), nil); got != "" {
 		t.Fatalf("unnameable item = %q", got)
 	}
 }
@@ -53,12 +54,12 @@ func TestDateOnlyPromiseDoesNotInventOrShiftADeadlineTime(t *testing.T) {
 	due := time.Date(2026, 10, 23, 23, 59, 59, 0, zone)
 	title := "Agree the renewal"
 	item := crmcontracts.WorklistItem{Source: crmcontracts.WorklistItemSourceWeeklyCommitment, Title: &title, DueAt: &due}
-	got := mailWorkItem(item, mailcopy.For("de"), time.FixedZone("PDT", -7*60*60))
+	got := mailWorkText(item, mailcopy.For("de"), time.FixedZone("PDT", -7*60*60))
 	if !strings.Contains(got, "23.10.2026") || strings.Contains(got, "23:59") || strings.Contains(got, "UTC") {
 		t.Fatalf("date-only commitment changed: %s", got)
 	}
 	item.Source = crmcontracts.WorklistItemSourceTask
-	got = mailWorkItem(item, mailcopy.For("de"), zone)
+	got = mailWorkText(item, mailcopy.For("de"), zone)
 	if !strings.Contains(got, "23:59") || !strings.Contains(got, "UTC+07:00") {
 		t.Fatalf("timed task lost its instant: %s", got)
 	}
@@ -66,11 +67,40 @@ func TestDateOnlyPromiseDoesNotInventOrShiftADeadlineTime(t *testing.T) {
 
 func TestAnApprovalWithoutADecisionActionDoesNotAskForAttentionByMail(t *testing.T) {
 	item := crmcontracts.WorklistItem{Source: crmcontracts.WorklistItemSourceApproval, Title: new("Review the stage change")}
-	if got := mailWorkItem(item, mailcopy.For("en"), nil); got != "" {
+	if got := mailWorkText(item, mailcopy.For("en"), nil); got != "" {
 		t.Fatalf("unactionable approval mailed: %s", got)
 	}
 	item.Actions = []crmcontracts.WorklistItemActions{"decide"}
-	if got := mailWorkItem(item, mailcopy.For("en"), nil); got == "" {
+	if got := mailWorkText(item, mailcopy.For("en"), nil); got == "" {
 		t.Fatal("ready approval omitted")
+	}
+}
+
+// mailWorkText is a work item in the plain alternative, or "" when the item
+// does not belong in mail.
+func mailWorkText(item crmcontracts.WorklistItem, words mailcopy.Copy, zone *time.Location) string {
+	row, ok := mailWorkItem(item, words, zone)
+	if !ok {
+		return ""
+	}
+	var content emailview.Content
+	content.Item(row)
+	return content.String()
+}
+
+func TestAWorkItemMarksItsCauseAndDeadlineWithStatusDots(t *testing.T) {
+	title, cause := "Reply to Ana Sommer", "Customer waiting"
+	due := time.Date(2026, 11, 4, 10, 0, 0, 0, time.UTC)
+	row, ok := mailWorkItem(crmcontracts.WorklistItem{Title: &title, CauseLabel: &cause, DueAt: &due}, mailcopy.For("en"), time.UTC)
+	if !ok {
+		t.Fatal("a named item was dropped")
+	}
+	var content emailview.Content
+	content.Item(row)
+	markup := emailview.Render(content.Message("Your priorities", "en", ""))
+	for _, want := range []string{`class="bg-warningText"`, "</span>" + cause + "</span>", `class="bg-infoText"`} {
+		if !strings.Contains(markup, want) {
+			t.Errorf("the row lost %q", want)
+		}
 	}
 }
