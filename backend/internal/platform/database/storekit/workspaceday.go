@@ -14,9 +14,12 @@ import (
 // with the name so an operator sees which zone did not resolve.
 //
 // A caller that resolves a name here reports an unresolvable one in these
-// words. Other readers resolve their own, and answer their own way. The
-// slipping read falls back to UTC, to keep two surfaces wrong in one direction
-// rather than two.
+// words. Other readers resolve their own, and answer their own way.
+//
+// `compose/attention` is the one that answers anyway. `backlogrisk.go` and
+// `backlogtail.go` read UTC when the installation's zone is absent.
+//
+// So its two surfaces are wrong in one direction rather than two.
 func LoadZone(name string) (*time.Location, error) {
 	loc, err := time.LoadLocation(name)
 	if err != nil {
