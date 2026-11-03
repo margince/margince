@@ -16,6 +16,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
+import { approvalQueryKey } from "../../lib/approvalread";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useReviewActions } from "../../lib/reviewactions";
@@ -150,7 +151,7 @@ function RepairApproval({ task }: Readonly<{ task: Task }>) {
   const actions = useReviewActions();
   const [open, setOpen] = useState(false);
   const detail = useQuery({
-    queryKey: ["approval", task.id],
+    queryKey: approvalQueryKey(task.id),
     queryFn: async () =>
       unwrap(
         await api.GET("/approvals/{id}", { params: { path: { id: task.id } } }),
