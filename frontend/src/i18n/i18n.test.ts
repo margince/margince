@@ -69,6 +69,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
+  "analytics.accounts.deal",
   "explain.col.pipeline",
   "reporting.recordType.lead",
   "reporting.recordType.deal",
