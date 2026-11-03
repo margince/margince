@@ -37,8 +37,8 @@ func TestTheTaxRateDownTakesBackTheGrantItsUpGave(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793741148")); err != nil {
-		t.Fatalf("up to the file before: %v", err)
+	if _, err := dbmigrate.Up(ctx, conn, namespaceThroughVersion(t, core, "1793734536")); err != nil {
+		t.Fatalf("up to the migration before the tax rate one: %v", err)
 	}
 	if _, err := conn.Exec(ctx, `INSERT INTO role (key, name, is_system, permissions)
 		VALUES ('admin', 'Admin', true, '{"objects":{}}'::jsonb)
