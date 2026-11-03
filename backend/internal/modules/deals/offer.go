@@ -239,13 +239,6 @@ const (
 	offerKeyGross = "gross_minor"
 )
 
-// offerTotalsImage renders one side of that transition as an audit image,
-// keyed by the column names, so field history reads three money fields moving
-// on the offer rather than a shape only this package understands.
-func offerTotalsImage(f OfferFigures) map[string]any {
-	return map[string]any{offerKeyNet: f.NetMinor, offerKeyTax: f.TaxMinor, offerKeyGross: f.GrossMinor}
-}
-
 // lineFieldEvidence is what a line write contributes as context ABOUT the
 // offer update it causes: which line moved, and what that line's own fields
 // held on either side. It is evidence and never an image, because a key in

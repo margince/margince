@@ -249,3 +249,10 @@ func formatQuantity(v float64) string { return strconv.FormatFloat(v, 'f', 3, 64
 
 // formatPct renders a percentage at numeric(5,2) scale.
 func formatPct(v float64) string { return strconv.FormatFloat(v, 'f', 2, 64) }
+
+// offerTotalsImage renders one side of a totals recompute as an audit image,
+// keyed by the column names. Field history then reads three money fields
+// moving on the offer, not a shape only this package understands.
+func offerTotalsImage(f OfferFigures) map[string]any {
+	return map[string]any{offerKeyNet: f.NetMinor, offerKeyTax: f.TaxMinor, offerKeyGross: f.GrossMinor}
+}
