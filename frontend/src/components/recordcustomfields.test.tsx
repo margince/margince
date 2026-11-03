@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import "@testing-library/jest-dom/vitest";
 import { afterEach, expect, it } from "vitest";
 import {
   installFetchStub,
@@ -78,9 +79,8 @@ it.each(["company", "contact", "deal", "lead"] as const)(
     );
     renderDetails(kind, { cf_budget: 4_800_000, cf_wiki: WIKI });
     const change = await screen.findByRole("button", {
-      name: "Change Annual budget",
+      name: "Change Annual budget €48,000.00",
     });
-    expect(change.textContent).toBe("€48,000.00");
     expect(screen.getByRole("link", { name: WIKI }).getAttribute("href")).toBe(
       WIKI,
     );
@@ -88,7 +88,8 @@ it.each(["company", "contact", "deal", "lead"] as const)(
     const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
     expect((amount as HTMLInputElement).value).toBe("48000");
     await user.clear(amount);
-    await user.type(amount, "48000.5{Enter}");
+    await user.type(amount, "48000.5");
+    await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(sent).toEqual([{ cf_budget: 4_800_050 }]));
 
     screen.getByRole("link", { name: WIKI }).focus();
@@ -97,17 +98,10 @@ it.each(["company", "contact", "deal", "lead"] as const)(
     expect(document.activeElement).toBe(verb);
     await user.keyboard("{Enter}");
     expect(
-      (
-        screen.getByRole("textbox", {
-          name: "Account wiki",
-        }) as HTMLInputElement
-      ).value,
-    ).toBe(WIKI);
-    expect(screen.queryByRole("link", { name: WIKI })).toBeNull();
+      await screen.findByRole("textbox", { name: "Account wiki" }),
+    ).toHaveValue(WIKI);
     await user.keyboard("{Escape}");
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Change Account wiki" }),
-    );
+    await waitFor(() => expect(verb).toHaveFocus());
     expect(screen.getByRole("link", { name: WIKI })).toBeTruthy();
   },
 );
@@ -124,9 +118,8 @@ it("shows and edits a field the create dialogs leave out", async () => {
   ]);
   renderDetails("contact", { cf_previous_owner: "Ada Lovelace" });
   const change = await screen.findByRole("button", {
-    name: "Change Previous owner",
+    name: "Change Previous owner Ada Lovelace",
   });
-  expect(change.textContent).toBe("Ada Lovelace");
   await user.click(change);
   const input = screen.getByRole("textbox", { name: "Previous owner" });
   await user.clear(input);
@@ -141,14 +134,14 @@ it("reads and edits a zero-decimal currency in whole units", async () => {
   const sent = catalog([{ ...budget, currency: "JPY" }]);
   renderDetails("contact", { cf_budget: 48_000 });
   const change = await screen.findByRole("button", {
-    name: "Change Annual budget",
+    name: "Change Annual budget JP¥48,000",
   });
-  expect(change.textContent).toBe("JP¥48,000");
   await user.click(change);
   const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
   expect((amount as HTMLInputElement).value).toBe("48000");
   await user.clear(amount);
-  await user.type(amount, "48001{Enter}");
+  await user.type(amount, "48001");
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toEqual([{ cf_budget: 48_001 }]));
 });
 
@@ -162,11 +155,12 @@ it.each([
     const sent = catalog([{ ...budget, currency }]);
     renderDetails("contact", { cf_budget: 4_800_000 });
     await user.click(
-      await screen.findByRole("button", { name: "Change Annual budget" }),
+      await screen.findByRole("button", { name: /^Change Annual budget/ }),
     );
     const amount = screen.getByRole("spinbutton", { name: "Annual budget" });
     await user.clear(amount);
-    await user.type(amount, `${typed}{Enter}`);
+    await user.type(amount, typed);
+    await user.click(screen.getByRole("button", { name: "Save" }));
     expect(
       await screen.findByText(
         `This amount has more decimals than ${currency} allows.`,
@@ -177,7 +171,7 @@ it.each([
   },
 );
 
-it("keeps the edit verb in place, disabled, while another field saves", async () => {
+it("keeps a link in place and pauses its edit while another field saves", async () => {
   const user = userEvent.setup();
   let release = () => {};
   const held = new Promise<void>((resolve) => {
@@ -186,17 +180,22 @@ it("keeps the edit verb in place, disabled, while another field saves", async ()
   const sent = catalog([budget, wiki], "contact", held);
   renderDetails("contact", { cf_budget: 4_800_000, cf_wiki: WIKI });
   await user.click(
-    await screen.findByRole("button", { name: "Change Annual budget" }),
+    await screen.findByRole("button", { name: /^Change Annual budget/ }),
   );
   await user.type(
     screen.getByRole("spinbutton", { name: "Annual budget" }),
-    "1{Enter}",
+    "1",
   );
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(sent).toHaveLength(1));
-  const verb = screen.getByRole("button", { name: "Change Account wiki" });
-  expect((verb as HTMLButtonElement).disabled).toBe(true);
+  expect(
+    screen.queryByRole("button", { name: "Change Account wiki" }),
+  ).toBeNull();
+  expect(screen.getByRole("link", { name: WIKI })).toBeTruthy();
   release();
-  await waitFor(() => expect((verb as HTMLButtonElement).disabled).toBe(false));
+  expect(
+    await screen.findByRole("button", { name: "Change Account wiki" }),
+  ).toBeEnabled();
 });
 
 it("reads an unset money or address field as unset, with nothing to follow", async () => {
@@ -210,12 +209,11 @@ it("reads an unset money or address field as unset, with nothing to follow", asy
     </StoryProviders>,
   );
   expect(
-    (await screen.findByRole("button", { name: "Change Annual budget" }))
-      .textContent,
-  ).toBe("Not set");
+    await screen.findByRole("button", { name: "Change Annual budget Not set" }),
+  ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Change Account wiki" }).textContent,
-  ).toBe("Not set");
+    screen.getByRole("button", { name: "Change Account wiki Not set" }),
+  ).toBeInTheDocument();
   expect(screen.queryByRole("link")).toBeNull();
 });
 
@@ -262,7 +260,7 @@ it.each(["company", "contact", "deal", "lead"] as const)(
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Change Customer tier" }),
+      await screen.findByRole("button", { name: /^Change Customer tier/ }),
     );
     await user.type(
       screen.getByRole("textbox", { name: "Customer tier" }),
@@ -309,12 +307,12 @@ it("clears an existing value and never offers a masked field for editing", async
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Change Customer tier" }),
+    await screen.findByRole("button", { name: /^Change Customer tier/ }),
   );
   await user.clear(screen.getByRole("textbox", { name: "Customer tier" }));
   await user.keyboard("{Enter}");
   await waitFor(() => expect(sent).toEqual([{ cf_tier: null }]));
-  expect(screen.queryByRole("button", { name: "Change Hidden" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Change Hidden/ })).toBeNull();
   expect(screen.getByText("Hidden").nextElementSibling?.textContent).toBe(
     "Not shown",
   );

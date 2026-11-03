@@ -33,6 +33,7 @@ import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
+type Preview = components["schemas"]["SendAuthorizationPreview"];
 type Link = { entity_type: RelinkKind; entity_id: string };
 
 // The refusals a rep can act on, as opposed to failures. Anything else keeps
@@ -122,6 +123,9 @@ type SendRequest = {
     attachment_ids?: string[];
   };
   links: Link[];
+  // The engine's answer on screen when Send was pressed. A refusal is about
+  // that message and that answer, and only while both still hold.
+  answerAtSend: Preview | undefined;
 };
 
 // The one place the send's origin is chosen. An anchor sends a reply; no
@@ -193,6 +197,7 @@ function sendRequest(
     heldDraftId: string | undefined;
     context: CommunicationContext | undefined;
     links: Link[];
+    answerAtSend: Preview | undefined;
   }>,
 ): SendRequest {
   const { to, cc, bcc, subject, body, html } = fields;
@@ -222,7 +227,36 @@ function sendRequest(
       attachment_ids: attachmentIds,
     },
     links: where.links,
+    answerAtSend: where.answerAtSend,
   };
+}
+
+/**
+ * Whether a refused Send still describes the message on screen. It stops when
+ * anything the request carries changes: a recipient, the words, a file, a
+ * record, the reason. It also stops when the check answers anew.
+ */
+export function refusalIsCurrent(
+  sent: SendRequest | undefined,
+  now: SendRequest,
+  preview: Preview | undefined,
+): boolean {
+  return (
+    sent !== undefined &&
+    sent.answerAtSend === preview &&
+    messageOf(sent) === messageOf(now)
+  );
+}
+
+// The message a request sends, without the bookkeeping that names drafts. A
+// draft id can arrive after the press and does not change the message.
+function messageOf(request: SendRequest): string {
+  // JSON leaves an undefined field out, which is how these are dropped.
+  return JSON.stringify({
+    ...request,
+    answerAtSend: undefined,
+    mail: { ...request.mail, draft_ref: undefined, mail_draft_id: undefined },
+  });
 }
 
 // 201 is a message that goes later; 202 is one that has gone.
@@ -336,13 +370,31 @@ export function useComposeSend({
   const links = composedLinks({ entityType, entityId }, grounding, projectId);
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
-  const permission = useSendPermission({
+  const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     enabled: open && !isChannelReply,
   });
+  // A consent refusal joins the engine's answer as one status, and only while
+  // it is about this message. A stale one would sit red beside a newer check.
+  const request = sendRequest(fields, {
+    answering,
+    isChannelReply,
+    files,
+    heldDraftId: savedDraft.held?.id,
+    context: claimedContext,
+    links,
+    answerAtSend: answer.preview,
+  });
+  const refusedNow =
+    refusal === "consent" &&
+    refusalIsCurrent(send.variables, request, answer.preview);
+  const permission = {
+    ...answer,
+    refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
+  };
   // Whether the reader has pressed Send. A form that reports gaps before then
   // scolds a reader for not having finished typing.
   const [attempted, setAttempted] = useState(false);
@@ -370,19 +422,19 @@ export function useComposeSend({
       globalThis.requestAnimationFrame(focusFirstMissing);
       return;
     }
-    send.mutate(
-      sendRequest(fields, {
-        answering,
-        isChannelReply,
-        files,
-        heldDraftId: savedDraft.held?.id,
-        context: claimedContext,
-        links,
-      }),
-    );
+    send.mutate(request);
   };
+  // What this client already knows will stop the send. The mark beside Send
+  // makes no passed claim while any of it stands.
+  const blocked =
+    missing.length > 0 ||
+    carriageBlocked ||
+    fields.sendUnavailable ||
+    refusal === "mailbox" ||
+    refusal === "sharedUnsubscribe";
   return {
     send,
+    blocked,
     refusal,
     sendReview,
     sendError,

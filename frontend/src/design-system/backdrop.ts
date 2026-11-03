@@ -28,7 +28,9 @@ export function useBackdropDismiss(
       const onBackdrop =
         pressedOnBackdrop.current && event.target === event.currentTarget;
       pressedOnBackdrop.current = false;
-      if (onBackdrop && !leaving) {
+      // A double-click's second press lands on the dialog its first one opened.
+      const repeat = event.detail > 1;
+      if (onBackdrop && !leaving && !repeat) {
         onDismiss();
       }
     },
