@@ -1014,6 +1014,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/users/{id}/password-link":                                     {Op: "issueUserPasswordLink", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/reactivate":                                        {Op: "reactivateUser", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/remove":                                            {Op: "removeMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/users/{id}/resend-invite":                                     {Op: "resendUserInvite", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/views":                                                        {Op: "createSavedView", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/voice-profiles":                                               {Op: "createVoiceProfile", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/voice-profiles/{id}/builds":                                   {Op: "createVoiceBuild", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

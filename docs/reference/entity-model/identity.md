@@ -95,12 +95,15 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## auth_token
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `expires_at` | `timestamp with time zone` | yes |  |
+| `mail_failed_at` | `timestamp with time zone` |  |  |
+| `mail_queued_at` | `timestamp with time zone` |  |  |
+| `mail_sent_at` | `timestamp with time zone` |  |  |
 | `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |

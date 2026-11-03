@@ -13776,6 +13776,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.reactivate": "Reaktivieren",
   "users.status.active": "Aktiv",
   "users.status.invited": "Eingeladen",
+  "users.status.inviteMailFailed": "Einladungs-E-Mail fehlgeschlagen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
   "users.handover.action": "Arbeit übergeben",
@@ -13812,6 +13813,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.resendInvite": "Einladung erneut senden",
+  "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",
   "users.link.pending": "Link wird erstellt…",
   "users.link.body":

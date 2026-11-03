@@ -13410,6 +13410,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.reactivate": "Kích hoạt lại",
   "users.status.active": "Đang hoạt động",
   "users.status.invited": "Đã mời",
+  "users.status.inviteMailFailed": "Không gửi được email mời",
   "users.status.deactivated": "Đã vô hiệu hóa",
   "users.status.suspended": "Đã tạm khóa",
   "users.handover.action": "Bàn giao công việc",
@@ -13446,6 +13447,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
   "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
+  "users.resendInvite": "Gửi lại lời mời",
+  "users.inviteResent": "Đã gửi lại lời mời cho {name}",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",
   "users.link.pending": "Đang tạo liên kết…",
   // Two sentences, no dash (VOICE-RULE-5).

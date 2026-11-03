@@ -22596,6 +22596,7 @@ const (
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
 	UserAllowedActionsRemove            UserAllowedActions = "remove"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
+	UserAllowedActionsResendInvite      UserAllowedActions = "resend_invite"
 )
 
 // Valid indicates whether the value is a known member of the UserAllowedActions enum.
@@ -22618,6 +22619,29 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsRemove:
 		return true
 	case UserAllowedActionsRemoveMfa:
+		return true
+	case UserAllowedActionsResendInvite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserInviteEmailState.
+const (
+	UserInviteEmailStateFailed  UserInviteEmailState = "failed"
+	UserInviteEmailStateSending UserInviteEmailState = "sending"
+	UserInviteEmailStateSent    UserInviteEmailState = "sent"
+)
+
+// Valid indicates whether the value is a known member of the UserInviteEmailState enum.
+func (e UserInviteEmailState) Valid() bool {
+	switch e {
+	case UserInviteEmailStateFailed:
+		return true
+	case UserInviteEmailStateSending:
+		return true
+	case UserInviteEmailStateSent:
 		return true
 	default:
 		return false
@@ -47113,6 +47137,20 @@ type InviteDealRoomParticipantRequest struct {
 	Source     string                         `json:"source"`
 }
 
+// InviteEmailHandoff What became of an invitation email at the time of the answer, as on the Deal Room invite.
+type InviteEmailHandoff struct {
+	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
+	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+	// refuses the address is reported a moment later as the member's
+	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	Queued bool `json:"queued"`
+
+	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
+	// set-password link can be mailed at all. False means the admin passes the link on by
+	// hand (`issueUserPasswordLink`).
+	Sendable bool `json:"sendable"`
+}
+
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
 type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
@@ -60687,7 +60725,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -60703,6 +60741,12 @@ type User struct {
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
+
+	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
+	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
+
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -60738,6 +60782,9 @@ type User struct {
 
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
+
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -87404,6 +87451,9 @@ type ServerInterface interface {
 	// Retire an account while preserving historical attribution.
 	// (POST /users/{id}/remove)
 	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Mail an invited member a new set-password link. Admin-only, human-only.
+	// (POST /users/{id}/resend-invite)
+	ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id)
 	// Preview removing a member or merging them into another account.
 	// (GET /users/{id}/retirement-preview)
 	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
@@ -93224,6 +93274,12 @@ func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id
 // Retire an account while preserving historical attribution.
 // (POST /users/{id}/remove)
 func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mail an invited member a new set-password link. Admin-only, human-only.
+// (POST /users/{id}/resend-invite)
+func (_ Unimplemented) ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -133449,6 +133505,38 @@ func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// ResendUserInvite operation middleware
+func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResendUserInvite(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewMemberRetirement operation middleware
 func (siw *ServerInterfaceWrapper) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request) {
 
@@ -139286,6 +139374,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/remove", wrapper.RemoveMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/resend-invite", wrapper.ResendUserInvite)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/retirement-preview", wrapper.PreviewMemberRetirement)

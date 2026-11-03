@@ -1600,6 +1600,9 @@ public.auth_token.auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES app_user
 public.auth_token.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.auth_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.auth_token.id uuid NOT NULL gen=- def=uuidv7()
+public.auth_token.mail_failed_at timestamp with time zone gen=- def=-
+public.auth_token.mail_queued_at timestamp with time zone gen=- def=-
+public.auth_token.mail_sent_at timestamp with time zone gen=- def=-
 public.auth_token.purpose text NOT NULL gen=- def=-
 public.auth_token.token_hash text NOT NULL gen=- def=-
 public.auth_token.used_at timestamp with time zone gen=- def=-
