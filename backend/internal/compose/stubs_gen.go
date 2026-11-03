@@ -367,6 +367,10 @@ func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 
+func (stubs) AssessSalesReview(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssessSalesReview")
+}
+
 func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsContext")
 }
@@ -597,6 +601,10 @@ func (stubs) ListSdrUpcomingMeetings(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) GetSdrTeamReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSdrTeamReviewParams) {
 	httperr.NotImplemented(w, r, "GetSdrTeamReview")
+}
+
+func (stubs) ProposeReportSetup(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeReportSetup")
 }
 
 func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {

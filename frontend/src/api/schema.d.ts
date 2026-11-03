@@ -4631,6 +4631,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * The Sales review's assessment of one selection: a few sentences on what the measured
+         *     figures show, each citing the cells it rests on, and one next decision on a deal the
+         *     reader may see. Written by the model and kept per reader until the figures or the
+         *     recorded decisions move; without a model, or when the model's reply cannot be grounded,
+         *     it answers no sentences and `generated_by` says so, and the page shows its own summary.
+         */
+        post: operations["assessSalesReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/setup-proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A sales initiative or a custom report proposed from a description in plain words:
+         *     the filters, metrics and charts the words name, resolved against what the reader may
+         *     use, with the phrase each came from, the questions the words leave open and the phrases
+         *     nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+         *     a model it answers 409 `ai_not_configured`.
+         */
+        post: operations["proposeReportSetup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -32266,17 +32312,37 @@ export interface components {
             scope?: components["schemas"]["ProjectScope"];
             /**
              * Format: date-time
-             * @description When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             * @description When they last wrote to us, among the messages the caller can open (see `last_touch_basis`). Null means no message the caller can open records a reply from them. It does not prove that none exists: a message the caller cannot open is never counted, and nothing here hints that one exists. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_inbound_at?: string | null;
+            /**
+             * @description Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+             * @enum {string}
+             */
+            last_touch_basis?: "readable_by_caller";
+            /**
+             * Format: uuid
+             * @description The activity behind `last_inbound_at`, picked by the same query. Evidence cites this id rather than matching a time against the capped `activities` page. Null when `last_inbound_at` is null; absent with it.
+             */
+            last_inbound_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The activity behind `last_outbound_at`, picked by the same query. Null when that is null; absent with it.
+             */
+            last_outbound_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The activity behind `last_live_inbound_at`, picked by the same query. Null when that is null; absent with it.
+             */
+            last_live_inbound_activity_id?: string | null;
             /** @description The contact's email addresses whose latest delivery hard-bounced with no clean delivery since — derived from the send ledger at read time, never stored, so a later send that arrives clears the mark on its own. Lowercased, as contact emails are stored. Absent when the caller has no activity grant, named in `sections_omitted`. */
             dead_addresses?: string[];
             /**
              * Format: date-time
-             * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+             * @description When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question. Counts the messages the caller can open, like `last_inbound_at`.
              */
             last_outbound_at?: string | null;
-            /** @description Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`. */
+            /** @description Which sides have written in the messages the caller can open, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`. */
             relationship_direction?: components["schemas"]["RelationshipDirection"];
             /**
              * Format: date-time
@@ -35217,6 +35283,107 @@ export interface components {
         };
         SalesDecisionListResponse: {
             data: components["schemas"]["SalesDecision"][];
+        };
+        SalesAssessmentRequest: {
+            selection: components["schemas"]["ReportingSelection"];
+            /** @description Ask the model again, whatever is kept. */
+            refresh?: boolean;
+        };
+        SalesAssessment: {
+            /** @description The evaluation the assessment read. */
+            evaluation_key: string;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+            /** @enum {string} */
+            confidence?: "low" | "medium" | "high";
+            sentences: components["schemas"]["SalesAssessmentSentence"][];
+            next_decision?: components["schemas"]["SalesAssessmentDecision"];
+            /** @description The figures the sentences may cite, as the model read them. */
+            cells: components["schemas"]["SalesAssessmentCell"][];
+            /** @description How many recorded decisions the model read. */
+            decisions: number;
+        };
+        SalesAssessmentSentence: {
+            text: string;
+            /** @enum {string} */
+            kind: "observation" | "claim" | "hypothesis";
+            /** @description The cell ids the sentence rests on. */
+            cells: string[];
+        };
+        SalesAssessmentDecision: {
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            owner_id: string;
+            text: string;
+        };
+        SalesAssessmentCell: {
+            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
+            id: string;
+            label: string;
+            value: string;
+        };
+        ReportSetupRequest: {
+            /**
+             * @description Which drawer asks: a sales initiative's goal or a custom report.
+             * @enum {string}
+             */
+            site: "initiative_setup" | "custom_report_setup";
+            /** @description What the reader typed. Only this and the catalog reach the model. */
+            description: string;
+        };
+        ReportSetupProposal: {
+            /** @enum {string} */
+            site: "initiative_setup" | "custom_report_setup";
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+            /** @description A name the words suggest. */
+            name?: string;
+            selection: components["schemas"]["ReportSetupSelection"];
+            objective?: components["schemas"]["ReportSetupObjective"];
+            /** @description The phrase each resolved field came from. */
+            sources: components["schemas"]["ReportSetupSource"][];
+            /** @description What the words leave open, as questions to the reader. */
+            clarifications: string[];
+            unsupported: components["schemas"]["ReportSetupUnsupported"][];
+        };
+        /** @description The part of a reporting selection the words named. Absent means the words said nothing about it. */
+        ReportSetupSelection: {
+            product_id?: components["schemas"]["ReportingProductId"];
+            industry?: components["schemas"]["ReportingIndustry"];
+            country?: components["schemas"]["ReportingCountry"];
+            /** @enum {string} */
+            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter";
+            metrics?: components["schemas"]["ReportingMetricID"][];
+            blocks?: components["schemas"]["ReportingBlockKind"][];
+        };
+        ReportSetupObjective: {
+            metric: components["schemas"]["ReportingMetricID"];
+            /** Format: int64 */
+            target_value?: number;
+            /** Format: date */
+            deadline?: string;
+        };
+        ReportSetupSource: {
+            /** @enum {string} */
+            field: "name" | "product" | "industry" | "country" | "period" | "metric" | "chart" | "objective" | "target_value" | "deadline";
+            /** @description The resolved id, or the value as proposed. */
+            value: string;
+            /** @description The value's name as the reader sees it. */
+            label?: string;
+            /** @description The words it was read from. */
+            phrase: string;
+        };
+        ReportSetupUnsupported: {
+            phrase: string;
+            /**
+             * @description `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+             * @enum {string}
+             */
+            code: "not_expressible" | "unknown_value" | "not_offered";
+            reason: string;
         };
         SalesInitiativeMemberRef: {
             /** @enum {string} */
@@ -45832,7 +45999,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "report_interpret" | "report_setup" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -45858,7 +46025,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -54699,19 +54866,23 @@ export interface components {
          *     engagement strip for an account. A queue row and the record it opens cannot
          *     disagree about who wrote last.
          *
+         *     On a contact row both dates count the messages this caller can open, the
+         *     contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+         *     History also counts here. An account row reads the company page's own basis.
+         *
          *     Absent from the row when the caller may not read activity, or may not read this
-         *     contact or account: a withheld answer. Present with both nulls for a record
-         *     nobody has ever exchanged a message with.
+         *     contact or account: a withheld answer. Present with both nulls when no message the
+         *     reader's basis counts was exchanged with the record.
          */
         WorklistContactTouch: {
             /**
              * Format: date-time
-             * @description When they last wrote to us. Null means nothing inbound was ever captured.
+             * @description When they last wrote to us. Null means no counted message records a reply; it does not prove that none exists.
              */
             last_inbound_at: string | null;
             /**
              * Format: date-time
-             * @description When we last wrote to them. Null means we never have.
+             * @description When we last wrote to them. Null means no counted message records one.
              */
             last_outbound_at: string | null;
             /** @description How to read `last_inbound_at`, from the row it names. Absent when that is null. */
@@ -62335,6 +62506,60 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    assessSalesReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesAssessmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The assessment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesAssessment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeReportSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportSetupRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportSetupProposal"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };

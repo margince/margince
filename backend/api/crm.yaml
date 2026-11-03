@@ -6994,6 +6994,62 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /analytics/assessment:
+    post:
+      tags: [Reports]
+      operationId: assessSalesReview
+      x-agent-access: human-only
+      x-waits-on-model: on-miss
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        The Sales review's assessment of one selection: a few sentences on what the measured
+        figures show, each citing the cells it rests on, and one next decision on a deal the
+        reader may see. Written by the model and kept per reader until the figures or the
+        recorded decisions move; without a model, or when the model's reply cannot be grounded,
+        it answers no sentences and `generated_by` says so, and the page shows its own summary.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesAssessmentRequest' }
+      responses:
+        '200':
+          description: The assessment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesAssessment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/setup-proposal:
+    post:
+      tags: [Reports]
+      operationId: proposeReportSetup
+      x-agent-access: human-only
+      x-waits-on-model: always
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        A sales initiative or a custom report proposed from a description in plain words:
+        the filters, metrics and charts the words name, resolved against what the reader may
+        use, with the phrase each came from, the questions the words leave open and the phrases
+        nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+        a model it answers 409 `ai_not_configured`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportSetupRequest' }
+      responses:
+        '200':
+          description: The proposal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReportSetupProposal' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects:
     get:
       tags: [Projects]
@@ -45556,9 +45612,37 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            When they last wrote to us. Null means nothing inbound was ever captured — a fact
-            about the relationship, not a missing field. Absent entirely when the caller has no
+            When they last wrote to us, among the messages the caller can open (see
+            `last_touch_basis`). Null means no message the caller can open records a reply from
+            them. It does not prove that none exists: a message the caller cannot open is never
+            counted, and nothing here hints that one exists. Absent entirely when the caller has no
             activity grant, named in `sections_omitted` as `last_touch`.
+        last_touch_basis:
+          type: string
+          enum: [readable_by_caller]
+          description: >-
+            Which messages the last-touch fields count: `readable_by_caller` means the messages
+            whose content this caller may open (the activity content gate, contact reach, project
+            narrowing and the human-message rules). The last-message dates, `relationship_direction`,
+            `relationship_changes` and the follow-up `moment` all read this basis, so they agree with
+            the History the caller can read. Shared metrics use a different basis on purpose:
+            `strength` and the colleague network count only messages the whole workspace may see, so
+            every colleague reads the same number. Absent together with the last-touch fields.
+        last_inbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The activity behind `last_inbound_at`, picked by the same query. Evidence cites this id
+            rather than matching a time against the capped `activities` page. Null when
+            `last_inbound_at` is null; absent with it.
+        last_outbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The activity behind `last_outbound_at`, picked by the same query. Null when that is null; absent with it.
+        last_live_inbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The activity behind `last_live_inbound_at`, picked by the same query. Null when that is null; absent with it.
         dead_addresses:
           type: array
           items: { type: string }
@@ -45574,11 +45658,13 @@ components:
           description: >-
             When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one
             "last touch": which direction went last is the whole question.
+            Counts the messages the caller can open, like `last_inbound_at`.
         relationship_direction:
           $ref: '#/components/schemas/RelationshipDirection'
           description: >-
-            Which sides have written, read off last_inbound_at and last_outbound_at. Absent
-            together with them, named in `sections_omitted` as `last_touch`.
+            Which sides have written in the messages the caller can open, read off
+            last_inbound_at and last_outbound_at. Absent together with them, named in
+            `sections_omitted` as `last_touch`.
         last_live_inbound_at:
           type: [string, 'null']
           format: date-time
@@ -49428,6 +49514,143 @@ components:
         data:
           type: array
           items: { $ref: '#/components/schemas/SalesDecision' }
+      additionalProperties: false
+    SalesAssessmentRequest:
+      type: object
+      required: [selection]
+      properties:
+        selection: { $ref: '#/components/schemas/ReportingSelection' }
+        refresh: { type: boolean, description: "Ask the model again, whatever is kept." }
+      additionalProperties: false
+    SalesAssessment:
+      type: object
+      required: [evaluation_key, generated_at, generated_by, sentences, cells, decisions]
+      properties:
+        evaluation_key: { type: string, description: "The evaluation the assessment read." }
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
+        confidence: { type: string, enum: [low, medium, high] }
+        sentences:
+          type: array
+          maxItems: 6
+          items: { $ref: '#/components/schemas/SalesAssessmentSentence' }
+        next_decision:
+          $ref: '#/components/schemas/SalesAssessmentDecision'
+        cells:
+          type: array
+          items: { $ref: '#/components/schemas/SalesAssessmentCell' }
+          description: "The figures the sentences may cite, as the model read them."
+        decisions: { type: integer, description: "How many recorded decisions the model read." }
+      additionalProperties: false
+    SalesAssessmentSentence:
+      type: object
+      required: [text, kind, cells]
+      properties:
+        text: { type: string, maxLength: 240 }
+        kind: { type: string, enum: [observation, claim, hypothesis] }
+        cells:
+          type: array
+          minItems: 1
+          items: { type: string }
+          description: The cell ids the sentence rests on.
+      additionalProperties: false
+    SalesAssessmentDecision:
+      type: object
+      required: [deal_id, owner_id, text]
+      properties:
+        deal_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        text: { type: string, maxLength: 240 }
+      additionalProperties: false
+    SalesAssessmentCell:
+      type: object
+      required: [id, label, value]
+      properties:
+        id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
+        label: { type: string }
+        value: { type: string }
+      additionalProperties: false
+    ReportSetupRequest:
+      type: object
+      required: [site, description]
+      properties:
+        site:
+          type: string
+          enum: [initiative_setup, custom_report_setup]
+          description: "Which drawer asks: a sales initiative's goal or a custom report."
+        description: { type: string, minLength: 1, maxLength: 2000, description: "What the reader typed. Only this and the catalog reach the model." }
+      additionalProperties: false
+    ReportSetupProposal:
+      type: object
+      required: [site, generated_by, selection, sources, clarifications, unsupported]
+      properties:
+        site: { type: string, enum: [initiative_setup, custom_report_setup] }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        model_used: { type: string }
+        name: { type: string, maxLength: 160, description: "A name the words suggest." }
+        selection: { $ref: '#/components/schemas/ReportSetupSelection' }
+        objective:
+          $ref: '#/components/schemas/ReportSetupObjective'
+        sources:
+          type: array
+          items: { $ref: '#/components/schemas/ReportSetupSource' }
+          description: "The phrase each resolved field came from."
+        clarifications:
+          type: array
+          maxItems: 4
+          items: { type: string, maxLength: 240 }
+          description: "What the words leave open, as questions to the reader."
+        unsupported:
+          type: array
+          items: { $ref: '#/components/schemas/ReportSetupUnsupported' }
+      additionalProperties: false
+    ReportSetupSelection:
+      type: object
+      description: "The part of a reporting selection the words named. Absent means the words said nothing about it."
+      properties:
+        product_id: { $ref: '#/components/schemas/ReportingProductId' }
+        industry: { $ref: '#/components/schemas/ReportingIndustry' }
+        country: { $ref: '#/components/schemas/ReportingCountry' }
+        period:
+          type: string
+          enum: [this_week, this_month, last_month, last_week, this_quarter]
+        metrics:
+          type: array
+          maxItems: 8
+          items: { $ref: '#/components/schemas/ReportingMetricID' }
+        blocks:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/ReportingBlockKind' }
+      additionalProperties: false
+    ReportSetupObjective:
+      type: object
+      required: [metric]
+      properties:
+        metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: integer, format: int64, minimum: 1 }
+        deadline: { type: string, format: date }
+      additionalProperties: false
+    ReportSetupSource:
+      type: object
+      required: [field, value, phrase]
+      properties:
+        field: { type: string, enum: [name, product, industry, country, period, metric, chart, objective, target_value, deadline] }
+        value: { type: string, description: "The resolved id, or the value as proposed." }
+        label: { type: string, description: "The value's name as the reader sees it." }
+        phrase: { type: string, maxLength: 240, description: "The words it was read from." }
+      additionalProperties: false
+    ReportSetupUnsupported:
+      type: object
+      required: [phrase, code, reason]
+      properties:
+        phrase: { type: string, maxLength: 240 }
+        code:
+          type: string
+          enum: [not_expressible, unknown_value, not_offered]
+          description: "`not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take."
+        reason: { type: string, maxLength: 240 }
       additionalProperties: false
     SalesInitiativeMemberRef:
       type: object
@@ -63172,6 +63395,8 @@ components:
         - owed_verdict
         - propose_roles
         - rate_extract
+        - report_interpret
+        - report_setup
         - request_settlement
         - signal_extract
         - site_extract
@@ -63195,7 +63420,7 @@ components:
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
-         request_settlement, account_scan, tag_suggest]
+         request_settlement, account_scan, tag_suggest, report_setup, report_interpret]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -73100,13 +73325,17 @@ components:
         engagement strip for an account. A queue row and the record it opens cannot
         disagree about who wrote last.
 
+        On a contact row both dates count the messages this caller can open, the
+        contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+        History also counts here. An account row reads the company page's own basis.
+
         Absent from the row when the caller may not read activity, or may not read this
-        contact or account: a withheld answer. Present with both nulls for a record
-        nobody has ever exchanged a message with.
+        contact or account: a withheld answer. Present with both nulls when no message the
+        reader's basis counts was exchanged with the record.
       required: [last_inbound_at, last_outbound_at]
       properties:
-        last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means nothing inbound was ever captured.' }
-        last_outbound_at: { type: [string, 'null'], format: date-time, description: 'When we last wrote to them. Null means we never have.' }
+        last_inbound_at: { type: [string, 'null'], format: date-time, description: 'When they last wrote to us. Null means no counted message records a reply; it does not prove that none exists.' }
+        last_outbound_at: { type: [string, 'null'], format: date-time, description: 'When we last wrote to them. Null means no counted message records one.' }
         last_inbound_precision:
           allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
           description: How to read `last_inbound_at`, from the row it names. Absent when that is null.

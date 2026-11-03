@@ -4013,6 +4013,7 @@ public.deal_product.offer_line_item_id uuid gen=- def=-
 public.deal_product.product_id uuid NOT NULL gen=- def=-
 public.deal_product.source text NOT NULL gen=- def=-
 public.deal_product.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_product_offer_line_item_idx CREATE INDEX deal_product_offer_line_item_idx ON public.deal_product USING btree (offer_line_item_id) WHERE (offer_line_item_id IS NOT NULL)
 public.deal_product_pkey CREATE UNIQUE INDEX deal_product_pkey ON public.deal_product USING btree (deal_id, product_id)
 public.deal_product_product_idx CREATE INDEX deal_product_product_idx ON public.deal_product USING btree (product_id)
 public.deal_risk_day acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -7533,6 +7534,7 @@ public.sales_initiative_baseline.sales_initiative_baseline_initiative_id_fkey FO
 public.sales_initiative_baseline.sales_initiative_baseline_pkey PRIMARY KEY (initiative_id, deal_id)
 public.sales_initiative_baseline.stage_id uuid gen=- def=-
 public.sales_initiative_baseline.status text NOT NULL gen=- def=-
+public.sales_initiative_baseline_deal_idx CREATE INDEX sales_initiative_baseline_deal_idx ON public.sales_initiative_baseline USING btree (deal_id)
 public.sales_initiative_baseline_pkey CREATE UNIQUE INDEX sales_initiative_baseline_pkey ON public.sales_initiative_baseline USING btree (initiative_id, deal_id)
 public.sales_initiative_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_initiative_member.captured_by text NOT NULL gen=- def=-
