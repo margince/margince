@@ -1007,6 +1007,31 @@ export const en = {
     "Snapshot queued. It will appear here when ready.",
   "reporting.createReport": "Create from Performance",
   "reporting.newCustomReport": "New custom report",
+  "reporting.previewReport": "Preview report",
+  "reporting.unsavedPreview": "Unsaved preview",
+  "reporting.assessmentCard": "Assessment",
+  "reporting.assessmentDeterministic":
+    "Written from the figures this report reads. Only measured figures are named.",
+  "reporting.useExample": "Use example",
+  "reporting.exampleQuestion":
+    "Margince sales in Germany this quarter: bookings, lead conversion and open pipeline by country.",
+  "reporting.whatToUnderstand": "What would you like to understand?",
+  "reporting.customBuilderPurpose":
+    "One report: the selection, the charts in their order and a custom question. Nothing is saved until you save the preview.",
+  "reporting.reportingSelection": "Reporting selection",
+  "reporting.includeAssessment": "Include the assessment",
+  "reporting.customQuestion": "Custom question",
+  "reporting.customQuestionHint":
+    "A grouped table of the open deals under the same selection.",
+  "reporting.measure": "Measure",
+  "reporting.groupBy": "Group by",
+  "reporting.dealCount": "Open deal count",
+  "reporting.openValueBase": "Open value, converted",
+  "reporting.addQuestionCard": "Add this question",
+  "reporting.askQuestion": "Ask a question",
+  "reporting.noPreview":
+    "No report is being previewed. Start one under Reports.",
+  "reporting.backToReports": "Back to reports",
   "reporting.stageAmountDeals_one": "{amount} · {count} priced deal",
   "reporting.stageAmountDeals_other": "{amount} · {count} priced deals",
   "reporting.stageDeals": "Priced deals",

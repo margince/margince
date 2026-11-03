@@ -174,8 +174,7 @@ func readReportingInitiativePipeline(ctx context.Context, tx pgx.Tx, frame crmco
 		for key, phrase := range reportingInitiativeOriginLabels {
 			label.WriteString(" WHEN '" + key + "' THEN " + b.add(said.Say(phrase)))
 		}
-		label.WriteString(" END")
-		return "'origin:'||" + origin, label.String(), nil
+		return "'origin:'||" + origin, label.String() + " END", nil
 	}
 	return readDealMetricFacts(ctx, tx, frame, reportingInitiativePipeline, query)
 }

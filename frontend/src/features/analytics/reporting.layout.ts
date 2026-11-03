@@ -65,7 +65,9 @@ export function blocksOf(layout: ReportingLayout): BlockKind[] {
   return [
     ...new Set(
       layout.flatMap((section) =>
-        section.cards.flatMap((c) => (c.kind === "question" ? [] : [c.kind])),
+        section.cards.flatMap((c) =>
+          c.kind === "question" || c.kind === ASSESSMENT_KIND ? [] : [c.kind],
+        ),
       ),
     ),
   ];
@@ -129,8 +131,20 @@ export function cardChoices(
 
 /** One card as the page draws it: a chart of the evaluation, or a question. */
 export type LaidOutItem = Readonly<
-  { chart: Chart; full: boolean } | { question: Card; full: boolean }
+  | { chart: Chart; full: boolean }
+  | { question: Card; full: boolean }
+  | { assessment: Card; full: boolean }
 >;
+
+/** The written summary of the report's figures, placed as a card. */
+export const ASSESSMENT_KIND = "assessment" as const satisfies Card["kind"];
+
+/** Whether the layout places the assessment card. */
+export function hasAssessment(layout: ReportingLayout): boolean {
+  return layout.some((section) =>
+    section.cards.some((card) => card.kind === ASSESSMENT_KIND),
+  );
+}
 
 /** One section as the page draws it: its title and what its cards place. */
 export type LaidOutSection = Readonly<{
@@ -149,6 +163,7 @@ export function laidOut(
       items: section.cards.flatMap((card): LaidOutItem[] => {
         const full = card.width === "full";
         if (card.kind === "question") return [{ question: card, full }];
+        if (card.kind === ASSESSMENT_KIND) return [{ assessment: card, full }];
         return charts
           .filter(
             (chart) =>
@@ -267,6 +282,26 @@ export const layoutEdits = {
       cards: [...section.cards, card],
     }));
   },
+  /** The assessment goes at the end of the last section, full width, once. */
+  addAssessment(layout: ReportingLayout): ReportingLayout {
+    if (hasAssessment(layout)) return layout;
+    const sections = layout.length > 0 ? layout : [{ cards: [] }];
+    const card: Card = {
+      id: newCardId(sections),
+      kind: ASSESSMENT_KIND,
+      width: "full",
+    };
+    return withSection(sections, sections.length - 1, (section) => ({
+      ...section,
+      cards: [...section.cards, card],
+    }));
+  },
+  /** Takes the assessment out, wherever it was placed. */
+  removeAssessment: (layout: ReportingLayout): ReportingLayout =>
+    layout.map((section) => ({
+      ...section,
+      cards: section.cards.filter((card) => card.kind !== ASSESSMENT_KIND),
+    })),
   /** A new card goes at the end of the last section, full width. */
   addCard(layout: ReportingLayout, choice: CardChoice): ReportingLayout {
     const sections = layout.length > 0 ? layout : [{ cards: [] }];
