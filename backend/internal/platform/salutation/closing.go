@@ -4,6 +4,7 @@
 package salutation
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -80,8 +81,8 @@ func withoutSignOff(lines []string) string {
 		lines = lines[:len(lines)-1]
 	}
 	signature := 0
-	for i := len(lines) - 1; i >= 0; i-- {
-		line := strings.TrimSpace(lines[i])
+	for i, raw := range slices.Backward(lines) {
+		line := strings.TrimSpace(raw)
 		switch {
 		case line == "":
 			continue
