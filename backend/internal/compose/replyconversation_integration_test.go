@@ -242,7 +242,7 @@ func TestAnOlderInboundMaterialsRequestKeepsItsTopicPastNewerMail(t *testing.T) 
 	for i := range 7 {
 		logReplyMessage(reader, t, e, thread, "Invoice and dinner", "Later invoice and dinner details", time.Duration(i+1)*time.Hour)
 	}
-	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Invoice and dinner", body: "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.", messageID: "newer-inbound@customer.test", inReplyTo: "materials-request@customer.test", at: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), authenticated: true})
+	o.capture(t, owedMail{from: replyCorrespondent, to: o.seat, subject: "Re: Product materials", body: "Guten Tag, bitte bestätigen Sie uns die Rechnungsadresse für die nächste Lieferung und die Einzelheiten zu unserem Abendessen am Freitag.", messageID: "newer-inbound@customer.test", inReplyTo: "materials-request@customer.test", at: time.Date(2026, 9, 2, 9, 0, 0, 0, time.UTC), authenticated: true})
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Re: Product materials","body":"Guten Tag,\n\nwelche Version der Produktbroschüre und welche freigegebenen Produktbilder benötigen Sie für Ihre Prüfung?"}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	result, err := drafter.DraftEmailWithProvenance(reader, selected, draftfloor.Steering{Intent: "Answer the materials request"})
