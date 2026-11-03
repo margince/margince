@@ -75,14 +75,14 @@ var errAgentSeatHasNoPassword = errors.New("identity: the agent seat has no pass
 // image or the event payload. Losing it means issuing another, never recovering
 // this one.
 func (s *Service) IssuePasswordLink(ctx context.Context, actor Identity, userID ids.UserID) (string, time.Time, error) {
-	return s.issueSetPasswordToken(ctx, actor, userID, refusePasswordLinkTarget, false)
+	return s.issueSetPasswordToken(ctx, actor, userID, linkTarget, false)
 }
 
 // issueSetPasswordToken is IssuePasswordLink with the target rule passed in.
 // A resent invitation runs the same supersede, audit and event on fewer
 // members. mailed marks the link as handed to the mail sender.
 func (s *Service) issueSetPasswordToken(
-	ctx context.Context, actor Identity, userID ids.UserID, refuseTarget func(status string, isAgent bool) error, mailed bool,
+	ctx context.Context, actor Identity, userID ids.UserID, refuseTarget targetRule, mailed bool,
 ) (string, time.Time, error) {
 	// The seat ceiling sits ABOVE RBAC (A62/ADR-0047) and the HTTP middleware
 	// already refuses a read seat every mutating method. It is re-checked here
@@ -182,7 +182,7 @@ func lockMemberForTokenIssue(ctx context.Context, tx pgx.Tx, userID ids.UserID) 
 // that redemption then refuses anyway, because redemption re-checks the same set
 // this admits — so the window costs a wasted link, never a usable one.
 func supersedeSetPasswordTokens(
-	ctx context.Context, tx pgx.Tx, userID ids.UserID, refuseTarget func(status string, isAgent bool) error,
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, refuseTarget targetRule,
 ) (int64, error) {
 	if err := lockMemberForTokenIssue(ctx, tx, userID); err != nil {
 		return 0, err
@@ -198,7 +198,7 @@ func supersedeSetPasswordTokens(
 	if err != nil {
 		return 0, err
 	}
-	if err := refuseTarget(status, isAgent); err != nil {
+	if err := refuseTarget(ctx, tx, userID, status, isAgent); err != nil {
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx,
@@ -219,6 +219,15 @@ func passwordLinkIssuedPayload(userID, by ids.UserID, expiresAt time.Time) crmco
 		By:        openapi_types.UUID(by.UUID),
 		ExpiresAt: expiresAt,
 	}
+}
+
+// targetRule refuses a member a set-password token may not be minted for, read
+// inside the issuing transaction after the member's lock.
+type targetRule func(ctx context.Context, tx pgx.Tx, userID ids.UserID, status string, isAgent bool) error
+
+// linkTarget is refusePasswordLinkTarget as the issuing transaction asks it.
+func linkTarget(_ context.Context, _ pgx.Tx, _ ids.UserID, status string, isAgent bool) error {
+	return refusePasswordLinkTarget(status, isAgent)
 }
 
 // refusePasswordLinkTarget refuses a member no link may be minted for.

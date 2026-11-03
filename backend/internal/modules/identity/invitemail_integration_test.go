@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -203,5 +204,64 @@ func TestAResendIsRefusedWhereNoInvitationIsWaiting(t *testing.T) {
 		if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), tc.code) {
 			t.Errorf("%s: resend answered %d %s, want 409 %s", name, rec.Code, rec.Body, tc.code)
 		}
+	}
+}
+
+// inviteThrough invites email through h, as the admin, and answers its id.
+func inviteThrough(t *testing.T, e *revocationEnv, h Handlers, email string) crmcontracts.Id {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	body := `{"email":"` + email + `","display_name":"New Member","role":"rep"}`
+	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).
+		WithContext(withIdentity(e.wsCtx(e.admin), e.admin)))
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
+	}
+	var user crmcontracts.User
+	if err := json.Unmarshal(rec.Body.Bytes(), &user); err != nil {
+		t.Fatal(err)
+	}
+	return user.Id
+}
+
+func TestAResendIsRefusedUnlessTheLiveMailFailed(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-resend-state")
+	resend, _ := mailingHandlers(e, &capturedMail{})
+	stalled := stalledMail{release: make(chan struct{})}
+	t.Cleanup(func() { close(stalled.release) })
+
+	sent, sentDone := mailingHandlers(e, &capturedMail{})
+	sentID := inviteThrough(t, e, sent, "sent@acme.test")
+	<-sentDone
+	sending, _ := mailingHandlers(e, stalled)
+	sendingID := inviteThrough(t, e, sending, "sending@acme.test")
+	unmailed := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
+	unmailedID := inviteThrough(t, e, unmailed, "unmailed@acme.test")
+
+	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
+	for state, id := range map[string]crmcontracts.Id{"sent": sentID, "sending": sendingID, "never mailed": unmailedID} {
+		rec := httptest.NewRecorder()
+		resend.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/x/resend-invite", nil).WithContext(ctx), id)
+		if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "invite_email_not_failed") {
+			t.Errorf("a resend of a %s invitation answered %d %s, want 409 invite_email_not_failed",
+				state, rec.Code, rec.Body)
+		}
+	}
+}
+
+// A relay that holds the mail past the send's budget fails it, and the
+// refusal still lands on the link although the send's own context is spent.
+func TestARelayTimeoutStillRecordsTheMailAsFailed(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-timeout")
+	stalled := stalledMail{release: make(chan struct{})}
+	t.Cleanup(func() { close(stalled.release) })
+	h, done := mailingHandlers(e, stalled)
+	h.sendBudget = 50 * time.Millisecond
+
+	inviteThrough(t, e, h, "slowrelay@acme.test")
+	<-done
+	if row := rosterRow(t, e, h, "slowrelay@acme.test"); !mailState(row, inviteMailFailed) || !offersResend(row) {
+		t.Fatalf("after the send ran out of time the roster shows %v %v, want failed and a resend",
+			row.InviteEmailState, row.AllowedActions)
 	}
 }

@@ -53,7 +53,10 @@ func inviteMailRefused(row userRow) bool {
 	return row.InviteMailState != nil && *row.InviteMailState == inviteMailFailed
 }
 
-var errMemberNotInvited = errors.New("identity: the member is not waiting on an invitation")
+var (
+	errMemberNotInvited     = errors.New("identity: the member is not waiting on an invitation")
+	errInviteEmailNotFailed = errors.New("identity: the member's invitation email did not fail")
+)
 
 // refuseResendTarget admits only an invited human. A member who has set a
 // password signs in or resets it, so an invitation mail is wrong for them.
@@ -62,6 +65,23 @@ func refuseResendTarget(status string, isAgent bool) error {
 		return errMemberNotInvited
 	}
 	return nil
+}
+
+// resendTarget admits an invited human whose live link's mail the relay
+// refused. A resend supersedes that link, so one still sending, already sent
+// or never mailed must not be replaced behind the member's back.
+func resendTarget(ctx context.Context, tx pgx.Tx, userID ids.UserID, status string, isAgent bool) error {
+	if err := refuseResendTarget(status, isAgent); err != nil {
+		return err
+	}
+	var failed bool
+	err := tx.QueryRow(ctx, `SELECT t.mail_failed_at IS NOT NULL FROM auth_token t
+		WHERE t.user_id = $1 AND t.purpose = 'password_reset' AND t.used_at IS NULL AND t.expires_at > now()
+		ORDER BY t.created_at DESC LIMIT 1`, userID).Scan(&failed)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !failed) {
+		return errInviteEmailNotFailed
+	}
+	return err
 }
 
 // RecordInviteMailOutcome stamps the relay's answer onto the link the mail
@@ -93,7 +113,7 @@ func (s *Service) RecordInviteMailOutcome(ctx context.Context, actor Identity, r
 // ResendInvite mints a new set-password link for an invited member, the way
 // IssuePasswordLink does, and returns it for the caller to mail.
 func (s *Service) ResendInvite(ctx context.Context, actor Identity, userID ids.UserID) (string, error) {
-	raw, _, err := s.issueSetPasswordToken(ctx, actor, userID, refuseResendTarget, true)
+	raw, _, err := s.issueSetPasswordToken(ctx, actor, userID, resendTarget, true)
 	return raw, err
 }
 
@@ -150,6 +170,9 @@ func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id cr
 	if err != nil {
 		err = conflictIf(err, errMemberNotInvited, "member_not_invited",
 			"this member has already set a password, or is no longer active, so there is no invitation to send")
+		err = conflictIf(err, errInviteEmailNotFailed, "invite_email_not_failed",
+			"this member's invitation email is on its way or was sent, so there is nothing to resend; "+
+				"issue a set-password link to replace it")
 		httperr.Write(w, r, archivedRoleRefusal(err))
 		return
 	}

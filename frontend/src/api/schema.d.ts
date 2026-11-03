@@ -18120,7 +18120,8 @@ export interface paths {
         put?: never;
         /**
          * Mail an invited member a new set-password link. Admin-only, human-only.
-         * @description For an invited member whose invitation email the relay refused. Mints a new single-use
+         * @description For an invited member whose invitation email the relay refused, and only then: the live
+         *     link's `invite_email_state` must be `failed`. Mints a new single-use
          *     set-password link exactly as `issueUserPasswordLink` does (it supersedes the old one,
          *     writes the same audit row and emits `user.password_link_issued`), then mails it instead
          *     of returning it. Shares that operation's rate limits per actor and per target. Nothing
@@ -83629,7 +83630,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `mail_unavailable` (this installation has no outbound relay or no link origin, so nothing can be mailed; `issueUserPasswordLink` is the way then), `member_not_invited` (the member has already set a password, or is suspended or deactivated), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `mail_unavailable` (this installation has no outbound relay or no link origin, so nothing can be mailed; `issueUserPasswordLink` is the way then), `invite_email_not_failed` (the member's live link was never mailed, or its mail is still `sending` or was `sent`; a resend would supersede a link that may still arrive), `member_not_invited` (the member has already set a password, or is suspended or deactivated), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
             409: {
                 headers: {
                     [name: string]: unknown;

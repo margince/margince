@@ -381,7 +381,7 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 		return false
 	}
 	// releaseSend runs in the goroutine, which outlives this handler.
-	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), inviteSendTimeout)
+	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), h.inviteSendBudget())
 	done := h.resetSendStarted // test seam; nil in production
 	go func() {
 		defer releaseSend()
@@ -396,7 +396,11 @@ func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Id
 		if sendErr != nil {
 			slog.Error("invite email failed", "err", sendErr)
 		}
-		if err := h.svc.RecordInviteMailOutcome(workCtx, inviter, rawToken, sendErr); err != nil {
+		// Its own budget: a send that ran out of time has spent workCtx, and the
+		// refusal must still land on the link.
+		outcomeCtx, releaseOutcome := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
+		defer releaseOutcome()
+		if err := h.svc.RecordInviteMailOutcome(outcomeCtx, inviter, rawToken, sendErr); err != nil {
 			slog.Error("recording an invite email outcome failed", "err", err)
 		}
 	}()
