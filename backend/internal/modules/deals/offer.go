@@ -391,8 +391,8 @@ type UpdateOfferInput struct {
 	IfVersion *int64
 }
 
-// UpdateOffer also answers the rendering a buyer change retired, nil when none
-// was, so the caller can reclaim an object the committed row no longer names.
+// UpdateOffer also answers the rendering a buyer or issuer change retired, nil
+// when none was. The caller reclaims the object the committed row no longer names.
 func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferInput) (crmcontracts.Offer, *string, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, nil, err
@@ -424,9 +424,13 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 			if err != nil {
 				return err
 			}
-			// Naming the entity the draft already names is no edit.
+			// Naming the entity the draft already names is no edit. Another
+			// issuer retires the rendering, which prints the old one.
 			if current.LegalEntityId == nil || ids.UUID(*current.LegalEntityId) != entity.UUID {
 				p.Set("legal_entity_id", current.LegalEntityId, entity)
+				if dropped == nil {
+					dropped = retireRendering(p, current)
+				}
 			}
 		}
 		if p.Empty() {

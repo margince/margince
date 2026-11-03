@@ -155,6 +155,12 @@ func (s *Store) resolveRenderIssuer(ctx context.Context, tx pgx.Tx, offer crmcon
 			return issuer, nil
 		}
 	}
+	// A sent offer never reads the entity as it is now. One with no snapshot
+	// predates snapshots, and issued under the installation's own name.
+	if offer.Status != crmcontracts.OfferStatusDraft {
+		name, err := s.issuerName(ctx, tx)
+		return OfferIssuer{Name: name}, err
+	}
 	entity, name, err := s.liveIssuer(ctx, tx, offer)
 	if err != nil {
 		return OfferIssuer{}, err
@@ -258,4 +264,41 @@ func joinNonEmpty(sep string, parts ...string) string {
 		}
 	}
 	return strings.Join(kept, sep)
+}
+
+// sendSnapshots captures the buyer and issuer legal blocks at send time:
+// the sent document stays truthful even when the company or workspace is
+// later renamed.
+func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency string,
+	offer crmcontracts.Offer,
+) (buyer, issuer map[string]any, err error) {
+	if offer.BuyerCompanyId != nil {
+		var displayName string
+		var legalName *string
+		err := tx.QueryRow(ctx,
+			`SELECT display_name, legal_name FROM company WHERE id = $1`, offer.BuyerCompanyId).
+			Scan(&displayName, &legalName)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, fmt.Errorf("snapshot buyer company: %w", err)
+		}
+		if err == nil {
+			buyer = map[string]any{filterCompanyID: offer.BuyerCompanyId, "display_name": displayName}
+			if legalName != nil {
+				buyer["legal_name"] = *legalName
+			}
+		}
+	}
+	// The currency is the caller's resolved base, not a second read: the
+	// snapshot must record the basis this offer was actually priced in.
+	// The same resolver the render takes, so what a customer saw on the draft
+	// is what the snapshot freezes as having been sent.
+	entity, name, err := s.liveIssuer(ctx, tx, offer)
+	if err != nil {
+		return nil, nil, fmt.Errorf("snapshot the issuer: %w", err)
+	}
+	// An entity archived since the draft named it issues nothing new.
+	if !entity.Live {
+		return nil, nil, auth.NameMissingReference("legal_entity_id", apperrors.ErrNotFound)
+	}
+	return buyer, issuerSnapshot(entity, name, baseCurrency), nil
 }

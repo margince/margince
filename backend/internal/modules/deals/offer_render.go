@@ -282,10 +282,16 @@ func (s *Store) SetPdfAssetRef(ctx context.Context, id ids.OfferID, ref string, 
 // kept, the old buyer's document would be handed out under the new buyer's
 // visibility.
 func retireRenderingOnBuyerChange(p *storekit.Patch, current crmcontracts.Offer, buyer ids.CompanyID) (retired *string) {
-	if current.PdfAssetRef == nil {
+	if current.BuyerCompanyId != nil && ids.UUID(*current.BuyerCompanyId) == buyer.UUID {
 		return nil
 	}
-	if current.BuyerCompanyId != nil && ids.UUID(*current.BuyerCompanyId) == buyer.UUID {
+	return retireRendering(p, current)
+}
+
+// retireRendering drops the offer's stored rendering, and answers the ref it
+// dropped, nil when there was none.
+func retireRendering(p *storekit.Patch, current crmcontracts.Offer) (retired *string) {
+	if current.PdfAssetRef == nil {
 		return nil
 	}
 	p.Set("pdf_asset_ref", current.PdfAssetRef, nil)

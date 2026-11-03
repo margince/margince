@@ -28,6 +28,8 @@ Also called: line item, position, add an item to a quote.
 To send an offer in Margince, open the draft offer and click **Send**, then confirm "Send this offer to the buyer?". Sending marks the offer as sent and locks it: "The offer becomes read-only until the buyer responds."
 
 **Send does not email anything.** Nothing leaves Margince when you click it; it records that this version is the one you are sending. To get the offer to the buyer, click **Render PDF** and open it with **View PDF**. Then send that file yourself: added to an email, or uploaded to the deal and added to its [Deal Room](deal-rooms.md). You cannot send an offer with no lines.
+
+Send removes a PDF made from the draft, so make it again after sending; the new file shows what was sent.
 Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
