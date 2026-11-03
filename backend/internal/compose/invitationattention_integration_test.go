@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A disconnect parks a queue and a held row joins it later: the host is told
+// A disconnect parks a queue and a held row joins it later. The host is told
 // once per episode, and a new episode tells them again.
 func TestAHostIsToldOncePerParkedEpisode(t *testing.T) {
 	e := integration.Setup(t)

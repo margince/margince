@@ -7,8 +7,8 @@ package activities
 //
 // Retrying each invitation five times against a calendar that has said no only
 // spends the attempts and the host's patience. The first refusal parks the
-// finishing invitation and every queued one of the same host and calendar that
-// no worker holds; a held one parks itself when its own attempt finishes. All
+// finishing invitation. It also parks every queued one of the same host and
+// calendar that no worker holds. A held one parks itself when its attempt ends. All
 // of them share one episode, so the host is told once. Each delivery pass first
 // resumes the rows whose calendar can take bookings again.
 
@@ -108,8 +108,8 @@ func (s *Store) parkQueued(ctx context.Context, tx pgx.Tx, id, episode ids.UUID)
 	return auditInvitation(ctx, tx, &before, row)
 }
 
-// disconnectEpisode is the open episode of this host and calendar, so a row a
-// worker held while the queue parked joins it, or a new one.
+// disconnectEpisode is the open episode of this host and calendar, or a new
+// one. A row a worker held while the queue parked joins the open one.
 func (s *Store) disconnectEpisode(ctx context.Context, tx pgx.Tx, host ids.UserID, provider string) (ids.UUID, error) {
 	args := schedulingArgs{}
 	var episode ids.UUID

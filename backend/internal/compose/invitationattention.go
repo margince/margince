@@ -14,7 +14,7 @@ import (
 )
 
 // invitationAttention raises the host's notice in the transaction that parks
-// an invitation. The episode is the dedupe key, so a disconnect that parks a
+// an invitation. The episode is the dedupe key. A disconnect that parks a
 // whole queue, and a held row that joins it later, tell the host once.
 type invitationAttention struct{ pool *pgxpool.Pool }
 
