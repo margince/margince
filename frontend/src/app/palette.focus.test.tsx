@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as renderRTL, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it } from "vitest";
+import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
 import { type Command, CommandPalette } from "./palette";
 
@@ -32,6 +33,10 @@ function render(ui: ReactNode) {
 }
 
 it("hands focus out of the overlay before making it inert", () => {
+  // The exit is held, so the overlay is still mounted when this asks where
+  // focus went. Unheld it unmounts at once, and there is no inert subtree to
+  // ask about.
+  const exits = holdExits();
   const opener = document.createElement("button");
   opener.textContent = "open the palette";
   document.body.append(opener);
@@ -54,11 +59,11 @@ it("hands focus out of the overlay before making it inert", () => {
     // left inside an inert subtree is focus no reader can use, and the next
     // Tab restarts at the top of the document.
     const inertOverlay = document.querySelector("[inert]");
-    if (inertOverlay) {
-      expect(inertOverlay.contains(document.activeElement)).toBe(false);
-    }
+    expect(inertOverlay).not.toBeNull();
+    expect(inertOverlay?.contains(document.activeElement)).toBe(false);
     expect(document.activeElement).toBe(opener);
   } finally {
     opener.remove();
+    exits.mockRestore();
   }
 });
