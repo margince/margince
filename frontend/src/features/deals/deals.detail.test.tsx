@@ -6,6 +6,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatDayMonth, formatMoney } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { translate } from "../../i18n";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -112,8 +113,9 @@ async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
   // The drawer's own field; the page's head renames the deal too.
   const drawer = await screen.findByRole("dialog");
   await user.click(
-    await within(drawer).findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: /^Change Deal name/ }),
   );
+  await screen.findByRole("dialog", { name: "Deal name" });
 }
 
 describe("DealScreen — edit, archive (A3)", () => {
@@ -282,10 +284,8 @@ describe("DealScreen — edit, archive (A3)", () => {
         name: translate("en", "deal.editDetails"),
       }),
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Change Referring partner" }),
-    );
-    await user.click(screen.getByLabelText("Referring partner"));
+    const { chooser } = await openChoiceDialog(user, "Referring partner");
+    await user.click(chooser);
     expect(
       await screen.findByRole("option", { name: "Northgate Partners" }),
     ).toBeTruthy();
@@ -672,7 +672,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
     await openHeaderMenu();
     expect(
-      screen.queryByRole("button", { name: "Change Deal name" }),
+      screen.queryByRole("button", { name: /^Change Deal name/ }),
     ).toBeNull();
   });
 });

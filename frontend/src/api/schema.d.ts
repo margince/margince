@@ -7227,18 +7227,26 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
-         * @description Records the meeting on the timeline. No invite is sent. Use the explicit
-         *     scheduling invitation command to create an event and notify the attendee.
+         * Book a meeting at a chosen slot and queue its calendar invitation.
+         * @description Reserves the slot and queues a calendar invitation on the host's connected calendar,
+         *     with every attendee on the one event; the calendar provider delivers it. Inspect
+         *     `invitation_status` on the returned activity: delivery is asynchronous, so a 201
+         *     means queued, not delivered.
          *
-         *     It RUNS DIRECTLY (ADR-0055), on the
-         *     passport holder's own authority; booking onto ANOTHER host's calendar still takes admin,
-         *     the same check the app applies. An installation that wants bookings confirmed sets a
-         *     tier floor on `book_meeting`. On success a
-         *     `meeting` `activity` is logged and linked to the supplied entities. Idempotent on
-         *     `Idempotency-Key`.
-         *     A link that names a record the caller cannot read answers 422 naming `links`, the same for a
-         *     missing record and for one hidden by row scope.
+         *     **Behaviour change:** a booking must name who it is with. Supply at least one
+         *     `contact` or `lead` link that carries an email address, or an `attendee_emails` address
+         *     that resolves to a contact the host can see. Otherwise the request answers 422
+         *     `invitee_required`; to block time on your own calendar without an invitee, log a
+         *     `meeting` through `POST /activities`.
+         *     The host also needs a connected, writable calendar and a booking profile, the same
+         *     as `createMeetingInvitation`.
+         *
+         *     Booking onto ANOTHER host's calendar takes admin. On success a `meeting` `activity`
+         *     is logged and linked to the supplied entities. Idempotent on `Idempotency-Key`.
+         *     A link that names a record the caller cannot read answers 422 naming `links`, the
+         *     same for a missing record and for one hidden by row scope. An agent cannot call this
+         *     operation; it uses the `invite_meeting` tool, which stages the full recipient list
+         *     for approval.
          */
         post: operations["bookMeeting"];
         delete?: never;
@@ -37781,6 +37789,21 @@ export interface components {
             description: string;
             /** @description Add a video call link from the connected calendar. Absent follows the host's profile setting. */
             video_call?: boolean;
+            /**
+             * @description Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+             *     Each address is resolved to a contact, a colleague or a lead the host can see; an
+             *     address matching nobody is invited as named by the host. Contacts and leads must hold
+             *     transactional consent; colleagues and host-named addresses are not asked.
+             */
+            attendee_emails?: string[];
+            /** @description Further records to file the meeting on, beside the invitee. */
+            links?: components["schemas"]["MeetingRecordLink"][];
+        };
+        MeetingRecordLink: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "lead" | "project";
+            /** Format: uuid */
+            entity_id: string;
         };
         MeetingAvailability: {
             slots: {
@@ -43934,6 +43957,16 @@ export interface components {
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
             freshness: components["schemas"]["AssuranceFreshness"];
+            review_deliveries: components["schemas"]["AssuranceReviewDeliveries"];
+        };
+        /** @description The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check. */
+        AssuranceReviewDeliveries: {
+            /** @description Reviews whose task is queued or retrying. */
+            pending: number;
+            /** @description Reviews whose task could not be delivered after every retry. */
+            failed: number;
+            /** @description Reviews that have their task, including a task somebody already completed while the review stays open. */
+            delivered: number;
         };
         /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
         AssuranceFreshness: {
@@ -52502,7 +52535,7 @@ export interface components {
             source_record?: components["schemas"]["AttentionSubject"];
             /**
              * Format: uuid
-             * @description The member explicitly asked to decide, independent of who has permission to approve.
+             * @description The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
              */
             readonly requested_decider_id?: string;
             /** @description The domain question's reason code, rendered in the reader's language. */
@@ -67130,15 +67163,6 @@ export interface operations {
                  *     to retry blind.
                  */
                 "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-                /**
-                 * @description The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-                 *     answer named. MCP takes the same id as `approval_id`. The server checks it against the
-                 *     stored approval: same tool, same diff hash, same staging passport, decided as approved,
-                 *     not yet used, and within 15 minutes of the decision. Anything else is refused with
-                 *     `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-                 *     human's direct call is itself the approval.
-                 */
-                "X-Approval-Token"?: components["parameters"]["ApprovalToken"];
             };
             path?: never;
             cookie?: never;
@@ -67154,10 +67178,12 @@ export interface operations {
                     end: string;
                     subject?: string;
                     /**
-                     * @description Who the meeting is with. **Accepted and not delivered to**: nothing in this
-                     *     build emails these addresses or adds them to a calendar event, and the
-                     *     created activity does not carry them either. Supply them for the caller's
-                     *     own record of intent, and tell the attendee yourself.
+                     * @description Who the meeting is with. Every address is an attendee on the queued calendar
+                     *     event. Each address is resolved to a contact, a
+                     *     colleague or a lead the host can see; an address matching nobody is invited as
+                     *     named by the host. Contacts and leads must hold transactional consent;
+                     *     colleagues and host-named addresses are not asked. At most 25 attendees in
+                     *     total.
                      */
                     attendee_emails?: string[];
                     /**
@@ -67165,15 +67191,10 @@ export interface operations {
                      *     required: a meeting belonging to no record appears on no timeline and is one
                      *     nobody will find again, which is the same reason `SendCompanyEmailRequest`
                      *     carries the bound. Each one is row-scope probed and written as its own row,
-                     *     so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-                     *     before it stages.
+                     *     so the list is bounded at 25. The first `contact` link (else the first `lead`
+                     *     link) is the invitee the meeting is filed on.
                      */
-                    links: {
-                        /** @enum {string} */
-                        entity_type: "contact" | "company" | "deal" | "lead" | "project";
-                        /** Format: uuid */
-                        entity_id: string;
-                    }[];
+                    links: components["schemas"]["MeetingRecordLink"][];
                     consent?: components["schemas"]["CaptureConsent"];
                 };
             };
@@ -67188,7 +67209,7 @@ export interface operations {
                     "application/json": components["schemas"]["Activity"];
                 };
             };
-            /** @description Approval token missing for the 🟡 booking, or RBAC denied. */
+            /** @description RBAC denied, or booking onto another host's calendar without admin. */
             403: {
                 headers: {
                     [name: string]: unknown;

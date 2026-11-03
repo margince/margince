@@ -841,6 +841,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Organisiert von",
   "approval.preview.intendedAttendee":
     "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
+  "approval.preview.hostNamedAttendee":
+    "Nur per Adresse eingeladen (ohne Einwilligungsprüfung)",
   "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
@@ -2666,6 +2668,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.phone": "Telefonnummer",
   "history.field.phones": "Telefonnummern",
   "history.field.invitation_status": "Einladungsstatus",
+  "history.field.attendees": "Eingeladene Teilnehmende",
   "history.field.proposal_status": "Status des Terminvorschlags",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",
@@ -2925,8 +2928,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
-  "board.weighted": "gewichtet {value}",
-  "board.convertedAt": "Umgerechnet · Wechselkurse vom {date}",
+  "board.weightedLabel": "gewichtet",
+  "board.ratesOn": "Kurse vom {date}",
+  "board.unpriced_one": "{count} ohne Preis",
+  "board.unpriced_other": "{count} ohne Preis",
+  "board.totalsTip": "{total} offen, {weighted} gewichtet mit {probability}.",
+  "board.unpricedTip_one":
+    "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
+  "board.unpricedTip_other":
+    "{count} Deals haben keinen Preis und zählen in keiner der beiden Summen.",
+  "board.convertedTip": "Umgerechnet mit Wechselkursen vom {date}.",
   "board.matchesIn_one": "{count} Treffer in {columns}",
   "board.matchesIn_other": "{count} Treffer in {columns}",
   "board.showMatches": "Zur Spalte",
@@ -5466,9 +5477,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.terminalDisqualified":
     "Disqualifiziert. Dieser Lead ist schreibgeschützt.",
   "lead.marker": "Lead",
-  "lead.assign": "Zuweisen",
   "lead.assignToMe": "Mir zuweisen",
-  "lead.assignTo": "Diesen Lead zuweisen an",
   "lead.assignChoose": "Teammitglied wählen",
   "lead.assignNobodyElse":
     "Kein weiteres Teammitglied, dem dieser Lead zugewiesen werden kann.",
@@ -5681,7 +5690,64 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
-  "legalEntities.countryHint": "Zwei Buchstaben, zum Beispiel AT.",
+  "legalEntities.edit": "Bearbeiten",
+  "legalEntities.archive": "Archivieren",
+  "legalEntities.editTitle": "{name} bearbeiten",
+  "legalEntities.save": "Speichern",
+  "legalEntities.defaultFromCompany":
+    "Der Standard übernimmt Name, Firmierung, Adresse, USt-IdNr., Registereintrag, Angebot und Logo aus dem Unternehmensprofil. Ändere sie dort.",
+  "legalEntities.sectionAddress": "Adresse",
+  "legalEntities.line1": "Straße und Hausnummer",
+  "legalEntities.line2": "Adresszusatz",
+  "legalEntities.postalCode": "Postleitzahl",
+  "legalEntities.city": "Ort",
+  "legalEntities.region": "Region oder Bundesland",
+  "legalEntities.sectionRegister": "Steuer und Register",
+  "legalEntities.vatId": "USt-IdNr.",
+  "legalEntities.registerCourt": "Registergericht",
+  "legalEntities.registerNumber": "Registernummer",
+  "legalEntities.sectionBank": "Bankverbindung",
+  "legalEntities.bankHolder": "Kontoinhaber",
+  "legalEntities.iban": "IBAN",
+  "legalEntities.bic": "BIC",
+  "legalEntities.sectionDocuments": "Dokumente",
+  "legalEntities.defaultLanguage": "Dokumentsprache",
+  "legalEntities.defaultLanguageHint":
+    "Zwei Buchstaben, zum Beispiel de. Leer lassen, um die Sprache der Vorlage zu nutzen.",
+  "legalEntities.imprint": "Impressum",
+  "legalEntities.imprintHint":
+    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu 4.000 Zeichen.",
+  "legalEntities.sectionOffering": "Was er verkauft",
+  "legalEntities.offerSummary": "Angebot",
+  "legalEntities.icp": "Idealer Kunde",
+  "legalEntities.valueProposition": "Nutzenversprechen",
+  "legalEntities.usp": "Was ihn abhebt",
+  "legalEntities.sectionLogo": "Logo",
+  "legalEntities.logoAdd": "Logo hinzufügen",
+  "legalEntities.logoReplace": "Logo ersetzen",
+  "legalEntities.logoHint":
+    "PNG, JPEG, GIF, WebP, ICO oder SVG. Es wird gespeichert, sobald du es auswählst.",
+  "legalEntities.logoEmpty": "Bild hier ablegen oder auswählen",
+  "legalEntities.logoRemove": "Logo entfernen",
+  "legalEntities.countryPlaceholder": "Land auswählen",
+  "legalEntities.countryInstallation": "Land der Installation",
+  "legalEntities.countryInstallationHint":
+    "Lass das Land der Installation stehen, außer dieses Unternehmen hat seinen Sitz anderswo.",
+  "legalEntities.archiveTitle": "{name} archivieren?",
+  "legalEntities.archiveBody":
+    "Er verschwindet aus dieser Liste, und niemand kann ihm mehr zugeordnet werden.",
+  "legalEntities.hasMembers":
+    "Für diesen Rechtsträger arbeiten noch Mitglieder. Ordne sie zuerst auf der Seite Mitglieder einem anderen zu.",
+  "legalEntities.assessedAgainst":
+    "Unternehmen werden noch an dem gemessen, was dieser Rechtsträger verkauft. Wähle für sie zuerst einen anderen.",
+  "legalEntities.nameTaken": "Ein anderer Rechtsträger hat diesen Namen schon.",
+  "legalEntities.invalidIban":
+    "Diese IBAN ist nicht gültig. Prüfe die Ziffern.",
+  "legalEntities.invalidBic":
+    "Diese BIC ist nicht gültig. Eine BIC hat 8 oder 11 Buchstaben und Ziffern.",
+  "legalEntities.invalidCountry": "Wähle ein Land aus der Liste.",
+  "legalEntities.invalidLanguage":
+    "Gib einen Sprachcode aus zwei Buchstaben ein, zum Beispiel de.",
   "lossReasons.title": "Verlustgründe",
   "lossReasons.sub":
     "Die Gründe, aus denen du wählst, wenn ein Deal verloren geht. Berichte zählen verlorene Deals danach.",
@@ -6675,7 +6741,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "field.phoneHome": "Privat",
   "field.phoneOther": "Sonstige",
   "field.primary": "Primär",
-  "field.removeRow": "Entfernen",
   "field.removeRowLabel": "Zeile {n} entfernen",
   "field.moveRowUp": "Zeile {n} nach oben verschieben",
   "field.moveRowDown": "Zeile {n} nach unten verschieben",
@@ -8075,6 +8140,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 Deal hat sich seit dieser Prüfung geändert.",
   "review.outOfDateDeals_other":
     "{count} Deals haben sich seit dieser Prüfung geändert.",
+  "review.deliveryFailed_one":
+    "1 Kundenprüfung konnte nicht als Aufgabe an den Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
+  "review.deliveryFailed_other":
+    "{count} Kundenprüfungen konnten nicht als Aufgaben an die Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
   "review.outOfDateWorkspace":
     "Eine Phase oder eine Prognose hat sich seit dieser Prüfung geändert.",
   "review.outOfDateSignals_one":
@@ -9524,6 +9593,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_run": "Prognoseprüfung auf Anfrage",
   "jobs.kind.assurance_sweep": "Prognoseprüfung",
   "jobs.kind.assurance_deal_rescan": "Prognoseprüfung eines geänderten Deals",
+  "jobs.kind.assurance_review_delivery": "Aufgabe zu einer Kundenprüfung",
   "jobs.kind.brief_generate": "Morgenbericht",
   "jobs.kind.capture_auto_enrich_sweep":
     "Anreicherung von Unternehmensdaten aus E-Mails",
@@ -13642,6 +13712,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.invite": "Einladen",
   "users.setRole": "Rolle festlegen…",
   "users.roleOf": "Rolle von {name}",
+  "users.entityLabel": "Rechtsträger",
+  "users.entityOf": "Rechtsträger von {name}",
+  "users.entitySaved": "{name} arbeitet jetzt für {entity}",
   "users.rolesReplace":
     "Eine Rolle, die du auswählst, ersetzt alle bisherigen.",
   "users.deactivate": "Deaktivieren",
@@ -19833,16 +19906,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Arbeit begonnen",
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
-  "mailCoverage.title": "Der E-Mail-Verlauf kann unvollständig sein",
-  "mailCoverage.unknown":
-    "Die E-Mail-Erfassung bestätigt diesen Zeitraum nicht vollständig. Diese Daten beschreiben erfasste Nachrichten; eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
-  "mailCoverage.partial":
-    "Die Erfassung war erfolgreich. Ein vollständiger Verlauf von Posteingang und gesendeten Nachrichten ist jedoch nicht bestätigt. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
-  "mailCoverage.unavailable":
-    "Die E-Mail-Erfassung ist für einen Teil dieses Verlaufs nicht verfügbar. Eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
-  "mailCoverage.withheld":
-    "Du darfst den Umfang der E-Mail-Erfassung nicht prüfen. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
-  "mailCoverage.connections": "Verbindungen prüfen",
   "connectors.syncTimeUnknown":
     "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
   "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",

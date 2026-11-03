@@ -1,14 +1,8 @@
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { Button } from "../design-system/atoms";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { EditableValue } from "../design-system/editablevalue";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice } from "../design-system/inlinechoice";
-import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
+import { InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
@@ -20,13 +14,8 @@ import {
   problemMessageOf,
 } from "../lib/problem";
 import type { Route } from "../lib/router";
-import {
-  type CreateField,
-  type FormRows,
-  fieldLabel,
-  RecordFormBody,
-  usePublishedValues,
-} from "./create";
+import { type CreateField, type FormRows, fieldLabel } from "./create";
+import { EditRecordModal } from "./edit";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
 import { useDetailsFieldTarget } from "./pageaside";
 import type {
@@ -48,15 +37,15 @@ type Props = {
   canEdit: boolean;
   notice?: string;
   maskedFields?: readonly string[];
-  // On a scalar row the rendered value is a destination drawn beside the edit
-  // verb, so it is never nested in the inline-edit button.
+  // A value drawn as a destination: it keeps its own action inside the edit
+  // pill, whose padding and bubble open the editor.
   renderValues?: Readonly<Record<string, ReactNode>>;
   // A value's resting reading where it differs from the raw value its editor
   // holds; a group row reads it only when the group is that one field.
   displayValues?: Readonly<Record<string, string>>;
   links?: Readonly<Record<string, { href: string; label: string }>>;
-  // A provenance mark per field, drawn BESIDE a resting scalar value: the value
-  // is the inline-edit button, and a mark nested in it would be a second one.
+  // A provenance mark per field, drawn beside a scalar value's edit pill: a
+  // mark inside it would be a second control in one.
   marks?: Readonly<Record<string, ReactNode>>;
   readOnlyFields?: Readonly<Record<string, string>>;
   save: RecordFieldSave;
@@ -122,7 +111,7 @@ function RecordField({
   }
 >) {
   const t = useT();
-  const opened = useRef(props.record);
+  const [opened, setOpened] = useState(props.record);
   const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -130,83 +119,107 @@ function RecordField({
   const { mutation, pending } = useRecordFieldWrite(props.kind, props.record);
   const onEditingChange = useCallback(
     (next: boolean) => {
-      if (next && !editing) opened.current = props.record;
+      if (next && !editing) setOpened(props.record);
       setEditing(next);
       if (!next) setDirty(false);
     },
     [editing, props.record],
   );
-  const values = prefillFromRecord(
-    props.fields,
-    editing ? opened.current : props.record,
-  );
-  const reason = props.fields
-    .map((entry) => props.readOnlyFields?.[entry.key])
-    .find(Boolean);
-  // A save elsewhere on the record pauses editing without unmounting the verb.
-  const editable = props.canEdit && !reason;
-  const canEdit = editable && (!pending || editing);
   const grouped =
     props.groups?.some((group) => group.keys.includes(field.key)) ||
     Boolean(field.searchTargets) ||
     props.fields.length > 1 ||
     field.type === "repeatable" ||
     field.type === "multiselect";
+  // Only the open group form speaks for the record's answers, and its close clears them.
+  const publish = grouped && editing ? props.onValuesChange : undefined;
+  useEffect(() => () => publish?.({}), [publish]);
+  const values = prefillFromRecord(
+    props.fields,
+    editing ? opened : props.record,
+  );
+  const reason = props.fields
+    .map((entry) => props.readOnlyFields?.[entry.key])
+    .find(Boolean);
+  // A save elsewhere on the record pauses this field, never its own open editor.
+  const editable = props.canEdit && !reason;
+  const canEdit = editable && (!pending || editing);
   const saveValue = async (next: string) => {
     checkFieldValue(field, next, t);
     await mutation.mutateAsync({
       values: { [field.key]: next },
       rows: {},
-      baseline: opened.current,
+      baseline: opened,
       save: props.save,
     });
+  };
+  const saveGroup = (
+    submitted: Record<string, string>,
+    rows: FormRows | undefined,
+    baseline: FieldRecord,
+  ) => {
+    const unchanged =
+      sameEditValue(submitted, prefillFromRecord(props.fields, baseline)) &&
+      sameEditValue(rows ?? {}, prefillRowsFromRecord(props.fields, baseline));
+    if (unchanged) {
+      onEditingChange(false);
+      return;
+    }
+    mutation.mutate(
+      { values: submitted, rows: rows ?? {}, baseline, save: props.save },
+      { onSuccess: () => onEditingChange(false) },
+    );
+  };
+  const resend = (extra: Record<string, unknown>) => {
+    const last = mutation.variables;
+    if (last)
+      mutation.mutate(
+        { ...last, extra },
+        { onSuccess: () => onEditingChange(false) },
+      );
   };
   if (props.maskedFields?.includes(field.key))
     return <FieldRow label={label}>{t("record.notShown")}</FieldRow>;
   const renderedValue = props.renderValues?.[field.key];
+  const refusal = mutation.error;
   if (grouped)
     return (
-      <FieldRow valueRef={target} label={label} align="top" stacked={editing}>
-        {!editing && renderedValue}
-        {editing ? (
-          <RecordFieldForm
-            {...props}
-            opened={opened.current}
-            pending={mutation.isPending}
-            error={mutation.error}
-            onResend={(extra) => {
-              const last = mutation.variables;
-              if (last)
-                mutation.mutate(
-                  { ...last, extra },
-                  { onSuccess: () => onEditingChange(false) },
-                );
-            }}
-            onDirtyChange={setDirty}
-            onClose={() => onEditingChange(false)}
-            onSubmit={(submitted, rows) =>
-              mutation.mutate(
-                {
-                  values: submitted,
-                  rows: rows ?? {},
-                  baseline: opened.current,
-                  save: props.save,
-                },
-                { onSuccess: () => onEditingChange(false) },
-              )
-            }
-          />
-        ) : (
-          <GroupReading
-            props={props}
-            field={field}
-            editable={editable}
-            canEdit={canEdit}
-            reason={reason}
-            label={label}
-            onEdit={() => onEditingChange(true)}
-          />
-        )}
+      <FieldRow valueRef={target} label={label} align="top">
+        <GroupReading
+          props={props}
+          field={field}
+          editable={editable}
+          canEdit={canEdit}
+          reason={reason}
+          label={label}
+          onEdit={() => {
+            mutation.reset();
+            onEditingChange(true);
+          }}
+        />
+        <EditRecordModal
+          open={editing}
+          onClose={() => onEditingChange(false)}
+          title={label}
+          fields={props.fields}
+          record={props.record}
+          pending={mutation.isPending}
+          error={refusal ? problemMessageOf(refusal, t) : null}
+          existing={
+            refusal instanceof ProblemError
+              ? problemExistingId(refusal.problem)
+              : null
+          }
+          resolveExisting={props.resolveExisting}
+          notice={
+            refusal
+              ? props.refusalNotice?.(refusal, resend, mutation.isPending)
+              : null
+          }
+          onValuesChange={publish}
+          onDirtyChange={setDirty}
+          onSubmit={saveGroup}
+        />
       </FieldRow>
     );
   return (
@@ -219,10 +232,8 @@ function RecordField({
       mark={props.marks?.[field.key]}
       label={label}
       values={values}
-      editable={editable}
       canEdit={canEdit}
       reason={reason}
-      editing={editing}
       onEditingChange={onEditingChange}
       onSave={saveValue}
       onDirtyChange={setDirty}
@@ -251,38 +262,31 @@ function GroupReading({
   const { locale } = useLocale();
   const { key, editLabel } = field;
   const rendered = props.renderValues?.[key];
-  if (rendered)
-    return editable ? (
-      <InlineEditVerb
-        label={label}
-        text={editLabel && t(editLabel)}
-        disabled={!canEdit}
-        onClick={onEdit}
-      />
-    ) : null;
-  const value =
-    (props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
-    groupValue(
-      props.fields,
-      props.record,
-      t,
-      locale,
-      props.maskedFields,
-      props.readOnlyFields,
-    );
-  if (!canEdit) return <span title={reason}>{value || t("field.unset")}</span>;
+  const value = rendered
+    ? null
+    : ((props.fields.length === 1 ? props.displayValues?.[key] : undefined) ??
+      groupValue(
+        props.fields,
+        props.record,
+        t,
+        locale,
+        props.maskedFields,
+        props.readOnlyFields,
+      ));
+  if (!editable || (!rendered && !canEdit))
+    return rendered ?? <span title={reason}>{value || t("field.unset")}</span>;
   return (
-    <Button
-      variant="link"
-      className="inline-editable"
-      data-empty={!value}
-      onClick={onEdit}
-      aria-label={
+    <EditableValue
+      editLabel={
         editLabel ? t(editLabel) : t("inlineChoice.change", { field: label })
       }
+      placeholder={t("field.unset")}
+      link={Boolean(rendered)}
+      editable={canEdit}
+      onEdit={onEdit}
     >
-      {value || t("field.unset")}
-    </Button>
+      {rendered ?? value}
+    </EditableValue>
   );
 }
 
@@ -295,10 +299,8 @@ function RecordScalarField({
   mark,
   label,
   values,
-  editable,
   canEdit,
   reason,
-  editing,
   onEditingChange,
   onDirtyChange,
   onSave,
@@ -311,10 +313,8 @@ function RecordScalarField({
   mark?: ReactNode;
   label: string;
   values: Record<string, string>;
-  editable: boolean;
   canEdit: boolean;
   reason?: string;
-  editing: boolean;
   onEditingChange: (editing: boolean) => void;
   onDirtyChange: (dirty: boolean) => void;
   onSave: (value: string) => Promise<void>;
@@ -322,21 +322,20 @@ function RecordScalarField({
   const t = useT();
   const { locale } = useLocale();
   const stored = values[field.key] ?? "";
-  const shown = display ?? dateDisplay(field, stored, locale);
+  const options = selectOptions(field, values, t);
   return (
     <FieldRow valueRef={valueRef} label={label}>
       {field.type === "select" ? (
         <InlineChoice
           label={label}
           hideLabel
-          value={values[field.key] ?? ""}
-          options={selectOptions(field, values, t)}
+          value={stored}
+          options={options}
           render={(value) =>
-            display && value === values[field.key]
+            display && value === stored
               ? display
-              : (selectOptions(field, values, t).find(
-                  (option) => option.value === value,
-                )?.label ?? value)
+              : (options.find((option) => option.value === value)?.label ??
+                value)
           }
           canEdit={canEdit}
           readOnlyReason={reason}
@@ -345,109 +344,31 @@ function RecordScalarField({
           onSave={onSave}
         />
       ) : (
-        <>
-          {!editing && rendered}
-          {(editable || !rendered) && (
-            <InlineText
-              label={label}
-              value={stored}
-              display={shown}
-              verb={Boolean(rendered)}
-              placeholder={t("field.unset")}
-              multiline={field.type === "textarea"}
-              type={
-                field.type === "number" ||
-                field.type === "date" ||
-                field.type === "email"
-                  ? field.type
-                  : "text"
-              }
-              maxLength={field.maxLength}
-              step={field.step ?? (field.type === "number" ? "any" : undefined)}
-              canEdit={canEdit}
-              readOnlyReason={reason}
-              onEditingChange={onEditingChange}
-              onDirtyChange={onDirtyChange}
-              onSave={onSave}
-            />
-          )}
-        </>
+        <InlineText
+          label={label}
+          value={stored}
+          display={display ?? dateDisplay(field, stored, locale)}
+          link={rendered}
+          placeholder={t("field.unset")}
+          multiline={field.type === "textarea"}
+          type={
+            field.type === "number" ||
+            field.type === "date" ||
+            field.type === "email"
+              ? field.type
+              : "text"
+          }
+          maxLength={field.maxLength}
+          step={field.step ?? (field.type === "number" ? "any" : undefined)}
+          canEdit={canEdit}
+          readOnlyReason={reason}
+          onEditingChange={onEditingChange}
+          onDirtyChange={onDirtyChange}
+          onSave={onSave}
+        />
       )}
-      {link && !editing && (
-        <OffsiteLink href={link.href}>{link.label}</OffsiteLink>
-      )}
-      {!editing && mark}
+      {link && <OffsiteLink href={link.href}>{link.label}</OffsiteLink>}
+      {mark}
     </FieldRow>
-  );
-}
-
-function RecordFieldForm({
-  opened,
-  pending,
-  error,
-  onResend,
-  onClose,
-  onDirtyChange,
-  onSubmit,
-  ...props
-}: Readonly<
-  Props & {
-    opened: FieldRecord;
-    pending: boolean;
-    error: unknown;
-    onResend: (extra: Record<string, unknown>) => void;
-    onClose: () => void;
-    onDirtyChange: (dirty: boolean) => void;
-    onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
-  }
->) {
-  const t = useT();
-  const [values, setValues] = useState(() =>
-    prefillFromRecord(props.fields, opened),
-  );
-  const [rows, setRows] = useState(() =>
-    prefillRowsFromRecord(props.fields, opened),
-  );
-  const dirty =
-    pending ||
-    !sameEditValue(values, prefillFromRecord(props.fields, opened)) ||
-    !sameEditValue(rows, prefillRowsFromRecord(props.fields, opened));
-  useEffect(() => {
-    onDirtyChange(dirty);
-  }, [dirty, onDirtyChange]);
-  usePublishedValues(values, props.onValuesChange);
-  const publish = props.onValuesChange;
-  useEffect(() => () => publish?.({}), [publish]);
-  return (
-    <div inert={pending} className="form-stack">
-      <RecordFormBody
-        fields={props.fields}
-        values={values}
-        setValues={setValues}
-        rows={rows}
-        setRows={setRows}
-        pending={pending}
-        error={error ? problemMessageOf(error, t) : null}
-        existing={
-          error instanceof ProblemError
-            ? problemExistingId(error.problem)
-            : null
-        }
-        resolveExisting={props.resolveExisting}
-        notice={error ? props.refusalNotice?.(error, onResend, pending) : null}
-        onSubmit={(submitted, submittedRows) => {
-          const original = prefillFromRecord(props.fields, opened);
-          const originalRows = prefillRowsFromRecord(props.fields, opened);
-          if (
-            sameEditValue(submitted, original) &&
-            sameEditValue(submittedRows, originalRows)
-          )
-            onClose();
-          else onSubmit(submitted, submittedRows);
-        }}
-        onClose={onClose}
-        intent="save"
-      />
-    </div>
   );
 }

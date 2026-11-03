@@ -24,9 +24,6 @@ import (
 type recordingComms struct {
 	anchor ids.UUID
 	args   SendMessageArgs
-	// booked records that the seam was reached at all, so a test can assert a
-	// refusal stopped SHORT of it rather than merely returning an error.
-	booked *BookMeetingArgs
 	// accountSent is the same evidence for the account-started send: the links
 	// the seam was reached with, nil when the call never got that far.
 	accountSent []RecordLink
@@ -56,11 +53,6 @@ func (c *recordingComms) SendCompanyEmail(_ context.Context, links []RecordLink,
 
 func (c *recordingComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, int) (AvailabilityResult, error) {
 	return AvailabilityResult{}, nil
-}
-
-func (c *recordingComms) BookMeeting(_ context.Context, args BookMeetingArgs) (json.RawMessage, error) {
-	c.booked = &args
-	return nil, nil
 }
 
 func (c *recordingComms) SendMessage(_ context.Context, anchor ids.UUID, in SendMessageArgs) (SendMessageResult, error) {
@@ -354,7 +346,7 @@ func sendCtx() context.Context {
 // only a tool that implements StageInfo, so each verb must implement it.
 // Otherwise the refusal comes back bare and no approval is minted.
 func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
-	anchor, deal := ids.NewV7(), ids.NewV7()
+	anchor := ids.NewV7()
 	for _, tc := range []struct {
 		tool, args  string
 		wantTarget  string
@@ -365,14 +357,6 @@ func TestRefusedOutboundCallsReachTheInbox(t *testing.T) {
 			args:        fmt.Sprintf(`{"activity_id":%q,"to":["buyer@example.test"],"subject":"Next steps","body":"b","consent_purpose":"support"}`, anchor),
 			wantTarget:  string(datasource.EntityActivity),
 			wantSummary: `Send an email to buyer@example.test, subject "Next steps"`,
-		},
-		{
-			tool: "book_meeting",
-			args: fmt.Sprintf(`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","subject":"Review","links":[{"entity_type":"deal","entity_id":%q}]}`, deal),
-			// A booking anchors on no row, so the first link is what the
-			// human sees and what the pin is taken from.
-			wantTarget:  "deal",
-			wantSummary: `Book "Review" from 2026-08-03T09:00:00Z to 2026-08-03T09:30:00Z, attached to 1 record(s)`,
 		},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
@@ -421,20 +405,6 @@ func TestStagingRefusesASendOrBookingExecutionWouldRefuse(t *testing.T) {
 			tool:      "send_email",
 			args:      fmt.Sprintf(`{"activity_id":%q,"to":[],"subject":"s","body":"b","consent_purpose":"support"}`, anchor),
 			wantNamed: "`to` is empty",
-		},
-		{
-			name: "a meeting that ends before it starts is not bookable",
-			tool: "book_meeting",
-			args: fmt.Sprintf(`{"start":"2026-08-10T15:00:00Z","end":"2026-08-10T14:00:00Z","subject":"s",`+
-				`"links":[{"entity_type":"contact","entity_id":%q}]}`, anchor),
-			wantNamed: "does not follow `start`",
-		},
-		{
-			name: "a meeting of zero length is not bookable either",
-			tool: "book_meeting",
-			args: fmt.Sprintf(`{"start":"2026-08-10T15:00:00Z","end":"2026-08-10T15:00:00Z","subject":"s",`+
-				`"links":[{"entity_type":"contact","entity_id":%q}]}`, anchor),
-			wantNamed: "does not follow `start`",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

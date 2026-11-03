@@ -8,7 +8,6 @@ package compose
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -61,17 +60,6 @@ func TestBookingApprovalShowsTheHostTimeAndCompleteFiling(t *testing.T) {
 			}
 			if preview.Effects == nil || len(*preview.Effects) != 1 || (*preview.Effects)[0] != "record_meeting_only" {
 				t.Fatalf("effects: %+v", preview.Effects)
-			}
-			start := time.Date(2027, 1, 12, 9, 0, 0, 0, time.FixedZone("+07", 7*60*60))
-			meeting, err := e.Activities.BookMeeting(e.Admin(), activities.BookMeetingInput{AttendeeEmails: []string{"buyer@example.test"}, Host: ids.From[ids.UserKind](e.AdminUser), Start: start, End: start.Add(time.Hour), Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: first}, {EntityType: "contact", EntityID: contact}}})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if meeting.Subject == nil || *meeting.Subject != details["subject"] {
-				t.Fatalf("recorded subject: %+v", meeting.Subject)
-			}
-			if count := e.WsCount(t, `SELECT count(*) FROM meeting_invitation`); count != 0 {
-				t.Fatalf("record-only booking created %d invitations", count)
 			}
 		})
 	}
