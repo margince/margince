@@ -34,13 +34,8 @@ import { useMe, useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
-// The account header's editable pieces. They are the owner, changed in place
-// (InlineChoice) rather than through an edit modal, and the write path the
-// lifecycle control (companylifecycle.tsx) shares. The record's own menu
-// (CompanyActionBadges) is the third.
-// The subtitle and facts strip live in companyheaderfacts.tsx and the header's
-// other verbs in companyheaderactions.tsx, so this file holds only the pieces
-// that write.
+// The header's pieces that write: the owner, the lifecycle's shared PATCH and
+// the record menu. The facts and other verbs live in companyheader*.tsx.
 
 type Company = components["schemas"]["Company"];
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
@@ -50,9 +45,8 @@ type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 // lifecycle change and an owner change cannot end up with different conflict,
 // refusal or invalidation behaviour.
 //
-// It throws on failure rather than swallowing: InlineChoice renders what is
-// thrown beside the control, and the server's problem detail is a better
-// sentence than any this layer could invent.
+// It throws on failure rather than swallowing. InlineChoice shows what is
+// thrown on the field, and the server's problem detail reads best there.
 // useCompanyFieldPatch wires one inline header edit to the query cache: the
 // record, the list it appears in and the 360 that summarizes it all read the
 // value being changed, so all three are refetched rather than left showing the
@@ -157,7 +151,10 @@ export function CompanyOwnerControl({
   const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
-  const claim = useClaimRecord("company", company.id, company.version);
+  const claim = useMutation({
+    mutationKey: ["company-claim", company.id],
+    mutationFn: useClaimRecord("company", company.id),
+  });
   const viewerId = useViewerId();
   const { options: owners, roster } = useRecordOwnerOptions();
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
@@ -225,7 +222,7 @@ export function CompanyOwnerControl({
       // who can write the row (`nameable`).
       onSave={(next) =>
         !company.owner_id && next === viewerId
-          ? claim()
+          ? claim.mutateAsync(company.version)
           : patch({ owner_id: next })
       }
     />

@@ -403,7 +403,7 @@ function useBriefedMeeting(): [
   return [params.get(BRIEF_PARAM) ?? null, setBriefed];
 }
 
-// The record with its name renamed in place, through the details' own edit.
+// The record renamed from its heading, through the details' own edit.
 function ContactRecordView({
   contact,
   ...view
