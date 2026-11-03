@@ -50745,10 +50745,25 @@ export interface components {
             readonly buyer_snapshot?: {
                 [key: string]: unknown;
             } | null;
-            /** @description Seller legal block captured at send time. */
+            /**
+             * @description Seller legal block captured at send time, so a later change to the legal entity
+             *     leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+             *     document prints), `base_currency`, and, on an offer sent since offers name their
+             *     legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+             *     `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+             *     `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+             *     the entity has no value for is absent.
+             */
             readonly issuer_snapshot?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Format: uuid
+             * @description The legal entity that issues the offer: its name, address, VAT ID, bank details and
+             *     logo are printed on the PDF. Null on an offer created before offers named one, which
+             *     is issued by the default entity.
+             */
+            readonly legal_entity_id?: string | null;
             /** Format: date */
             valid_until?: string | null;
             intro_text?: string | null;
@@ -50904,6 +50919,12 @@ export interface components {
              * @description Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
              */
             template_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity that issues the offer. Defaults to the entity the author works for;
+             *     for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+             */
+            legal_entity_id?: string;
             line_items?: components["schemas"]["OfferLineItemInput"][] | null;
             source: string;
         };
@@ -50926,6 +50947,11 @@ export interface components {
             template_id?: string | null;
             intro_text?: string | null;
             terms_text?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+             */
+            legal_entity_id?: string;
         };
         RejectOfferRequest: {
             /** @description Optional buyer-given decline reason (rides offer.rejected). */

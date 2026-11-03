@@ -122,6 +122,10 @@ type Installation struct {
 	// ContractVisible is the contracts module's row rule, which stage
 	// evidence asks before it calls a cited contract openable.
 	ContractVisible ContractVisibleClause
+	// AuthorEntity and IssuerEntity answer which legal entity an offer is
+	// issued by, and what it prints about it. `contacts` owns the entities.
+	AuthorEntity AuthorEntity
+	IssuerEntity IssuerEntityReader
 }
 
 // EnsurePartner answers whether a company may be named as a deal's
@@ -175,6 +179,16 @@ func (i Installation) orRefusing() Installation {
 	}
 	if i.ContractVisible == nil {
 		i.ContractVisible = refusingContractVisible()
+	}
+	if i.AuthorEntity == nil {
+		i.AuthorEntity = func(context.Context, pgx.Tx, ids.UserID) (ids.LegalEntityID, error) {
+			return ids.LegalEntityID{}, errEntitySeamUnwired("AuthorEntity")
+		}
+	}
+	if i.IssuerEntity == nil {
+		i.IssuerEntity = func(context.Context, pgx.Tx, *ids.LegalEntityID) (IssuerEntity, error) {
+			return IssuerEntity{}, errEntitySeamUnwired("IssuerEntity")
+		}
 	}
 	return i
 }

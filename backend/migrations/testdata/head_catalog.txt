@@ -5253,6 +5253,7 @@ public.idx_mfa_recovery_code_user CREATE INDEX idx_mfa_recovery_code_user ON pub
 public.idx_oauth_authorization_code_user CREATE INDEX idx_oauth_authorization_code_user ON public.oauth_authorization_code USING btree (user_id)
 public.idx_oauth_grant_user CREATE INDEX idx_oauth_grant_user ON public.oauth_grant USING btree (user_id)
 public.idx_offer_deal CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL)
+public.idx_offer_legal_entity CREATE INDEX idx_offer_legal_entity ON public.offer USING btree (legal_entity_id) WHERE (legal_entity_id IS NOT NULL)
 public.idx_offer_status CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL)
 public.idx_offer_template_fk CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL)
 public.idx_offer_template_search CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv)
@@ -6431,6 +6432,7 @@ public.offer.gross_minor bigint NOT NULL gen=- def=0
 public.offer.id uuid NOT NULL gen=- def=uuidv7()
 public.offer.intro_text text gen=- def=-
 public.offer.issuer_snapshot jsonb gen=- def=-
+public.offer.legal_entity_id uuid gen=- def=-
 public.offer.net_minor bigint NOT NULL gen=- def=0
 public.offer.offer_accepted_at CHECK (((status <> 'accepted'::text) OR (accepted_at IS NOT NULL)))
 public.offer.offer_buyer_company_fkey FOREIGN KEY (buyer_company_id) REFERENCES company(id) ON DELETE SET NULL (buyer_company_id)
@@ -6438,6 +6440,7 @@ public.offer.offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE
 public.offer.offer_deal_id_id_key UNIQUE (deal_id, id)
 public.offer.offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor)))
 public.offer.offer_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))
+public.offer.offer_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.offer.offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)

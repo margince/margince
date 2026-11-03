@@ -41211,11 +41211,15 @@ type CreateLossReasonRequest struct {
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
-	BuyerCompanyId *openapi_types.UUID   `json:"buyer_company_id,omitempty"`
-	Currency       string                `json:"currency"`
-	IntroText      *string               `json:"intro_text,omitempty"`
-	LineItems      *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source         string                `json:"source"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+	Currency       string              `json:"currency"`
+	IntroText      *string             `json:"intro_text,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. Defaults to the entity the author works for;
+	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
+	Source        string                `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -50970,9 +50974,20 @@ type Offer struct {
 	Id         openapi_types.UUID `json:"id"`
 	IntroText  *string            `json:"intro_text,omitempty"`
 
-	// IssuerSnapshot Seller legal block captured at send time.
+	// IssuerSnapshot Seller legal block captured at send time, so a later change to the legal entity
+	// leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+	// document prints), `base_currency`, and, on an offer sent since offers name their
+	// legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+	// `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+	// `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+	// the entity has no value for is absent.
 	IssuerSnapshot *map[string]interface{} `json:"issuer_snapshot,omitempty"`
-	LineItems      *[]OfferLineItem        `json:"line_items,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer: its name, address, VAT ID, bank details and
+	// logo are printed on the PDF. Null on an offer created before offers named one, which
+	// is issued by the default entity.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
 	// NetMinor Σ line nets; derived, never client-set.
 	NetMinor *int64 `json:"net_minor,omitempty"`
@@ -60216,11 +60231,14 @@ type UpdateOfferRequest struct {
 	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
 	// Changing the currency on a draft with no priced lines is free, and re-sending the
 	// currency the offer already holds is not a change.
-	Currency   *string             `json:"currency,omitempty"`
-	IntroText  *string             `json:"intro_text,omitempty"`
-	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
-	TermsText  *string             `json:"terms_text,omitempty"`
-	ValidUntil *openapi_types.Date `json:"valid_until,omitempty"`
+	Currency  *string `json:"currency,omitempty"`
+	IntroText *string `json:"intro_text,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	TemplateId    *openapi_types.UUID `json:"template_id,omitempty"`
+	TermsText     *string             `json:"terms_text,omitempty"`
+	ValidUntil    *openapi_types.Date `json:"valid_until,omitempty"`
 }
 
 // UpdateOfferTemplateRequest Full replace via PUT (unlike updateProduct's merge-PATCH) — every writable field must be supplied; omitting one resets it, it is not left unchanged.
@@ -80684,6 +80702,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "issuer_snapshot")
 	}
 
+	if raw, found := object["legal_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.LegalEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_entity_id': %w", err)
+		}
+		delete(object, "legal_entity_id")
+	}
+
 	if raw, found := object["line_items"]; found {
 		err = json.Unmarshal(raw, &a.LineItems)
 		if err != nil {
@@ -80926,6 +80952,13 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		object["issuer_snapshot"], err = json.Marshal(a.IssuerSnapshot)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'issuer_snapshot': %w", err)
+		}
+	}
+
+	if a.LegalEntityId != nil {
+		object["legal_entity_id"], err = json.Marshal(a.LegalEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_entity_id': %w", err)
 		}
 	}
 

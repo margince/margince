@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 354 |
-| Columns | 4175 |
-| Foreign keys | 581 |
+| Columns | 4176 |
+| Foreign keys | 582 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -346,7 +346,7 @@ erDiagram
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
-| [`legal_entity`](contacts.md#legal_entity) | contacts | 29 | 2 |
+| [`legal_entity`](contacts.md#legal_entity) | contacts | 29 | 3 |
 | [`legal_entity_member`](contacts.md#legal_entity_member) | contacts | 4 | 0 |
 | [`legal_review`](deals.md#legal_review) | deals | 17 | 1 |
 | [`linkedin_account`](contacts.md#linkedin_account) | contacts | 6 | 0 |
@@ -372,7 +372,7 @@ erDiagram
 | [`oauth_client`](identity.md#oauth_client) | identity | 11 | 1 |
 | [`oauth_grant`](identity.md#oauth_grant) | identity | 9 | 3 |
 | [`oauth_refresh_token`](identity.md#oauth_refresh_token) | identity | 7 | 0 |
-| [`offer`](deals.md#offer) | deals | 26 | 3 |
+| [`offer`](deals.md#offer) | deals | 27 | 3 |
 | [`offer_line_item`](deals.md#offer_line_item) | deals | 19 | 1 |
 | [`offer_template`](deals.md#offer_template) | deals | 10 | 1 |
 | [`onboarding_wizard_state`](identity.md#onboarding_wizard_state) | identity | 15 | 0 |

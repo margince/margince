@@ -103,7 +103,7 @@ func (p *Provider) updateOffer(ctx context.Context, in datasource.UpdateInput, r
 	}
 	if retired != nil && p.reclaim != nil {
 		if delErr := p.reclaim(ctx, *retired); delErr != nil {
-			slog.WarnContext(ctx, "reclaiming the rendering a buyer change retired",
+			slog.WarnContext(ctx, "reclaiming the rendering a buyer or issuer change retired",
 				"offer", offerID.String(), "ref", *retired, "err", delErr)
 		}
 	}

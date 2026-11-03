@@ -6180,6 +6180,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.buyerCompany": "Käuferunternehmen",
   "offer.buyerCompanyConfirm": "Käuferunternehmen: {name}",
   "offer.template": "Vorlage",
+  "offer.legalEntity": "Ausgestellt von",
+  "offer.legalEntityHint":
+    "Der Rechtsträger, dessen Name, Adresse, USt-IdNr., Bankverbindung und Logo das Angebot druckt.",
   "offer.validUntil": "Gültig bis",
   "offer.introText": "Einleitungstext",
   "offer.termsText": "Bedingungstext",

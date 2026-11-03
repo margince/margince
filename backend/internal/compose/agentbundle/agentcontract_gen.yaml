@@ -22838,7 +22838,26 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         buyer_company_id: {type: [string, 'null'], format: uuid}
         buyer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Buyer legal block captured at send time.}
-        issuer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Seller legal block captured at send time.}
+        issuer_snapshot:
+          type: [object, 'null']
+          additionalProperties: true
+          readOnly: true
+          description: |-
+            Seller legal block captured at send time, so a later change to the legal entity
+            leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+            document prints), `base_currency`, and, on an offer sent since offers name their
+            legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+            `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+            `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+            the entity has no value for is absent.
+        legal_entity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: |-
+            The legal entity that issues the offer: its name, address, VAT ID, bank details and
+            logo are printed on the PDF. Null on an offer created before offers named one, which
+            is issued by the default entity.
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
@@ -22928,6 +22947,12 @@ components:
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
         template_id: {type: [string, 'null'], format: uuid}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: |-
+            The legal entity that issues the offer. Defaults to the entity the author works for;
+            for an agent, the human it acts for. An unknown or archived entity is refused as 422.
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
@@ -22952,6 +22977,10 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
       additionalProperties: false
     MorningBrief:
       type: object

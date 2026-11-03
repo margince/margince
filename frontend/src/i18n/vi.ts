@@ -6032,6 +6032,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.buyerCompany": "Công ty bên mua",
   "offer.buyerCompanyConfirm": "Công ty bên mua: {name}",
   "offer.template": "Mẫu",
+  "offer.legalEntity": "Pháp nhân phát hành",
+  "offer.legalEntityHint":
+    "Pháp nhân có tên, địa chỉ, mã số thuế, tài khoản ngân hàng và logo được in trên báo giá.",
   "offer.validUntil": "Có hiệu lực đến",
   "offer.introText": "Lời mở đầu",
   "offer.termsText": "Điều khoản",
