@@ -21915,6 +21915,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deals/{id}/viability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Whether the customer still supports this deal, and the review behind the answer.
+         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
+         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
+         *     `deal_viability` review with its task. The review is shown while it is open, even when
+         *     its task is done: completing the task does not answer the review.
+         *
+         *     Needs the deal and `forecast:read`. Carries no amount, so nothing here needs masking.
+         *     `qualification` is computed whether or not the installation enforces it;
+         *     `qualification_mode` says whether the qualified forecast applies it.
+         */
+        get: operations["getDealViability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/commitments": {
         parameters: {
             query?: never;
@@ -43933,6 +43963,71 @@ export interface components {
             /** @description The estimated share of those deals that end won. Absent when none closed. */
             won_percent?: number;
             chance_in_use: number;
+        };
+        DealViability: {
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * @description Whether the installation's qualified forecast applies `qualification`.
+             * @enum {string}
+             */
+            qualification_mode: "off" | "enforcing";
+            /**
+             * @description The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. A deal that is not open reads `eligible`.
+             * @enum {string}
+             */
+            qualification: "eligible" | "excluded" | "unsupported" | "unknown";
+            /**
+             * Format: date-time
+             * @description When the input check last assessed the deal; null when it never did.
+             */
+            assessed_at?: string | null;
+            /**
+             * @description The review standing the qualification rests on.
+             * @enum {string}
+             */
+            disposition?: "none" | "open_review" | "override" | "unsupported";
+            /** @description Whether the deal was judged on its current evidence under the current policy. */
+            complete?: boolean;
+            policy_version?: string;
+            receipt?: components["schemas"]["DealViabilityReceipt"];
+            /** Format: date */
+            expected_close_date?: string | null;
+            close_date_provisional: boolean;
+            /** @description True when the expected close date is before today in the installation's zone. */
+            close_date_overdue: boolean;
+            /** @description The baseline chance, the deal's stage probability. */
+            stage_probability: number;
+            review?: components["schemas"]["DealViabilityReview"];
+        };
+        /** @description The input check's last answer about the deal. Absent when it never assessed it. */
+        DealViabilityReceipt: {
+            /** @description The check's outcome, such as `eligible` or `unsupported`. */
+            outcome: string;
+            /** @description The reason codes the check recorded. */
+            reasons: string[];
+            /** Format: date-time */
+            valid_until: string;
+        };
+        /** @description The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done. */
+        DealViabilityReview: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            opened_at: string;
+            episode: number;
+            /**
+             * @description How far handing the review to a task got; null before a pass queued it.
+             * @enum {string|null}
+             */
+            delivery_state?: "pending" | "failed" | "delivered" | null;
+            task?: components["schemas"]["DealViabilityTask"];
+        };
+        /** @description The task the review was delivered as. Absent until delivered, or when the reader may not see it. */
+        DealViabilityTask: {
+            /** Format: uuid */
+            id: string;
+            done: boolean;
         };
         /**
          * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
@@ -89626,6 +89721,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealCoverage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealViability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's viability. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealViability"];
                 };
             };
             401: components["responses"]["Unauthorized"];

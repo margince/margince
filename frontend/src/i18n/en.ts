@@ -5559,6 +5559,21 @@ export const en = {
   "deals.confirm": "Confirm",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
+  "deals.viability.title": "Customer support",
+  "deals.viability.standing": "Supported-deals forecast",
+  "deals.viability.enforced":
+    "The forecast counts only deals the customer supports.",
+  "deals.viability.notEnforced":
+    "The forecast counts every deal; this is shown for reference.",
+  "deals.viability.qualification.eligible": "Counted",
+  "deals.viability.qualification.excluded": "Left out for review",
+  "deals.viability.qualification.unsupported": "Left out: no support",
+  "deals.viability.qualification.unknown": "Not checked",
+  "deals.viability.assessed": "Last checked",
+  "deals.viability.review": "Customer support review",
+  "deals.viability.reviewOpenedOn": "Opened {date}",
+  "deals.viability.reviewOpen": "Open",
+  "deals.viability.taskDoneReviewOpen": "Task done, still open",
 
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
