@@ -263,6 +263,11 @@ var catalog = map[string]struct {
 	"weekly_plan.updated":        {identityStreamEntity, 1},
 	"weekly_plan.help_requested": {identityStreamEntity, 1},
 
+	// A sales initiative is a commercial decision about a population, not a
+	// record of its own stream. It rides the identity stream as a report
+	// definition does.
+	"sales_initiative.updated": {identityStreamEntity, 1},
+
 	// A call rides the identity stream because its entity is the AUTHOR. A
 	// forecast is about a pipeline, but a CALL is an assertion by a contact and
 	// is attributable to them, a consumer asking "who said this number" is
