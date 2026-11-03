@@ -140,8 +140,8 @@ func deliverReview(ctx context.Context, deps bundleDeps, args AssuranceReviewDel
 	if err != nil || !found {
 		return err
 	}
-	// A cycle of its own per attempt: an attempt that died before closing its
-	// cycle must not block the next one, as a reused scope would.
+	// Each attempt opens its own cycle. A reused scope would let an attempt that
+	// died with its cycle open block every later one.
 	cycle, err := deps.bundles.OpenCycle(ctx, fmt.Sprintf("assurance_review:%s:%d:%s",
 		args.Exception, args.Episode, ids.NewV7()))
 	if err != nil {
@@ -182,7 +182,8 @@ func runSubjectOf(
 
 // settleReviewTasks completes each open review task whose findings are all
 // answered, cleared or gone. Only system-minted tasks complete: the activities
-// writer refuses a task a person wrote, and a review still open keeps its task.
+// writer refuses a task somebody wrote by hand. A review still open keeps its
+// task.
 func settleReviewTasks(ctx context.Context, deps bundleDeps) error {
 	var settled []ids.UUID
 	if err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {

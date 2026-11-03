@@ -393,8 +393,7 @@ type Run struct {
 	Readiness       *string
 	// Freshness is what changed after this reading. A reading the records
 	// moved past is never shown as current.
-	Freshness Freshness
-	// Deliveries are the open reviews by how far their task delivery got.
+	Freshness  Freshness
 	Deliveries DeliveryCounts
 }
 

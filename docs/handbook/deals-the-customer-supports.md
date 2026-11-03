@@ -22,7 +22,7 @@ Completing the task alone does not answer it, and no second task comes for the
 same review.
 
 The task follows the deal. When the deal gets a new owner, the next check moves
-the task to them. If somebody gave the task to a colleague, it stays with that
+the task to them. If somebody moved the task to a colleague, it stays with that
 colleague. When the review and every other check on the same task are answered,
 the next check marks the task done.
 

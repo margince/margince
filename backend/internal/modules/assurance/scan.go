@@ -40,8 +40,8 @@ type Scanner struct {
 	cfg          Config
 }
 
-// ReviewDeliveryFunc queues the delivery of the reviews a run observed, in the
-// run's own transaction, so a delivery exists exactly when its finding does.
+// ReviewDeliveryFunc queues the delivery of the reviews a run observed. It runs
+// in the run's own transaction, so a delivery commits with its finding or not at all.
 type ReviewDeliveryFunc func(ctx context.Context, tx pgx.Tx, runID ids.UUID) error
 
 // WithReviewDelivery wires the queue the run's reviews are delivered through.

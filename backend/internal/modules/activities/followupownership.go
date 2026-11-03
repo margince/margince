@@ -208,10 +208,9 @@ const assignmentAttempts = 3
 // another firing: lead.updated fires when the LEAD changes, and the task's own
 // edits do not produce one.
 //
-// A task whose assignee mayMove refuses after a re-read is left alone. That is
-// the case where somebody did decide, and re-reading the record's owner over
-// their decision is how an automation takes work back off the contact it was
-// just handed to.
+// A task whose assignee mayMove refuses after a re-read is left alone. There
+// somebody did decide. Writing the record's owner over their decision would
+// take work back off the contact it was just handed to.
 func (s *Store) assignSystemTask(
 	ctx context.Context, id ids.ActivityID, version int64, owner ids.UserID, mayMove func(assignee *ids.UUID) bool,
 ) (bool, error) {
@@ -259,8 +258,8 @@ func unclaimedOr(owner ids.UserID) func(*ids.UUID) bool {
 	return func(assignee *ids.UUID) bool { return assignee == nil || *assignee == owner.UUID }
 }
 
-// heldBy admits a task whose assignee is still exactly the one given, nil
-// meaning nobody.
+// heldBy admits a task whose assignee is still the one given, nil meaning
+// nobody.
 func heldBy(seat *ids.UserID) func(*ids.UUID) bool {
 	return func(assignee *ids.UUID) bool {
 		if seat == nil || assignee == nil {

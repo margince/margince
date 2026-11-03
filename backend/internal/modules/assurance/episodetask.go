@@ -98,9 +98,7 @@ func (s *Store) FollowedOwner(ctx context.Context, tx pgx.Tx, exceptionID ids.UU
 		 WHERE id = $1 AND episode = $2`, exceptionID, episode, assignee); err != nil {
 		return fmt.Errorf("assurance: recording the review task's new assignee: %w", err)
 	}
-	_, err := storekit.AuditEvent(ctx, tx, "update", "assurance_exception", exceptionID,
-		map[string]any{"episode": episode, "delivered_assignee_id": assignee.String()})
-	return err
+	return nil
 }
 
 // QueueDelivery marks an undelivered episode pending. A failed one is pending

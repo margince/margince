@@ -9528,6 +9528,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_run": "Prognoseprüfung auf Anfrage",
   "jobs.kind.assurance_sweep": "Prognoseprüfung",
   "jobs.kind.assurance_deal_rescan": "Prognoseprüfung eines geänderten Deals",
+  "jobs.kind.assurance_review_delivery": "Aufgabe zu einer Kundenprüfung",
   "jobs.kind.brief_generate": "Morgenbericht",
   "jobs.kind.capture_auto_enrich_sweep":
     "Anreicherung von Unternehmensdaten aus E-Mails",
