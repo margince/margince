@@ -4,8 +4,8 @@ import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePublishedScrollerHeight } from "./scrollerheight";
 
-// A banner that appears or goes shortens or lengthens the scroller without a
-// render of the shell, so the height has to follow the box, not the tree.
+// A banner that appears or goes changes the scroller's height without a
+// render of the shell. The height follows the box, not the tree.
 
 type Watcher = { fire: () => void; boxes: Element[] };
 

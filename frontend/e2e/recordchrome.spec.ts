@@ -222,8 +222,8 @@ test.describe("a refused rename under the record's name", () => {
 });
 
 // A shell banner shortens the scroller the record stands in. The details card
-// caps its height to that scroller, so at the end of a scroll in a short window
-// its top is still in view, under the banner rather than cut by it.
+// caps its height to that scroller. At the end of a scroll in a short window,
+// its top stays in view under the banner instead of being cut off by it.
 test.describe("the details card clears a shell banner", () => {
   for (const record of RECORDS) {
     test(`on a ${record.name} at the end of a scroll in a short window`, async ({
