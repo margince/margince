@@ -28391,12 +28391,12 @@ type AccountCoverageRow struct {
 	DaysSilent *int                 `json:"days_silent,omitempty"`
 	Deal       *AccountCoverageDeal `json:"deal,omitempty"`
 
-	// EngagedSeats People inside the account engaged on the deal, for a single-threaded row.
+	// EngagedSeats Contacts engaged on the deal, for a single-threaded row.
 	EngagedSeats *int       `json:"engaged_seats,omitempty"`
 	LastInbound  *time.Time `json:"last_inbound,omitempty"`
 	LastOutbound *time.Time `json:"last_outbound,omitempty"`
 
-	// NamedSeats People named on the deal, engaged or not.
+	// NamedSeats Contacts named on the deal, engaged or not.
 	NamedSeats *int `json:"named_seats,omitempty"`
 
 	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
@@ -28409,7 +28409,7 @@ type AccountCoverageRow struct {
 
 // AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
-	// MaxEngagedSeats A deal with this many engaged people inside the account, or fewer, is single-threaded. Default 1.
+	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
 	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty"`
 
 	// SilentDays A won account with no exchange within this many days is silent. Default 30.

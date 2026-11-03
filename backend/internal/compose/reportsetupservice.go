@@ -11,7 +11,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -228,7 +228,7 @@ func wireSetupProposal(site crmcontracts.ReportSetupRequestSite, proposal report
 func setupSelection(proposal reportsetup.Proposal) crmcontracts.ReportSetupSelection {
 	var selection crmcontracts.ReportSetupSelection
 	if proposal.Product != "" {
-		if id, err := uuid.Parse(proposal.Product); err == nil {
+		if id, err := ids.Parse(proposal.Product); err == nil {
 			product := crmcontracts.ReportingProductId(openapi_types.UUID(id))
 			selection.ProductId = &product
 		}

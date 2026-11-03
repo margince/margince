@@ -35433,9 +35433,9 @@ export interface components {
         AccountCoverageRow: {
             deal?: components["schemas"]["AccountCoverageDeal"];
             company: components["schemas"]["AccountCoverageAccount"];
-            /** @description People inside the account engaged on the deal, for a single-threaded row. */
+            /** @description Contacts engaged on the deal, for a single-threaded row. */
             engaged_seats?: number;
-            /** @description People named on the deal, engaged or not. */
+            /** @description Contacts named on the deal, engaged or not. */
             named_seats?: number;
             /** @description Open deals on the account, for an untouched row. */
             open_deals?: number;
@@ -42895,7 +42895,7 @@ export interface components {
         };
         /** @description What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints. */
         AccountCoverageThresholds: {
-            /** @description A deal with this many engaged people inside the account, or fewer, is single-threaded. Default 1. */
+            /** @description A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1. */
             max_engaged_seats?: number;
             /** @description An account with an open deal and no exchange within this many days is untouched. Default 21. */
             untouched_days?: number;
