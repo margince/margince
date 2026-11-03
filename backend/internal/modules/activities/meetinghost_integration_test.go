@@ -128,3 +128,26 @@ func TestAnExplicitMeetingHostIsKept(t *testing.T) {
 		}
 	}
 }
+
+func TestAnonymousImportedInteractionsDoNotStampTheImporter(t *testing.T) {
+	e := setupSend(t)
+	for _, kind := range []string{KindMeeting, "call", "email"} {
+		in := LogActivityInput{Kind: kind, Subject: new("Unattributed history"), Source: "import", SourceSystem: new("mirror:legacy_crm"), SourceID: new("anonymous-" + kind)}
+		if kind == "email" {
+			in.Direction = new("outbound")
+			in.EmailFrom = "writer@source.test"
+			in.EmailTo = []string{"reader@customer.test"}
+		}
+		row, _, err := e.store(nil).LogActivity(e.as(principal.RowScopeAll), in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var count int
+		if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2`, ids.UUID(row.Id), e.rep).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatalf("%s stamps %d importer participants", kind, count)
+		}
+	}
+}

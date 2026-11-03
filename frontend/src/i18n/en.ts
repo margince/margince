@@ -7402,6 +7402,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.analytics_decision":
+    "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
     "Created from a follow-up that the overnight review proposed and someone approved.",
   "tasks.origin.commitment":
@@ -13110,7 +13112,7 @@ export const en = {
   "voice.candidate.applyHint":
     "If it reads like you, use it. If not, keep your current voice and add more writing samples; the next build learns from them.",
   "voice.candidate.firstHint":
-    "If it reads like you, use it. If not, discard it and add more writing samples; the next build learns from them.",
+    "If it reads like you, use it. Setup is done once you use a version. If not, discard it, add more writing samples and build again; the next build learns from them.",
   "voice.candidate.reason.uncomparable":
     "The previous voice profile could not be compared. Review this version before replacing it.",
   "voice.candidate.reason.identity":
@@ -14536,7 +14538,20 @@ export const en = {
   "setup.caption.waitsAdmin": "Waits on an administrator.",
   "setup.caption.mailReconnect": "Connection expired.",
   "setup.caption.calendarReconnect": "Expired or cannot add bookings.",
-  "setup.caption.voice": "Needs 800 words you wrote.",
+  "setup.caption.voice": "Needs about {n} more words you wrote.",
+  "setup.caption.voiceSamples": "Needs writing samples of your own.",
+  "setup.caption.voiceReview": "Your voice is trained and ready to review.",
+  "setup.caption.voiceBuilding":
+    "Building your voice. It continues if you leave.",
+  "setup.caption.voiceDeferred": "Your voice build is waiting to run.",
+  "setup.caption.voiceFailed": "The last build did not finish.",
+  "setup.caption.voiceReady": "Your samples are ready to build from.",
+  "setup.caption.voiceUnknown": "Could not check your writing voice.",
+  "setup.action.voiceReview": "Review voice",
+  "setup.action.voiceProgress": "View progress",
+  "setup.action.voiceRetry": "Try again",
+  "setup.action.voiceBuild": "Build voice",
+  "setup.action.voiceOpen": "Open writing voice",
   "setup.caption.booking": "Customers book your free time.",
   "setup.caption.bookingNeedsCalendar": "Needs a calendar.",
   "setup.reminder.progress": "Setup progress",
@@ -16492,12 +16507,14 @@ export const en = {
   "contact.standing.lastRecordedExchange":
     "since last recorded contact exchange",
   "contact.standing.lastInbound": "Last inbound message",
+  "contact.standing.noneAccessible": "None you can open",
   "contact.standing.direction.twoWay": "Both sides have written.",
   "contact.standing.direction.inboundOnly":
-    "Only they have written so far. Nothing has gone out from your team.",
+    "In the messages you can open, only they have written. Nothing from your team appears.",
   "contact.standing.direction.outboundOnly":
-    "Only outgoing messages from your team are recorded. No reply is recorded.",
-  "contact.standing.direction.none": "No messages either way yet.",
+    "In the messages you can open, only your team has written. No reply appears.",
+  "contact.standing.direction.none":
+    "No messages either way in what you can open.",
   "contact.subtitle.at": "at",
   "contact.standing.dims": "How the relationship stands",
   "contact.standing.dim.promises": "Your commitments",
@@ -17644,6 +17661,7 @@ export const en = {
   "worklist.pane.lastFromCompany": "Last from this company",
   "worklist.pane.lastToCompany": "Last to this company",
   "worklist.pane.never": "Never",
+  "worklist.pane.noneAccessible": "None you can open",
   "worklist.pane.company": "Company",
   "worklist.pane.role": "Role",
   "worklist.why.title": "Why this needs attention",
@@ -18926,6 +18944,27 @@ export const en = {
   "scheduling.noLinkYetBody":
     "Create one to share a page where guests pick a time.",
   "scheduling.replaceAddress": "Replace address",
+  "scheduling.alias.label": "Short address",
+  "scheduling.alias.help":
+    "Optional. A short address such as /book/alex is easy to share and easy to guess. Anyone who guesses it sees your booking page and your free times. Your long address keeps working.",
+  "scheduling.alias.preview": "Your link will end in {path}",
+  "scheduling.alias.save": "Save address",
+  "scheduling.alias.clear": "Remove short address",
+  "scheduling.alias.changeTitle": "Change your short address?",
+  "scheduling.alias.clearTitle": "Remove your short address?",
+  "scheduling.alias.changeHelp":
+    "{old} stops working at once. Guests who have it see that the page is not available. Nobody else can ever take it, and you can take it back at any time.",
+  "scheduling.alias.error.too_short": "Use at least 3 characters.",
+  "scheduling.alias.error.too_long": "Use at most 30 characters.",
+  "scheduling.alias.error.invalid":
+    "Use letters, digits and hyphens. Start and end with a letter or digit.",
+  "scheduling.alias.error.reserved":
+    "This address is reserved. Choose another one.",
+  "scheduling.alias.error.taken":
+    "Another booking page uses or has used this address. Choose another one.",
+  "scheduling.alias.error.no_booking_link": "Create your booking link first.",
+  "scheduling.replaceAliasHelp":
+    "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",

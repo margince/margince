@@ -1637,6 +1637,22 @@ public.automation_effect_claim_pkey CREATE UNIQUE INDEX automation_effect_claim_
 public.automation_effect_claim_unapplied CREATE INDEX automation_effect_claim_unapplied ON public.automation_effect_claim USING btree (created_at) WHERE (applied_at IS NULL)
 public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_claim_unique ON public.automation_effect_claim USING btree (handler, occurrence_key, effect_fingerprint)
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
+public.booking_alias acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.booking_alias.alias text NOT NULL gen=- def=-
+public.booking_alias.booking_alias_alias_key UNIQUE (alias)
+public.booking_alias.booking_alias_alias_shape CHECK ((alias ~ '^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$'::text))
+public.booking_alias.booking_alias_booking_page_id_fkey FOREIGN KEY (booking_page_id) REFERENCES booking_page(id) ON DELETE SET NULL
+public.booking_alias.booking_alias_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.booking_alias.booking_alias_pkey PRIMARY KEY (id)
+public.booking_alias.booking_page_id uuid gen=- def=-
+public.booking_alias.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.booking_alias.host_user_id uuid gen=- def=-
+public.booking_alias.id uuid NOT NULL gen=- def=uuidv7()
+public.booking_alias.retired_at timestamp with time zone gen=- def=-
+public.booking_alias_alias_key CREATE UNIQUE INDEX booking_alias_alias_key ON public.booking_alias USING btree (alias)
+public.booking_alias_booking_page_idx CREATE INDEX booking_alias_booking_page_idx ON public.booking_alias USING btree (booking_page_id)
+public.booking_alias_one_live_per_host CREATE UNIQUE INDEX booking_alias_one_live_per_host ON public.booking_alias USING btree (host_user_id) WHERE (retired_at IS NULL)
+public.booking_alias_pkey CREATE UNIQUE INDEX booking_alias_pkey ON public.booking_alias USING btree (id)
 public.booking_page acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.booking_page.booking_page_host_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.booking_page.booking_page_host_user_id_retirement_guard CREATE TRIGGER booking_page_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.booking_page FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')
@@ -3997,6 +4013,7 @@ public.deal_product.offer_line_item_id uuid gen=- def=-
 public.deal_product.product_id uuid NOT NULL gen=- def=-
 public.deal_product.source text NOT NULL gen=- def=-
 public.deal_product.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.deal_product_offer_line_item_idx CREATE INDEX deal_product_offer_line_item_idx ON public.deal_product USING btree (offer_line_item_id) WHERE (offer_line_item_id IS NOT NULL)
 public.deal_product_pkey CREATE UNIQUE INDEX deal_product_pkey ON public.deal_product USING btree (deal_id, product_id)
 public.deal_product_product_idx CREATE INDEX deal_product_product_idx ON public.deal_product USING btree (product_id)
 public.deal_risk_day acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -7517,6 +7534,7 @@ public.sales_initiative_baseline.sales_initiative_baseline_initiative_id_fkey FO
 public.sales_initiative_baseline.sales_initiative_baseline_pkey PRIMARY KEY (initiative_id, deal_id)
 public.sales_initiative_baseline.stage_id uuid gen=- def=-
 public.sales_initiative_baseline.status text NOT NULL gen=- def=-
+public.sales_initiative_baseline_deal_idx CREATE INDEX sales_initiative_baseline_deal_idx ON public.sales_initiative_baseline USING btree (deal_id)
 public.sales_initiative_baseline_pkey CREATE UNIQUE INDEX sales_initiative_baseline_pkey ON public.sales_initiative_baseline USING btree (initiative_id, deal_id)
 public.sales_initiative_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_initiative_member.captured_by text NOT NULL gen=- def=-

@@ -7081,6 +7081,21 @@ func (e ContactVisibility) Valid() bool {
 	}
 }
 
+// Defines values for Contact360LastTouchBasis.
+const (
+	Contact360LastTouchBasisReadableByCaller Contact360LastTouchBasis = "readable_by_caller"
+)
+
+// Valid indicates whether the value is a known member of the Contact360LastTouchBasis enum.
+func (e Contact360LastTouchBasis) Valid() bool {
+	switch e {
+	case Contact360LastTouchBasisReadableByCaller:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Contact360SectionsOmitted.
 const (
 	Contact360SectionsOmittedContact360SectionsOmittedActivities          Contact360SectionsOmitted = "activities"
@@ -38448,11 +38463,17 @@ type Contact360 struct {
 	// LastContactPrecision How to read `last_contact_at`, from the row it names. Absent when that is null or absent.
 	LastContactPrecision *OccurredPrecision `json:"last_contact_precision,omitempty"`
 
-	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+	// LastInboundActivityId The activity behind `last_inbound_at`, picked by the same query. Evidence cites this id rather than matching a time against the capped `activities` page. Null when `last_inbound_at` is null; absent with it.
+	LastInboundActivityId *openapi_types.UUID `json:"last_inbound_activity_id,omitempty"`
+
+	// LastInboundAt When they last wrote to us, among the messages the caller can open (see `last_touch_basis`). Null means no message the caller can open records a reply from them. It does not prove that none exists: a message the caller cannot open is never counted, and nothing here hints that one exists. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastLiveInboundActivityId The activity behind `last_live_inbound_at`, picked by the same query. Null when that is null; absent with it.
+	LastLiveInboundActivityId *openapi_types.UUID `json:"last_live_inbound_activity_id,omitempty"`
 
 	// LastLiveInboundAt When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastLiveInboundAt *time.Time `json:"last_live_inbound_at,omitempty"`
@@ -38460,11 +38481,17 @@ type Contact360 struct {
 	// LastLiveInboundPrecision How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent.
 	LastLiveInboundPrecision *OccurredPrecision `json:"last_live_inbound_precision,omitempty"`
 
-	// LastOutboundAt When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+	// LastOutboundActivityId The activity behind `last_outbound_at`, picked by the same query. Null when that is null; absent with it.
+	LastOutboundActivityId *openapi_types.UUID `json:"last_outbound_activity_id,omitempty"`
+
+	// LastOutboundAt When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question. Counts the messages the caller can open, like `last_inbound_at`.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+
+	// LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+	LastTouchBasis *Contact360LastTouchBasis `json:"last_touch_basis,omitempty"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
 	// not assert that no reply exists. Partial means capture has succeeded but
@@ -38534,6 +38561,9 @@ type Contact360 struct {
 	// `contributing_activity_ids` are the receipts, so the UI can show its inputs — no mystery number.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
 }
+
+// Contact360LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+type Contact360LastTouchBasis string
 
 // Contact360SectionsOmitted defines model for Contact360.SectionsOmitted.
 type Contact360SectionsOmitted string
@@ -55609,8 +55639,16 @@ type ScheduledSendHeldReason string
 // a human reschedules or cancels it.
 type ScheduledSendStatus string
 
+// SchedulingAliasRequest defines model for SchedulingAliasRequest.
+type SchedulingAliasRequest struct {
+	// Alias The friendly address to claim; empty clears it. Validated and normalized by the server.
+	Alias string `json:"alias"`
+}
+
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
+	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
+	Alias             *string   `json:"alias,omitempty"`
 	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int       `json:"buffer_minutes"`
 	CalendarId        string    `json:"calendar_id"`
@@ -55632,10 +55670,12 @@ type SchedulingProfile struct {
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
 	NoticeMinutes int                       `json:"notice_minutes"`
 	Provider      SchedulingProfileProvider `json:"provider"`
-	PublicUrl     *string                   `json:"public_url,omitempty"`
-	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
-	Slug          *string                   `json:"slug,omitempty"`
-	Title         string                    `json:"title"`
+
+	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
+	PublicUrl   *string `json:"public_url,omitempty"`
+	ReplaceLink *bool   `json:"replace_link,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Title       string  `json:"title"`
 
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -60211,14 +60251,20 @@ type VoiceProfile struct {
 	ArchivedAt       *time.Time `json:"archived_at"`
 
 	// AutoLearningEnabled Explicit owner opt-in; defaults off.
-	AutoLearningEnabled bool                  `json:"auto_learning_enabled"`
-	CandidateVersion    *int                  `json:"candidate_version,omitempty"`
-	CapturedBy          *string               `json:"captured_by,omitempty"`
-	CreatedAt           time.Time             `json:"created_at"`
-	Id                  openapi_types.UUID    `json:"id"`
-	LastBuiltAt         *time.Time            `json:"last_built_at,omitempty"`
-	Maturity            *VoiceProfileMaturity `json:"maturity,omitempty"`
-	OwnerId             *openapi_types.UUID   `json:"owner_id,omitempty"`
+	AutoLearningEnabled bool      `json:"auto_learning_enabled"`
+	CandidateVersion    *int      `json:"candidate_version,omitempty"`
+	CapturedBy          *string   `json:"captured_by,omitempty"`
+	CreatedAt           time.Time `json:"created_at"`
+
+	// FirstBuildWordsRemaining Included corpus words still missing before a first build can learn anything; zero once maturity leaves collecting.
+	FirstBuildWordsRemaining *int               `json:"first_build_words_remaining,omitempty"`
+	Id                       openapi_types.UUID `json:"id"`
+	LastBuiltAt              *time.Time         `json:"last_built_at,omitempty"`
+
+	// LatestBuild The newest build of this profile; absent when none was ever queued. Setup reads it to tell building, failed and deferred apart without polling a build id.
+	LatestBuild *VoiceBuild           `json:"latest_build,omitempty"`
+	Maturity    *VoiceProfileMaturity `json:"maturity,omitempty"`
+	OwnerId     *openapi_types.UUID   `json:"owner_id,omitempty"`
 
 	// PersonalityMd Owner-authored preferences; model output never overwrites this field.
 	PersonalityMd string `json:"personality_md"`
@@ -61750,9 +61796,13 @@ type WorklistCompanyFacts struct {
 	// engagement strip for an account. A queue row and the record it opens cannot
 	// disagree about who wrote last.
 	//
+	// On a contact row both dates count the messages this caller can open, the
+	// contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+	// History also counts here. An account row reads the company page's own basis.
+	//
 	// Absent from the row when the caller may not read activity, or may not read this
-	// contact or account: a withheld answer. Present with both nulls for a record
-	// nobody has ever exchanged a message with.
+	// contact or account: a withheld answer. Present with both nulls when no message the
+	// reader's basis counts was exchanged with the record.
 	Touch *WorklistContactTouch `json:"touch,omitempty"`
 }
 
@@ -61826,9 +61876,13 @@ type WorklistContactFacts struct {
 	// engagement strip for an account. A queue row and the record it opens cannot
 	// disagree about who wrote last.
 	//
+	// On a contact row both dates count the messages this caller can open, the
+	// contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+	// History also counts here. An account row reads the company page's own basis.
+	//
 	// Absent from the row when the caller may not read activity, or may not read this
-	// contact or account: a withheld answer. Present with both nulls for a record
-	// nobody has ever exchanged a message with.
+	// contact or account: a withheld answer. Present with both nulls when no message the
+	// reader's basis counts was exchanged with the record.
 	Touch *WorklistContactTouch `json:"touch,omitempty"`
 }
 
@@ -61838,17 +61892,21 @@ type WorklistContactFacts struct {
 // engagement strip for an account. A queue row and the record it opens cannot
 // disagree about who wrote last.
 //
+// On a contact row both dates count the messages this caller can open, the
+// contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+// History also counts here. An account row reads the company page's own basis.
+//
 // Absent from the row when the caller may not read activity, or may not read this
-// contact or account: a withheld answer. Present with both nulls for a record
-// nobody has ever exchanged a message with.
+// contact or account: a withheld answer. Present with both nulls when no message the
+// reader's basis counts was exchanged with the record.
 type WorklistContactTouch struct {
-	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
+	// LastInboundAt When they last wrote to us. Null means no counted message records a reply; it does not prove that none exists.
 	LastInboundAt *time.Time `json:"last_inbound_at"`
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
 
-	// LastOutboundAt When we last wrote to them. Null means we never have.
+	// LastOutboundAt When we last wrote to them. Null means no counted message records one.
 	LastOutboundAt *time.Time `json:"last_outbound_at"`
 
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null.
@@ -72077,6 +72135,9 @@ type ChangeMeetingInvitationJSONRequestBody = MeetingInvitationChange
 
 // PutSchedulingProfileJSONRequestBody defines body for PutSchedulingProfile for application/json ContentType.
 type PutSchedulingProfileJSONRequestBody = SchedulingProfile
+
+// PutSchedulingAliasJSONRequestBody defines body for PutSchedulingAlias for application/json ContentType.
+type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
@@ -86293,6 +86354,9 @@ type ServerInterface interface {
 	// Configure and activate the caller's booking page.
 	// (PUT /scheduling/profile)
 	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Choose, change or clear the caller's friendly booking address.
+	// (PUT /scheduling/profile/alias)
+	PutSchedulingAlias(w http.ResponseWriter, r *http.Request)
 	// List the acting host's open proposals and personal links for one contact.
 	// (GET /scheduling/proposals)
 	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
@@ -91871,6 +91935,12 @@ func (_ Unimplemented) GetSchedulingProfile(w http.ResponseWriter, r *http.Reque
 // Configure and activate the caller's booking page.
 // (PUT /scheduling/profile)
 func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose, change or clear the caller's friendly booking address.
+// (PUT /scheduling/profile/alias)
+func (_ Unimplemented) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129495,6 +129565,26 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// PutSchedulingAlias operation middleware
+func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutSchedulingAlias(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
 
@@ -137870,6 +137960,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/profile/alias", wrapper.PutSchedulingAlias)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)

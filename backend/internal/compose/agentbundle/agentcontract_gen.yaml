@@ -12417,7 +12417,25 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+            When they last wrote to us, among the messages the caller can open (see `last_touch_basis`). Null means no message the caller can open records a reply from them. It does not prove that none exists: a message the caller cannot open is never counted, and nothing here hints that one exists. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+        last_touch_basis:
+          type: string
+          enum: [readable_by_caller]
+          description: >-
+            Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+        last_inbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The activity behind `last_inbound_at`, picked by the same query. Evidence cites this id rather than matching a time against the capped `activities` page. Null when `last_inbound_at` is null; absent with it.
+        last_outbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The activity behind `last_outbound_at`, picked by the same query. Null when that is null; absent with it.
+        last_live_inbound_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The activity behind `last_live_inbound_at`, picked by the same query. Null when that is null; absent with it.
         dead_addresses:
           type: array
           items: {type: string}
@@ -12427,11 +12445,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: >-
-            When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+            When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question. Counts the messages the caller can open, like `last_inbound_at`.
         relationship_direction:
           $ref: '#/components/schemas/RelationshipDirection'
           description: >-
-            Which sides have written, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`.
+            Which sides have written in the messages the caller can open, read off last_inbound_at and last_outbound_at. Absent together with them, named in `sections_omitted` as `last_touch`.
         last_live_inbound_at:
           type: [string, 'null']
           format: date-time
@@ -16254,7 +16272,8 @@ components:
         company_name: {type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.}
         logo_url: {type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.}
         slug: {type: string, readOnly: true}
-        public_url: {type: string, readOnly: true}
+        alias: {type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`."}
+        public_url: {type: string, readOnly: true, description: 'The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.'}
         replace_link: {type: boolean, writeOnly: true}
         email_reminder: {type: boolean, description: Send one operational email reminder one hour before future meetings.}
         video_call: {type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.}

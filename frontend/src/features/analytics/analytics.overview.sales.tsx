@@ -198,7 +198,6 @@ function SalesReviewBody({
                   onEvidence={openEvidence}
                 />
               )}
-              <DecisionsPanel />
               <QuarterNotes
                 evaluation={evaluation}
                 period={filters.period}
@@ -254,6 +253,8 @@ function SalesReviewBody({
           emptyLabel={t("analytics.overview.salesNothing")}
         />
       </div>
+      {/* Past the first screen, so the decision and the first action stay on it. */}
+      <DecisionsPanel />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
       {answered && (
