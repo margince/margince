@@ -53,6 +53,7 @@ import {
 } from "./voice-versions";
 import "./voice-dna.css";
 import { BuildControls, reportFailure } from "./voice-dna.build";
+import { useFollowBuildOutcome, useSetupFocus } from "./voice-dna.setup";
 
 export type VoiceProfile = components["schemas"]["VoiceProfile"];
 
@@ -79,6 +80,9 @@ export function VoiceDnaCard() {
   const canCreate = useCanWrite("voice_profile", "create");
   const qc = useQueryClient();
   const profile = useVoiceProfile();
+  // Before the first sample there is no section to land on; the dial is still
+  // answered, so pressing the step again works.
+  useSetupFocus(profile.data === null);
   // Owned above the empty and profile branches. The first sample mints the
   // profile and swaps one branch for the other. The files still in flight then
   // belong to the card that remains.
@@ -98,20 +102,22 @@ export function VoiceDnaCard() {
           // DNA at all, and everything the profile unlocks stayed unreachable.
           <div className="vdna-page">
             <VoiceStart />
-            <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
-              <PanelBody>
-                <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
-                <VoiceKinds />
-                {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
-              </PanelBody>
-              {/* The first sample mints the profile, so adding it takes the
+            <VoiceSection id={VOICE_SECTIONS.sharpen}>
+              <Panel tone="ai" title={t("settings.voice.start.addTitle")}>
+                <PanelBody>
+                  <PanelIntro>{t("settings.voice.emptyBody")}</PanelIntro>
+                  <VoiceKinds />
+                  {!canCreate && <p>{t("settings.voice.readOnly")}</p>}
+                </PanelBody>
+                {/* The first sample mints the profile, so adding it takes the
                   create grant rather than the update one. */}
-              {canCreate && (
-                <SettingList bleed="settings">
-                  <VoiceCorpusIntake first intake={intake} />
-                </SettingList>
-              )}
-            </Panel>
+                {canCreate && (
+                  <SettingList bleed="settings">
+                    <VoiceCorpusIntake first intake={intake} />
+                  </SettingList>
+                )}
+              </Panel>
+            </VoiceSection>
           </div>
         )
       }
@@ -203,7 +209,10 @@ function VoiceDnaBody({
   const [intakeBusy, setIntakeBusy] = useState(false);
   const [deltasAsked, setDeltasAsked] = useState(false);
   const invalidate = () => invalidateVoiceCorpus(qc);
-  const versions = loadedVersions(useVoiceVersions(profile.id).data?.pages);
+  const versionsRead = useVoiceVersions(profile.id);
+  const versions = loadedVersions(versionsRead.data?.pages);
+  useSetupFocus(!versionsRead.isPending);
+  useFollowBuildOutcome(profile, qc);
   const active = versions.find((version) => version.status === "active");
   const candidate = versions.find((version) => version.status === "candidate");
   // A first version awaiting review is the only voice there is. The page draws

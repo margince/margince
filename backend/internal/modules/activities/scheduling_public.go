@@ -15,12 +15,8 @@ package activities
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -47,12 +43,16 @@ type BookingPage struct {
 // itself, not read off a row an anonymous caller chose. An unknown or revoked
 // slug reads as absent, and so does a host whose account is not live. Every
 // public booking read, the preview card included, resolves here.
+// A slug matches as typed and an alias lowercased; a slug's 32 characters
+// keep the two apart, since an alias has at most 30.
 func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPage, error) {
 	var page BookingPage
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx,
 			`SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id = p.host_user_id
-   WHERE p.slug = $1 AND p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u"),
+   WHERE p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u")+`
+   AND (p.slug = $1 OR p.id = (SELECT a.booking_page_id FROM booking_alias a
+     WHERE a.alias = lower($1) AND a.retired_at IS NULL AND a.host_user_id = p.host_user_id))`,
 			slug).Scan(&page.HostUserID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -63,57 +63,6 @@ func (s *Store) ResolveBookingPage(ctx context.Context, slug string) (BookingPag
 		return BookingPage{}, err
 	}
 	return page, nil
-}
-
-// SeedBookingPageTx mints a host's public page inside the caller's
-// transaction (the workspace bootstrap seeds one for the admin). The
-// slug is a public identifier, not a credential — unguessable so the
-// URL cannot be enumerated, stored plaintext because it IS the URL.
-func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (string, error) {
-	slug, err := mintBookingSlug(rand.Read)
-	if err != nil {
-		return "", err
-	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO booking_page (host_user_id, slug)
-		VALUES ($1, $2)`,
-		hostUserID, slug); err != nil {
-		return "", fmt.Errorf("activities: seed booking page: %w", err)
-	}
-	return slug, nil
-}
-
-// The ids under /#/book/ that are not a host's public page. The owner is
-// frontend/src/lib/bookingaddress.ts (BOOKING_HOST_IDS, BOOKING_ID_PREFIXES),
-// next to the router that dispatches on them; frontend/nginx.conf refuses the
-// same set. TestReservedBookingIDsMatchTheRouteOwner fails when they drift.
-var (
-	reservedBookingIDs      = []string{"contact", "preview"}
-	reservedBookingPrefixes = []string{"contact-", "meeting-", "proposal-", "manage-"}
-)
-
-// bookingSlugReserved reports whether a slug would collide with a host
-// control or a guest-token address. Base64url can spell "manage-".
-func bookingSlugReserved(slug string) bool {
-	if slices.Contains(reservedBookingIDs, slug) {
-		return true
-	}
-	return slices.ContainsFunc(reservedBookingPrefixes, func(prefix string) bool { return strings.HasPrefix(slug, prefix) })
-}
-
-// mintBookingSlug draws 24 random bytes as base64url until the result is not
-// reserved. A reserved draw is about one in 10^11, so the loop is bounded.
-func mintBookingSlug(read func([]byte) (int, error)) (string, error) {
-	for range 8 {
-		var buf [24]byte
-		if _, err := read(buf[:]); err != nil {
-			return "", fmt.Errorf("activities: booking slug entropy: %w", err)
-		}
-		if slug := base64.RawURLEncoding.EncodeToString(buf[:]); !bookingSlugReserved(slug) {
-			return slug, nil
-		}
-	}
-	return "", errors.New("activities: booking slug entropy kept drawing reserved slugs")
 }
 
 // ContactEnsurer is the contacts seam of the public capture path (compose

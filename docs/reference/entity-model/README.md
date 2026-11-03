@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 353 |
-| Columns | 4163 |
-| Foreign keys | 578 |
+| Tables | 354 |
+| Columns | 4169 |
+| Foreign keys | 580 |
 | Owning areas | 38 |
 
 ## The 12 records everything else hangs off
@@ -39,7 +39,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 151 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 34 | 152 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 69 | 43 |
@@ -91,7 +91,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 31 |
+| [activities](activities.md) | 32 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -170,7 +170,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 34 | 151 |
+| [`app_user`](identity.md#app_user) | identity | 34 | 152 |
 | [`approval`](approvals.md#approval) | approvals | 37 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -189,7 +189,8 @@ erDiagram
 | [`auth_token`](identity.md#auth_token) | identity | 7 | 0 |
 | [`automation`](automation.md#automation) | automation | 15 | 0 |
 | [`automation_effect_claim`](automation.md#automation_effect_claim) | automation | 6 | 0 |
-| [`booking_page`](activities.md#booking_page) | activities | 6 | 0 |
+| [`booking_alias`](activities.md#booking_alias) | activities | 6 | 0 |
+| [`booking_page`](activities.md#booking_page) | activities | 6 | 1 |
 | [`brief_item`](compose.md#brief_item) | compose | 15 | 0 |
 | [`brief_run`](compose.md#brief_run) | compose | 13 | 1 |
 | [`bulk_confirmation`](compose.md#bulk_confirmation) | compose | 7 | 0 |
