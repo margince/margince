@@ -41,7 +41,7 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingOpenPipeline}, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}}
 
 	floor := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool))
-	out, err := floor.Get(ctx, selection, false)
+	out, err := floor.Assess(ctx, selection, false)
 	if err != nil {
 		t.Fatalf("the floor: %v", err)
 	}
@@ -60,17 +60,17 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 	figure := strings.Fields(open)[0]
 	lane := &assessmentLane{reply: `{"sentences":[{"text":"The open pipeline stands at ` + figure + ` EUR.","kind":"observation","cells":["metric:open_pipeline"]},{"text":"That is 42 percent of the target.","kind":"hypothesis","cells":["metric:open_pipeline"]}],"next_decision":null,"confidence":"medium"}`}
 	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, "routing-test")
-	out, err = written.Get(ctx, selection, false)
+	out, err = written.Assess(ctx, selection, false)
 	if err != nil {
 		t.Fatalf("the written assessment: %v", err)
 	}
 	if out.GeneratedBy != crmcontracts.WrittenByModel || len(out.Sentences) != 1 || !strings.HasPrefix(out.Sentences[0].Text, "The open pipeline") {
 		t.Fatalf("the written assessment is %+v, want the one grounded sentence", out)
 	}
-	if _, err := written.Get(ctx, selection, false); err != nil || lane.calls != 1 {
+	if _, err := written.Assess(ctx, selection, false); err != nil || lane.calls != 1 {
 		t.Fatalf("a second read asked the model %d times (err %v), want the kept assessment", lane.calls, err)
 	}
-	if _, err := written.Get(ctx, selection, true); err != nil || lane.calls != 2 {
+	if _, err := written.Assess(ctx, selection, true); err != nil || lane.calls != 2 {
 		t.Fatalf("a refresh asked the model %d times (err %v), want a second call", lane.calls, err)
 	}
 }

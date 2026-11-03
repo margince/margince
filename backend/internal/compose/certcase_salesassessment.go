@@ -45,7 +45,6 @@ type salesAssessmentDealFixture struct {
 	Label  string `json:"label"`
 	Name   string `json:"name"`
 	Amount string `json:"amount"`
-	Stage  string `json:"stage"`
 }
 
 type salesAssessmentDecisionFix struct {
@@ -120,7 +119,7 @@ func salesAssessmentInput(f salesAssessmentFixture) (salesassessment.Input, map[
 		}
 		id, owner := ids.NewV7().String(), ids.NewV7().String()
 		labels[deal.Label], owners[deal.Label] = id, owner
-		in.Candidates = append(in.Candidates, salesassessment.CandidateIn{ID: id, Name: deal.Name, Amount: deal.Amount, Stage: deal.Stage, OwnerID: owner})
+		in.Candidates = append(in.Candidates, salesassessment.CandidateIn{ID: id, Name: deal.Name, Amount: deal.Amount, OwnerID: owner})
 	}
 	for _, decision := range f.Decisions {
 		deal, ok := labels[decision.Deal]

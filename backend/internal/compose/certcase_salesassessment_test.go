@@ -20,8 +20,8 @@ const salesAssessmentFixtureJSON = `{
     {"label": "open_pipeline", "value": "370000 EUR", "unit": "EUR", "window": "2026-10-01 to 2026-11-03", "coverage": "ok"}
   ],
   "candidate_deals": [
-    {"label": "linden", "name": "Linden press", "amount": "250000 EUR", "stage": "Proposal"},
-    {"label": "tern", "name": "Tern portal", "amount": "120000 EUR", "stage": "Qualified"}
+    {"label": "linden", "name": "Linden press", "amount": "250000 EUR"},
+    {"label": "tern", "name": "Tern portal", "amount": "120000 EUR"}
   ],
   "decisions": []
 }`
