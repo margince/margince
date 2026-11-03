@@ -87154,6 +87154,11 @@ export interface operations {
                 /** @description Opaque position from a previous page's `next_cursor`. */
                 cursor?: string;
                 limit?: number;
+                /**
+                 * @description The instant to list at, so the rows describe the same moment as a summary read beside
+                 *     them (its `as_of`). Omitted means now; a future instant is refused.
+                 */
+                as_of?: string;
             };
             header?: never;
             path?: never;

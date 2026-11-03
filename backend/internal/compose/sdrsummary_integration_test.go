@@ -363,9 +363,17 @@ func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
 	asked := f.at.Add(time.Hour)
-	f.submit(t, "Earlier prospect", &f.ae)
+	earlier := f.submit(t, "Earlier prospect", &f.ae)
 	f.at = f.at.Add(2 * time.Hour)
 	f.submit(t, "Later prospect", &f.ae)
+	// Sent back after the asked instant: at that instant it was still waiting.
+	var reason ids.UUID
+	if err := e.Pool.QueryRow(context.Background(), `SELECT id FROM sdr_handoff_reason WHERE applies_to='recycled' AND active ORDER BY sort_order LIMIT 1`).Scan(&reason); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.handoffs.DecideHandoff(f.ctx, earlier, contacts.HandoffDecision{Status: contacts.HandoffRecycled, ReasonID: &reason}); err != nil {
+		t.Fatal(err)
+	}
 	f.at = f.at.Add(time.Hour)
 
 	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
@@ -380,8 +388,8 @@ func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 	if !out.AsOf.Equal(asked) {
 		t.Errorf("the summary answers as of %v, want the instant asked for, %v", out.AsOf, asked)
 	}
-	if out.Handoffs == nil || out.Handoffs.Waiting != 1 {
-		t.Errorf("at the asked instant only the earlier handoff waits: %+v", out.Handoffs)
+	if out.Handoffs == nil || out.Handoffs.Waiting != 1 || out.Handoffs.Returned != 0 {
+		t.Errorf("at the asked instant the earlier handoff waits and none is returned yet: %+v", out.Handoffs)
 	}
 
 	future := f.at.Add(time.Hour)

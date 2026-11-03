@@ -347,12 +347,12 @@ func readWaitingSubmitters(ctx context.Context, tx pgx.Tx, requested RequestedSc
 	seats := func(filter string) string {
 		return "COALESCE(array_remove(array_agg(DISTINCT cycle.submitter_id_at_change) FILTER (WHERE " + filter + "),NULL),'{}')"
 	}
-	waiting := "h.status=" + b.add(contacts.HandoffSubmitted)
-	query := `SELECT ` + seats(waiting) + `,` + seats("h.status="+b.add(contacts.HandoffRecycled)) + `,
+	waiting := "cycle.to_status=" + b.add(contacts.HandoffSubmitted)
+	query := `SELECT ` + seats(waiting) + `,` + seats("cycle.to_status="+b.add(contacts.HandoffRecycled)) + `,
  ` + seats(waiting+" AND h.assigned_to IS NULL") + `,
  ` + seats(waiting+" AND h.assigned_to IS NOT NULL AND NOT ("+identity.LiveMemberSQL("r")+")") + `
- ` + handoffCycleSQL + `
- WHERE h.status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population)
+ ` + handoffCycleSQL(&b, at) + `
+ WHERE cycle.to_status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + orUnnarrowed(population)
 	groups := make([][]ids.UUID, 4)
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&groups[0], &groups[1], &groups[2], &groups[3])
 	return groups, err
@@ -447,8 +447,8 @@ func sdrTeamMemberHandoffsSQL(b *reportingBindings, seats string, window sdrTeam
  FROM sdr_handoff_event e WHERE e.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(b, "e.occurred_at", window) + ` GROUP BY 1),
  won AS (SELECT credit.submitter_id_at_change seat,count(*) n FROM ` + acceptedCreditSQL + `
  WHERE credit.submitter_id_at_change=ANY(` + seats + `) AND ` + eventWindowSQL(b, "credit.occurred_at", window) + ` GROUP BY 1),
- waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL + `
- WHERE h.status=` + submitted + ` AND ` + cycleByAsOf(b, at) + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1),
+ waits AS (SELECT cycle.submitter_id_at_change seat,count(*) n,min(cycle.occurred_at) since ` + handoffCycleSQL(b, at) + `
+ WHERE cycle.to_status=` + submitted + ` AND cycle.submitter_id_at_change=ANY(` + seats + `) GROUP BY 1),
  `
 }
 

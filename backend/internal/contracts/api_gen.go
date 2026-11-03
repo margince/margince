@@ -63993,6 +63993,10 @@ type ListSdrWaitingHandoffsParams struct {
 	// Cursor Opaque position from a previous page's `next_cursor`.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// AsOf The instant to list at, so the rows describe the same moment as a summary read beside
+	// them (its `as_of`). Omitted means now; a future instant is refused.
+	AsOf *time.Time `form:"as_of,omitempty" json:"as_of,omitempty"`
 }
 
 // ListSdrWaitingHandoffsParamsScopeKind defines parameters for ListSdrWaitingHandoffs.
@@ -98796,6 +98800,19 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "as_of" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "as_of", r.URL.Query(), &params.AsOf, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "as_of"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "as_of", Err: err})
 		}
 		return
 	}

@@ -32,14 +32,19 @@ const (
 	sdrHandoffPageMax     = 50
 )
 
-// handoffCycleSQL joins each handoff to the event that began its current
-// state, under the alias cycle. A resubmission writes a new submitted event,
-// so a handoff sent back and submitted again waits from that event. It is
-// credited to whoever that event names as the submitter.
-const handoffCycleSQL = `FROM sdr_handoff h
- JOIN LATERAL (SELECT e.occurred_at,e.submitter_id_at_change FROM sdr_handoff_event e
- WHERE e.handoff_id=h.id AND e.to_status=h.status ORDER BY e.occurred_at DESC,e.id DESC LIMIT 1) cycle ON true
+// handoffCycleSQL joins each handoff to the event that began its state at as_of,
+// under the alias cycle: its newest event by then. cycle.to_status is the state
+// the answer counts, so a handoff accepted after as_of still waited at it. A
+// resubmission writes a new submitted event, so a handoff sent back and
+// submitted again waits from that event. It is credited to that event's
+// submitter. A handoff with no event by as_of has no row.
+func handoffCycleSQL(b *reportingBindings, at time.Time) string {
+	return `FROM sdr_handoff h
+ JOIN LATERAL (SELECT e.occurred_at,e.submitter_id_at_change,e.to_status FROM sdr_handoff_event e
+ WHERE e.handoff_id=h.id AND e.occurred_at<=` + b.add(at) + ` -- occurred_at raw: a handoff event's instant, not an activity day
+ ORDER BY e.occurred_at DESC,e.id DESC LIMIT 1) cycle ON true
  LEFT JOIN app_user r ON r.id=h.assigned_to`
+}
 
 type sdrSummaryHandlers struct {
 	db      *database.DB
@@ -64,17 +69,14 @@ func (h sdrSummaryHandlers) GetSdrSummary(w http.ResponseWriter, r *http.Request
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
-	at := h.now().UTC()
-	if params.AsOf != nil {
-		if params.AsOf.After(at) {
-			httperr.Write(w, r, httperr.Validation("as_of", "future", "choose an instant no later than now"))
-			return
-		}
-		at = params.AsOf.UTC()
+	at, err := sdrAnswerInstant(h.now(), params.AsOf)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
 	}
 	ctx := r.Context()
 	var out crmcontracts.SdrSummary
-	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = readSdrSummary(ctx, tx, requested, at)
 		return err
@@ -97,6 +99,11 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 		httperr.Write(w, r, err)
 		return
 	}
+	at, err := sdrAnswerInstant(h.now(), params.AsOf)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	status := contacts.HandoffSubmitted
 	if params.State != nil && *params.State == crmcontracts.ListSdrWaitingHandoffsParamsStateReturned {
 		status = contacts.HandoffRecycled
@@ -105,7 +112,7 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 	ctx := r.Context()
 	err = h.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out.AsOf = h.now().UTC()
+		out.AsOf = at
 		out.Rows, out.NextCursor, err = readWaitingHandoffs(ctx, tx, requested, handoffPage{status: status, at: out.AsOf, after: after, limit: limit})
 		return err
 	})
@@ -164,14 +171,14 @@ func readHandoffTotals(ctx context.Context, tx pgx.Tx, requested RequestedScope,
 	if err != nil {
 		return crmcontracts.SdrHandoffTotals{}, err
 	}
-	waiting := "h.status=" + b.add(contacts.HandoffSubmitted)
+	waiting := "cycle.to_status=" + b.add(contacts.HandoffSubmitted)
 	query := `SELECT count(*) FILTER (WHERE ` + waiting + `),
  count(*) FILTER (WHERE ` + waiting + ` AND h.assigned_to IS NULL),
  count(*) FILTER (WHERE ` + waiting + ` AND h.assigned_to IS NOT NULL AND NOT (` + identity.LiveMemberSQL("r") + `)),
- count(*) FILTER (WHERE h.status=` + b.add(contacts.HandoffRecycled) + `),
+ count(*) FILTER (WHERE cycle.to_status=` + b.add(contacts.HandoffRecycled) + `),
  min(cycle.occurred_at) FILTER (WHERE ` + waiting + `)
- ` + handoffCycleSQL + `
- WHERE h.status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population)
+ ` + handoffCycleSQL(&b, at) + `
+ WHERE cycle.to_status IN (` + b.add(contacts.HandoffSubmitted) + `,` + b.add(contacts.HandoffRecycled) + `) AND ` + orUnnarrowed(population)
 	var out crmcontracts.SdrHandoffTotals
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&out.Waiting, &out.Unassigned, &out.Blocked, &out.Returned, &out.OldestWaitingSince)
 	return out, err
@@ -188,13 +195,6 @@ func readUpcomingMeetings(ctx context.Context, tx pgx.Tx, requested RequestedSco
 	var count int
 	err = tx.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE `+where, b.values...).Scan(&count)
 	return count, err
-}
-
-// cycleByAsOf keeps a handoff whose current round began after as_of out of an
-// answer stamped as_of. A read-committed statement can see a later commit, and
-// its wait would otherwise start after the instant the answer names.
-func cycleByAsOf(b *reportingBindings, at time.Time) string {
-	return b.add(at) + ">=cycle.occurred_at -- occurred_at raw: a handoff event's instant, not an activity day\n"
 }
 
 // handoffPage is one page of open handoffs in one status: submitted and
@@ -237,15 +237,16 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	}
 	subject := "CASE WHEN h.lead_id IS NOT NULL AND " + leadVisible + " THEN 'lead' WHEN h.contact_id IS NOT NULL AND " + contactVisible + " THEN 'contact' END"
 	query := `SELECT h.id,cycle.occurred_at,cycle.submitter_id_at_change,
- (SELECT count(*) FROM sdr_handoff_event s WHERE s.handoff_id=h.id AND s.to_status=` + b.add(contacts.HandoffSubmitted) + `)>1,
+ (SELECT count(*) FROM sdr_handoff_event s WHERE s.handoff_id=h.id AND s.to_status=` + b.add(contacts.HandoffSubmitted) + `
+   AND s.occurred_at<=` + b.add(at) + `)>1,
  sv.kind,CASE sv.kind WHEN 'lead' THEN l.id WHEN 'contact' THEN c.id END,
  CASE sv.kind WHEN 'lead' THEN ` + label + ` WHEN 'contact' THEN c.full_name ELSE '' END,
  h.assigned_to,COALESCE(r.display_name,''),COALESCE(` + identity.LiveMemberSQL("r") + `,false),reason.label
- ` + handoffCycleSQL + `
+ ` + handoffCycleSQL(&b, at) + `
  LEFT JOIN lead l ON l.id=h.lead_id LEFT JOIN contact c ON c.id=h.contact_id
- LEFT JOIN sdr_handoff_reason reason ON reason.id=h.reason_id AND h.status=` + b.add(contacts.HandoffRecycled) + `
+ LEFT JOIN sdr_handoff_reason reason ON reason.id=h.reason_id AND cycle.to_status=` + b.add(contacts.HandoffRecycled) + `
  CROSS JOIN LATERAL (SELECT ` + subject + ` AS kind) sv
- WHERE h.status=` + b.add(p.status) + ` AND ` + cycleByAsOf(&b, at) + ` AND ` + orUnnarrowed(population) + page + `
+ WHERE cycle.to_status=` + b.add(p.status) + ` AND ` + orUnnarrowed(population) + page + `
  ORDER BY cycle.occurred_at,h.id LIMIT ` + b.add(limit+1)
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
@@ -325,4 +326,18 @@ func scanWaitingHandoff(row pgx.CollectableRow) (crmcontracts.SdrWaitingHandoff,
 		out.Recipient = &crmcontracts.SdrHandoffRecipient{Id: *ptrUUID(*recipient), Label: recipientLabel, Active: active}
 	}
 	return out, nil
+}
+
+// sdrAnswerInstant is the instant an SDR read answers at: the one asked for, or
+// now. A summary and the rows beside it then describe one moment. A future
+// instant is refused, since nothing has happened by then to count.
+func sdrAnswerInstant(now time.Time, asked *time.Time) (time.Time, error) {
+	at := now.UTC()
+	if asked == nil {
+		return at, nil
+	}
+	if asked.After(at) {
+		return time.Time{}, httperr.Validation("as_of", "future", "choose an instant no later than now")
+	}
+	return asked.UTC(), nil
 }

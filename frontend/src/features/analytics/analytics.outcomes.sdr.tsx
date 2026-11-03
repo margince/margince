@@ -54,13 +54,16 @@ export function MySdrWork({
   const t = useT();
   const readsLeads = useCan("lead", "read");
   const readsReports = useCan("report_definition", "read");
-  const evaluation = useMyLeadsEvaluation(self, readsReports);
+  const evaluation = useMyLeadsEvaluation(self, readsReports && readsLeads);
   // The summary counts at the evaluation's instant, so the two describe one
-  // moment. It waits only while that instant is unknown, never on a failure.
+  // moment. It waits only while that instant is unknown, never on a failure,
+  // and only a successful evaluation pins it.
   const summary = useSdrSummary(
     self,
     readsLeads && !(readsReports && evaluation.isPending),
-    evaluation.data?.context.evaluated_at,
+    readsReports && evaluation.isSuccess
+      ? evaluation.data.context.evaluated_at
+      : undefined,
   );
   return (
     <>
@@ -255,6 +258,7 @@ export function WaitingOnOthers({
     { kind: "owner", id: self },
     "waiting",
     totals.waiting > 0,
+    summary.as_of,
   );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   return (
@@ -318,7 +322,9 @@ export function WaitingOnOthers({
           )}
         </QueryGate>
       )}
-      {totals.returned > 0 && <ReturnedHandoffs self={self} locale={locale} />}
+      {totals.returned > 0 && (
+        <ReturnedHandoffs self={self} locale={locale} at={summary.as_of} />
+      )}
     </Panel>
   );
 }
@@ -408,9 +414,15 @@ function HandoffRow({
 function ReturnedHandoffs({
   self,
   locale,
-}: Readonly<{ self: string; locale: Locale }>) {
+  at,
+}: Readonly<{ self: string; locale: Locale; at: string }>) {
   const t = useT();
-  const rows = useHandoffPages({ kind: "owner", id: self }, "returned", true);
+  const rows = useHandoffPages(
+    { kind: "owner", id: self },
+    "returned",
+    true,
+    at,
+  );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   const asOf = Date.parse(rows.data?.pages[0]?.as_of ?? "");
   return (
@@ -441,6 +453,8 @@ export function useHandoffPages(
   scope: HandoffScope,
   state: "waiting" | "returned",
   enabled: boolean,
+  // The summary's instant, so the rows describe the totals beside them.
+  asOf?: string,
 ) {
   return useInfiniteQuery({
     queryKey: [
@@ -448,6 +462,7 @@ export function useHandoffPages(
       scope.id ?? scope.kind ?? "default",
       "handoffs",
       state,
+      asOf ?? null,
     ],
     enabled,
     initialPageParam: undefined as string | undefined,
@@ -460,6 +475,7 @@ export function useHandoffPages(
               ...(scope.id ? { scope_id: scope.id } : {}),
               state,
               ...(pageParam ? { cursor: pageParam } : {}),
+              ...(asOf ? { as_of: asOf } : {}),
             },
           },
           signal,

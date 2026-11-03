@@ -160,10 +160,10 @@ function show(
 describe("MySdrWork", () => {
   it("reads the summary at the instant its lead readings were evaluated", async () => {
     const asked = show({ evaluation: reportingStoryEvaluation });
-    await screen.findByText(en["analytics.sdrLeads"]);
-    const summary = asked.find((url) =>
-      url.pathname.endsWith("/analytics/sdr-summary"),
-    );
+    const isSummary = (url: URL) =>
+      url.pathname.endsWith("/analytics/sdr-summary");
+    await waitFor(() => expect(asked.some(isSummary)).toBe(true));
+    const summary = asked.find(isSummary);
     expect(summary?.searchParams.get("as_of")).toBe(
       reportingStoryEvaluation.context.evaluated_at,
     );
