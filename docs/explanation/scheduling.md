@@ -18,9 +18,11 @@ host can be booked is that host's call.
 ## A page with no calendar is paused, and says so
 
 A booking page saved before the profile existed names no calendar, and nothing migrates it. One
-rule, `publicPagePaused`, decides whether a page is open. The guest profile, the free-time read
-and the booking call all ask it. The guest profile answers `paused`, and the
-guest page names the host instead of showing a blank refusal.
+rule, `Store.pagePaused`, decides whether a standing page is open: switched on, and `blocker` is
+`none`. The guest profile, the free-time read, both booking reads and the link card ask it. A
+paused page answers as an unknown slug, before any body is read, because the slug is the
+capability. Only a retry of a booking the page already took is answered, since that caller holds
+its own key. A proposal is paused by its calendar only, not by the standing page's switch.
 
 The host's own profile carries `blocker`. It is read from the connection row and the host's
 authority, never from a provider call. `no_calendar` is a page that names none, `calendar_read_only`

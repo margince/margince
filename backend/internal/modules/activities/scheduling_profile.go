@@ -146,6 +146,17 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 	return s.brandSchedulingProfile(ctx, host, profile), err
 }
 
+// pagePaused is the one answer to whether a standing booking page takes
+// bookings: the host switched it on, and its calendar can take them. The
+// guest profile, the free-time read and both booking reads ask it.
+func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, error) {
+	if !profile.Enabled {
+		return true, nil
+	}
+	blocker, err := s.calendarBlocker(ctx, host, profile)
+	return blocker != crmcontracts.SchedulingProfileBlockerNone, err
+}
+
 // calendarBlocker is why bookings cannot reach the host's calendar. A page that
 // names no calendar, which is every page saved before the profile existed, is
 // blocked without asking the seam.

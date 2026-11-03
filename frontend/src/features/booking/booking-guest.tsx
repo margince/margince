@@ -82,9 +82,9 @@ export function BookingGuestScreen({
       company_name: value.company_name ?? "",
       proposal: "proposal" in value ? value.proposal : null,
       video_app: videoAppOf(value, preview),
-      // The server's own answer for a guest page. The host's preview reads
-      // only the switch, since it may show a page that is not live yet.
-      paused: "paused" in value ? value.paused : !value.enabled,
+      // A used proposal turns enabled off; the server's paused answers its
+      // calendar. The host's preview has only the switch.
+      paused: !value.enabled || ("paused" in value && value.paused),
     }),
     queryFn: async () => {
       if (preview) {

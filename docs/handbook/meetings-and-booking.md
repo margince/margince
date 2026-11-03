@@ -111,7 +111,7 @@ A paused page gives a card that names nobody. A replaced or unknown address give
 
 If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
 
-A paused page tells the guest that you are not taking bookings through it right now, and names you. A page is paused when **Accept bookings** is off, or when no calendar is set for it. When your calendar cannot take bookings, **My booking link** in the account menu shows **Paused**.
+A page is paused when **Accept bookings** is off. It is also paused when your calendar cannot take bookings: none is set, it is read-only, or it is disconnected. A paused page answers your guest the way an address that does not exist does, so nobody learns that the address is yours. **My booking link** in the account menu shows **Paused** while it is. A personal link you sent stays open while your calendar can take its booking, even when **Accept bookings** is off.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

@@ -219,13 +219,8 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	if publicPagePaused(profile) {
-		httperr.Write(w, r, apperrors.ErrNotFound)
+	profile, ok := h.openBookingPage(w, r, page)
+	if !ok {
 		return
 	}
 	if params.DurationMinutes != nil && *params.DurationMinutes != profile.DurationMinutes {
@@ -290,17 +285,21 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		httperr.Write(w, r, err)
 		return
 	}
+	profile, open := h.store.openForBooking(r.Context(), page)
+	if open.err != nil {
+		writeStoreErr(w, r, open.err)
+		return
+	}
+	if open.paused {
+		h.answerPausedBooking(w, r, page, hostSlug)
+		return
+	}
 
 	var req crmcontracts.BookPublicMeetingJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	if !h.bookingRequestIsWritable(w, r, req) {
-		return
-	}
-	profile, err := h.store.hostSchedulingProfile(r.Context(), page.HostUserID)
-	if err != nil {
-		writeStoreErr(w, r, err)
 		return
 	}
 	intent, err := publicBookingRequestIntent(r, hostSlug, req)
@@ -313,10 +312,6 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	} else if recovered != nil {
 		writePublicInvitation(w, *recovered, intent.Marketing)
-		return
-	}
-	if publicPagePaused(profile) {
-		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
 	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
