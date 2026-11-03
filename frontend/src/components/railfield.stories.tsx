@@ -11,8 +11,8 @@ import type { CreateField } from "./create";
 import { type RailEdit, RailField } from "./railfield";
 import type { FieldRecord } from "./recordfieldtypes";
 
-// A record's left column: a plain field and a choice open a one-field dialog,
-// a link keeps its action while its pill opens the edit form.
+// A record's left column. A plain field or a choice opens a one-field dialog.
+// A link keeps its action; its pill opens the edit form.
 
 const meta: Meta = {
   title: "Records/Record 360/Rail field",
