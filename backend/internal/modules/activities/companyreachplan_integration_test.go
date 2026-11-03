@@ -47,6 +47,9 @@ func TestTheAccountReachWalkNeverScansEveryActivity(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &plans); err != nil || len(plans) != 1 {
 			t.Fatalf("reading the plan: %v (%d plans)", err, len(plans))
 		}
+		if plans[0].Plan.ActualRows == 0 {
+			t.Fatalf("the %s walk returned no activity of the seeded account, so its plan proves nothing", name)
+		}
 		var activityScans int
 		plans[0].Plan.walk(func(n planNode) {
 			if n.RelationName == "activity" && n.NodeType == "Seq Scan" {
