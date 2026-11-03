@@ -84,20 +84,18 @@ func companyReach(operand string) string {
 // companyLinkReach is companyReach without the participant arm: the activities
 // filed against the account, its deals or its employees.
 func companyLinkReach(operand string) string {
-	linkBranch := func(column string) string {
+	linkBranch := func(column, arms string) string {
 		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
-			column, companyArms, operand)
+			column, arms, operand)
 	}
-	return directLinkBranch(operand) + "\n\t\t    UNION " + linkBranch("d.company_id") +
-		"\n\t\t    UNION " + linkBranch("r.company_id")
+	return linkBranch("l.company_id", directLinkArm) + "\n\t\t    UNION " + linkBranch("d.company_id", companyArms) +
+		"\n\t\t    UNION " + linkBranch("r.company_id", companyArms)
 }
 
-// directLinkBranch is the arm that needs none of companyArms' joins. Joining
-// the activity there only to read its timestamp makes Postgres hash every
-// activity of the installation, and the foreign keys already guarantee the row.
-func directLinkBranch(operand string) string {
-	return sprintf("SELECT l.activity_id, l.company_id AS company_id FROM activity_link l\n\t\t    WHERE l.company_id = %s", operand)
-}
+// directLinkArm is the arm that needs none of companyArms' joins. Joining the
+// activity there only to read its timestamp makes Postgres hash every activity
+// of the installation, and the foreign keys already guarantee the row.
+const directLinkArm = "FROM activity_link l"
 
 // CompanyFiledActivityExists is the predicate over the three link arms only. A
 // file of a mail that merely CC'd an employee is not a document of that
