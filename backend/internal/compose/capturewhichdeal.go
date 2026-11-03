@@ -72,7 +72,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := `
 		SELECT coalesce(nullif(a.thread_key, ''), a.id::text), a.audience = 'workspace'
-		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1 AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND a.archived_at IS NULL
+		  FROM activity a WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND ` + storekit.CurrentSourceMailClause("a.id", a.now(), arg)
 	err = tx.QueryRow(ctx, query, args...).Scan(&thread, &shared)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -125,7 +125,7 @@ func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID
 		  FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id AND p.user_id IS NOT NULL
 		  JOIN capture_import ci ON ci.activity_id = a.id AND ci.user_id = p.user_id
-		 WHERE a.id = $1 AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND a.archived_at IS NULL
+		 WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND CASE WHEN a.direction = 'outbound' THEN a.counterparty_outbound_attested AND p.role = 'from'
 		            ELSE p.role = 'to' AND p.address IS NOT NULL END
 		 ORDER BY p.user_id

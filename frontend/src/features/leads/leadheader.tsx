@@ -7,22 +7,27 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { mayOwnRecords } from "../../components/assigneepicker";
 import {
   EntityRef,
   RosterFailedLine,
-  RosterPartialNote,
   useRoster,
   useRosterPartial,
+  useRosterPartialHint,
 } from "../../components/entityref";
 import { fetchGrants } from "../../components/share.parts";
-import { Badge, Button } from "../../design-system/atoms";
+import { Badge } from "../../design-system/atoms";
+import { EditableValue } from "../../design-system/editablevalue";
+import {
+  type FieldEditControl,
+  FieldEditDialog,
+} from "../../design-system/fieldeditdialog";
 import { IdentityLine } from "../../design-system/identityline";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { LeadCompany } from "./leadcompany";
@@ -143,19 +148,17 @@ function candidateLabel(
 // conditional: a roster still arriving, a roster that failed, a workspace
 // with nobody else in it, and the picker itself.
 function AssigneePicker({
+  field,
   roster,
   rosterPartial,
   candidates,
   meId,
-  pending,
-  onPick,
 }: Readonly<{
+  field: FieldEditControl;
   roster: ReturnType<typeof useRoster>;
   rosterPartial: boolean;
   candidates: readonly Readonly<{ id: string; display_name?: string }>[];
   meId: string | undefined;
-  pending: boolean;
-  onPick: (ownerId: string) => void;
 }>) {
   const t = useT();
   if (roster.isPending) {
@@ -171,21 +174,20 @@ function AssigneePicker({
   if (candidates.length === 0 && !rosterPartial) {
     return <span>{t("lead.assignNobodyElse")}</span>;
   }
+  const { control, draft, setDraft, saving } = field;
   return (
-    <>
-      <Select
-        aria-label={t("lead.assignTo")}
-        placeholder={t("lead.assignChoose")}
-        value=""
-        disabled={pending}
-        options={candidates.map((entry) => ({
-          value: entry.id,
-          label: candidateLabel(entry, meId, t),
-        }))}
-        onChange={onPick}
-      />
-      <RosterPartialNote partial={rosterPartial} />
-    </>
+    <Select
+      {...control}
+      placeholder={t("lead.assignChoose")}
+      value={draft}
+      disabled={saving}
+      aria-busy={saving || undefined}
+      options={candidates.map((entry) => ({
+        value: entry.id,
+        label: candidateLabel(entry, meId, t),
+      }))}
+      onChange={setDraft}
+    />
   );
 }
 
@@ -196,33 +198,30 @@ function AssigneePicker({
 // Reassignment is a plain owner change. The server audits it and keeps
 // whatever routing decision it overrides. So the only thing this control owes
 // the reader is the list of who they can hand it to.
-//
-// No caption of its own: it is drawn inside the Ownership section's Owner
-// row, whose label already says what this value is.
 function LeadOwner({
   lead,
   meId,
-  pending,
-  onAssign,
+  editable,
+  readOnlyReason,
   refusedReasonId,
+  onAssign,
 }: Readonly<{
   lead: Lead;
   meId: string | undefined;
-  pending: boolean;
-  onAssign: (ownerId: string) => void;
-  // The page's one sentence about why this lead takes no changes, while it
-  // does not: assigning writes the owner, so it is refused by the same fact
-  // as every other write here.
+  editable: boolean;
+  readOnlyReason?: string;
   refusedReasonId?: string;
+  onAssign: (ownerId: string, opened: Lead) => Promise<unknown>;
 }>) {
   const t = useT();
-  const pickerId = useId();
   const [picking, setPicking] = useState(false);
+  // Save sends the version the reader opened on, never a later refetch's.
+  const [opened, setOpened] = useState(lead);
   const roster = useRoster("user", picking);
   const rosterPartial = useRosterPartial("user", picking);
-  // Everyone but the current owner, with the VIEWER first: assigning to
-  // yourself is the common case on a small team, and it is now an option in
-  // this one control rather than a button of its own (ADR-0108 §5).
+  const partialHint = useRosterPartialHint(rosterPartial);
+  // Everyone but the current owner, with the viewer first: assigning to
+  // yourself is the common case on a small team.
   const candidates = (roster.data ?? [])
     .filter(mayOwnRecords)
     .filter((entry) => entry.id !== lead.owner_id)
@@ -231,51 +230,56 @@ function LeadOwner({
       if (b.id === meId) return 1;
       return 0;
     });
-
+  const label = t("lead.ownerLabel");
+  let owner: ReactNode = t("lead.unassigned");
+  if (lead.owner_id) {
+    owner =
+      lead.owner_id === meId ? (
+        t("lead.ownerYou")
+      ) : (
+        <EntityRef kind="user" id={lead.owner_id} />
+      );
+  }
   return (
-    <div className="lead-stack">
-      <div className="lead-line lead-owner-line">
-        {lead.owner_id ? (
-          lead.owner_id === meId ? (
-            <span>{t("lead.ownerYou")}</span>
-          ) : (
-            <EntityRef kind="user" id={lead.owner_id} />
-          )
-        ) : (
-          <span>{t("lead.unassigned")}</span>
-        )}
-        {/* ONE control, not a button that assigns to you beside a button
-            that reveals a picker nobody can see until they press it
-            (ADR-0108 §5). The viewer is the first option because
-            self-assignment is the common case on a small team. */}
-        <Button
-          variant="link"
-          disabled={pending}
-          reasonId={refusedReasonId}
-          aria-expanded={picking}
-          aria-controls={pickerId}
-          onClick={() => setPicking(!picking)}
+    <>
+      {editable || picking ? (
+        <EditableValue
+          editLabel={t("inlineChoice.change", { field: label })}
+          onEdit={() => {
+            setOpened(lead);
+            setPicking(true);
+          }}
         >
-          {t("lead.assign")}
-        </Button>
-      </div>
-
-      <div id={pickerId}>
-        {picking && (
+          {owner}
+        </EditableValue>
+      ) : (
+        <span title={readOnlyReason} aria-describedby={refusedReasonId}>
+          {owner}
+        </span>
+      )}
+      {/* The draft starts unpicked: the current owner is no candidate, and
+          Save on no pick is no write. */}
+      <FieldEditDialog
+        open={picking}
+        label={label}
+        value=""
+        hint={partialHint}
+        onClose={() => setPicking(false)}
+        onSave={async (ownerId) => {
+          await onAssign(ownerId, opened);
+        }}
+      >
+        {(field) => (
           <AssigneePicker
+            field={field}
             roster={roster}
             rosterPartial={rosterPartial}
             candidates={candidates}
             meId={meId}
-            pending={pending}
-            onPick={(value) => {
-              onAssign(value);
-              setPicking(false);
-            }}
           />
         )}
-      </div>
-    </div>
+      </FieldEditDialog>
+    </>
   );
 }
 
@@ -293,6 +297,7 @@ export function LeadOwnerControl({
   writer: LeadWriter;
   terminalReasonId: string;
 }>) {
+  const t = useT();
   const me = useMe();
   // Assignment asks a DIFFERENT question from editing, so it drops the PER-ROW
   // half of the editor's answer and keeps the rest. `writable` is false on a
@@ -305,29 +310,23 @@ export function LeadOwnerControl({
   // fails is worse than none. An archived lead is refused too: a terminal
   // record is nobody's to hand on.
   const mayAssign = useCanWrite("lead", "update");
-  const refusedReasonId =
-    lead.archived_at || !mayAssign ? terminalReasonId : undefined;
+  const assignRefusal = useWriteRefusal("lead", "update", {
+    seat: t("settings.seatRefused"),
+    grant: t("record.actionRefused"),
+  });
+  const refused = Boolean(lead.archived_at) || !mayAssign;
+  const refusal = lead.archived_at
+    ? writer.readOnlyReason
+    : me.data && assignRefusal;
+  const meId = me.data?.user?.id;
   return (
     <LeadOwner
       lead={lead}
-      meId={me.data?.user?.id}
-      refusedReasonId={refusedReasonId}
-      pending={
-        writer.patch.isPending ||
-        writer.claim.isPending ||
-        Boolean(refusedReasonId)
-      }
-      // A lead nobody owns is nobody's to change, so the PATCH this control
-      // used to send for EVERY pick was refused for the one pick a rep makes
-      // most: taking an unassigned lead. Picking yourself on an unowned lead
-      // goes through the claim door, which is the write the server actually
-      // admits; naming a colleague stays a patch, which the assignment gate
-      // answers.
-      onAssign={(ownerId) =>
-        !lead.owner_id && ownerId === me.data?.user?.id
-          ? writer.claim.mutate()
-          : writer.save({ owner_id: ownerId })
-      }
+      meId={meId}
+      editable={!refused && !writer.patch.isPending && !writer.assigning}
+      readOnlyReason={refusal}
+      refusedReasonId={lead.archived_at ? terminalReasonId : undefined}
+      onAssign={(ownerId, opened) => writer.assign(ownerId, opened, meId)}
     />
   );
 }

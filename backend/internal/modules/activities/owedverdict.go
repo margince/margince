@@ -156,14 +156,14 @@ func priorOutboundVisibleJoin(scope string) string {
 // priorOutboundFrom finds that message for candidate a.
 func priorOutboundFrom(scope string) string {
 	return `FROM activity prior
-   WHERE activity_thread_available(prior.thread_key) AND a.thread_key IS NOT NULL
+   WHERE a.thread_key IS NOT NULL
      AND a.counterparty_email IS NOT NULL
      AND ` + ourOutboundInThisThread("prior", "a") + `
      -- On the prior row and not on the settlement pass's own uses of the same
      -- helper, because this one ships the body to a model. A thread the
      -- confidentiality engine narrowed is exactly the mail that must not go.
      AND prior.audience = 'workspace'
-     AND (prior.restricted_at IS NULL AND activity_thread_available(prior.thread_key)) AND (` + scope + `)
+     AND prior.restricted_at IS NULL AND (` + scope + `)
      AND (prior.occurred_at, prior.id) < (a.occurred_at, a.id)
    ORDER BY prior.occurred_at DESC, prior.id DESC
    LIMIT 1`
@@ -288,7 +288,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
-				` AND a.audience = 'workspace' AND (a.restricted_at IS NULL AND activity_thread_available(a.thread_key)) AND `+provenance.MailBodyCompleteSQL("a")+
+				` AND a.audience = 'workspace' AND a.restricted_at IS NULL AND `+provenance.MailBodyCompleteSQL("a")+
 				` AND `+priorContextComplete,
 			// An unjudged calendar response is off the lane until judged, and
 			// judged it must be: any sender can mark a request REPLY.
@@ -376,7 +376,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.owed_verdict IS NOT NULL
 			   AND NOT `+humanReviewedOwedSQL("a")+`
 			   AND `+rulesetStaleSQL("a.owed_verdict_ruleset", "$%[2]d")+`
-			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
 			   AND a.restricted_at IS NULL
 			   AND `+provenance.MailBodyCompleteSQL("a")+`
@@ -445,8 +445,8 @@ func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, rule
 		return false, err
 	}
 	var before, beforeRules *string
-	err := tx.QueryRow(ctx, `SELECT owed_verdict,owed_verdict_ruleset FROM activity WHERE activity_thread_available(thread_key) AND id=@id
- AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND audience='workspace' AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&before, &beforeRules)
+	err := tx.QueryRow(ctx, `SELECT owed_verdict,owed_verdict_ruleset FROM activity WHERE id=@id
+ AND archived_at IS NULL AND audience='workspace' AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&before, &beforeRules)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -457,7 +457,7 @@ func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, rule
 	tag, err := tx.Exec(ctx, `UPDATE activity SET owed_verdict=@verdict,owed_verdict_at=now(),owed_verdict_ruleset=@rules
  WHERE id=@id AND (@reviewed OR (`+rulesetStaleSQL("owed_verdict_ruleset", "@rules")+`
  AND (owed_verdict_at IS NULL OR owed_verdict_at<@read_at) AND NOT `+humanReviewedOwedSQL("activity")+`))
- AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND audience='workspace' AND restricted_at IS NULL`,
+ AND archived_at IS NULL AND audience='workspace' AND restricted_at IS NULL`,
 		pgx.NamedArgs{"id": id, "verdict": verdict, "rules": ruleset, "reviewed": reviewed, "read_at": readAt})
 	if err != nil || tag.RowsAffected() == 0 {
 		return false, err

@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -170,9 +171,11 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 		updateID: 6101, messageID: 11, senderID: 771101,
 		username: "buyer", firstName: "Nils", text: "Do you ship to Hamburg?",
 	}
+	// The customer answers after the rep's send, which the server stamps now.
 	answer := telegramUpdate{
 		updateID: 6102, messageID: 12, senderID: 771101,
 		username: "buyer", firstName: "Nils", text: "Perfect, I'll take two.",
+		sentAt: clocktest.Now(t).Add(time.Hour),
 	}
 	const repReply = "We do — two days by courier."
 
@@ -245,9 +248,11 @@ func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
 		updateID: 6201, messageID: 21, senderID: 771201,
 		username: "browser", firstName: "Ida", text: "Are you at the fair next week?",
 	}
+	// Dated after the send, so only the archive can be what refuses it.
 	answer := telegramUpdate{
 		updateID: 6202, messageID: 22, senderID: 771201,
 		username: "browser", firstName: "Ida", text: "See you there.",
+		sentAt: clocktest.Now(t).Add(time.Hour),
 	}
 
 	runner, sub := newTelegramWorker(t, c, compose.JobRunnerConfig{SendRegistry: c.sendRegistry()})

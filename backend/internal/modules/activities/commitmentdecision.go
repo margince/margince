@@ -37,7 +37,7 @@ func RecordCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, source ids.Acti
  'rule_version', d.rule_version, 'evidence_ids', d.evidence_ids, 'evaluated_at', d.evaluated_at, 'renewed_by', d.renewed_by, 'renewed_at', d.renewed_at,
  'meaning_state', d.meaning->'state', 'deadline_precision', d.meaning->'deadline_precision')
  FROM activity_commitment_admission d WHERE d.source_activity_id = a.id AND d.locator = $2))
-  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $1 FOR UPDATE OF a`, source, decision.Locator).Scan(&before); err != nil {
+  FROM activity a WHERE a.id = $1 FOR UPDATE OF a`, source, decision.Locator).Scan(&before); err != nil {
 		return fmt.Errorf("activities: locking prior commitment admission: %w", err)
 	}
 	var args []any

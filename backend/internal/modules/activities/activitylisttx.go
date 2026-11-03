@@ -51,7 +51,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	err = perBind(ctx, in.WaitingReplyAsOf != nil, func(ctx context.Context) error {
 		rows, err := tx.Query(ctx,
 			`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
-				` FROM activity a WHERE activity_thread_available(a.thread_key) AND `+strings.Join(where, " AND ")+
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+
 				order+sprintf(" LIMIT %d", limit+1),
 			waitingListArgs(in, args)...)
 		if err != nil {

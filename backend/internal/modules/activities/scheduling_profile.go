@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -30,6 +29,12 @@ type SchedulingCalendar interface {
 	Check(context.Context, ids.UserID, string) error
 	List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error)
 	CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error
+	// ResolveAttendees says what each address is to the host: a contact they
+	// can see, a live colleague, a lead, or host-named.
+	ResolveAttendees(context.Context, ids.UserID, []string) ([]connector.CalendarAttendee, error)
+	// InviteeAddress reads a linked contact's or lead's address under the
+	// host's row scope, and the contact a promoted lead became.
+	InviteeAddress(context.Context, ids.UserID, string, ids.UUID, []string) (string, ids.UUID, error)
 	Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error)
 	Inspect(context.Context, ids.UserID, string, string, string) (connector.CalendarState, error)
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
@@ -102,13 +107,23 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 			profile = *stored
 		}
 		profile.Slug = &slug
-		return nil
+		profile.Alias = nil
+		alias, err := liveBookingPageAlias(ctx, tx, host)
+		if alias != "" {
+			profile.Alias = &alias
+		}
+		return err
 	})
 	profile.HostName = &name
 
-	if err == nil && profile.Slug != nil && s.publicOriginUsable() == nil {
-		link := strings.TrimRight(s.publicBaseURL, "/") + "/#/book/" + url.PathEscape(*profile.Slug)
-		profile.PublicUrl = &link
+	if err == nil && profile.Slug != nil {
+		address := *profile.Slug
+		if profile.Alias != nil {
+			address = *profile.Alias
+		}
+		if link, ok := s.publicBookingURL(address); ok {
+			profile.PublicUrl = &link
+		}
 	}
 	return profile, err
 }
@@ -348,12 +363,12 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 			return err
 		}
 		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
-			id, err = replaceBookingPage(ctx, tx, host)
+			id, err = s.replaceBookingPage(ctx, tx, host)
 			if err != nil {
 				return err
 			}
 		}
-		profile.Slug, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil
+		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
 		profile.HostName = nil
 		args = []any{profile, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
@@ -372,9 +387,14 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 	})
 }
 
-func replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
+func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
 	args := schedulingArgs{}
 	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
+		return ids.Nil, err
+	}
+	// Replace address stops every public address of the old page, the alias
+	// included. The alias is retired, so its cooldown starts now.
+	if err := s.retireBookingAliasTx(ctx, tx, host); err != nil {
 		return ids.Nil, err
 	}
 	slug, err := SeedBookingPageTx(ctx, tx, host)

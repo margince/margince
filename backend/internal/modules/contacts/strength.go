@@ -313,7 +313,7 @@ func contactStrengths(
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = a.link_contact
 		         WHERE `+relstrength.TheyWroteSQL("a.link_contact", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
-		           AND (i.archived_at IS NULL AND activity_thread_available(i.thread_key)) AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
+		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM (SELECT `+foldColumns+`, l.contact_id AS link_contact,
@@ -321,7 +321,7 @@ func contactStrengths(
 		               OVER (PARTITION BY l.contact_id) AS engaged_at
 		        FROM activity a
 		        JOIN activity_link l ON l.activity_id = a.id
-		       WHERE l.contact_id = ANY($1) AND `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a
+		       WHERE l.contact_id = ANY($1) AND `+strengthCountsAt(nowPos)+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a
 		GROUP BY a.link_contact`, args...)
 	if err != nil {
 		return nil, err
@@ -390,14 +390,14 @@ func strengthInputs(
 		       (SELECT i.id FROM activity i
 		          JOIN activity_link il ON il.activity_id = i.id AND il.contact_id = $1
 		         WHERE `+relstrength.TheyWroteSQL("$1", "i")+` AND `+strengthCitedCountsAt(nowPos)+`
-		           AND (i.archived_at IS NULL AND activity_thread_available(i.thread_key)) AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
+		           AND i.archived_at IS NULL AND `+occurredday.FromSQL("i", "$2")+auth.AudienceWorkspaceOnly("i")+citedWithin+`
 		         ORDER BY i.occurred_at DESC, i.id DESC
 		         LIMIT 1)
 		FROM (SELECT `+foldColumns+`,
 		             max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("$1", "a")+`) OVER () AS engaged_at
 		        FROM activity a
 		        JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		       WHERE `+strengthCountsAt(nowPos)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a`,
+		       WHERE `+strengthCountsAt(nowPos)+` AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+scoreWithin+`) a`,
 		foldArgs...).Scan(&out.LastInteraction, &out.LastEngaged, &out.InteractionCount90d,
 		&out.Inbound90d, &out.Outbound90d, &out.lateCount90d, &out.lateOutbound90d, &out.LastInbound, &out.LastOutbound,
 		&out.LastInboundPrecision, &out.LastOutboundPrecision, &out.LastInboundActivity); err != nil {
@@ -413,7 +413,7 @@ func strengthInputs(
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		WHERE `+strengthCountsAt(4)+` AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND `+occurredday.FromSQL("a", "$2")+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
+		WHERE `+strengthCountsAt(4)+` AND a.archived_at IS NULL AND `+occurredday.FromSQL("a", "$2")+auth.AudienceWorkspaceOnly("a")+contributingWithin+`
 		ORDER BY a.occurred_at DESC
 		LIMIT $3`, citeArgs...)
 	if err != nil {

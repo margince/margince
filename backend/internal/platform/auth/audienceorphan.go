@@ -106,7 +106,7 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
 		                      WHERE tm.team_id = am.subject_id
                             AND tm.user_id NOT IN (%[3]s))))))
-		  FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded))
+		  FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded))
 	var reachable bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)

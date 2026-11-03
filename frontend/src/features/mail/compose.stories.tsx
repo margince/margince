@@ -281,10 +281,9 @@ export const ColleaguesMailbox: Story = {
   },
 };
 
-// The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
-// back 409 consent_not_granted, so the modal stays open with the pointed
-// "Review consent" copy instead of a raw server error, and the action the
-// server says this rep may take.
+// A filled, confirmed send comes back 409 consent_not_granted. The modal stays
+// open, and the send status shows the engine's reason for the refused address
+// with the action the server offers this rep.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
@@ -302,6 +301,13 @@ export const ConsentBlocked: Story = {
             overrulable: [
               {
                 contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+                category: "marketing",
+              },
+            ],
+            refusals: [
+              {
+                address: "buyer@acme.test",
+                reason_code: "no_marketing_consent",
                 category: "marketing",
               },
             ],

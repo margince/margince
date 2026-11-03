@@ -3,32 +3,50 @@
 
 package capture
 
-// Parent identity and subject boundaries define a conversation independently of arrival order.
+// Joining the threads one email links.
+//
+// A captured email's thread_key is the first id of its References header. Mail
+// programs shorten that header (iPhone Mail sends only the direct parent). So
+// one conversation arrives under a new root at every reply such a program
+// makes. A thread an importer filed under its own key never meets the key a
+// mailbox derives. The email itself still says what it answers. Every capture
+// stores those ids, looks for the messages on either end of them, and merges
+// the thread keys it finds into one.
+//
+// Order does not matter. A backfill walks a mailbox newest first. So the reply
+// is usually stored before the message it answers, and the stored links let
+// the older message find its replies when it arrives.
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // ThreadJoiner connects capture to the activity owner and the cross-module thread merge.
 type ThreadJoiner struct {
-	Repair       func(context.Context, pgx.Tx, int, ids.UUID, string) (int, int, bool, error)
-	InheritSeat  func(context.Context, pgx.Tx, string, string, ids.UUID) error
-	InheritBasis func(context.Context, pgx.Tx, ids.UUID, string, string) error
 	// SentBySeat proves which neighbours this seat sent before a mailbox echo exists.
 	SentBySeat func(ctx context.Context, tx pgx.Tx, seat ids.UUID, candidates []ids.ActivityID) ([]ids.ActivityID, error)
 	// RecordReferences stores the ids one email says it answers.
 	RecordReferences func(ctx context.Context, tx pgx.Tx, id ids.ActivityID, referenced []string) error
+	// Neighbours answers the live messages a reply links to this one, in
+	// either direction.
+	Neighbours func(ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string) ([]ids.ActivityID, error)
+	// Earliest chooses the key the others merge into, or "" when no live
+	// message holds any of them any more.
+	Earliest func(ctx context.Context, tx pgx.Tx, keys []string) (string, error)
+	// Merge moves thread `from` into thread `to` everywhere a row carries one.
+	Merge func(ctx context.Context, tx pgx.Tx, from, to string) error
 }
 
 func (j ThreadJoiner) complete() bool {
-	return j.RecordReferences != nil && j.Repair != nil && j.InheritSeat != nil && j.InheritBasis != nil
+	return j.RecordReferences != nil && j.Neighbours != nil && j.Earliest != nil && j.Merge != nil
 }
 
 // WithThreadJoin returns a copy that joins the threads each captured email
@@ -39,16 +57,30 @@ func (s *Sink) WithThreadJoin(j ThreadJoiner) *Sink {
 	return &c
 }
 
-// joinThread uses the same persisted partition engine as historical correction.
+// joinThread records what this email replies to and merges every thread its
+// reply links reach into one.
+//
+// It runs after this seat's import row is written. That holds on every path a
+// capture can take: a new row, a replay, and an import this mailbox took over.
+// The take-over is where an importer's key meets a mailbox's. created says this
+// capture minted the row.
+//
+// The References header is the sender's text, so three rules keep a stranger
+// from steering the join:
+//
+//   - The seat must hold this message (its own import row), and a link counts
+//     only toward a neighbour the seat also holds or is proved to have sent.
+//   - A row this capture just minted got its key from its own header. That key
+//     is merged as a thread only when no other message carries it yet;
+//     otherwise the row stays under it, as every row did before thread
+//     joining, and the conversation its header named is left where it was.
+//   - Only the keys of held neighbours, and a key the row already had before
+//     this capture, are merged whole.
 func (s *Sink) joinThread(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, created bool,
 ) error {
 	if !s.threadJoin.complete() || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem {
 		return nil
-	}
-	live, err := threadSourceLiveTx(ctx, tx, id)
-	if err != nil || !live {
-		return err
 	}
 	if err := s.threadJoin.RecordReferences(ctx, tx, id, rec.ReplyTo); err != nil {
 		return err
@@ -61,82 +93,163 @@ func (s *Sink) joinThread(
 	if err != nil || !held {
 		return err
 	}
-	if err := s.rememberThreadTopicTx(ctx, tx, id); err != nil {
+	neighbours, err := s.threadJoin.Neighbours(ctx, tx, id, rec.NaturalKey.SourceID, rec.ReplyTo)
+	if err != nil || len(neighbours) == 0 {
 		return err
 	}
-	var key string
-	if err := tx.QueryRow(ctx, `SELECT coalesce(thread_key,'') FROM activity WHERE id=@id`, pgx.NamedArgs{"id": id}).Scan(&key); err != nil {
+	if err := s.mergeLinkedThreads(ctx, tx, seat, id, neighbours, created); err != nil {
 		return err
 	}
-	changed, err := rememberThreadInputTx(ctx, tx, id, seat)
-	if err != nil {
-		return err
-	}
-	if created || changed {
-		if err := QueueThreadRepairTx(ctx, tx, key); err != nil {
-			return err
-		}
-	}
-
 	// Last, because it asks what thread this message is in and only the merge
 	// above knows the answer.
 	return s.holdFromJoinedThreadTx(ctx, tx, id)
 }
 
-// Capture takes this workspace lock before any activity row; repair uses the same order.
+// mergeLockStatement is one workspace-wide lock for every thread merge. It is
+// spelled once because two callers take it: takeMergeLockFirst before a row is
+// written, and mergeLinkedThreads where the merge happens. Two spellings of one
+// lock name are two locks, and the deadlock ordering would be lost.
+//
+// Held by: TestTheMergeLockHasOneSpelling (backend/gates/mergelockordering_test.go)
 const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`
 
+// mergeLinkedThreads merges the thread keys a held email's reply links reach,
+// under the rules joinThread states.
+func (s *Sink) mergeLinkedThreads(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
+) error {
+	// Read once without the lock. Nearly every capture finds one key and stops.
+	// A replay that already holds its own row lock must not then wait on the
+	// merge lock for nothing.
+	keys, err := s.keysToMerge(ctx, tx, seat, id, neighbours, created)
+	if err != nil || len(keys) < 2 {
+		return err
+	}
+	// One lock for every merge in the workspace, and the keys read again under
+	// it. So a concurrent merge cannot retire a key between the read and the
+	// rewrite. takeMergeLockFirst usually holds it already, and an advisory xact
+	// lock is re-entrant within one transaction. Correctness rests on this call;
+	// the probe only decides whether the cost is paid early.
+	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
+		return fmt.Errorf("capture: locking the thread merge: %w", err)
+	}
+	if keys, err = s.keysToMerge(ctx, tx, seat, id, neighbours, created); err != nil || len(keys) < 2 {
+		return err
+	}
+	into, err := s.threadJoin.Earliest(ctx, tx, keys)
+	if err != nil || into == "" {
+		return err
+	}
+	for _, key := range keys {
+		if key == into {
+			continue
+		}
+		if err := s.threadJoin.Merge(ctx, tx, key, into); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// keysToMerge answers the thread keys this email joins, sorted. These are the
+// keys of the neighbours the seat holds, and the email's own key when the rules
+// in joinThread let it count.
+func (s *Sink) keysToMerge(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
+) ([]string, error) {
+	own, sole, live, err := ownThreadKeyTx(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	// An archived message joins nothing. Capture itself archives mail (the
+	// counterparty verdict does), and a later backfill or sync that meets the
+	// same message again resolves onto that archived row. The archive stands:
+	// the row is neither revived nor duplicated, and it does not bridge the
+	// threads of the live messages it links.
+	if !live {
+		return nil, nil
+	}
+	var sent []ids.ActivityID
+	if s.threadJoin.SentBySeat != nil {
+		sent, err = s.threadJoin.SentBySeat(ctx, tx, seat, neighbours)
+		if err != nil {
+			return nil, err
+		}
+	}
+	keys, err := heldNeighbourKeysTx(ctx, tx, seat, id, neighbours, sent)
+	if err != nil {
+		return nil, err
+	}
+	if own != "" && (!created || sole) && !slices.Contains(keys, own) {
+		keys = append(keys, own)
+		slices.Sort(keys)
+	}
+	return keys, nil
+}
+
+// seatHoldsTx answers whether this seat's own mailbox delivered the message:
+// its capture_import row, which recordThisImport writes only on proof.
 func seatHoldsTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID) (bool, error) {
 	var held bool
-	err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM capture_import WHERE activity_id=@id AND user_id=@seat)`, pgx.NamedArgs{"id": id, threadArgSeat: seat}).Scan(&held)
-	return held, err
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1 AND user_id = $2)`,
+		id, seat).Scan(&held); err != nil {
+		return false, fmt.Errorf("capture: reading whether this seat holds the message: %w", err)
+	}
+	return held, nil
 }
 
-func (s *Sink) rememberThreadTopicTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
-	live, err := threadSourceLiveTx(ctx, tx, id)
-	if err != nil || !live {
-		return err
+// ownThreadKeyTx answers the message's current thread key, whether it is the
+// only message carrying it, and whether the message is live. An archived row is
+// not an error: live is false and the key is empty.
+func ownThreadKeyTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (key string, sole, live bool, err error) {
+	err = tx.QueryRow(ctx, `
+		SELECT coalesce(a.thread_key, ''),
+		       NOT EXISTS (SELECT 1 FROM activity o WHERE o.thread_key = a.thread_key AND o.id <> a.id)
+		  FROM activity a
+		 WHERE a.id = $1 AND a.archived_at IS NULL`, id).Scan(&key, &sole)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, false, nil
 	}
-	var subject string
-	if err := tx.QueryRow(ctx, `SELECT coalesce(subject,'') FROM activity WHERE id=@id`, pgx.NamedArgs{"id": id}).Scan(&subject); err != nil {
-		return err
-	}
-	keys, err := s.threadProjectKeysTx(ctx, tx, subject)
 	if err != nil {
-		return err
+		return "", false, false, fmt.Errorf("capture: reading the message's thread: %w", err)
 	}
-	prior, err := threadHistoricalProjectKeysTx(ctx, tx, id)
+	return key, sole, true, nil
+}
+
+// heldNeighbourKeysTx answers the distinct thread keys of the neighbours this
+// seat holds or is proved to have sent, sorted.
+func heldNeighbourKeysTx(
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours, sent []ids.ActivityID,
+) ([]string, error) {
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	// Word overlap is not transitive; one reply must not bridge two different topics.
+	query := fmt.Sprintf(`
+		WITH held_neighbours AS (
+		    SELECT a.thread_key, a.subject
+		      FROM activity a
+		     WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
+		       AND a.archived_at IS NULL AND a.id = ANY($%d::uuid[])
+		       AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
+		                    WHERE ci.activity_id = a.id AND ci.user_id = $%d))
+		)
+		SELECT DISTINCT a.thread_key
+		  FROM held_neighbours a
+		  JOIN activity self ON self.id = $%d
+		 WHERE %s
+		   AND NOT EXISTS (SELECT 1 FROM held_neighbours other
+		       WHERE other.thread_key <> a.thread_key
+		         AND mail_topics_differ(a.subject, other.subject))`,
+		arg(neighbours), arg(sent), arg(seat), arg(id), sameTopicSQL("a", "self"))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)
 	}
-	keys = append(keys, prior...)
+	keys, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)
+	}
 	slices.Sort(keys)
-	keys = slices.Compact(keys)
-	topic := threadBoundaryTopic(subject, keys)
-	_, err = tx.Exec(ctx, `INSERT INTO capture_thread_topic(activity_id,own_topic,recognized_keys,subject_hash,effective_topic,root_key) SELECT @id,@topic,@keys,md5(coalesce(subject,'')),@topic,thread_key FROM activity WHERE id=@id ON CONFLICT(activity_id) DO UPDATE SET own_topic=EXCLUDED.own_topic,recognized_keys=EXCLUDED.recognized_keys,subject_hash=EXCLUDED.subject_hash`, pgx.NamedArgs{"id": id, threadArgTopic: topic, "keys": keys})
-	return err
-}
-
-func (s *Sink) finishCapturedThreadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) error {
-	if !s.threadJoin.complete() || rec.NaturalKey.SourceSystem != connector.EmailSourceSystem {
-		return nil
-	}
-	live, err := threadSourceLiveTx(ctx, tx, id)
-	if err != nil || !live {
-		return err
-	}
-
-	run, traced := principal.CorrelationID(ctx)
-	if !traced {
-		run = ids.NewV7()
-	}
-	var key string
-	if err := tx.QueryRow(ctx, `SELECT coalesce(thread_key,'') FROM activity WHERE id=@id`, pgx.NamedArgs{"id": id}).Scan(&key); err != nil {
-		return err
-	}
-	if _, _, _, err := s.threadJoin.Repair(ctx, tx, 256, run, key); err != nil {
-		return err
-	}
-	_, err = tx.Exec(ctx, `UPDATE capture_thread_pending p SET blocked=true FROM activity a WHERE a.id=@id AND p.source_key=a.thread_key`, pgx.NamedArgs{"id": id})
-	return err
+	return keys, nil
 }

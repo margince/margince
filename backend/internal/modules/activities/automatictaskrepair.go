@@ -81,7 +81,7 @@ func automaticTaskRepairBasis(ctx context.Context, tx pgx.Tx, task HomeRepairTas
 	id, version := arg(task.ID), arg(task.Version)
 	current := storekit.CurrentTaskClause("a", asOf, "'[]'::jsonb", arg)
 	query := storekit.SQLf(`SELECT %s, a.source_activity_id IS NULL,
- a.due_at IS NOT NULL AND (%s) IS NULL, %s FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id=$%d AND a.version=$%d`,
+ a.due_at IS NOT NULL AND (%s) IS NULL, %s FROM activity a WHERE a.id=$%d AND a.version=$%d`,
 		provenance.TaskSourceActivitySQL("a"), storekit.TaskDueSQL("a"), current, id, version)
 	basis := AutomaticTaskRepair{Supported: true}
 	err := tx.QueryRow(ctx, query, args...).Scan(&basis.SourceID, &basis.NormalizeSource, &basis.ClearDue, &basis.Current)
@@ -119,7 +119,7 @@ func (s *Store) RepairAutomaticTaskTx(ctx context.Context, tx pgx.Tx, task HomeR
 	var nextVersion int64
 	query := `UPDATE activity SET source_activity_id=CASE WHEN @normalize THEN @source::uuid ELSE source_activity_id END,
  due_at=CASE WHEN @clear_due THEN NULL ELSE due_at END
- WHERE id=@id AND version=@version AND (archived_at IS NULL AND activity_thread_available(thread_key)) RETURNING version`
+ WHERE id=@id AND version=@version AND archived_at IS NULL RETURNING version`
 	if err := tx.QueryRow(ctx, query, args).Scan(&nextVersion); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrVersionSkew

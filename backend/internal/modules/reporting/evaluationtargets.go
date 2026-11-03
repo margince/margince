@@ -165,6 +165,12 @@ func (s *Service) applyTargets(ctx context.Context, tx pgx.Tx, evaluation *Evalu
 			return err
 		}
 	}
+	// A target is set for a whole scope. A figure narrowed to a product,
+	// country, industry or one kind of value stands against none of them.
+	if dimensioned(out.Context) {
+		applyMetricTargets(ctx, out, evaluation.Forecast, heldTargets{})
+		return nil
+	}
 	keys := metricTargetKeys(out.Context, out.Metrics)
 	pointOwners := map[int]map[int]openapi_types.UUID{}
 	var owners []openapi_types.UUID
@@ -385,4 +391,9 @@ func targetAppliesToInterval(frame crmcontracts.ReportingContext, interval *crmc
 		return false
 	}
 	return target.EndAt.Equal(target.StartAt.AddDate(0, months, 0))
+}
+
+func dimensioned(frame crmcontracts.ReportingContext) bool {
+	return frame.ProductId != nil || frame.InitiativeId != nil || frame.Country != nil || frame.Industry != nil ||
+		(frame.ValueBasis != nil && *frame.ValueBasis != crmcontracts.ReportingValueBasisAll)
 }

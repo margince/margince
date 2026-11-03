@@ -39,8 +39,7 @@ type TraceLadder struct {
 	// ActivityID is the row this message became, where it became one. An
 	// internal-only drop writes no activity at all, which is exactly why this
 	// read can be reached by a trace id as well as by an activity id.
-	ActivityID     *ids.UUID
-	ActivityHidden bool
+	ActivityID *ids.UUID
 
 	// Rungs are the stored rows, oldest stage first.
 	Rungs []TraceRow
@@ -112,24 +111,9 @@ func (s *TraceStore) ladder(ctx context.Context, payloads bool,
 		if err != nil {
 			return err
 		}
-		hidden := false
-		if anchor.activityID != nil {
-			readable := false
-			for _, rung := range rungs {
-				if rung.ActivityID != nil && *rung.ActivityID == *anchor.activityID {
-					readable = true
-					break
-				}
-			}
-			if !readable {
-				hidden = true
-				anchor.activityID = nil
-			}
-		}
 		out = TraceLadder{
 			Connector:       anchor.connector,
 			ActivityID:      anchor.activityID,
-			ActivityHidden:  hidden,
 			Rungs:           rungs,
 			PayloadsEnabled: payloads,
 		}
@@ -232,9 +216,6 @@ func (s *TraceStore) readRungs(ctx context.Context, tx pgx.Tx, a traceAnchor) ([
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("capture: reading the trace ladder: %w", err)
-	}
-	if err := s.hideUnreadableLinks(ctx, tx, out); err != nil {
-		return nil, err
 	}
 	return out, nil
 }

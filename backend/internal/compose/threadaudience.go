@@ -195,7 +195,7 @@ func readableActivityIDsTx(ctx context.Context, tx pgx.Tx, ids0 []ids.UUID) ([]i
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(
-		`SELECT a.id FROM activity a WHERE activity_thread_available(a.thread_key) AND a.id = ANY($%d) AND (%s) ORDER BY a.id`,
+		`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND (%s) ORDER BY a.id`,
 		idsPos, scope), args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: narrowing a thread decision to what the caller reads: %w", err)

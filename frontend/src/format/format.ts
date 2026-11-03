@@ -154,6 +154,10 @@ export function formatMoneyCompact(
     // digits, so a maximum of 1 alone always prints one digit ("€420.0k").
     minimumFractionDigits: 0,
     maximumFractionDigits: abbreviated ? 1 : 0,
+    // One decimal alone cuts €1,062,548 and €1,094,000 both to "€1m". Three
+    // significant digits keep them apart, and the more precise rule wins.
+    maximumSignificantDigits: 3,
+    roundingPriority: "morePrecision",
     // Half-up turns CHF 999,999.99 into "CHF 1M", a figure the record does
     // not reach; truncating drops digits but never adds any.
     roundingMode: "trunc",

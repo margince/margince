@@ -311,9 +311,10 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// same transaction that created it. There is no client-supplied reference
 	// to gate: nothing outside the triage resolve ever writes this column, and
 	// no human surface reads the row.
-	"company_domain_disposition.company_id": "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
-	"contact_email.contact_id":              "child row: written through the contact's own gated paths",
-	"contact_phone.contact_id":              "child row: written through the contact's own gated paths",
+	"company_domain_disposition.company_id":           "server-derived: set only by ResolveDomainTriage, to the company that same transaction created or adopted through the gated dedupe chokepoint",
+	"company_domain_disposition.candidate_company_id": "server-derived: set only by withholdForNearDuplicate, to the rival the dedupe chokepoint ranked; the read that offers it keeps only companies inside the reader's company scope",
+	"contact_email.contact_id":                        "child row: written through the contact's own gated paths",
+	"contact_phone.contact_id":                        "child row: written through the contact's own gated paths",
 	// The licensed-data-provider platform (ADR-0101). A run names the subject
 	// it spends credits on, so admitting one IS a read of that contact: QueueRun
 	// takes auth.EnsureVisible inside the queueing transaction, before any
@@ -358,11 +359,12 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// arrives from the caller, and is stamped only after auth.EnsureWritable
 	// has admitted the loser and auth.WritableBy the survivor. A lead either
 	// end of the pair cannot be written to answers before the pointer is set.
-	"lead.merged_into_id":              "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
-	"contact.converted_from_lead_id":   "server-derived: stamped by PromoteLead",
-	"deal_stage_history.deal_id":       "server-derived: appended by CreateDeal/AdvanceDeal",
-	"project_phase_history.project_id": "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
-	"brief_item.deal_id":               "server-derived: written only by the brief ranker from its own row-scoped candidate query, never from a request body",
+	"lead.merged_into_id":               "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
+	"contact.converted_from_lead_id":    "server-derived: stamped by PromoteLead",
+	"deal_stage_history.deal_id":        "server-derived: appended by CreateDeal/AdvanceDeal",
+	"project_phase_history.project_id":  "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
+	"brief_item.deal_id":                "server-derived: written only by the brief ranker from its own row-scoped candidate query, never from a request body",
+	"sales_initiative_baseline.deal_id": "server-derived: frozen by initiatives.Store.Launch from the membership the same transaction resolved under the caller's deal grant and row scope (visibleRecords and the rule engine), never from a request body",
 	// The capture disposition ledger (CAP-DDL-8): capture writes the row in
 	// the same transaction as the activity it just created, from that
 	// activity's own id — a connector principal supplies message bytes, never
@@ -384,6 +386,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"company_fact.company_id":              "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
 	"company_fact_revision.company_id":     "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
 	"offer.deal_id":                        "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
+	"deal_product.deal_id":                 "gated: auth.EnsureWritableLive on the deal in deals.Store.ReplaceDealProducts, the one caller-supplied door; syncDealProductsFromOffer runs inside the offer accept, whose deal the accept already probed",
 	"offer.buyer_company_id":               "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
 	"signal.resolved_company_id":           "gated: the resolver attributes only to a caller-visible company (visibleCandidates → auth.EnsureLinkTarget)",
 	"signal.resolved_contact_id":           "gated: consentedContact links only a caller-visible contact (auth.EnsureLinkTarget); else company-level",
@@ -440,7 +443,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_participant.activity_id": "child row: written only beside the activity itself, inside the transaction that mints it",
 	// The external identities one message answers to, and the row a second
 	// provider's copy of it resolves to.
-	"activity_mail_reference.activity_id": "gated: the WRITE is a child row stored beside the email a capture just landed or took over, on the id the capture itself resolved, inside that capture's transaction. The native thread planner reads candidate identities only inside its bounded repair, proves importer authority before applying an edge, and publishes grouping only after the whole component is ready; no source content is served by the reference lookup. ON DELETE CASCADE, plus an explicit purge on the erasure path beside activity_identity, because erasure archives rather than deletes",
+	"activity_mail_reference.activity_id": "gated: the WRITE is a child row stored beside the email a capture just landed or took over, on the id the capture itself resolved, inside that capture's transaction. The READ (activities.MailNeighboursTx) answers activity ids only to capture's thread join, which acts on a neighbour solely when the capturing seat holds it (its own capture_import row) and only ever rewrites thread keys; no id, subject or content reaches a caller. ON DELETE CASCADE, plus an explicit purge on the erasure path beside activity_identity, because erasure archives rather than deletes",
 	"activity_identity.activity_id":       "gated: the WRITE is a child row, claimed only beside the activity it names inside the transaction that mints it, on an id the store generated rather than one a caller supplied. The READ is where disclosure would live — resolving an identity tells a caller which activity already holds their message — and it goes through readActivity, whose own row-scope gate answers ErrNotFound for a row outside the caller's scope; that miss falls through to an ordinary create, so an out-of-scope incumbent is never named. ON DELETE CASCADE, plus an explicit purge on the erasure path, because erasure archives rather than deletes and an identity outliving its content would resolve a later arrival onto an emptied row",
 	"activity_participant.contact_id":     "server-derived: the counterparty the ensure chokepoint resolved, or a link the activities store already gated",
 	// The named audience of a limited activity. Written only by the audience
@@ -448,12 +451,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"activity_audience_member.activity_id":       "child row: written only by the audience endpoint, beside the audience column it qualifies, after auth.EnsureActivityContentVisible",
 	"activity_reply_verdict_history.activity_id": "gated: both writers reach the row through the activity's own doors. The human correction takes auth.EnsureActivityWritable on this id before it appends (activities.CorrectReplyVerdict), so a seat cannot rewrite the reading of a message they may not change; the classifier path runs under auth.Require(activity, update) on the row it is already processing and names no id a caller supplied. ON DELETE CASCADE because the history is a reading OF the message — losing the message must lose what was read from it, which is the same ground activity.owed_verdict sits on",
 
-	"capture_thread_reply.activity_id":              "server-derived: captured reply bookkeeping names only the email the sink just resolved through its mailbox ownership proof; it stores no content and publication rechecks the activity before emitting.",
-	"capture_thread_topic.activity_id":              "server-derived: cached topic digests are written for the activity the capture sink resolved, never for a request-supplied target; erasure invalidates the cache and ordinary readers retain the activity content gate.",
-	"capture_thread_repair_node.activity_id":        "server-derived: bounded repair discovers the component under the capture owner lock and stages only those activity identities; no staged row is an ordinary conversation view.",
-	"capture_thread_repair_node.parent_activity_id": "server-derived: the ordered reply edge is resolved only after the capturing seat proves access to the parent; the staged identity is internal to repair and is cleared or recomputed after erasure.",
-	"capture_thread_verdict.first_activity_id":      "provenance, not a reach: the message that opened this thread for this seat, so a verdict can be traced to what it was asked about. NOTHING writes it yet — the classifier that records verdicts is a later change, and this column lands with the ledger it belongs to rather than being added under it. The obligation on that writer is the one stated here: the activity must be the one whose capture opened the thread — the ledger is keyed on (thread_key, user_id), and every decision it drives is asked of those two. ON DELETE SET NULL because losing the activity must not lose the verdict, which would re-open a thread a classifier already held",
-	"capture_import.activity_id":                    "child row: written only by the capture sink, for the activity that same sink just landed or replayed, after mailboxWasARecipientTx, which requires one of the seat's own EXACT addresses on the message — a message's natural key is the sender-supplied Message-ID, so hitting an incumbent must grant the syncing seat nothing they cannot evidence",
+	"capture_thread_verdict.first_activity_id": "provenance, not a reach: the message that opened this thread for this seat, so a verdict can be traced to what it was asked about. NOTHING writes it yet — the classifier that records verdicts is a later change, and this column lands with the ledger it belongs to rather than being added under it. The obligation on that writer is the one stated here: the activity must be the one whose capture opened the thread — the ledger is keyed on (thread_key, user_id), and every decision it drives is asked of those two. ON DELETE SET NULL because losing the activity must not lose the verdict, which would re-open a thread a classifier already held",
+	"capture_import.activity_id":               "child row: written only by the capture sink, for the activity that same sink just landed or replayed, after mailboxWasARecipientTx, which requires one of the seat's own EXACT addresses on the message — a message's natural key is the sender-supplied Message-ID, so hitting an incumbent must grant the syncing seat nothing they cannot evidence",
 	// The interaction projection (CG-DDL-1) holds no fact of its own: every
 	// row is folded from activity_participant rows by the consumer, and no
 	// request body ever names a contact here. Reads of it carry the contact

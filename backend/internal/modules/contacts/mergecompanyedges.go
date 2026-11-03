@@ -20,7 +20,8 @@ import (
 // relinkCompanyEdges moves A's relationship edges to B across both company
 // columns. Order matters: edges that would degenerate (A↔B partner
 // edges, duplicates of what B already has) archive first, then the
-// survivors relink.
+// survivors relink. An archived duplicate's primary-employer slot passes to
+// the B edge it duplicates.
 func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
 	if err := relinkEmploymentSupport(ctx, tx, sourceID.UUID, targetID.UUID, false); err != nil {
 		return err
@@ -38,7 +39,7 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	if err := foldFirstObservations(ctx, tx, companyFK, sourceID.UUID, targetID.UUID); err != nil {
 		return err
 	}
-	if _, err := mergeEdgeWrite(ctx, tx, `archived_at=@archived`, mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeDuplicate, mergeArgs); err != nil {
+	if err := archiveDuplicatesKeepingPrimarySlot(ctx, tx, false, mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeDuplicate, mergeArgs); err != nil {
 		return err
 	}
 	if _, err := mergeEdgeWrite(ctx, tx, `company_id=@target,is_current_primary=`+mergeCompanyEdgePrimary, mergeCompanyForwardSource, mergeArgs); err != nil {

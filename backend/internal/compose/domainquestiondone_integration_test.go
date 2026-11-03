@@ -46,7 +46,7 @@ func TestDomainQuestionDeferralPreservesTheReviewDestination(t *testing.T) {
 			t.Fatal("deferred question remains in Worklist")
 		}
 	}
-	review, _, err := e.Contacts.DomainQuestionsForOwner(ctx, "", 100)
+	review, _, err := e.Contacts.DomainQuestionsForOwner(ctx, "", 100, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,6 +62,9 @@ func TestDomainQuestionDeferralPreservesTheReviewDestination(t *testing.T) {
 	}
 	for _, row := range day.Queue {
 		if row.Source == "domain_question" && row.Id == domain {
+			if row.DomainContext == nil || row.DomainContext.SenderAddress == nil {
+				t.Fatalf("the worklist row carries no domain_context: %+v", row.DomainContext)
+			}
 			return
 		}
 	}
@@ -81,7 +84,6 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 		t.Helper()
 		captures++
 		captureStaffMail(t, e, staffMail{sourceID: fmt.Sprintf("fresh-question-%d", captures), from: "hello@" + domain, mailbox: e.Rep1, to: []string{rep1Email}, occurred: evidenceAt})
-		finishThreadRepairs(t, e)
 		if _, err := e.Contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{Domain: domain}); err != nil {
 			t.Fatal(err)
 		}
@@ -100,6 +102,9 @@ func TestFreshCapturedEvidenceReturnsADeferredDomainQuestion(t *testing.T) {
 		visible := len(questions) == 1 && questions[0].Domain == domain
 		if visible != (delta > 0) {
 			t.Fatalf("evidence delta %s: questions=%+v", delta, questions)
+		}
+		if visible && questions[0].Context.SenderAddress != "hello@"+domain {
+			t.Fatalf("the returning question lost its sender: %+v", questions[0].Context)
 		}
 	}
 }

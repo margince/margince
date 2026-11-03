@@ -68,6 +68,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	},
 	"brief_item.returned_after_dismissal_on": {calendar: installationDay},
 	"brief_run.local_day":                    {calendar: installationDay},
+	"sales_initiative.deadline":              {calendar: installationDay},
 	"capture_auto_enrich_budget.budget_date": {
 		calendar: utcDay,
 		why:      "one shared daily enrichment cap, keyed explicitly on (now() AT TIME ZONE 'UTC')::date so the cap resets at one instant everywhere",

@@ -23,7 +23,8 @@ export const reportingMetricNames: Record<
   forecast_landing: "Forecast landing",
   leads_created: "New leads",
   lead_status_moves: "Lead status changes",
-  leads_promoted: "Leads qualified",
+  leads_promoted: "Arriving leads qualified",
+  leads_qualified: "Leads qualified",
   lead_first_response: "First response time",
   leads_awaiting_response: "Leads still waiting for a reply",
   partner_pipeline: "Partner pipeline",
@@ -32,6 +33,9 @@ export const reportingMetricNames: Record<
   partner_activity: "Active partners",
   stage_conversion: "Stage conversion",
   lead_cohort_outcomes: "What became of new leads",
+  bookings_mix: "Commercial mix",
+  qualified_opportunities_created: "Qualified opportunities",
+  initiative_pipeline: "Initiative pipeline by origin",
 };
 
 export const reportingStoryScope = {

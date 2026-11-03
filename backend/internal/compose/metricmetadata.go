@@ -4,6 +4,8 @@
 package compose
 
 import (
+	"slices"
+
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -14,12 +16,18 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 	filters := []string{reportingScope, "period", "target_basis"}
 	switch out.Id {
 	case reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsCreated, reportingLeadStatusMoves,
-		reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingPartnerCommission, reportingPartnerActivity,
+		reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingPartnerCommission, reportingPartnerActivity,
 		reportingLeadCohortOutcomes:
 	case reportingPartnerPipeline, reportingPartnerWon, reportingStageConversion:
 		filters = append(filters, "pipeline")
 	default:
 		filters = append(filters, "pipeline", "close_window")
+	}
+	if slices.Contains(reportingDimensionMetrics, out.Id) {
+		filters = append(filters, "product", "initiative", "country", "industry")
+	}
+	if slices.Contains(reportingValueBasisMetrics, out.Id) {
+		filters = append(filters, "value_basis")
 	}
 	out.AllowedFilters = &filters
 	fields := reportingRequiredFields(out.Id)
@@ -52,7 +60,7 @@ func reportingRequiredFields(metric crmcontracts.ReportingMetricID) []string {
 		return reportingMeetingFields()
 	case reportingAcceptedOpportunities:
 		return []string{"accepted_credit"}
-	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadCohortOutcomes:
+	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadCohortOutcomes:
 		return reportingLeadFields(metric)
 	case reportingPartnerActivity:
 		return []string{companyDisplayName, fieldOwnerID, partnerLastActivity, partnerCertStatus}

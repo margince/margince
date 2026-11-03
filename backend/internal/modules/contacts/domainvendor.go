@@ -78,7 +78,7 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 		status, source, row, reason := arg(DomainProvider), arg(DomainSourceHuman), arg(base), arg(PendingVendorVerdict)
 		var id ids.UUID
 		err = tx.QueryRow(ctx, `UPDATE company_domain_disposition
-   SET status = `+status+`, source = `+source+`, pending_reason = NULL, next_attempt_at = NULL, updated_at = now()
+   SET status = `+status+`, source = `+source+`, pending_reason = NULL, candidate_company_id = NULL, site_unreadable = false, next_attempt_at = NULL, updated_at = now()
  WHERE domain = `+row+` AND status = 'pending' AND pending_reason = `+reason+` RETURNING id`, args...).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The row is locked, so only its own state refuses: no open vendor question.
@@ -134,7 +134,7 @@ func vendorDeciderSQL(ctx context.Context, domain, reader, identities string, as
 	decider := `(SELECT CASE WHEN bool_and(vendor_seat.seat IS NOT NULL) AND count(DISTINCT vendor_seat.seat) = 1
    THEN (array_agg(vendor_seat.seat))[1] END
  FROM (SELECT ` + sole + ` AS seat FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + ` AND ` + controlling + `) vendor_seat)`
-	return `(` + decider + ` = ` + reader + ` AND EXISTS (SELECT 1 FROM activity vendor_mail WHERE activity_thread_available(vendor_mail.thread_key) AND ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `
+	return `(` + decider + ` = ` + reader + ` AND EXISTS (SELECT 1 FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `
  AND ` + controlling + ` AND ` + sole + ` = ` + reader + `
  AND ` + storekit.CurrentSourceMailClause("vendor_mail.id", asOf, arg) + ` AND ` + readable + `))`, nil
 }

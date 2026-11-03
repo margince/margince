@@ -107,16 +107,6 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // this lookup carries no entity context, so `suppression_kind` rather than
 // `kind`.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
-  ["basis_id", "history.field.basis_id"],
-  ["source_activity_id", "history.field.source_activity_id"],
-  ["derived_from_basis_id", "history.field.derived_from_basis_id"],
-  ["thread_key", "history.field.thread_key"],
-  [
-    "matched_outbound_activity_id",
-    "history.field.matched_outbound_activity_id",
-  ],
-  ["communication_basis_status", "history.field.communication_basis_status"],
-
   [
     "commitment_evidence_unavailable",
     "history.field.commitment_evidence_unavailable",
@@ -124,6 +114,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["proposal_status", "history.field.proposal_status"],
   ["reminder_status", "history.field.reminder_status"],
   ["invitation_status", "history.field.invitation_status"],
+  ["attendees", "history.field.attendees"],
   ["admission", "history.field.admission"],
   ["admission_reason", "history.field.admission_reason"],
   ["admission_reason_code", "history.field.admission_reason_code"],

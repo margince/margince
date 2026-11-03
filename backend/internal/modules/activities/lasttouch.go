@@ -43,14 +43,19 @@ type LastTouchCandidate struct {
 	LastTouch  time.Time
 }
 
-// genuineEngagement excludes automation output so a reminder cannot reset its own clock.
-// Public evidence is shared by the quiet scan and its completion reader.
+// genuineEngagement is what counts as a real touch for the quiet reminders. It
+// is live, an engagement rather than a notice, visible to the workspace, and not
+// the engine's own output. The scan reads it to find a silence. The resolver
+// (CompleteQuietRemindersReachedBy) reads it to find the silence's end, so a
+// touch that would not have moved the anchor does not close the reminder.
+// Mail from a sending system, an invitation and a meeting that did not happen
+// are not contact, by the rules every recency clock reads (relstrength).
+//
+// The three positions bind systemSource, systemCapturedBy and
+// systemCapturedByPattern; source alone is a client's to spell, so it is
+// excluded only together with captured_by.
 func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
-	return genuineEngagementWithAudience(alias, sourcePos, capturedByPos, patternPos, auth.AudienceWorkspaceOnly(alias))
-}
-
-func genuineEngagementWithAudience(alias string, sourcePos, capturedByPos, patternPos int, audience string) string {
-	return storekit.SQLf(`%[1]s.archived_at IS NULL`+audience+`
+	return storekit.SQLf(`%[1]s.archived_at IS NULL`+auth.AudienceWorkspaceOnly(alias)+`
 				  AND `+relstrength.WrittenByHumanSQL(alias)+`
 				  AND `+relstrength.NotCalledOffSQL(alias)+`
 				  AND NOT (%[1]s.source = $%[2]d
@@ -77,18 +82,8 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
 				FROM activity a
-				WHERE activity_thread_available(a.thread_key) AND `+genuineEngagement("a", 1, 4, 5)+`
+				WHERE `+genuineEngagement("a", 1, 4, 5)+`
 				  AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
-			), deferred_genuine AS (
-				SELECT a.id, a.occurred_at FROM activity a
-				WHERE `+genuineEngagementWithAudience("a", 1, 4, 5, auth.AudienceWorkspaceDeferred("a"))+`
-				  AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
-			), deferred_reach AS (
-				SELECT al.entity_type, %[1]s AS entity_id, g.occurred_at
-				FROM activity_link al JOIN deferred_genuine g ON g.id=al.activity_id
-				WHERE al.entity_type <> '%[2]s'
-				UNION ALL SELECT '%[2]s', reach.company_id, g.occurred_at
-				FROM (%[3]s) reach JOIN deferred_genuine g ON g.id=reach.activity_id
 			), live_accounts AS (
 				SELECT o.id, o.owner_id
 				FROM company o
@@ -123,9 +118,6 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 			SELECT q.entity_type, q.entity_id, q.last_touch
 			FROM quiet q
 			WHERE q.last_touch < $2
-			  AND NOT EXISTS (SELECT 1 FROM deferred_reach pending
-			      WHERE pending.entity_type=q.entity_type AND pending.entity_id=q.entity_id
-			        AND pending.occurred_at>q.last_touch)
 			  AND (%[4]s)
 			  AND NOT EXISTS (%[5]s)%[7]s
 			ORDER BY q.last_touch, q.entity_id
@@ -206,7 +198,7 @@ func openChildReminderHoldsAccount() string {
 		                    AND ` + employment.IsCurrentSQL("ce.ended_at") + `
 		                    AND ce.archived_at IS NULL
 		         WHERE t.kind = 'task'
-		           AND t.is_done = false AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key))
+		           AND t.is_done = false AND t.archived_at IS NULL
 		           AND t.source_system = $6
 		           AND t.source = $1
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)
@@ -262,7 +254,7 @@ func openReminderHoldsEntity() string {
 		         WHERE tl.entity_type = q.entity_type
 		           AND ` + linkIDCoalesceQualified("tl") + ` = q.entity_id
 		           AND t.kind = 'task'
-		           AND t.is_done = false AND (t.archived_at IS NULL AND activity_thread_available(t.thread_key))
+		           AND t.is_done = false AND t.archived_at IS NULL
 		           AND t.source_system = $6
 		           AND t.source = $1
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`

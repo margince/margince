@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/network"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -70,9 +69,8 @@ func activityScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityContentClause)
 }
 
-// activityDiscoverScope is the DISCOVER gate for the sections that disclose a
-// date and a direction and nothing else (last touch): a limited conversation
-// still counts as a touch, its content stays withheld.
+// activityDiscoverScope is the DISCOVER gate for the timeline rows: a limited
+// conversation still shows as a row, its content withheld.
 func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityDiscoverClause)
 }
@@ -267,7 +265,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s AND (%s)%s %s
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
 		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
@@ -319,34 +317,6 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return nil, false, err
 	}
 	return out, hasMore, nil
-}
-
-// lastTouchSection reads the two directions separately. Folding them into
-// one "last touch" hides the only distinction a reader acts on: a contact
-// we mailed a fortnight ago with no reply and one who wrote to us this
-// morning have the same last-touch date and opposite meanings.
-//
-// The set reader over a set of one: this page and a queue row naming the same
-// contact are answered by the statement in lasttouch.go, under the same
-// scopes. The record read above already admitted the contact, so the set
-// reader's own row scope narrows nothing here.
-func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
-	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
-	if err != nil {
-		return err
-	}
-	touch := touched[contactID]
-	out.LastInboundAt = touch.InboundAt
-	out.LastOutboundAt = touch.OutboundAt
-	out.LastLiveInboundAt = touch.LiveInboundAt
-	out.LastContactAt = touch.ContactAt
-	out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
-	out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
-	out.LastContactPrecision = activitywhen.Stated(touch.ContactPrecision)
-	out.LastLiveInboundPrecision = activitywhen.Stated(touch.LiveInboundPrecision)
-	direction := crmcontracts.RelationshipDirection(touch.Direction())
-	out.RelationshipDirection = &direction
-	return nil
 }
 
 // networkSection answers "who here knows them", warmest first — the
@@ -436,7 +406,7 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactI
 	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.created_at > $%d AND %s AND (%s)%s`,
+		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
 		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg))
 	if err := tx.QueryRow(ctx, query, args...).
 		Scan(&view.NewActivities); err != nil {

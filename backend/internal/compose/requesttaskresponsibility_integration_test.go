@@ -23,7 +23,7 @@ import (
 )
 
 func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
-	for _, scenario := range []string{"copied importer", "addressed assignee", "old addressed assignee", "withdrawn request"} {
+	for _, scenario := range []string{"copied importer", "addressed assignee", "old addressed assignee", "withdrawn request", "answered request"} {
 		t.Run(scenario, func(t *testing.T) {
 			e := integration.Setup(t)
 			at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
@@ -42,13 +42,13 @@ func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
 				t.Fatal(err)
 			}
 			contact := e.SeedContact(t, "Request buyer", &e.AdminUser)
-			e.Contacts.WithClock(func() time.Time { return at.Add(time.Hour) })
+			e.Contacts.SetClock(func() time.Time { return at.Add(time.Hour) })
 			lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: new("Request prospect"), Source: "manual"})
 			if err != nil {
 				t.Fatal(err)
 			}
 			source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-				Kind: "email", Subject: new("Please send the specification"), Body: new("Please send the specification for review."), Direction: new("inbound"), OccurredAt: &sourceAt, Source: "manual", EmailFrom: "buyer@customer.test", EmailTo: []string{recipient}, Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+				Kind: "email", Subject: new("Please send the specification"), Body: new("Please send the specification for review."), Direction: new("inbound"), OccurredAt: &sourceAt, Source: "manual", ThreadKey: "request-" + contact.String(), EmailFrom: "buyer@customer.test", EmailTo: []string{recipient}, Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -68,6 +68,16 @@ func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
 			})
 			if err != nil {
 				t.Fatal(err)
+			}
+			if scenario == "answered request" {
+				_, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+					Kind: "email", Subject: new("Re: Please send the specification"), Direction: new("outbound"),
+					OccurredAt: new(at.Add(30 * time.Minute)), Source: "manual", ThreadKey: "request-" + contact.String(), EmailFrom: recipient, EmailTo: []string{"buyer@customer.test"},
+					Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			taskID := ids.From[ids.ActivityKind](ids.UUID(task.Id))
 			feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return at.Add(time.Hour) })

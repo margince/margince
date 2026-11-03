@@ -273,7 +273,7 @@ describe("a saved view over the deals board", () => {
 
     expect(await screen.findByText("2 deals")).toBeTruthy();
     expect(screen.getByText("7 deals")).toBeTruthy();
-    expect(screen.getByText("≈ €7,000.00")).toBeTruthy();
+    expect(screen.getByText("€7,000")).toBeTruthy();
 
     // Archived deals are reachable from the board, not only from the table: a
     // deal archived by mistake could otherwise only be restored by leaving.
@@ -282,7 +282,7 @@ describe("a saved view over the deals board", () => {
     await waitFor(() =>
       expect(dealUrls.at(-1)?.includes("include_archived=true")).toBe(true),
     );
-    expect(screen.queryByText("≈ €7,000.00")).toBeNull();
+    expect(screen.queryByText("€7,000")).toBeNull();
     expect(screen.queryByText("7 deals")).toBeNull();
     expect(
       screen.getByText(

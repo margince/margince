@@ -23,7 +23,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 	maps.Copy(after, in.CustomFields)
 	if len(in.audienceMembers) > 0 {
 		args := []any{id}
-		if result, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE activity SET audience = 'selected' WHERE id = $%d AND (archived_at IS NULL AND activity_thread_available(thread_key)) AND restricted_at IS NULL`, len(args)), args...); err != nil {
+		if result, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE activity SET audience = 'selected' WHERE id = $%d AND archived_at IS NULL AND restricted_at IS NULL`, len(args)), args...); err != nil {
 			return err
 		} else if result.RowsAffected() != 1 {
 			return errors.New("activities: initial audience row unavailable")
@@ -38,7 +38,11 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		maps.Copy(after, audience)
 		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.SourceActivityID, in.AssigneeID
 	}
-	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, after)
+	var evidence map[string]any
+	if in.Kind == KindMeeting && in.HostUserID != nil {
+		evidence = map[string]any{storekit.ExplicitMeetingHostEvidence: in.HostUserID.UUID}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "create", "activity", id.UUID, nil, after, evidence)
 	if err != nil {
 		return err
 	}

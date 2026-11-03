@@ -42,7 +42,17 @@ func productCreateInput(req crmcontracts.CreateProductRequest, priceStated bool)
 
 		BillingModel:          billingModel,
 		BillingIntervalMonths: billingMonths,
+		ComponentKind:         componentKindOf(req.ComponentKind),
 	}, nil
+}
+
+// componentKindOf is the stored spelling of a component kind a request named.
+func componentKindOf[K ~string](kind *K) *string {
+	if kind == nil {
+		return nil
+	}
+	value := string(*kind)
+	return &value
 }
 
 // productUpdateInput maps a patch. cleared names the fields the body sent as
@@ -76,6 +86,7 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 		Active:         req.Active,
 		Clear:          clears,
 		IfVersion:      ifVersion,
+		ComponentKind:  componentKindOf(req.ComponentKind),
 
 		// A patch addresses the classification when it names either half.
 		Classified:            req.BillingModel != nil || req.BillingIntervalMonths != nil,

@@ -87,10 +87,9 @@ var (
 		Message: fmt.Sprintf("`duration_minutes` must be between %d and %d",
 			int(minSlotDuration.Minutes()), int(maxSlotDuration.Minutes())),
 	}
-	// The booking twin of errAvailabilityToNotAfterFrom. book_meeting's StageInfo
-	// pre-empts the same condition in its own terms so no approval is minted for
-	// an unbookable slot; this is what makes it true on every path that does not
-	// stage, REST included.
+	// The booking twin of errAvailabilityToNotAfterFrom. The booking resolver
+	// refuses the same condition before staging; this holds it on every path
+	// that does not stage, REST included.
 	errBookingEndNotAfterStart = &SchedulingArgumentError{
 		Field: "end", Code: "invalid_date_range",
 		Message: "`end` must be later than `start`",
@@ -172,7 +171,7 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
-			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND activity_thread_available(a.thread_key) AND a.occurred_precision = 'instant'
+			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.occurred_precision = 'instant'
 			  AND (a.host_user_id = $%[1]d
 			       OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id = a.id AND held.user_id = $%[1]d)
 			       OR EXISTS (SELECT 1 FROM activity_participant seat

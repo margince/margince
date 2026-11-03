@@ -46,6 +46,7 @@ const UNITS: Readonly<Record<MetricID, string>> = {
   accepted_opportunities: "count",
   leads_created: "count",
   lead_status_moves: "count",
+  leads_qualified: "count",
   leads_promoted: "count",
   lead_first_response: "hours",
   leads_awaiting_response: "count",
@@ -55,6 +56,9 @@ const UNITS: Readonly<Record<MetricID, string>> = {
   partner_activity: "count",
   stage_conversion: "percent",
   lead_cohort_outcomes: "percent",
+  bookings_mix: "Commercial mix",
+  qualified_opportunities_created: "Qualified opportunities",
+  initiative_pipeline: "Initiative pipeline by origin",
 };
 
 const SALES_METRICS: readonly MetricID[] = [
@@ -65,7 +69,7 @@ const SALES_METRICS: readonly MetricID[] = [
 const SDR_METRICS: readonly MetricID[] = [
   "meetings_held",
   "accepted_opportunities",
-  "leads_promoted",
+  "leads_qualified",
   "lead_first_response",
   "leads_awaiting_response",
 ];
@@ -73,7 +77,7 @@ const SDR_METRICS: readonly MetricID[] = [
 const TEAM_METRICS: readonly MetricID[] = [
   "meetings_held",
   "accepted_opportunities",
-  "leads_promoted",
+  "leads_qualified",
   "leads_awaiting_response",
 ];
 
@@ -184,6 +188,7 @@ export function landingBasis(
       ...shape,
     },
     period: SALES_QUARTER,
+    open_pipeline_minor: 136_000_000,
     eligible_count: 18,
     priced_count: 18,
     fx_missing_count: 0,
@@ -243,7 +248,7 @@ export function prospectingEvaluation(
       attainment: 75,
     }),
     metric("accepted_opportunities", 2, { target: 8, target_actual: 6 }),
-    metric("leads_promoted", 3, { denominator: 11 }),
+    metric("leads_qualified", 3, { denominator: 11 }),
     metric("lead_first_response", 1.7),
     metric("leads_awaiting_response", 3),
   ],
@@ -282,7 +287,7 @@ export function teamEvaluation(): ReportingEvaluation {
   const week = prospectingEvaluation([
     metric("meetings_held", 7),
     metric("accepted_opportunities", 3),
-    metric("leads_promoted", 5),
+    metric("leads_qualified", 5),
     metric("leads_awaiting_response", 2),
   ]);
   return {
@@ -344,6 +349,7 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
         label: "Riley Rep",
         meetings_held: 4,
         qualified: 3,
+        qualified_events: 3,
         unanswered: 1,
         submitted: 4,
         accepted: 2,
@@ -357,6 +363,7 @@ export function teamReview(over: Partial<TeamReview> = {}): TeamReview {
         label: "Sam SDR",
         meetings_held: 4,
         qualified: 2,
+        qualified_events: 2,
         unanswered: 1,
         submitted: 2,
         accepted: 1,

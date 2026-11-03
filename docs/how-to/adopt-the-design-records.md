@@ -36,7 +36,7 @@ later page copies what it decides. Files: `companies.tsx` (over the limit: new z
 | Ask (prepared questions) | `AssistantPanel` as full-width rows, with no free field. The three questions are the ones the server answers (`CompanyQuestion`), so there are no new keys. One more question is a server change first | | `co.ask.nothing` |
 | About | `DossierPanel` lead, body text and sources; `SignalsSection` rows; the `GrowthFitPanel` verdict row (only when `!hasWorkInFlight`); a `"Profile"` link | own reads | `co.dossier.empty` (write it), `co.dossier.stale` `"Read over a month ago"`, `co.dossier.unavailable`; `co.factSuspect.*` with its evidence |
 | Contacts (chips) | `ContactsSection` (`RAIL_ROW_LIMIT`) as chips with `"+N"` | 360 | withheld → absent, with the sentence |
-| Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the layout of five subjects inside the pane): a Details grid with inline edit, the top 3 deals, the top 3 contacts, Hold, Tags | | every rail state as today; absent while a composer is open |
+| Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the layout of five subjects inside the pane): a Details grid whose values open a field dialog, the top 3 deals, the top 3 contacts, Hold, Tags | | every rail state as today; absent while a composer is open |
 | Chronology zone | stays the timeline slot of `RecordView`, on the History tab only (the 360 carries the folded thread) | | `timelineNotice`, `chronologyNotice` |
 
 States at the header level: `co.partial` on `view.isError`. A 403 keeps the one shared sentence. Each banner for
@@ -204,9 +204,9 @@ Company, contact, deal and lead fields are edited in the Details pane. There is 
 record. Fields with no value still show. Custom fields form their own section, from the workspace catalog in
 use, even when no values exist.
 
-Text fields, and fields where you pick one value, save in line; Escape stops the edit. Text of many lines saves
-on `Cmd/Ctrl+Enter`, or when you leave the field. Some changes use a local `Save` and `Cancel`, so the parts that
-go together are saved together. Those are
+Each field opens a dialog with `Save` and `Cancel`, and nothing is stored until `Save`, a picked value included.
+Escape and `Cancel` stop the edit. Text of many lines saves on `Cmd/Ctrl+Enter`. A field of several parts opens
+the record's edit form in a dialog, so the parts that go together are saved together. Those are
 address parts, email, phone and domain lists, deal money, company and project links, and partner attribution.
 A failed save keeps the draft.
 
@@ -217,6 +217,6 @@ Qualifying leads, changing the lifecycle, setting a score by hand, closing deals
 changes keep their own controls and needed evidence. Fields the app works out, masked and archived fields, and
 fields you have no rights to stay read-only. Header buttons use the same record writer as Details. Dialogs for a new record stay.
 
-`RecordFields` composes the inline controls of the design system and `RecordFormBody`. Each object gives its
+`RecordFields` composes `InlineText`, `InlineChoice` and `EditableValue`, which open a dialog and store on Save, and `EditRecordModal` for a field of several inputs. Each object gives its
 field list that exists, and a small request mapper. `RecordCustomFields` gives the section built from the
 catalog for all four kinds.

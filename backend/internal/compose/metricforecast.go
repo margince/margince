@@ -43,11 +43,11 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	call, seen, err := forecastCallSeen(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
+	record, seen, err := forecastCallRecord(ctx, tx, e.forecast, period, assembly.Scope, frame.PipelineId != nil)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	called := seenCall(call, seen)
+	called := seenCall(record.AmountMinor, seen)
 	landing, err := forecasting.ProjectLanding(readings, measure, called)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -80,6 +80,9 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		}
 		e.compared.operands = operands
 		e.compared.basis = reportingForecastBasis(period, readings, landing, called)
+		if seen {
+			e.compared.basis.CallAt = &record.CreatedAt
+		}
 	}
 	for i := range facts {
 		if facts[i].SourceType == reportingForecastProjection {
@@ -94,15 +97,19 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 // rule. A call covers every pipeline, so a reading of one pipeline has none.
 // The reporting landing and a live share both read the call through it.
 func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (int64, bool, error) {
+	call, seen, err := forecastCallRecord(ctx, tx, store, period, scope, onePipeline)
+	return call.AmountMinor, seen, err
+}
+
+func forecastCallRecord(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (forecasting.Call, bool, error) {
 	if onePipeline {
-		return 0, false, nil
+		return forecasting.Call{}, false, nil
 	}
 	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
 	if err != nil {
-		return 0, false, err
+		return forecasting.Call{}, false, err
 	}
-	call, seen, err := forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
-	return call.AmountMinor, seen, err
+	return forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
 }
 
 // seenCall is the call amount a landing takes: nil when no call was seen.
@@ -295,13 +302,14 @@ func reportingForecastBasis(period forecasting.Period, readings forecasting.Read
 	// A deal with no rate is priced but left out of every total.
 	included := int64(readings.PricedCount - readings.FxMissingCount)
 	return &crmcontracts.ReportingForecastBasis{
-		Landing:        forecasting.LandingToWire(landing),
-		Period:         crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
-		CallMinor:      called,
-		EligibleCount:  int64(readings.EligibleCount),
-		PricedCount:    int64(readings.PricedCount),
-		FxMissingCount: int64(readings.FxMissingCount),
-		IncludedCount:  &included,
+		Landing:           forecasting.LandingToWire(landing),
+		OpenPipelineMinor: &readings.OpenMinor,
+		Period:            crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
+		CallMinor:         called,
+		EligibleCount:     int64(readings.EligibleCount),
+		PricedCount:       int64(readings.PricedCount),
+		FxMissingCount:    int64(readings.FxMissingCount),
+		IncludedCount:     &included,
 	}
 }
 

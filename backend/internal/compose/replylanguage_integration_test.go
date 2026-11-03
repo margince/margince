@@ -36,20 +36,6 @@ func replyLangMail(t *testing.T, o *owedEnv, direction, address, body string, of
 // replyLangMailFor is replyLangMail into the mailbox of owner at seat.
 func replyLangMailFor(t *testing.T, o *owedEnv, owner ids.UUID, seat, direction, address, body string, offset time.Duration) ids.UUID {
 	t.Helper()
-	parent := owedMail{
-		from: o.seat, to: address, subject: "Angebot", body: "ok",
-		messageID: "angebot-root@kunde.test", at: replyLangStart.Add(-time.Hour),
-	}
-	if owner != o.owner {
-		o.e.GrantRole(t, owner, "rep")
-		parent.cc = seat
-	}
-	if o.e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system='email' AND source_id=$1`, parent.messageID) == 0 {
-		o.weWrite(t, parent)
-	}
-	if owner != o.owner {
-		o.captureFor(t, owner, seat, parent)
-	}
 	m := owedMail{
 		from: address, to: seat, subject: "Angebot", body: body, at: replyLangStart.Add(offset),
 		messageID: "angebot-" + ids.NewV7().String() + "@kunde.test", inReplyTo: "angebot-root@kunde.test",
@@ -85,11 +71,10 @@ func replyLangDraft(t *testing.T, e *integration.Env, anchor ids.UUID) string {
 // replyLangPrompt is replyLangDraft with the whole prompt the model was sent.
 func replyLangPrompt(t *testing.T, e *integration.Env, anchor ids.UUID) (string, string) {
 	t.Helper()
-	finishThreadRepairs(t, e)
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	drafter.envelope = draftfloor.NewResolver().
-		WithClock(func() time.Time { return replyLangStart.Add(30 * 24 * time.Hour) }).
+		SetClock(func() time.Time { return replyLangStart.Add(30 * 24 * time.Hour) }).
 		WithUserLanguage(func(context.Context) string { return "vi" })
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
 	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {
@@ -148,10 +133,6 @@ func longReplyThread(t *testing.T, o *owedEnv, oldestOwner ids.UUID, oldestSeat 
 		replyLangMail(t, o, "inbound", "anne@kunde.test", replyLangEnglish, time.Duration(i+1)*time.Minute)
 	}
 	anchor = replyLangMail(t, o, "inbound", "dietmar@kunde.test", "ok", 2*time.Hour)
-	requireOneThreadKey(t, o, anchor, replyEvidenceRows+4)
-	if err := newTestLinkReconcileWorker(e).reconcileLinksForWorkspace(t.Context(), e.WS); err != nil {
-		t.Fatal(err)
-	}
 	return oldest, anchor
 }
 

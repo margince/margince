@@ -63,7 +63,7 @@ func (s *Service) nextMeetingSection(ctx context.Context, tx pgx.Tx, contactID i
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.occurred_precision, a.subject, %s
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND a.kind = 'meeting' AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		  AND %s
 		  AND `+fmt.Sprintf(contactReachesActivity, bind(linkPos))+`

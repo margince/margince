@@ -1,12 +1,8 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadroot.go backend/internal/modules/capture/threadrepair.go backend/internal/compose/company360/suggestionreads.go backend/internal/compose/assuranceseam.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
-Nobody should have to copy an email into a CRM by hand. **Capture** is the part
-of Margince that connects to your mailbox, your calendar and your chat. It files
-what arrives against the right contacts, their companies and projects.
-Connecting a mailbox or calendar, and importing your older mail, is its own
-page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
+Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
@@ -177,9 +173,7 @@ To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-
 If you use projects, a captured message is filed against one by three fixed
 rules, and the first match wins. No AI model is used in any of them.
 
-**1. The conversation.** A reply to a thread already filed goes under the same
-project. Matching stays within one channel, so an email cannot be filed under a
-chat conversation.
+**1. The conversation.** A reply to a thread already filed goes under the same project. Matching stays within one channel, so an email cannot be filed under a chat conversation.
 
 **2. The deal.** A message already linked to a deal is filed under that deal's
 project.
@@ -239,9 +233,10 @@ You see only the messages whose audience includes you; a held message stays with
 Also called: email history, correspondence, all mails with a customer.
 
 ### What counts as one email thread?
-A reply with a changed subject starts a new conversation. Reply and forward prefixes do not count as a change. A project key in square brackets does not count when Margince has matched that project to the message; other labels in brackets still count. A reply without a subject follows its parent conversation. A blank subject does not join conversations with different subjects.
+A reply starts a new conversation only when its subject shares no word with the message it answers. Tags in brackets, reply prefixes, marks, capital letters and words such as "the" do not count. "Signature requested" and "Signature completed" stay together. A reply stays with its parent when either subject has no words left. A conversation you kept private stays private under its new subject.
 
-When Margince needs to split older mail, that conversation stays hidden until all its messages are ready to show together. The company overview and suggested next steps wait if they need that conversation. Other companies and the company record itself remain available. Pipeline checks keep their last findings while the conversation is hidden; a later check uses it once it is ready.
+Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
+Also called: thread split, new subject, separate conversation.
 
 ### How do I read a whole email thread?
 To read a whole thread in Margince, press an email on the **History** tab. The thread opens beside the record, oldest message first.
@@ -369,19 +364,14 @@ member. "Applies from the next message. Messages already captured stay."
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
 back in asks the company question again.
 
-**Domain review** (Worklist → Review): domains waiting for a company match appear together. Open
-**Domain review** to see each question, the answering website, and the age of the evidence.
-**Set aside** hides your question until newer evidence arrives; it stays in Domain review, where
-**Return to Review** puts it back in your queue. A colleague's question stays as it was.
+**Company questions** (Worklist → Decisions): Margince asks which company a contact works for when
+it cannot tell. The row names the contact and says why. The website could not be read, named no
+company, sent you on to another website, or looks like a mail provider. Hidden contacts are counted,
+never named. Margince suggests a company only when one company you can see fits, and no second one. **Confirm
+company** makes it the company of the contacts on the domain; contacts at another company keep theirs.
 
-**Match company** links the domain to the company you choose. **Create company** adds one where the
-evidence allows it. If another domain answered the website read, you must choose an existing company
-yourself. **Retry site read** leaves the company question open and asks again. **Exclude domain**
-stops capture for your mailboxes. You can use **Set aside** without making these decisions.
-
-If the website reads like a mail or hosting vendor, Margince creates no company. It asks the
-colleague whose mail came from the domain, and shows the reason. **Create company** adds it and links
-the contacts who write from it. **Keep as vendor** creates nothing, and later mail does not ask again.
+**Choose another** opens the question with a company search and **Create company**. **Not now** puts
+it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
 
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
@@ -396,5 +386,8 @@ how many there are.
 back right now, with the reason and the outside addresses on each. **Share with
 the team** releases one.
 
-Three settings decide who may read captured mail. **Mail visibility** is in each mailbox's settings in Settings → Connections. **Private correspondence** is on a contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules, for administrators only.
-They are explained in [Who can see an email](who-can-see-an-email.md), together with whose capture activity you can see.
+Three settings decide who may read captured mail. **Mail visibility** is in
+each mailbox's settings in Settings → Connections. **Private correspondence** is on a
+contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules,
+for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
+together with whose capture activity you can see.

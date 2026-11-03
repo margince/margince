@@ -82,6 +82,7 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 		IntroText:      req.IntroText,
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		LegalEntityID:  idArg[ids.LegalEntityKind](req.LegalEntityId),
 		Source:         source,
 	}
 	if req.ValidUntil != nil {
@@ -104,6 +105,7 @@ func offerUpdateInput(req crmcontracts.UpdateOfferRequest, cleared []string, ifV
 		IntroText:      req.IntroText,
 		TermsText:      req.TermsText,
 		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
+		LegalEntityID:  idArg[ids.LegalEntityKind](req.LegalEntityId),
 		IfVersion:      ifVersion,
 		Clear:          cleared,
 	}

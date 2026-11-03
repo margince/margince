@@ -48,7 +48,7 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 	switch metric {
 	case reportingLeadsCreated:
 		fields = append(fields, "origin")
-	case reportingLeadsPromoted:
+	case reportingLeadsPromoted, reportingLeadsQualified:
 		fields = append(fields, "qualified_deal_id", "promoted_at")
 	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
@@ -63,12 +63,18 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 // cohort narrows the scope by the owner a lead arrived with.
 func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, b *reportingBindings) (string, bool, error) {
 	owner := leadOwnerColumn
+	if metric == reportingLeadsQualified {
+		owner = "qualified.owner_id"
+	}
 	if metric == reportingLeadCohortOutcomes {
 		owner = leadArrivalOwnerColumn
 	}
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
 	if err != nil {
 		return "", false, err
+	}
+	if metric == reportingLeadsQualified && population != "" {
+		population = "(" + population + " OR NOT qualified.ownership_recorded)"
 	}
 	rowScope, err := auth.ScopeClauseFor(ctx, string(recordTypeLead), "l", b.arg)
 	if err != nil {
@@ -78,7 +84,11 @@ func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reportin
 	if err != nil {
 		return "", false, err
 	}
-	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope, withheld, nil
+	dimensions, err := leadDimensionSQL(ctx, frame, b, "l")
+	if err != nil {
+		return "", false, err
+	}
+	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope + dimensions + initiativeMemberSQL(ctx, b, "l", string(recordTypeLead)), withheld, nil
 }
 
 func orUnnarrowed(clause string) string {

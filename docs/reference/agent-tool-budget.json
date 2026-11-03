@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 38,
     "system_frame_tokens": 592,
-    "tokens": 24529,
+    "tokens": 24419,
     "median_tool_tokens": 532,
-    "mean_tool_tokens": 645
+    "mean_tool_tokens": 642
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 1912
+      "tokens": 1958
     },
     {
       "name": "find_records",
@@ -100,10 +100,6 @@
       "tokens": 1467
     },
     {
-      "name": "read_analytics",
-      "tokens": 1066
-    },
-    {
       "name": "send_outbound",
       "tokens": 1014
     },
@@ -114,6 +110,10 @@
     {
       "name": "preview_import",
       "tokens": 1001
+    },
+    {
+      "name": "read_analytics",
+      "tokens": 927
     },
     {
       "name": "read_forecast",
@@ -133,7 +133,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 664
+      "tokens": 710
     },
     {
       "name": "change_lists",
@@ -164,16 +164,16 @@
       "tokens": 517
     },
     {
-      "name": "schedule_meeting",
-      "tokens": 479
-    },
-    {
       "name": "decide_approvals",
       "tokens": 429
     },
     {
       "name": "annotate_brief",
       "tokens": 417
+    },
+    {
+      "name": "schedule_meeting",
+      "tokens": 409
     },
     {
       "name": "list_approvals",
@@ -197,7 +197,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 337
+      "tokens": 342
     },
     {
       "name": "read_attention",

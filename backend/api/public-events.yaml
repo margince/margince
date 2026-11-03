@@ -116,6 +116,7 @@ components:
         - forecast.share_revoked
         - weekly_plan.updated
         - weekly_plan.help_requested
+        - sales_initiative.updated
         - activity.disposition_recorded
         - activity.marked_handled
         - activity.readiness_recorded
@@ -2615,6 +2616,33 @@ components:
           items:
             type: string
           description: Which parts of the plan moved — status, commitments.
+      additionalProperties: false
+    PublicEventSalesInitiativeUpdated:
+      type: object
+      x-event-type: sales_initiative.updated
+      x-entity-type: sales_initiative
+      x-version: 1
+      description: >-
+        Payload for sales_initiative.updated. A sales initiative was defined,
+        changed, launched or had its picked and excluded records changed. The
+        entity is the initiative. `changed_fields` names what moved rather than
+        carrying it; the definition and the members stay on the record.
+      required:
+        - initiative_id
+        - status
+        - changed_fields
+      properties:
+        initiative_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, live, ended]
+        changed_fields:
+          type: array
+          items:
+            type: string
+          description: Which parts moved, such as definition, status, members.
       additionalProperties: false
     PublicEventWeeklyPlanHelpRequested:
       type: object

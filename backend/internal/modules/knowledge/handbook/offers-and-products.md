@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -28,6 +28,8 @@ Also called: line item, position, add an item to a quote.
 To send an offer in Margince, open the draft offer and click **Send**, then confirm "Send this offer to the buyer?". Sending marks the offer as sent and locks it: "The offer becomes read-only until the buyer responds."
 
 **Send does not email anything.** Nothing leaves Margince when you click it; it records that this version is the one you are sending. To get the offer to the buyer, click **Render PDF** and open it with **View PDF**. Then send that file yourself: added to an email, or uploaded to the deal and added to its [Deal Room](deal-rooms.md). You cannot send an offer with no lines.
+
+Send removes a PDF made from the draft, so make it again after sending; the new file shows what was sent.
 Also called: email the proposal, issue the quote.
 
 ### How do I print or download an offer?
@@ -95,6 +97,8 @@ You can make an offer **PDF** at any point, draft included. Where your Margince 
 
 The PDF prints the offer's own **Intro text** above the lines and its **Terms text** under the totals. It leaves either part out when it is empty. The terms always come from the offer, never from the template.
 
+Every offer PDF prints who issues it. That is the name, address, VAT ID, register entry, **Bank details** and logo of the company on the offer's **Issued by** line. A new offer is issued by the company its writer works for, set on the **Legal entities** card. While the offer is a draft you can choose another under **Edit**; once sent, it stays. The send keeps what it printed, so a later change to that company does not change a sent offer. If your template's footer already lists your address or account, the PDF prints them twice until you take them out of the footer.
+
 ## What an offer refuses
 
 - **An empty offer cannot be sent.** "the offer has no line items to send".
@@ -137,6 +141,8 @@ For any other unit, pick **Other** and type it in **Other unit**. Margince shows
 A product holds a name, a SKU if you want one, a description, a unit, a unit price and currency, and a default tax rate. It also holds its billing type: one-time or recurring, and for recurring, the period.
 
 You can leave product billing **unspecified**, which is not the same as one-time. Margince does not guess the type, so the product says "Not specified".
+
+**Kind** says what a product is: **Software**, **Implementation** or **Other**. The commercial mix on Analytics groups won value by it. You can leave it empty, and the mix then shows the product's value as **Unclassified product**.
 
 ### Snapshots, and why a line does not move
 
