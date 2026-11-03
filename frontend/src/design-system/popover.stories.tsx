@@ -153,7 +153,7 @@ export const GhostTriggerWithBadge: Story = {
   },
 };
 
-// `pinned`: the caller's class places the panel, as the top bar does, so the
+// `pinned`: the caller's class places the panel, as the top bar does. The
 // panel carries no placement of its own and is not moved to the trigger.
 export const Pinned: Story = {
   render: () => (

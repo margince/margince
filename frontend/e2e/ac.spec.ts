@@ -204,17 +204,14 @@ async function expectSettingsViewLanded(page: Page, view: string) {
     return;
   }
   const tab = view.slice("settings/".length);
-  // The trail rather than the settings nav level, because the nav level is not
-  // there at 390px — the rail becomes a phone bar and the tabs go with it, and
-  // an assertion that reads the rail passes vacuously on the one viewport this
-  // sweep exists for. The trail's current crumb names the tab at every width.
-  //
-  // The expected wording comes from the catalog under the SAME key the nav
-  // builds its label from, so this is not a second copy of the tab names.
+  // The page heading, because the nav level and the trail both leave a phone
+  // bar. The heading is named by the tab at every width, its switcher included.
+  // The expected wording comes from the catalog key the nav labels the tab with,
+  // so this is not a second copy of the tab names.
   await expect(
-    page.locator(".crumbs-current"),
+    page.locator(".pagetitle").getByRole("heading"),
     `#/${view} did not land on the ${tab} tab — the address fell back, so this sweep measured a page it never opened`,
-  ).toHaveText(de[`settings.tab.${tab}` as MessageKey]);
+  ).toHaveAccessibleName(de[`settings.tab.${tab}` as MessageKey]);
 }
 
 /**

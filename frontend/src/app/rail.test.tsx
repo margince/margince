@@ -54,8 +54,8 @@ vi.mock("@composition/extensions", () => ({
   ],
 }));
 
-// B-EP09.4 acceptance for the sidebar: the destinations in order, one active
-// row, badges, the collapsed tooltip, and the phone bar with its More menu.
+// What the sidebar promises: the destinations in order, one active row,
+// badges, the collapsed tooltip, and the phone bar with its More menu.
 // The second suite is a section route, whose entries replace the destinations.
 // The shell around the panel is tested in shell.test.tsx.
 
