@@ -1,0 +1,94 @@
+/* SPDX-License-Identifier: BUSL-1.1 */
+/* SPDX-FileCopyrightText: 2026 Gradion */
+
+/* The margins cancel the face's padding, so the text sits on the column edge
+   a read-only value beside it starts from. */
+.editable-value {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  margin-block: calc(-1 * var(--space-1));
+  margin-inline-start: calc(-1 * var(--space-2));
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+}
+
+.editable-value-face {
+  min-inline-size: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+  overflow-wrap: anywhere;
+  transition: background-color var(--dur-state);
+}
+
+.editable-value-placeholder {
+  color: var(--textSecondary);
+}
+
+/* As tall as the face's first line, so it never grows the row; held in place
+   at rest, so the value does not move when it shows. */
+.editable-value-bubble {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: calc(1lh + 2 * var(--space-1));
+  block-size: calc(1lh + 2 * var(--space-1));
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--groundHover);
+  color: var(--textSecondary);
+  opacity: 0;
+  transition: opacity var(--dur-state);
+}
+.editable-value-bubble svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+}
+
+.editable-value-edit {
+  display: inline-flex;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Not on a touch screen: a tap leaves `:hover` set, and the fill would stay. */
+@media (hover: hover) {
+  .editable-value:hover .editable-value-face {
+    background: var(--groundHover);
+  }
+  .editable-value:hover .editable-value-bubble {
+    opacity: 1;
+  }
+}
+
+/* No hover to find it by, so the bubble is the sign at rest. */
+@media (hover: none) {
+  .editable-value-bubble {
+    opacity: 1;
+  }
+}
+
+.editable-value:focus-visible .editable-value-face,
+.editable-value-link:focus-within .editable-value-face {
+  background: var(--groundHover);
+}
+.editable-value:focus-visible .editable-value-bubble,
+.editable-value-link:focus-within .editable-value-bubble {
+  opacity: 1;
+}
+.editable-value:focus-visible,
+.editable-value-edit:focus-visible {
+  outline: var(--focus-ring-forced);
+  outline-offset: 2px;
+  box-shadow: var(--focus-glow);
+}
