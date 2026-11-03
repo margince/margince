@@ -33,15 +33,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// recencyFunctions are the SQL functions that answer "when did the other side
-// last engage". The list is asserted, not just iterated: a new one that skips
-// the exclusion is exactly the defect this gate exists to catch.
-var recencyFunctions = []string{
+// recencyFloor names SQL functions that answer "when did the other side last
+// engage", which the census must find. The census itself is every function a
+// migration names last_activity_of_*, so a new one is checked without joining
+// a list: a new one that skips the exclusion is the defect this gate catches.
+var recencyFloor = []string{
 	"last_activity_of_deal",
 	"last_activity_of_contact",
 	"last_activity_of_company",
 	"last_activity_of_project",
+	"last_activity_of_activity",
 }
+
+// recencyFunctionRe finds a recency function's definition or its drop, by the
+// prefix every one carries. A dropped function is not live, so it leaves the census.
+var recencyFunctionRe = regexp.MustCompile(`(CREATE (?:OR REPLACE )?|DROP )FUNCTION\s+(?:IF EXISTS\s+)?(last_activity_of_\w+)`)
 
 const remediationOrigin = "system_remediation"
 
@@ -57,18 +63,15 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 
 	bodies := currentRecencyBodies(t)
 
-	if len(bodies) != len(recencyFunctions) {
-		t.Fatalf("found %d recency functions, expected %d (%v) — a census that "+
-			"reads a smaller tree reports PASS and there is no failing assertion "+
-			"to notice", len(bodies), len(recencyFunctions), recencyFunctions)
+	for _, name := range recencyFloor {
+		if _, ok := bodies[name]; !ok {
+			t.Errorf("%s: no definition found in migrations — a census that reads a "+
+				"smaller tree reports PASS and there is no failing assertion to notice", name)
+		}
 	}
 
-	for _, name := range recencyFunctions {
-		body, ok := bodies[name]
-		if !ok {
-			t.Errorf("%s: no definition found in migrations", name)
-			continue
-		}
+	for _, name := range sortedKeys(bodies) {
+		body := bodies[name]
 		// Every arm, not the function: last_activity_of_company unions
 		// three populations, and an exclusion on two of them still lets a
 		// review task filed against a deal refresh its account.
@@ -123,9 +126,16 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 		if err != nil {
 			t.Fatalf("reading %s: %v", fn, err)
 		}
-		for _, want := range recencyFunctions {
-			if body, ok := extractFunctionBody(string(raw), want); ok {
-				bodies[want] = body
+		// In statement order, so a file that drops one function and creates
+		// another leaves the census as the database does.
+		for _, m := range recencyFunctionRe.FindAllStringSubmatchIndex(string(raw), -1) {
+			name := string(raw[m[4]:m[5]])
+			if strings.HasPrefix(string(raw[m[2]:m[3]]), "DROP") {
+				delete(bodies, name)
+				continue
+			}
+			if body, ok := extractFunctionBody(string(raw[m[0]:]), name); ok {
+				bodies[name] = body
 			}
 		}
 	}
