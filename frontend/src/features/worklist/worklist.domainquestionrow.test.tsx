@@ -30,6 +30,7 @@ const suggested: Context = {
   contacts: [alex],
   contact_count: 2,
   hidden_senders: false,
+  linked_contact_count: 2,
   sender_address: "alex@alias.example",
   origin_activity_id: "01a1a000-0000-7000-8000-0000000000ac",
   suggested_company: {
@@ -138,7 +139,9 @@ it("confirms the suggested company by sending its id", async () => {
   });
   mount(<DomainQuestionAnswer item={row()} />);
   expect(
-    await screen.findByText(/Confirming links alias.example and its/),
+    await screen.findByText(
+      /Confirming links alias.example to Example Company and gives 2 contacts that company\. Contacts already at another company keep theirs\./,
+    ),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Confirm company" }));
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -161,6 +164,7 @@ it("offers only choose and create when nothing is suggested", async () => {
           contacts: [],
           contact_count: 0,
           hidden_senders: false,
+          linked_contact_count: 2,
           site_read: "unread",
         },
       })}
@@ -213,6 +217,7 @@ it("says a site that could not be read was not read", async () => {
             contacts: [],
             contact_count: 1,
             hidden_senders: true,
+            linked_contact_count: 2,
             site_read: "unread",
           },
         },

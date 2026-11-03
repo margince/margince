@@ -28,6 +28,7 @@ const questions: Question[] = [
       ],
       contact_count: 3,
       hidden_senders: false,
+      linked_contact_count: 2,
       sender_address: "alex@alias.example",
       origin_activity_id: "01a1a000-0000-7000-8000-0000000000ac",
       suggested_company: {
@@ -46,6 +47,7 @@ const questions: Question[] = [
       contacts: [],
       contact_count: 1,
       hidden_senders: true,
+      linked_contact_count: 2,
       site_read: "unread",
     },
   },
@@ -59,6 +61,7 @@ const questions: Question[] = [
       contacts: [],
       contact_count: 0,
       hidden_senders: false,
+      linked_contact_count: 2,
       sender_address: "billing@hosting.example",
     },
   },

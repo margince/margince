@@ -160,7 +160,7 @@ func TestARedirectTargetSuggestsItsOwnerButDoesNotDecide(t *testing.T) {
 	}
 }
 
-func TestANameTwinIsStoredAsTheCandidateUntilTheQuestionSettles(t *testing.T) {
+func TestANameTwinIsStoredButTwoTwinsSuggestNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	twin := e.createNamedCompany(ctx, t, "Twin GmbH", "twin-one.test")
@@ -175,8 +175,8 @@ func TestANameTwinIsStoredAsTheCandidateUntilTheQuestionSettles(t *testing.T) {
 	if got.ReasonCode != PendingNearDuplicate {
 		t.Fatalf("reason = %q, want %q", got.ReasonCode, PendingNearDuplicate)
 	}
-	if got.Context.Suggestion == nil || got.Context.Suggestion.CompanyID != *stored || got.Context.Suggestion.Basis != SuggestionNameTwin {
-		t.Fatalf("suggestion = %+v, want the stored name twin", got.Context.Suggestion)
+	if got.Context.Suggestion != nil {
+		t.Fatalf("suggestion = %+v, want none: two companies carry the name", got.Context.Suggestion)
 	}
 	if _, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
 		Domain: "twin-three.test", Status: DomainCompany, Source: DomainSourceHuman, CompanyID: &twin,
@@ -217,5 +217,119 @@ func TestTheFocusedReadAnswersOnlyTheNamedQuestion(t *testing.T) {
 	}
 	if rows, _, err := e.store.DomainQuestionsForOwner(e.asOther(), "", 50, "focus-two.test"); err != nil || len(rows) != 0 {
 		t.Fatalf("the colleague's focused read = %+v, %v; want nothing", rows, err)
+	}
+}
+
+// withheldAgain re-opens the unevidenced question new mail rearmed.
+func (e *dedupeEnv) withheldAgain(ctx context.Context, t *testing.T, domain string) {
+	t.Helper()
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: domain}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOneTwinSuggestsItself(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	twin := e.createNamedCompany(ctx, t, "Solo GmbH", "solo-one.test")
+	e.openTriageFirst(ctx, t, "sam@solo-two.test", "Sam Solo", "solo-two.test")
+	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
+		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "solo-two.test"},
+			CompanyCandidateScore{CompanyID: twin, CandidateValue: "Solo GmbH", IncumbentValue: "Solo GmbH"})
+	})
+	got := e.questionAbout(ctx, t, "solo-two.test").Context.Suggestion
+	if got == nil || got.CompanyID != twin || got.Basis != SuggestionNameTwin {
+		t.Fatalf("suggestion = %+v, want the one company with that name", got)
+	}
+}
+
+func TestEverySenderCountsTowardsTheSuggestionNotOnlyTheNamedThree(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	one, other := e.createNamedCompany(ctx, t, "Employer A"), e.createNamedCompany(ctx, t, "Employer B")
+	// Oldest first, so the B sender is the one the display cap leaves out.
+	outlier := e.openTriageFirst(ctx, t, "outlier@four.test", "Outlier Sender", "four.test")
+	e.employCurrently(ctx, t, outlier.ContactID, other)
+	for _, name := range []string{"first", "second", "third"} {
+		sender := e.openTriage(ctx, t, name+"@four.test", name+" Sender", "four.test")
+		e.employCurrently(ctx, t, sender.ContactID, one)
+	}
+	e.withheldAgain(ctx, t, "four.test")
+	got := e.questionAbout(ctx, t, "four.test").Context
+	if len(got.Contacts) != 3 || got.ContactCount != 4 {
+		t.Fatalf("context = %+v, want three named of four senders", got)
+	}
+	if got.Suggestion != nil {
+		t.Fatalf("suggestion = %+v, want none: a fourth sender works elsewhere", got.Suggestion)
+	}
+}
+
+func TestAnEmploymentThatEndedYesterdaySuggestsNothing(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	former := e.openTriageFirst(ctx, t, "former@ended.test", "Former Employee", "ended.test")
+	e.withheldAgain(ctx, t, "ended.test")
+	e.employCurrently(ctx, t, former.ContactID, e.createNamedCompany(ctx, t, "Past Employer"))
+	e.inTx(ctx, t, "ending the employment yesterday", func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE relationship SET ended_at = current_date - 1
+ WHERE contact_id = $1 AND kind = 'employment'`, former.ContactID)
+		return err
+	})
+	if got := e.questionAbout(ctx, t, "ended.test").Context.Suggestion; got != nil {
+		t.Fatalf("suggestion = %+v, want none for an employment that has ended", got)
+	}
+}
+
+func TestTheLinkedCountIsWhatAConfirmEmploys(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "free@linked.test", "Free Sender", "linked.test")
+	taken := e.openTriage(ctx, t, "taken@linked.test", "Taken Sender", "linked.test")
+	e.employCurrently(ctx, t, taken.ContactID, e.createNamedCompany(ctx, t, "Elsewhere Ltd"))
+	e.withheldAgain(ctx, t, "linked.test")
+	got := e.questionAbout(ctx, t, "linked.test").Context
+	if got.LinkedContactCount != 1 {
+		t.Fatalf("linked contacts = %d, want 1: the employed sender keeps their employer", got.LinkedContactCount)
+	}
+	target := e.createNamedCompany(ctx, t, "Chosen Company")
+	res, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "linked.test", Status: DomainCompany, Source: DomainSourceHuman, CompanyID: &target,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.EdgesPlanted != got.LinkedContactCount {
+		t.Fatalf("the confirm employed %d contacts, the copy promised %d", res.EdgesPlanted, got.LinkedContactCount)
+	}
+}
+
+func TestASuppressionClearsTheQuestionsContext(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	twin := e.createNamedCompany(ctx, t, "Refused GmbH")
+	e.openTriageFirst(ctx, t, "hello@refused.test", "Refused Sender", "refused.test")
+	e.inTx(ctx, t, "withholding for a name twin", func(tx pgx.Tx) error {
+		return withholdForNearDuplicate(ctx, tx, ResolveDomainTriageInput{Domain: "refused.test"},
+			CompanyCandidateScore{CompanyID: twin, CandidateValue: "Refused GmbH", IncumbentValue: "Refused GmbH"})
+	})
+	if _, err := e.store.SetDomainAdmission(ctx, "refused.test", DomainSuppressed, "not a customer"); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.candidateOf(ctx, t, "refused.test"); got != nil {
+		t.Fatalf("candidate = %s after the refusal, want none", got)
+	}
+	e.openTriageFirst(ctx, t, "hello@refused-unread.test", "Unread Sender", "refused-unread.test")
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: "refused-unread.test", SiteUnreadable: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.SetDomainAdmission(ctx, "refused-unread.test", DomainSuppressed, "not a customer"); err != nil {
+		t.Fatal(err)
+	}
+	var unreadable bool
+	e.inTx(ctx, t, "reading the refused row", func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT site_unreadable FROM company_domain_disposition WHERE domain = 'refused-unread.test'`).Scan(&unreadable)
+	})
+	if unreadable {
+		t.Fatal("a refused domain still says its site was never read")
 	}
 }

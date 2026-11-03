@@ -10921,11 +10921,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.domainQuestion.suggested": "Công ty được gợi ý: {name}.",
   "worklist.domainQuestion.confirm": "Xác nhận công ty",
   "worklist.domainQuestion.confirmEffectNone":
-    "Xác nhận sẽ liên kết {domain} với {company}.",
+    "Xác nhận sẽ liên kết {domain} với {company}. Liên hệ đã thuộc công ty khác vẫn giữ công ty đó.",
   "worklist.domainQuestion.confirmEffect_one":
-    "Xác nhận sẽ liên kết {domain} và {count} liên hệ của nó với {company}.",
+    "Xác nhận sẽ liên kết {domain} với {company} và gán {count} liên hệ cho công ty đó. Liên hệ đã thuộc công ty khác vẫn giữ công ty đó.",
   "worklist.domainQuestion.confirmEffect_other":
-    "Xác nhận sẽ liên kết {domain} và {count} liên hệ của nó với {company}.",
+    "Xác nhận sẽ liên kết {domain} với {company} và gán {count} liên hệ cho công ty đó. Liên hệ đã thuộc công ty khác vẫn giữ công ty đó.",
   "worklist.domainQuestion.confirmed": "Đã liên kết công ty",
   "worklist.domainQuestion.confirmFailed":
     "Chưa liên kết được công ty. Hãy thử lại.",

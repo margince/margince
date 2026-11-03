@@ -25687,6 +25687,12 @@ export interface components {
             contact_count: number;
             /** @description True when contacts sent the mail but the reader may see none of them. */
             hidden_senders: boolean;
+            /**
+             * @description How many contacts the reader may see that confirming a company would employ there: every
+             *     live contact with an address on the domain, less workspace seats and anyone who already
+             *     holds a primary employment. Those keep the employer they have.
+             */
+            linked_contact_count: number;
             /** @description The From address of the newest mail behind the question, which the reader may read. */
             sender_address?: string;
             /**

@@ -43198,6 +43198,11 @@ type DomainQuestionContext struct {
 	// HiddenSenders True when contacts sent the mail but the reader may see none of them.
 	HiddenSenders bool `json:"hidden_senders"`
 
+	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
+	// live contact with an address on the domain, less workspace seats and anyone who already
+	// holds a primary employment. Those keep the employer they have.
+	LinkedContactCount int `json:"linked_contact_count"`
+
 	// OriginActivityId The newest mail behind the question, which the reader may read.
 	OriginActivityId *openapi_types.UUID `json:"origin_activity_id,omitempty"`
 

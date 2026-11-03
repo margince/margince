@@ -11213,11 +11213,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.domainQuestion.suggested": "Vorgeschlagenes Unternehmen: {name}.",
   "worklist.domainQuestion.confirm": "Unternehmen bestätigen",
   "worklist.domainQuestion.confirmEffectNone":
-    "Bestätigen verknüpft {domain} mit {company}.",
+    "Bestätigen verknüpft {domain} mit {company}. Kontakte, die schon bei einem anderen Unternehmen sind, behalten es.",
   "worklist.domainQuestion.confirmEffect_one":
-    "Bestätigen verknüpft {domain} und den {count} Kontakt darauf mit {company}.",
+    "Bestätigen verknüpft {domain} mit {company} und ordnet {count} Kontakt diesem Unternehmen zu. Kontakte, die schon bei einem anderen Unternehmen sind, behalten es.",
   "worklist.domainQuestion.confirmEffect_other":
-    "Bestätigen verknüpft {domain} und die {count} Kontakte darauf mit {company}.",
+    "Bestätigen verknüpft {domain} mit {company} und ordnet {count} Kontakte diesem Unternehmen zu. Kontakte, die schon bei einem anderen Unternehmen sind, behalten es.",
   "worklist.domainQuestion.confirmed": "Unternehmen verknüpft",
   "worklist.domainQuestion.confirmFailed":
     "Unternehmen wurde nicht verknüpft. Versuche es erneut.",

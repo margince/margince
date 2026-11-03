@@ -37910,7 +37910,7 @@ components:
         Whose mail raised a company question, and which existing company the evidence points
         at. Every contact and company named here passed the reader's own row scope; a sender the
         reader may not see is counted in `contact_count` and never named.
-      required: [contacts, contact_count, hidden_senders]
+      required: [contacts, contact_count, hidden_senders, linked_contact_count]
       properties:
         contacts:
           type: array
@@ -37919,6 +37919,13 @@ components:
           items: { $ref: '#/components/schemas/DomainQuestionContact' }
         contact_count: { type: integer, minimum: 0, description: 'How many contacts sent the mail behind the question, seen or not.' }
         hidden_senders: { type: boolean, description: 'True when contacts sent the mail but the reader may see none of them.' }
+        linked_contact_count:
+          type: integer
+          minimum: 0
+          description: |
+            How many contacts the reader may see that confirming a company would employ there: every
+            live contact with an address on the domain, less workspace seats and anyone who already
+            holds a primary employment. Those keep the employer they have.
         sender_address: { type: string, description: 'The From address of the newest mail behind the question, which the reader may read.' }
         origin_activity_id: { type: string, format: uuid, description: 'The newest mail behind the question, which the reader may read.' }
         suggested_company: { $ref: '#/components/schemas/DomainQuestionSuggestion' }

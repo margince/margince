@@ -49,6 +49,13 @@ type DomainQuestionContext struct {
 	OriginID      *ids.UUID
 	Suggestion    *DomainQuestionSuggestion
 	SiteRead      string
+	// LinkedContactCount is how many contacts the reader may see that a
+	// confirm would employ there: the planter's own set.
+	LinkedContactCount int
+
+	// visibleSenders holds the senders the reader may see, past the display
+	// cap, so a suggestion is judged over all of them.
+	visibleSenders []ids.ContactID
 }
 
 // DomainQuestionContact is one sender the reader may see.
@@ -114,6 +121,9 @@ func domainQuestionContextTx(ctx context.Context, tx pgx.Tx, evidence map[string
 	if err := suggestDomainQuestionCompaniesTx(ctx, tx, evidence, out); err != nil {
 		return nil, err
 	}
+	if err := countLinkedContactsTx(ctx, tx, domains, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -165,8 +175,11 @@ func readDomainQuestionSendersTx(ctx context.Context, tx pgx.Tx, domains []strin
 		one.OriginID, one.SenderAddress = &origin, address
 		if contactID != nil {
 			one.ContactCount++
-			if visible && name != nil && len(one.Contacts) < domainQuestionContactLimit {
-				one.Contacts = append(one.Contacts, DomainQuestionContact{ID: *contactID, Name: *name})
+			if visible && name != nil {
+				one.visibleSenders = append(one.visibleSenders, *contactID)
+				if len(one.Contacts) < domainQuestionContactLimit {
+					one.Contacts = append(one.Contacts, DomainQuestionContact{ID: *contactID, Name: *name})
+				}
 			}
 		}
 		one.HiddenSenders = one.ContactCount > 0 && len(one.Contacts) == 0
@@ -229,7 +242,8 @@ func suggestDomainQuestionCompaniesTx(ctx context.Context, tx pgx.Tx, evidence m
 
 // suggestionCandidatesSQL unions the three sources a suggestion may come
 // from, strongest first, and keeps only live companies inside the reader's
-// scope. A hidden sender's employer is never a source: the suggestion would
+// scope. A name twin offers every company carrying that name, so two of them
+// leave no suggestion. An employer counts only while the employment is current. A hidden sender's employer is never a source: the suggestion would
 // say where a contact the reader may not see works.
 func suggestionCandidatesSQL(ctx context.Context, evidence map[string]domainQuestionEvidence, out map[string]DomainQuestionContext) (string, []any, error) {
 	var twinDomains, targetDomains, targets, senderDomains []string
@@ -251,9 +265,9 @@ func suggestionCandidatesSQL(ctx context.Context, evidence map[string]domainQues
 		return "", nil, err
 	}
 	for domain, one := range out {
-		for _, contact := range one.Contacts {
+		for _, contact := range one.visibleSenders {
 			if employers {
-				senderDomains, senders = append(senderDomains, domain), append(senders, contact.ID)
+				senderDomains, senders = append(senderDomains, domain), append(senders, contact)
 			}
 		}
 	}
@@ -263,14 +277,19 @@ func suggestionCandidatesSQL(ctx context.Context, evidence map[string]domainQues
 	var args []any
 	bind := func(value any) int { args = append(args, value); return len(args) }
 	arg := func(value any, cast string) string { return fmt.Sprintf("$%d::%s", bind(value), cast) }
-	candidates := `SELECT q.domain, q.company_id, '` + SuggestionNameTwin + `' AS basis, 1 AS strength
+	twinName := exactNameKeySQL("twin.display_name")
+	candidates := `SELECT q.domain, same.id AS company_id, '` + SuggestionNameTwin + `' AS basis, 1 AS strength
    FROM unnest(` + arg(twinDomains, "text[]") + `, ` + arg(twins, "uuid[]") + `) AS q(domain, company_id)
+   JOIN company twin ON twin.id = q.company_id
+   JOIN company same ON (` + exactNameKeySQL("same.display_name") + ` = ` + twinName + `
+     OR ` + exactNameKeySQL("same.legal_name") + ` = ` + twinName + `)
  UNION ALL SELECT q.domain, cd.company_id, '` + SuggestionRedirectTarget + `', 2
    FROM unnest(` + arg(targetDomains, "text[]") + `, ` + arg(targets, "text[]") + `) AS q(domain, target)
    JOIN company_domain cd ON cd.domain_folded = q.target AND cd.archived_at IS NULL
  UNION ALL SELECT q.domain, r.company_id, '` + SuggestionContactEmployer + `', 3
    FROM unnest(` + arg(senderDomains, "text[]") + `, ` + arg(senders, "uuid[]") + `) AS q(domain, contact_id)
-   JOIN relationship r ON r.contact_id = q.contact_id AND r.company_id IS NOT NULL AND ` + employment.CurrentPrimarySlotSQL("r")
+   JOIN relationship r ON r.contact_id = q.contact_id AND r.company_id IS NOT NULL
+    AND r.kind = 'employment' AND r.archived_at IS NULL AND ` + employment.CurrentPrimarySQL("r")
 	query := `SELECT cand.domain, co.id, co.display_name, cand.basis FROM (` + candidates + `) cand
  JOIN company co ON co.id = cand.company_id AND co.archived_at IS NULL AND co.merged_into_id IS NULL`
 	scope, err := auth.ScopeClauseFor(ctx, entityCompany, "co", bind)

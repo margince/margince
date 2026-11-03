@@ -78,15 +78,15 @@ export function suggestionBasis(
   return t(BASES[suggestion.basis]);
 }
 
-// What confirming a company does: the domain and every captured contact on it
-// are linked, so the sentence names both.
+// What confirming a company does. The count is the contacts the confirm will
+// employ there; contacts already at another company keep theirs.
 export function confirmEffect(
   { t, plural, locale }: Words,
   domain: string,
   company: string,
   context: DomainQuestionContext | undefined,
 ): string {
-  const count = context?.contact_count ?? 0;
+  const count = context?.linked_contact_count ?? 0;
   if (count === 0)
     return t("worklist.domainQuestion.confirmEffectNone", { domain, company });
   return plural("worklist.domainQuestion.confirmEffect", count, {

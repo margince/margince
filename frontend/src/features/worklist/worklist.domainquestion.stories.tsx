@@ -215,6 +215,7 @@ const REDIRECTED: WorklistItem = {
     contacts: [ALEX],
     contact_count: 2,
     hidden_senders: false,
+    linked_contact_count: 2,
     sender_address: "alex@alias.example",
     suggested_company: {
       id: "01a1a000-0000-7000-8000-0000000000c0",
@@ -254,7 +255,9 @@ export const ARedirectWithASuggestedCompany: Story = {
       await canvas.findByRole("button", { name: "Confirm company" }),
     ).toBeVisible();
     await expect(
-      canvas.getByText(/Confirming links alias.example and its 2 contacts/),
+      canvas.getByText(
+        /Confirming links alias.example to Example Company and gives 2 contacts/,
+      ),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: "Create company" }),
@@ -277,6 +280,7 @@ export const NoSuggestion: Story = {
         contacts: [ALEX],
         contact_count: 1,
         hidden_senders: false,
+        linked_contact_count: 2,
         site_read: "unread",
       },
     },

@@ -11204,11 +11204,11 @@ export const en = {
   "worklist.domainQuestion.suggested": "Suggested company: {name}.",
   "worklist.domainQuestion.confirm": "Confirm company",
   "worklist.domainQuestion.confirmEffectNone":
-    "Confirming links {domain} to {company}.",
+    "Confirming links {domain} to {company}. Contacts already at another company keep theirs.",
   "worklist.domainQuestion.confirmEffect_one":
-    "Confirming links {domain} and its {count} contact to {company}.",
+    "Confirming links {domain} to {company} and gives {count} contact that company. Contacts already at another company keep theirs.",
   "worklist.domainQuestion.confirmEffect_other":
-    "Confirming links {domain} and its {count} contacts to {company}.",
+    "Confirming links {domain} to {company} and gives {count} contacts that company. Contacts already at another company keep theirs.",
   "worklist.domainQuestion.confirmed": "Company linked",
   "worklist.domainQuestion.confirmFailed": "Company was not linked. Retry.",
   "worklist.domainQuestion.choose": "Choose company",

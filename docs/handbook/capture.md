@@ -373,9 +373,9 @@ and never named.
 
 Margince suggests a company only when one company you can see fits the evidence and no second one
 does. It fits when the website redirects to a domain that company owns, when a sender already works
-there, or when it has the same name the website states. **Confirm company** links the domain and every captured contact on it to that
-company, and the line beside the button says how many contacts that is. Nothing is linked until you
-confirm. A redirect alone never creates or matches a company.
+there, or when it has the same name the website states. **Confirm company** links the domain to that company and makes it the employer of the contacts on
+the domain. A contact already at another company keeps that company. The line beside the button says
+how many contacts get the company. Nothing is linked until you confirm. A redirect alone never creates or matches a company.
 
 **Choose another** (or **Choose company** when nothing is suggested) opens that one question. It
 shows the contacts and the email that raised it, a company search, and **Create company** where the

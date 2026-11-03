@@ -51,9 +51,10 @@ type DomainQuestion struct {
 // worklist row and the review list both call it.
 func DomainQuestionContextWire(in contacts.DomainQuestionContext) *crmcontracts.DomainQuestionContext {
 	out := &crmcontracts.DomainQuestionContext{
-		Contacts:      make([]crmcontracts.DomainQuestionContact, 0, len(in.Contacts)),
-		ContactCount:  in.ContactCount,
-		HiddenSenders: in.HiddenSenders,
+		Contacts:           make([]crmcontracts.DomainQuestionContact, 0, len(in.Contacts)),
+		ContactCount:       in.ContactCount,
+		HiddenSenders:      in.HiddenSenders,
+		LinkedContactCount: in.LinkedContactCount,
 	}
 	for _, contact := range in.Contacts {
 		out.Contacts = append(out.Contacts, crmcontracts.DomainQuestionContact{Id: openapi_types.UUID(contact.ID.UUID), Name: contact.Name})
