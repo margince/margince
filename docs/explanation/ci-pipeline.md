@@ -226,7 +226,7 @@ changes ──┬─> deterministic-gates
           ├─> backend-lint
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
-          │                     integration-shards (×6) ──┐         │
+          │                     integration-shards (×10) ─┐         │
           │                     integration-unit-coverage ┴─> fan-in│
           ├─> extension-reference ──────────────────────────────┐   │
           ├─> vuln                                              │   │
@@ -272,7 +272,7 @@ pass, one level down.
 without that, every step would run from the repository root.
 
 Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/6)`. Only `ci` is a required check, so no ruleset depends on those
+`integration / integration shard (3/10)`. Only `ci` is a required check, so no ruleset depends on those
 names.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
