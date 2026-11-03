@@ -3,7 +3,7 @@
 
 package deals
 
-// "How many contacts at the account carry this deal?", asked of many deals
+// "How many contacts on this deal's committee are engaged?", asked of many deals
 // at once, for the Account coverage section. It counts what engagedAmong
 // answers, so the deal page, the morning queue and the list agree on who
 // counts.

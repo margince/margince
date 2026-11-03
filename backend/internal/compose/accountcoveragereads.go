@@ -80,12 +80,16 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 	if err != nil {
 		return nil, err
 	}
+	currency, err := auth.MaskedColumnSQL(ctx, tableDeal, "currency", "d", "currency", scope.arg)
+	if err != nil {
+		return nil, err
+	}
 	value, err := scope.baseValue(ctx, pop)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.name, %s, d.currency, s.name, d.owner_id, d.expected_close_date,
+		SELECT d.id, d.name, %s, %s, s.name, d.owner_id, d.expected_close_date,
 		       c.id, c.display_name, c.owner_id
 		  FROM deal d
 		  JOIN stage s ON s.id = d.stage_id
@@ -93,7 +97,7 @@ func openDealsOf(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		 CROSS JOIN LATERAL (SELECT %s AS base_minor) v
 		 WHERE d.status = 'open' AND d.archived_at IS NULL AND %s
 		 ORDER BY v.base_minor DESC NULLS LAST, d.id
-		 LIMIT %d`, amount, value, scope.where, coverageCandidates), scope.args...)
+		 LIMIT %d`, amount, currency, value, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the population's open deals: %w", err)
 	}
@@ -172,12 +176,16 @@ func wonAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 	if err != nil {
 		return nil, err
 	}
+	currency, err := auth.MaskedColumnSQL(ctx, tableDeal, "currency", "d", "currency", scope.arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT won.company_id, won.company_name, won.company_owner_id,
 		       won.deal_id, won.deal_name, won.amount_minor, won.currency, won.deal_owner_id, won.closed_at
 		  FROM (
 		  SELECT DISTINCT ON (c.id) c.id AS company_id, c.display_name AS company_name, c.owner_id AS company_owner_id,
-		         d.id AS deal_id, d.name AS deal_name, %s AS amount_minor, d.currency, d.owner_id AS deal_owner_id, d.closed_at
+		         d.id AS deal_id, d.name AS deal_name, %s AS amount_minor, %s AS currency, d.owner_id AS deal_owner_id, d.closed_at
 		    FROM deal d
 		    JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
 		   WHERE d.status = 'won' AND d.archived_at IS NULL AND d.closed_at >= $%d AND %s
@@ -185,7 +193,7 @@ func wonAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		   ORDER BY c.id, d.closed_at DESC, d.id
 		) won
 		 ORDER BY won.closed_at DESC
-		 LIMIT %d`, amount, since, scope.where, coverageCandidates), scope.args...)
+		 LIMIT %d`, amount, currency, since, scope.where, coverageCandidates), scope.args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the won accounts: %w", err)
 	}

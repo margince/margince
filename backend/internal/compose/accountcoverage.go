@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -242,7 +243,7 @@ func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.Accou
 	var rows []crmcontracts.AccountCoverageRow
 	for _, candidate := range candidates {
 		touch := touches[ids.From[ids.CompanyKind](ids.UUID(candidate.Company.Id))]
-		if touch.Contact != nil && elapsed.Days(touch.Contact.At, pop.now, pop.zone) < days {
+		if touch.Contact != nil && contactDays(touch.Contact, pop.now, pop.zone) < days {
 			continue
 		}
 		candidate.LastInbound, candidate.LastOutbound = touch.InboundAt, touch.OutboundAt
@@ -260,9 +261,15 @@ func silentSince(ctx context.Context, tx pgx.Tx, candidates []crmcontracts.Accou
 func silentDays(touch company360.LastTouch, row crmcontracts.AccountCoverageRow, now time.Time, zone *time.Location) (int, bool) {
 	switch {
 	case touch.Contact != nil:
-		return max(elapsed.Days(touch.Contact.At, now, zone), 0), true
+		return max(contactDays(touch.Contact, now, zone), 0), true
 	case row.WonDeal != nil && row.WonDeal.ClosedAt != nil:
 		return max(elapsed.Days(*row.WonDeal.ClosedAt, now, zone), 0), true
 	}
 	return 0, false
+}
+
+// contactDays counts calendar days from the newest exchange the way every
+// touch-age reader does, so a day-precision entry is read by its date.
+func contactDays(contact *company360.LastContact, now time.Time, zone *time.Location) int {
+	return occurredday.DaysSince(occurredday.Moment{At: contact.At, DateOnly: occurredday.IsDay(contact.Precision)}, now, zone)
 }
