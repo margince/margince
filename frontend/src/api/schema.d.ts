@@ -51822,6 +51822,12 @@ export interface components {
              *     the basis needs. Never true without a basis.
              */
             replan_recommended: boolean;
+            /**
+             * @description True when the standing call this coverage reads has an open input-check finding
+             *     because the pipeline moved since it was made. Present only beside the `manager_call`
+             *     basis.
+             */
+            call_needs_review?: boolean;
         };
         TeamWeeklyStaleDeal: {
             /** Format: uuid */

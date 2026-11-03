@@ -147,7 +147,8 @@ func readTeamCoverage(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]Cove
 		SELECT period_kind, coalesce(basis, ''), coalesce(absent, ''),
 		       coalesce(reference_landing_minor, 0), coalesce(needed_open_minor, 0),
 		       coalesce(current_open_minor, 0), coalesce(remaining_to_support_minor, 0),
-		       coalesce(coverage_bp, 0), base_currency, replan_recommended
+		       coalesce(coverage_bp, 0), base_currency, replan_recommended,
+		       call_needs_review
 		  FROM team_weekly_review_coverage
 		 WHERE team_weekly_review_id = $1
 		 ORDER BY CASE period_kind WHEN 'month' THEN 0 ELSE 1 END`, reviewID)
@@ -158,7 +159,7 @@ func readTeamCoverage(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) ([]Cove
 		var c Coverage
 		err := row.Scan(&c.PeriodKind, &c.Basis, &c.Absent, &c.ReferenceLandingMinor,
 			&c.NeededOpenMinor, &c.CurrentOpenMinor, &c.RemainingToSupportMinor,
-			&c.CoverageBp, &c.BaseCurrency, &c.ReplanRecommended)
+			&c.CoverageBp, &c.BaseCurrency, &c.ReplanRecommended, &c.CallNeedsReview)
 		return c, err
 	})
 	if err != nil {

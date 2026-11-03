@@ -111,3 +111,36 @@ func TestReplanNeedsABasisAndLowCoverage(t *testing.T) {
 		})
 	}
 }
+
+// A manager_call coverage whose call needs review says so beside the figure,
+// in every language the copy holds, and a current call says nothing more.
+func TestTheSummaryNamesACallThatNeedsReview(t *testing.T) {
+	for language, want := range map[string]string{
+		"en": "needs review", "de": "geprüft werden", "vi": "xem lại",
+	} {
+		review := TeamReview{Language: language, Counts: TeamCounts{RepsCounted: 1}}
+		review.Coverage = []Coverage{{PeriodKind: "month", Basis: "manager_call", CoverageBp: 9000}}
+		if got := summarise(review); strings.Contains(got, want) {
+			t.Errorf("%s: a current call reads %q", language, got)
+		}
+		review.Coverage[0].CallNeedsReview = true
+		if got := summarise(review); !strings.Contains(got, want) {
+			t.Errorf("%s: a call that needs review reads %q, want %q in it", language, got, want)
+		}
+	}
+}
+
+func TestCoverageWireCarriesTheCallReviewOnlyBesideAManagerCall(t *testing.T) {
+	call := coverageToWire(Coverage{PeriodKind: "month", Basis: "manager_call", CallNeedsReview: true})
+	if call.CallNeedsReview == nil || !*call.CallNeedsReview {
+		t.Errorf("a manager_call coverage sends %v, want true", call.CallNeedsReview)
+	}
+	for _, c := range []Coverage{
+		{PeriodKind: "month", Basis: "historical_median", CallNeedsReview: true},
+		CoverageRefused("month", "EUR"),
+	} {
+		if got := coverageToWire(c); got.CallNeedsReview != nil {
+			t.Errorf("%+v sends call_needs_review %v, want it left out", c, *got.CallNeedsReview)
+		}
+	}
+}

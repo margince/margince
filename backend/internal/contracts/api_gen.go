@@ -59221,9 +59221,14 @@ type TeamWeeklyCounts struct {
 type TeamWeeklyCoverage struct {
 	// Absent Why there is no answer. `not_authorized` is a standing call the member who closed the
 	// week could not read, which is not the same as no call.
-	Absent                  *TeamWeeklyCoverageAbsent    `json:"absent,omitempty"`
-	BaseCurrency            string                       `json:"base_currency"`
-	Basis                   *TeamWeeklyCoverageBasis     `json:"basis,omitempty"`
+	Absent       *TeamWeeklyCoverageAbsent `json:"absent,omitempty"`
+	BaseCurrency string                    `json:"base_currency"`
+	Basis        *TeamWeeklyCoverageBasis  `json:"basis,omitempty"`
+
+	// CallNeedsReview True when the standing call this coverage reads has an open input-check finding
+	// because the pipeline moved since it was made. Present only beside the `manager_call`
+	// basis.
+	CallNeedsReview         *bool                        `json:"call_needs_review,omitempty"`
 	CoverageBp              *int64                       `json:"coverage_bp,omitempty"`
 	CurrentOpenMinor        *int64                       `json:"current_open_minor,omitempty"`
 	NeededOpenMinor         *int64                       `json:"needed_open_minor,omitempty"`

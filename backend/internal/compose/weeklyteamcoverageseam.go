@@ -9,11 +9,13 @@ package compose
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,10 +63,15 @@ func (w *WeeklyForecast) teamCoverage(
 ) (weekly.Coverage, error) {
 	kind := string(horizon.kind)
 	var called *int64
+	needsReview := false
 	call, err := w.store.CurrentCallTx(ctx, tx, horizon.period, scope)
 	switch {
 	case err == nil:
 		called = &call.AmountMinor
+		needsReview, err = callNeedsReview(ctx, tx, call)
+		if err != nil {
+			return weekly.Coverage{}, err
+		}
 	case forecasting.IsNoStandingCall(err):
 	case errors.Is(err, apperrors.ErrPermissionDenied):
 		return weekly.CoverageRefused(kind, horizon.baseCurrency), nil
@@ -79,7 +86,20 @@ func (w *WeeklyForecast) teamCoverage(
 	if err != nil {
 		return weekly.Coverage{}, err
 	}
-	return weekly.CoverageFrom(kind, horizon.baseCurrency, sufficiency), nil
+	coverage := weekly.CoverageFrom(kind, horizon.baseCurrency, sufficiency)
+	coverage.CallNeedsReview = needsReview && coverage.Basis == string(forecasting.BasisManagerCall)
+	return coverage, nil
+}
+
+// callNeedsReview reads the call's open finding through the list the web
+// reads. A closer who may not see findings about the call gets false, since
+// the same seat sees no finding on any screen either.
+func callNeedsReview(ctx context.Context, tx pgx.Tx, call forecasting.Call) (bool, error) {
+	found, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: call.Scope.Kind, ID: call.Scope.ID})
+	if err != nil {
+		return false, err
+	}
+	return slices.ContainsFunc(found, func(f assurance.Exception) bool { return f.SubjectID == call.ID }), nil
 }
 
 // closedHorizons are the windows frozen over one book, with the readings each

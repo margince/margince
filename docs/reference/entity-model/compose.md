@@ -945,7 +945,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review_coverage
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -953,6 +953,7 @@ The 48 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `absent` | `text` |  | One of `insufficient_basis`, `insufficient_history`, `not_authorized`. |
 | `base_currency` | `currency_code` | yes |  |
 | `basis` | `text` |  | One of `manager_call`, `historical_median`. |
+| `call_needs_review` | `boolean`, default `false` | yes |  |
 | `coverage_bp` | `bigint` |  |  |
 | `current_open_minor` | `bigint` |  |  |
 | `needed_open_minor` | `bigint` |  |  |

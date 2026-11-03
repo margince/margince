@@ -29,11 +29,12 @@ type WeeklyAttention struct{}
 
 var _ weekly.TeamAttention = WeeklyAttention{}
 
-// TeamExceptions are the open findings on deals the members own now.
+// TeamExceptions are the open findings on deals the members own now and on
+// the team's standing calls.
 func (WeeklyAttention) TeamExceptions(
-	ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int,
+	ctx context.Context, tx pgx.Tx, teamID ids.UUID, members []ids.UUID, limit int,
 ) ([]crmcontracts.InputCheck, error) {
-	found, err := TeamAssuranceExceptions(ctx, tx, members, limit)
+	found, err := TeamAssuranceExceptions(ctx, tx, teamID, members, limit)
 	if err != nil {
 		return nil, err
 	}

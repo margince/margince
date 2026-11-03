@@ -21,6 +21,7 @@ var teamWords = struct {
 	AtRisk      langcopy.Phrase
 	Holds       langcopy.Phrase
 	Common      langcopy.Phrase
+	CallReview  langcopy.Phrase
 	Month       langcopy.Phrase
 	Quarter     langcopy.Phrase
 	ManagerCall langcopy.Phrase
@@ -33,6 +34,7 @@ var teamWords = struct {
 	AtRisk:      langcopy.Phrase{En: "%s: coverage at risk against %s (%d%%); a replan is recommended.", De: "%s: Deckung gegenüber %s gefährdet (%d%%); eine neue Planung wird empfohlen.", Vi: "%s: mức bao phủ có rủi ro so với %s (%d%%); nên lập lại kế hoạch."},
 	Holds:       langcopy.Phrase{En: "%s: coverage holds against %s (%d%%).", De: "%s: Deckung gegenüber %s ausreichend (%d%%).", Vi: "%s: mức bao phủ đáp ứng %s (%d%%)."},
 	Common:      langcopy.Phrase{En: "Most common pattern: %s (%d members).", De: "Häufigstes Muster: %s (%d Teammitglieder).", Vi: "Mẫu phổ biến nhất: %s (%d thành viên)."},
+	CallReview:  langcopy.Phrase{En: "%s: the manager's call needs review; the pipeline moved since it was made.", De: "%s: Die Einschätzung der Führungskraft muss geprüft werden; die Pipeline hat sich seitdem verändert.", Vi: "%s: dự báo của người quản lý cần được xem lại; pipeline đã thay đổi kể từ khi lập."},
 	Month:       langcopy.Phrase{En: "Month", De: "Monat", Vi: "Tháng"},
 	Quarter:     langcopy.Phrase{En: "Quarter", De: "Quartal", Vi: "Quý"},
 	ManagerCall: langcopy.Phrase{En: "the manager's call", De: "der Einschätzung der Führungskraft", Vi: "dự báo của người quản lý"},

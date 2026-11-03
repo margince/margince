@@ -44,9 +44,11 @@ type TeamAttentionItems struct {
 }
 
 // TeamAttention answers the live lists over the deals a set of members owns
-// now. Implementations apply the caller's deal permission and row scope in SQL.
+// now. The exceptions also hold the findings on the team's standing calls. Implementations apply the caller's deal permission and row scope in SQL.
 type TeamAttention interface {
-	TeamExceptions(ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int) ([]crmcontracts.InputCheck, error)
+	TeamExceptions(
+		ctx context.Context, tx pgx.Tx, teamID ids.UUID, members []ids.UUID, limit int,
+	) ([]crmcontracts.InputCheck, error)
 	StalledDealsOf(ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int) ([]StaleDeal, error)
 }
 
@@ -66,7 +68,7 @@ func (e *Engine) readTeamAttention(ctx context.Context, tx pgx.Tx, review *TeamR
 		review.Attention = TeamAttentionItems{Read: true}
 		return nil
 	}
-	exceptions, err := e.attention.TeamExceptions(ctx, tx, members, teamExceptionsCap)
+	exceptions, err := e.attention.TeamExceptions(ctx, tx, review.TeamID, members, teamExceptionsCap)
 	if err != nil {
 		return err
 	}

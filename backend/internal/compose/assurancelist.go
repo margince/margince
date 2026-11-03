@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -61,15 +62,22 @@ func AssuranceExceptionsIn(
 }
 
 // TeamAssuranceExceptions reads the open findings on deals the members own
-// now. Ownership is the deal's live owner, never the finding's own owner_id,
-// which is set when the finding is first raised and not kept in step.
+// now, with the findings on the team's own calls. Ownership is the deal's live
+// owner, never the finding's own owner_id, which is set when the finding is
+// first raised and not kept in step.
 func TeamAssuranceExceptions(
-	ctx context.Context, tx pgx.Tx, members []ids.UUID, limit int,
+	ctx context.Context, tx pgx.Tx, teamID ids.UUID, members []ids.UUID, limit int,
 ) ([]assurance.Exception, error) {
 	if len(members) == 0 {
 		return nil, nil
 	}
-	return assuranceExceptionsOwnedBy(ctx, tx, members, nil, limit)
+	// A read for named owners skips call findings, so the team's are read by
+	// the team's scope and merged into the one ranking.
+	calls, err := assuranceCallExceptions(ctx, tx, nil, &RequestedScope{Kind: forecasting.ScopeTeam, ID: &teamID})
+	if err != nil {
+		return nil, err
+	}
+	return assuranceExceptionsWith(ctx, tx, members, nil, limit, calls)
 }
 
 // assuranceDealExceptionsOwnedBy is both deal readers' body. Nil owners reads every

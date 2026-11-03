@@ -182,6 +182,7 @@ func insertTeamCoverage(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, c Cov
 	add("absent", nullableText(c.Absent))
 	add("base_currency", c.BaseCurrency)
 	add("replan_recommended", c.ReplanRecommended)
+	add("call_needs_review", c.CallNeedsReview)
 	if c.Basis != "" {
 		add("reference_landing_minor", c.ReferenceLandingMinor)
 		add("needed_open_minor", c.NeededOpenMinor)
