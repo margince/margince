@@ -884,6 +884,8 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
+	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
@@ -942,6 +944,10 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindReportInterpret:
+		return true
+	case AiActivityKindReportSetup:
 		return true
 	case AiActivityKindRequestSettlement:
 		return true
@@ -1462,6 +1468,8 @@ const (
 	AiTaskOwedVerdict                   AiTask = "owed_verdict"
 	AiTaskProposeRoles                  AiTask = "propose_roles"
 	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskReportInterpret               AiTask = "report_interpret"
+	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
 	AiTaskSignalExtract                 AiTask = "signal_extract"
 	AiTaskSiteExtract                   AiTask = "site_extract"
@@ -1517,6 +1525,10 @@ func (e AiTask) Valid() bool {
 	case AiTaskProposeRoles:
 		return true
 	case AiTaskRateExtract:
+		return true
+	case AiTaskReportInterpret:
+		return true
+	case AiTaskReportSetup:
 		return true
 	case AiTaskRequestSettlement:
 		return true
@@ -7075,6 +7087,21 @@ func (e ContactVisibility) Valid() bool {
 	case ContactVisibilityOwner:
 		return true
 	case ContactVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Contact360LastTouchBasis.
+const (
+	Contact360LastTouchBasisReadableByCaller Contact360LastTouchBasis = "readable_by_caller"
+)
+
+// Valid indicates whether the value is a known member of the Contact360LastTouchBasis enum.
+func (e Contact360LastTouchBasis) Valid() bool {
+	switch e {
+	case Contact360LastTouchBasisReadableByCaller:
 		return true
 	default:
 		return false
@@ -17968,6 +17995,132 @@ func (e ReportScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportSetupProposalSite.
+const (
+	ReportSetupProposalSiteCustomReportSetup ReportSetupProposalSite = "custom_report_setup"
+	ReportSetupProposalSiteInitiativeSetup   ReportSetupProposalSite = "initiative_setup"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupProposalSite enum.
+func (e ReportSetupProposalSite) Valid() bool {
+	switch e {
+	case ReportSetupProposalSiteCustomReportSetup:
+		return true
+	case ReportSetupProposalSiteInitiativeSetup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupRequestSite.
+const (
+	ReportSetupRequestSiteCustomReportSetup ReportSetupRequestSite = "custom_report_setup"
+	ReportSetupRequestSiteInitiativeSetup   ReportSetupRequestSite = "initiative_setup"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupRequestSite enum.
+func (e ReportSetupRequestSite) Valid() bool {
+	switch e {
+	case ReportSetupRequestSiteCustomReportSetup:
+		return true
+	case ReportSetupRequestSiteInitiativeSetup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupSelectionPeriod.
+const (
+	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
+	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
+	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupSelectionPeriod enum.
+func (e ReportSetupSelectionPeriod) Valid() bool {
+	switch e {
+	case ReportSetupSelectionPeriodLastMonth:
+		return true
+	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodThisMonth:
+		return true
+	case ReportSetupSelectionPeriodThisQuarter:
+		return true
+	case ReportSetupSelectionPeriodThisWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupSourceField.
+const (
+	ReportSetupSourceFieldChart       ReportSetupSourceField = "chart"
+	ReportSetupSourceFieldCountry     ReportSetupSourceField = "country"
+	ReportSetupSourceFieldDeadline    ReportSetupSourceField = "deadline"
+	ReportSetupSourceFieldIndustry    ReportSetupSourceField = "industry"
+	ReportSetupSourceFieldMetric      ReportSetupSourceField = "metric"
+	ReportSetupSourceFieldName        ReportSetupSourceField = "name"
+	ReportSetupSourceFieldObjective   ReportSetupSourceField = "objective"
+	ReportSetupSourceFieldPeriod      ReportSetupSourceField = "period"
+	ReportSetupSourceFieldProduct     ReportSetupSourceField = "product"
+	ReportSetupSourceFieldTargetValue ReportSetupSourceField = "target_value"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupSourceField enum.
+func (e ReportSetupSourceField) Valid() bool {
+	switch e {
+	case ReportSetupSourceFieldChart:
+		return true
+	case ReportSetupSourceFieldCountry:
+		return true
+	case ReportSetupSourceFieldDeadline:
+		return true
+	case ReportSetupSourceFieldIndustry:
+		return true
+	case ReportSetupSourceFieldMetric:
+		return true
+	case ReportSetupSourceFieldName:
+		return true
+	case ReportSetupSourceFieldObjective:
+		return true
+	case ReportSetupSourceFieldPeriod:
+		return true
+	case ReportSetupSourceFieldProduct:
+		return true
+	case ReportSetupSourceFieldTargetValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupUnsupportedCode.
+const (
+	ReportSetupUnsupportedCodeNotExpressible ReportSetupUnsupportedCode = "not_expressible"
+	ReportSetupUnsupportedCodeNotOffered     ReportSetupUnsupportedCode = "not_offered"
+	ReportSetupUnsupportedCodeUnknownValue   ReportSetupUnsupportedCode = "unknown_value"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupUnsupportedCode enum.
+func (e ReportSetupUnsupportedCode) Valid() bool {
+	switch e {
+	case ReportSetupUnsupportedCodeNotExpressible:
+		return true
+	case ReportSetupUnsupportedCodeNotOffered:
+		return true
+	case ReportSetupUnsupportedCodeUnknownValue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingBlockKind.
 const (
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
@@ -18036,6 +18189,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
 	ReportingCardKindForecastSupport   ReportingCardKind = "forecast_support"
@@ -18054,6 +18208,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAssessment:
+		return true
 	case ReportingCardKindBookingsTrend:
 		return true
 	case ReportingCardKindBreakdown:
@@ -18958,6 +19114,66 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	case RunReportRequestAggregatesFnP75:
 		return true
 	case RunReportRequestAggregatesFnSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentConfidence.
+const (
+	SalesAssessmentConfidenceHigh   SalesAssessmentConfidence = "high"
+	SalesAssessmentConfidenceLow    SalesAssessmentConfidence = "low"
+	SalesAssessmentConfidenceMedium SalesAssessmentConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentConfidence enum.
+func (e SalesAssessmentConfidence) Valid() bool {
+	switch e {
+	case SalesAssessmentConfidenceHigh:
+		return true
+	case SalesAssessmentConfidenceLow:
+		return true
+	case SalesAssessmentConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentSentenceKind.
+const (
+	SalesAssessmentSentenceKindClaim       SalesAssessmentSentenceKind = "claim"
+	SalesAssessmentSentenceKindHypothesis  SalesAssessmentSentenceKind = "hypothesis"
+	SalesAssessmentSentenceKindObservation SalesAssessmentSentenceKind = "observation"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentSentenceKind enum.
+func (e SalesAssessmentSentenceKind) Valid() bool {
+	switch e {
+	case SalesAssessmentSentenceKindClaim:
+		return true
+	case SalesAssessmentSentenceKindHypothesis:
+		return true
+	case SalesAssessmentSentenceKindObservation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesDecisionStatus.
+const (
+	SalesDecisionStatusDone SalesDecisionStatus = "done"
+	SalesDecisionStatusOpen SalesDecisionStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the SalesDecisionStatus enum.
+func (e SalesDecisionStatus) Valid() bool {
+	switch e {
+	case SalesDecisionStatusDone:
+		return true
+	case SalesDecisionStatusOpen:
 		return true
 	default:
 		return false
@@ -24934,6 +25150,24 @@ func (e GetAiTaskFlowParamsWindow) Valid() bool {
 	case GetAiTaskFlowParamsWindowN30d:
 		return true
 	case GetAiTaskFlowParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSalesDecisionsParamsStatus.
+const (
+	ListSalesDecisionsParamsStatusDone ListSalesDecisionsParamsStatus = "done"
+	ListSalesDecisionsParamsStatusOpen ListSalesDecisionsParamsStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the ListSalesDecisionsParamsStatus enum.
+func (e ListSalesDecisionsParamsStatus) Valid() bool {
+	switch e {
+	case ListSalesDecisionsParamsStatusDone:
+		return true
+	case ListSalesDecisionsParamsStatusOpen:
 		return true
 	default:
 		return false
@@ -38404,11 +38638,17 @@ type Contact360 struct {
 	// LastContactPrecision How to read `last_contact_at`, from the row it names. Absent when that is null or absent.
 	LastContactPrecision *OccurredPrecision `json:"last_contact_precision,omitempty"`
 
-	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+	// LastInboundActivityId The activity behind `last_inbound_at`, picked by the same query. Evidence cites this id rather than matching a time against the capped `activities` page. Null when `last_inbound_at` is null; absent with it.
+	LastInboundActivityId *openapi_types.UUID `json:"last_inbound_activity_id,omitempty"`
+
+	// LastInboundAt When they last wrote to us, among the messages the caller can open (see `last_touch_basis`). Null means no message the caller can open records a reply from them. It does not prove that none exists: a message the caller cannot open is never counted, and nothing here hints that one exists. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null or absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastLiveInboundActivityId The activity behind `last_live_inbound_at`, picked by the same query. Null when that is null; absent with it.
+	LastLiveInboundActivityId *openapi_types.UUID `json:"last_live_inbound_activity_id,omitempty"`
 
 	// LastLiveInboundAt When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastLiveInboundAt *time.Time `json:"last_live_inbound_at,omitempty"`
@@ -38416,11 +38656,17 @@ type Contact360 struct {
 	// LastLiveInboundPrecision How to read `last_live_inbound_at`, from the row it names. Absent when that is null or absent.
 	LastLiveInboundPrecision *OccurredPrecision `json:"last_live_inbound_precision,omitempty"`
 
-	// LastOutboundAt When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+	// LastOutboundActivityId The activity behind `last_outbound_at`, picked by the same query. Null when that is null; absent with it.
+	LastOutboundActivityId *openapi_types.UUID `json:"last_outbound_activity_id,omitempty"`
+
+	// LastOutboundAt When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question. Counts the messages the caller can open, like `last_inbound_at`.
 	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
 
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+
+	// LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+	LastTouchBasis *Contact360LastTouchBasis `json:"last_touch_basis,omitempty"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
 	// not assert that no reply exists. Partial means capture has succeeded but
@@ -38490,6 +38736,9 @@ type Contact360 struct {
 	// `contributing_activity_ids` are the receipts, so the UI can show its inputs — no mystery number.
 	Strength *RelationshipStrength `json:"strength,omitempty"`
 }
+
+// Contact360LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole workspace may see, so every colleague reads the same number. Absent together with the last-touch fields.
+type Contact360LastTouchBasis string
 
 // Contact360SectionsOmitted defines model for Contact360.SectionsOmitted.
 type Contact360SectionsOmitted string
@@ -47525,6 +47774,9 @@ type LeadScoreFactor struct {
 	// blended into an auto-captured signal (AC-S7a).
 	SignalKind *LeadManualSignalKind `json:"signal_kind,omitempty"`
 
+	// SourceActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `source_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
+	SourceActivities *[]ActivityReference `json:"source_activities,omitempty"`
+
 	// SourceActivityIds The activities behind a behavioral factor, re-read through the CALLER's scope (ADR-0105 §3).
 	SourceActivityIds *[]openapi_types.UUID `json:"source_activity_ids,omitempty"`
 }
@@ -53844,6 +54096,94 @@ type ReportScope struct {
 // ReportScopeKind defines model for ReportScope.Kind.
 type ReportScopeKind string
 
+// ReportSetupObjective defines model for ReportSetupObjective.
+type ReportSetupObjective struct {
+	Deadline    *openapi_types.Date `json:"deadline,omitempty"`
+	Metric      ReportingMetricID   `json:"metric"`
+	TargetValue *int64              `json:"target_value,omitempty"`
+}
+
+// ReportSetupProposal defines model for ReportSetupProposal.
+type ReportSetupProposal struct {
+	// Clarifications What the words leave open, as questions to the reader.
+	Clarifications []string `json:"clarifications"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+	ModelUsed   *string   `json:"model_used,omitempty"`
+
+	// Name A name the words suggest.
+	Name      *string               `json:"name,omitempty"`
+	Objective *ReportSetupObjective `json:"objective,omitempty"`
+
+	// Selection The part of a reporting selection the words named. Absent means the words said nothing about it.
+	Selection ReportSetupSelection    `json:"selection"`
+	Site      ReportSetupProposalSite `json:"site"`
+
+	// Sources The phrase each resolved field came from.
+	Sources     []ReportSetupSource      `json:"sources"`
+	Unsupported []ReportSetupUnsupported `json:"unsupported"`
+}
+
+// ReportSetupProposalSite defines model for ReportSetupProposal.Site.
+type ReportSetupProposalSite string
+
+// ReportSetupRequest defines model for ReportSetupRequest.
+type ReportSetupRequest struct {
+	// Description What the reader typed. Only this and the catalog reach the model.
+	Description string `json:"description"`
+
+	// Site Which drawer asks: a sales initiative's goal or a custom report.
+	Site ReportSetupRequestSite `json:"site"`
+}
+
+// ReportSetupRequestSite Which drawer asks: a sales initiative's goal or a custom report.
+type ReportSetupRequestSite string
+
+// ReportSetupSelection The part of a reporting selection the words named. Absent means the words said nothing about it.
+type ReportSetupSelection struct {
+	Blocks    *[]ReportingBlockKind       `json:"blocks,omitempty"`
+	Country   *ReportingCountry           `json:"country,omitempty"`
+	Industry  *ReportingIndustry          `json:"industry,omitempty"`
+	Metrics   *[]ReportingMetricID        `json:"metrics,omitempty"`
+	Period    *ReportSetupSelectionPeriod `json:"period,omitempty"`
+	ProductId *ReportingProductId         `json:"product_id,omitempty"`
+}
+
+// ReportSetupSelectionPeriod defines model for ReportSetupSelection.Period.
+type ReportSetupSelectionPeriod string
+
+// ReportSetupSource defines model for ReportSetupSource.
+type ReportSetupSource struct {
+	Field ReportSetupSourceField `json:"field"`
+
+	// Label The value's name as the reader sees it.
+	Label *string `json:"label,omitempty"`
+
+	// Phrase The words it was read from.
+	Phrase string `json:"phrase"`
+
+	// Value The resolved id, or the value as proposed.
+	Value string `json:"value"`
+}
+
+// ReportSetupSourceField defines model for ReportSetupSource.Field.
+type ReportSetupSourceField string
+
+// ReportSetupUnsupported defines model for ReportSetupUnsupported.
+type ReportSetupUnsupported struct {
+	// Code `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+	Code   ReportSetupUnsupportedCode `json:"code"`
+	Phrase string                     `json:"phrase"`
+	Reason string                     `json:"reason"`
+}
+
+// ReportSetupUnsupportedCode `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+type ReportSetupUnsupportedCode string
+
 // ReportVocabulary What `describe_report_vocabulary` answers.
 type ReportVocabulary struct {
 	Vocabulary map[string]interface{} `json:"vocabulary"`
@@ -53880,7 +54220,8 @@ type ReportingCard struct {
 	// Id A short id the client mints. Unique within the report, so one chart kind can be placed twice.
 	Id string `json:"id"`
 
-	// Kind A chart kind, or `question`, a custom analytics question the card asks for each reader.
+	// Kind A chart kind, `question`, a custom analytics question the card asks for each reader, or
+	// `assessment`, the report's figures written up in a few sentences.
 	Kind   ReportingCardKind  `json:"kind"`
 	Metric *ReportingMetricID `json:"metric,omitempty"`
 
@@ -53898,7 +54239,8 @@ type ReportingCard struct {
 // ReportingCardWidth `half` shares a row with the next half card. A chart that needs the whole width draws full regardless.
 type ReportingCardWidth string
 
-// ReportingCardKind A chart kind, or `question`, a custom analytics question the card asks for each reader.
+// ReportingCardKind A chart kind, `question`, a custom analytics question the card asks for each reader, or
+// `assessment`, the report's figures written up in a few sentences.
 type ReportingCardKind string
 
 // ReportingCardQuestion A custom analytics question a card asks. Present exactly when the card's `kind` is
@@ -55152,6 +55494,111 @@ type RunReportRequest struct {
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
 
+// SalesAssessment defines model for SalesAssessment.
+type SalesAssessment struct {
+	// Cells The figures the sentences may cite, as the model read them.
+	Cells      []SalesAssessmentCell      `json:"cells"`
+	Confidence *SalesAssessmentConfidence `json:"confidence,omitempty"`
+
+	// Decisions How many recorded decisions the model read.
+	Decisions int `json:"decisions"`
+
+	// EvaluationKey The evaluation the assessment read.
+	EvaluationKey string    `json:"evaluation_key"`
+	GeneratedAt   time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy  WrittenBy                 `json:"generated_by"`
+	ModelUsed    *string                   `json:"model_used,omitempty"`
+	NextDecision *SalesAssessmentDecision  `json:"next_decision,omitempty"`
+	Sentences    []SalesAssessmentSentence `json:"sentences"`
+}
+
+// SalesAssessmentConfidence defines model for SalesAssessment.Confidence.
+type SalesAssessmentConfidence string
+
+// SalesAssessmentCell defines model for SalesAssessmentCell.
+type SalesAssessmentCell struct {
+	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
+	Id    string `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// SalesAssessmentDecision defines model for SalesAssessmentDecision.
+type SalesAssessmentDecision struct {
+	DealId  openapi_types.UUID `json:"deal_id"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+	Text    string             `json:"text"`
+}
+
+// SalesAssessmentRequest defines model for SalesAssessmentRequest.
+type SalesAssessmentRequest struct {
+	// Refresh Ask the model again, whatever is kept.
+	Refresh   *bool              `json:"refresh,omitempty"`
+	Selection ReportingSelection `json:"selection"`
+}
+
+// SalesAssessmentSentence defines model for SalesAssessmentSentence.
+type SalesAssessmentSentence struct {
+	// Cells The cell ids the sentence rests on.
+	Cells []string                    `json:"cells"`
+	Kind  SalesAssessmentSentenceKind `json:"kind"`
+	Text  string                      `json:"text"`
+}
+
+// SalesAssessmentSentenceKind defines model for SalesAssessmentSentence.Kind.
+type SalesAssessmentSentenceKind string
+
+// SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
+type SalesDecision struct {
+	CreatedAt      time.Time          `json:"created_at"`
+	DealId         openapi_types.UUID `json:"deal_id"`
+	Decision       string             `json:"decision"`
+	DoneAt         *time.Time         `json:"done_at,omitempty"`
+	ExpectedResult *string            `json:"expected_result,omitempty"`
+
+	// Id The task's id.
+	Id openapi_types.UUID `json:"id"`
+
+	// OwnerId The accountable owner, the task's assignee.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Result What work was completed, once the outcome was recorded.
+	Result *string `json:"result,omitempty"`
+
+	// ReviewOn The review date, the task's due day in the installation's calendar.
+	ReviewOn *openapi_types.Date `json:"review_on,omitempty"`
+	Status   SalesDecisionStatus `json:"status"`
+}
+
+// SalesDecisionStatus defines model for SalesDecision.Status.
+type SalesDecisionStatus string
+
+// SalesDecisionInput defines model for SalesDecisionInput.
+type SalesDecisionInput struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	Decision string             `json:"decision"`
+
+	// ExpectedResult The observable result the owner expects by the review date.
+	ExpectedResult *string            `json:"expected_result,omitempty"`
+	OwnerId        openapi_types.UUID `json:"owner_id"`
+	ReviewOn       openapi_types.Date `json:"review_on"`
+}
+
+// SalesDecisionListResponse defines model for SalesDecisionListResponse.
+type SalesDecisionListResponse struct {
+	Data []SalesDecision `json:"data"`
+}
+
+// SalesDecisionOutcomeInput defines model for SalesDecisionOutcomeInput.
+type SalesDecisionOutcomeInput struct {
+	Result string `json:"result"`
+}
+
 // SalesInitiative defines model for SalesInitiative.
 type SalesInitiative struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -55514,8 +55961,16 @@ type ScheduledSendHeldReason string
 // a human reschedules or cancels it.
 type ScheduledSendStatus string
 
+// SchedulingAliasRequest defines model for SchedulingAliasRequest.
+type SchedulingAliasRequest struct {
+	// Alias The friendly address to claim; empty clears it. Validated and normalized by the server.
+	Alias string `json:"alias"`
+}
+
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
+	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
+	Alias             *string   `json:"alias,omitempty"`
 	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int       `json:"buffer_minutes"`
 	CalendarId        string    `json:"calendar_id"`
@@ -55537,10 +55992,12 @@ type SchedulingProfile struct {
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
 	NoticeMinutes int                       `json:"notice_minutes"`
 	Provider      SchedulingProfileProvider `json:"provider"`
-	PublicUrl     *string                   `json:"public_url,omitempty"`
-	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
-	Slug          *string                   `json:"slug,omitempty"`
-	Title         string                    `json:"title"`
+
+	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
+	PublicUrl   *string `json:"public_url,omitempty"`
+	ReplaceLink *bool   `json:"replace_link,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Title       string  `json:"title"`
 
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -60116,14 +60573,20 @@ type VoiceProfile struct {
 	ArchivedAt       *time.Time `json:"archived_at"`
 
 	// AutoLearningEnabled Explicit owner opt-in; defaults off.
-	AutoLearningEnabled bool                  `json:"auto_learning_enabled"`
-	CandidateVersion    *int                  `json:"candidate_version,omitempty"`
-	CapturedBy          *string               `json:"captured_by,omitempty"`
-	CreatedAt           time.Time             `json:"created_at"`
-	Id                  openapi_types.UUID    `json:"id"`
-	LastBuiltAt         *time.Time            `json:"last_built_at,omitempty"`
-	Maturity            *VoiceProfileMaturity `json:"maturity,omitempty"`
-	OwnerId             *openapi_types.UUID   `json:"owner_id,omitempty"`
+	AutoLearningEnabled bool      `json:"auto_learning_enabled"`
+	CandidateVersion    *int      `json:"candidate_version,omitempty"`
+	CapturedBy          *string   `json:"captured_by,omitempty"`
+	CreatedAt           time.Time `json:"created_at"`
+
+	// FirstBuildWordsRemaining Included corpus words still missing before a first build can learn anything; zero once maturity leaves collecting.
+	FirstBuildWordsRemaining *int               `json:"first_build_words_remaining,omitempty"`
+	Id                       openapi_types.UUID `json:"id"`
+	LastBuiltAt              *time.Time         `json:"last_built_at,omitempty"`
+
+	// LatestBuild The newest build of this profile; absent when none was ever queued. Setup reads it to tell building, failed and deferred apart without polling a build id.
+	LatestBuild *VoiceBuild           `json:"latest_build,omitempty"`
+	Maturity    *VoiceProfileMaturity `json:"maturity,omitempty"`
+	OwnerId     *openapi_types.UUID   `json:"owner_id,omitempty"`
 
 	// PersonalityMd Owner-authored preferences; model output never overwrites this field.
 	PersonalityMd string `json:"personality_md"`
@@ -61655,9 +62118,13 @@ type WorklistCompanyFacts struct {
 	// engagement strip for an account. A queue row and the record it opens cannot
 	// disagree about who wrote last.
 	//
+	// On a contact row both dates count the messages this caller can open, the
+	// contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+	// History also counts here. An account row reads the company page's own basis.
+	//
 	// Absent from the row when the caller may not read activity, or may not read this
-	// contact or account: a withheld answer. Present with both nulls for a record
-	// nobody has ever exchanged a message with.
+	// contact or account: a withheld answer. Present with both nulls when no message the
+	// reader's basis counts was exchanged with the record.
 	Touch *WorklistContactTouch `json:"touch,omitempty"`
 }
 
@@ -61731,9 +62198,13 @@ type WorklistContactFacts struct {
 	// engagement strip for an account. A queue row and the record it opens cannot
 	// disagree about who wrote last.
 	//
+	// On a contact row both dates count the messages this caller can open, the
+	// contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+	// History also counts here. An account row reads the company page's own basis.
+	//
 	// Absent from the row when the caller may not read activity, or may not read this
-	// contact or account: a withheld answer. Present with both nulls for a record
-	// nobody has ever exchanged a message with.
+	// contact or account: a withheld answer. Present with both nulls when no message the
+	// reader's basis counts was exchanged with the record.
 	Touch *WorklistContactTouch `json:"touch,omitempty"`
 }
 
@@ -61743,17 +62214,21 @@ type WorklistContactFacts struct {
 // engagement strip for an account. A queue row and the record it opens cannot
 // disagree about who wrote last.
 //
+// On a contact row both dates count the messages this caller can open, the
+// contact page's `last_touch_basis`, so a reply the reader can open on the contact's
+// History also counts here. An account row reads the company page's own basis.
+//
 // Absent from the row when the caller may not read activity, or may not read this
-// contact or account: a withheld answer. Present with both nulls for a record
-// nobody has ever exchanged a message with.
+// contact or account: a withheld answer. Present with both nulls when no message the
+// reader's basis counts was exchanged with the record.
 type WorklistContactTouch struct {
-	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured.
+	// LastInboundAt When they last wrote to us. Null means no counted message records a reply; it does not prove that none exists.
 	LastInboundAt *time.Time `json:"last_inbound_at"`
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the row it names. Absent when that is null.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
 
-	// LastOutboundAt When we last wrote to them. Null means we never have.
+	// LastOutboundAt When we last wrote to them. Null means no counted message records one.
 	LastOutboundAt *time.Time `json:"last_outbound_at"`
 
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null.
@@ -63707,6 +64182,39 @@ type GetAiUsageParams struct {
 
 	// To Default: today.
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// ListSalesDecisionsParams defines parameters for ListSalesDecisions.
+type ListSalesDecisionsParams struct {
+	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+	Status *ListSalesDecisionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListSalesDecisionsParamsStatus defines parameters for ListSalesDecisions.
+type ListSalesDecisionsParamsStatus string
+
+// RecordSalesDecisionParams defines parameters for RecordSalesDecision.
+type RecordSalesDecisionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // CompareReportingEditionsParams defines parameters for CompareReportingEditions.
@@ -71020,6 +71528,15 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
+type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
+
+// RecordSalesDecisionJSONRequestBody defines body for RecordSalesDecision for application/json ContentType.
+type RecordSalesDecisionJSONRequestBody = SalesDecisionInput
+
+// RecordSalesDecisionOutcomeJSONRequestBody defines body for RecordSalesDecisionOutcome for application/json ContentType.
+type RecordSalesDecisionOutcomeJSONRequestBody = SalesDecisionOutcomeInput
+
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
@@ -71064,6 +71581,9 @@ type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
 
 // UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
 type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
+// ProposeReportSetupJSONRequestBody defines body for ProposeReportSetup for application/json ContentType.
+type ProposeReportSetupJSONRequestBody = ReportSetupRequest
 
 // CreateReportingTargetJSONRequestBody defines body for CreateReportingTarget for application/json ContentType.
 type CreateReportingTargetJSONRequestBody = ReportingTargetInput
@@ -71943,6 +72463,9 @@ type ChangeMeetingInvitationJSONRequestBody = MeetingInvitationChange
 
 // PutSchedulingProfileJSONRequestBody defines body for PutSchedulingProfile for application/json ContentType.
 type PutSchedulingProfileJSONRequestBody = SchedulingProfile
+
+// PutSchedulingAliasJSONRequestBody defines body for PutSchedulingAlias for application/json ContentType.
+type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
@@ -83830,12 +84353,29 @@ type ServerInterface interface {
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	// The Sales review's assessment of one selection: a few sentences on what the measured
+	// figures show, each citing the cells it rests on, and one next decision on a deal the
+	// reader may see. Written by the model and kept per reader until the figures or the
+	// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+	// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+	// (POST /analytics/assessment)
+	AssessSalesReview(w http.ResponseWriter, r *http.Request)
 	// Which population this caller measures by default, and which they may choose.
 	// (GET /analytics/context)
 	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// The decisions recorded from a sales review, newest first, as tasks the reader may see.
+	// (GET /analytics/decisions)
+	ListSalesDecisions(w http.ResponseWriter, r *http.Request, params ListSalesDecisionsParams)
+	// Record a decision from a sales review as a task on its deal. An open decision with the
+	// same text on the same deal is returned instead of a second one.
+	// (POST /analytics/decisions)
+	RecordSalesDecision(w http.ResponseWriter, r *http.Request, params RecordSalesDecisionParams)
+	// Record what work was completed and close the decision. The deal does not change.
+	// (POST /analytics/decisions/{id}/outcome)
+	RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request, id Id)
 	// Compare reporting editions
 	// (GET /analytics/editions/compare)
 	CompareReportingEditions(w http.ResponseWriter, r *http.Request, params CompareReportingEditionsParams)
@@ -83995,6 +84535,13 @@ type ServerInterface interface {
 	// How a team's handoffs ended and what still waits, for coaching.
 	// (GET /analytics/sdr-team)
 	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
+	// A sales initiative or a custom report proposed from a description in plain words:
+	// the filters, metrics and charts the words name, resolved against what the reader may
+	// use, with the phrase each came from, the questions the words leave open and the phrases
+	// nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+	// a model it answers 409 `ai_not_configured`.
+	// (POST /analytics/setup-proposal)
+	ProposeReportSetup(w http.ResponseWriter, r *http.Request)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -86149,6 +86696,9 @@ type ServerInterface interface {
 	// Configure and activate the caller's booking page.
 	// (PUT /scheduling/profile)
 	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Choose, change or clear the caller's friendly booking address.
+	// (PUT /scheduling/profile/alias)
+	PutSchedulingAlias(w http.ResponseWriter, r *http.Request)
 	// List the acting host's open proposals and personal links for one contact.
 	// (GET /scheduling/proposals)
 	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
@@ -87073,6 +87623,16 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The Sales review's assessment of one selection: a few sentences on what the measured
+// figures show, each citing the cells it rests on, and one next decision on a deal the
+// reader may see. Written by the model and kept per reader until the figures or the
+// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+// (POST /analytics/assessment)
+func (_ Unimplemented) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Which population this caller measures by default, and which they may choose.
 // (GET /analytics/context)
 func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
@@ -87082,6 +87642,25 @@ func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Reques
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
 func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The decisions recorded from a sales review, newest first, as tasks the reader may see.
+// (GET /analytics/decisions)
+func (_ Unimplemented) ListSalesDecisions(w http.ResponseWriter, r *http.Request, params ListSalesDecisionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a decision from a sales review as a task on its deal. An open decision with the
+// same text on the same deal is returned instead of a second one.
+// (POST /analytics/decisions)
+func (_ Unimplemented) RecordSalesDecision(w http.ResponseWriter, r *http.Request, params RecordSalesDecisionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record what work was completed and close the decision. The deal does not change.
+// (POST /analytics/decisions/{id}/outcome)
+func (_ Unimplemented) RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87400,6 +87979,16 @@ func (_ Unimplemented) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Re
 // How a team's handoffs ended and what still waits, for coaching.
 // (GET /analytics/sdr-team)
 func (_ Unimplemented) GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A sales initiative or a custom report proposed from a description in plain words:
+// the filters, metrics and charts the words name, resolved against what the reader may
+// use, with the phrase each came from, the questions the words leave open and the phrases
+// nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+// a model it answers 409 `ai_not_configured`.
+// (POST /analytics/setup-proposal)
+func (_ Unimplemented) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -91711,6 +92300,12 @@ func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Choose, change or clear the caller's friendly booking address.
+// (PUT /scheduling/profile/alias)
+func (_ Unimplemented) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the acting host's open proposals and personal links for one contact.
 // (GET /scheduling/proposals)
 func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams) {
@@ -95843,6 +96438,26 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// AssessSalesReview operation middleware
+func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssessSalesReview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAnalyticsContext operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
 
@@ -95876,6 +96491,137 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSalesDecisions operation middleware
+func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSalesDecisionsParams
+
+	// ------------- Optional query parameter "deal_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deal_id", r.URL.Query(), &params.DealId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deal_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deal_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSalesDecisions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordSalesDecision operation middleware
+func (siw *ServerInterfaceWrapper) RecordSalesDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RecordSalesDecisionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordSalesDecision(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordSalesDecisionOutcome operation middleware
+func (siw *ServerInterfaceWrapper) RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordSalesDecisionOutcome(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -98953,6 +99699,26 @@ func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSdrTeamReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProposeReportSetup operation middleware
+func (siw *ServerInterfaceWrapper) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeReportSetup(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129201,6 +129967,26 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// PutSchedulingAlias operation middleware
+func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutSchedulingAlias(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
 
@@ -135250,10 +136036,22 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/ai/usage/summary", wrapper.GetAiUsageSummary)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/assessment", wrapper.AssessSalesReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/context", wrapper.GetAnalyticsContext)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/decisions", wrapper.ListSalesDecisions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/decisions", wrapper.RecordSalesDecision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/decisions/{id}/outcome", wrapper.RecordSalesDecisionOutcome)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/editions/compare", wrapper.CompareReportingEditions)
@@ -135413,6 +136211,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/setup-proposal", wrapper.ProposeReportSetup)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
@@ -137567,6 +138368,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/profile/alias", wrapper.PutSchedulingAlias)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)

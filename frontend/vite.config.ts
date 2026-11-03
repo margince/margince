@@ -219,7 +219,7 @@ export default defineConfig({
       },
       // A booking page's path, split the way nginx.conf splits it: a browser
       // navigation gets the app, any other fetch the api's booking preview.
-      "/book/": {
+      "/book": {
         target: proxyTarget,
         changeOrigin: false,
         secure: false,

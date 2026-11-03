@@ -16,7 +16,9 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
+import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { DecisionsPanel } from "./analytics.decisions";
 import {
   SalesHero,
   StockCharts,
@@ -213,12 +215,19 @@ function SalesReviewBody({
                   charts={charts}
                   onEvidence={openEvidence}
                   aside={
-                    <HeroAside
-                      evaluation={evaluation}
-                      charts={charts?.data}
-                      onApply={apply}
-                      targetSetup={targetSetup}
-                    />
+                    <>
+                      <AssessmentPanel
+                        selection={selection}
+                        evaluation={evaluation}
+                        onEvidence={openEvidence}
+                      />
+                      <HeroAside
+                        evaluation={evaluation}
+                        charts={charts?.data}
+                        onApply={apply}
+                        targetSetup={targetSetup}
+                      />
+                    </>
                   }
                 />
                 <SalesReadings
@@ -252,6 +261,8 @@ function SalesReviewBody({
           emptyLabel={t("analytics.overview.salesNothing")}
         />
       </div>
+      {/* Past the first screen, so the decision and the first action stay on it. */}
+      <DecisionsPanel />
       {/* Below the decision and the actions: today's stock by stage, and the
           permitted chart of sales by owner, in name order. */}
       {answered && (

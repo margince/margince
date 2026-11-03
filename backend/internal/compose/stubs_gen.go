@@ -367,12 +367,28 @@ func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 
+func (stubs) AssessSalesReview(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssessSalesReview")
+}
+
 func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsContext")
 }
 
 func (stubs) GetDataCoverage(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetDataCoverage")
+}
+
+func (stubs) ListSalesDecisions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesDecisionsParams) {
+	httperr.NotImplemented(w, r, "ListSalesDecisions")
+}
+
+func (stubs) RecordSalesDecision(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RecordSalesDecisionParams) {
+	httperr.NotImplemented(w, r, "RecordSalesDecision")
+}
+
+func (stubs) RecordSalesDecisionOutcome(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordSalesDecisionOutcome")
 }
 
 func (stubs) CompareReportingEditions(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CompareReportingEditionsParams) {
@@ -585,6 +601,10 @@ func (stubs) ListSdrUpcomingMeetings(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) GetSdrTeamReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSdrTeamReviewParams) {
 	httperr.NotImplemented(w, r, "GetSdrTeamReview")
+}
+
+func (stubs) ProposeReportSetup(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ProposeReportSetup")
 }
 
 func (stubs) ListReportingTargets(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListReportingTargetsParams) {
@@ -3457,6 +3477,10 @@ func (stubs) GetSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) 
 
 func (stubs) PutSchedulingProfile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PutSchedulingProfile")
+}
+
+func (stubs) PutSchedulingAlias(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PutSchedulingAlias")
 }
 
 func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListMeetingProposalsParams) {

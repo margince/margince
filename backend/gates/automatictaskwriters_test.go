@@ -55,6 +55,7 @@ var declaredWithoutFamily = []string{writesNoTask, writesCallerSource, writesFor
 // taskSourceWriters is each writer's declaration, keyed by file:function.
 var taskSourceWriters = map[string][]string{
 	"compose/assurancebundletask.go:mintBundleTask":                       {provenance.AssuranceTaskSource},
+	"compose/decisionseam.go:Record":                                      {provenance.AnalyticsDecisionSource},
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
 	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
