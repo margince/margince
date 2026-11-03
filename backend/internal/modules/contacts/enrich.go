@@ -125,6 +125,10 @@ func (s *Store) ApplyEnrichmentTx(ctx context.Context, tx pgx.Tx, companyID ids.
 	if err != nil {
 		return err
 	}
+	rowsBefore, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
 	applied, err := applyEvidenceFields(ctx, tx, wsID, companyID, by, in.Fields)
 	if err != nil {
 		return err
@@ -133,14 +137,18 @@ func (s *Store) ApplyEnrichmentTx(ctx context.Context, tx pgx.Tx, companyID ids.
 	if err != nil {
 		return err
 	}
-	before, after = storekit.ChangedColumns(before, after)
+	rowsAfter, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
+	before, after = changedColdStartColumns(before, after)
 	// before/after carry the RECORD's own column images and nothing else.
 	// The operation's metadata rides audit_log.evidence, which is the column
 	// for it: anything placed in the images is projected by field history as
 	// a change to a field of that name (storekit.AuditWithEvidence).
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "company", companyID.UUID, before, after, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "company", companyID.UUID, before, after, withProfileFieldReceipts(map[string]any{
 		auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL, auditKeyFields: applied,
-	})
+	}, profileFieldReceipts(rowsBefore, rowsAfter, after)))
 	if err != nil {
 		return fmt.Errorf("audit enrichment apply: %w", err)
 	}

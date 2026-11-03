@@ -52,6 +52,9 @@ func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission stri
 		       -- leaves the company question genuinely open again.
 		       pending_reason = CASE WHEN EXCLUDED.admission = 'suppressed'
 		                             THEN NULL ELSE company_domain_disposition.pending_reason END,
+		       candidate_company_id = CASE WHEN EXCLUDED.admission = 'suppressed'
+		                                   THEN NULL ELSE company_domain_disposition.candidate_company_id END,
+		       site_unreadable = company_domain_disposition.site_unreadable AND EXCLUDED.admission IS DISTINCT FROM 'suppressed',
 		       -- next_attempt_at means scheduled work, and a refused domain has
 		       -- none: nothing will crawl it while the refusal stands.
 		       next_attempt_at = CASE WHEN EXCLUDED.admission = 'suppressed'

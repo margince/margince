@@ -267,8 +267,11 @@ export function ListTable<Row>({
   // The browser's own navigation is the discriminator, with no false hits.
   // `replaceParams` uses `history.replaceState`, which fires neither event, so
   // every dial this surface turns is silent here. Both events are heard: Back
-  // moves the address at `popstate` and announces it a task later. A timer
-  // firing between them would write the word over the address Back restored.
+  // moves the address at `popstate`, and a fragment-only move also fires
+  // `hashchange` a task later. A timer firing between them would write the word
+  // over the address Back restored. These are the raw events and not
+  // lib/router.tsx's `watchAddress`, which also runs for the app's own
+  // `replaceParams` announcements. Those must not abandon the word.
   useEffect(() => {
     const abandonPendingSearch = () => {
       const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";

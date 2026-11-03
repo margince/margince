@@ -6,8 +6,7 @@ import {
   Badge,
   Button,
   EmptyState,
-  Field,
-  TextInput,
+  OverflowMenu,
 } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
@@ -23,6 +22,12 @@ import {
   useCreateLegalEntity,
   useLegalEntities,
 } from "./legalentities.queries";
+import {
+  ArchiveEntityDialog,
+  CountryField,
+  EditEntityDialog,
+  TextField,
+} from "./legalentityeditor";
 
 // The companies this installation trades as. With one entity the card lists
 // the default alone, named after the company above it. An installation that
@@ -31,7 +36,13 @@ export function LegalEntitiesCard() {
   const t = useT();
   const query = useLegalEntities();
   const canCreate = useCanWrite("legal_entity", "create");
+  const verbs = {
+    canEdit: useCanWrite("legal_entity", "update"),
+    canArchive: useCanWrite("legal_entity", "delete"),
+  };
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<LegalEntity | null>(null);
+  const [archiving, setArchiving] = useState<LegalEntity | null>(null);
   const entities = query.data ?? [];
   return (
     <Panel
@@ -52,7 +63,11 @@ export function LegalEntitiesCard() {
           bleed
           fold
           label={t("legalEntities.title")}
-          columns={entityColumns(t)}
+          columns={entityColumns(t, {
+            ...verbs,
+            onEdit: setEditing,
+            onArchive: setArchiving,
+          })}
           rows={entities}
           rowKey={(entity) => entity.id}
           rowTestId={(entity) => `legal-entity-${entity.id}`}
@@ -65,19 +80,36 @@ export function LegalEntitiesCard() {
         </PanelBody>
       )}
       {open && <NewEntityDialog onClose={() => setOpen(false)} />}
+      {editing && (
+        <EditEntityDialog entity={editing} onClose={() => setEditing(null)} />
+      )}
+      <ArchiveEntityDialog
+        entity={archiving}
+        onClose={() => setArchiving(null)}
+      />
     </Panel>
   );
 }
 
-function entityColumns(t: Translator): DataTableColumn<LegalEntity>[] {
-  return [
+type RowVerbs = Readonly<{
+  canEdit: boolean;
+  canArchive: boolean;
+  onEdit: (entity: LegalEntity) => void;
+  onArchive: (entity: LegalEntity) => void;
+}>;
+
+function entityColumns(
+  t: Translator,
+  verbs: RowVerbs,
+): DataTableColumn<LegalEntity>[] {
+  const columns: DataTableColumn<LegalEntity>[] = [
     {
       key: "name",
       header: t("legalEntities.colName"),
       grow: true,
       render: (entity) => (
         <span className="t-name">
-          {entity.display_name || t("legalEntities.defaultUnnamed")}{" "}
+          {nameOf(entity, t)}{" "}
           {entity.is_default && (
             <Badge>{t("legalEntities.defaultBadge")}</Badge>
           )}
@@ -96,6 +128,40 @@ function entityColumns(t: Translator): DataTableColumn<LegalEntity>[] {
       render: (entity) => entity.country?.toUpperCase() ?? "",
     },
   ];
+  if (!verbs.canEdit && !verbs.canArchive) return columns;
+  return [
+    ...columns,
+    {
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      fold: "end",
+      render: (entity) => (
+        <span className="cell-actions">
+          <OverflowMenu
+            label={t("table.rowActions", { name: nameOf(entity, t) })}
+          >
+            {verbs.canEdit && (
+              <Button onClick={() => verbs.onEdit(entity)}>
+                {t("legalEntities.edit")}
+              </Button>
+            )}
+            {/* The default is the entity every unassigned colleague works
+                for, so it is never offered for archiving. */}
+            {verbs.canArchive && !entity.is_default && (
+              <Button onClick={() => verbs.onArchive(entity)}>
+                {t("legalEntities.archive")}
+              </Button>
+            )}
+          </OverflowMenu>
+        </span>
+      ),
+    },
+  ];
+}
+
+function nameOf(entity: LegalEntity, t: Translator): string {
+  return entity.display_name || t("legalEntities.defaultUnnamed");
 }
 
 const EMPTY_FORM: CreateLegalEntity = {
@@ -104,8 +170,8 @@ const EMPTY_FORM: CreateLegalEntity = {
   country: "",
 };
 
-// The three fields every further entity needs. Its address, bank details and
-// imprint are described through the API until the editor that shows them lands.
+// The three fields every further entity needs. The rest of its description
+// is added in the editor once it exists.
 function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
   const formId = useId();
@@ -130,19 +196,19 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         <form id={formId} onSubmit={submit} className="form-stack">
           <TextField
             label={t("legalEntities.displayName")}
+            required
             value={form.display_name}
             onChange={set("display_name")}
           />
           <TextField
             label={t("legalEntities.legalName")}
+            required
             value={form.legal_name}
             onChange={set("legal_name")}
           />
-          <TextField
-            label={t("legalEntities.country")}
-            hint={t("legalEntities.countryHint")}
+          <CountryField
+            required
             value={form.country}
-            maxLength={2}
             onChange={set("country")}
           />
           <ErrorLine
@@ -166,33 +232,5 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         </>
       }
     />
-  );
-}
-
-function TextField({
-  label,
-  hint,
-  value,
-  maxLength,
-  onChange,
-}: Readonly<{
-  label: string;
-  hint?: string;
-  value: string;
-  maxLength?: number;
-  onChange: (value: string) => void;
-}>) {
-  return (
-    <Field label={label} hint={hint} required>
-      {(control) => (
-        <TextInput
-          {...control}
-          required
-          maxLength={maxLength}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </Field>
   );
 }

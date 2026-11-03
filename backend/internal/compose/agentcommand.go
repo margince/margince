@@ -185,7 +185,6 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"sendEmail":               sendEmailCommand,
 	"sendMessage":             sendMessageCommand,
 	"sendCompanyEmail":        sendCompanyEmailCommand,
-	"bookMeeting":             bookMeetingCommand,
 	"createMeetingInvitation": meetingInvitationCommand,
 	"promoteLead":             promoteLeadCommand,
 	"disqualifyLead":          disqualifyLeadCommand,

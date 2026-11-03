@@ -58,9 +58,37 @@ type CalendarAppointment struct {
 	Start       time.Time `json:"Start"`
 	End         time.Time `json:"End"`
 	Attendees   []string  `json:"Attendees"`
+	// Roster says, for every address in Attendees, what it resolved to when the
+	// host booked it. Empty on an appointment written before bookings carried
+	// more than one attendee; such an appointment holds its one invitee only.
+	Roster []CalendarAttendee `json:"Roster,omitempty"`
 	// VideoCall asks the provider for a conference on create only; an update
 	// keeps whatever conference the event already has.
 	VideoCall bool `json:"VideoCall"`
+}
+
+// The bases an invited address can resolve to, in the order they are tried.
+const (
+	AttendeeContact   = "contact"
+	AttendeeColleague = "user"
+	AttendeeLead      = "lead"
+	// AttendeeHostNamed is an address that matches no contact, colleague or
+	// lead the host can see. The host typed it, and that is all that is known.
+	AttendeeHostNamed = "host_named"
+)
+
+// CalendarAttendee is one invited address and the record it resolved to.
+//
+//nolint:tagliatelle // stored inside meeting_invitation.appointment beside Go-default keys
+type CalendarAttendee struct {
+	Address string   `json:"Address"`
+	Basis   string   `json:"Basis"`
+	ID      ids.UUID `json:"ID"`
+	// AskConsent says the consent gate must clear this address before the
+	// provider sends. It holds for every contact and lead. It also holds for a
+	// host-named address that a hidden contact or lead still holds. Only a
+	// colleague and an address no consent subject holds skip it.
+	AskConsent bool `json:"AskConsent"`
 }
 
 // CalendarReceipt is evidence of a provider event, not guest acceptance.
