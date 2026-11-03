@@ -119,11 +119,13 @@ export const RefusedSendForSeveral: Story = {
             address: "ben@example.test",
             reasonCode: "no_compatible_evidence",
             category: "active_deal_followup",
+            canBeOverruled: true,
           },
           {
             address: "anna@example.test",
             reasonCode: "marketing_objection",
             category: "marketing",
+            canBeOverruled: false,
           },
         ],
       }}

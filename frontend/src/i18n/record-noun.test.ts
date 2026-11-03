@@ -343,6 +343,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.appliesToAndMore_other",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
+    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",

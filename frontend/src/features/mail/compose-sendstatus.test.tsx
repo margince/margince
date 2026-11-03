@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { writeMessage } from "../../design-system/richtext-testing";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -21,6 +22,7 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
+import { refusalIsCurrent } from "./composesend";
 
 // The composer shows one status for the message. It is the engine's preview
 // while the rep writes. After a refused Send it is that refusal, until the
@@ -34,7 +36,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const READY = { name: /ready to send/i };
+const READY = { name: /recipients checked/i };
 
 const NO_DEAL = {
   reason_code: "no_compatible_evidence",
@@ -92,7 +94,7 @@ function openComposer() {
 
 describe("a refused send and the check after it", () => {
   // The defect: the preview said ready, Send was refused, and the composer
-  // drew the red refusal and "Ready to send" side by side.
+  // drew the red refusal and "Recipients checked" side by side.
   it("replaces the ready mark with the refusal, then clears it for a changed message", async () => {
     let refused = true;
     stubEngine(
@@ -185,6 +187,85 @@ describe("a refused send and the check after it", () => {
   });
 });
 
+describe("an edited message is a different message", () => {
+  // A remedy on a stale refusal would act on the message as it was sent, while
+  // looking like it is about the draft on screen.
+  it.each([
+    [
+      "the subject",
+      async () => {
+        await userEvent.type(screen.getByLabelText("Subject"), " again");
+      },
+    ],
+    [
+      "the body",
+      async () => {
+        writeMessage("Body", "Different words");
+      },
+    ],
+  ])("clears the refusal and its remedies when %s changes", async (_, edit) => {
+    stubEngine(
+      (addresses) => allowedPreview(addresses),
+      () =>
+        problemResponse(
+          {
+            code: "consent_not_granted",
+            title: "Conflict",
+            details: {
+              review_id: "r-1",
+              available_actions: ["overrule"],
+              overrulable: [{ contact_id: "c-1", category: "marketing" }],
+              refusals: [
+                {
+                  address: "a@x.com",
+                  reason_code: "no_marketing_consent",
+                  can_be_overruled: true,
+                },
+              ],
+            },
+          },
+          409,
+        ),
+    );
+    openComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillSendableForm();
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Consent needed for this message");
+
+    await edit();
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    expect(screen.queryByText("Consent needed for this message")).toBeNull();
+  });
+});
+
+describe("the mark beside Send", () => {
+  // The consent check passing is not the whole send. A form still missing a
+  // field will stop at the button, so the mark makes no passed claim.
+  it("claims no passed check while a field is missing", async () => {
+    const asks: string[][] = [];
+    stubEngine((addresses) => {
+      asks.push(addresses);
+      return allowedPreview(addresses);
+    }, refusedSend([]));
+    openComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
+    await userEvent.tab();
+    await pickWhy(WHY_LABEL.requestedFollowup);
+    await waitFor(() => expect(asks.length).toBeGreaterThan(0));
+    await waitFor(() =>
+      expect(screen.queryByText(/checking whether/i)).toBeNull(),
+    );
+    expect(screen.queryByRole("button", READY)).toBeNull();
+
+    await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
+    writeMessage("Body", "Body content");
+    expect(await screen.findByRole("button", READY)).toBeInTheDocument();
+  });
+});
+
 describe("several recipients", () => {
   it("names the recipient that refuses, not the one that is allowed", async () => {
     stubEngine(
@@ -242,7 +323,7 @@ describe("several recipients", () => {
   });
 });
 
-describe("an answer that is not a full answer is never Ready to send", () => {
+describe("an answer that is not a full answer is never a passed check", () => {
   const answers: Record<string, (addresses: string[]) => Preview | Response> = {
     "an answer about nobody": () => allowedPreview([]),
     "an answer missing an addressee": () => allowedPreview(["other@x.com"]),
@@ -255,6 +336,18 @@ describe("an answer that is not a full answer is never Ready to send", () => {
       })),
     }),
     "a failed check": () => new Response(null, { status: 502 }),
+    "an answer naming someone not asked": (addresses) => ({
+      ...allowedPreview(addresses),
+      recipients: [
+        ...allowedPreview(addresses).recipients,
+        ...refusedPreview("stranger@x.com", {
+          reason_code: "marketing_objection",
+          decided_by: "subject",
+        }).recipients,
+      ],
+    }),
+    "an answer naming one addressee twice": (addresses) =>
+      allowedPreview([...addresses, ...addresses]),
   };
   for (const [name, engine] of Object.entries(answers)) {
     it(`says the check did not complete on ${name}`, async () => {
@@ -272,4 +365,44 @@ describe("an answer that is not a full answer is never Ready to send", () => {
       );
     });
   }
+});
+
+describe("whether a refusal is about the message on screen", () => {
+  type Request = Parameters<typeof refusalIsCurrent>[1];
+  const answerAtSend = allowedPreview(["a@x.com"]);
+  const sent: Request = {
+    activityId: "act-1",
+    isChannelReply: false,
+    mail: {
+      subject: "Hi",
+      body: "Words",
+      to: ["a@x.com"],
+      attachment_ids: ["f-1"],
+      mail_draft_id: undefined,
+    },
+    channelBody: { body: "Words", attachment_ids: ["f-1"] },
+    links: [],
+    answerAtSend,
+  };
+
+  it("is, while nothing the request carries has changed", () => {
+    // A draft id arriving after the press is bookkeeping, not a new message.
+    const now = { ...sent, mail: { ...sent.mail, mail_draft_id: "d-1" } };
+    expect(refusalIsCurrent(sent, now, answerAtSend)).toBe(true);
+  });
+
+  it("is not, once a file is added", () => {
+    const now = {
+      ...sent,
+      mail: { ...sent.mail, attachment_ids: ["f-1", "f-2"] },
+      channelBody: { ...sent.channelBody, attachment_ids: ["f-1", "f-2"] },
+    };
+    expect(refusalIsCurrent(sent, now, answerAtSend)).toBe(false);
+  });
+
+  it("is not, once the check answers anew", () => {
+    expect(refusalIsCurrent(sent, sent, allowedPreview(["a@x.com"]))).toBe(
+      false,
+    );
+  });
 });

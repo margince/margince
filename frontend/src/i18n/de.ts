@@ -7333,7 +7333,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other":
     "Das betrifft {count} von {total} Empfangsadressen.",
-  "sendPermission.ready": "Bereit zum Senden",
+  "sendPermission.ready": "Empfangsadressen geprüft",
   "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
@@ -7433,7 +7433,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Freigabe gespeichert. Drücke erneut auf Senden.",
   "compose.overrule.failed":
     "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
-  "compose.refusalOpenContact": "Kontakt öffnen",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":

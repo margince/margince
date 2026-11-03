@@ -123,9 +123,9 @@ type SendRequest = {
     attachment_ids?: string[];
   };
   links: Link[];
-  // The permission question and the answer on screen when Send was pressed.
-  // A refusal describes that message, and only while both still hold.
-  asked: Readonly<{ question: string; answer: Preview | undefined }>;
+  // The engine's answer on screen when Send was pressed. A refusal is about
+  // that message and that answer, and only while both still hold.
+  answerAtSend: Preview | undefined;
 };
 
 // The one place the send's origin is chosen. An anchor sends a reply; no
@@ -197,7 +197,7 @@ function sendRequest(
     heldDraftId: string | undefined;
     context: CommunicationContext | undefined;
     links: Link[];
-    asked: SendRequest["asked"];
+    answerAtSend: Preview | undefined;
   }>,
 ): SendRequest {
   const { to, cc, bcc, subject, body, html } = fields;
@@ -227,24 +227,36 @@ function sendRequest(
       attachment_ids: attachmentIds,
     },
     links: where.links,
-    asked: where.asked,
+    answerAtSend: where.answerAtSend,
   };
 }
 
 /**
- * Whether a refused Send still describes the message on screen. It stops
- * when the question changes (a recipient, a record, the reason). It also stops
- * when the check answers anew, so a corrected message loses the old refusal.
+ * Whether a refused Send still describes the message on screen. It stops when
+ * anything the request carries changes: a recipient, the words, a file, a
+ * record, the reason. It also stops when the check answers anew.
  */
 export function refusalIsCurrent(
-  asked: SendRequest["asked"] | undefined,
-  now: Readonly<{ question: string; preview: Preview | undefined }>,
+  sent: SendRequest | undefined,
+  now: SendRequest,
+  preview: Preview | undefined,
 ): boolean {
   return (
-    asked !== undefined &&
-    asked.question === now.question &&
-    asked.answer === now.preview
+    sent !== undefined &&
+    sent.answerAtSend === preview &&
+    messageOf(sent) === messageOf(now)
   );
+}
+
+// The message a request sends, without the bookkeeping that names drafts. A
+// draft id can arrive after the press and does not change the message.
+function messageOf(request: SendRequest): string {
+  // JSON leaves an undefined field out, which is how these are dropped.
+  return JSON.stringify({
+    ...request,
+    answerAtSend: undefined,
+    mail: { ...request.mail, draft_ref: undefined, mail_draft_id: undefined },
+  });
 }
 
 // 201 is a message that goes later; 202 is one that has gone.
@@ -367,8 +379,18 @@ export function useComposeSend({
   });
   // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.
+  const request = sendRequest(fields, {
+    answering,
+    isChannelReply,
+    files,
+    heldDraftId: savedDraft.held?.id,
+    context: claimedContext,
+    links,
+    answerAtSend: answer.preview,
+  });
   const refusedNow =
-    refusal === "consent" && refusalIsCurrent(send.variables?.asked, answer);
+    refusal === "consent" &&
+    refusalIsCurrent(send.variables, request, answer.preview);
   const permission = {
     ...answer,
     refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
@@ -400,20 +422,19 @@ export function useComposeSend({
       globalThis.requestAnimationFrame(focusFirstMissing);
       return;
     }
-    send.mutate(
-      sendRequest(fields, {
-        answering,
-        isChannelReply,
-        files,
-        heldDraftId: savedDraft.held?.id,
-        context: claimedContext,
-        links,
-        asked: { question: answer.question, answer: answer.preview },
-      }),
-    );
+    send.mutate(request);
   };
+  // What this client already knows will stop the send. The mark beside Send
+  // makes no passed claim while any of it stands.
+  const blocked =
+    missing.length > 0 ||
+    carriageBlocked ||
+    fields.sendUnavailable ||
+    refusal === "mailbox" ||
+    refusal === "sharedUnsubscribe";
   return {
     send,
+    blocked,
     refusal,
     sendReview,
     sendError,

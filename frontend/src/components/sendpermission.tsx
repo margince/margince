@@ -11,8 +11,10 @@ import {
 import { usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  decidingRefusal,
   previewStatus,
   type RefusedRecipient,
+  refusalOf,
   refusedStatus,
   type SendStatus,
 } from "../lib/sendstatus";
@@ -79,25 +81,22 @@ export function decidingRecipient(
   if (asking) return { state: "checking" };
   if (!preview) return { state: "allowed" };
 
-  let overrulable: Recipient | undefined;
-  for (const recipient of preview.recipients) {
-    // `would_refuse` and not the verdict. Under a rollout mode short of enforce
-    // a deny is recorded and the send still goes, so drawing the verdict would
-    // show a rollout position as a rule and talk a rep out of lawful mail.
-    if (!recipient.would_refuse) continue;
-    // `can_be_overruled` and not `decided_by`, because the two disagree: a dead
-    // mailbox and a rolling frequency cap are the engine's own reading AND
-    // absolute. Offering the override there renders a button that cannot do
-    // what it promises — the rep types a justification and staging refuses it
-    // anyway. Absent means the server did not say, which is not permission to
-    // guess yes.
-    if (!recipient.can_be_overruled) {
-      return { state: "refused", recipient };
-    }
-    overrulable ??= recipient;
-  }
-  if (overrulable) return { state: "unproven", recipient: overrulable };
-  return { state: "allowed" };
+  // `would_refuse` and not the verdict. Under a rollout mode short of enforce
+  // a deny is recorded and the send still goes. Drawing the verdict would talk
+  // a rep out of lawful mail.
+  const refusing = preview.recipients.filter((r) => r.would_refuse);
+  // The same rule picks the deciding refusal after a refused Send.
+  const refusals = refusing.map(refusalOf);
+  const deciding = decidingRefusal(refusals);
+  const recipient = deciding && refusing[refusals.indexOf(deciding)];
+  if (!recipient) return { state: "allowed" };
+  // `can_be_overruled` and not `decided_by`, because the two disagree: a dead
+  // mailbox and a rolling frequency cap are the engine's own reading, and
+  // absolute. Absent means the server did not say, which is not a yes.
+  return {
+    state: recipient.can_be_overruled ? "unproven" : "refused",
+    recipient,
+  };
 }
 
 /** A refusal a pressed Send came back with, about the message as it stands. */
@@ -127,11 +126,7 @@ export function sendStatus({
   refusal,
 }: Answer): SendStatus {
   if (refusal) return refusedStatus(refusal.refusals);
-  const { state, recipient } = decidingRecipient(preview, asking);
-  return previewStatus(
-    { preview, asking, unanswered },
-    state === "unproven" || state === "refused" ? recipient : undefined,
-  );
+  return previewStatus({ preview, asking, unanswered });
 }
 
 const TITLE: Record<RefusalKind, MessageKey> = {
@@ -299,16 +294,20 @@ export function SendMark({
   asking = false,
   unanswered = false,
   refusal,
-}: Answer) {
+  blocked = false,
+}: Answer &
+  Readonly<{
+    /** Something the surface knows will stop the send, such as an empty field. */
+    blocked?: boolean;
+  }>) {
   const t = useT();
   const { kind } = sendStatus({ preview, asking, unanswered, refusal });
   // Every other state is the Callout's: a sentence a rep has to read does not
-  // belong in a glyph beside a button.
-  if (kind !== "ready" && kind !== "checking") return null;
-  const label =
-    kind === "checking"
-      ? t("sendPermission.checking")
-      : t("sendPermission.ready");
+  // belong in a glyph beside a button. A blocked form makes no passed claim.
+  if (kind !== "checking" && (kind !== "ready" || blocked)) return null;
+  const label = t(
+    kind === "checking" ? "sendPermission.checking" : "sendPermission.ready",
+  );
   return (
     <CommunicationStatus
       state={kind}

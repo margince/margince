@@ -10,33 +10,20 @@ import { ReviewReference, SendReviewActions } from "./sendreviewaction";
 // The moves the server offers after a refused Send, drawn inside the one send
 // status. The words come from the status; these are what the rep can do.
 export function SendRefusalRemedies({
-  contactId,
   review,
-}: Readonly<{
-  contactId?: string;
-  review: SendReview | null;
-}>) {
-  const t = useT();
+}: Readonly<{ review: SendReview | null }>) {
+  if (!review) return null;
   return (
     <>
       {/* Keyed by the review, so a second refusal about a different message
           gets a fresh control rather than the first one's success state. */}
-      {review && <SendReviewActions key={review.reviewId} review={review} />}
+      <SendReviewActions key={review.reviewId} review={review} />
       {/* The other answer to the same question, for a rep who holds the
           authority. The server offers one or the other, never both. */}
-      {review && (
-        <DirectSendAction key={`direct-${review.reviewId}`} review={review} />
-      )}
+      <DirectSendAction key={`direct-${review.reviewId}`} review={review} />
       {/* The reference, whether or not there is an action to offer. A server
           naming an action this build cannot draw leaves the rep with this. */}
-      {review && review.actions.length === 0 && (
-        <ReviewReference review={review} />
-      )}
-      {contactId && (
-        <AppLink href={`#/contacts/${contactId}`} className="link-button">
-          {t("compose.refusalOpenContact")}
-        </AppLink>
-      )}
+      {review.actions.length === 0 && <ReviewReference review={review} />}
     </>
   );
 }

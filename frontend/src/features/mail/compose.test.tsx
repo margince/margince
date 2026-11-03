@@ -628,8 +628,8 @@ describe("ComposeModal", () => {
     expect(
       await screen.findByText("This message cannot be sent as it stands."),
     ).toBeTruthy();
-    // It points at the contact, and the modal stays open.
-    expect(screen.getByRole("link", { name: "Open contact" })).toBeTruthy();
+    // The server offered no move, so none is drawn, and the modal stays open.
+    expect(screen.queryByRole("link", { name: "Open contact" })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
   });
 

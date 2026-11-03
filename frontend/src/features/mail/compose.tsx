@@ -451,10 +451,7 @@ export function ComposeWindow({
                     send.permission.refusal && {
                       ...send.permission.refusal,
                       remedies: (
-                        <SendRefusalRemedies
-                          contactId={contactId}
-                          review={send.sendReview}
-                        />
+                        <SendRefusalRemedies review={send.sendReview} />
                       ),
                     }
                   }

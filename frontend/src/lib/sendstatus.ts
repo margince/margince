@@ -5,16 +5,19 @@ import {
 } from "../format/sendpermissionreason";
 
 // One answer about the message being written. The server gives one in two
-// places: the preview asked while the rep writes, and a refused Send. The composer used to draw both, so a red refusal stayed
-// on screen beside a later check that said the message may go.
+// places: the preview asked while the rep writes, and a refused Send. Drawing
+// both left a red refusal beside a later check that said the message may go.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
+type PreviewRecipient = Preview["recipients"][number];
 
 /** One refused recipient, as the server named it. */
 export type RefusedRecipient = Readonly<{
   address: string;
   reasonCode: string;
   category?: string;
+  /** The server's answer to whether a recorded reason may lift it. */
+  canBeOverruled: boolean;
 }>;
 
 export type SendStatusKind =
@@ -43,10 +46,53 @@ const SEVERITY: readonly RefusalKind[] = [
   "missingEvidence",
 ];
 
-function severityOf(recipient: RefusedRecipient): number {
-  return SEVERITY.indexOf(
-    refusalKindOf(recipient.reasonCode, recipient.category),
+function rankOf(refusal: RefusedRecipient): number {
+  const severity = SEVERITY.indexOf(
+    refusalKindOf(refusal.reasonCode, refusal.category),
   );
+  return (refusal.canBeOverruled ? SEVERITY.length : 0) + severity;
+}
+
+/**
+ * The refusal the status explains, by one rule before and after Send. One a
+ * recorded reason cannot lift outranks one it can; then the more severe kind;
+ * then the server's order.
+ */
+export function decidingRefusal(
+  refusals: readonly RefusedRecipient[],
+): RefusedRecipient | undefined {
+  let deciding: RefusedRecipient | undefined;
+  for (const refusal of refusals) {
+    if (deciding === undefined || rankOf(refusal) < rankOf(deciding)) {
+      deciding = refusal;
+    }
+  }
+  return deciding;
+}
+
+/** A preview recipient as a refusal. Absent overrulability is not a yes. */
+export function refusalOf(recipient: PreviewRecipient): RefusedRecipient {
+  return {
+    address: recipient.address,
+    reasonCode: recipient.reason_code,
+    category: recipient.resolved_category,
+    canBeOverruled: recipient.can_be_overruled === true,
+  };
+}
+
+function statusOf(
+  refusals: readonly RefusedRecipient[],
+  recipients: number,
+): SendStatus {
+  const deciding = decidingRefusal(refusals);
+  return {
+    kind: deciding
+      ? refusalKindOf(deciding.reasonCode, deciding.category)
+      : "restricted",
+    deciding,
+    refusing: refusals.length,
+    recipients,
+  };
 }
 
 /**
@@ -58,56 +104,32 @@ function severityOf(recipient: RefusedRecipient): number {
 export function refusedStatus(
   refusals: readonly RefusedRecipient[],
 ): SendStatus {
-  const deciding = refusals.reduce<RefusedRecipient | undefined>(
-    (worst, next) =>
-      worst === undefined || severityOf(next) < severityOf(worst)
-        ? next
-        : worst,
-    undefined,
-  );
-  return {
-    kind: deciding
-      ? refusalKindOf(deciding.reasonCode, deciding.category)
-      : "restricted",
-    deciding,
-    refusing: refusals.length,
-    recipients: 0,
-  };
+  return statusOf(refusals, 0);
 }
 
-/**
- * The status of the preview answer. The caller picks `deciding` with the same
- * rule that decides whether an override is offered.
- */
+/** The status of the preview answer. */
 export function previewStatus(
   answer: Readonly<{
     preview: Preview | undefined;
     asking: boolean;
     unanswered: boolean;
   }>,
-  deciding: Preview["recipients"][number] | undefined,
 ): SendStatus {
-  if (answer.unanswered)
-    return { kind: "unavailable", refusing: 0, recipients: 0 };
-  if (answer.asking) return { kind: "checking", refusing: 0, recipients: 0 };
+  const none = { refusing: 0, recipients: 0 };
+  if (answer.unanswered) return { kind: "unavailable", ...none };
+  if (answer.asking) return { kind: "checking", ...none };
   const { preview } = answer;
-  if (!preview) return { kind: "idle", refusing: 0, recipients: 0 };
+  if (!preview) return { kind: "idle", ...none };
   // An answer about nobody answers nothing. The hook refuses one; a surface
   // handed a preview some other way must not read it as permission either.
-  if (preview.recipients.length === 0) {
-    return { kind: "unavailable", refusing: 0, recipients: 0 };
+  if (preview.recipients.length === 0) return { kind: "unavailable", ...none };
+  const refusing = preview.recipients.filter((r) => r.would_refuse);
+  if (refusing.length === 0) {
+    return {
+      kind: "ready",
+      refusing: 0,
+      recipients: preview.recipients.length,
+    };
   }
-  const recipients = preview.recipients.length;
-  if (!deciding) return { kind: "ready", refusing: 0, recipients };
-  const refused: RefusedRecipient = {
-    address: deciding.address,
-    reasonCode: deciding.reason_code,
-    category: deciding.resolved_category,
-  };
-  return {
-    kind: refusalKindOf(refused.reasonCode, refused.category),
-    deciding: refused,
-    refusing: preview.recipients.filter((r) => r.would_refuse).length,
-    recipients,
-  };
+  return statusOf(refusing.map(refusalOf), preview.recipients.length);
 }

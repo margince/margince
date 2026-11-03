@@ -552,8 +552,16 @@ describe("one status for the message", () => {
       preview: preview(answer({ decided_by: "machine", verdict: "allow" })),
       refusal: {
         refusals: [
-          { address: "a@x.test", reasonCode: "no_marketing_consent" },
-          { address: "b@x.test", reasonCode: "consent_withdrawn" },
+          {
+            address: "a@x.test",
+            reasonCode: "no_marketing_consent",
+            canBeOverruled: true,
+          },
+          {
+            address: "b@x.test",
+            reasonCode: "consent_withdrawn",
+            canBeOverruled: false,
+          },
         ],
       },
     });
@@ -579,7 +587,9 @@ describe("one status for the message", () => {
         />
       </LocaleProvider>,
     );
-    expect(screen.queryByRole("button", { name: /ready to send/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /recipients checked/i }),
+    ).toBeNull();
   });
 
   // Distinct conditions get distinct titles, so a missing deal never reads as
@@ -639,5 +649,100 @@ describe("one status for the message", () => {
       screen.getByText("This applies to 1 of 2 recipients."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/anna@example\.test/)).toBeNull();
+  });
+});
+
+describe("one rule picks the deciding refusal before and after Send", () => {
+  // Mixed kinds and overrulability, in an order no single rule would pass by
+  // accident: the preview and the refused Send must explain the same address.
+  const wire = [
+    {
+      address: "e@x.test",
+      reason_code: "no_compatible_evidence",
+      can_be_overruled: true,
+    },
+    {
+      address: "c@x.test",
+      reason_code: "unknown_purpose",
+      can_be_overruled: false,
+    },
+    {
+      address: "p@x.test",
+      reason_code: "no_marketing_consent",
+      can_be_overruled: true,
+    },
+    {
+      address: "r@x.test",
+      reason_code: "frequency_cap_reached",
+      can_be_overruled: false,
+    },
+  ] as const;
+
+  it.each([
+    [wire, "r@x.test"],
+    [wire.filter((w) => w.address !== "r@x.test"), "c@x.test"],
+    [wire.filter((w) => w.can_be_overruled), "p@x.test"],
+  ])("picks the same recipient from %#", (rows, expected) => {
+    const before = sendStatus({
+      preview: preview(
+        ...rows.map((row) =>
+          answer({ ...row, decided_by: "machine", would_refuse: true }),
+        ),
+      ),
+    });
+    const after = sendStatus({
+      preview: undefined,
+      refusal: {
+        refusals: rows.map((row) => ({
+          address: row.address,
+          reasonCode: row.reason_code,
+          canBeOverruled: row.can_be_overruled,
+        })),
+      },
+    });
+    expect(before.deciding?.address).toBe(expected);
+    expect(after.deciding?.address).toBe(expected);
+    expect(after.kind).toBe(before.kind);
+  });
+});
+
+describe("the mark makes no passed claim on a blocked form", () => {
+  it("draws nothing for an allowed message the form will still stop", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendMark
+          preview={preview(
+            answer({
+              decided_by: "machine",
+              verdict: "allow",
+              would_refuse: false,
+            }),
+          )}
+          blocked
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.queryByRole("button", { name: /recipients checked/i }),
+    ).toBeNull();
+  });
+
+  it("draws the passed check once nothing on the form is in the way", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendMark
+          preview={preview(
+            answer({
+              decided_by: "machine",
+              verdict: "allow",
+              would_refuse: false,
+            }),
+          )}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByRole("button", { name: /recipients checked/i }),
+    ).toBeInTheDocument();
   });
 });

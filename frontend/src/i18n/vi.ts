@@ -7159,7 +7159,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.appliesToSome_other":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
-  "sendPermission.ready": "Sẵn sàng gửi",
+  "sendPermission.ready": "Đã kiểm tra người nhận",
   "sendPermission.markName": "Trạng thái liên lạc của tin nhắn này",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
   "sendPermission.unanswered":
@@ -7251,7 +7251,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.overrule.recorded": "Đã lưu. Hãy bấm Gửi lại.",
   "compose.overrule.failed":
     "Chưa lưu được. Hãy thử lại, hoặc mở mục duyệt từ thông báo từ chối ở trên.",
-  "compose.refusalOpenContact": "Mở liên hệ",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
   "compose.draftUnsupportedHere":

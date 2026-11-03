@@ -7349,7 +7349,7 @@ export const en = {
     "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other":
     "This applies to {count} of {total} recipients.",
-  "sendPermission.ready": "Ready to send",
+  "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
   "sendPermission.unanswered":
@@ -7450,7 +7450,6 @@ export const en = {
   "compose.overrule.recorded": "Overrule recorded. Press Send again.",
   "compose.overrule.failed":
     "The overrule was not recorded. Retry, or open the review from the refusal above.",
-  "compose.refusalOpenContact": "Open contact",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":
