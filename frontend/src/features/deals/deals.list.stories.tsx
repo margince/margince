@@ -32,12 +32,9 @@ const deal = {
   updated_at: "2026-06-01T00:00:00Z",
 };
 
-// The pipeline board as the list surface's BODY, which is the whole point of
-// this story: the saved-view rail, the count, the filter bar and the archived
-// toggle stand above the board exactly as they stand above the table, because
-// both views read the same dials. Rendered instead of the surface, the board took all
-// four off screen and left the reader unable to see — or undo — what had
-// narrowed the pipeline.
+// The pipeline board as the list surface's BODY. The view rail, count, filters
+// and archived toggle stand above it as above the table. Without them, a reader
+// cannot see or undo what narrowed the pipeline.
 const boardStages = [
   {
     id: "s1",

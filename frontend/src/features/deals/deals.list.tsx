@@ -401,14 +401,9 @@ export function DealsScreen({
     stageColumns.deals,
   );
 
-  // The board is the surface's alternate body, not a surface of its own. The
-  // saved views, the chips and the archived toggle all describe the one set of
-  // dials both views read. A board that replaced the surface would take them along,
-  // leaving a narrowed pipeline with nothing saying what narrowed it.
-  //
-  // Each column carries its own "Load more"; `bodyOwnsPaging` withholds the
-  // grid's pager. The count goes to the surface's head (`bodyCount`), beside
-  // the page's name; under the toolbar it would read as a caption on the dials.
+  // The board is the surface's body, so the dials that narrow it stay in view.
+  // Each column pages itself, so `bodyOwnsPaging` withholds the grid's pager.
+  // The count sits in the head beside the page's name, not under the dials.
   const boardBody =
     view === "board" && !refusal ? (
       <DealBoardBody

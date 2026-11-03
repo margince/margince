@@ -87,9 +87,8 @@ const render = (ui: ReactNode) => {
  * is how a case tells a filter the surface merely DREW from one it actually
  * sent — a chip that narrows nothing is the defect, not the picture of it.
  *
- * The per-stage report answers a count of its own, deliberately larger than the
- * cards on the board: the column's count is the server's aggregate over every
- * matching deal, and the surface's head sums those counts.
+ * The per-stage report counts more deals than the board holds as cards. The
+ * column and the surface's head state that count, not the cards.
  */
 function stubBackend(opts: {
   deals: Deal[];

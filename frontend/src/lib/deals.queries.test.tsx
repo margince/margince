@@ -13,8 +13,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// A keyset server over deal ids per stage: the cursor is the offset the next
-// page starts at, and a stage that is asked for answers only its own deals.
+// A keyset server over deal ids per stage. The cursor is the next page's offset,
+// and a stage asked for answers only its own deals.
 function stubServer(byStage: Record<string, string[]>) {
   const asked: URL[] = [];
   const failing = new Set<string>();

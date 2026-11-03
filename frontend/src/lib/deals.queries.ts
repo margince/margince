@@ -187,8 +187,8 @@ export type StageColumnRead = Readonly<{
   loadMoreError: unknown;
 }>;
 
-// Each cursor comes from the page this walk just read, never a cached one, so a
-// walk's pages meet with no gap or overlap however the column changed.
+// Each cursor comes from the page this walk just read, never a cached one. So a
+// walk's pages meet with no gap or overlap.
 async function walkStagePages(
   query: DealListQuery,
   depth: number,

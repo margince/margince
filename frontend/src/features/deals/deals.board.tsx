@@ -128,7 +128,7 @@ export function useAdvanceDeal() {
 }
 
 // Under a column's cards: its first read's wait or failure, then its own
-// "Load more" and the failure of the page that button last asked for.
+// "Load more". A failed later page is named above that button.
 export function StageColumnFoot({ read }: Readonly<{ read: StageColumnRead }>) {
   const t = useT();
   return (
