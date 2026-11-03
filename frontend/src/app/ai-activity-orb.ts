@@ -77,6 +77,8 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   overnight_at_risk_sweep: "working",
   summarize: "working",
   propose_roles: "working",
+  report_interpret: "working",
+  report_setup: "working",
   transcript_propose: "working",
   weekly_review: "working",
   weekly_learnings: "working",
