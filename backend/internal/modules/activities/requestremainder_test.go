@@ -43,3 +43,16 @@ func TestARemainingAskIsNotTheirGreetingOrTheirThanks(t *testing.T) {
 		t.Fatal("their own ask was refused")
 	}
 }
+
+// A sign-off whose name stands under a blank line grounds nothing either, and
+// a remainder spelled with decomposed accents still quotes the message.
+func TestARemainingAskSkipsASpacedSignOffAndReadsAccentsAlike(t *testing.T) {
+	t.Parallel()
+	body := "Please send the café menu.\n\nThanks again\n\nBob"
+	if RequestRemainderGrounded(body, "Thanks again") {
+		t.Error("a sign-off above its name was admitted as an ask")
+	}
+	if !RequestRemainderGrounded(body, "send the cafe\u0301 menu") {
+		t.Error("their ask, with its accent decomposed, was refused")
+	}
+}

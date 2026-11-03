@@ -16,6 +16,7 @@ import (
 var closings = foldedSet(
 	"thanks", "thank you", "thanks again", "thank you again", "many thanks", "thanks a lot",
 	"best", "best regards", "kind regards", "regards", "warm regards", "cheers", "all the best",
+	"sincerely", "yours sincerely", "yours truly", "best wishes", "kind wishes",
 	"danke", "vielen dank", "danke schön", "danke schon", "besten dank",
 	"mit freundlichen grüßen", "freundliche grüße", "viele grüße", "beste grüße", "liebe grüße", "grüße", "lg", "vg",
 	"cảm ơn", "xin cảm ơn", "trân trọng", "thân ái", "thân mến",
@@ -49,28 +50,58 @@ func signedBy(words []string) bool {
 	return true
 }
 
-// Strip is text without its opening greeting or the sign-off lines it ends on.
-// A greeting run on into the message keeps its line. Where it stops is a guess,
-// and a wrong cut would drop the sender's first words.
+// signatureLinesMax bounds the lines a sign-off may carry under its closing:
+// a name, a title or a company. More is a message, not a signature.
+const signatureLinesMax = 3
+
+// signatureWordsMax bounds one signature line.
+const signatureWordsMax = 6
+
+// Strip is text without its opening greeting or the sign-off it ends on. A
+// greeting run on into the message keeps its line. Where it stops is a guess,
+// and a wrong cut would drop the sender's first words. A message that is all
+// greeting and sign-off is kept whole: it asks nothing, and nothing in it is cut.
 func Strip(text string) string {
 	trimmed := norm.NFC.String(strings.TrimSpace(text))
+	body := trimmed
 	if greeting, ok := Opening(trimmed); ok && greeting.Closed {
-		trimmed = strings.TrimSpace(trimmed[greeting.End:])
+		body = strings.TrimSpace(trimmed[greeting.End:])
 	}
-	lines := strings.Split(trimmed, "\n")
-	for len(lines) > 0 {
-		last := len(lines) - 1
+	if kept := withoutSignOff(strings.Split(body, "\n")); kept != "" {
+		return kept
+	}
+	return trimmed
+}
+
+// withoutSignOff drops the closing a message ends on, with the signature lines
+// under it and the blank lines between.
+func withoutSignOff(lines []string) string {
+	for len(lines) > 0 && strings.TrimSpace(lines[len(lines)-1]) == "" {
+		lines = lines[:len(lines)-1]
+	}
+	signature := 0
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
 		switch {
-		case strings.TrimSpace(lines[last]) == "" || isClosing(lines[last]):
-			lines = lines[:last]
-		case last > 0 && signedBy(lineWords(lines[last])) && isClosing(lines[last-1]):
-			// The name on a line of its own, under the closing it signs.
-			lines = lines[:last-1]
+		case line == "":
+			continue
+		case isClosing(line):
+			return strings.TrimSpace(strings.Join(lines[:i], "\n"))
+		case signature < signatureLinesMax && signatureLine(line):
+			signature++
 		default:
-			return strings.Join(lines, "\n")
+			return strings.TrimSpace(strings.Join(lines, "\n"))
 		}
 	}
-	return ""
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
+// signatureLine reports a line that can stand under a closing: a few words,
+// capitalised, that end no sentence.
+func signatureLine(line string) bool {
+	words := lineWords(line)
+	return len(words) > 0 && len(words) <= signatureWordsMax &&
+		!strings.ContainsAny(line, "?!") && !strings.HasSuffix(line, ".") && signedBy(words[:1])
 }
 
 // lineWords are the letters-and-digits runs of a line.

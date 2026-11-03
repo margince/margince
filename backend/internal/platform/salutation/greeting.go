@@ -36,7 +36,12 @@ func WordBoundary(text string, i int) bool {
 	if i < 0 || i >= len(text) {
 		return true
 	}
-	r := rune(text[i])
+	// The whole character at i, which may start before i when i is the last
+	// byte of the character before a word.
+	r, _ := utf8.DecodeRuneInString(text[i:])
+	if !utf8.RuneStart(text[i]) {
+		r, _ = utf8.DecodeLastRuneInString(text[:i+1])
+	}
 	return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\''
 }
 
@@ -61,7 +66,7 @@ var greetingOpeners = map[textlang.Lang][]string{
 var addressForms = foldedSet(
 	"mr", "mrs", "ms", "mx", "miss", "dr", "prof", "professor", "sir", "sirs", "madam",
 	"all", "team", "everyone", "everybody", "there", "folks", "colleagues", "customer",
-	"and", "or", "herr", "frau", "damen", "herren", "und", "zusammen", "alle",
+	"and", "or", "herr", "frau", "hr", "fr", "damen", "herren", "und", "zusammen", "alle",
 	"allerseits", "liebes", "kollegen", "kolleginnen",
 	"anh", "chị", "em", "ông", "bà", "cô", "chú", "bạn", "quý", "vị", "và", "mọi", "người",
 )
@@ -137,9 +142,12 @@ func foldedPrefix(line, opener string) (int, bool) {
 func addressee(line string, from int) ([]string, int, bool) {
 	var names []string
 	end := from
-	// "Hello, Bob," puts a comma between the opener and the name.
-	if rest := strings.TrimLeft(line[end:], " \t"); strings.HasPrefix(rest, ",") {
+	// "Hello, Bob," and "Kính gửi: Anh Nam," put a separator between the
+	// opener and the name. A message that follows it closes the greeting there.
+	separated := -1
+	if rest := strings.TrimLeft(line[end:], " \t"); strings.HasPrefix(rest, ",") || strings.HasPrefix(rest, ":") {
 		end = len(line) - len(rest) + 1
+		separated = end
 	}
 	for end < len(line) {
 		rest := line[end:]
@@ -160,10 +168,13 @@ func addressee(line string, from int) ([]string, int, bool) {
 		named := nameWords(word)
 		initial, _ := utf8.DecodeRuneInString(word)
 		if word == "" || messageWords[FoldName(word)] || (len(named) > 0 && !unicode.IsUpper(initial)) {
+			if separated >= 0 && len(names) == 0 {
+				return names, separated, true
+			}
 			return names, end, false
 		}
 		end += start + width
-		if strings.Contains(word, ".") || (strings.HasSuffix(field, ".") && !last) {
+		if strings.Contains(word, ".") || (strings.HasSuffix(field, ".") && !last && abbreviated(word)) {
 			continue
 		}
 		names = append(names, named...)
@@ -172,6 +183,12 @@ func addressee(line string, from int) ([]string, int, bool) {
 		}
 	}
 	return names, end, true
+}
+
+// abbreviated reports a dotted word that does not end the greeting: an initial
+// ("J.") or a title ("Dr.", "Hr."). "Hi Bob. How are you" closes after Bob.
+func abbreviated(word string) bool {
+	return utf8.RuneCountInString(word) == 1 || addressForms[FoldName(word)]
 }
 
 // nameWords are the parts of a greeted word that are not an address form,

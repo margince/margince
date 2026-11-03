@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -36,7 +37,7 @@ func RequestRemainderGrounded(body, remaining string) bool {
 	}
 	// The greeting and the sign-off ask for nothing, so a quote of them alone
 	// grounds no remainder.
-	return values.Quoted(salutation.Strip(textlang.MessageOpening(body, utf8.RuneCountInString(body))), remaining)
+	return values.Quoted(salutation.Strip(textlang.MessageOpening(body, utf8.RuneCountInString(body))), norm.NFC.String(remaining))
 }
 
 // groundedRemainderTx is the remaining text a verdict may record, re-read
