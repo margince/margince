@@ -29,6 +29,7 @@ import {
 } from "./analytics.overview.context";
 import { DecisionSummary } from "./analytics.overview.decision";
 import { HeroAside } from "./analytics.overview.hero";
+import { InitiativePanel } from "./analytics.overview.initiative";
 import {
   InterventionPanel,
   useInterventions,
@@ -190,6 +191,12 @@ function SalesReviewBody({
           {(evaluation) => (
             <>
               {emptyNotice(evaluation.context.scope_holds_deals)}
+              {selection.initiative_id && (
+                <InitiativePanel
+                  selection={selection}
+                  onEvidence={openEvidence}
+                />
+              )}
               <QuarterNotes
                 evaluation={evaluation}
                 period={filters.period}

@@ -65,6 +65,7 @@ export function SalesHeader({
           <DimensionChips
             selection={selection}
             productLabel={evaluation?.context.product_label}
+            initiativeLabel={evaluation?.context.initiative_label}
             onChange={onChange}
           />
           <Badge>

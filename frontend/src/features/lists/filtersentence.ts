@@ -85,6 +85,7 @@ const REFERENCE_NOUN: Record<ReferenceKind, PluralBase> = {
   company: "filters.sentence.ref.company",
   tag: "filters.sentence.ref.tag",
   project: "filters.sentence.ref.project",
+  product: "filters.sentence.ref.product",
 };
 
 const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;

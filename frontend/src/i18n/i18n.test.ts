@@ -69,6 +69,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // so translating only these drill-through headers would split the vocabulary.
   "explain.col.record",
   "explain.col.pipeline",
+  "reporting.recordType.lead",
+  "reporting.recordType.deal",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
   // the vi catalog already carries it untranslated wherever it appears in a
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give
