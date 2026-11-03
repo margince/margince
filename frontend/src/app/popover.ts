@@ -2,17 +2,10 @@ import { type RefObject, useEffect } from "react";
 import { coveredByDialog } from "../design-system/dialogfocus";
 
 /**
- * Dismissal for a popover that owns the document while it is open.
- *
- * The listeners live on the document so Escape works from anywhere inside the
- * popover and any outside click closes it. The click listener is registered a
- * tick late, so the click that OPENED the popover does not immediately close it
- * again.
- *
- * One implementation, every popover in the chrome — the strip's account menu and
- * the theme flyout inside it, the agent dock at the foot of the content column,
- * and the phone menu: a second copy of this is how two popovers in the same
- * product end up dismissing differently.
+ * Dismissal for a popover that owns the document while it is open: Escape from
+ * anywhere, or a click outside. The click listener is registered a tick late, so
+ * the click that opened the popover does not close it again. Every popover in
+ * the chrome uses this one, so they all dismiss the same way.
  */
 export function usePopoverDismiss(
   open: boolean,
@@ -27,18 +20,10 @@ export function usePopoverDismiss(
       if (event.key !== "Escape" || coveredByDialog(panel.current)) {
         return;
       }
-      // One keystroke closes one layer. A row inside may open a layer of its
-      // own (the appearance choice does), and both dismissals listen on the
-      // document, so without this a single Escape would collapse the inner
-      // layer AND this one — leaving the reader two steps from where they were.
-      // The inner layer announces itself through a trigger that has EXPANDED a
-      // region it NAMES, and both halves are load-bearing. `aria-expanded`
-      // alone also matches the panel's own opener when that opener lives inside
-      // it — the phone menu's "More" is in the bar the menu grows out of, so
-      // a guard reading only the flag stood the menu down against itself and
-      // Escape stopped closing it at all. And what KIND of layer a trigger
-      // opens (a menu, a group of radios, a listbox) is the inner surface's
-      // business, so reading `aria-haspopup` stood down for one shape only.
+      // One keystroke closes one layer. An inner layer (the appearance choice)
+      // shows itself as a trigger with `aria-expanded` and `aria-controls`.
+      // Both are needed: the flag alone also matches the panel's own opener
+      // when it lives inside, and Escape would never close that panel.
       if (
         panel.current?.querySelector('[aria-expanded="true"][aria-controls]')
       ) {
@@ -46,11 +31,8 @@ export function usePopoverDismiss(
       }
       dismiss();
     };
-    // OUTSIDE clicks only. A listener that fired for every click dismissed the
-    // popover when the click was inside it — which, for a popover as large as
-    // the phone menu, meant its own account block closed the menu out from
-    // under the row being pressed. A click that should BOTH act and close (a
-    // destination, a settings link) says so at the call site.
+    // Outside clicks only: a press inside the popover acts on it. A click that
+    // should both act and close (a destination) says so at the call site.
     const onClick = (event: globalThis.MouseEvent) => {
       const target = event.target;
       if (target instanceof Node && panel.current?.contains(target)) {

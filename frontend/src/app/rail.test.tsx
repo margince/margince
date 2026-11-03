@@ -54,26 +54,10 @@ vi.mock("@composition/extensions", () => ({
   ],
 }));
 
-// B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
-//
-// It is destinations only: the canonical nav in order (AC-shell-1b —
-// Automations left it for Settings → AI while the filter builder took a row and
-// the duplicate queue is a lane inside Today, a UI divergence on the founder's
-// back-fill list), at most one active item tracking the route (AC-shell-2),
-// badges only on the attention screens and only from live counts (AC-shell-1e),
-// collapsed rows on the expanded rows' own geometry with a dismissible tooltip
-// (AC-shell-1d), and the phone bar with its More menu. It carries no search
-// row, no collapse control, no Settings door and no account block any more — each of those moved to the top bar
-// (topbar.test.tsx).
-//
-// The second suite is the panel's own DEPTH: a section route replaces the
-// destinations with that section's entries, one level at a time, with the way
-// back up in the panel. A few of those cases drive the whole Shell, because
-// where the reader walked down FROM is remembered above the rail and a rail on
-// its own always answers "brief".
-//
-// What the shell composes around this panel — the page title, the top bar's
-// mounting — is shell.test.tsx's, and sign-out is shell.signout.test.tsx's.
+// B-EP09.4 acceptance for the sidebar: the destinations in order, one active
+// row, badges, the collapsed tooltip, and the phone bar with its More menu.
+// The second suite is a section route, whose entries replace the destinations.
+// The shell around the panel is tested in shell.test.tsx.
 
 // Only what a level hides needs the shell's real stylesheet in the document
 // (see mountShellStyles); it outlives cleanup(), so it is taken down here.
@@ -491,10 +475,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(document.activeElement).toBe(more);
   });
 
-  // The menu takes focus when it opens, so dismissing it from INSIDE (Escape, a
-  // click outside) leaves focus on a row that is about to be gone. It goes back
-  // to the control that opened it rather than onto <body> — and only then: a rail
-  // that merely mounts with a row focused must keep that focus where it is.
+  // The menu took focus, so focus lost with it goes back to More, not to <body>.
   it("hands focus back to More when the menu is dismissed by Escape", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();

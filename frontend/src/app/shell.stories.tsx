@@ -632,30 +632,11 @@ export const ThirdLevel: Story = {
 };
 
 /**
- * A section at phone width, where the sidebar does NOT hand its bar over.
- *
- * The bar keeps its destinations plus More on a section route — handing them
- * to a section's entries lost the whole product's navigation and left two
- * controls floating in a card — so the section lives in the PAGE HEAD here: the
- * heading names it, and the switcher under the heading names the entry the reader
- * is on and opens the rest as a sheet.
- *
- * Rendered from the parts rather than through `Shell`, because the real settings
- * section is published from live grants: the rail and the head are both handed the
- * fixture, which is what keeps this a picture of the CHROME.
- *
- * The bar itself carries five glyphs and no captions — the agent, three tabs and
- * More. Every row keeps its name in `aria-label`, so nothing is lost to a screen
- * reader or a voice-control user; the words are simply not drawn at a size where
- * they would be legible, and the menu behind More is where they come back.
- *
- * One thing about the viewport tool is worth knowing before trusting a picture
- * of this: it is applied by the MANAGER, which resizes the preview iframe, and
- * these are viewport media queries — so a story opened as a bare `iframe.html`,
- * which is how the fe-uat capture gate renders, would get the harness's own width
- * and draw the SIDEBAR. `uat-phone` is what stops that: the gate reads the tag and
- * drives the browser itself to 390px. Without it every story named for a phone was
- * captured at 1024px, which is how three of them once shipped showing a sidebar.
+ * A section at phone width: the bar keeps its destinations, and the section
+ * lives in the page head, whose switcher opens the other entries. Rendered from
+ * the parts, because the real settings section comes from live grants.
+ * `uat-phone` makes the capture gate drive the browser to 390px; the viewport
+ * tool alone resizes only the manager's iframe.
  */
 function PhoneSectionExample() {
   const route: Route = { screen: "settings", id: "privacy" };
@@ -742,8 +723,8 @@ export const SectionSwitcherOpen: Story = {
 };
 
 /**
- * The More menu open over the bar on Analytics, a destination the bar does not
- * carry: the bar stays live, More reads Close, and the menu's own row is current.
+ * The More menu open over the bar on Analytics, which the bar does not carry.
+ * The bar stays live, More reads Close, and the menu's own row is current.
  */
 function PhoneMenuExample() {
   const route: Route = { screen: "analytics" };
@@ -799,25 +780,10 @@ export const PhoneMoreMenu: Story = {
 };
 
 /**
- * The phone bar, closed — three destinations, the agent, and More.
- *
- * Five cells of equal width, and only three of them are places to go. The middle
- * one is the agent, and everything about how it is drawn is one claim: it is a
- * different KIND of thing from the four glyphs around it. It rises out of the
- * bar's top edge in a round well of the bar's own material, it carries the only
- * lit object in the chrome, and it has no caption — the bar has no captions at
- * all, and a word under the one cell with room for one would read as a label for
- * the bar rather than for the agent. Its accessible name says the rest.
- *
- * The Worklist is what the bar gave up for that cell. It is a tap away in the
- * More menu, which is the same distance the other destinations already are.
- *
- * Position is load-bearing twice over. It is the CENTRE because the agent
- * belongs to the whole session rather than to any destination, so it stands
- * outside the row of them rather than at one end. And it is the third cell in
- * the DOM as well as on screen (app/navlevel.tsx renders it into the row stream),
- * so a thumb and a Tab key read the bar in the same order — a cell placed by a
- * grid column alone would have been third to the eye and last to the keyboard.
+ * The phone bar, closed: three destinations, the agent in the middle, and More.
+ * The agent is the centre cell because it belongs to the whole session, not to
+ * one destination. It is third in the DOM too, so a thumb and Tab read the bar
+ * in the same order.
  */
 function PhoneBarExample() {
   const route: Route = { screen: "home" };
@@ -856,24 +822,9 @@ export const PhoneBar: Story = {
 };
 
 /**
- * The agent's panel, open over the phone bar.
- *
- * The same panel the sidebar opens beside its own card, in the only place a
- * bottom bar leaves for it: above. Two things make it read as this cell's panel
- * rather than as a sheet that arrived from nowhere.
- *
- * It is MEASURED from the well, not from the cell behind it — the well rises
- * clear of the bar, and a frame taken from the cell would open the panel across
- * the orb it belongs to. And it carries a notch that points back down at that
- * well, drawn on the portalled wrapper rather than on the panel, because the
- * panel scrolls its own body and would clip anything outside it. The notch's x
- * is the measured middle of the well, so it still lands if the bar's cells ever
- * stop being even.
- *
- * There is no scrim. This is a popover, not the More menu: the page behind it
- * stays live and readable, an outside tap or Escape closes it, and focus goes
- * back to the orb. A dimmed page would claim the reader has to answer something
- * before carrying on, and there is nothing here to answer.
+ * The agent's panel, open over the phone bar and measured from the well, with a
+ * notch pointing back at it. There is no scrim: this is a popover, and the page
+ * behind it stays live.
  */
 export const PhoneAgentPanel: Story = {
   name: "phone — the agent's panel over the bar",

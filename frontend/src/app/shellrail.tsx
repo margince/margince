@@ -149,16 +149,9 @@ export function WorkspaceRail({
   const closeMenu = useCallback(() => setOpenAt(undefined), []);
   usePopoverDismiss(menuOpen, menu, closeMenu);
 
-  // Which of the route's levels the panel shows, and the two ways the reader
-  // moves between them (app/navlevel.tsx). A section's entries take over the
-  // panel rather than hanging off the destinations. 56px cannot carry two
-  // levels, and 256px carrying both reads as a list of twenty places to go.
-  //
-  // At phone width the panel is a bottom bar of destinations, and it
-  // keeps them on a section route. A bar that gave its tabs to a section
-  // would lose every destination and hold two controls. There the section is
-  // reached from the page head (app/sectionswitcher.tsx), so no section is
-  // walked into here.
+  // A section's entries take over the panel, one level at a time. The phone
+  // bar keeps its destinations on a section route, which is reached from the
+  // page head there (app/sectionswitcher.tsx).
   const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
 
   // The menu takes focus, or Tab walks a page nobody can see; focus it took down
@@ -193,17 +186,9 @@ export function WorkspaceRail({
     }
   }, [menuOpen, phone]);
 
-  // A scrim that only looks blocking is the worst of both worlds: the page it
-  // dims stays reachable by Tab and by a screen reader. `inert` on the content
-  // column takes it out of the tab order, the accessibility tree and pointer
-  // reach in one attribute. That is the guarantee <dialog> gives, and this nav
-  // cannot become one without giving up its landmark. The body stops scrolling
-  // for the same reason: a touch on the scrim should dismiss, not scroll.
-  //
-  // The skip link goes inert with it. It is a sibling of the nav, not a child
-  // of the column. So Tab past the bar's last cell wrapped onto it, drew it
-  // over the scrim, and pointed at an inert element. That is a control that
-  // takes focus, shows itself, and does nothing.
+  // `inert` takes the dimmed page out of Tab, the accessibility tree and pointer
+  // reach. The skip link sits outside `.main`, so it goes inert too, and the
+  // body stops scrolling so a touch on the scrim dismisses.
   useEffect(() => {
     if (!menuOpen) {
       return;
