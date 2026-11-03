@@ -452,6 +452,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
   and the shard profiles cannot reach them.
+- **`extension-reference` runs only the cached unit pass.** `./gates` already reads the reference
+  fixture under `fixtures/extensions/` in `deterministic-gates`, so a second run here finds nothing new.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
   the slow `e2e` tests work through its part without running minutes past its siblings.
 - **`integration unit coverage`** exists because the shards run just the packages tagged for
