@@ -22,8 +22,8 @@ rule, `Store.pagePaused`, decides whether a standing page is open: switched on, 
 `none`. The guest profile, the free-time read, both booking reads and the link card ask it.
 
 The guest profile of a paused page answers the host's name and `paused: true`, so the guest page
-can say whose page is closed. Every other field holds a neutral value and shows nothing about the
-calendar. The free-time read and the
+can say whose page is closed. Every other field is empty, zero or false, and shows nothing about
+the calendar. The free-time read and the
 booking call answer as for an unknown slug, before any body is read, because the slug is the
 capability. Only a retry of a booking the page already took is answered, since that caller holds
 its own key. A proposal is paused by its calendar only, not by the standing page's switch.
