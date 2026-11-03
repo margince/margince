@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -72,7 +73,7 @@ func loggedOurSide(ctx context.Context, in LogActivityInput) ids.UUID {
 	if in.Author.AuthorID != nil {
 		return *in.Author.AuthorID
 	}
-	if in.Author.AuthorName != nil {
+	if in.Author.AuthorName != nil || isImportedActivity(in) {
 		return ids.Nil
 	}
 	actor, ok := principal.Actor(ctx)
@@ -83,6 +84,10 @@ func loggedOurSide(ctx context.Context, in LogActivityInput) ids.UUID {
 		return ids.Nil
 	}
 	return actor.UserID
+}
+
+func isImportedActivity(in LogActivityInput) bool {
+	return in.SourceSystem != nil && provenance.ImporterNamespace(*in.SourceSystem)
 }
 
 // loggedStamp is what one logged interaction says about who was in it.
