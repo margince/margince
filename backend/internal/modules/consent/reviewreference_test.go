@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // A refused send names each refused address with its own reason, so a sender
@@ -42,5 +43,31 @@ func TestARefusalWithoutAReviewCarriesNoReasons(t *testing.T) {
 	refusal := &SendRefusedError{Refusals: []RefusedRecipient{{Address: "ana@example.test", ReasonCode: commsauthz.ReasonObjection}}}
 	if got := refusal.FaultReference(); got != nil {
 		t.Errorf("reference without a review = %#v, want nil", got)
+	}
+}
+
+// A deny the rollout mode only records did not stop the send, so the sender is
+// not told about it. An absolute reason stops it under any mode.
+func TestOnlyTheRecipientsThatStoppedTheSendAreNamed(t *testing.T) {
+	decision := func(email, reason string, verdict commsauthz.Verdict, mode commsauthz.Mode) commsauthz.Decision {
+		return commsauthz.Decision{
+			Recipient: connector.Recipient{Email: email}, Verdict: verdict,
+			ReasonCode: reason, Mode: mode, Resolved: commsauthz.CategoryMarketing,
+		}
+	}
+	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		decision("observed@example.test", commsauthz.ReasonNoMarketingConsent, commsauthz.VerdictDeny, commsauthz.ModeObserve),
+		decision(" Enforced@Example.test", commsauthz.ReasonNoMarketingConsent, commsauthz.VerdictDeny, commsauthz.ModeEnforce),
+		decision("objected@example.test", commsauthz.ReasonObjection, commsauthz.VerdictDeny, commsauthz.ModeObserve),
+		decision("allowed@example.test", commsauthz.ReasonAllowed, commsauthz.VerdictAllow, commsauthz.ModeEnforce),
+	}}
+
+	var got []string
+	for _, r := range BlockingRefusals(set) {
+		got = append(got, r.Address)
+	}
+	want := []string{"enforced@example.test", "objected@example.test"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("blocking refusals = %v, want %v; a deny under observe did not stop the send", got, want)
 	}
 }

@@ -244,23 +244,40 @@ func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
 	}
 	out := make([]RefusedRecipient, 0, len(denied))
 	for _, d := range denied {
-		refusal := RefusedRecipient{
-			// NORMALIZED ON THE WAY IN, because the erasure sweeps match on it.
-			// An address stored with the whitespace or the casing a caller
-			// typed is one a lowercased, trimmed comparison walks past — and
-			// what it walks past is an erased subject's mailbox.
-			Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
-			SubjectKind: d.SubjectKind,
-			ReasonCode:  d.ReasonCode,
-			Category:    string(d.Resolved),
-			PurposeID:   d.PurposeID,
-		}
-		if !d.SubjectID.IsZero() {
-			refusal.SubjectID = d.SubjectID.String()
-		}
-		out = append(out, refusal)
+		out = append(out, refusedRecipientOf(d))
 	}
 	return out
+}
+
+// BlockingRefusals is the refused recipients whose answer actually stopped the
+// send. A deny the rollout mode only records did not stop it, so a sender told
+// about it would hunt for a cause that changed nothing.
+func BlockingRefusals(set commsauthz.DecisionSet) []RefusedRecipient {
+	var out []RefusedRecipient
+	for _, d := range set.Denied() {
+		if d.WouldRefuse(d.Mode) {
+			out = append(out, refusedRecipientOf(d))
+		}
+	}
+	return out
+}
+
+func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
+	refusal := RefusedRecipient{
+		// NORMALIZED ON THE WAY IN, because the erasure sweeps match on it.
+		// An address stored with the whitespace or the casing a caller
+		// typed is one a lowercased, trimmed comparison walks past — and
+		// what it walks past is an erased subject's mailbox.
+		Address:     strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
+		SubjectKind: d.SubjectKind,
+		ReasonCode:  d.ReasonCode,
+		Category:    string(d.Resolved),
+		PurposeID:   d.PurposeID,
+	}
+	if !d.SubjectID.IsZero() {
+		refusal.SubjectID = d.SubjectID.String()
+	}
+	return refusal
 }
 
 // stateFor decides which kind of work this refusal is.
