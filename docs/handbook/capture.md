@@ -364,32 +364,14 @@ member. "Applies from the next message. Messages already captured stay."
 company for. Each shows what decided it: an AI model, a fixed rule, or a human. Letting a domain
 back in asks the company question again.
 
-**Company questions** (Worklist → Decisions): when Margince cannot tell which company a contact
-works for, it asks the colleague whose mail brought the address in. The row asks about the contact,
-for example "Which company does Alex Example work for?". It says why Margince asks: the website
-could not be read, the website was read and names no company, the website redirects to another
-website, or the website reads like a mail or hosting vendor. A contact you may not see is counted
-and never named.
+**Company questions** (Worklist → Decisions): Margince asks which company a contact works for when
+it cannot tell. The row names the contact and says why. The website could not be read, named no
+company, sent you on to another website, or looks like a mail provider. Hidden contacts are counted,
+never named. Margince suggests a company only when one company you can see fits, and no second one. **Confirm
+company** makes it the company of the contacts on the domain; contacts at another company keep theirs.
 
-Margince suggests a company only when one company you can see fits the evidence and no second one
-does. It fits when the website redirects to a domain that company owns, when a sender already works
-there, or when it has the same name the website states. **Confirm company** links the domain to that company and makes it the employer of the contacts on
-the domain. A contact already at another company keeps that company. The line beside the button says
-how many contacts get the company. Nothing is linked until you confirm. A redirect alone never creates or matches a company.
-
-**Choose another** (or **Choose company** when nothing is suggested) opens that one question. It
-shows the contacts and the email that raised it, a company search, and **Create company** where the
-evidence allows one. **Retry site read** leaves the question open and asks again. For a vendor,
-**Keep as vendor** creates nothing, and later mail does not ask again. **Website details** holds the
-answering website, the redirects and the date of the newest evidence.
-
-**Stop capturing in your mailboxes** stops saving mail from the domain for the mailboxes you
-connected. Mail already saved stays. It does not answer the company question for anyone else.
-
-**Not now** takes the question off your list without answering it. New mail from the domain brings
-it back. The **Company questions** button in Worklist → Decisions opens every question you hold,
-including the ones you put off; **Return to Review** puts one back on your list. A colleague's
-question stays as it was.
+**Choose another** opens the question with a company search and **Create company**. **Not now** puts
+it off until new mail arrives. **Stop capturing in your mailboxes** stops saving mail from the domain.
 
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
