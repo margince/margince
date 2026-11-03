@@ -146,11 +146,13 @@ func TestPausedBookingPreviewNamesNobody(t *testing.T) {
 		t.Fatalf("paused preview: %d %s", response.Code, body)
 	}
 	expectNoMarginceOrHost(t, body)
-	// The guest's own page answers as an unknown slug, naming nobody.
+	// The guest's own page still shows who the paused page belongs to, and
+	// nothing about the calendar behind it.
 	profile := httptest.NewRecorder()
 	server.ServeHTTP(profile, httptest.NewRequest(http.MethodGet, "/v1/public/booking/"+slug+"/profile", nil))
-	if profile.Code != http.StatusNotFound || strings.Contains(profile.Body.String(), "Ada") {
-		t.Fatalf("paused profile: %d %s", profile.Code, profile.Body.String())
+	body = profile.Body.String()
+	if profile.Code != http.StatusOK || !strings.Contains(body, "Ada") || !strings.Contains(body, `"paused":true`) || strings.Contains(body, "enabled") {
+		t.Fatalf("paused profile: %d %s", profile.Code, body)
 	}
 }
 

@@ -16,9 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// A booking slug is the capability, so a paused page must not confirm that it
-// exists. Every public read and write on it answers as an unknown slug does,
-// with the same status and body, whatever the body sent.
+// A booking slug is the capability. On a paused page the availability read
+// and the booking call answer as an unknown slug does. Status and body match,
+// whatever the body sent. Only the profile differs, by design. It
+// tells the guest whose page is paused, and nothing more.
 func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
 	e := apptest.SetupBookingApp(t)
 	paused := bookingSlug(t, e)
@@ -34,7 +35,6 @@ func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
 	complete := `{"start":"` + slot.Format(time.RFC3339) + `","end":"` + slot.Add(30*time.Minute).Format(time.RFC3339) +
 		`","booker":{"name":"Guest","email":"guest@example.test"},"consent":{"policy_version":"v1","wording":"ok"}}`
 	for name, call := range map[string]struct{ method, path, body string }{
-		"profile":         {http.MethodGet, "/profile", ""},
 		"availability":    {http.MethodGet, window, ""},
 		"malformed body":  {http.MethodPost, "", `{"start":`},
 		"incomplete body": {http.MethodPost, "", `{}`},
@@ -51,6 +51,10 @@ func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
 				t.Errorf("paused answered %d, want 404", pausedStatus)
 			}
 		})
+	}
+	status, body := rawPublicCall(t, e, http.MethodGet, "/v1/public/booking/"+paused+"/profile", "")
+	if status != http.StatusOK || !strings.Contains(body, `"paused":true`) || strings.Contains(body, "enabled") || strings.Contains(body, "video_app") {
+		t.Errorf("the paused profile answered %d %s, want host_name and paused only", status, body)
 	}
 }
 

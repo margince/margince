@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,16 +31,30 @@ func savePage(t *testing.T, f *invitationFixture, enabled bool) crmcontracts.Sch
 	return saved
 }
 
-func publicProfileStatus(t *testing.T, f *invitationFixture, slug string) int {
+// guestProfile is the public profile body, as a guest's browser reads it.
+func guestProfile(t *testing.T, f *invitationFixture, slug string) map[string]any {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	Handlers{store: f.store}.GetPublicSchedulingProfile(rec, httptest.NewRequest(http.MethodGet, "/profile", nil).WithContext(f.ctx), slug)
-	return rec.Code
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || rec.Code != http.StatusOK {
+		t.Fatalf("public profile: %d %s", rec.Code, rec.Body.String())
+	}
+	return body
+}
+
+// assertPausedForGuest holds that a paused page tells its guest whose page it
+// is and that it is paused, and nothing about the calendar behind it.
+func assertPausedForGuest(t *testing.T, body map[string]any) {
+	t.Helper()
+	if len(body) != 2 || body["paused"] != true || body["host_name"] == "" {
+		t.Errorf("a paused page told its guest %v, want only host_name and paused", body)
+	}
 }
 
 // A page saved before the profile existed names no calendar. The host reads
-// it as blocked for want of one, and a guest reads it as an unknown page.
-func TestAPageWithNoCalendarIsBlockedForTheHostAndHiddenFromTheGuest(t *testing.T) {
+// it as blocked for want of one, and its guest reads it as paused.
+func TestAPageWithNoCalendarIsBlockedForTheHostAndPausedForTheGuest(t *testing.T) {
 	f := newInvitationFixture(t)
 	saved := savePage(t, f, true)
 	if _, err := f.env.owner.Exec(f.ctx, `UPDATE booking_page SET scheduling_policy = NULL WHERE host_user_id = $1`, f.env.rep); err != nil {
@@ -52,9 +67,7 @@ func TestAPageWithNoCalendarIsBlockedForTheHostAndHiddenFromTheGuest(t *testing.
 	if profile.Blocker == nil || *profile.Blocker != crmcontracts.SchedulingProfileBlockerNoCalendar {
 		t.Errorf("blocker = %v, want no_calendar", profile.Blocker)
 	}
-	if code := publicProfileStatus(t, f, *saved.Slug); code != http.StatusNotFound {
-		t.Errorf("a page with no calendar answered its guest %d, want 404", code)
-	}
+	assertPausedForGuest(t, guestProfile(t, f, *saved.Slug))
 }
 
 // A switched-on page whose calendar cannot take bookings is paused for its
@@ -62,8 +75,8 @@ func TestAPageWithNoCalendarIsBlockedForTheHostAndHiddenFromTheGuest(t *testing.
 func TestAPageIsPausedForItsGuestWhenItsCalendarIsBlocked(t *testing.T) {
 	f := newInvitationFixture(t)
 	saved := savePage(t, f, true)
-	if code := publicProfileStatus(t, f, *saved.Slug); code != http.StatusOK {
-		t.Fatalf("a live page answered %d", code)
+	if live := guestProfile(t, f, *saved.Slug); live["paused"] != false || live["enabled"] != true {
+		t.Fatalf("a live page reads %v", live)
 	}
 	f.calendar.checkErr = connector.ErrAuthRejected
 	profile, err := f.store.SchedulingProfile(f.ctx)
@@ -73,9 +86,7 @@ func TestAPageIsPausedForItsGuestWhenItsCalendarIsBlocked(t *testing.T) {
 	if profile.Blocker == nil || *profile.Blocker != crmcontracts.SchedulingProfileBlockerCalendarUnavailable {
 		t.Errorf("blocker = %v, want calendar_unavailable", profile.Blocker)
 	}
-	if code := publicProfileStatus(t, f, *saved.Slug); code != http.StatusNotFound {
-		t.Errorf("a page with an unusable calendar answered its guest %d, want 404", code)
-	}
+	assertPausedForGuest(t, guestProfile(t, f, *saved.Slug))
 }
 
 // The second read inside the booking answers a page paused since the first

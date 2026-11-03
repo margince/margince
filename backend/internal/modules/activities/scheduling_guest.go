@@ -43,15 +43,21 @@ func (s *Store) ResolveMeetingToken(ctx context.Context, token string) (ids.UUID
 	return id, host, err
 }
 
-// GetPublicSchedulingProfile returns the host-approved public identity and meeting policy.
+// GetPublicSchedulingProfile returns the host-approved public identity and
+// meeting policy. A paused page answers only whose page it is.
 func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, slug string) {
 	page, err := h.store.ResolveBookingPage(r.Context(), slug)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	profile, ok := h.openBookingPage(w, r, page)
-	if !ok {
+	profile, open := h.store.openForBooking(r.Context(), page)
+	if open.err != nil {
+		writeStoreErr(w, r, open.err)
+		return
+	}
+	if open.paused {
+		httperr.WriteJSON(w, http.StatusOK, pausedPublicProfile(profile))
 		return
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)

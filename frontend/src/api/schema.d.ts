@@ -37815,16 +37815,21 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        /**
+         * @description A guest's view of a booking page. A paused page answers `host_name` and `paused: true` and
+         *     nothing else, so the guest is told who is not taking bookings and learns nothing about the
+         *     calendar behind the page. Every other field is present on a page that takes bookings.
+         */
         PublicSchedulingProfile: {
             host_name: string;
-            company_name: string;
+            company_name?: string;
             /** @description Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
-            title: string;
-            location: string;
-            duration_minutes: number;
-            enabled: boolean;
-            /** @description True when the page takes no bookings now: the host turned bookings off or never connected a calendar. The availability and booking calls answer 404 while it is paused. */
+            title?: string;
+            location?: string;
+            duration_minutes?: number;
+            enabled?: boolean;
+            /** @description True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page. */
             paused: boolean;
             /**
              * @description Present when new meetings get a video call link from the host's calendar.

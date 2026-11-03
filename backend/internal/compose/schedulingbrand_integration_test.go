@@ -76,7 +76,7 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	if err := json.Unmarshal(guest.Body.Bytes(), &public); err != nil {
 		t.Fatal(err)
 	}
-	if guest.Code != http.StatusOK || public.CompanyName != "New anchor name" || !public.Enabled {
+	if guest.Code != http.StatusOK || public.CompanyName == nil || *public.CompanyName != "New anchor name" || public.Enabled == nil || !*public.Enabled {
 		t.Fatalf("public profile did not follow the anchor or changed its open status: %d %+v", guest.Code, public)
 	}
 	if _, err := e.Contacts.ClearCompanyLogo(e.Admin(), contacts.LogoWide); err != nil {
@@ -168,7 +168,7 @@ func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &public); err != nil {
 		t.Fatal(err)
 	}
-	if response.Code != http.StatusOK || public.Profile.CompanyName != "Acme GmbH" || public.Profile.LogoUrl == nil || *public.Profile.LogoUrl != "https://crm.example.test/v1/public/booking/company-logo" {
+	if response.Code != http.StatusOK || (public.Profile.CompanyName == nil || *public.Profile.CompanyName != "Acme GmbH") || public.Profile.LogoUrl == nil || *public.Profile.LogoUrl != "https://crm.example.test/v1/public/booking/company-logo" {
 		t.Fatalf("proposal brand: %d %+v", response.Code, public.Profile)
 	}
 }

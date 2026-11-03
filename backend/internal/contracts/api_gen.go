@@ -53126,6 +53126,10 @@ type PublicMeetingProposal struct {
 		End   time.Time `json:"end"`
 		Start time.Time `json:"start"`
 	} `json:"options"`
+
+	// Profile A guest's view of a booking page. A paused page answers `host_name` and `paused: true` and
+	// nothing else, so the guest is told who is not taking bookings and learns nothing about the
+	// calendar behind the page. Every other field is present on a page that takes bookings.
 	Profile PublicSchedulingProfile `json:"profile"`
 	Used    bool                    `json:"used"`
 }
@@ -53147,20 +53151,22 @@ type PublicOriginStatus struct {
 	Reachable *bool `json:"reachable,omitempty"`
 }
 
-// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+// PublicSchedulingProfile A guest's view of a booking page. A paused page answers `host_name` and `paused: true` and
+// nothing else, so the guest is told who is not taking bookings and learns nothing about the
+// calendar behind the page. Every other field is present on a page that takes bookings.
 type PublicSchedulingProfile struct {
-	CompanyName     string `json:"company_name"`
-	DurationMinutes int    `json:"duration_minutes"`
-	Enabled         bool   `json:"enabled"`
-	HostName        string `json:"host_name"`
-	Location        string `json:"location"`
+	CompanyName     *string `json:"company_name,omitempty"`
+	DurationMinutes *int    `json:"duration_minutes,omitempty"`
+	Enabled         *bool   `json:"enabled,omitempty"`
+	HostName        string  `json:"host_name"`
+	Location        *string `json:"location,omitempty"`
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
 
-	// Paused True when the page takes no bookings now: the host turned bookings off or never connected a calendar. The availability and booking calls answer 404 while it is paused.
-	Paused bool   `json:"paused"`
-	Title  string `json:"title"`
+	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
+	Paused bool    `json:"paused"`
+	Title  *string `json:"title,omitempty"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`

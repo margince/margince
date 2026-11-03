@@ -80,6 +80,11 @@ export function BookingGuestScreen({
       ...value,
       host_name: value.host_name ?? "",
       company_name: value.company_name ?? "",
+      // A paused page answers only its host's name; the rest reads as empty.
+      title: value.title ?? "",
+      location: value.location ?? "",
+      duration_minutes: value.duration_minutes ?? 0,
+      enabled: value.enabled ?? false,
       proposal: "proposal" in value ? value.proposal : null,
       video_app: videoAppOf(value, preview),
       // A used proposal turns enabled off; the server's paused answers its
