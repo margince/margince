@@ -89,14 +89,9 @@ export type TimelineEntry = {
    */
   direction?: "inbound" | "outbound" | null;
   /**
-   * Which side WROTE it, when that is known: `ours` is a colleague, `theirs`
-   * is the other side. Distinct from `direction`, which is only how the
-   * message travelled: a colleague's mail captured as an inbound copy is
-   * still ours, and a contact's reply stored with an outbound transport is
-   * still theirs. The activity adapter fills it from the shared rule
-   * (lib/messagevoice.ts correspondenceSide, the frontend twin of
-   * activities.WroteItOurSide). Absent means fall back to `direction`; see
-   * sideOf.
+   * Which side wrote it, when known. `direction` is only how the copy moved.
+   * A colleague's inbound copy is still `ours`. The adapter fills it from
+   * correspondenceSide (lib/messagevoice.ts); absent falls back to direction.
    */
   side?: "ours" | "theirs";
   /**
@@ -256,11 +251,8 @@ export const TIMELINE_ICON = {
 // get. A mail we did not write is not a place to render a friendly label over
 // a different address.
 
-// sideOf answers which side wrote an entry. Known authorship wins; transport
-// direction answers only for an entry that carries no side, the same order
-// correspondenceSide uses. Every authorship reading on the timeline (the
-// spine side, a thread's lead and mark, the per-side counts) goes through
-// here, so no surface reads raw direction as authorship.
+// sideOf answers which side wrote an entry: known authorship first, then
+// transport direction. Every authorship reading on the timeline goes through it.
 export function sideOf(entry: TimelineEntry): "ours" | "theirs" | undefined {
   if (entry.side) {
     return entry.side;

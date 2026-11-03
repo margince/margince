@@ -7,15 +7,6 @@ package contact360
 // one statement. The page's last-touch section is this over a set of one; the
 // ranked queue asks it for every contact a page names. One reader, so the row
 // a rep acts on and the record it opens cannot disagree about who wrote last.
-//
-// It reads the caller's own correspondence: the messages whose content the
-// caller may open. These dates drive personal follow-up advice — the
-// Overview dates, the relationship wording, the gone-quiet card and the same
-// reader's Worklist rows — so a reply the reader can open must count, and a
-// reply the reader cannot open must not. The shared metrics are a different
-// reading on purpose: relationship strength (contacts/strength.go) and the
-// colleague graph count only what the whole workspace may see
-// (auth.AudienceWorkspaceOnly), because every colleague reads the same number.
 
 import (
 	"context"
@@ -37,16 +28,13 @@ import (
 )
 
 // LastTouch is when they last wrote to us and when we last wrote to them. Nil
-// on either side means no message the caller can open records it, not that
-// the answer was withheld: a withheld answer is a refusal from LastTouchFor,
-// never a zero in its map.
+// means no message the caller can open records it. A withheld answer is a
+// refusal from LastTouchFor, never a zero in its map.
 type LastTouch struct {
 	InboundAt  *time.Time
 	OutboundAt *time.Time
-	// The rows behind InboundAt, OutboundAt and LiveInboundAt, picked by the
-	// same statement. Evidence cites these ids rather than matching a time
-	// against the capped timeline page: two rows can share a time, and the
-	// row may sit past the first page.
+	// The rows the statement picked for those times. Evidence cites them by id:
+	// two rows can share a time, and a row may sit past the timeline page.
 	InboundID, OutboundID, LiveInboundID *ids.UUID
 	// LiveInboundAt is InboundAt without the email an import brought in as
 	// history. Only the re-engaged suggestion reads it; every other consumer
@@ -87,16 +75,9 @@ func dated(at *time.Time, precision string) *occurredday.Moment {
 	return &occurredday.Moment{At: *at, DateOnly: occurredday.IsDay(precision)}
 }
 
-// lastTouchSection reads the two directions separately. Folding them into
-// one "last touch" hides the only distinction a reader acts on: a contact
-// we mailed a fortnight ago with no reply and one who wrote to us this
-// morning have the same last-touch date and opposite meanings.
-//
-// The set reader over a set of one: this page and a queue row naming the same
-// contact are answered by the statement in lasttouch.go, under the same
-// scopes. Both count the messages the caller can open (last_touch_basis), the
-// same rows the History tab lets this reader open. The record read above already admitted the contact, so the set
-// reader's own row scope narrows nothing here.
+// lastTouchSection reads the two directions separately, because which side
+// wrote last is what a reader acts on. It is LastTouchFor over a set of one,
+// so this page and a Worklist row naming the contact cannot disagree.
 func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
 	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
 	if err != nil {
@@ -150,13 +131,11 @@ func wireActivityID(id *ids.UUID) *openapi_types.UUID {
 // a calendar invitation, a sending system's notice or the product's own mail
 // is nobody writing.
 //
-// The caller's content gate, not the workspace-only aggregate rule: a reply
-// the caller may open is evidence for the caller's own follow-up advice, so a
-// participant on a private thread sees it counted and a colleague outside
-// that thread sees exactly what they saw before. Discovering that a
-// row exists is not enough; the caller must be able to read it, so a row
-// shown only as withheld moves no date. The system principal has no reader to
-// answer for, and reads the workspace-only basis instead.
+// It counts the messages whose content the caller may open. These dates drive
+// one reader's follow-up advice, so a reply that reader can open counts and
+// one they cannot open does not. A row they may only discover moves no date.
+// Shared numbers (strength, the colleague graph) use auth.AudienceWorkspaceOnly
+// instead, because every colleague must read the same number.
 func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, opts AssembleOptions) (map[ids.ContactID]LastTouch, error) {
 	if err := requireRead(ctx, "activity"); err != nil {
 		return nil, err
@@ -178,9 +157,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	if visible == "" {
 		visible = scopeAll
 	}
-	// The content gate runs once, over every activity a wanted contact is on,
-	// and each direction tests membership in that set: a copy of the gate per
-	// direction is planned separately and held by the pooled connection.
+	// One copy of the content gate for all directions. Postgres plans each
+	// copy, and the pooled connection keeps that memory.
 	readable, err := auth.ContentReadableActivitiesSQL(ctx, fmt.Sprintf(`
 		SELECT l.activity_id FROM activity_link l WHERE l.contact_id = ANY($%[1]d)
 		UNION ALL
@@ -250,9 +228,8 @@ func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, o
 	return rows.Err()
 }
 
-// readerlessBasis narrows the reading to workspace-visible rows when no human
-// reads it. The content gate reads every audience for the system principal,
-// and a date computed for nobody must not count a private message.
+// readerlessBasis narrows the system principal to workspace-visible rows. The
+// content gate admits every audience for it, and nobody reads its dates.
 func readerlessBasis(ctx context.Context) string {
 	if p, ok := principal.Actor(ctx); ok && p.Type == principal.PrincipalSystem {
 		return auth.AudienceWorkspaceOnly("a")

@@ -84,10 +84,9 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 	}
 }
 
-// TestAHeldMessageDoesNotMoveLastTouch drives the real contact360.Service —
-// the composite read GET /contacts/{id}/360 serves — through lastTouchSection.
-// The dates count the messages the caller can open, so a held message the
-// caller is not in the audience of must not move them, even for an admin.
+// TestAHeldMessageDoesNotMoveLastTouch drives the real contact360.Service, the
+// read behind GET /contacts/{id}/360. The dates count the messages the caller
+// can open, so a held message outside the caller's audience must not move them.
 func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedLinkedContact(t, e, "spaet@kanzlei.example")

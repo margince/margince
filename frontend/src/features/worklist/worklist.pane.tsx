@@ -199,10 +199,7 @@ function ContactFacts({
 // "Never" is a reading rather than a gap: a customer nobody has ever answered
 // is the strongest case on the page for answering now, and an em dash would
 // leave the reader to guess whether the fact was missing or the silence real.
-//
-// A contact's pair counts the messages this reader can open (the contact
-// page's last_touch_basis), so its absence says that rather than "Never".
-// An account's pair is the company page's workspace reading.
+// A contact's pair counts only what this reader can open (last_touch_basis).
 function spoken(
   at: string | null | undefined,
   precision: OccurredPrecision,

@@ -182,13 +182,8 @@ func (said momentCopy) bookMeeting() crmcontracts.ContactMomentAction {
 	}
 }
 
-// inboundEvidence cites the message the last-touch query picked, by its id.
-//
-// The id comes from the same statement that picked the date
-// (Contact360.last_live_inbound_activity_id), never from matching a time
-// against the capped timeline page: two rows can share a time, and the newest
-// inbound may sit past the first page. A citation that names the row keeps the
-// link and the dismissal fingerprint stable however the timeline pages.
+// inboundEvidence cites the row the last-touch query picked, by id. A time
+// match against the capped timeline could pick a twin or miss the row.
 func (said momentCopy) inboundEvidence(page *crmcontracts.Contact360, inbound time.Time, precision *crmcontracts.OccurredPrecision) crmcontracts.ContactMomentEvidence {
 	return directionEvidence(page, inbound, precision, page.LastLiveInboundActivityId, said.Say(momentWords.TheirMessage))
 }
@@ -200,9 +195,8 @@ func (said momentCopy) outboundEvidence(page *crmcontracts.Contact360, outbound 
 	}
 }
 
-// directionEvidence names the cited row. The subject is borrowed from the
-// timeline page when that row is on it; otherwise the label says what the row
-// is, and the id still opens it.
+// directionEvidence names the cited row. Its subject comes from the timeline
+// page when the row is there; the id opens it either way.
 func directionEvidence(page *crmcontracts.Contact360, at time.Time, precision *crmcontracts.OccurredPrecision, id *openapi_types.UUID, fallback string) crmcontracts.ContactMomentEvidence {
 	evidence := crmcontracts.ContactMomentEvidence{
 		Type:              crmcontracts.ContactMomentEvidenceTypeActivity,

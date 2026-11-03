@@ -11,9 +11,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// A follow-up card cites the row the last-touch query picked, by id. A
-// timeline row at the same instant is a different message and must not be
-// cited; the picked row need not be on the timeline page at all.
+// A follow-up card cites the row the last-touch query picked, by id. A row at
+// the same instant is another message. The picked row may be off the page.
 func TestTheFollowUpCardCitesThePickedRowNotATimeMatch(t *testing.T) {
 	sent := now.AddDate(0, 0, -20)
 	picked := openapi_types.UUID{1}
