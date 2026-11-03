@@ -1339,6 +1339,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.addRecord": "Thêm",
   "reporting.searchRecords": "Tìm bản ghi",
   "reporting.noMatchingRecords": "Không có bản ghi khớp",
+  "reporting.typeToFindRecord": "Nhập tên để tìm",
   "reporting.pickExplains":
     "Chọn một deal không ghi danh mọi liên hệ ở công ty đó. Lead giữ nguyên lịch sử chuyển đổi.",
   "reporting.memberCounts":

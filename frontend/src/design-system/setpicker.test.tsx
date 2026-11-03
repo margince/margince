@@ -20,10 +20,12 @@ function Picker({
   options = TEAMS,
   initial = [],
   onCreate,
+  search,
 }: Readonly<{
   options?: SetPickerOption[];
   initial?: string[];
   onCreate?: (name: string) => void;
+  search?: (term: string) => Promise<readonly SetPickerOption[]>;
 }>) {
   const [values, setValues] = useState(initial);
   return (
@@ -39,6 +41,7 @@ function Picker({
       doneLabel="Done"
       empty="Type a name to create the first team."
       removeLabel={(item) => `Remove from ${item.label}`}
+      search={search}
       create={
         onCreate && { label: (name) => `Create team “${name}”`, onCreate }
       }
@@ -104,6 +107,38 @@ describe("SetPicker", () => {
     expect(
       screen.getByText("Type a name to create the first team."),
     ).toBeTruthy();
+  });
+
+  it("asks the server for a typed term and keeps the name of a value ticked from its answer", async () => {
+    const user = userEvent.setup();
+    const search = vi.fn(async (term: string) =>
+      term === "iberia" ? [{ value: "t9", label: "Iberia Sales" }] : [],
+    );
+    render(<Picker options={[TEAMS[0]]} initial={["t1"]} search={search} />);
+    await user.click(screen.getByRole("button", { name: /Add teams/ }));
+    await user.type(screen.getByRole("searchbox"), "iberia");
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Iberia Sales/ }),
+    );
+    expect(search).toHaveBeenLastCalledWith("iberia");
+    await user.clear(screen.getByRole("searchbox"));
+    expect(tokens()).toEqual(["DACH Sales", "Iberia Sales"]);
+    await user.type(screen.getByRole("searchbox"), "nordics");
+    expect(await screen.findByText("No team matches.")).toBeTruthy();
+  });
+
+  it("says a search failed rather than that nothing matched", async () => {
+    const user = userEvent.setup();
+    render(
+      <Picker
+        options={[]}
+        search={() => Promise.reject(new Error("unreachable"))}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /Add teams/ }));
+    await user.type(screen.getByRole("searchbox"), "iberia");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.queryByText("No team matches.")).toBeNull();
   });
 
   it("draws a read-only set with no way to change it", () => {

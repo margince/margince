@@ -4,9 +4,11 @@
 import { Plus } from "lucide-react";
 import { type ReactNode, useId, useMemo, useState } from "react";
 import { holdsEveryWord, searchWords } from "../format/collate";
+import { useT } from "../i18n";
 import { Button, Checkbox, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { Popover } from "./popover";
+import { useCandidateSearch } from "./recordpicker";
 import { type Token, TokenList } from "./tokeninput";
 import "./setpicker.css";
 
@@ -114,6 +116,12 @@ type SetPickerProps = Readonly<{
   doneLabel: string;
   /** What the panel says when there is nothing to choose at all. */
   empty?: ReactNode;
+  /**
+   * Asks the server once per settled term, for a set too large to hold. The
+   * panel lists `options` until something is typed, and a chosen value keeps
+   * the name it was ticked under.
+   */
+  search?: (term: string) => Promise<readonly SetPickerOption[]>;
   /** Offers the typed name as a new value when no value carries that name. */
   create?: Create;
   disabled?: boolean;
@@ -126,13 +134,19 @@ type SetPickerProps = Readonly<{
 export function SetPicker(props: SetPickerProps) {
   const { legend, options, values, onChange, disabled } = props;
   const [open, setOpen] = useState(false);
+  const [ticked, setTicked] = useState<ReadonlyMap<string, string>>(
+    () => new Map(),
+  );
   const chosen = useMemo(() => {
-    const labels = new Map(options.map((option) => [option.value, option]));
+    const labels = new Map(ticked);
+    for (const option of options) {
+      labels.set(option.value, option.label);
+    }
     return values.flatMap((value) => {
-      const option = labels.get(value);
-      return option ? [{ id: value, label: option.label }] : [];
+      const label = labels.get(value);
+      return label === undefined ? [] : [{ id: value, label }];
     });
-  }, [options, values]);
+  }, [options, ticked, values]);
   return (
     <fieldset className="set-picker" disabled={disabled}>
       <legend className="set-picker-legend">{legend}</legend>
@@ -146,7 +160,13 @@ export function SetPicker(props: SetPickerProps) {
         open={open}
         onOpenChange={setOpen}
       >
-        <SetPickerPanel {...props} onDone={() => setOpen(false)} />
+        <SetPickerPanel
+          {...props}
+          onTick={(option) =>
+            setTicked((known) => new Map(known).set(option.value, option.label))
+          }
+          onDone={() => setOpen(false)}
+        />
       </SetPickerFrame>
     </fieldset>
   );
@@ -161,17 +181,24 @@ function SetPickerPanel({
   doneLabel,
   empty,
   create,
+  search,
+  onTick,
   onDone,
-}: SetPickerProps & Readonly<{ onDone: () => void }>) {
+}: SetPickerProps &
+  Readonly<{ onTick: (option: SetPickerOption) => void; onDone: () => void }>) {
+  const t = useT();
   const [term, setTerm] = useState("");
   const listId = useId();
   const chosen = new Set(values);
-  const shown = useMemo(() => {
-    const words = searchWords(term);
+  const found = useCandidateSearch(search, term);
+  const asked = search !== undefined && term.trim() !== "";
+  const local = useMemo(() => {
+    const words = search ? [] : searchWords(term);
     return options.filter((option) =>
       holdsEveryWord(words, [option.label, option.detail ?? ""]),
     );
-  }, [options, term]);
+  }, [options, search, term]);
+  const shown = asked ? found.candidates : local;
   const name = term.trim();
   const typed = searchWords(name).join(" ");
   // A name that only differs in case or accents is the same team to a reader.
@@ -179,10 +206,16 @@ function SetPickerPanel({
     (option) => searchWords(option.label).join(" ") === typed,
   );
   const offerCreate = create !== undefined && name !== "" && !taken;
-  const toggle = (value: string, on: boolean) =>
+  const toggle = (option: SetPickerOption, on: boolean) => {
+    if (on) {
+      onTick(option);
+    }
     onChange(
-      on ? [...values, value] : values.filter((other) => other !== value),
+      on
+        ? [...values, option.value]
+        : values.filter((other) => other !== option.value),
     );
+  };
   return (
     <div className="set-picker-body">
       <SearchField
@@ -199,7 +232,7 @@ function SetPickerPanel({
               className="set-picker-row"
               checked={chosen.has(option.value)}
               disabled={option.disabled}
-              onChange={(event) => toggle(option.value, event.target.checked)}
+              onChange={(event) => toggle(option, event.target.checked)}
               label={
                 <span className="set-picker-label">
                   <span>{option.label}</span>
@@ -212,10 +245,14 @@ function SetPickerPanel({
           </li>
         ))}
       </ul>
-      {options.length === 0 && empty && !offerCreate && (
+      {!asked && options.length === 0 && empty && !offerCreate && (
         <p className="t-caption">{empty}</p>
       )}
-      {options.length > 0 && shown.length === 0 && (
+      {asked && found.pending && (
+        <p className="t-caption">{t("search.pending")}</p>
+      )}
+      <ErrorLine error={found.failure?.cause} />
+      {(asked ? found.answered : options.length > 0) && shown.length === 0 && (
         <p className="t-caption">{noMatch}</p>
       )}
       {offerCreate && (

@@ -1311,6 +1311,7 @@ export const en = {
   "reporting.addRecord": "Add",
   "reporting.searchRecords": "Search records",
   "reporting.noMatchingRecords": "No matching records",
+  "reporting.typeToFindRecord": "Type a name to find one",
   "reporting.pickExplains":
     "Picking a deal does not enroll every contact at its company. A lead keeps its promotion history.",
   "reporting.memberCounts":

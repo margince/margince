@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Checkbox, Field } from "../../design-system/field";
 import { Select } from "../../design-system/select";
-import { SetPicker } from "../../design-system/setpicker";
+import { SetPicker, type SetPickerOption } from "../../design-system/setpicker";
 import { countryOptions } from "../../format/assignedcountries";
 import { formatNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
@@ -20,6 +19,42 @@ import {
   predicateOf,
   type Rule,
 } from "./reporting.initiativegoal";
+
+/** How many candidates one typed name brings back. */
+const CANDIDATE_LIMIT = 20;
+
+async function searchOpenDeals(q: string): Promise<SetPickerOption[]> {
+  const deals = unwrap(
+    await api.GET("/deals", {
+      params: { query: { q, status: "open", limit: CANDIDATE_LIMIT } },
+    }),
+  );
+  return deals.data.map((deal) => ({ value: deal.id, label: deal.name }));
+}
+
+async function searchLeads(q: string): Promise<SetPickerOption[]> {
+  const leads = unwrap(
+    await api.GET("/leads", {
+      params: { query: { q, limit: CANDIDATE_LIMIT } },
+    }),
+  );
+  return leads.data.map((lead) => ({
+    value: lead.id,
+    label: lead.full_name || lead.company_name || lead.id,
+  }));
+}
+
+/** The saved picks, named as the membership read names them. */
+function pickedOptions(
+  members: Members | undefined,
+  type: "lead" | "deal",
+): SetPickerOption[] {
+  return (members?.data ?? [])
+    .filter(
+      (member) => member.reason === "picked" && member.record_type === type,
+    )
+    .map((member) => ({ value: member.record_id, label: member.label }));
+}
 
 export function MemberFields({
   rule,
@@ -47,28 +82,6 @@ export function MemberFields({
   const t = useT();
   const { locale } = useLocale();
   const products = useProductOptions();
-  const candidates = useQuery({
-    queryKey: ["initiative-candidates"],
-    queryFn: async () => {
-      const [deals, leads] = await Promise.all([
-        api.GET("/deals", {
-          params: { query: { limit: 200, status: "open" } },
-        }),
-        api.GET("/leads", { params: { query: { limit: 200 } } }),
-      ]);
-      return {
-        deals: unwrap(deals).data.map((deal) => ({
-          value: deal.id,
-          label: deal.name,
-        })),
-        leads: unwrap(leads).data.map((lead) => ({
-          value: lead.id,
-          label: lead.full_name || lead.company_name || lead.id,
-        })),
-      };
-    },
-    staleTime: 60_000,
-  });
   const pickedOf = (type: "lead" | "deal") =>
     picked
       .filter((ref) => ref.record_type === type)
@@ -86,6 +99,7 @@ export function MemberFields({
     searchLabel: t("reporting.searchRecords"),
     noMatch: t("reporting.noMatchingRecords"),
     doneLabel: t("reporting.pickDone"),
+    empty: t("reporting.typeToFindRecord"),
   };
   return (
     <div className="form-stack">
@@ -146,14 +160,16 @@ export function MemberFields({
       />
       <SetPicker
         legend={t("reporting.pickDeals")}
-        options={candidates.data?.deals ?? []}
+        options={pickedOptions(members, "deal")}
+        search={searchOpenDeals}
         values={pickedOf("deal")}
         onChange={(ids) => setPickedOf("deal", ids)}
         {...pickerWords}
       />
       <SetPicker
         legend={t("reporting.pickLeads")}
-        options={candidates.data?.leads ?? []}
+        options={pickedOptions(members, "lead")}
+        search={searchLeads}
         values={pickedOf("lead")}
         onChange={(ids) => setPickedOf("lead", ids)}
         {...pickerWords}
