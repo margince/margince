@@ -1165,6 +1165,13 @@ export const en = {
     "Nothing to draw for this report’s period and metrics yet. Add the chart anyway, or change the period under Customize report.",
   "reporting.chooseChart": "Chart to add",
   "reporting.exportCsv": "Export CSV",
+  "reporting.coverageThresholds": "Account coverage limits",
+  "reporting.coverageThresholdsHelp":
+    "What the Account coverage section counts as at risk. The limits apply from the next read.",
+  "reporting.maxEngagedSeats": "Engaged contacts at most",
+  "reporting.untouchedDays": "Days without exchange in pipeline",
+  "reporting.silentDays": "Days without exchange after a win",
+  "reporting.wonWithinDays": "Days a win counts",
   "reporting.captureContexts": "Record daily pipeline history",
   "reporting.captureHelp":
     "Choose fixed teams and pipelines to build movement history. Two comparable daily captures are needed.",
@@ -7697,6 +7704,48 @@ export const en = {
   "analytics.sectionOutcomes": "My outcomes",
   "analytics.sectionCoverage": "Data coverage",
   "analytics.sectionDelivery": "Delivery",
+  "analytics.sectionAccounts": "Account coverage",
+  "analytics.accounts.views": "Risk views",
+  "analytics.accounts.singleThreaded": "Single-contact deals",
+  "analytics.accounts.untouched": "Untouched in pipeline",
+  "analytics.accounts.silent": "Won but silent",
+  "analytics.accounts.pending": "Judging the accounts",
+  "analytics.accounts.thresholds":
+    "At risk means: at most {seats} engaged contact on a deal, no exchange in {untouched} days while in pipeline, no exchange in {silent} days after a win within {won} days.",
+  "analytics.accounts.singleThreadedPurpose":
+    "Open deals where at most {seats} contact inside the account has exchanged mail or met with you lately.",
+  "analytics.accounts.untouchedPurpose":
+    "Accounts with an open deal and no exchange either way in the last {days} days.",
+  "analytics.accounts.silentPurpose":
+    "Accounts with a deal won in the last {won} days, no open deal, and no exchange either way in the last {days} days.",
+  "analytics.accounts.noActivityGrant":
+    "Judging accounts needs permission to read activities.",
+  "analytics.accounts.none": "Nothing at risk here.",
+  "analytics.accounts.truncated":
+    "More accounts than this read judges: the counts cover the largest ones. Narrow the records you chose.",
+  "analytics.accounts.withheld_one":
+    "{count} more deal has contacts you may not see, so it is not judged.",
+  "analytics.accounts.withheld_other":
+    "{count} more deals have contacts you may not see, so they are not judged.",
+  "analytics.accounts.account": "Account",
+  "analytics.accounts.deal": "Deal",
+  "analytics.accounts.owner": "Owner",
+  "analytics.accounts.engagedSeats": "Engaged contacts",
+  "analytics.accounts.seatsOf": "{engaged} of {named}",
+  "analytics.accounts.openDeals": "Open deals",
+  "analytics.accounts.wonDeal": "Won deal",
+  "analytics.accounts.lastExchange": "Last exchange",
+  "analytics.accounts.never": "Never",
+  "analytics.accounts.daysAgo": "{date}, {days} days ago",
+  "analytics.accounts.evidencePurpose": "What this reading rests on.",
+  "analytics.accounts.factSeats":
+    "{engaged} of {named} contacts named on the deal exchanged mail or met with you in the last 90 days.",
+  "analytics.accounts.factStage": "The deal is in stage {stage}.",
+  "analytics.accounts.factOpen_one": "{count} open deal on this account.",
+  "analytics.accounts.factOpen_other": "{count} open deals on this account.",
+  "analytics.accounts.factWon": "{deal} was won on {date}.",
+  "analytics.accounts.factInbound": "They last wrote: {date}.",
+  "analytics.accounts.factOutbound": "You last wrote: {date}.",
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.
