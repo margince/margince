@@ -213,13 +213,13 @@ func TestTheOwnerScopedSetIsNotEveryOwnedTable(t *testing.T) {
 				"workspace-wide read every seat is supposed to get", table)
 		}
 	}
-	if got, want := len(ownerScopedTables), 9; got != want {
+	if got, want := len(ownerScopedTables), 10; got != want {
 		t.Errorf("ownerScopedTables holds %d tables, want %d — if that is a deliberate "+
 			"change, the count in its own comment moves with it", got, want)
 	}
-	if got, want := len(attributionOnlyOwners)+len(ownerScopedTables), 14; got != want {
+	if got, want := len(attributionOnlyOwners)+len(ownerScopedTables), 15; got != want {
 		t.Errorf("the row-scoped set (%d) plus the attribution-only owners (%d) is %d, "+
-			"want the 14 tables that carry owner_id — a new owner_id column belongs in "+
+			"want the 15 tables that carry owner_id — a new owner_id column belongs in "+
 			"exactly one of the two, and choosing is the point",
 			len(ownerScopedTables), len(attributionOnlyOwners), got)
 	}

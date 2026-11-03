@@ -92,6 +92,7 @@ const TAB_SECTIONS: readonly Section[] = [
   "sdr",
   "leads",
   "partners",
+  "conversion",
   "forecast",
   "pipeline",
   "outcomes",
@@ -136,7 +137,10 @@ function libraryOf(available: readonly Section[]): Section | undefined {
 }
 
 // Administration rather than analysis, behind one menu at the row's end.
-type SetupSection = Extract<Section, "targets" | "definitions" | "coverage">;
+export type SetupSection = Extract<
+  Section,
+  "targets" | "definitions" | "coverage"
+>;
 
 export const SETUP_LABEL: Readonly<Record<SetupSection, MessageKey>> = {
   targets: "reporting.targets",

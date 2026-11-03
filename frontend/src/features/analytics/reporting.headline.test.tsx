@@ -10,6 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ReportingOverview } from "./reporting.overview";
+import { reportingCatalogKey } from "./reporting.queries";
 import {
   reportingCatalogClient,
   reportingStoryEvaluation,
@@ -107,6 +108,18 @@ it("says open pipeline is a count now and the expected finish is this quarter's"
         value: 76000000,
         coverage: { status: "ok", withheld: false },
         evidence: { metric: "forecast_landing", context_id: "state" },
+        forecast_basis: {
+          landing: {
+            amount_minor: 76000000,
+            measure: "weighted",
+            won_minor: 42000000,
+            remaining_minor: 34000000,
+          },
+          period: reportingStoryEvaluation.context.interval,
+          eligible_count: 3,
+          priced_count: 3,
+          fx_missing_count: 0,
+        },
       },
     ],
   };
@@ -118,7 +131,9 @@ it("says open pipeline is a count now and the expected finish is this quarter's"
   expect(await screen.findByText("Forecast landing")).toBeVisible();
   expect(screen.getByText(/^Open deals: 3 · as of /)).toBeVisible();
   expect(
-    screen.getByText("This fiscal quarter, from the deal forecast"),
+    screen.getByText(
+      "This fiscal quarter, from the deal forecast · Won + weighted open deals",
+    ),
   ).toBeVisible();
   const labels = screen
     .getAllByText(/^(Sales won|Forecast landing|Open pipeline)$/)
@@ -168,7 +183,64 @@ it("opens the forecast section from the forecast landing, not an empty evidence 
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
     </StoryProviders>,
   );
-  await userEvent.setup().click(screen.getByRole("button", { name: "Open" }));
+  await userEvent.setup().click(screen.getByRole("link", { name: "Open" }));
   expect(onEvidence).not.toHaveBeenCalled();
   expect(window.location.hash).toMatch(/^#\/analytics\/forecast/);
+});
+
+it("heads the sales figures with the win rate and new qualified pipeline beside sales won", () => {
+  const evaluation: typeof reportingStoryEvaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      ...reportingStoryEvaluation.metrics,
+      {
+        id: "closed_win_rate",
+        version: "1",
+        unit: "percent",
+        value: 42,
+        coverage: { status: "ok", withheld: false },
+        evidence: { metric: "closed_win_rate", context_id: "period" },
+      },
+      {
+        id: "qualified_pipeline_created",
+        version: "1",
+        unit: "EUR",
+        value: 12000000,
+        coverage: { status: "ok", withheld: false },
+        evidence: {
+          metric: "qualified_pipeline_created",
+          context_id: "period",
+        },
+      },
+    ],
+  };
+  // Every reading is named from the catalog, so the win rate needs its entry.
+  const client = reportingCatalogClient();
+  client.setQueryData(
+    reportingCatalogKey,
+    (catalog: typeof reportingStoryCatalog) => ({
+      ...catalog,
+      metrics: [
+        ...catalog.metrics,
+        { ...landing, id: "closed_win_rate", label: "Closed win rate" },
+      ],
+    }),
+  );
+  render(
+    <StoryProviders client={client}>
+      <ResultsSummary evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  const labels = screen
+    .getAllByText(
+      /^(Sales won|Closed win rate|Qualified pipeline created|Open pipeline)$/,
+    )
+    .map((node) => node.textContent);
+  expect(labels).toEqual([
+    "Sales won",
+    "Closed win rate",
+    "Qualified pipeline created",
+    "Open pipeline",
+  ]);
+  expect(screen.getByText("42%")).toBeVisible();
 });

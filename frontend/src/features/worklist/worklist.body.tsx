@@ -318,7 +318,7 @@ export function WorklistBody({
           also the only panel here that asks for nothing. The receipt is why the
           acts above it are safe to take, and a receipt folded shut is one
           nobody checks. */}
-          <OptionalRelationships day={day} owner={owner} />
+          <OptionalRelationships day={day} owner={owner} scope={scope} />
           <HandledForYouPanel />
         </div>
       </div>

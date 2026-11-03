@@ -39,6 +39,9 @@ type TaskBacklog interface {
 	// the store's due order, each with the position after it. more says the
 	// window holds tasks past the batch.
 	TasksAfter(ctx context.Context, window TaskWindow, after string, limit int) (tasks []Positioned[Task], more bool, err error)
+	// TasksOnDeals reads every task of the window filed under any of these
+	// deals, drawn as the lane draws them.
+	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that
@@ -55,6 +58,12 @@ type WaitingBacklog interface {
 	// WaitingAfter judges up to judge messages after a position, oldest
 	// first, and answers the cards among them.
 	WaitingAfter(ctx context.Context, asOf time.Time, narrow WaitingFor, after string, judge int) (WaitingTail, error)
+	// DealsWaiting names which of these deals a waiting card names, by the
+	// lane's own rules under its narrowing.
+	DealsWaiting(ctx context.Context, asOf time.Time, narrow WaitingFor, deals []ids.UUID) (map[ids.UUID]bool, error)
+	// CardsAmong names which of these messages are cards the tail serves under
+	// the narrowing.
+	CardsAmong(ctx context.Context, asOf time.Time, narrow WaitingFor, messages []ids.UUID) (map[ids.UUID]bool, error)
 }
 
 // WaitingTail is one read of the waiting backlog. Through is the position
@@ -86,6 +95,7 @@ func (s *Service) WithTaskBacklog(b TaskBacklog) *Service {
 type backlogState struct {
 	tasks   TaskBacklog
 	waiting WaitingBacklog
+	risk    RiskBacklog
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page
@@ -131,11 +141,7 @@ func (s *Service) readingBacklog(
 // taskWindows are the two task windows a page draws, by the category each
 // window's rows carry: today's under tasks, the later ones under upcoming.
 func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
-	var team []ids.UUID
-	if s.teamRoster != nil {
-		team = s.teamRoster.seats()
-	}
-	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: team}
+	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
 	later := today
 	later.From, later.Until = until, until.AddDate(0, 0, upcomingHorizonDays)
 	return map[totalKey]TaskWindow{
@@ -145,15 +151,12 @@ func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
 }
 
 // countInto states one task window's total. A window read short of its cap
-// is whole on the page. Today's cut window is the planned lane's own count.
-// A team page counts nothing: the roster arm defeats the open-task index, and
-// at ten thousand tasks a seat its count outran the lane budget.
+// is whole on the page. Today's cut window is the planned lane's own count,
+// which a team page narrows to its roster as the lane does.
 func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow, day crmcontracts.Attention, cut bool) {
 	switch {
 	case !cut:
 		s.backlog.whole[key] = true
-		return
-	case window.Team != nil:
 		return
 	case window.From.IsZero():
 		s.backlog.exact[key] = day.Counts.Planned

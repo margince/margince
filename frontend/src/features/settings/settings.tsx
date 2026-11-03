@@ -59,9 +59,10 @@ import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { LegalEntitiesCard } from "./legalentities";
 import { LicenseCard } from "./license";
+import { LegacyLossReasonsCard, LossReasonsCard } from "./lossreasons";
 import { NotificationSettingsCard } from "./notification-settings";
 import { OAuthAppsCard } from "./oauth-apps-card";
-import { PublicOriginCard } from "./public-origin";
+import { PartnerStagesCard } from "./partnerstages";
 import { FxRatesCard } from "./rates";
 import { RolesSettings } from "./roles-settings";
 import { AiAccessTab } from "./settings.aiaccess";
@@ -204,6 +205,15 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       );
     case "acquisition":
       return <AcquisitionSourcesCard />;
+    case "lossreasons":
+      return (
+        <>
+          <LossReasonsCard />
+          <LegacyLossReasonsCard />
+        </>
+      );
+    case "partners":
+      return <PartnerStagesCard />;
     case "reviewtemplates":
       return <ReviewTemplatesCard />;
     case "recordroles":
@@ -282,12 +292,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
       // to consent and retention, and one reader can hold one without the other.
       return <AuditLogCard />;
     case "system-health":
-      return (
-        <>
-          <SystemHealthPage />
-          <PublicOriginCard />
-        </>
-      );
+      return <SystemHealthPage view={route?.id2} />;
     case "configuration":
       return <InstallationConfigurationPage />;
     case "extensions":

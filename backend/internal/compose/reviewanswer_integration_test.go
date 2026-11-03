@@ -113,7 +113,7 @@ func TestClosingLostClosesTheDealAndTheReview(t *testing.T) {
 		t.Fatal("a review was dismissed as not relevant while its deal is still open")
 	}
 
-	if rec := v.postAnswer(t, review, "close-lost", map[string]any{"lost_reason": "Chose another supplier"}); rec.Code != http.StatusNoContent {
+	if rec := v.postAnswer(t, review, "close-lost", map[string]any{"lost_reason": "Chose another supplier", "lost_reason_code": "competitor"}); rec.Code != http.StatusNoContent {
 		t.Fatalf("closing lost answered %d %s", rec.Code, rec.Body)
 	}
 	if got := v.WsScalar(t, `SELECT status FROM deal WHERE id = $1`, v.silent); got != "lost" {
@@ -135,7 +135,7 @@ func TestAReviewOfADealClosedSinceMovesNothing(t *testing.T) {
 	}
 	reason := "Budget cut"
 	if _, err := v.Deals.AdvanceDeal(v.Admin(), ids.From[ids.DealKind](v.silent), deals.AdvanceDealInput{
-		ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason,
+		ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason, LostReasonCode: new("other"),
 	}); err != nil {
 		t.Fatalf("closing the deal outside the review: %v", err)
 	}

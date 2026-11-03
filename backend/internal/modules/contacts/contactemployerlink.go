@@ -13,8 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/freemail"
-	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -108,32 +106,9 @@ func (s *Store) newEmployerDomainsTx(ctx context.Context, tx pgx.Tx, contactID i
 }
 
 func (s *Store) employerDomainsForAddressTx(ctx context.Context, tx pgx.Tx, email string) ([]CompanyDomainInput, error) {
-	matcher, err := s.consumerMailMatcher(ctx, tx)
+	facts, err := s.employerDomainFactsTx(ctx, tx, email)
 	if err != nil {
 		return nil, err
 	}
-	host := owndomain.OfAddress(email)
-	domain, ok := freemail.Hostname(host)
-	if !ok || matcher.IsConsumer(host) {
-		return nil, nil
-	}
-	suppressed, err := domainSuppressedTx(ctx, tx, domain)
-	if err != nil || suppressed {
-		return nil, err
-	}
-	owners, err := exactCompanyByDomain(ctx, tx, []string{host, domain}, nil)
-	if err != nil {
-		return nil, err
-	}
-	for _, owner := range owners {
-		visible, err := auth.VisibleTo(ctx, tx, companyEntity, owner.UUID)
-		if err != nil || !visible {
-			return nil, err
-		}
-	}
-	domains := []CompanyDomainInput{{Domain: domain, IsPrimary: true}}
-	if host != domain {
-		domains = append(domains, CompanyDomainInput{Domain: host})
-	}
-	return domains, nil
+	return employerDomainsVisible(ctx, tx, facts)
 }

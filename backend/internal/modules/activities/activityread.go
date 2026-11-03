@@ -308,6 +308,9 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if err := AttachLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if err := WithCreators(ctx, tx, one); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	if err := WithOffersEmail(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
@@ -452,6 +455,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		}
 		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 			return err
+		}
+		if in.WithOutsideParty {
+			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {

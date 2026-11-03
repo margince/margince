@@ -278,10 +278,7 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 		Phone:          req.Phone,
 		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
 	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {

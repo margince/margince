@@ -14,6 +14,7 @@ import {
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { CohortTable } from "./reporting.cohort";
 import { withDealCount } from "./reporting.dealcount";
 import { breakdownLabel } from "./reporting.grouplabel";
 import {
@@ -38,10 +39,13 @@ export function ChartBody({
   chart,
   evaluation,
   onEvidence,
+  trendSize,
 }: Readonly<{
   chart: ReportingChart;
   evaluation: ReportingEvaluation;
   onEvidence: EvidenceAction;
+  /** `compact` is a shorter trend, for one beside a lead figure. */
+  trendSize?: "default" | "compact";
 }>) {
   const t = useT();
   const metricName = useMetricNames();
@@ -111,6 +115,7 @@ export function ChartBody({
                   label: t("reporting.target"),
                 }
           }
+          size={trendSize}
         />
       );
     }
@@ -180,6 +185,15 @@ export function ChartBody({
           label={shared.label}
           format={format}
           onSelect={onSelect}
+        />
+      );
+    case "stage_cohort":
+    case "lead_cohort":
+      return (
+        <CohortTable
+          chart={chart}
+          label={shared.label}
+          onEvidence={onEvidence}
         />
       );
     case "sdr_outcomes":

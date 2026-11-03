@@ -15,19 +15,29 @@ import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { FieldGuard } from "../../design-system/rbac";
-import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { MultiSelect, Select } from "../../design-system/select";
+import { useLocale, useT } from "../../i18n";
 import {
   useCanWrite,
   useGrantRefused,
   useWriteRefusal,
 } from "../../lib/capability";
 import { isOption } from "../../lib/options";
+import {
+  assignableStages,
+  KIND_LABELS,
+  PARTNER_KINDS,
+  type PartnerKind,
+  partnerKindsLabel,
+  partnerStageLabel,
+  usePartnerStages,
+} from "../../lib/partnerstages.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
+import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
+import { ActivationNote, MarginTierRow } from "./partners.detailrows";
 import {
   CERT_LABELS,
   CERT_STATUSES,
@@ -35,13 +45,7 @@ import {
   MARGIN_TIER_LABELS,
   MARGIN_TIERS,
   type MarginTier,
-  PARTNER_ROLES,
   type Partner,
-  type PartnerRole,
-  RELATIONSHIP_STAGES,
-  type RelationshipStage,
-  ROLE_LABELS,
-  STAGE_LABELS,
   type UpsertPartnerRequest,
 } from "./partners.vocab";
 
@@ -59,10 +63,11 @@ async function fetchPartner(companyId: string): Promise<Partner | null> {
 }
 
 type PartnerFormValues = {
-  partner_role: PartnerRole;
+  partner_kinds: PartnerKind[];
   cert_status: CertStatus;
   margin_tier: "" | MarginTier;
-  relationship_stage: RelationshipStage;
+  // Empty on a new programme: the server starts it on the first candidate stage.
+  relationship_stage: string;
   next_step: string;
   next_step_due_at: string;
   served_segments: string;
@@ -70,10 +75,10 @@ type PartnerFormValues = {
 
 function defaultFormValues(partner?: Partner): PartnerFormValues {
   return {
-    partner_role: partner?.partner_role ?? "hosting",
+    partner_kinds: [...(partner?.partner_kinds ?? [])],
     cert_status: partner?.cert_status ?? "applied",
     margin_tier: partner?.margin_tier ?? "",
-    relationship_stage: partner?.relationship_stage ?? "research",
+    relationship_stage: partner?.relationship_stage ?? "",
     next_step: partner?.next_step ?? "",
     next_step_due_at: partner?.next_step_due_at ?? "",
     served_segments: (partner?.served_segments ?? []).join(", "),
@@ -91,10 +96,10 @@ function buildUpsertBody(
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0);
   return {
-    partner_role: values.partner_role,
+    partner_kinds: values.partner_kinds,
     cert_status: values.cert_status,
     ...(setsTier ? { margin_tier: values.margin_tier || null } : {}),
-    relationship_stage: values.relationship_stage,
+    relationship_stage: values.relationship_stage || undefined,
     next_step: values.next_step.trim() || undefined,
     next_step_due_at: values.next_step_due_at || undefined,
     served_segments: segments.length > 0 ? segments : undefined,
@@ -128,6 +133,10 @@ function PartnerForm({
   );
   const setsTier = useCanWrite("partner", "update");
   const tierRefused = useGrantRefused({ object: "partner", action: "update" });
+  const stages = assignableStages(
+    usePartnerStages().data,
+    partner?.relationship_stage,
+  );
 
   const mutation = useMutation({
     // The prior row rides the variables rather than the closure, and its
@@ -160,18 +169,22 @@ function PartnerForm({
       }}
       className="form-stack"
     >
-      <Field label={t("partner.role")} required>
+      <Field label={t("partner.kinds")} required>
         {(control) => (
-          <Select
+          <MultiSelect
             {...control}
-            value={values.partner_role}
-            onChange={(value) =>
-              isOption(value, PARTNER_ROLES) &&
-              setValues({ ...values, partner_role: value })
+            values={values.partner_kinds}
+            onChange={(picked) =>
+              setValues({
+                ...values,
+                partner_kinds: PARTNER_KINDS.filter((kind) =>
+                  picked.includes(kind),
+                ),
+              })
             }
-            options={PARTNER_ROLES.map((role) => ({
-              value: role,
-              label: t(ROLE_LABELS[role]),
+            options={PARTNER_KINDS.map((kind) => ({
+              value: kind,
+              label: t(KIND_LABELS[kind]),
             }))}
           />
         )}
@@ -228,13 +241,13 @@ function PartnerForm({
           <Select
             {...control}
             value={values.relationship_stage}
+            placeholder={t("partner.stageAll")}
             onChange={(value) =>
-              isOption(value, RELATIONSHIP_STAGES) &&
               setValues({ ...values, relationship_stage: value })
             }
-            options={RELATIONSHIP_STAGES.map((stage) => ({
-              value: stage,
-              label: t(STAGE_LABELS[stage]),
+            options={stages.map((stage) => ({
+              value: stage.key,
+              label: stage.label,
             }))}
           />
         )}
@@ -285,6 +298,7 @@ function PartnerForm({
         <Button
           variant="primary"
           type="submit"
+          disabled={!mutation.isPending && values.partner_kinds.length === 0}
           pending={mutation.isPending}
           busyLabel={t(SUBMIT_COPY[intent].busy)}
         >
@@ -292,28 +306,6 @@ function PartnerForm({
         </Button>
       </div>
     </form>
-  );
-}
-
-// Withheld is not empty. A role that may not read the commercial terms gets
-// the tier as null with `masked_fields` naming it. A row that vanished would
-// say this partner agreed no tier, so no row means only that none was agreed.
-function MarginTierRow({ partner }: Readonly<{ partner: Partner }>) {
-  const t = useT();
-  const masked = partner.masked_fields?.includes("margin_tier") ?? false;
-  const tier = partner.margin_tier;
-  if (!masked && !tier) {
-    return null;
-  }
-  return (
-    <>
-      <dt>{t("partner.marginTier")}</dt>
-      <dd>
-        <FieldGuard mode={masked ? "masked" : "visible"}>
-          {tier ? t(MARGIN_TIER_LABELS[tier]) : null}
-        </FieldGuard>
-      </dd>
-    </>
   );
 }
 
@@ -329,6 +321,8 @@ function PartnerDetail({
   onSaved: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -364,17 +358,20 @@ function PartnerDetail({
     >
       <PanelBody>
         <dl className="detail-grid">
-          {partner.partner_role && (
+          {(partner.partner_kinds ?? []).length > 0 && (
             <>
-              <dt>{t("partner.role")}</dt>
-              <dd>{t(ROLE_LABELS[partner.partner_role])}</dd>
+              <dt>{t("partner.kinds")}</dt>
+              <dd>{partnerKindsLabel(partner.partner_kinds, t)}</dd>
             </>
           )}
           <dt>{t("partner.certStatus")}</dt>
           <dd>{t(CERT_LABELS[partner.cert_status])}</dd>
           <MarginTierRow partner={partner} />
           <dt>{t("partner.stage")}</dt>
-          <dd>{t(STAGE_LABELS[partner.relationship_stage])}</dd>
+          <dd>
+            {partnerStageLabel(partner, t)}
+            <ActivationNote partner={partner} locale={locale} zone={zone} />
+          </dd>
           {partner.next_step && (
             <>
               <dt>{t("partner.nextStep")}</dt>

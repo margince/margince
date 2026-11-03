@@ -42,10 +42,12 @@ export function EmploymentEdit({
   const id = useId();
   const [primary, setPrimary] = useState(employment.is_current_primary);
   const [role, setRole] = useState(employment.role ?? "");
-  const [status, setStatus] = useState(
+  const [status, setStatus] = useState<"current" | "former" | "">(
     stillHeld(employment)
       ? "current"
-      : (employment.employment_status ?? "former"),
+      : employment.employment_status === "unknown"
+        ? ""
+        : (employment.employment_status ?? "former"),
   );
   const [start, setStart] = useState(
     employment.started_at?.slice(
@@ -95,22 +97,16 @@ export function EmploymentEdit({
             <Select
               {...control}
               value={status}
+              placeholder={t("employment.statusChoose")}
               onChange={(value) => {
-                if (
-                  value === "current" ||
-                  value === "former" ||
-                  value === "unknown"
-                )
-                  setStatus(value);
+                if (value === "current" || value === "former") setStatus(value);
               }}
-              options={["current", "former", "unknown"].map((value) => ({
+              options={["current", "former"].map((value) => ({
                 value,
                 label: t(
                   value === "current"
                     ? "employment.status.current"
-                    : value === "former"
-                      ? "employment.status.former"
-                      : "employment.status.unknown",
+                    : "employment.status.former",
                 ),
               }))}
             />
@@ -148,13 +144,13 @@ export function EmploymentEdit({
         </Button>
         <Button
           variant="primary"
-          disabled={!valid || saving.isPending}
+          disabled={!valid || status === "" || saving.isPending}
           onClick={() => {
             const started = datePatch(start),
               ended = datePatch(end);
             const body: Patch = {
               role: role === (employment.role ?? "") ? undefined : role,
-              employment_status: status,
+              employment_status: status || undefined,
               is_current_primary: status === "current" && primary,
               started_at: started.date,
               ended_at: ended.date,

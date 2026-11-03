@@ -98,7 +98,7 @@ it("opens the section that already holds a prepared report", async () => {
   ) as HTMLElement;
   await userEvent
     .setup()
-    .click(within(row).getByRole("button", { name: "Open" }));
+    .click(within(row).getByRole("link", { name: "Open" }));
   expect(window.location.hash).toMatch(/^#\/analytics\/delivery/);
 });
 
@@ -160,5 +160,39 @@ it("asks the prospecting template from the catalog's sdr preset", () => {
       reportingStoryScope,
       "p-1",
     ),
+  ).toBeNull();
+});
+
+// The team template asks what the catalog's team preset asks.
+it("asks the team prospecting template from the catalog's team preset", () => {
+  const team = PREPARED_REPORTS.find(
+    (report) => report.id === "team-prospecting-review",
+  );
+  if (team?.kind !== "question") throw new Error("it is a question");
+  const withTeam = {
+    ...reportingStoryCatalog,
+    presets: [
+      ...reportingStoryCatalog.presets,
+      {
+        id: "team" as const,
+        metrics: ["meetings_held" as const, "accepted_opportunities" as const],
+        blocks: ["sdr_outcomes" as const],
+      },
+    ],
+  };
+  const selection = preparedSelection(
+    team,
+    withTeam,
+    reportingStoryScope,
+    "p-1",
+  );
+  expect(selection?.metrics).toEqual([
+    "meetings_held",
+    "accepted_opportunities",
+  ]);
+  expect(selection?.blocks).toEqual(["sdr_outcomes"]);
+  expect(selection?.period).toBe("this_week");
+  expect(
+    preparedSelection(team, reportingStoryCatalog, reportingStoryScope, "p-1"),
   ).toBeNull();
 });

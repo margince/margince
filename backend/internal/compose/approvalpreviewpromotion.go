@@ -8,16 +8,34 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLeadInput, error) {
-	if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeLead) || approval.TargetEntityId == nil || approval.TargetVersion == nil || approval.ProposedChange == nil {
+	if approval.TargetVersion == nil {
+		return contacts.PromoteLeadInput{}, apperrors.ErrInvalidArgument
+	}
+	in, err := promotionRequestInput(approval)
+	if err != nil {
+		return in, err
+	}
+	in.IfVersion = new(int64(*approval.TargetVersion))
+	return in, nil
+}
+
+// promotionRequestInput reads the promotion either door staged, without the version pin.
+func promotionRequestInput(approval crmcontracts.Approval) (contacts.PromoteLeadInput, error) {
+	if approval.TargetEntityType == nil || *approval.TargetEntityType != string(recordTypeLead) || approval.TargetEntityId == nil || approval.ProposedChange == nil {
 		return contacts.PromoteLeadInput{}, apperrors.ErrInvalidArgument
 	}
 	var in contacts.PromoteLeadInput
@@ -29,6 +47,7 @@ func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLea
 		in = contacts.PromotionRequestInput(req)
 	} else {
 		req, err := commercialRequest[struct {
+			datasource.PromotionDealChoice
 			LeadID       ids.UUID `json:"lead_id"`
 			Trigger      string   `json:"trigger"`
 			EvidenceNote *string  `json:"evidence_note"`
@@ -39,9 +58,9 @@ func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLea
 		if req.LeadID != ids.UUID(*approval.TargetEntityId) {
 			return in, apperrors.ErrInvalidArgument
 		}
+		in = contacts.PromotionDealInput(req.PromotionDealChoice)
 		in.Trigger, in.EvidenceNote = req.Trigger, req.EvidenceNote
 	}
-	in.IfVersion = new(int64(*approval.TargetVersion))
 	return in, nil
 }
 
@@ -67,6 +86,7 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if err != nil {
 		return nil, err
 	}
+	r.touch(promotionTouches(ids.UUID(*approval.TargetEntityId), plan))
 	out.CurrentVersion = new(int(plan.LeadVersion))
 	details, err := r.promotionDetails(ctx, in, plan)
 	if previewUnavailable(err) {
@@ -88,6 +108,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if len(plan.ConsentLinks.WithdrawalCredentials)+len(plan.ConsentLinks.CommunicationBases) > 0 {
 		effects = append(effects, "promote_move_consent_links")
 	}
+	if plan.ExistingDealID != nil {
+		effects = append(effects, "promote_seat_contact_on_existing_deal")
+	}
 	if plan.Deal != nil {
 		effects = append(effects, "promote_open_deal_seat_contact")
 	}
@@ -96,6 +119,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	}
 	if plan.CompanyIndustry != nil {
 		effects = append(effects, "promote_fill_company_industry")
+	}
+	if plan.TypedCompany != "" {
+		effects = append(effects, "promote_propose_company")
 	}
 	out.Effects, out.State = &effects, previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
@@ -106,8 +132,8 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 	if in.EvidenceNote != nil {
 		details = append(details, previewDetail("promotion_note", *in.EvidenceNote))
 	}
-	if in.EvidenceActivityID != nil {
-		value, err := r.referenceValue(ctx, "activity_id", in.EvidenceActivityID.String())
+	if plan.Evidence != nil {
+		value, err := r.promotionEvidenceValue(ctx, *plan.Evidence)
 		if err != nil {
 			return nil, err
 		}
@@ -131,6 +157,16 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 	if plan.CompanyIndustry != nil {
 		details = append(details, previewDetail("promotion_company_industry", *plan.CompanyIndustry))
 	}
+	if plan.TypedCompany != "" {
+		details = append(details, previewDetail("promotion_company_proposed", plan.TypedCompany))
+	}
+	if plan.ExistingDealID != nil {
+		value, err := r.referenceValue(ctx, "deal_id", plan.ExistingDealID.String())
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_existing_deal", Value: value})
+	}
 	if plan.Deal != nil {
 		deal, err := r.promotionDealDetails(ctx, *plan.Deal)
 		if err != nil {
@@ -139,6 +175,24 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 		details = append(details, deal...)
 	}
 	return details, nil
+}
+
+// promotionEvidenceValue names the activity a promotion rests on by its subject.
+// Evidence the caller may discover but not read keeps its subject withheld.
+// It is named by its date, and the trigger beside it says what kind it is.
+func (r approvalPreviewReader) promotionEvidenceValue(ctx context.Context, id ids.ActivityID) (crmcontracts.ApprovalPreviewValue, error) {
+	value, err := r.referenceValue(ctx, "activity_id", id.String())
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		return value, err
+	}
+	activity, err := r.activities.GetActivity(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		return value, err
+	}
+	return crmcontracts.ApprovalPreviewValue{
+		Kind: previewValueDate, Text: activity.OccurredAt.Format(time.RFC3339Nano),
+		EntityType: new(entityActivity), EntityId: new(openapi_types.UUID(id.UUID)),
+	}, nil
 }
 
 func (r approvalPreviewReader) promotionContactDetails(ctx context.Context, plan contacts.LeadContactChange) ([]crmcontracts.ApprovalPreviewDetail, error) {

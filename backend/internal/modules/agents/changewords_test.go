@@ -203,7 +203,9 @@ func TestReadApprovalLabelsTheChangeAndNamesWhoItIsFor(t *testing.T) {
 	inbox := &fakeInbox{one: StagedApproval{
 		StagedActionID: ids.NewV7(), Kind: "update_record", Status: "pending",
 		OnBehalfOf: &RecordOwner{ID: seat},
-		Changes:    []FieldChange{{Field: "owner_id"}},
+		Preview: &crmcontracts.ApprovalPreview{
+			Version: 1, State: "ready", Changes: []crmcontracts.ApprovalPreviewChange{{Field: "owner_id"}},
+		},
 	}}
 	names := func(context.Context, []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{seat: "Sam Rep"}, nil

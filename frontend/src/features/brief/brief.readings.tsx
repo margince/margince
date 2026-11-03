@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { StatCard } from "../../design-system/atoms";
+import { Skeleton, StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { useTooltip } from "../../design-system/tooltip";
 import { floorFigure, readsAsFloor } from "../../format/figure";
@@ -28,9 +28,9 @@ import {
 } from "./brief.readings.honesty";
 import {
   calendarStandIn,
-  meetingsDetail,
+  meetingsBasis,
+  meetingsFloor,
   meetingsReading,
-  nextMeetingLine,
   type StandIn,
 } from "./brief.readings.meetings";
 
@@ -272,21 +272,15 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // prepared is the one fact on this slot a reader must act on before
           // it begins. The count of meetings itself is neither good nor bad.
           warning={meetings.unready !== null && meetings.unready > 0}
-          floor={
-            scopeCut ||
-            day.reach?.find((entry) => entry.source === "meeting")
-              ?.more_available ||
-            day.sources_unavailable.some(
-              (entry) => entry.source === "meeting" || !entry.category,
-            )
-          }
+          floor={scopeCut || meetingsFloor(day, calendar)}
           // A quiet day says when the next conversation is, since a bare zero
           // reads the same whether that is tomorrow or next month.
-          basis={
-            calendar.state === "quiet"
-              ? nextMeetingLine(calendar.next, locale, t, viewerZone())
-              : meetingsDetail(meetings, locale, t, plural)
-          }
+          basis={meetingsBasis(day, calendar, meetings, {
+            locale,
+            t,
+            plural,
+            zone: viewerZone(),
+          })}
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
           standIn={calendarStandIn(calendar, t)}
@@ -341,6 +335,27 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         />
       </StatStrip>
     </section>
+  );
+}
+
+/** One slot per reading the strip above draws, in its order. */
+export const BRIEF_READING_SLOTS = [
+  "urgent",
+  "meetings",
+  "leads",
+  "risk",
+  "decisions",
+] as const;
+
+/** The strip's room while the day is read: its own plate, one reading card's
+ *  height per slot, so what stands under it does not move when it lands. */
+export function BriefReadingsPending() {
+  return (
+    <StatStrip>
+      {BRIEF_READING_SLOTS.map((slot) => (
+        <Skeleton key={slot} width="100%" height="5.5rem" />
+      ))}
+    </StatStrip>
   );
 }
 

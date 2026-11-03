@@ -47,7 +47,8 @@ const MaxBodyLen = 8000
 // the raw original reaches the Sink verbatim as evidence, so a field absent
 // here is not a field lost.
 type Event struct {
-	ID string
+	Private bool
+	ID      string
 	// ICalUID is the event's identity ACROSS providers, and ID is not: ID is
 	// whatever the provider numbered this event in its own store, so the same
 	// meeting read from Google and from Graph carries two of them and dedupes
@@ -119,6 +120,7 @@ type Meeting struct {
 	occurredAt      time.Time
 	allDay          bool
 	durationSeconds *int
+	private         bool
 	cancelled       bool
 	ownerDeclined   bool
 	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
@@ -147,6 +149,7 @@ func Classify(ev Event, owner string) Meeting {
 		occurredAt:      ev.StartsAt,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
+		private:         ev.Private,
 		cancelled:       ev.Cancelled,
 		ownerDeclined:   ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
@@ -234,9 +237,10 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
-			Kind:    "meeting",
-			Subject: m.subject,
-			Body:    m.body,
+			Kind:            "meeting",
+			ProviderPrivate: m.private,
+			Subject:         m.subject,
+			Body:            m.body,
 			// The sink adds a mask of the subject to this.
 			CredentialsMasked: m.masked,
 			AgendaFingerprint: m.agenda,
@@ -486,12 +490,4 @@ func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
 	}
 	_, settlement := Classify(ev, owner).Settle()
 	return settlement, nil
-}
-
-func eventDuration(event Event) *int {
-	if event.StartsAt.IsZero() || !event.EndsAt.After(event.StartsAt) {
-		return nil
-	}
-	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
-	return capture.StorableDuration(&seconds)
 }

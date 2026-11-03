@@ -78,15 +78,28 @@ export function retarget(
 }
 
 /**
- * A grouping in the report's own field order, which is the order the picker
- * lists it in. The question groups in that order too, so the picker's face,
- * the request and the answer's columns all read the same way.
+ * The order the grouping picker lists a report's fields in. The built-in
+ * fields come in the report's order, then the installation's own fields, so
+ * the classifications an administrator added read as one set.
+ */
+export function groupingOrder(entity: AnalyticsEntity): string[] {
+  const own = new Set((entity.custom_fields ?? []).map((field) => field.name));
+  return [
+    ...entity.group_by.filter((field) => !own.has(field)),
+    ...entity.group_by.filter((field) => own.has(field)),
+  ];
+}
+
+/**
+ * A grouping in the order the picker lists it in. The question groups in that
+ * order too, so the picker's face, the request and the answer's columns all
+ * read the same way.
  */
 export function inOptionOrder(
   groupBy: readonly string[],
   entity: AnalyticsEntity,
 ): string[] {
-  return entity.group_by.filter((field) => groupBy.includes(field));
+  return groupingOrder(entity).filter((field) => groupBy.includes(field));
 }
 
 function valueMissing(value: LeafValue): boolean {

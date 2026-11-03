@@ -61,6 +61,7 @@ const (
 	methodResourcesRead         = "resources/read"
 	methodResourceTemplatesList = "resources/templates/list"
 	methodPromptsList           = "prompts/list"
+	methodPromptsGet            = "prompts/get"
 	// fieldName is the "name" member of both serverInfo and a tools/list
 	// entry — the same identifier in both, so it stays one spelling.
 	fieldName = "name"
@@ -68,9 +69,18 @@ const (
 	// an MCP tool result ({"type":"text","text":…}) — one spelling for both,
 	// because a typo in either makes a result no client renders.
 	fieldText = "text"
+	// fieldType names the kind of a content block.
+	fieldType = "type"
 	// fieldTitle is the display name, carried BOTH at the top level of a
 	// tools/list entry and inside its annotations — one spelling for both.
 	fieldTitle = "title"
+	// fieldDescription is the prose beside a title in serverInfo, prompts/list
+	// and prompts/get.
+	fieldDescription = "description"
+	// fieldContent carries a tool result's blocks and a prompt message's body.
+	fieldContent = "content"
+	// capabilityListChanged is the member every capability entry answers false.
+	capabilityListChanged = "listChanged"
 )
 
 // negotiateLegacyVersion answers the client's requested MCP revision when this
@@ -125,6 +135,13 @@ type Dispatcher struct {
 	// which withdraws every `_meta.ui` rather than advertising documents that
 	// cannot be read. Every tool still answers in text.
 	viewHeld func(uri string) bool
+	// publicOrigin is the install's configured web origin, which the app is
+	// served from. Empty leaves serverInfo without a website or icons, and
+	// results without record links.
+	publicOrigin string
+	// inputState signs the questions a tool asks in the chat. Unarmed, no tool
+	// asks, and each does what it did before the question existed.
+	inputState inputStateSigner
 	// log receives the true cause of failures the tool client only sees
 	// generically — the client is an untrusted agent, so infrastructure
 	// detail (DSNs, hosts, wrap chains) stays server-side.
@@ -252,7 +269,13 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 	case methodResourceTemplatesList:
 		resp.Result = map[string]any{"resourceTemplates": []any{}}
 	case methodPromptsList:
-		resp.Result = map[string]any{"prompts": []any{}}
+		resp.Result = map[string]any{"prompts": s.promptList(ctx)}
+	case methodPromptsGet:
+		if result, rpcErr := s.promptGet(ctx, req.Params); rpcErr != nil {
+			resp.Error = rpcErr
+		} else {
+			resp.Result = result
+		}
 	case methodTasksGet, methodTasksUpdate, methodTasksCancel:
 		// Modern-only, and not through eraOwned because these need the request
 		// context: they authenticate, read and can execute. In the handshake era
@@ -266,42 +289,6 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 		return methodNotFound(req)
 	}
 	return resp
-}
-
-// eraOwned answers the calls that exist in ONE framing only, and reports
-// whether the method was one of them at all.
-//
-// Each era's opening call belongs here because answering the other era's would
-// tell a client it had reached the kind of server it was probing for, which is
-// exactly the question those two calls exist to settle. ping is here for a
-// different reason: the 2026-07-28 revision REMOVED it along with the handshake
-// it kept alive, so it stays answered only in the era that still defines it.
-func (s *Dispatcher) eraOwned(req rpcRequest, fr framing) (rpcResponse, bool) {
-	resp := rpcResponse{JSONRPC: jsonRPCVersion, ID: req.ID}
-	switch req.Method {
-	case methodInitialize:
-		if fr.modern {
-			return methodNotFound(req), true
-		}
-		if result, rpcErr := s.initialize(req.Params); rpcErr != nil {
-			resp.Error = rpcErr
-		} else {
-			resp.Result = result
-		}
-	case methodDiscover:
-		if !fr.modern {
-			return methodNotFound(req), true
-		}
-		resp.Result = s.discover()
-	case methodPing:
-		if fr.modern {
-			return methodNotFound(req), true
-		}
-		resp.Result = map[string]any{}
-	default:
-		return rpcResponse{}, false
-	}
-	return resp, true
 }
 
 func methodNotFound(req rpcRequest) rpcResponse {
@@ -325,17 +312,19 @@ func methodNotFound(req rpcRequest) rpcResponse {
 // legacy client would offer a negotiation it cannot enter — the same reason
 // ping is answered in one era only.
 //
-// listChanged is FALSE on both feature entries because this server has no way
-// to send the notification: notifications/*/list_changed travels on a stream
-// this transport does not open. Both surfaces really do change — each is
-// filtered per caller — so the claim would promise a message that can never
-// arrive.
+// listChanged is FALSE on every feature entry, because this server cannot send
+// the notification. notifications/*/list_changed travels on a stream this
+// transport does not open. Every surface really does change, since each is
+// filtered per caller, so the claim would promise a message that never arrives.
 func (s *Dispatcher) capabilities(modern bool) map[string]any {
-	capabilities := map[string]any{"tools": map[string]any{"listChanged": false}}
+	capabilities := map[string]any{
+		"tools":   map[string]any{capabilityListChanged: false},
+		"prompts": map[string]any{capabilityListChanged: false},
+	}
 	if s.resources != nil {
 		// subscribe is FALSE for the same reason, and separately: a
 		// per-caller document has no shared state to subscribe to.
-		capabilities["resources"] = map[string]any{"listChanged": false, "subscribe": false}
+		capabilities["resources"] = map[string]any{capabilityListChanged: false, "subscribe": false}
 	}
 	if modern && s.tasksServed() {
 		// Advertised only where it is real. Without a task store this server
@@ -358,12 +347,6 @@ func (s *Dispatcher) capabilities(modern bool) map[string]any {
 		extensions[extensionUI] = map[string]any{}
 	}
 	return capabilities
-}
-
-// identity is the serverInfo both framings report — the handshake era in its
-// initialize result, the modern era in every result's _meta.
-func (s *Dispatcher) identity() map[string]any {
-	return map[string]any{fieldName: s.name, "version": s.version}
 }
 
 // call answers tools/call. Its return is `any` rather than a result map because
@@ -391,7 +374,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 		p.Arguments = json.RawMessage(`{}`)
 	}
 
-	callCtx, err := s.bind(ctx)
+	callCtx, err := s.bind(withRecordLinks(ctx, s.publicOrigin))
 	if err != nil {
 		// The bind failure's cause (revoked vs expired vs infrastructure)
 		// is server-side knowledge; the client only learns that its
@@ -401,6 +384,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"(it may be revoked, expired, or bound to another workspace). Nothing was changed — " +
 			"mint a new passport or contact the workspace admin.")
 	}
+	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
 	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
 	if spec, ok := s.registry.Spec(p.Name); ok && spec.Unlisted {
 		// The traffic a hidden name still carries, which decides when it can go.
@@ -409,6 +393,9 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle
+		}
+		if asked, ok := s.askedInChat(callCtx, p.Name, p.Arguments, err); ok {
+			return asked
 		}
 		refusal := toolError(s.explain(served.Tool, err))
 		if shown := shownAnswer(err); shown != nil {
@@ -437,7 +424,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 // this server made and did not keep. structuredContent below is the member that
 // carries that promise, and it is withheld rather than served in violation.
 func (s *Dispatcher) result(name string, out json.RawMessage) map[string]any {
-	res := map[string]any{"content": []map[string]any{{"type": fieldText, fieldText: string(out)}}}
+	res := map[string]any{fieldContent: []map[string]any{{fieldType: fieldText, fieldText: string(out)}}}
 	if structured, ok := s.structuredContent(name, out); ok {
 		res["structuredContent"] = structured
 	}
@@ -484,7 +471,7 @@ func (s *Dispatcher) structuredContent(name string, out json.RawMessage) (json.R
 
 func toolError(msg string) map[string]any {
 	return map[string]any{
-		"isError": true,
-		"content": []map[string]any{{"type": fieldText, fieldText: msg}},
+		"isError":    true,
+		fieldContent: []map[string]any{{fieldType: fieldText, fieldText: msg}},
 	}
 }

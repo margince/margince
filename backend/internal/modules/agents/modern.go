@@ -78,10 +78,9 @@ const (
 	// createTaskResult (tasksdispatch.go) — which is how the specification's
 	// "MUST NOT set resultType to task on other result types" is kept.
 	//
-	// "input_required" is never answered. It belongs to a multi-round-trip call,
-	// and no tool here asks its caller for input — a 🟡 tool stages through the
-	// approvals engine, which is a Margince surface a human visits, not a round
-	// trip to the agent's client.
+	// "input_required" is answered only by inputRequiredResult, when a tool asks
+	// the user a question the client could settle by itself (inputrequired.go).
+	// A 🟡 tool still stages through the approvals engine, which a human visits.
 	fieldResultType    = "resultType"
 	resultTypeComplete = "complete"
 	fieldMeta          = "_meta"
@@ -151,6 +150,9 @@ type framing struct {
 	// there is a document to prefetch and sandbox, and a host that cannot enter
 	// the negotiation has nowhere to put it.
 	apps bool
+	// elicit reports whether this request's client can show the user a form,
+	// which is what lets a tool ask in the chat (inputrequired.go).
+	elicit bool
 }
 
 // legacyFraming is the handshake era, named rather than spelled as a zero
@@ -266,6 +268,7 @@ func modernPreconditions(meta modernMeta) (framing, *rpcError) {
 	}
 	fr.tasks = declaresTasks(meta.capabilities)
 	fr.apps = declaresUI(meta.capabilities)
+	fr.elicit = declaresFormElicitation(meta.capabilities)
 	if !servesAsModern(fr.version) {
 		return fr, unsupportedProtocolVersion(fr.version)
 	}

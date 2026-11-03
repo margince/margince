@@ -4,11 +4,16 @@
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
 import type { Section } from "../../lib/analytics.address";
-import { type ReportingView, viewRequest } from "./reporting.views";
+import {
+  presetRequest,
+  type ReportingView,
+  viewRequest,
+} from "./reporting.views";
 
 type ReportingSelection = components["schemas"]["ReportingSelection"];
 type MetricID = components["schemas"]["ReportingMetricID"];
 type BlockKind = components["schemas"]["ReportingBlockKind"];
+type PresetID = components["schemas"]["ReportingPreset"]["id"];
 
 // A prepared report is a question the reporting engine answers, which a reader
 // previews and saves a copy of. Or it is a section that already holds the
@@ -21,14 +26,15 @@ export type PreparedReport =
       kind: "question";
       period: ReportingSelection["period"];
     }> &
-      // A question lists its metrics and charts, or asks what a view's
-      // server preset asks, so the template cannot drift from the view.
+      // A question lists its metrics and charts, or asks what a view's or a
+      // server preset asks, so the template cannot drift from the screen.
       (
         | Readonly<{
             metrics: readonly MetricID[];
             blocks: readonly BlockKind[];
           }>
         | Readonly<{ view: ReportingView }>
+        | Readonly<{ preset: PresetID }>
       ))
   | Readonly<{
       id: string;
@@ -67,6 +73,14 @@ export const PREPARED_REPORTS: readonly PreparedReport[] = [
     kind: "question",
     period: "this_week",
     view: "sdr",
+  },
+  {
+    id: "team-prospecting-review",
+    title: "reporting.prepared.teamTitle",
+    purpose: "reporting.prepared.teamPurpose",
+    kind: "question",
+    period: "this_week",
+    preset: "team",
   },
   {
     id: "sales-by-owner",
@@ -130,7 +144,9 @@ export function preparedSelection(
   const asked =
     "view" in report
       ? viewRequest(report.view, catalog, report.period)
-      : report;
+      : "preset" in report
+        ? presetRequest(report.preset, catalog)
+        : report;
   const offered = catalog.metrics.filter((metric) =>
     asked.metrics.includes(metric.id),
   );

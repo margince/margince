@@ -177,16 +177,8 @@ const GLANCE_WEEK = {
   },
 } as unknown as Parameters<typeof BriefGlance>[0]["week"];
 
-// The header the Brief opens with: a greeting and ONE composed sentence about
-// the day — two lines, and nothing between or above them. The uppercase eyebrow
-// naming the view, the clock reporting the minute the queue was read, and the
-// date under the greeting were three lines a reader already knew.
-//
-// The sentence is the part to read closely: the LEAD is a link into the row it
-// names, and the tail — "Then N more" — reaches the day's own order further
-// down the page, so the words a reader acts on are the words they can press.
-// The tail is a button rather than an anchor because every href in this product
-// is a route, and a fragment link would replace it.
+// The header the Brief opens with: the greeting over the reader's name, then
+// the date and one composed sentence about the day on one line.
 export const Glance: Story = {
   render: part(
     <BriefGlance
@@ -214,11 +206,9 @@ export const GlanceUnnamed: Story = {
   ),
 };
 
-// The weekly says its own thing, composed from the counts the week was frozen
-// with rather than from the ranked queue — which describes THIS morning and
-// would read as the wrong week entirely. It draws the SAME two lines the
-// morning does: two views drawn alike need no kicker to tell them apart, and
-// one of them wearing one would be the odd page.
+// The weekly composes its sentence from the counts the week was frozen with.
+// The ranked queue describes this morning, and would read as the wrong week.
+// It draws the morning's shape: the week over its days, then one line of facts.
 export const GlanceWeekly: Story = {
   render: part(
     <BriefGlance

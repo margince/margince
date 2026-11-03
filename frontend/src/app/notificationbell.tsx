@@ -305,7 +305,7 @@ function NoticeRow({
           // cannot reach.
           <span className="notifrow-subject">{headline}</span>
         )}
-        {!settled && <Badge tone="accent">{t("notifications.new")}</Badge>}
+        {!settled && <Badge tone="accent">{t("notifications.unread")}</Badge>}
         {agentAuthored(notice) && (
           <Badge tone="ai">{t("notifications.byAgent")}</Badge>
         )}

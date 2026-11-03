@@ -26,7 +26,7 @@ const (
 	// choose (REPORT-PARAM-7) — a caller who could pick it could produce two
 	// reports that disagree and both look right. It is NOT NULL for every row
 	// this report reads, guaranteed by the deal_closed_at CHECK.
-	colClosedAt = "t.closed_at"
+	colClosedAt = "t." + wonSalesAnchorColumn
 	colSource   = "t.source"
 	colOrigin   = "t.origin"
 	// The company's size band, read over win-loss's join to company. The
@@ -46,6 +46,8 @@ const (
 	fieldPeriodYear    = "period_year"
 	fieldPeriodQuarter = "period_quarter"
 	fieldPeriodMonth   = "period_month"
+	fieldLossReason    = "loss_reason"
+	fieldLossState     = "loss_reason_state"
 
 	// The three grains' to_char patterns (REPORT-PARAM-5). Q is Postgres's
 	// quarter-of-year; the "-Q" is a quoted literal inside the pattern, not a
@@ -264,6 +266,16 @@ func isPeriodField(entity string) func(field string) bool {
 	}
 }
 
+// lossReasonStateExpr says how a lost deal's reason is known: chosen at the
+// close, mapped later from its note, or a note nobody has mapped yet. A won
+// deal is NULL, as under lost_reason. "missing" is a lost deal with neither
+// code nor note. deal_lost_reason refuses one, so a count there is a broken row.
+const lossReasonStateExpr = `(CASE WHEN t.status <> 'lost' THEN NULL
+	WHEN t.lost_reason_basis = 'mapped' THEN 'mapped'
+	WHEN t.lost_reason_code IS NOT NULL THEN 'recorded'
+	WHEN t.lost_reason IS NOT NULL THEN 'unmapped'
+	ELSE 'missing' END)`
+
 // withProjectFilter adds the project_id filter a deal-based report carries:
 // every deal report answers "for this project" the same way.
 func withProjectFilter(filters map[string]string) map[string]string {
@@ -298,6 +310,10 @@ func winLossSpec() reportSpec {
 		// not a gap in it. A caller asking why we lose filters status='lost'
 		// first, exactly as the meeting_status dimension expects a kind filter.
 		fieldLostReason: colLostReason,
+		// The administered code, which a report can count; lost_reason above
+		// stays for the notes a team wrote before the list existed.
+		fieldLossReason: "t.lost_reason_code",
+		fieldLossState:  lossReasonStateExpr,
 		// How big the company was, so "who do we actually win against" is one
 		// question rather than a company-by-company read.
 		//
@@ -320,9 +336,13 @@ func winLossSpec() reportSpec {
 		// totals silently, which is the shape where a report quietly stops
 		// counting some of the business.
 		joins:     []string{"LEFT JOIN company company ON company.id = t.company_id"},
-		baseWhere: "t.archived_at IS NULL AND t.status IN ('won','lost')",
+		baseWhere: closedDealWhere("t"),
 		basePlain: "live (unarchived) deals that have been won or lost, bucketed by when they closed " +
 			"in the installation's reporting timezone (an open deal is absent from this report, not a zero in it)",
+		notes: "a lost deal counts once, under the period and loss_reason of its latest loss; " +
+			"a deal reopened and lost again leaves its earlier loss, and that loss's code, in its stage history " +
+			"and not in this report. loss_reason_state says whether the code was picked at the close (recorded), " +
+			"mapped later from an older note (mapped), or is missing because only an unmapped note exists (unmapped)",
 		// The installation's, not the caller's: a question about how the
 		// business closes. Naming one owner, by filter or by grouping, goes
 		// through the owner gate (reportownergate.go).
@@ -344,7 +364,7 @@ func winLossSpec() reportSpec {
 		// at the same revenue looked identical to one that was not.
 		measures: map[string]string{
 			fieldAmountMinor:     colAmountMinor,
-			fieldAmountBaseMinor: pipelineBaseValueExpr,
+			fieldAmountBaseMinor: wonSalesValueSQL(reportAsOfToken, reportBaseCurrencyToken, "t"),
 			fieldDaysToClose:     daysToCloseExpr,
 		},
 		nativeMeasures: nativeMoney(fieldAmountMinor),

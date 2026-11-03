@@ -264,6 +264,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The captured-cohort repair: a contact's earlier mail is linked when the
 		// contact appears or gains an address. Its own group so a slow enrichment
 		// cannot delay a record becoming complete.
+		"cg:deal-refile":         {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal", "gw:events:crm:lead"},
 		"cg:cohort-promote":      {"gw:events:crm:contact"},
 		"cg:contact-auto-enrich": {"gw:events:crm:contact"},
 		// The prompt half of captured-company auto-enrich: an
@@ -289,6 +290,9 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// because accrual is money: a projection rebuild must not be able to
 		// stall it, and a failure to accrue must not read as a failure to index.
 		"cg:commissions": {"gw:events:crm:deal"},
+		// Activating a partner on its first sourced win; apart from the accrual
+		// so neither waits on the other.
+		"cg:partner-activation": {"gw:events:crm:deal"},
 		// Both streams: contract.* and deal_room.* ride the deal one,
 		// activity.captured its own.
 		"cg:stage-evidence": {"gw:events:crm:activity", "gw:events:crm:deal"},

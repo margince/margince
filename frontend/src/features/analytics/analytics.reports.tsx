@@ -85,6 +85,7 @@ export const SECTION_REPORTS = {
   sdr: [],
   leads: [],
   partners: [],
+  conversion: [],
   // The rep's own week: a composed view like the forecast, not report cards.
   outcomes: [],
   // Source health: an ops view over the nightly check's own coverage rows.

@@ -49,17 +49,24 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 	case reportingLeadsCreated:
 		fields = append(fields, "origin")
 	case reportingLeadsPromoted:
-		fields = append(fields, "qualified_deal_id")
+		fields = append(fields, "qualified_deal_id", "promoted_at")
 	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
 		fields = append(fields, "routed_at", "first_response_at")
+	case reportingLeadCohortOutcomes:
+		fields = append(fields, "routed_at")
 	}
 	return fields
 }
 
 // leadMetricScope is what every lead reader narrows by: the picked scope, the
-// leads this reader may see, and none whose read columns are withheld.
+// leads this reader may see, and none whose read columns are withheld. The lead
+// cohort narrows the scope by the owner a lead arrived with.
 func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, b *reportingBindings) (string, bool, error) {
-	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), leadOwnerColumn, b.arg, unownedIsExcluded)
+	owner := leadOwnerColumn
+	if metric == reportingLeadCohortOutcomes {
+		owner = leadArrivalOwnerColumn
+	}
+	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
 	if err != nil {
 		return "", false, err
 	}
@@ -71,7 +78,11 @@ func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reportin
 	if err != nil {
 		return "", false, err
 	}
-	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope, withheld, nil
+	dimensions, err := leadDimensionSQL(ctx, frame, b, "l")
+	if err != nil {
+		return "", false, err
+	}
+	return orUnnarrowed(population) + " AND " + orUnnarrowed(rowScope) + " AND " + fieldScope + dimensions + initiativeMemberSQL(ctx, b, "l", string(recordTypeLead)), withheld, nil
 }
 
 func orUnnarrowed(clause string) string {
@@ -157,17 +168,34 @@ func readReportingLeadsPromoted(ctx context.Context, tx pgx.Tx, frame crmcontrac
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),l.created_at,
- CASE WHEN l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<` + at + ` THEN 1 ELSE 0 END::float8,'lead_created','',''
+ CASE WHEN ` + leadQualifiedBySQL(at) + ` THEN 1 ELSE 0 END::float8,'lead_created','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
  WHERE ` + countedLeadSQL + ` AND l.created_at>=` + b.add(reportingEarliest(frame)) + ` AND l.created_at<` + at + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsPromoted, string(recordTypeLead), query, b, withheld)
 }
 
+// leadQualifiedBySQL holds for a lead joined to an existing or new deal before at: the
+// Leads qualified reading's value, which the team review's members share.
+func leadQualifiedBySQL(at string) string {
+	return "l.status='promoted' AND l.qualified_deal_id IS NOT NULL AND l.promoted_at<" + at
+}
+
+// leadAwaitingBySQL holds for a lead that wrote in, is still open and had no
+// first reply before at. It is the rule of Leads still waiting for a reply.
+func leadAwaitingBySQL(at string) string {
+	return "l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=" + at + ") AND " + auth.LiveLeadInquiryClause("l")
+}
+
 // leadArrivedSQL is the arrival cohort both response readings count from: a
 // counted lead no import wrote, which arrived in the window ending at `at`.
 func leadArrivedSQL(frame crmcontracts.ReportingContext, b *reportingBindings, at string) string {
-	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + b.add(reportingEarliest(frame)) + " AND " + leadArrivalSQL + "<" + at
+	return leadArrivedBetweenSQL(b.add(reportingEarliest(frame)), at)
+}
+
+// leadArrivedBetweenSQL is that cohort for the half-open window [start, end).
+func leadArrivedBetweenSQL(start, end string) string {
+	return countedLeadSQL + " AND " + weekly.NonImportedLeadSQL + " AND " + leadArrivalSQL + ">=" + start + " AND " + leadArrivalSQL + "<" + end
 }
 
 // leadArrivalSQL is when a lead arrived: the instant the response target runs from.
@@ -218,8 +246,7 @@ func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame cr
 	}
 	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
- WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND l.archived_at IS NULL AND (l.first_response_at IS NULL OR l.first_response_at>=` + at + `)
- AND ` + auth.LiveLeadInquiryClause("l") + ` AND ` + scope + `
+ WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND ` + leadAwaitingBySQL(at) + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	return readGroupedFacts(ctx, tx, frame, reportingLeadsAwaitingResponse, string(recordTypeLead), query, b, withheld)
 }

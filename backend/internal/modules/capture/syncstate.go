@@ -81,7 +81,7 @@ func backoffDelay(consecutiveFailures int) time.Duration {
 }
 
 // A successful pull and its health share the snapshot-fenced transaction.
-func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, receivedAt *time.Time) error {
 	now := r.now()
 	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
 	if err != nil {
@@ -91,23 +91,24 @@ func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectio
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO capture_sync_state (connection_id, next_sync_at,
 		                                consecutive_failures, last_synced_at, last_success_at,
-		                                last_error_class, failing_since)
-		VALUES ($1, now() + make_interval(secs => $2), 0, $3, $3, NULL, NULL)
+		                                last_error_class, failing_since, last_delivery_at)
+		VALUES (@id, now() + make_interval(secs => @interval), 0, @observed, @observed, NULL, NULL, @received::timestamptz)
 		ON CONFLICT (connection_id) DO UPDATE SET
-		  next_sync_at = now() + make_interval(secs => $2),
+		  next_sync_at = now() + make_interval(secs => @interval),
 		  consecutive_failures = 0,
 		  last_synced_at = EXCLUDED.last_synced_at,
 		  last_success_at = EXCLUDED.last_success_at,
+		  last_delivery_at = GREATEST(capture_sync_state.last_delivery_at, EXCLUDED.last_delivery_at),
 		  last_error_class = NULL,
 		  -- One success ends the streak, so the next failure starts a new
 		  -- one from its own instant rather than continuing this one.
 		  failing_since = NULL`,
-		connectionID, interval, now); err != nil {
+		pgx.NamedArgs{"id": connectionID, "interval": interval, "observed": now, "received": receivedAt}); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'connected'
-		WHERE id = $1 AND status = 'error' AND archived_at IS NULL`, connectionID); err != nil {
+		WHERE id = @id AND status = 'error' AND archived_at IS NULL`, pgx.NamedArgs{"id": connectionID}); err != nil {
 		return err
 	}
 	return reviveTruncatedBackfillTx(ctx, tx, connectionID)

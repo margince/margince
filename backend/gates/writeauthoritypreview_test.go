@@ -10,15 +10,23 @@ import "testing"
 // Preview admissions ask for the eventual write grant while leaving every row unchanged.
 func classifyReadOnlyPreviewAdmissions(t *testing.T, packages map[string]map[string]map[string]*writeAuthorityFn) {
 	t.Helper()
-	receivers := packages["internal/modules/contacts"]
-	visible := visibleWriteAuthorityFns(receivers, "Store")
-	purity := previewMutationClosure(receivers)
-	for _, name := range []string{"PreviewCompanyRead", "PreviewColdStart", "PreviewMergeSurvivorship"} {
-		if !readOnlyPreviewAdmission(purity, name) {
-			t.Errorf("%s must retain its write admission and reach no mutation", name)
-			continue
+	for _, group := range []struct {
+		module string
+		names  []string
+	}{
+		{"internal/modules/contacts", []string{"PreviewCompanyRead", "PreviewColdStart", "PreviewMergeSurvivorship", "PreviewLeadPromotionWithOptions", "promotionDealsPreview", "promotionCandidateCompany"}},
+		{"internal/modules/deals", []string{"appendDealWriteScope"}},
+	} {
+		receivers := packages[group.module]
+		visible := visibleWriteAuthorityFns(receivers, "Store")
+		purity := previewMutationClosure(receivers)
+		for _, name := range group.names {
+			if !readOnlyPreviewAdmission(purity, name) {
+				t.Errorf("%s:%s must retain its write admission and reach no mutation", group.module, name)
+				continue
+			}
+			visible[name].previewOnly = true
 		}
-		visible[name].previewOnly = true
 	}
 }
 
@@ -73,5 +81,17 @@ func TestPreviewAdmissionIncludesOtherReceiverMutations(t *testing.T) {
 	}
 	if readOnlyPreviewAdmission(previewMutationClosure(receivers), "preview") {
 		t.Fatal("a mutation behind another receiver must refuse preview classification")
+	}
+}
+
+func TestPreviewClassificationSurvivesThePackageFunctionView(t *testing.T) {
+	t.Parallel()
+	pure := &writeAuthorityFn{previewOnly: true}
+	functions := map[string]map[string]*writeAuthorityFn{"": {"preview": pure}, "Writer": {"preview": {}}}
+	if !visibleWriteAuthorityFns(functions, "")["preview"].previewOnly {
+		t.Fatal("the package function's own view dropped its proven read-only admission")
+	}
+	if visibleWriteAuthorityFns(functions, "Writer")["preview"].previewOnly {
+		t.Fatal("a distinct writer inherited the package function's read-only classification")
 	}
 }

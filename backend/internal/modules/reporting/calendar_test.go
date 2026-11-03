@@ -121,3 +121,36 @@ func TestThisWeekAtMondayMidnightIsAnEmptyWeekInTheCutoffsMonth(t *testing.T) {
 		t.Fatalf("target = %+v, want March, the month the empty week starts in", target)
 	}
 }
+
+// The cutoff ends what was measured; the horizon is the whole period named.
+// A fiscal year from February puts 20 Oct in Q3. That quarter opens in summer
+// time and closes in winter time, so its end is 23:00Z, not 22:00Z. The week
+// holds the clock change too.
+func TestTheHorizonRunsPastTheCutoffToThePeriodsOwnEnd(t *testing.T) {
+	berlin := Calendar{Timezone: "Europe/Berlin", Currency: "EUR", FiscalStartMonth: 2}
+	at := time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		period, start, end string
+	}{
+		{"this_quarter", "2026-07-31T22:00:00Z", "2026-10-31T23:00:00Z"},
+		{"this_month", "2026-09-30T22:00:00Z", "2026-10-31T23:00:00Z"},
+		{"this_week", "2026-10-18T22:00:00Z", "2026-10-25T23:00:00Z"},
+		{"last_month", "2026-08-31T22:00:00Z", "2026-09-30T22:00:00Z"},
+	} {
+		selection := crmcontracts.ReportingSelection{Period: crmcontracts.ReportingSelectionPeriod(tc.period)}
+		interval, err := Interval(selection, berlin, at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := Horizon(selection, berlin, interval)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if start, end := got.StartAt.UTC().Format(time.RFC3339), got.EndAt.UTC().Format(time.RFC3339); start != tc.start || end != tc.end {
+			t.Fatalf("%s horizon %s – %s, want %s – %s", tc.period, start, end, tc.start, tc.end)
+		}
+		if tc.period != "last_month" && !interval.EndAt.Equal(at) {
+			t.Fatalf("%s interval ends %s, want the cutoff %s", tc.period, interval.EndAt, at)
+		}
+	}
+}

@@ -1,3 +1,4 @@
+import { FileUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
@@ -8,8 +9,7 @@ import { problemMessageOf } from "../../lib/problem";
 import { useFileDrop } from "../../lib/use-file-drop";
 import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
-import type { IntakeNotice, SpeakerAsk } from "./use-voice-intake";
-import { useVoiceIntake } from "./use-voice-intake";
+import type { IntakeNotice, SpeakerAsk, VoiceIntake } from "./use-voice-intake";
 
 // The Settings intake: hand over files, and answer who is speaking when one
 // turns out to be a conversation. It owns the intake hook so the build control
@@ -19,15 +19,14 @@ import { useVoiceIntake } from "./use-voice-intake";
 // Files and pasted text both come in here, as in onboarding. A paste is the
 // way past a file the browser cannot open, such as a locked PDF.
 //
-// Everything the intake has to say back — the unanswered speaker questions and
-// the per-source notices — lives in this component's hook and renders on the
-// card under the zone, where a reader who has just handed over six files can
-// see what happened to each.
+// What the intake has to say back renders on the card under the zone: the
+// unanswered speaker questions and the per-source notices. A reader who has
+// just handed over six files sees there what happened to each.
 
 type VoiceCorpusIntakeProps = Readonly<{
-  /** null for an owner who has no profile yet: the first sample mints it. */
-  profileId: string | null;
-  onChanged: () => void;
+  /** The intake this zone feeds. Its caller owns it, so work in flight
+   * outlives the swap from the first-sample card to the full one. */
+  intake: VoiceIntake;
   /** Told when intake is in progress, so the caller can hold the build. */
   onBusyChange?: (busy: boolean) => void;
   /** The first sample is the one that MINTS the profile: the row names itself
@@ -37,14 +36,12 @@ type VoiceCorpusIntakeProps = Readonly<{
 }>;
 
 export function VoiceCorpusIntake({
-  profileId,
-  onChanged,
+  intake,
   onBusyChange,
   first = false,
 }: VoiceCorpusIntakeProps) {
   const t = useT();
   const { locale } = useLocale();
-  const intake = useVoiceIntake({ profileId, onChanged });
   const zoneRef = useRef<HTMLDivElement>(null);
 
   // The zone's own input takes every drop that lands on it. This hook is never
@@ -69,23 +66,31 @@ export function VoiceCorpusIntake({
         description={t("settings.voice.dropHint")}
         layout="stack"
         control={(control) => (
-          <div className="vdna-zone settingrow-measure">
-            <FileDropzoneControl
-              control={control}
-              emptyLabel={t("settings.voice.dropEmpty")}
-              multiple
-              accept={ACCEPTED_CORPUS_ATTR}
-              onPick={(file) => intake.addFiles([file])}
-            />
-            <PasteSample
-              onAdd={(text, onSettled) =>
-                intake.addPaste(
-                  text,
-                  t("settings.voice.pasteSource"),
-                  onSettled,
-                )
-              }
-            />
+          <div className="vdna-zone">
+            {/* Two ways in, side by side where the card is wide enough. */}
+            <div className="vdna-zone-inputs">
+              <div className="vdna-drop">
+                {/* A caption, not a label: the row already names the input. */}
+                <span className="t-label">{t("settings.voice.dropLabel")}</span>
+                <FileDropzoneControl
+                  control={control}
+                  emptyLabel={t("settings.voice.dropEmpty")}
+                  icon={FileUp}
+                  multiple
+                  accept={ACCEPTED_CORPUS_ATTR}
+                  onPick={(file) => intake.addFiles([file])}
+                />
+              </div>
+              <PasteSample
+                onAdd={(text, onSettled) =>
+                  intake.addPaste(
+                    text,
+                    t("settings.voice.pasteSource"),
+                    onSettled,
+                  )
+                }
+              />
+            </div>
             {intake.pendingAsk && (
               // Keyed by the source: when the queue advances to the next file
               // the panel is a NEW panel, so the previous file's chosen
@@ -136,7 +141,7 @@ function PasteSample({
   const [sending, setSending] = useState(false);
   const blank = text.trim() === "";
   return (
-    <div>
+    <div className="vdna-paste">
       <Field label={t("settings.voice.pasteLabel")}>
         {(control) => (
           <Textarea
@@ -173,7 +178,7 @@ function PasteSample({
 function WhatTeachesTheVoice() {
   const t = useT();
   return (
-    <div>
+    <div className="vdna-works">
       <p className="vdna-label">{t("settings.voice.worksTitle")}</p>
       <ul className="vdna-works-list">
         <li>{t("settings.voice.worksEmails")}</li>

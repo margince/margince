@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import {
   installFetchStub,
   jsonResponse,
@@ -22,7 +23,14 @@ function story(delivery: Record<string, string>, routes: RouteMap = {}) {
     });
     return (
       <StoryProviders>
-        <BriefDeliveryPanel />
+        <div className="settings-stack">
+          {/* The panel drafts and the bar writes, so a story without the bar
+              cannot show a save at all, refused or not. */}
+          <SavePageProvider>
+            <BriefDeliveryPanel />
+            <PageSaveBar />
+          </SavePageProvider>
+        </div>
       </StoryProviders>
     );
   };
@@ -54,7 +62,8 @@ export const NeverChosenPhone: Story = {
   render: story({}),
 };
 
-// A refused save is said once, under the rows, with the server's reason.
+// A refused save is said under the rows, with the server's reason, and the rows
+// it covered point at it.
 export const SaveRefused: Story = {
   render: story(
     {},
@@ -77,7 +86,15 @@ export const SaveRefused: Story = {
     await userEvent.click(
       await page.findByRole("option", { name: "Not by email" }),
     );
-    await page.findByRole("alert");
+    // The page writes through the save bar, so the choice alone drafts and
+    // refuses nothing. The notice answers the write.
+    await userEvent.click(await page.findByRole("button", { name: "Save" }));
+    // Two notices answer one refusal: the bar summarises it, and the rows that
+    // were in the write point at the one under the list.
+    const alerts = await page.findAllByRole("alert");
+    const describes = morning.getAttribute("aria-describedby") ?? "";
+    if (!alerts.some((candidate) => describes.includes(candidate.id)))
+      throw new Error("the refused row points at no notice");
   },
 };
 

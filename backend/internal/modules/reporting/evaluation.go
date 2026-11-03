@@ -118,7 +118,14 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 			return err
 		}
 		out, err = s.evaluateSelection(ctx, tx, selection, framework)
-		return err
+		if err != nil {
+			return err
+		}
+		recorded, err := s.revisionMetricVersions(ctx, tx, id, chosen)
+		if err != nil {
+			return err
+		}
+		return withdrawChangedDefinitions(&out, recorded)
 	})
 	return out.Result, err
 }
@@ -206,8 +213,10 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 	if after, ok := strings.CutPrefix(group, "owner:"); ok {
 		return !fact.OwnerWithheld && fact.OwnerID.String() == after
 	}
+	// A stage cohort's outcome group starts like its stage's and names the
+	// outcome after it, so the fact's own key answers it.
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
-		return fact.StageID == after
+		return fact.StageID == after || fact.GroupKey == group
 	}
 	if strings.HasPrefix(group, "week:") && fact.At() != nil {
 		zone, err := time.LoadLocation(frame.Timezone)

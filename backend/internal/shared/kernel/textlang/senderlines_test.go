@@ -70,18 +70,51 @@ func TestSenderLinesEndAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
 	}
 }
 
-func TestCurrentMessageKeepsItsCutSoStoredQuoteProofsStillVerify(t *testing.T) {
-	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
-		"From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\n\n" + quotedSellerSignature
-	got := textlang.CurrentMessage(body)
-	proof, ok := values.ProveQuote(got, "Head of Sales")
-	if !ok {
-		t.Fatalf("CurrentMessage no longer holds the text a stored proof covers: %q", got)
-	}
-	if _, ok := values.VerifyQuote(textlang.CurrentMessage(body), proof); !ok {
-		t.Fatal("a proof made from CurrentMessage stopped verifying")
+// An Outlook block that follows the stored envelope is quoted. The text a proof
+// hashes ends there, as every other reader's does.
+func TestCurrentMessageEndsAtAnOutlookBlockThatFollowsTheEnvelope(t *testing.T) {
+	if got := textlang.CurrentMessage(outlookBlockBody); strings.Contains(got, "Head of Sales") {
+		t.Fatalf("CurrentMessage kept the quoted signature: %q", got)
 	}
 }
+
+// A proof stored with the zero cut hashed the whole of this message. It still
+// verifies, because it is read with that cut.
+func TestAProofStoredUnderTheEarlierCutStillVerifies(t *testing.T) {
+	stored, ok := values.ProveQuote(strings.TrimSpace(outlookBlockBody), "Head of Sales")
+	if !ok {
+		t.Fatal("the fixture's earlier-cut proof could not be made")
+	}
+	if quote, ok := textlang.VerifySenderQuote(outlookBlockBody, stored); !ok || quote != "Head of Sales" {
+		t.Fatalf("a proof stored under the earlier cut read %q, %v", quote, ok)
+	}
+}
+
+func TestANewProofNamesItsCutAndVerifies(t *testing.T) {
+	body := "Thanks, I will send the signed order by Friday.\n\nBob Contact"
+	proof, ok := textlang.ProveSenderQuote(body, "send the signed order by Friday")
+	if !ok || proof.Cut != textlang.QuoteCutSecondSender {
+		t.Fatalf("proof = %+v, %v; want one made under today's cut", proof, ok)
+	}
+	if quote, ok := textlang.VerifySenderQuote(body, proof); !ok || quote != "send the signed order by Friday" {
+		t.Fatalf("a new proof read %q, %v", quote, ok)
+	}
+}
+
+func TestAProofUnderAnUnknownCutVerifiesNothing(t *testing.T) {
+	body := "Thanks, I will send the signed order by Friday."
+	proof, ok := textlang.ProveSenderQuote(body, "send the signed order")
+	if !ok {
+		t.Fatal("the fixture's proof could not be made")
+	}
+	proof.Cut = textlang.QuoteCutSecondSender + 1
+	if quote, ok := textlang.VerifySenderQuote(body, proof); ok {
+		t.Fatalf("a proof under an unknown cut verified as %q", quote)
+	}
+}
+
+const outlookBlockBody = "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +
+	"From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\n\n" + quotedSellerSignature
 
 func TestAFromSentenceAfterTheEnvelopeIsNotAQuote(t *testing.T) {
 	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n" +

@@ -78,6 +78,9 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
 		return out, err
 	}
+	if err := reportingDimensionContext(ctx, tx, selection, &out); err != nil {
+		return out, err
+	}
 	out.Interval, err = reporting.Interval(selection, calendar, at)
 	if err != nil {
 		return out, err
@@ -87,6 +90,11 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		return out, err
 	}
 	out.TargetInterval = &target
+	horizon, err := reporting.Horizon(selection, calendar, out.Interval)
+	if err != nil {
+		return out, err
+	}
+	out.Horizon = &horizon
 	switch selection.CloseWindow {
 	case "all_open":
 	case "fiscal_quarter":
@@ -137,7 +145,7 @@ func reportingMemberStrings(frame crmcontracts.ReportingContext) []string {
 
 func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	db := InstallationDB(pool)
-	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
+	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db), initiatives: newInitiativeStore(pool)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
 		WithBaseLanguage(identity.BaseLanguageForRecord).
 		WithReaderLanguage(identity.ReaderLanguageForRecord).
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})

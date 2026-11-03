@@ -178,3 +178,35 @@ export const Phone: Story = {
 export const NamedByItsAddress: Story = {
   render: dialog({ lead: { full_name: "" } }),
 };
+
+export const ExistingDeal: Story = {
+  render: dialog({
+    preview: () =>
+      jsonResponse({
+        outcome: "create",
+        company_id: "company-one",
+        existing_deals: [{ id: "deal-one", name: "Annual renewal" }],
+      }),
+  }),
+};
+export const ExistingDealDark: Story = {
+  ...ExistingDeal,
+  globals: { theme: "dark" },
+};
+export const SeveralExistingDeals: Story = {
+  render: dialog({
+    preview: () =>
+      jsonResponse({
+        outcome: "create",
+        company_id: "company-one",
+        existing_deals: [
+          { id: "deal-one", name: "Annual renewal" },
+          { id: "deal-two", name: "New rollout" },
+        ],
+      }),
+  }),
+};
+export const SeveralExistingDealsDark: Story = {
+  ...SeveralExistingDeals,
+  globals: { theme: "dark" },
+};

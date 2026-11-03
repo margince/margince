@@ -140,6 +140,7 @@ const (
 	RefPipeline Reference = "pipeline"
 	RefStage    Reference = "stage"
 	RefProject  Reference = "project"
+	RefProduct  Reference = "product"
 )
 
 // ReferenceTargets is every target the engine admits, and the ONE list of them.
@@ -153,6 +154,6 @@ const (
 func ReferenceTargets() []Reference {
 	return []Reference{
 		RefTag, RefAppUser, RefTeam, RefCompany,
-		RefPipeline, RefStage, RefProject,
+		RefPipeline, RefStage, RefProject, RefProduct,
 	}
 }

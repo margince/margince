@@ -76,6 +76,9 @@ func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, figure.status)
 			}
 		}
+		for _, figure := range forecastBasisCSV(metric) {
+			appendRow(string(metric.Id), reportingForecastBasisBlock, figure.label, figure.value, nil, nil, nil, metric.Unit, figure.context, string(metric.Coverage.Status))
+		}
 	}
 	for _, chart := range evaluation.Charts {
 		for _, point := range chart.Points {
@@ -120,6 +123,7 @@ func writeReportingCSV(w http.ResponseWriter, r *http.Request, raw []byte, err e
 }
 
 const (
+	reportingForecastBasisBlock    = "forecast_basis"
 	reportingTargetComparisonBlock = "target_comparison"
 	comparisonStatusRow            = "status"
 )
@@ -154,6 +158,40 @@ func targetComparisonCSV(comparison crmcontracts.ReportingTargetComparison, unit
 		out = append(out, comparisonFigure{label: "qualified_status", context: reportingTargetComparisonBlock, status: string(qualified.Status)})
 		add("qualified_open_pipeline", unit, string(qualified.Status), qualified.OpenPipeline)
 		add("qualified_coverage", "ratio", string(qualified.Status), qualified.Coverage)
+	}
+	return out
+}
+
+// forecastBasisCSV is the measure the landing used, the figures it rests on
+// and the modelled range, each on its own row. A legacy reading without a
+// basis has none of the basis rows, so no blank reads as a measure.
+func forecastBasisCSV(metric crmcontracts.ReportingMetric) []comparisonFigure {
+	out := []comparisonFigure{}
+	add := func(label, context string, minor *int64) {
+		figure := comparisonFigure{label: label, context: context}
+		if minor != nil {
+			figure.value = new(float64(*minor))
+		}
+		out = append(out, figure)
+	}
+	if basis := metric.ForecastBasis; basis != nil {
+		landing := basis.Landing
+		add("measure", string(landing.Measure), nil)
+		add("won", reportingForecastBasisBlock, &landing.WonMinor)
+		add("remaining", reportingForecastBasisBlock, &landing.RemainingMinor)
+		if landing.SystemMinor != nil {
+			add("records_projection", reportingForecastBasisBlock, landing.SystemMinor)
+		}
+		if basis.CallMinor != nil {
+			add("manager_call", reportingForecastBasisBlock, basis.CallMinor)
+		}
+		if landing.Caveat != nil {
+			add("caveat", string(*landing.Caveat), nil)
+		}
+	}
+	if metric.RangeLowMinor != nil && metric.RangeHighMinor != nil {
+		add("range_low", reportingForecastBasisBlock, metric.RangeLowMinor)
+		add("range_high", reportingForecastBasisBlock, metric.RangeHighMinor)
 	}
 	return out
 }

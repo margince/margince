@@ -56,7 +56,7 @@ func replaceContactSetsAndCompare(
 	if err := replaceContactSets(ctx, tx, id, in); err != nil {
 		return replaceSetsChange{}, err
 	}
-	after, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	after, err := readContactRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return replaceSetsChange{}, fmt.Errorf("read the contact after its replace-sets: %w", err)
 	}

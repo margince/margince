@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -12,15 +17,21 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { activityDay } from "../../format/activitywhen";
 import { leadIdentityName } from "../../format/leadname";
 import { toMinorUnits } from "../../format/minorunits";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import {
+  ExistingQualificationDeal,
+  type QualificationDealChoice,
+  qualificationConfirmState,
+  qualificationDealState,
+} from "./leads.qualifydeal";
+import { reasonSentence, triggerFor } from "./leads.qualifyreason";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -37,18 +48,45 @@ type Pipeline = components["schemas"]["Pipeline"];
 
 // The server's preview of a promotion, read without writing. An absent contact
 // on a `merge` means the match is outside the reader's row scope, not "no match".
-export function usePromotePreview(id: string, open: boolean) {
+export function usePromotePreview(
+  id: string,
+  open: boolean,
+  createCompany = false,
+) {
   const t = useT();
-  return useQuery({
-    queryKey: leadPromotePreviewKey(id),
+  return useInfiniteQuery({
+    queryKey: [...leadPromotePreviewKey(id), { createCompany }],
+    initialPageParam: "",
+    getNextPageParam: (page: components["schemas"]["PromoteLeadPreview"]) =>
+      page.existing_deals_cursor,
+    select: (data) => {
+      const first = data.pages[0];
+      if (!first) return undefined;
+      return {
+        ...first,
+        existing_deals: data.pages.flatMap((page) => page.existing_deals ?? []),
+        existing_deals_cursor: data.pages.at(-1)?.existing_deals_cursor,
+      };
+    },
     enabled: open,
+    placeholderData: keepPreviousData,
     // Always fresh: the answer is about the workspace as it stands the moment
     // the dialog opens, and a 30s-old "create" can be a merge by now.
     staleTime: 0,
-    queryFn: async () => {
+    queryFn: async ({
+      pageParam,
+      signal,
+    }): Promise<components["schemas"]["PromoteLeadPreview"]> => {
       return unwrap(
         await api.GET("/leads/{id}/promote-preview", {
-          params: { path: { id } },
+          params: {
+            path: { id },
+            query: {
+              create_company: createCompany,
+              deals_cursor: pageParam || undefined,
+            },
+          },
+          signal,
         }),
         t,
       );
@@ -58,37 +96,7 @@ export function usePromotePreview(id: string, open: boolean) {
 
 // triggerFor reads the wire trigger off the lead's captured evidence; a lead
 // with none is qualified by the human's own judgement.
-export function triggerFor(lead: Lead): PromoteLeadRequest["trigger"] {
-  return lead.qualification_evidence?.trigger ?? "human_qualify";
-}
-
-function reasonSentence(
-  lead: Lead,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  zone: string,
-): string {
-  const evidence = lead.qualification_evidence;
-  if (!evidence) {
-    return t("lead.qualify.reasonHuman");
-  }
-  const at = evidence.occurred_at
-    ? activityDay(
-        evidence.occurred_at,
-        evidence.occurred_precision ?? "instant",
-        locale,
-        zone,
-      )
-    : "";
-  switch (evidence.trigger) {
-    case "meeting_held":
-      return t("lead.qualify.reasonMeetingHeld", { at });
-    case "meeting_booked":
-      return t("lead.qualify.reasonMeetingBooked", { at });
-    default:
-      return t("lead.qualify.reasonReplied", { at });
-  }
-}
+export { triggerFor } from "./leads.qualifyreason";
 
 // dealBlock is the wire's deal request from the dialog's fields. The money
 // pair holds from birth: an amount only travels with the currency, and an
@@ -133,23 +141,65 @@ function openStagesOf(pipeline: Pipeline | undefined) {
     .sort((a, b) => a.position - b.position);
 }
 
-export function QualifyDialog({
-  lead,
-  open,
-  onClose,
-  onQualified,
-}: Readonly<{
+type QualifyDialogProps = Readonly<{
   lead: Lead;
   open: boolean;
   onClose: () => void;
   onQualified: (result: PromoteLeadResponse) => void;
-}>) {
+}>;
+
+export function QualifyDialog(props: QualifyDialogProps) {
+  return props.open ? <OpenQualificationDialog {...props} /> : null;
+}
+
+function OpenQualificationDialog(props: QualifyDialogProps) {
+  const t = useT();
+  const [createCompany, setCreateCompany] = useState(false);
+  const preview = usePromotePreview(props.lead.id, props.open, createCompany);
+  if (!props.open) return null;
+  if (!preview.data)
+    return (
+      <ConfirmModal
+        open
+        onClose={props.onClose}
+        intent="form"
+        title={t("lead.qualify.title", { name: leadIdentityName(props.lead) })}
+        confirmLabel={t("lead.qualify.confirm")}
+        confirmDisabled
+        onConfirm={() => undefined}
+      >
+        <PreviewSentence preview={preview} t={t} />
+      </ConfirmModal>
+    );
+  return (
+    <QualificationForm
+      key={props.lead.id}
+      {...props}
+      preview={preview}
+      createCompany={createCompany}
+      setCreateCompany={setCreateCompany}
+    />
+  );
+}
+
+function QualificationForm({
+  lead,
+  open,
+  onClose,
+  onQualified,
+  preview,
+  createCompany,
+  setCreateCompany,
+}: QualifyDialogProps & {
+  preview: ReturnType<typeof usePromotePreview>;
+  createCompany: boolean;
+  setCreateCompany: (value: boolean) => void;
+}) {
   const t = useT();
   const { locale } = useLocale();
   // The signal is an activity, so its day is the record's.
   const zone = useRecordZone();
   const queryClient = useQueryClient();
-  const preview = usePromotePreview(lead.id, open);
   const pipelines = usePipelines(open);
   // The money pair holds from birth: an amount travels with the
   // installation's base currency, the only one a qualify dialog can name.
@@ -157,12 +207,32 @@ export function QualifyDialog({
   const currency = installation.data?.base_currency;
   // An engaged lead is one a rep has something to sell to, so the deal
   // block starts ticked for it and unticked otherwise.
-  const [withDeal, setWithDeal] = useState(lead.status === "engaged");
+  const [dealChoice, setDealChoice] = useState<QualificationDealChoice>(() => {
+    const initial = qualificationDealState(
+      lead.status,
+      null,
+      preview.data,
+      preview.hasNextPage,
+    );
+    return initial.selectedDeal
+      ? { id: initial.selectedDeal.id, company: preview.data?.company_id }
+      : initial.withDeal
+        ? "new"
+        : "none";
+  });
+  const { selectedDeal, withDeal, invalidSelection } = qualificationDealState(
+    lead.status,
+    dealChoice,
+    preview.data,
+    preview.hasNextPage,
+  );
+
   const [pipelineId, setPipelineId] = useState("");
   const [stageId, setStageId] = useState("");
   const [dealName, setDealName] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const typedCompany = preview.data?.typed_company;
 
   const defaultPipeline =
     pipelines.data?.find((p) => p.is_default) ?? pipelines.data?.[0];
@@ -200,6 +270,8 @@ export function QualifyDialog({
 
   const close = () => {
     qualify.reset();
+    setCreateCompany(false);
+    setDealChoice(null);
     onClose();
   };
 
@@ -211,6 +283,9 @@ export function QualifyDialog({
         activity_id: lead.qualification_evidence?.activity_id ?? null,
         note: trimmedNote || null,
       },
+      // Only a box the reader saw ticked in this opening may mint a company.
+      create_company: Boolean(typedCompany) && createCompany,
+      existing_deal_id: selectedDeal?.id,
       deal: withDeal
         ? dealBlock({
             pipelineId: chosenPipeline?.id,
@@ -227,6 +302,11 @@ export function QualifyDialog({
     amount,
     currency,
   );
+  const confirmation = qualificationConfirmState(
+    { selectedDeal, withDeal, invalidSelection },
+    preview,
+    { amountInvalid, amountWaitsForCurrency },
+  );
   const name = leadIdentityName(lead);
 
   return (
@@ -235,10 +315,8 @@ export function QualifyDialog({
       onClose={close}
       intent="form"
       title={t("lead.qualify.title", { name })}
-      confirmLabel={
-        withDeal ? t("lead.qualify.confirmWithDeal") : t("lead.qualify.confirm")
-      }
-      confirmDisabled={amountInvalid || amountWaitsForCurrency}
+      confirmLabel={t(confirmation.label)}
+      confirmDisabled={confirmation.disabled}
       onConfirm={submit}
       pending={qualify.isPending}
       error={qualify.isError ? problemMessageOf(qualify.error, t) : undefined}
@@ -250,11 +328,23 @@ export function QualifyDialog({
         <PreviewSentence preview={preview} t={t} />
       </section>
 
-      <Checkbox
-        label={t("lead.qualify.alsoDeal")}
-        checked={withDeal}
-        data-testid="lead-qualify-with-deal"
-        onChange={(event) => setWithDeal(event.target.checked)}
+      {typedCompany && (
+        <TypedCompanyChoice
+          company={typedCompany}
+          checked={createCompany}
+          onChange={setCreateCompany}
+        />
+      )}
+
+      <ExistingQualificationDeal
+        preview={preview.data}
+        selected={selectedDeal}
+        newDeal={withDeal}
+        invalid={invalidSelection}
+        more={preview.hasNextPage}
+        fetching={preview.isFetchingNextPage}
+        loadMore={() => preview.fetchNextPage()}
+        choose={setDealChoice}
       />
       {withDeal && (
         <div className="lead-qualify-deal">
@@ -337,6 +427,37 @@ export function QualifyDialog({
         )}
       </Field>
     </ConfirmModal>
+  );
+}
+
+// The rep adds a typed company the lead's email cannot place. Unticked, it
+// lands on the contact as a company to link or create.
+function TypedCompanyChoice({
+  company,
+  checked,
+  onChange,
+}: Readonly<{
+  company: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}>) {
+  const t = useT();
+  return (
+    <section className="lead-qualify-block">
+      <Heading size="xsmall" as="h3">
+        {t("lead.qualify.company")}
+      </Heading>
+      <p>{t("lead.qualify.companyUnresolved", { company })}</p>
+      <Checkbox
+        label={t("lead.qualify.createCompany", { company })}
+        checked={checked}
+        data-testid="lead-qualify-create-company"
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <p className="t-caption">
+        {t("lead.qualify.createCompanyHint", { company })}
+      </p>
+    </section>
   );
 }
 

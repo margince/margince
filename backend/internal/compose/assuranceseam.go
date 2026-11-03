@@ -33,7 +33,9 @@ import (
 const assuranceSubjectsSQL = `
 		SELECT d.id, d.owner_id, d.amount_minor, d.currency,
 		       d.expected_close_date, d.close_date_provisional,
-		       d.forecast_category, s.name,
+		       d.forecast_category, s.name, d.stage_id,
+		       COALESCE((SELECT max(h.changed_at) FROM deal_stage_history h
+		                  WHERE h.deal_id = d.id AND h.to_stage_id = d.stage_id), d.created_at),
 		       d.created_at, d.wait_until,
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
@@ -88,7 +90,8 @@ const assuranceSubjectsSQL = `
 		           AND (au.before ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date') IS NOT NULL
 		           AND (au.after ->> 'expected_close_date')::date
-		               > (au.before ->> 'expected_close_date')::date) AS close_date_pushes,
+		               > (au.before ->> 'expected_close_date')::date
+		           AND %[10]s) AS close_date_pushes,
 		       EXISTS (SELECT 1
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id
@@ -158,10 +161,11 @@ func AssuranceSubjects(
 	return assuranceSubjects(ctx, tx, asOf, coverage, nil)
 }
 
-// assuranceSubjects is AssuranceSubjects, narrowed to one deal when only is set:
-// a review answer is checked against the same evidence the nightly pass reads.
+// assuranceSubjects is AssuranceSubjects, narrowed to the deals in only when it
+// is not nil. A review answer and the forecast's risk signals read the same
+// evidence the nightly pass reads.
 func assuranceSubjects(
-	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only *ids.UUID,
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
 ) ([]assurance.Subject, error) {
 	now := asOf.UTC()
 	zone, err := installationZoneTx(ctx, tx)
@@ -192,10 +196,11 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	var dealID ids.UUID
 	var owner *ids.UUID
 	var currency, category, stage *string
+	var stageID *ids.UUID
 	var evidence deals.ViabilityInput
 	var fingerprint string
 	err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
-		&out.ExpectedClose, &out.CloseProvisional, &category, &stage,
+		&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &stageID, &out.StageEnteredAt,
 		&evidence.CreatedAt, &evidence.CustomerWaitUntil, &evidence.LastCustomerProgressAt,
 		&evidence.LastCustomerRefusalAt,
 		&evidence.ConfirmedMeetingAt, &evidence.EarlierAnswerUntil, &evidence.OpenReview, &fingerprint,
@@ -216,6 +221,9 @@ func scanAssuranceSubject(row pgx.CollectableRow, asOf time.Time, zone *time.Loc
 	}
 	if stage != nil {
 		out.StageName = *stage
+	}
+	if stageID != nil {
+		out.StageID = stageID.String()
 	}
 	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
 	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered
@@ -254,8 +262,7 @@ func customerRefusalSQL(alias, asOf string) string {
 // once the customer moved the deal after it, a later silence is a new one. A
 // reminder holds at most as long as any answer may hide a finding.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
-	capped := fmt.Sprintf("LEAST(r.remind_at, r.created_at + make_interval(days => $%d))",
-		arg(int(assurance.MaxSuppression/(24*time.Hour))))
+	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
 		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
@@ -274,22 +281,25 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 
 // assuranceSubjectsQuery is the statement assuranceSubjects runs. Rendered
 // apart so a test can read which tables the check reads.
-func assuranceSubjectsQuery(now time.Time, identities string, only *ids.UUID, arg func(any) int) string {
+func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, arg func(any) int) string {
 	// A task the product filed itself asks for a next step; it is not one.
 	humanTask := activities.CurrentTaskClause("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
 	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
 		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
-		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg))
+		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
+		// A date an import moved is the source system's history, not a push.
+		storekit.AuditNotFromAnImport("au"))
 }
 
-// onlyDealSQL narrows the read to one deal, or to none of them when unset.
-func onlyDealSQL(only *ids.UUID, arg func(any) int) string {
+// onlyDealSQL narrows the read to the deals in only, or not at all when only is
+// nil. An empty, non-nil list reads no deal.
+func onlyDealSQL(only []ids.UUID, arg func(any) int) string {
 	if only == nil {
 		return ""
 	}
-	return fmt.Sprintf(" AND d.id = $%d", arg(*only))
+	return fmt.Sprintf(" AND d.id = ANY($%d)", arg(only))
 }
 
 // visibleToAllSQL admits an activity every member may read. The check runs as

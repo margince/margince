@@ -18,12 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/compose/weekly"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
@@ -86,6 +86,7 @@ type Server struct {
 	// restore seam the reversal route uses — the receipt's offer and the write's
 	// refusal have to be one judgment.
 	magicService *magic.Service
+	homeCache    *homecache.Cache // Home's cached answers; forgetHomeOnWrite ends a writer's own answers
 	// The relationship-graph reads (ADR-0078): who knows this contact, and
 	// how a deal is covered.
 	network.Reads
@@ -119,7 +120,9 @@ type Server struct {
 	captureExclusionHandlers
 	captureOwnerIdentityHandlers
 	captureCounterpartyHoldHandlers
+	conversationSuggestionHandlers
 	claimHandlers
+	ownershipRequestHandlers
 	dealCommitmentHandlers
 	promiseTakeOverHandlers
 	importHandlers
@@ -134,7 +137,7 @@ type Server struct {
 	companyRollupHandlers
 	reviewAnswerHandlers
 	companyOfferedHandlers
-	strengthHandlers
+	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
@@ -196,6 +199,7 @@ type Server struct {
 	// it. In compose because the vocabulary is derived from the report catalog
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
+	salesDecisionHandlers
 	analyticsContextHandlers
 	sdrSummaryHandlers
 	assuranceHandlers
@@ -206,6 +210,8 @@ type Server struct {
 	// The introductions transport: one rep asking a colleague to open a door,
 	// the colleague's bounded answer, and what came of it.
 	introductionHandlers
+	// The sales initiative transport; the reporting engine reads its membership too.
+	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this
 	// deployment composed, in registration order. It exists because each
@@ -238,6 +244,8 @@ type Server struct {
 	// challenge points at. WithMCPResource sets both from --public-base-url,
 	// never from a request header a caller controls.
 	mcpResource, mcpAllowedOrigin string
+	// mcpInputStateKey signs the questions a tool asks in the chat.
+	mcpInputStateKey string
 
 	// metricsToken gates /metrics, injected by WithMetricsToken from the
 	// deployment's --metrics-token. Empty — the default — configures no
@@ -490,5 +498,3 @@ type Server struct {
 	// leaves /.well-known/security.txt unmounted.
 	securityTxt string
 }
-
-var _ crmcontracts.ServerInterface = Server{}

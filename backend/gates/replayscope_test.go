@@ -67,6 +67,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"DealSuggestionAcceptance": {object: "deal", moduleProbe: "deal_suggestion", idPath: "suggestion.id", rowNote: "the acceptance hands back the suggestion it decided, probed like DealSuggestion; the deal it opened rides as a companion"},
 
 	"Activity":            {table: "activity", idPath: "id"},
+	"SalesDecision":       {table: "activity", idPath: "id"},
 	"VoiceProfile":        {table: "voice_profile", idPath: "id"},
 	"List":                {table: "list", idPath: "id"},
 	"SavedView":           {table: "saved_view", idPath: "id"},
@@ -109,6 +110,8 @@ var rowScopedResponses = map[string]expectedTarget{
 	// so the bulk engine owns the probe.
 	"BulkChangeResult": {moduleProbe: "bulk_batch", idPath: "batch_id"},
 	"RecordGrant":      {tableField: "record_type", idPath: "record_id"},
+	"OwnershipRequest": {tableField: "record_type", idPath: "record_id"},
+	"OwnershipOffer":   {tableField: "record_type", idPath: "record_id"},
 	// A health assessment has no owner column: its visibility IS the project it
 	// judges, which the body names as project_id. Probed rather than waved
 	// through, because a replay hands back how a delivery is going — something

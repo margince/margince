@@ -36,9 +36,11 @@ func refreshContactPhoneEvidence(ctx context.Context, tx pgx.Tx, pair openPair, 
 	if score < dedupeReviewThreshold {
 		if contactNamesCollide(left.name, right.name) {
 			evidence = nameCollisionEvidence(left.name, right.name, score)
-		} else {
-			candidate, incumbent, _ := addressVariantPair(left.emails, right.emails)
+		} else if candidate, incumbent, variant := addressVariantPair(left.emails, right.emails); variant {
 			evidence = addressVariantEvidence(candidate, incumbent)
+			score = 0
+		} else if linkedInProfilesMatch(left.linkedIn, right.linkedIn) {
+			evidence = linkedInEvidence(left.linkedIn, right.linkedIn)
 			score = 0
 		}
 	}

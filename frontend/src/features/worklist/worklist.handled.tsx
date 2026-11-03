@@ -34,7 +34,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { listReadState } from "../../lib/worklist.listread";
-import { subjectHref } from "./worklist.copy";
+import { subjectHref } from "../../lib/worklistcopy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
 import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
@@ -54,6 +54,9 @@ export function HandledForYouPanel() {
   // column names and a silence, where the sentence saying nothing was done on
   // the reader's behalf is the whole answer.
   const state = listReadState(handled, receipts);
+  // A day with nothing done draws no panel: the empty sentence sat beside the
+  // queue's own on every quiet day. A failed read still shows, with its retry.
+  if (state === "empty") return null;
   return (
     <Panel
       className={AFTER_THE_DAY}

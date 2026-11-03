@@ -144,7 +144,39 @@ function productFields(
         label: t(CADENCE[months]),
       })),
     },
+    {
+      // What the product is, which the commercial mix on Analytics groups won
+      // value by. Unset is a real answer: nobody has classified it.
+      key: "component_kind",
+      label: "product.componentKind",
+      type: "select",
+      options: [
+        { value: "", label: t("product.componentUnset") },
+        ...COMPONENT_KINDS.map((kind) => ({
+          value: kind,
+          label: t(COMPONENT_LABEL[kind]),
+        })),
+      ],
+    },
   ];
+}
+
+type ComponentKind = NonNullable<Product["component_kind"]>;
+
+const COMPONENT_KINDS: readonly ComponentKind[] = [
+  "software",
+  "implementation",
+  "other",
+];
+
+const COMPONENT_LABEL: Readonly<Record<ComponentKind, MessageKey>> = {
+  software: "product.componentSoftware",
+  implementation: "product.componentImplementation",
+  other: "product.componentOther",
+};
+
+function componentKindOf(value: unknown): ComponentKind | undefined {
+  return COMPONENT_KINDS.find((kind) => kind === value);
 }
 
 type BillingMonths = NonNullable<Product["billing_interval_months"]>;
@@ -216,6 +248,7 @@ function editableProduct(p: Product) {
     unit_other: unit.other,
     unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
     billing_model: p.billing_model ?? "",
+    component_kind: p.component_kind ?? "",
     billing_interval_months:
       p.billing_interval_months == null
         ? ""
@@ -293,6 +326,7 @@ export function ProductsAdmin() {
             ? Number(values.default_tax_rate)
             : null,
           ...billingOf(values),
+          component_kind: componentKindOf(values.component_kind) ?? null,
           source: "manual",
         },
       }),
@@ -332,6 +366,7 @@ export function ProductsAdmin() {
               ? Number(values.default_tax_rate)
               : undefined,
             ...billingPatchOf(values),
+            component_kind: componentKindOf(values.component_kind) ?? null,
           },
         }),
       );

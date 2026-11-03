@@ -2,17 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Sparkles } from "lucide-react";
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { Button, Skeleton } from "../design-system/atoms";
 import { CallAction, linkVerb } from "../design-system/callaction";
 import { ContactLink } from "../design-system/contactlink";
-import { mailbox, primaryPhone } from "../format/contacturi";
+import { primaryPhone } from "../format/contacturi";
 import { type Translator, useT } from "../i18n";
 import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
+import { useWriteTo } from "../lib/writeto";
 import "./tasknextsteps.css";
 
 // What a rep does next about the contact a task is owed to. Nothing here
@@ -20,6 +21,17 @@ import "./tasknextsteps.css";
 
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
+type EmailTarget = components["schemas"]["ActivityEmailTarget"];
+
+/** The room the next steps take while the reads behind them are out, so the
+ *  verbs arrive without pushing the row they sit in. One Email verb wide. */
+export function TaskNextStepsPending() {
+  return (
+    <div className="task-next-pending">
+      <Skeleton width="6rem" height="var(--controlHeight)" />
+    </div>
+  );
+}
 
 /** Call, for a task read out of a call to a contact with a number to dial. */
 export function TaskCallAction({
@@ -32,8 +44,10 @@ export function TaskCallAction({
 
 /**
  * Call, Draft email and Open contact. A task owed to a contact is work for that
- * contact, so mail to them is drafted from the task rather than offered blank. `className` wraps them in a row of their own,
- * which is left out when there is no contact to act on.
+ * contact, so mail to them is drafted from the task rather than offered blank.
+ * Who the mail goes to is the server's answer (`email_target`): one contact,
+ * else one live lead, else one company. `className` wraps the verbs in a row
+ * of their own, which is left out when there is nothing to act on.
  */
 export function TaskNextSteps({
   task,
@@ -41,18 +55,54 @@ export function TaskNextSteps({
   className,
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
   const t = useT();
-  const reasonId = useId();
-  const { contact, fromCall } = useTaskContact(task);
-  if (!contact) {
+  const { contact, fromCall, pending } = useTaskContact(task);
+  const target = task.email_target;
+  const intent = intentAbout(t("task.next.draftIntent"), task.subject);
+  let steps: ReactNode;
+  if (pending) {
+    // In the row the verbs will stand in, so they land where it stood.
+    steps = <TaskNextStepsPending />;
+  } else if (target?.entity_type === "contact") {
+    // A contact the reader can no longer read takes its verbs with it.
+    if (!contact) return null;
+    steps = (
+      <ContactSteps
+        contact={contact}
+        fromCall={fromCall}
+        intent={intent}
+        offerOpen={offerOpen}
+        refusal={refusalOf(target, t)}
+      />
+    );
+  } else if (target) {
+    steps = <RecordDraftStep target={target} intent={intent} />;
+  } else {
     return null;
   }
-  const refusal = emailRefusal(contact, t);
-  const steps = (
+  return className ? <div className={className}>{steps}</div> : steps;
+}
+
+function ContactSteps({
+  contact,
+  fromCall,
+  intent,
+  offerOpen,
+  refusal,
+}: Readonly<{
+  contact: Contact;
+  fromCall: boolean;
+  intent: string;
+  offerOpen: boolean;
+  refusal: string | undefined;
+}>) {
+  const t = useT();
+  const reasonId = useId();
+  return (
     <>
       <CallVerb contact={contact} fromCall={fromCall} />
       <EmailVerb
         contact={contact}
-        intent={intentAbout(t("task.next.draftIntent"), task.subject)}
+        intent={intent}
         reasonId={refusal === undefined ? undefined : reasonId}
       />
       {offerOpen &&
@@ -70,16 +120,68 @@ export function TaskNextSteps({
       )}
     </>
   );
-  return className ? <div className={className}>{steps}</div> : steps;
 }
 
-/** Why Email is refused. `mailbox` is the test ContactLink applies. */
-function emailRefusal(contact: Contact, t: Translator): string | undefined {
-  if (contact.archived_at) return t("contact.rail.archivedReadOnly");
-  if (!mailbox(contact.primary_email ?? "")) return t("task.next.noAddress");
-  return undefined;
+/**
+ * Draft email to a lead or a company. The lead's draft fills To with the lead's
+ * address. The company's composer asks which of its contacts the mail is for.
+ * Neither has an address to hand a mail client, so with no composer to open
+ * there is no verb.
+ */
+function RecordDraftStep({
+  target,
+  intent,
+}: Readonly<{ target: EmailTarget; intent: string }>) {
+  const t = useT();
+  const reasonId = useId();
+  const writeTo = useWriteTo();
+  const refusal = refusalOf(target, t);
+  if (refusal !== undefined) {
+    return (
+      <>
+        <Button variant="ai" reasonId={reasonId}>
+          <Sparkles aria-hidden="true" />
+          {t("task.next.draftEmail")}
+        </Button>
+        <p id={reasonId} className="t-caption task-next-reason">
+          {refusal}
+        </p>
+      </>
+    );
+  }
+  if (!writeTo || target.entity_type === "contact") return null;
+  return (
+    <Button
+      variant="ai"
+      onClick={() =>
+        writeTo({
+          entityType: target.entity_type,
+          entityId: target.entity_id,
+          draftIntent: intent,
+        })
+      }
+    >
+      <Sparkles aria-hidden="true" />
+      {t("task.next.draftEmail")}
+    </Button>
+  );
 }
 
+/** Why the server refuses the email, in the reader's words. */
+function refusalOf(target: EmailTarget, t: Translator): string | undefined {
+  switch (target.refusal) {
+    case "archived":
+      return t("contact.rail.archivedReadOnly");
+    case "lead_closed":
+      return t("lead.terminalReadOnly");
+    case "no_address":
+      return target.entity_type === "lead"
+        ? t("task.next.noLeadAddress")
+        : t("task.next.noAddress");
+    default:
+      return undefined;
+  }
+}
 function CallVerb({
   contact,
   fromCall,

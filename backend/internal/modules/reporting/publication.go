@@ -62,6 +62,13 @@ func (s *Service) executeClaim(ctx context.Context, claim executionClaim) error 
 		if err != nil {
 			return err
 		}
+		recorded, err := s.revisionMetricVersions(human, tx, ids.UUID(report.Id), run.Execution.ReportRevision)
+		if err != nil {
+			return err
+		}
+		if err := withdrawChangedDefinitions(&evaluation, recorded); err != nil {
+			return err
+		}
 		if err := requireEveryMetricCalculated(evaluation.Result); err != nil {
 			return err
 		}

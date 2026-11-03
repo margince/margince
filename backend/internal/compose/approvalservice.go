@@ -14,5 +14,7 @@ func NewApprovalsService(db *database.DB) *approvals.Service {
 	preview := newApprovalPreviewReader(db)
 	return approvals.NewService(db).
 		WithAssigneeCheck(activities.SeatCanHoldAutomaticWork).
-		WithPreview(preview.read)
+		WithPreview(preview.read).
+		WithContextPin(operationPromoteLead, promotionContextPin(db)).
+		WithEffectActor(approvalEffectActor(db))
 }

@@ -43,6 +43,26 @@ func TestPersonalMailIsDestroyedOnceItsWindowCloses(t *testing.T) {
 	}
 }
 
+// The sweep's selector must let go of mail it already destroyed. The erase
+// leaves the activity row standing. Without the guard, a destroyed message is
+// erased and audited again on every pass.
+func TestPersonalMailIsDestroyedOnlyOnce(t *testing.T) {
+	e := integration.Setup(t)
+	mail := seedPurgeableMail(t, e, "mama@familie.example", "Sonntag Essen?", e.Rep1)
+	resolvePersonal(t, e, "mama@familie.example", mail, e.Rep1, true)
+	agePersonalMail(t, e, mail, "mama@familie.example", 8*24*time.Hour)
+
+	if n := sweepPersonal(t, e); n != 1 {
+		t.Fatalf("first pass destroyed %d messages, want 1", n)
+	}
+	if n := sweepPersonal(t, e); n != 0 {
+		t.Fatalf("second pass destroyed %d messages, want 0: it found mail already erased", n)
+	}
+	if n := eraseAudits(t, e, mail); n != 1 {
+		t.Fatalf("the message carries %d erase audit rows, want 1", n)
+	}
+}
+
 func TestPersonalMailInsideItsWindowSurvives(t *testing.T) {
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "mama@familie.example", "Sonntag Essen?", e.Rep1)
@@ -331,6 +351,19 @@ func overruleAsBusiness(t *testing.T, e *integration.Env, seat ids.UUID, address
 	if _, err := store.Set(purgeCtx(e, seat), address, capture.OverrideBusiness); err != nil {
 		t.Fatalf("overruling the verdict: %v", err)
 	}
+}
+
+func eraseAudits(t *testing.T, e *integration.Env, activityID ids.UUID) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM audit_log WHERE action = 'erase' AND entity_type = 'activity' AND entity_id = $1`,
+			activityID).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting erase audits: %v", err)
+	}
+	return n
 }
 
 func sweepPersonal(t *testing.T, e *integration.Env) int {

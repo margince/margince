@@ -20,6 +20,21 @@ describe("which Overview view opens", () => {
     expect(overviewViews({ presets: [] })).toEqual([]);
   });
 
+  it("offers Team prospecting only to a reader whose lens covers colleagues", () => {
+    const catalog = {
+      presets: [
+        { id: "sdr" as const, metrics: ["meetings_held" as const], blocks: [] },
+        {
+          id: "team" as const,
+          metrics: ["meetings_held" as const],
+          blocks: [],
+        },
+      ],
+    };
+    expect(overviewViews(catalog, true)).toEqual(["prospecting", "team"]);
+    expect(overviewViews(catalog, false)).toEqual(["prospecting"]);
+  });
+
   it("recommends prospecting to a reader measuring their own work in an SDR team", () => {
     expect(
       recommendedView(both, {

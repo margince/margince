@@ -22,6 +22,7 @@ const meta: Meta<typeof OptionalRelationships> = {
   ],
   args: {
     owner: "",
+    scope: "mine",
     day: {
       optional_relationships: [
         row({

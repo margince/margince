@@ -58,6 +58,8 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// Provider is connector provenance from the installed adapter, never subject-authored text.
+	"capture_party_source": {"provider"},
 	// The hash identifies the promise; the version and actor identify its reader.
 	// Retained work needs this provenance after the summary and quotation are cleared.
 	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},
@@ -67,8 +69,9 @@ var erasureColumnBaseline = map[string][]string{
 	"report_edition": {"publication_audience"},
 	// A revision's selection is the report's public structure: metrics, period,
 	// scope and card shapes. Filters stay in question_bindings, which the
-	// redaction rewrites, so no subject value reaches the selection.
-	"report_definition_revision": {"selection"},
+	// redaction rewrites, so no subject value reaches the selection. The metric
+	// versions map metric ids to definition version numbers.
+	"report_definition_revision": {"selection", "metric_versions"},
 	// The evidence ledger's closed vocabularies: source kind, author side,
 	// commitment and writer. The snippet is the column that quotes the subject,
 	// and the redaction clears it.
@@ -193,6 +196,9 @@ var erasureColumnBaseline = map[string][]string{
 		"co_target_entity_type",
 		// Which staging rule named the decider: one of four fixed words.
 		"requested_decider_source",
+		// A hex hash of the facts a kind's approval was staged on; it holds
+		// nothing a subject wrote and cannot be read back into them.
+		"context_digest",
 	},
 	"comms_outbound": {
 		// The delivery's half of the decision vocabulary, read by the worker
@@ -240,6 +246,9 @@ var erasureColumnBaseline = map[string][]string{
 		// A key of the closed lead_origin list, which names no one. The note
 		// beside it, origin_detail, is free text and the redaction clears it.
 		"origin",
+		// The seat that accepted the lead for its partner, spelled as
+		// captured_by is: a colleague, never the lead's subject.
+		"partner_accepted_by",
 		"source",
 		"source_id",
 		"source_system",

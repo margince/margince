@@ -69,6 +69,45 @@ describe("the approval card", () => {
     ).toEqual(["StageProposal → Negotiation"]);
   });
 
+  it("heads with the summary's sentence and lists its values where the preview has none", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary: "Update record deal: name=Acme, Inc., +1 more",
+      summary_parts: {
+        sentence: "Update record deal",
+        fields: [{ field: "name", value: "Acme, Inc." }],
+        more_fields: 1,
+      },
+      changes: [],
+    });
+    expect(root.querySelector("h1")?.textContent).toBe("Update record deal");
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["NameAcme, Inc."]);
+    expect(root.textContent).toContain("1 more not shown");
+    expect(root.textContent).not.toContain("name=");
+  });
+
+  it("lists only the summary fields the preview does not name, as sent", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary_parts: {
+        sentence: "Move Acme renewal",
+        fields: [
+          { field: "stage_id", value: "Negotiation" },
+          { field: "scheduled_at", value: "2026-11-01T12:00:00Z" },
+        ],
+        more_fields: 0,
+      },
+    });
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual([
+      "StageProposal → Negotiation",
+      "Scheduled at2026-11-01T12:00:00Z",
+    ]);
+  });
+
   it("shows a structured value as words rather than as its document", () => {
     const root = mount({
       ...(approvalFixture.data as object),
@@ -116,6 +155,49 @@ describe("the approval card", () => {
   it("names nothing it was not told, for a proposal it cannot preview", () => {
     const root = mount({ ...(approvalFixture.data as object), changes: [] });
     expectReadable(root);
+    expect(root.querySelector("tbody")).toBeNull();
+  });
+
+  it("shows the operands and further effects of a ready preview", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      changes: [],
+      preview_state: "ready",
+      details: [
+        {
+          field: "promotion_contact_name",
+          label: "Promotion contact name",
+          value: { kind: "text", text: "Pia Parity" },
+        },
+      ],
+      effects: [
+        {
+          effect: "promote_lead_archive_source",
+          label: "Qualifies and archives this lead.",
+        },
+      ],
+    });
+    expectReadable(root);
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Promotion contact namePia Parity"]);
+    expect(root.querySelector(".dcard-body")?.textContent).toContain(
+      "Also changesQualifies and archives this lead.",
+    );
+    expect(labels(root)).toEqual(["Reject", "Approve"]);
+  });
+
+  it("offers no approval for a preview the reader cannot see, and says who decides", () => {
+    const note =
+      "This change touches records you cannot open. A colleague who can see them must decide it.";
+    const root = mount({
+      ...(approvalFixture.data as object),
+      changes: [],
+      preview_state: "needs_wider_sight",
+      preview_note: note,
+    });
+    expect(labels(root)).toEqual([]);
+    expect(root.querySelector(".dcard-verbs")?.textContent).toBe(note);
     expect(root.querySelector("tbody")).toBeNull();
   });
 

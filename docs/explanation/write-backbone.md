@@ -257,7 +257,7 @@ time reports it.
 | `cg:stage-evidence` | write the evidence a proposed stage move rests on, from captured mail, contracts and Deal Rooms | **live** |
 | `cg:stage-progression-outcome` | count the outcome of each proposed stage move, including time-outs | **live** |
 | `cg:deal-room-timeline` | write what happened in a Deal Room into the deal's history | **live** (worker) |
-| `cg:assurance-freshness` | mark the input check's findings out of date when a deal, its activities, a stage, a buying signal, its company or a forecast call changes | **live** (worker) |
+| `cg:assurance-freshness` | mark the input check's findings out of date when a deal, its activities, a stage, a buying signal, its company or a forecast call changes, and queue a check of each changed deal alone | **live** (worker) |
 | `cg:ai-activity` | write every action that AI does into `ai_task_run`, the table the AI rail will read once its read moves there | **live** (worker) |
 | `cg:ai-budget-resume` | start again AI work that a budget limit put off, once the budget allows | **live** |
 | `cg:contact-auto-enrich` | fill a contact from what the site of their company already shows | **live** (worker) |

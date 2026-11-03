@@ -323,12 +323,19 @@ func (e *Env) AgentCtx() context.Context {
 // assertion vacuously.
 func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
 	t.Helper()
+	return e.AgentOnPassport(t, human, teams, perms, ids.New[ids.PassportKind]())
+}
+
+// AgentOnPassport is AgentFor acting under a passport the test seeded, so the
+// audit row resolves the tool the passport was granted to.
+func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions, passport ids.PassportID) context.Context {
+	t.Helper()
 	teamIDs := make([]ids.TeamID, 0, len(teams))
 	for _, team := range teams {
 		teamIDs = append(teamIDs, ids.From[ids.TeamKind](team))
 	}
 	agent := identity.AgentIdentity{
-		PassportID:  ids.New[ids.PassportKind](),
+		PassportID:  passport,
 		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
 		OnBehalfOf:  ids.From[ids.UserKind](human),
 		SeatType:    string(principal.SeatFull),

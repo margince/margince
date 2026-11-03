@@ -188,14 +188,13 @@ func (e *embedReindexEngine) identities(w http.ResponseWriter, r *http.Request) 
 		httperr.Write(w, r, err)
 		return
 	}
-	populated, _, _, err := e.store.PopulatedIdentity(ctx)
+	report, err := e.statusEvidence(ctx)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmbedReindexIdentities{
-		ConfiguredIdentity: e.currentIdentity(),
-		PopulatedIdentity:  populated,
+		ConfiguredIdentity: report.ConfiguredIdentity, PopulatedIdentity: report.PopulatedIdentity,
 	})
 }
 
@@ -339,31 +338,31 @@ func (e *embedReindexEngine) confirm(w http.ResponseWriter, r *http.Request) {
 // shared by the status handler and the confirm handler's 202 body (the
 // SAME read, so the client sees exactly what it would GET-poll next).
 func (e *embedReindexEngine) statusBody(ctx context.Context) (crmcontracts.EmbedReindexStatus, error) {
-	configured := e.currentIdentity()
-	populated, jobStatus, updatedAt, err := e.store.PopulatedIdentity(ctx)
+	report, err := e.statusEvidence(ctx)
 	if err != nil {
 		return crmcontracts.EmbedReindexStatus{}, err
 	}
-	// The store's own total, NOT the sum of PendingByWorkspace. Since ADR-0091
-	// §8 phase D no embeddable entity carries a tenant, so that rollup holds the
-	// same rows under every workspace it enumerates — summing it reported an
-	// installation with two of them as having twice the backlog. The previous
-	// comment here had the premise exactly right ("a per-workspace breakdown of
-	// it is the total repeated") and drew the opposite conclusion from it.
-	total, err := e.store.EntitiesPending(ctx, configured)
+	total, err := e.store.EntitiesPending(ctx, report.ConfiguredIdentity)
 	if err != nil {
 		return crmcontracts.EmbedReindexStatus{}, err
 	}
-	// Derived from the backlog just counted: ReindexNeeded would scan for it again.
-	needed := search.ReindexRequired(configured, populated, total)
+	report.EntitiesPending = total
+	report.ReindexNeeded = search.ReindexRequired(report.ConfiguredIdentity, report.PopulatedIdentity, total)
+	return report, nil
+}
 
+// statusEvidence reads the durable marker without scanning the indexed corpus.
+// A matching identity alone does not establish that no records remain pending.
+func (e *embedReindexEngine) statusEvidence(ctx context.Context) (crmcontracts.EmbedReindexStatus, error) {
+	configured := e.currentIdentity()
+	populated, status, at, err := e.store.PopulatedIdentity(ctx)
+	if err != nil {
+		return crmcontracts.EmbedReindexStatus{}, err
+	}
 	return crmcontracts.EmbedReindexStatus{
-		ConfiguredIdentity: configured,
-		PopulatedIdentity:  populated,
-		Status:             crmcontracts.EmbedReindexStatusStatus(jobStatus),
-		UpdatedAt:          updatedAt,
-		ReindexNeeded:      needed,
-		EntitiesPending:    total,
+		ConfiguredIdentity: configured, PopulatedIdentity: populated,
+		Status: crmcontracts.EmbedReindexStatusStatus(status), UpdatedAt: at,
+		ReindexNeeded: search.ReindexRequired(configured, populated, 0),
 	}, nil
 }
 

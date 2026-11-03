@@ -137,8 +137,9 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// count. It adds one read for next steps outside the caller's row scope.
 	// It adds one party read for the timeline page's authors, one statement
 	// for the whole page, which the equality above holds flat. One separate
-	// read counts all pending proposals beyond the displayed page.
-	const budget = 58
+	// read counts all pending proposals beyond the displayed page. One more
+	// names who created the company, which its rail shows.
+	const budget = 59
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}

@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A meeting that already happened, answered from the row that asked.
+// Held and Mark as canceled write at once from the row. Add notes opens the
+// composer, where No-show and what was said are typed.
 //
-// The row used to offer three verbs and nothing else: each wrote one word and
-// closed the card, so the one moment a human knows what came of a meeting was
-// the moment the product could be told the least. Now the card carries the two
-// answers that differ in KIND — a cancellation, which needs no prose, and an
-// update, which opens the composer on this meeting so the outcome is typed
-// where the reader is standing.
-//
-// What these pin is that the update PATCHES the meeting rather than logging a
+// What these pin is that the composer PATCHES the meeting rather than logging a
 // second activity beside it. A composer that POSTed would leave the original
 // sitting in the queue unanswered and put two rows on the account's timeline
 // for one meeting — and every visible check on this screen would still pass.
@@ -174,24 +168,45 @@ function stubWithMeetingRead(
 }
 
 describe("a meeting that owes an answer", () => {
-  it("offers the two answers that differ in kind, not three statuses", async () => {
+  it("offers Held first, then Add notes and Mark as canceled", async () => {
     stub(aDayWithOne());
     renderUnderAToastRegion();
 
     await screen.findByText(/Discovery call with Turbinenbau/);
-    expect(
-      await screen.findByRole("button", { name: /update/i }),
-    ).not.toBeNull();
-    expect(
-      screen.getByRole("button", {
-        name: "Mark as canceled: Discovery call with Turbinenbau",
+    const names = [
+      "Held: Discovery call with Turbinenbau",
+      "Add notes to Discovery call with Turbinenbau",
+      "Mark as canceled: Discovery call with Turbinenbau",
+    ];
+    const verbs = await Promise.all(
+      names.map((name) => screen.findByRole("button", { name })),
+    );
+    for (let at = 1; at < verbs.length; at++) {
+      expect(
+        verbs[at - 1].compareDocumentPosition(verbs[at]) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+    // No-show needs the composer, so it is never a verb on the card.
+    expect(screen.queryByRole("button", { name: /no-show/i })).toBeNull();
+  });
+
+  it("records a held meeting from the card, with no dialog in the way", async () => {
+    const sent: unknown[] = [];
+    const preconditions: (string | null)[] = [];
+    stubWithMeetingRead(sent, 200, CAPTURED_MEETING, preconditions);
+    const user = userEvent.setup();
+    renderUnderAToastRegion();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Held: Discovery call with Turbinenbau",
       }),
-    ).not.toBeNull();
-    // The two statuses that need prose are answers INSIDE the composer, not
-    // verbs on the card: a row that still offered them would write one word and
-    // close, which is the whole behaviour this replaced.
-    expect(screen.queryByRole("button", { name: /it happened/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /didn't come/i })).toBeNull();
+    );
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent).toEqual([{ meeting_status: "held" }]);
+    expect(preconditions).toEqual(["3"]);
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("records a cancellation from the card, with no dialog in the way", async () => {
@@ -214,7 +229,9 @@ describe("a meeting that owes an answer", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     // Seeded rather than blank: the reader is amending what the calendar
     // already knew, and an empty form invites them to save nothing over it.
     const subject = await screen.findByDisplayValue(
@@ -234,7 +251,9 @@ describe("a meeting that owes an answer", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     await screen.findByDisplayValue("Discovery call with Turbinenbau");
     writeMessage("Details", "They want a pilot in Q1.");
     await user.click(screen.getByRole("button", { name: /^log$/i }));
@@ -263,7 +282,9 @@ describe("a meeting that owes an answer", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     expect(
       (await screen.findByLabelText<HTMLTextAreaElement>("Details")).value,
     ).toBe(transcript);
@@ -280,7 +301,9 @@ describe("a meeting that owes an answer", () => {
     const user = userEvent.setup();
     renderUnderAToastRegion();
 
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     await waitFor(() => expect(messageText("Details")).toContain("Fifth"));
     fireEvent.focus(messageBox("Details"));
     fireEvent.blur(messageBox("Details"));
@@ -335,7 +358,7 @@ describe("a meeting that owes an answer", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Update Discovery call with Turbinenbau",
+        name: "Add notes to Discovery call with Turbinenbau",
       }),
     ).not.toBeNull();
     expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
@@ -361,7 +384,7 @@ describe("a meeting that owes an answer", () => {
     ).not.toBeNull();
     expect(screen.queryByText(/Retry/)).toBeNull();
     expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /update/i })).not.toBeNull();
+    expect(screen.getByRole("button", { name: /^add notes/i })).not.toBeNull();
   });
 });
 
@@ -401,7 +424,9 @@ describe("the start a meeting outcome saves", () => {
   ): Promise<void> {
     const user = userEvent.setup();
     renderUnderAToastRegion(zone);
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     await screen.findByDisplayValue("Discovery call with Turbinenbau");
     await moveDay?.(user);
     await user.click(screen.getByRole("button", { name: /^log$/i }));
@@ -536,7 +561,9 @@ describe("the start a meeting outcome saves", () => {
     stubWithMeetingRead([]);
     const user = userEvent.setup();
     renderUnderAToastRegion("Pacific/Pago_Pago");
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     await user.click(
       await screen.findByRole("button", { name: /^Choose date/ }),
     );
@@ -581,7 +608,9 @@ describe("the start a meeting outcome saves", () => {
     client.setQueryData(["activity", MEETING_ID], CAPTURED_MEETING);
     const user = userEvent.setup();
     renderUnderAToastRegion("Asia/Bangkok", client);
-    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /^add notes/i }),
+    );
     await screen.findByDisplayValue("Discovery call with Turbinenbau");
     client.setQueryData(["activity", MEETING_ID], {
       ...CAPTURED_MEETING,

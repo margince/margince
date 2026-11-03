@@ -14,6 +14,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -41,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -198,9 +201,10 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 // would come to disagree.
 func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 	staged := approvalsServiceWithEffects(pool)
-	s.attentionHandlers = newAttentionHandlers(pool, staged)
+	s.homeCache = homecache.New(pool)
+	s.attentionHandlers = newAttentionHandlers(pool, staged).WithHomeCache(s.homeCache)
 	s.magicService = newMagicService(pool, staged, time.Now)
-	s.magicHandlers = magic.NewHandlers(s.magicService)
+	s.magicHandlers = magic.NewHandlers(s.magicService).WithHomeCache(s.homeCache)
 }
 
 // wireCaptureSettingsSurface binds the workspace's own capture posture
@@ -214,6 +218,17 @@ func (s *Server) wireStagedSurfaces(pool *pgxpool.Pool) {
 // sits behind the grant that reads the thing being shared. Splitting them
 // across the literal and here would put half of that seam out of sight of the
 // other half.
+// newForecastHandlers is the forecast surface over its seams, every call
+// recorded through it keeping its baseline.
+func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.Handlers {
+	return forecasting.NewHandlers(
+		newForecastStoreFor(pool),
+		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
+		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
+	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
+		WithReaderRows(ForecastReaderContributions)
+}
+
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	reportingService := newReportingService(pool, time.Now)
 	s.reportingHandlers = reporting.NewHandlers(reportingService, openingSelection())
@@ -221,12 +236,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.reportingReaderPreviewHandlers = reportingReaderPreviewHandlers{
 		reports: reportingService, roles: identity.NewServiceFor(InstallationDB(pool)),
 	}
-	s.forecastHandlers = forecasting.NewHandlers(
-		newForecastStoreFor(pool),
-		ForecastDeals, ForecastPeriodAt, ForecastWritableScope,
-		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals,
-		func() time.Time { return time.Now().UTC() },
-	)
+	s.forecastHandlers = newForecastHandlers(pool, func() time.Time { return time.Now().UTC() })
 	// The floor comes from the constant rather than a setting for now: one
 	// number, and moving it to installation settings is a migration plus a
 	// reader, which is its own change.
@@ -236,7 +246,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
-		InstallationDB(pool), func() time.Time { return time.Now().UTC() })
+		InstallationDB(pool), func() time.Time { return time.Now().UTC() }).withTargets(reportingService)
 	s.analyticsShareHandlers = newAnalyticsShareHandlers(
 		NewAnalyticsShareStore(func() time.Time { return time.Now().UTC() }),
 		newForecastStoreFor(pool),
@@ -376,12 +386,17 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
+	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
+	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
+		return suggestionSink().ConversationSuggestions(ctx, anchor)
+	}}
 	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
 		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
 		recompute: activities.RecomputeAudienceTx,
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
 	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
 	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
 	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
 	// The importer maps only core columns (see importTargets for why custom
@@ -436,6 +451,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.wireContact360(pool)
 	s.wireReversal(pool)
 	s.wireProject360(pool)
+	s.wireSalesReview(pool)
 }
 
 // newConsentHandlers binds the consent surface to the four edges it cannot

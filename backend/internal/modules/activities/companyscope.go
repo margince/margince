@@ -121,8 +121,8 @@ func CompanyFiledActivityExists(companyPos int) string {
 var companyArms = `FROM activity_link l
 		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
+		    LEFT JOIN relationship r ON r.contact_id = l.contact_id
+		      AND ` + employment.CurrentMembershipSQL("r") + `
 		      AND ` + employment.InPlaceForSQL("r", "la") + `
 		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
@@ -149,8 +149,8 @@ var companyArms = `FROM activity_link l
 // relationship in scope under that name reads as the first.
 var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
-		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
+		      JOIN relationship emp ON emp.contact_id = ap.contact_id
+		        AND ` + employment.CurrentMembershipSQL("emp") + `
 		        AND ` + employment.InPlaceForSQL("emp", "a") + `
 		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
@@ -206,8 +206,7 @@ func activityReachesCompany(operand string) string {
 // exactly one of the three id columns is set per row, and the predicate omits
 // it for the same reason.
 //
-// No workspace filter: activity_link, deal and relationship all carry FORCE
-// row-level security, and every caller runs inside WithWorkspaceTx.
+// Every caller runs this fragment inside its workspace-bound transaction.
 //
 // The employment arm reaches only mail sent while the edge was in place
 // (employment.InPlaceForSQL). Mail from someone's previous job is therefore not

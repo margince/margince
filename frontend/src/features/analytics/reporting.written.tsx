@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Panel, PanelBody } from "../../design-system/panel";
 import {
   formatDateAbbrev,
   formatDecimal,
@@ -9,11 +10,28 @@ import {
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import {
   type ReportingEvaluation,
+  type ReportingEvidenceRef,
   reportingCompactAmount,
   reportingPeriodLabel,
 } from "./reporting.model";
 
 type Metric = ReportingEvaluation["metrics"][number];
+
+/** Where a sentence's reader goes to check it. */
+export type SentenceLink =
+  | Readonly<{ kind: "evidence"; reference: ReportingEvidenceRef }>
+  | Readonly<{ kind: "forecast" }>
+  | Readonly<{ kind: "interventions" }>;
+
+/** One summary sentence and the evidence or action it rests on. */
+export type LinkedSentence = Readonly<{ text: string; link?: SentenceLink }>;
+
+/** What the summary knows of the open checks: read, failed, or still coming. */
+export type ChecksReading = Readonly<{
+  state: "pending" | "failed" | "ready" | "not_permitted";
+  findings?: number;
+  deals?: number;
+}>;
 
 // The position in a few sentences, written from a fixed template over the
 // figures this evaluation already carries. It adds no total of its own, and a
@@ -175,25 +193,84 @@ const SALES_FIGURES: readonly Metric["id"][] = [
 ];
 
 /**
- * Sales review in two or three sentences. They say where the quarter is heading
- * against its target, what is won, and how far the open deals cover the rest.
- * The comparison is the server's; no gap is worked out here.
+ * Sales review in a few sentences. They say where the quarter is heading
+ * against its target and what is won. They say how far the open deals cover
+ * the rest and what the open checks ask. Each links to what it rests on. The comparison is
+ * the server's; no gap is worked out here. While a figure or the checks
+ * failed, no sentence says the quarter is on or above target.
  */
 export function salesReviewSummary(
   evaluation: ReportingEvaluation,
   words: Words,
-): string[] {
+  checks?: ChecksReading,
+): LinkedSentence[] {
   const metric = (id: Metric["id"]) => readable(evaluation, id);
   const landing = metric("forecast_landing");
   const comparison = landing?.target_comparison;
+  const won = metric("bookings_won");
+  const open = metric("open_pipeline");
+  const failed = failedSentence(evaluation, SALES_FIGURES, words);
+  const healthy = failed === null && checks?.state !== "failed";
+  const covered =
+    comparison?.status === "compared" && landing?.coverage.status === "ok";
+  const evidence = (found: Metric | undefined): SentenceLink | undefined =>
+    found && { kind: "evidence", reference: found.evidence };
   return [
-    failedSentence(evaluation, SALES_FIGURES, words),
-    positionSentence(evaluation, landing, comparison, words),
-    wonSentence(evaluation, metric("bookings_won"), words),
-    comparison?.status === "compared" && landing?.coverage.status === "ok"
-      ? coverageSentence(evaluation, comparison, words)
-      : openSentence(evaluation, metric("open_pipeline"), words),
-  ].filter((sentence): sentence is string => sentence !== null);
+    linked(failed),
+    // While an input failed, a verdict of on or above target is left out:
+    // the missing part could change it.
+    healthy || !claimsTarget(comparison)
+      ? linked(positionSentence(evaluation, landing, comparison, words), {
+          kind: "forecast",
+        })
+      : null,
+    linked(wonSentence(evaluation, won, words), evidence(won)),
+    covered && comparison
+      ? linked(coverageSentence(evaluation, comparison, words), evidence(open))
+      : linked(openSentence(evaluation, open, words), evidence(open)),
+    linked(checksSentence(checks, words), { kind: "interventions" }),
+  ].filter((sentence): sentence is LinkedSentence => sentence !== null);
+}
+
+// Whether the comparison says the target is reached, met or beaten.
+function claimsTarget(comparison: Comparison | undefined): boolean {
+  if (comparison?.status === "target_reached") return true;
+  return (
+    comparison?.status === "compared" &&
+    comparison.gap != null &&
+    comparison.gap <= 0
+  );
+}
+
+function linked(
+  text: string | null,
+  link?: SentenceLink,
+): LinkedSentence | null {
+  return text === null ? null : { text, link };
+}
+
+// What the open checks ask, counted by the server over every check the
+// reader may see. A list that failed to load says so, never "nothing".
+function checksSentence(
+  checks: ChecksReading | undefined,
+  words: Words,
+): string | null {
+  if (!checks || checks.state === "pending" || checks.state === "not_permitted")
+    return null;
+  if (checks.state === "failed")
+    return words.t("reporting.writtenChecksFailed");
+  const findings = checks.findings ?? 0;
+  if (findings === 0) return words.t("reporting.writtenChecksNone");
+  if (!checks.deals)
+    return words.plural("reporting.writtenChecksOnly", findings, {
+      count: formatNumber(findings, words.locale),
+    });
+  return words.plural("reporting.writtenChecks", findings, {
+    count: formatNumber(findings, words.locale),
+    deals: words.plural("reporting.writtenChecksDeals", checks.deals, {
+      count: formatNumber(checks.deals, words.locale),
+    }),
+  });
 }
 
 /**
@@ -236,11 +313,19 @@ export function prospectingSummary(
   ].filter((sentence): sentence is string => sentence !== null);
 }
 
+// Titled, the sentences stand in their own panel beside the page's lists.
 export function OpeningSummary({
   sentences,
-}: Readonly<{ sentences: readonly string[] }>) {
+  title,
+}: Readonly<{ sentences: readonly string[]; title?: string }>) {
   if (sentences.length === 0) return null;
-  return <p className="reporting-written">{sentences.join(" ")}</p>;
+  const words = <p className="reporting-written">{sentences.join(" ")}</p>;
+  if (!title) return words;
+  return (
+    <Panel title={title}>
+      <PanelBody>{words}</PanelBody>
+    </Panel>
+  );
 }
 
 // A figure the reader sees in full. Part of one would be stated as the whole.

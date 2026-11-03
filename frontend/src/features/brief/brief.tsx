@@ -20,6 +20,7 @@ import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
 import {
@@ -46,7 +47,7 @@ import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { BriefReadingsStrip } from "./brief.readings";
+import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
@@ -86,7 +87,8 @@ export function BriefScreen() {
   const t = useT();
   const nowMs = useNow(60_000);
   const me = useMe();
-  const query = useWorklist("mine", "all");
+  // The drawer's default queue, so an open drawer joins this read.
+  const query = useWorklist("mine", "all", undefined, true, DEFAULT_VIEW);
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
@@ -123,6 +125,7 @@ export function BriefScreen() {
       }}
     />
   );
+  // The dial ends the facts' line, and the week stepper the title's.
   const glance = (
     <BriefGlance
       view={address.view}
@@ -144,13 +147,12 @@ export function BriefScreen() {
       week={review.data}
       firstName={firstName}
       now={new Date(nowMs)}
+      pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
       titleAside={morning ? undefined : <WeekStepper />}
     />
   );
-  // The dial stands on the date's line, and the week stepper on the title's.
-  const head = <div className="brief-head">{glance}</div>;
   return (
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
@@ -158,12 +160,12 @@ export function BriefScreen() {
       {morning && (
         <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
       )}
-      <BriefBody
-        address={address}
-        query={query}
-        head={head}
-        queueToggle={queueToggle}
-      />
+      {/* The head stands over the panes in both views, so the dial never
+          moves when it is pressed. */}
+      <div className="brief-frame">
+        {glance}
+        <BriefBody address={address} query={query} queueToggle={queueToggle} />
+      </div>
       <BriefQueue />
     </div>
   );
@@ -174,33 +176,29 @@ export { deckItems } from "../../lib/brief.decisions.items";
 function BriefBody({
   address,
   query,
-  head,
   queueToggle,
 }: Readonly<{
   address: BriefAddress;
   query: ReturnType<typeof useWorklist>;
-  head: ReactNode;
   queueToggle: ReactNode;
 }>) {
   if (address.view === "weekly")
     return (
-      <div className="brief-weekly-page">
-        {head}
-        <WeeklySection plan={<PlanSection />} />
-      </div>
+      <PageZones
+        shape="single"
+        panes
+        mainClassName="brief-weekly-page"
+        main={<WeeklySection plan={<PlanSection />} />}
+      />
     );
-  return (
-    <PersonalMorning query={query} head={head} queueToggle={queueToggle} />
-  );
+  return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 
 function PersonalMorning({
   query,
-  head,
   queueToggle,
 }: Readonly<{
   query: ReturnType<typeof useWorklist>;
-  head: ReactNode;
   queueToggle: ReactNode;
 }>) {
   const t = useT();
@@ -243,13 +241,13 @@ function PersonalMorning({
           figures and the meetings the work is read against. */}
       <PageZones
         shape="aside"
+        panes
         className="brief-morning"
         mainClassName="brief-main"
         asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={
           <>
-            {head}
             <BriefFeed
               day={day}
               onContext={(item) => setSelected(`${item.source}-${item.id}`)}
@@ -291,6 +289,18 @@ function PersonalMorning({
                   run={brief.data}
                   onRetry={() => void query.refetch()}
                 />
+              </div>
+            )}
+            {/* The figures stand above the meetings, so their wait holds
+                their place rather than letting the meetings rise and fall. */}
+            {/* Hidden from a screen reader: the meetings below already
+                announce the wait. */}
+            {state === "loading" && (
+              <div className="brief-overview" aria-hidden="true">
+                <Eyebrow as="h2" className="brief-section-label">
+                  {t("brief.rail.numbers")}
+                </Eyebrow>
+                <BriefReadingsPending />
               </div>
             )}
             <SchedulePanel day={day} state={state} />

@@ -30,7 +30,8 @@ package gates
 //
 // What it cannot see: an off-by-one in the SQL's month shift, or a to_char
 // pattern that renders the right shape from the wrong instant. Those are
-// arithmetic rather than shape, and they are held by TestQuarterBounds and by
+// arithmetic rather than shape, and they are held by
+// TestTheRollupWithNoPeriodSumsTheFiscalQuarterUnderWay and by
 // TestWinLossPeriodBucketsFollowTheInstallationFiscalYear /
 // TestTheFiscalMonthShiftIsExactAtTheYearsFirstDay in
 // internal/compose/report_winloss_integration_test.go, which execute the real

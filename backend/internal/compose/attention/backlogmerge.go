@@ -27,6 +27,9 @@ type tailRow struct {
 	at    *time.Time
 	after string
 	kept  bool
+	// elsewhere says another row reports this row's subject, so the page
+	// never keeps it.
+	elsewhere bool
 }
 
 // tailBatch is one read of one source, in the source's own order. more says

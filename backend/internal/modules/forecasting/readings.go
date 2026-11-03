@@ -23,6 +23,7 @@ import (
 // package's tests need a deal writer to say anything about rounding.
 type Deal struct {
 	ID    string
+	Name  string
 	Owner string
 	// The deal's own money. Nil is an UNPRICED deal: real pipeline that
 	// contributes nothing, and never the same thing as zero.
@@ -42,8 +43,15 @@ type Deal struct {
 	// Lost deals cannot land, so no reading counts them as open.
 	Lost     bool
 	Category string
-	// Integer percent, the stage's own win probability.
+	// StageProbability is the chance in use, an integer percent: the typed
+	// stage chance, moved by the stage's recorded outcomes when there are any.
 	StageProbability int
+	// The typed chance, the count of outcomes that moved it, the risk signals
+	// and the strongest one's odds ratio. Nil where the reader set none.
+	TypedProbability *int
+	EvidenceN        *int
+	Signals          []Signal
+	Effect           *float64
 	// StageID is which stage the deal stands in, empty where the reader could
 	// not name one. Frozen onto the contribution so a later conversion read can
 	// ask what happened to deals that REACHED a stage — a question the deal's
@@ -114,12 +122,17 @@ type Readings struct {
 
 	// Qualified is nil unless the caller qualified the deals.
 	Qualified *QualifiedReadings
+
+	// Range is the central 80% of finishes, set by the assembler; nil if not drawn.
+	Range *Range
 }
 
 // Contribution is one deal's part in one set of readings, with the membership
 // decisions recorded rather than left to be recomputed.
 type Contribution struct {
-	DealID           string
+	DealID string
+	// Name is the deal's name as read live, for a drill-through. Never frozen.
+	Name             string
 	Owner            string
 	AmountMinor      *int64
 	Currency         string
@@ -128,6 +141,12 @@ type Contribution struct {
 	CloseProvisional bool
 	Category         string
 	StageProbability int
+	// What the chance and the risk effect were made of; see Deal. Nil on a
+	// contribution frozen before they were recorded.
+	TypedProbability *int
+	EvidenceN        *int
+	Signals          []Signal
+	Effect           *float64
 	// StageID is the stage the deal stood in when this was frozen, empty where
 	// it could not be read. Carried so a conversion rate can be measured per
 	// stage from what was recorded rather than from where the deal ended up.
@@ -328,6 +347,7 @@ func addMinor(running, add int64) (int64, error) {
 func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, error) {
 	out := Contribution{
 		DealID:           deal.ID,
+		Name:             deal.Name,
 		Owner:            deal.Owner,
 		AmountMinor:      deal.AmountMinor,
 		Currency:         deal.Currency,
@@ -336,6 +356,10 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 		CloseProvisional: deal.CloseProvisional,
 		Category:         EffectiveCategory(asOfDay, deal),
 		StageProbability: deal.StageProbability,
+		TypedProbability: deal.TypedProbability,
+		EvidenceN:        deal.EvidenceN,
+		Signals:          deal.Signals,
+		Effect:           deal.Effect,
 		StageID:          deal.StageID,
 		Qualification:    deal.Qualification,
 	}
@@ -368,7 +392,7 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 	}
 
 	if out.InOpen && deal.BaseMinor != nil {
-		weighted, err := values.WeightedValue(*deal.BaseMinor, deal.StageProbability)
+		weighted, err := values.WeightedValue(*deal.BaseMinor, AppliedProbability(deal.StageProbability, deal.Effect))
 		if err != nil {
 			return Contribution{}, fmt.Errorf("forecasting: weighting deal %s: %w", deal.ID, err)
 		}

@@ -3,6 +3,7 @@ import { type ComponentProps, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { LostReasonFields } from "../../components/lostreasonfields";
 import { Button, Modal } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { QueryGate } from "../../design-system/querystates";
@@ -13,15 +14,25 @@ import {
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import {
+  choosableLossReasons,
+  useLossReasons,
+} from "../../lib/lossreasons.queries";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type ReviewActions, useReviewActions } from "../../lib/reviewactions";
+import { CallCheckSheet } from "./inputcheck.call";
 import { CheckFacts } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
   check?: InputCheck;
-  onSubmit: (answer: ResolveAnswer, dealId?: string) => void;
+  // lostReasonCode rides only with a review answered by closing the deal lost.
+  onSubmit: (
+    answer: ResolveAnswer,
+    dealId?: string,
+    lostReasonCode?: string,
+  ) => void;
 };
 
 // The answers a customer review takes, as the server accepts them
@@ -36,16 +47,19 @@ const reviewOutcomes = new Set([
 
 export function InputCheckAnswerSheet(props: Readonly<Props>) {
   const actions = useReviewActions();
-  const t = useT();
-  if (props.check?.type === "deal_viability") {
+  if (props.check?.type === "forecast_call_moved") {
     return (
-      <ResolveSheet
-        {...props}
-        labels={reviewLabels(t, props.labels)}
-        asksExpiry={(outcome) => outcome !== "not_relevant"}
-        context={<CheckFacts check={props.check} />}
+      <CallCheckSheet
+        check={props.check}
+        open={props.open}
+        onClose={props.onClose}
+        returnFocusTo={props.returnFocusTo}
+        closeLabel={props.labels.cancel}
       />
     );
+  }
+  if (props.check?.type === "deal_viability") {
+    return <ReviewAnswerSheet {...props} check={props.check} />;
   }
   if (props.check?.type !== "unlinked_signal") {
     return (
@@ -59,6 +73,36 @@ export function InputCheckAnswerSheet(props: Readonly<Props>) {
     throw new Error("The app shell must supply review actions");
   }
   return <SignalCheckAnswerSheet {...props} actions={actions} />;
+}
+
+// A customer review answered by closing the deal lost asks why from the same
+// picker as every other close-lost dialog. The sheet's own reason is the note.
+function ReviewAnswerSheet(props: Readonly<Props & { check: InputCheck }>) {
+  const t = useT();
+  const [code, setCode] = useState("");
+  const reasons = choosableLossReasons(useLossReasons(props.open).data);
+  const closesLost = (outcome: string) => outcome === "not_relevant";
+  return (
+    <ResolveSheet
+      {...props}
+      labels={reviewLabels(t, props.labels)}
+      asksExpiry={(outcome) => !closesLost(outcome)}
+      context={<CheckFacts check={props.check} />}
+      outcomeFields={(outcome) =>
+        closesLost(outcome) && (
+          <LostReasonFields reasons={reasons} code={code} onCode={setCode} />
+        )
+      }
+      canSubmit={(outcome) => !closesLost(outcome) || code !== ""}
+      onSubmit={(answer) =>
+        props.onSubmit(
+          answer,
+          undefined,
+          closesLost(answer.outcome) ? code : undefined,
+        )
+      }
+    />
+  );
 }
 
 function reviewLabels(

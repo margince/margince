@@ -40,6 +40,7 @@ const SETTINGS = {
   call_telegram: false,
   call_zalo: true,
   individual_performance: true,
+  forecast_self_correcting: true,
 };
 
 const RATE_SHEET_LOCK = {

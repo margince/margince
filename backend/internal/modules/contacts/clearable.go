@@ -40,6 +40,8 @@ func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.C
 		"industry":                 {Column: "industry", Current: current.Industry},
 		"size_band":                {Column: "size_band", Current: current.SizeBand},
 		"linkedin_url":             {Column: "linkedin_url", Current: current.LinkedinUrl},
+		"phone":                    {Column: columnCompanyPhone, Current: current.Phone},
+		"email":                    {Column: columnCompanyEmail, Current: current.Email},
 		"owner_id":                 {Column: ownerIDColumn, Current: current.OwnerId},
 		"parent_company_id":        {Column: "parent_company_id", Current: current.ParentCompanyId},
 		"assess_against_entity_id": {Column: "assess_against_entity_id", Current: current.AssessAgainstEntityId},
@@ -65,5 +67,6 @@ func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearab
 		"owner_id":              {Column: ownerIDColumn, Current: current.OwnerId},
 		"origin":                {Column: leadOriginField, Current: current.Origin},
 		"origin_detail":         {Column: leadOriginDetailField, Current: current.OriginDetail},
+		"partner_company_id":    {Column: leadPartnerField, Current: current.PartnerCompanyId},
 	}
 }

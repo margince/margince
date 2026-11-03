@@ -217,6 +217,22 @@ export default defineConfig({
         rewrite: (path) =>
           path.replace(/^\/r\//, "/v1/public/record-previews/"),
       },
+      // A booking page's path, split the way nginx.conf splits it: a browser
+      // navigation gets the app, any other fetch the api's booking preview.
+      "/book": {
+        target: proxyTarget,
+        changeOrigin: false,
+        secure: false,
+        bypass: (request) =>
+          request.headers["sec-fetch-dest"] === "document"
+            ? "/index.html"
+            : undefined,
+        rewrite: (path) =>
+          path.replace(
+            /^\/book\/([A-Za-z0-9_-]+)\/?(?:\?.*)?$/,
+            "/v1/public/booking/$1/preview",
+          ),
+      },
       "/v1": { target: proxyTarget, changeOrigin: false, secure: false },
       // The claim surface (ADR-0105). It sits beside the probes rather than
       // under /v1 because it must answer before a company exists, so it
@@ -277,6 +293,10 @@ export default defineConfig({
     // seconds without a single wait failing, and the longest chain here is six —
     // so a five-second ceiling failed tests whose every assertion passed.
     testTimeout: TEST_TIMEOUT_MS,
+    // A hook pays for a screen's chunk, which keeps that cost out of a waiter.
+    // The 10s default sits under it: one screen import on a loaded suite ran
+    // past it. A hook doing a test's work earns a test's ceiling.
+    hookTimeout: TEST_TIMEOUT_MS,
     // Rebinds jsdom's Web Storage over the Node ≥23 global stub — see the file.
     setupFiles: ["./vitest.setup.ts"],
     // Playwright owns e2e/ — vitest must not collect its specs

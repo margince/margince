@@ -29,6 +29,8 @@ const (
 	Perf9Budget  = 300 * time.Millisecond
 	Perf10Budget = time.Second
 	Load1Budget  = 150 * time.Millisecond
+	Perf11Budget = 750 * time.Millisecond
+	Perf12Budget = time.Second
 )
 
 // DailyVerdict is the recorded outcome of one flow for one seat; gen-perfdoc

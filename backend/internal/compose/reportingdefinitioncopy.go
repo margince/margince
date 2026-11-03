@@ -14,23 +14,28 @@ import (
 //
 //nolint:dupl // every metric table is a map of phrases, so the tables share one shape and no text
 var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
-	reportingBookingsWon:              {En: "Sales won", De: "Gewonnener Umsatz", Vi: "Doanh số đã chốt"},
-	reportingClosedWinRate:            {En: "Closed win rate", De: "Gewinnquote abgeschlossener Deals", Vi: "Tỷ lệ thắng trên deal đã đóng"},
-	reportingOpenPipeline:             {En: "Open pipeline", De: "Offene Pipeline", Vi: "Pipeline đang mở"},
-	reportingStageAge:                 {En: "Time in current stage", De: "Zeit in der aktuellen Phase", Vi: "Thời gian ở giai đoạn hiện tại"},
-	reportingQualifiedPipelineCreated: {En: "Qualified pipeline created", De: "Neu qualifizierte Pipeline", Vi: "Pipeline đủ điều kiện đã tạo"},
-	reportingMeetingsHeld:             {En: "Meetings held", De: "Durchgeführte Termine", Vi: "Cuộc họp đã diễn ra"},
-	reportingAcceptedOpportunities:    {En: "Accepted handoffs", De: "Angenommene Übergaben", Vi: "Bàn giao đã chấp nhận"},
-	reportingForecastLanding:          {En: "Forecast landing", De: "Erwartetes Ergebnis", Vi: "Dự kiến cuối kỳ"},
-	reportingLeadsCreated:             {En: "New leads", De: "Neue Leads", Vi: "Lead mới"},
-	reportingLeadStatusMoves:          {En: "Lead status changes", De: "Statuswechsel von Leads", Vi: "Lượt đổi trạng thái lead"},
-	reportingLeadsPromoted:            {En: "Leads qualified", De: "Qualifizierte Leads", Vi: "Lead đủ điều kiện"},
-	reportingLeadFirstResponse:        {En: "First response time", De: "Zeit bis zur ersten Antwort", Vi: "Thời gian phản hồi đầu tiên"},
-	reportingLeadsAwaitingResponse:    {En: "Leads still waiting for a reply", De: "Leads, die noch auf eine Antwort warten", Vi: "Lead vẫn đang chờ phản hồi"},
-	reportingPartnerPipeline:          {En: "Partner pipeline", De: "Pipeline über Partnerunternehmen", Vi: "Pipeline từ đối tác"},
-	reportingPartnerWon:               {En: "Partner sales won", De: "Umsatz über Partnerunternehmen", Vi: "Doanh số chốt từ đối tác"},
-	reportingPartnerCommission:        {En: "Partner commission", De: "Provision für Partnerunternehmen", Vi: "Hoa hồng đối tác"},
-	reportingPartnerActivity:          {En: "Active partners", De: "Aktive Partnerunternehmen", Vi: "Đối tác đang hoạt động"},
+	reportingBookingsWon:                   {En: "Sales won", De: "Gewonnener Umsatz", Vi: "Doanh số đã chốt"},
+	reportingClosedWinRate:                 {En: "Closed win rate", De: "Gewinnquote abgeschlossener Deals", Vi: "Tỷ lệ thắng trên deal đã đóng"},
+	reportingOpenPipeline:                  {En: "Open pipeline", De: "Offene Pipeline", Vi: "Pipeline đang mở"},
+	reportingStageAge:                      {En: "Time in current stage", De: "Zeit in der aktuellen Phase", Vi: "Thời gian ở giai đoạn hiện tại"},
+	reportingQualifiedPipelineCreated:      {En: "Qualified pipeline created", De: "Neu qualifizierte Pipeline", Vi: "Pipeline đủ điều kiện đã tạo"},
+	reportingMeetingsHeld:                  {En: "Meetings held", De: "Durchgeführte Termine", Vi: "Cuộc họp đã diễn ra"},
+	reportingAcceptedOpportunities:         {En: "Accepted handoffs", De: "Angenommene Übergaben", Vi: "Bàn giao đã chấp nhận"},
+	reportingForecastLanding:               {En: "Forecast landing", De: "Erwartetes Ergebnis", Vi: "Dự kiến cuối kỳ"},
+	reportingLeadsCreated:                  {En: "New leads", De: "Neue Leads", Vi: "Lead mới"},
+	reportingLeadStatusMoves:               {En: "Lead status changes", De: "Statuswechsel von Leads", Vi: "Lượt đổi trạng thái lead"},
+	reportingLeadsPromoted:                 {En: "Leads qualified", De: "Qualifizierte Leads", Vi: "Lead đủ điều kiện"},
+	reportingLeadFirstResponse:             {En: "First response time", De: "Zeit bis zur ersten Antwort", Vi: "Thời gian phản hồi đầu tiên"},
+	reportingLeadsAwaitingResponse:         {En: "Leads still waiting for a reply", De: "Leads, die noch auf eine Antwort warten", Vi: "Lead vẫn đang chờ phản hồi"},
+	reportingPartnerPipeline:               {En: "Partner pipeline", De: "Pipeline über Partnerunternehmen", Vi: "Pipeline từ đối tác"},
+	reportingPartnerWon:                    {En: "Partner sales won", De: "Umsatz über Partnerunternehmen", Vi: "Doanh số chốt từ đối tác"},
+	reportingPartnerCommission:             {En: "Partner commission", De: "Provision für Partnerunternehmen", Vi: "Hoa hồng đối tác"},
+	reportingPartnerActivity:               {En: "Active partners", De: "Aktive Partnerunternehmen", Vi: "Đối tác đang hoạt động"},
+	reportingStageConversion:               {En: "Stage conversion", De: "Weiterkommen pro Phase", Vi: "Tỷ lệ đi tiếp theo giai đoạn"},
+	reportingLeadCohortOutcomes:            {En: "What became of new leads", De: "Was aus neuen Leads wurde", Vi: "Kết quả của lead mới"},
+	reportingBookingsMix:                   {En: "Commercial mix", De: "Umsatzmix", Vi: "Cơ cấu doanh số"},
+	reportingQualifiedOpportunitiesCreated: {En: "Qualified opportunities", De: "Qualifizierte Verkaufschancen", Vi: "Cơ hội đủ điều kiện"},
+	reportingInitiativePipeline:            {En: "Initiative pipeline by origin", De: "Initiativen-Pipeline nach Herkunft", Vi: "Pipeline sáng kiến theo nguồn gốc"},
 }
 
 // reportingMetricName names a metric in the reading's language. An edition
@@ -132,6 +137,31 @@ var reportingDefinitionWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		De: "Die Zahl der aktiven Partnerunternehmen gerade jetzt, von allen nicht archivierten: aktiv ist ein Partnerunternehmen, wenn es zertifiziert ist und in den letzten 90 Tagen eine Aktivität beim Unternehmen erfasst wurde, gutgeschrieben der Person, die das Unternehmen verantwortet. Beispiel: Von 12 Partnerunternehmen sind 8 zertifiziert und hatten in den letzten 90 Tagen eine Aktivität, also zeigt die Zahl 8 von 12.",
 		Vi: "Số đối tác đang hoạt động ngay lúc này, trên tổng số đối tác chưa lưu trữ: đối tác đang hoạt động khi đã được chứng nhận và công ty của đối tác có hoạt động được ghi nhận trong 90 ngày qua, tính cho người phụ trách công ty của đối tác. Ví dụ: có 12 đối tác, 8 đối tác đã chứng nhận và có hoạt động trong 90 ngày qua, nên hiển thị 8 trên 12.",
 	},
+	reportingStageConversion: {
+		En: "Of the deals that entered a stage during the period you picked, the share that next moved to a later stage or was won, out of those that have left the stage since. Deals still in the stage are shown apart and never count as lost. Example: 10 deals entered Demo in May, 4 moved on, 1 was won, 3 were lost and 2 are still in Demo, so Demo shows 5 of 8.",
+		De: "Von den Deals, die im gewählten Zeitraum in eine Phase gekommen sind, der Anteil derer, die danach in eine spätere Phase gewechselt sind oder gewonnen wurden, gemessen an denen, die die Phase seitdem verlassen haben. Deals, die noch in der Phase sind, stehen getrennt und zählen nie als verloren. Beispiel: Im Mai kommen 10 Deals in die Phase Demo, 4 gehen weiter, 1 wird gewonnen, 3 gehen verloren und 2 sind noch in Demo, also zeigt Demo 5 von 8.",
+		Vi: "Trong các deal vào một giai đoạn trong khoảng thời gian bạn chọn, phần deal sau đó sang giai đoạn sau hoặc đã thắng, trên số deal đã rời giai đoạn đó. Deal vẫn còn trong giai đoạn được hiển thị riêng và không bao giờ bị tính là thua. Ví dụ: tháng 5 có 10 deal vào giai đoạn Demo, 4 deal đi tiếp, 1 deal thắng, 3 deal thua và 2 deal vẫn ở Demo, nên Demo hiển thị 5 trên 8.",
+	},
+	reportingLeadCohortOutcomes: {
+		En: "Of the leads that arrived during the period you picked, the share since qualified or handed on and accepted, out of those that reached an outcome; leads still open are shown apart and never count as lost. Example: 20 leads arrived in May, 3 were handed on and accepted, 4 qualified, 5 disqualified and 8 are still open, so May shows 7 of 12.",
+		De: "Von den Leads, die im gewählten Zeitraum eingegangen sind, der Anteil derer, die seitdem qualifiziert oder übergeben und angenommen wurden, gemessen an denen mit einem Ergebnis; noch offene Leads stehen getrennt und zählen nie als verloren. Beispiel: Im Mai gehen 20 Leads ein, 3 werden übergeben und angenommen, 4 qualifiziert, 5 disqualifiziert und 8 sind noch offen, also zeigt der Mai 7 von 12.",
+		Vi: "Trong các lead đến trong khoảng thời gian bạn chọn, phần lead sau đó đủ điều kiện hoặc được bàn giao và chấp nhận, trên số lead đã có kết quả; lead vẫn đang mở được hiển thị riêng và không bao giờ bị tính là thua. Ví dụ: tháng 5 có 20 lead đến, 3 lead được bàn giao và chấp nhận, 4 lead đủ điều kiện, 5 lead bị loại và 8 lead vẫn đang mở, nên tháng 5 hiển thị 7 trên 12.",
+	},
+	reportingBookingsMix: {
+		En: "The value of deals won in the period you picked, split by what each product sold is: software, implementation or other, with the part of a deal no product carries shown as unallocated. The split reads the accepted offer's lines, or the products set by hand on the deal. Example: a €10,000 deal won in May with €7,000 of software and €3,000 of implementation on its accepted offer counts €7,000 under software and €3,000 under implementation.",
+		De: "Der Wert der im gewählten Zeitraum gewonnenen Deals, aufgeteilt danach, was jedes verkaufte Produkt ist: Software, Umsetzung oder Sonstiges. Der Teil eines Deals, der keinem Produkt zugeordnet ist, steht als nicht zugeordnet. Die Aufteilung liest die Positionen des angenommenen Angebots oder die am Deal von Hand gesetzten Produkte. Beispiel: Ein im Mai gewonnener Deal über 10.000 € mit 7.000 € Software und 3.000 € Umsetzung im angenommenen Angebot zählt 7.000 € unter Software und 3.000 € unter Umsetzung.",
+		Vi: "Giá trị các deal đã thắng trong khoảng thời gian bạn chọn, chia theo loại của từng sản phẩm đã bán: phần mềm, triển khai hoặc khác; phần của deal không gắn với sản phẩm nào hiển thị là chưa phân bổ. Việc chia đọc từ các dòng của báo giá đã chấp nhận, hoặc từ các sản phẩm đặt thủ công trên deal. Ví dụ: deal 10.000 € thắng vào tháng 5 với 7.000 € phần mềm và 3.000 € triển khai trong báo giá đã chấp nhận được tính 7.000 € vào phần mềm và 3.000 € vào triển khai.",
+	},
+	reportingQualifiedOpportunitiesCreated: {
+		En: "The number of distinct deals that entered a qualifying stage of the reporting framework during the period you picked, each counted once. With a sales initiative chosen, only the deals a member lead was promoted into after the launch count: membership says a deal belongs, never that the effort made it. Example: 12 deals reached Qualification in May, so May shows 12.",
+		De: "Die Zahl der Deals, die im gewählten Zeitraum eine qualifizierende Phase der Berichtseinstellungen erreicht haben, jeder einmal gezählt. Mit einer gewählten Vertriebsinitiative zählen nur Deals, in die ein zugehöriger Lead nach dem Start umgewandelt wurde: Die Zugehörigkeit sagt, dass ein Deal dazugehört, nie, dass die Initiative ihn hervorgebracht hat. Beispiel: 12 Deals erreichen im Mai die Qualifizierung, also zeigt der Mai 12.",
+		Vi: "Số deal riêng biệt đã vào một giai đoạn đủ điều kiện của thiết lập báo cáo trong khoảng thời gian bạn chọn, mỗi deal tính một lần. Khi đã chọn một sáng kiến bán hàng, chỉ tính các deal mà một lead thành viên được chuyển vào sau khi khởi động: tư cách thành viên cho biết deal thuộc về sáng kiến, không phải sáng kiến tạo ra nó. Ví dụ: 12 deal đạt Đủ điều kiện trong tháng 5, nên tháng 5 hiển thị 12.",
+	},
+	reportingInitiativePipeline: {
+		En: "The known open value of the selected initiative's member deals as of today, split by where each deal came from: existing at launch, sourced by the initiative, created after launch, or added after launch. Example: an initiative launched on 1 May with 50,000 € of open deals, and a member lead promoted into a 10,000 € deal in June, shows 50,000 € existing and 10,000 € sourced.",
+		De: "Der bekannte offene Wert der zugehörigen Deals der gewählten Initiative zum heutigen Tag, aufgeteilt nach Herkunft: beim Start vorhanden, durch die Initiative gewonnen, nach dem Start angelegt oder nach dem Start hinzugefügt. Beispiel: Eine am 1. Mai gestartete Initiative mit 50.000 € offenen Deals und ein zugehöriger Lead, der im Juni in einen Deal über 10.000 € umgewandelt wurde, zeigt 50.000 € vorhanden und 10.000 € gewonnen.",
+		Vi: "Giá trị đang mở đã biết của các deal thành viên thuộc sáng kiến đã chọn tính đến hôm nay, chia theo nguồn gốc của từng deal: có sẵn khi khởi động, do sáng kiến mang về, tạo sau khi khởi động, hoặc thêm sau khi khởi động. Ví dụ: sáng kiến khởi động ngày 1 tháng 5 với 50.000 € deal đang mở, và một lead thành viên được chuyển thành deal 10.000 € vào tháng 6, hiển thị 50.000 € có sẵn và 10.000 € do sáng kiến mang về.",
+	},
 }
 
 //nolint:dupl // every metric table is a map of phrases, so the three share one shape and no text
@@ -221,6 +251,31 @@ var reportingAttributionWords = map[crmcontracts.ReportingMetricID]langcopy.Phra
 		De: "Jedes Partnerunternehmen zählt einmal für die Person, die das Unternehmen jetzt verantwortet, so wie es beim Abruf der Zahl steht.",
 		Vi: "Mỗi đối tác được tính một lần cho người đang phụ trách công ty, theo trạng thái tại thời điểm số liệu được đọc.",
 	},
+	reportingStageConversion: {
+		En: "Credit goes to the owner and pipeline the deal had when it entered the stage, so a reassigned deal stays with them; whether a move went forward or back is read from the stage order at the time of the move.",
+		De: "Gutgeschrieben wird der Person und der Pipeline, die der Deal beim Eintritt in die Phase hatte, sodass ein neu zugewiesener Deal dort bleibt; ob ein Wechsel vor- oder zurückging, wird aus der Reihenfolge der Phasen zum Zeitpunkt des Wechsels gelesen.",
+		Vi: "Kết quả tính cho người phụ trách và pipeline của deal tại lúc deal vào giai đoạn, nên deal được giao lại vẫn tính cho họ; việc chuyển tiến hay lùi được đọc từ thứ tự giai đoạn tại thời điểm chuyển.",
+	},
+	reportingLeadCohortOutcomes: {
+		En: "Credit goes to the owner the lead had when it arrived, so a reassigned lead stays with them; each lead counts in the period it arrived, however late its outcome.",
+		De: "Gutgeschrieben wird der Person, der der Lead bei seinem Eingang gehörte, sodass ein neu zugewiesener Lead dort bleibt; jeder Lead zählt im Zeitraum seines Eingangs, egal wie spät sein Ergebnis kommt.",
+		Vi: "Kết quả tính cho người phụ trách lead tại lúc lead đến, nên lead được giao lại vẫn tính cho họ; mỗi lead được tính vào kỳ lead đến, dù kết quả đến muộn đến đâu.",
+	},
+	reportingBookingsMix: {
+		En: "Credit goes to the deal's current owner and pipeline, so a reassigned deal moves with it; each allocation keeps the product's classification from when it was written, so a later catalog change does not rewrite a closed deal.",
+		De: "Gutgeschrieben wird der aktuell verantwortlichen Person und der aktuellen Pipeline des Deals, ein neu zugewiesener Deal wandert also mit; jede Zuordnung behält die Einordnung des Produkts vom Zeitpunkt des Schreibens, sodass eine spätere Katalogänderung einen abgeschlossenen Deal nicht umschreibt.",
+		Vi: "Kết quả tính cho người đang phụ trách và pipeline hiện tại của deal, nên deal được chuyển giao sẽ đi theo người mới; mỗi phân bổ giữ phân loại của sản phẩm tại lúc ghi, nên thay đổi danh mục sau này không viết lại deal đã đóng.",
+	},
+	reportingQualifiedOpportunitiesCreated: {
+		En: "Credit goes to the owner and pipeline the deal had when it entered the qualifying stage, so a reassigned deal stays with them.",
+		De: "Gutgeschrieben wird der Person und der Pipeline, die der Deal beim Eintritt in die qualifizierende Phase hatte, sodass ein neu zugewiesener Deal dort bleibt.",
+		Vi: "Kết quả tính cho người phụ trách và pipeline của deal tại lúc deal vào giai đoạn đủ điều kiện, nên deal được giao lại vẫn tính cho họ.",
+	},
+	reportingInitiativePipeline: {
+		En: "Credit goes to the deal's current owner and pipeline; a deal's origin is read against the launch time and the frozen baseline, and never changes when membership is edited.",
+		De: "Gutgeschrieben wird der aktuell verantwortlichen Person und der aktuellen Pipeline des Deals; die Herkunft eines Deals wird am Startzeitpunkt und an der eingefrorenen Ausgangsbasis gelesen und ändert sich bei einer Bearbeitung der Zugehörigkeit nie.",
+		Vi: "Kết quả tính cho người đang phụ trách và pipeline hiện tại của deal; nguồn gốc của deal được đọc theo thời điểm khởi động và đường cơ sở đã đóng băng, và không bao giờ thay đổi khi chỉnh sửa thành viên.",
+	},
 }
 
 //nolint:dupl // every metric table is a map of phrases, so the three share one shape and no text
@@ -309,5 +364,30 @@ var reportingIncompleteWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		En: "Only partners you may see are counted; a partner whose company has no logged activity counts as inactive, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Partnerunternehmen, die du sehen darfst; ohne erfasste Aktivität beim Unternehmen gilt ein Partnerunternehmen als inaktiv, und mit einer gewählten Pipeline gibt es keine Zahl.",
 		Vi: "Chỉ tính các đối tác bạn được phép xem; đối tác mà công ty chưa có hoạt động nào được tính là không hoạt động, và khi chọn một pipeline thì không có số liệu.",
+	},
+	reportingStageConversion: {
+		En: "Only deals you may see are counted, and moves an import brought in are left out; a deal whose next move was imported, or saved before Margince kept the stage order, is counted apart as next move imported or unknown, and there is no rate with fewer than 5 deals that left the stage.",
+		De: "Gezählt werden nur Deals, die du sehen darfst, und Wechsel, die ein Import mitgebracht hat, bleiben außen vor; ein Deal, dessen nächster Wechsel importiert ist oder gespeichert wurde, bevor Margince die Reihenfolge der Phasen festgehalten hat, steht getrennt als Nächster Wechsel importiert oder unbekannt, und bei weniger als 5 Deals, die die Phase verlassen haben, gibt es keine Quote.",
+		Vi: "Chỉ tính các deal bạn được phép xem và không tính các lần chuyển do nhập dữ liệu mang vào; deal có lần chuyển tiếp theo được nhập, hoặc được lưu trước khi Margince ghi thứ tự giai đoạn, được đếm riêng là lần chuyển tiếp theo được nhập hoặc không rõ, và không có tỷ lệ khi có ít hơn 5 deal đã rời giai đoạn.",
+	},
+	reportingLeadCohortOutcomes: {
+		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 leads with an outcome, and with a pipeline chosen there is no figure.",
+		De: "Gezählt werden nur Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, bei weniger als 5 Leads mit einem Ergebnis gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 lead đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
+	},
+	reportingBookingsMix: {
+		En: "Only deals you may see are counted; a won deal with no accepted offer and no products set by hand counts whole as unallocated, an allocation in another currency than the deal's has no value, and a deal whose amount is unknown adds nothing.",
+		De: "Gezählt werden nur Deals, die du sehen darfst; ein gewonnener Deal ohne angenommenes Angebot und ohne von Hand gesetzte Produkte zählt ganz als nicht zugeordnet, eine Zuordnung in einer anderen Währung als der des Deals hat keinen Wert, und ein Deal ohne bekannten Betrag trägt nichts bei.",
+		Vi: "Chỉ tính các deal bạn được phép xem; deal đã thắng không có báo giá được chấp nhận và không có sản phẩm đặt thủ công được tính toàn bộ là chưa phân bổ, phân bổ bằng loại tiền khác với deal không có giá trị, và deal không rõ số tiền không đóng góp gì.",
+	},
+	reportingQualifiedOpportunitiesCreated: {
+		En: "Only deals you may see are counted; nothing counts before qualifying stages were set up, and a deal whose qualifying entry was reversed is left out.",
+		De: "Gezählt werden nur Deals, die du sehen darfst; vor der Einrichtung der qualifizierenden Phasen zählt nichts, und ein Deal, dessen qualifizierender Eintritt zurückgenommen wurde, bleibt außen vor.",
+		Vi: "Chỉ tính các deal bạn được phép xem; không tính gì trước khi thiết lập các giai đoạn đủ điều kiện, và deal có lượt vào giai đoạn đủ điều kiện bị đảo ngược sẽ không được tính.",
+	},
+	reportingInitiativePipeline: {
+		En: "Only member deals you may see are counted; an unpriced deal stays in the count and adds nothing to the value, a rule that matches more records than one read lists is marked as cut, and with no initiative chosen there is no figure.",
+		De: "Gezählt werden nur zugehörige Deals, die du sehen darfst; ein Deal ohne Betrag bleibt in der Zahl und trägt nichts zum Wert bei, eine Regel, die mehr Datensätze trifft, als eine Abfrage auflistet, wird als gekürzt markiert, und ohne gewählte Initiative gibt es keine Zahl.",
+		Vi: "Chỉ tính các deal thành viên bạn được phép xem; deal chưa có giá trị vẫn được đếm nhưng không đóng góp giá trị, quy tắc khớp nhiều bản ghi hơn một lần đọc liệt kê sẽ được đánh dấu là bị cắt, và khi chưa chọn sáng kiến thì không có số liệu.",
 	},
 }

@@ -199,9 +199,38 @@ func MarkOutOfDate(ctx context.Context, tx pgx.Tx, found []Exception) error {
 		return fmt.Errorf("assurance: reading which findings are out of date: %w", err)
 	}
 	everything := changed[WorkspaceChanged()]
+	anyDeal, err := dealsMovedSince(ctx, tx, generation, found)
+	if err != nil {
+		return err
+	}
 	for i := range found {
 		moved := everything || changed[ChangedSubject{Scope: InputScope(found[i].SubjectKind), ID: found[i].SubjectID}]
+		if found[i].SubjectKind == SubjectKindForecastCall {
+			moved = everything || anyDeal
+		}
 		found[i].InputsChanged = &moved
 	}
 	return nil
+}
+
+// dealsMovedSince answers, for a list holding call findings, whether any deal
+// changed after the last pass over the pipeline. A call is judged against its
+// scope's deals, and only that pass judges it again. So a change a one-deal
+// pass has since read still leaves the call out of date.
+func dealsMovedSince(ctx context.Context, tx pgx.Tx, generation int64, found []Exception) (bool, error) {
+	if !slices.ContainsFunc(found, func(e Exception) bool { return e.SubjectKind == SubjectKindForecastCall }) {
+		return false, nil
+	}
+	var moved bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM assurance_input_change
+		                WHERE generation > $1 AND subject_kind = 'deal')
+		    OR EXISTS (SELECT 1 FROM assurance_run one
+		                WHERE one.subject_deal_id IS NOT NULL
+		                  AND one.as_of > (SELECT max(r.as_of) FROM assurance_run r
+		                                    WHERE r.read_through_generation = $1))`,
+		generation).Scan(&moved); err != nil {
+		return false, fmt.Errorf("assurance: reading whether a call's deals changed: %w", err)
+	}
+	return moved, nil
 }

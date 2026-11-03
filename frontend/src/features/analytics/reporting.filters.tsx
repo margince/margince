@@ -14,6 +14,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { useRecordZone } from "../../lib/recordzone";
 import { useAnalyticsContext } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
+import { DimensionFilters } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
 export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
@@ -29,15 +30,21 @@ export function ReportingFilters({
   selection,
   onChange,
   showScope = true,
+  showPeriod = true,
   showPipeline = true,
   showTargets = true,
   showCloseWindow = showPipeline,
+  showDimensions = false,
   dates: controlledDates,
 }: Readonly<{
   showScope?: boolean;
+  // False leaves the period and its dates to a control elsewhere on the page.
+  showPeriod?: boolean;
   showPipeline?: boolean;
   showTargets?: boolean;
   showCloseWindow?: boolean;
+  // The product, country, industry and value basis dials, for a deal view.
+  showDimensions?: boolean;
   dates?: Readonly<{
     from: string;
     through: string;
@@ -99,25 +106,27 @@ export function ReportingFilters({
           }
         />
       )}
-      <Field label={t("reporting.period")}>
-        {(field) => (
-          <Select
-            {...field}
-            value={selection.period}
-            options={REPORTING_PERIODS.map((value) => ({
-              value,
-              label: t(`reporting.${value}`),
-            }))}
-            onChange={(value) => {
-              const period = REPORTING_PERIODS.find(
-                (candidate) => candidate === value,
-              );
-              if (period) onChange({ ...selection, period });
-            }}
-          />
-        )}
-      </Field>
-      {selection.period === "custom" && (
+      {showPeriod && (
+        <Field label={t("reporting.period")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={selection.period}
+              options={REPORTING_PERIODS.map((value) => ({
+                value,
+                label: t(`reporting.${value}`),
+              }))}
+              onChange={(value) => {
+                const period = REPORTING_PERIODS.find(
+                  (candidate) => candidate === value,
+                );
+                if (period) onChange({ ...selection, period });
+              }}
+            />
+          )}
+        </Field>
+      )}
+      {showPeriod && selection.period === "custom" && (
         <>
           <Field label={t("reporting.fromDate")}>
             {(field) => (
@@ -202,6 +211,9 @@ export function ReportingFilters({
             />
           )}
         </Field>
+      )}
+      {showDimensions && (
+        <DimensionFilters selection={selection} onChange={onChange} />
       )}
       <ErrorLine error={context.error ?? pipelines.error} />
     </div>

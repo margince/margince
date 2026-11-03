@@ -158,6 +158,7 @@ installation:
   fiscal_year_start_month: 1
   follow_up_reconcile_interval_seconds: 86400
   forecast_forward_measure: commit_evidence
+  forecast_self_correcting: true
   geocode_backfill_interval_seconds: 3600
   gmail_watch_renew_within_hours: 48
   gmail_watch_scan_interval_seconds: 21600

@@ -91,7 +91,7 @@ func TestTheLastRunToConfirmAFindingIsAnswerable(t *testing.T) {
 	e := setupScan(t)
 
 	finding := Finding{
-		Type: TypeClosePast, SubjectID: ids.NewV7().String(), Severity: SeverityHigh,
+		Type: TypeClosePast, SubjectID: e.seedDeal(t), Severity: SeverityHigh,
 		Claim:    map[string]any{"expected_close": "2026-04-30"},
 		Observed: map[string]any{"as_of": "2026-05-14"},
 	}
@@ -129,7 +129,7 @@ func TestEveryRunThatSawAFindingStaysOnRecord(t *testing.T) {
 	e := setupScan(t)
 
 	finding := Finding{
-		Type: TypeClosePast, SubjectID: ids.NewV7().String(), Severity: SeverityHigh,
+		Type: TypeClosePast, SubjectID: e.seedDeal(t), Severity: SeverityHigh,
 		Claim:    map[string]any{"expected_close": "2026-04-30"},
 		Observed: map[string]any{"as_of": "2026-05-14"},
 	}
@@ -163,7 +163,7 @@ func TestOneRunSeeingAFindingTwiceRecordsItOnce(t *testing.T) {
 	e := setupScan(t)
 
 	finding := Finding{
-		Type: TypeClosePast, SubjectID: ids.NewV7().String(), Severity: SeverityHigh,
+		Type: TypeClosePast, SubjectID: e.seedDeal(t), Severity: SeverityHigh,
 		Claim:    map[string]any{"expected_close": "2026-04-30"},
 		Observed: map[string]any{"as_of": "2026-05-14"},
 	}
@@ -232,7 +232,7 @@ func TestMembershipDiesWithItsRun(t *testing.T) {
 	e := setupScan(t)
 
 	finding := Finding{
-		Type: TypeClosePast, SubjectID: ids.NewV7().String(), Severity: SeverityHigh,
+		Type: TypeClosePast, SubjectID: e.seedDeal(t), Severity: SeverityHigh,
 		Claim:    map[string]any{"expected_close": "2026-04-30"},
 		Observed: map[string]any{"as_of": "2026-05-14"},
 	}
@@ -266,7 +266,7 @@ func TestTheNightlyScanRecordsWhatItSaw(t *testing.T) {
 
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	sick := Subject{
-		DealID: ids.NewV7().String(), Owner: e.rep.String(),
+		DealID: e.seedDeal(t), Owner: e.rep.String(),
 		ExpectedClose: &past, Category: "commit", HasNextStep: true, HasEconomicBuyer: true,
 	}
 	scanner := NewScanner(e.store,
@@ -308,7 +308,7 @@ func TestARunRecordsAFindingItSawEvenIfResolved(t *testing.T) {
 	ctx := e.as()
 
 	finding := Finding{
-		Type: TypeClosePast, SubjectID: ids.NewV7().String(), Severity: SeverityHigh,
+		Type: TypeClosePast, SubjectID: e.seedDeal(t), Severity: SeverityHigh,
 		Claim:    map[string]any{"expected_close": "2026-04-30"},
 		Observed: map[string]any{"as_of": "2026-05-14"},
 	}
@@ -345,7 +345,7 @@ func TestMembershipDiesWithItsException(t *testing.T) {
 	e := setupScan(t)
 
 	finding := Finding{
-		Type: TypeClosePast, SubjectID: ids.NewV7().String(), Severity: SeverityHigh,
+		Type: TypeClosePast, SubjectID: e.seedDeal(t), Severity: SeverityHigh,
 		Claim:    map[string]any{"expected_close": "2026-04-30"},
 		Observed: map[string]any{"as_of": "2026-05-14"},
 	}

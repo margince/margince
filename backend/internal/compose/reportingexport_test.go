@@ -68,3 +68,50 @@ func TestReportingCSVNamesARetiredMetricAsGone(t *testing.T) {
 		t.Fatalf("retired metric row %v", rows[1])
 	}
 }
+
+// A landing by the manager's call keeps its basis in the file. That is the
+// measure, the split, the records' projection, the call and the range.
+// A legacy reading with no basis writes no measure row at all.
+func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
+	landing := float64(19_000)
+	caveat := crmcontracts.ForecastLandingCaveat("call_below_actual")
+	var evaluation crmcontracts.ReportingEvaluation
+	evaluation.Context.Currency = "EUR"
+	metric := crmcontracts.ReportingMetric{
+		Id: reportingForecastLanding, Unit: "EUR", Value: &landing, Coverage: crmcontracts.ReportingCoverage{Status: "ok"},
+		RangeLowMinor: new(int64(15_000)), RangeHighMinor: new(int64(33_500)),
+		ForecastBasis: &crmcontracts.ReportingForecastBasis{
+			Landing:   crmcontracts.ForecastLanding{AmountMinor: 19_000, Measure: "manager_call", WonMinor: 10_000, SystemMinor: new(int64(14_000)), Caveat: &caveat},
+			CallMinor: new(int64(19_000)),
+		},
+	}
+	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
+	rows := reportingCSVRows(evaluation)
+	block, label, value, context := slices.Index(rows[0], "block"), slices.Index(rows[0], "label"), slices.Index(rows[0], extractionValueKey), slices.Index(rows[0], "context")
+	got := map[string][2]string{}
+	for _, row := range rows[1:] {
+		if row[block] == reportingForecastBasisBlock {
+			got[row[label]] = [2]string{row[value], row[context]}
+		}
+	}
+	want := map[string][2]string{
+		"measure": {"", "manager_call"}, "won": {"10000", reportingForecastBasisBlock}, "remaining": {"0", reportingForecastBasisBlock},
+		"records_projection": {"14000", reportingForecastBasisBlock}, "manager_call": {"19000", reportingForecastBasisBlock},
+		"caveat": {"", "call_below_actual"}, "range_low": {"15000", reportingForecastBasisBlock}, "range_high": {"33500", reportingForecastBasisBlock},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("basis rows %v, want %v", got, want)
+	}
+	for key, row := range want {
+		if got[key] != row {
+			t.Fatalf("basis row %s = %v, want %v", key, got[key], row)
+		}
+	}
+	metric.ForecastBasis = nil
+	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
+	for _, row := range reportingCSVRows(evaluation)[1:] {
+		if row[label] == "measure" {
+			t.Fatalf("a reading without a basis wrote a measure row: %v", row)
+		}
+	}
+}

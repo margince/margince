@@ -120,7 +120,7 @@ var activityProjection = []activityColumn{
 	{"a.duration_seconds", func(s *activityScan) any { return &s.a.DurationSeconds }},
 	{"a.meeting_status", func(s *activityScan) any { return &s.meetingStatus }},
 	{"(SELECT status FROM meeting_invitation WHERE activity_id=a.id AND status<>'erased')", func(s *activityScan) any { return &s.invitationStatus }},
-	{"a.host_user_id", func(s *activityScan) any { return &s.hostUserID }},
+	{storekit.KnownMeetingHostSQL("a"), func(s *activityScan) any { return &s.hostUserID }},
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
@@ -129,16 +129,7 @@ var activityProjection = []activityColumn{
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.source_author_id", func(s *activityScan) any { return &s.sourceAuthorID }},
 	{"a.source_author_name", func(s *activityScan) any { return &s.sourceAuthorName }},
-	// The author's CURRENT display name: sourceAuthorSeatNameSQL, below the table.
-	// Three readers compose their own `FROM activity a WHERE …` around this
-	// projection, so a join would have to be added to each of them and to the
-	// next one somebody writes — which is precisely how the contact360 timeline
-	// came to be missing a column for a whole slice, twice. A column that
-	// carries its own source needs nothing of its callers.
-	//
-	// NO liveness filter, deliberately. Who wrote something in August is a fact
-	// about August: a colleague who has since left was still its author, and
-	// readEmailParties already refuses the same filter for the same reason.
+	// The author's current display name: see sourceAuthorSeatNameSQL below.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
 	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
 	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
@@ -160,27 +151,23 @@ var activityProjection = []activityColumn{
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
-// sourceAuthorSeatNameSQL resolves the author's current display name, and it is
-// a SUBSELECT rather than a join.
+// sourceAuthorSeatNameSQL resolves the author's current display name as a
+// subselect rather than a join.
 //
 // Three readers compose their own `FROM activity a WHERE …` around this
-// projection, so a join would have to be added to each of them and to the next
-// one somebody writes — which is precisely how the contact360 timeline came to
-// be missing a column for a whole slice, twice. A column that carries its own
-// source needs nothing of its callers.
+// projection. A join would have to be added to each of them and to the next one.
+// The contact360 timeline lost a column twice that way. A column that carries its
+// own source needs nothing of its callers.
 //
-// NO liveness filter, deliberately. Who wrote something in August is a fact
-// about August: a colleague who has since left was still its author, and
-// readEmailParties already refuses the same filter for the same reason.
+// No liveness filter. Who wrote something in August is a fact about August. A
+// colleague who has since left was still its author. readEmailParties refuses the
+// same filter for the same reason.
 //
-// ALIASED, and the alias is load-bearing even though no activity reader needs
-// it today. An unaliased subselect takes its output name from the column inside
-// it, so this arrives as `display_name`; a select list that also draws a column
-// of that name then has two of them, and `ORDER BY "display_name"` fails with
-// SQLSTATE 42702. The record stores' copies of this helper shipped unaliased
-// and took the accounts list down for exactly that reason. No activity
-// projection draws a `display_name` today — this is aliased so the next one
-// does not rediscover it.
+// The alias matters even though no activity reader needs it today. An unaliased
+// subselect takes its output name from the inner column, so it arrives as
+// `display_name`. A select list that also draws a column of that name then has
+// two, and `ORDER BY "display_name"` fails with SQLSTATE 42702. The record stores'
+// unaliased copies of this helper broke the accounts list that way.
 const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u ` +
 	`WHERE u.id = a.source_author_id) AS source_author_seat_name`
 

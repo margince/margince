@@ -75,6 +75,7 @@ const FULL: InstallationSettings = {
   base_currency: "EUR",
   base_currency_locked: false,
   individual_performance: true,
+  forecast_self_correcting: true,
   ...ALL_ON,
 };
 

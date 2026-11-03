@@ -27,6 +27,9 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.WithOutsideParty {
+		in.outsideParty = outsidePartyClause(ctx, tx)
+	}
 	limit := storekit.ClampLimit(in.Limit)
 	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
 	if err != nil {
@@ -95,6 +98,9 @@ func finishActivityList(ctx context.Context, tx pgx.Tx, columns CustomColumns, a
 		return err
 	}
 	if err := AttachLinks(ctx, tx, activities); err != nil {
+		return err
+	}
+	if err := WithCreators(ctx, tx, activities); err != nil {
 		return err
 	}
 	if err := WithOffersEmail(ctx, tx, activities); err != nil {

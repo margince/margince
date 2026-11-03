@@ -68,6 +68,16 @@ function valueKey(
       const key = `timeline.kind.${value}`;
       return isMessageKey(key) ? key : undefined;
     }
+    case "loss_reason": {
+      // A built-in reason reads in the reader's language; one an
+      // administrator added keeps its stored key.
+      const key = `lossReasons.builtin.${value}`;
+      return isMessageKey(key) ? key : undefined;
+    }
+    case "loss_reason_state": {
+      const key = `analytics.lossState.${value}`;
+      return isMessageKey(key) ? key : undefined;
+    }
     default:
       return undefined;
   }

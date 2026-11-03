@@ -32,6 +32,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
@@ -55,6 +56,7 @@ import {
 } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
 import { commitTray } from "./brief.decisions.commit";
+import { DECK_KEY_WORDS } from "./brief.deckwords";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
 // what is in it.
@@ -101,12 +103,12 @@ function deckLabels(
   locale: Parameters<typeof formatDateTime>[1],
 ): DecisionDeckLabels {
   const card: DecisionCardLabels = {
-    accept: t("brief.approval.approve"),
-    edit: t("trust.edit"),
-    reject: t("decision.reject"),
+    accept: t(DECK_KEY_WORDS.accept),
+    edit: t(DECK_KEY_WORDS.edit),
+    reject: t(DECK_KEY_WORDS.reject),
     // The deck is the one surface where "later" is a real answer: it is the top
     // of the pile, not the pile itself, and the full queue is one click away.
-    skip: t("brief.deck.later"),
+    skip: t(DECK_KEY_WORDS.skip),
     expired: t("decision.expired"),
     draftSubject: t("decision.draftSubject"),
     draftBody: t("decision.draftBody"),
@@ -114,6 +116,7 @@ function deckLabels(
     showLess: t("brief.deck.showLess"),
     noContent: t("common.empty"),
     loading: t("brief.panel.decisions"),
+    summaryWords: summaryWords(t),
   };
   return {
     card,
@@ -138,10 +141,10 @@ function deckLabels(
       plural("brief.deck.edited", count, {
         count: formatNumber(count, locale),
       }),
-    commit: t("brief.deck.commit"),
+    commit: t(DECK_KEY_WORDS.commit),
     commitNothingToSend: t("brief.deck.commitNothingToSend"),
     acceptanceChanged: t("brief.deck.acceptanceChanged"),
-    unstage: t("brief.deck.unstage"),
+    unstage: t(DECK_KEY_WORDS.unstage),
     clearedTitle: t("brief.deck.clearedTitle"),
     cleared: (count) =>
       plural("brief.deck.cleared", count, {

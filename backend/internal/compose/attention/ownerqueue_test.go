@@ -115,9 +115,9 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 // The two narrowing passes keep the SAME rows.
 //
 // A waiting row is narrowed twice: once before its crowding is decided, once
-// with the whole assembled page. Between them dropDealsAlreadyWaiting absorbs a
-// drifting deal INTO the waiting row and attaches that deal's facts to it — so
-// the evidence the filter reads changes under it.
+// with the whole assembled page. Between them dropDealsAlreadyInHand absorbs a
+// drifting deal into the waiting row. It attaches that deal's facts to the row,
+// so the evidence the filter reads changes under it.
 //
 // While the deal was asked first, the two passes could answer differently. A
 // deal reassigned between the at-risk read and the waiting read gave the row a

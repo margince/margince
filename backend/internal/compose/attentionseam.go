@@ -180,6 +180,12 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		contacts: newContactsStore(db),
 		now:      now,
 	}
+	// The lane's sweeps and the scroll tail read one candidate set.
+	atRisk := attentionAtRisk{
+		lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now),
+		tail:   quietDealTail(pool, deals.QuietThresholdDays),
+		among:  quietDealsAmong(pool, deals.QuietThresholdDays), pool: pool, now: now,
+	}
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
@@ -193,7 +199,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			now:     now,
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
-		attentionAtRisk{lister: quietDealScanWithClock(pool, deals.QuietThresholdDays, now), pool: pool, now: now},
+		atRisk,
 		attentionDecay{pool: pool, store: newContactsStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		attentionFailedEffects{svc: svc},
@@ -242,6 +248,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 	).WithWaiting(waiting).
 		// The same seam counts the waiting cards whole and reads on past the scan.
 		WithWaitingBacklog(waiting).
+		WithRiskBacklog(atRisk).
 		// The mirror: the reader's own sends nobody has answered, once the
 		// workspace's follow-up window has passed.
 		WithAwaiting(attentionAwaiting{
@@ -306,6 +313,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// Which account a meeting row's contact works for, from the employer
 		// read every contact page carries.
 		WithContactEmployers(newContactsStore(db)).
+		WithMeetingOrganizers(activities.NewStore(db)).
 		// The step a deal row suggests, decided ONCE by the deal's own status
 		// card and read here. The queue does not reason about next steps: it
 		// reads what that card already worked out, so the row and the deal page
@@ -314,7 +322,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// Reads the card's cache and never assembles one — a page holds thirty
 		// rows and assembling costs a timeline, seats and possibly a model call
 		// each. A deal nobody has opened simply carries no step.
-		WithDealMoves(cards).
+		WithDealMoves(attentionDealMoves{cards: cards}).
 		// And the standing above that step, from the SAME card, the same cache
 		// and the same service value. Two seams because they are read at
 		// different moments and a caller wanting one should not pay for the

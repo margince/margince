@@ -58,11 +58,39 @@ func EscapeLikeSQL(expr string) string {
 // erasure gate, and the expensive mistake is a later reader assuming
 // something narrower already scoped it.
 func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	var suppressed bool
-	err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'email' AND value_hash = $1)`,
-		SuppressionHash(email)).Scan(&suppressed)
-	return suppressed, err
+	suppressed, err := SuppressedEmails(ctx, tx, []string{email})
+	return suppressed[strings.ToLower(strings.TrimSpace(email))], err
+}
+
+// SuppressedEmails batches durable erasure checks before a participant list is admitted.
+func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[string]bool, error) {
+	result := map[string]bool{}
+	if len(emails) == 0 {
+		return result, nil
+	}
+	hashes := make([]string, 0, len(emails))
+	for _, email := range emails {
+		hashes = append(hashes, SuppressionHash(email))
+	}
+	args := []any{hashes}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[])`, len(args)), args...)
+	if err != nil {
+		return nil, err
+	}
+	found, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	held := map[string]bool{}
+	for _, hash := range found {
+		held[hash] = true
+	}
+	for _, email := range emails {
+		if held[SuppressionHash(email)] {
+			result[strings.ToLower(strings.TrimSpace(email))] = true
+		}
+	}
+	return result, nil
 }
 
 // ErasedIdentifierCode is the contract's machine code for a write refused

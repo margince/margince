@@ -48,7 +48,7 @@ func AssuranceReviewCheck(ctx context.Context, tx pgx.Tx, deal ids.UUID, outcome
 	case status != string(deals.DealOpen):
 		return httperr.Validation("outcome", "deal_closed", "The deal is closed, so there is nothing to revive.")
 	}
-	subjects, err := assuranceSubjects(ctx, tx, now, AssuranceCoverage(ctx, tx, now), &deal)
+	subjects, err := assuranceSubjects(ctx, tx, now, AssuranceCoverage(ctx, tx, now), []ids.UUID{deal})
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (h reviewAnswerHandlers) CloseLostInputCheck(w http.ResponseWriter, r *http
 		// The target is a lost stage, so the move claims no win and carries no
 		// win-evidence reason.
 		if _, err := h.deals.AdvanceDealTx(ctx, tx, deal, deals.AdvanceDealInput{
-			ToStageID: lost, LostReason: &reason, WonWithoutContractReason: nil,
+			ToStageID: lost, LostReason: &reason, LostReasonCode: body.LostReasonCode, WonWithoutContractReason: nil,
 		}, active); err != nil {
 			return err
 		}

@@ -42,11 +42,13 @@ type ImportedDecision struct {
 const ExtensionGroupPrefix = "cg:ext-"
 
 var importedDecisions = map[string]ImportedDecision{
+	"cg:deal-refile":        {KeepImported, "recent captured correspondence follows imported deal and contact facts through the same attribution rule"},
 	"cg:context-graph":      {KeepImported, "embeds and indexes the record, and imported history belongs in the graph"},
 	"cg:read-model":         {KeepImported, "a projection holds every deal, however it arrived"},
 	"cg:audit-stream":       {KeepImported, "the audit slice records every event"},
 	"cg:webhooks":           {KeepImported, "outside systems decide for themselves, and the payload says the event was imported"},
 	"cg:commissions":        {SkipImported, "a sale an import brings in was priced and paid in the system it came from"},
+	"cg:partner-activation": {SkipImported, "a sale an import brings in happened in the past, and activation is a fact of today"},
 	"cg:stage-evidence":     {SkipImported, "evidence settles what happened now, and imported history is not a new fact"},
 	"cg:deal-room-timeline": {SkipImported, "writes a note about a room that is live today"},
 	"cg:overnight-agent":    {SkipImported, "plans work against the live pipeline, and closed history is not work"},

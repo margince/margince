@@ -24,7 +24,7 @@ import {
   type MagicReceipt,
   useMagic,
 } from "../../lib/magic.queries";
-import { sourceUnavailableText } from "../worklist/worklist.copy";
+import { sourceUnavailableText } from "../../lib/worklistcopy";
 import { MagicLaneSection } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";

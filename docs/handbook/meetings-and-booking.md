@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
+<!-- describes: frontend/src/features/booking backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/scheduling_proposal.go backend/internal/modules/activities/scheduling_public.go backend/internal/modules/activities/scheduling_preview.go backend/internal/compose/publicbookingpreview.go backend/internal/modules/activities/scheduling_alias.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/activities/meetingcancel.go backend/internal/modules/activities/meetingoutcomestart.go frontend/src/components/meetingoutcome.tsx -->
 # Meetings and booking
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
@@ -37,8 +37,9 @@ A move to a new start clears **Held** or **No-show**, so the meeting asks how it
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-To record what came of a meeting, press **Update** on its Worklist row. A customer meeting that has
-started with no outcome also shows **Update** on the contact's **Meetings** tab and on the timeline.
+A meeting that took place takes one press: **Held** on its Worklist row. A customer meeting that
+has started with no outcome also shows **Held** and **Add notes** on the contact's **Meetings** tab
+and on the timeline. To say more, or to record a no-show, press **Add notes**:
 1. Pick **Held** or **No-show** and write what was said.
 2. Change **Date** only if the meeting was on another day.
 3. Press **Log**.
@@ -57,7 +58,7 @@ Also called: call off a meeting, delete a meeting.
 
 ### How do I offer a contact a few times to choose from?
 To offer times in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, then choose **Propose times**.
-1. Pick two or three **Times to offer** in the calendar.
+1. Pick two or three **Times to offer** in the calendar. Two times you offer cannot share a minute.
 2. Choose **Review email**, read the email, and send it.
 The contact gets a personal link with your times. It books one meeting, and runs out after 7 days or at the last time offered.
 Also called: suggest times, propose a slot, send options.
@@ -86,9 +87,29 @@ If Margince cannot read a calendar it needs, it shows no times at all, rather th
 
 Margince checks your hours, notice and live calendar again each time a guest books or a meeting moves. It checks your calendar once more right before it writes the event. Another calendar app can still book the same time in the second between that check and the write.
 
+### How do I choose a short address for my booking link?
+<!-- opens: settings/meetings -->
+To give your booking link a short address in Margince, open Settings → **Meetings**, choose **Edit link** on the link, and fill **Short address**.
+1. Type a name such as `alex`: 3 to 30 characters, made of small letters, numbers and `-`.
+2. Choose **Save address**. The link becomes `/book/alex`.
+Your long address keeps working. Anyone who guesses a short address sees your booking page and your free times.
+Also called: custom booking URL, personal booking address, friendly address.
+
+A short address belongs to one booking page at a time. Margince refuses one that another link uses or has ever used. Some words are kept back, such as `preview`.
+
+When you change or remove your short address, the old one stops working at once. Margince asks first. You can take your old address back at any time. Nobody else can ever take it, so guests who kept it never reach someone else's page. **Replace address** ends the short address too, and you can choose it again after.
+
 ## What your guest sees
 
 The Margince booking page shows your name from **Settings → Account**, and the name and logo of the company you work for. An Admin sets that company under **Legal entities**. Unless an Admin sets one, that is your company profile. A company with no logo shows its name only. When new meetings get a video call, it names the video app: Google Meet or Microsoft Teams. Guests never see which calendar provider you use, your calendar names, or other guests.
+
+Your booking link has the form `https://<your Margince address>/book/<code>`. With a short address it is `/book/<your short address>`, and the long form still works. A short address works in capital or small letters. A link in the old form, with `/#/book/` in it, still opens the same page. The page and the guest's own meeting page do not promote Margince. The browser tab names you: "Book a meeting with" and your name.
+
+When you paste the link into chat or email, the preview card shows your name and the company name. It also shows the meeting title and how long the meeting takes. It shows the company logo when there is one. Without a logo the card is text only.
+
+A paused page gives a card that names nobody. A replaced or unknown address gives no card. The card never shows guest details.
+
+If your account is suspended or removed, your page and your short address stop working. Nobody else can take your short address, so it never leads to someone else's page.
 
 Turning off **Accept bookings** stops new bookings on your public page. Personal links you already sent keep working until they run out. **Replace address** stops the old public address once you confirm, but guests keep the private links that let them change their own meetings.
 

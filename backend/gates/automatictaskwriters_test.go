@@ -55,6 +55,7 @@ var declaredWithoutFamily = []string{writesNoTask, writesCallerSource, writesFor
 // taskSourceWriters is each writer's declaration, keyed by file:function.
 var taskSourceWriters = map[string][]string{
 	"compose/assurancebundletask.go:mintBundleTask":                       {provenance.AssuranceTaskSource},
+	"compose/decisionseam.go:Record":                                      {provenance.AnalyticsDecisionSource},
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
 	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
@@ -114,6 +115,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:teamQueueClause":                  "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/handover.go:openTasksAssignedTo":                  "a handover moves every open task the departed member holds, current or not, so none stays on the seat",
+	"modules/activities/handover.go:recordTasksTx":                        "a record's handover counts and moves every open task its giver holds on that record, current or not",
 	"modules/activities/homerepair.go:pristineRepairTaskSQL":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/homerepair.go:readHomeRepairTasksTx":              "the repair reads exactly the automatic tasks that are no longer current",
 	"modules/activities/lasttouch.go:openChildReminderHoldsAccount":       "an open reminder of the engine's own family holds its re-raise; it creates no work",

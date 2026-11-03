@@ -11,6 +11,7 @@ import type { MessageKey } from "../i18n/en";
 import { usePendingApprovalCount } from "../lib/approvals.queries";
 import { useCan, useHoldsAdminRole } from "../lib/capability";
 import { type CaptureProgress, liveCapture } from "../lib/capture-progress";
+import { serviceHealth } from "../lib/connector-status";
 import { useConnectors } from "../lib/connectors";
 import { type LicensePosture, useLicensePosture } from "../lib/license-posture";
 
@@ -126,6 +127,14 @@ function useAgentProfile(): Readonly<{ state: AiPosture; name: string }> {
   };
 }
 
+/** A source the agent cannot read, by the health the Connections page shows. A
+ *  connection its owner disconnected is not broken, and one still "connected"
+ *  while its sync keeps failing is. */
+export function isOffline(connection: Connection): boolean {
+  const health = serviceHealth(connection);
+  return health === "needs_reconnect" || health === "needs_attention";
+}
+
 /** The account address and its provider, or the provider alone when the
  *  connection carries no address. The label is display only; the id is the
  *  identity, so a missing address never merges two connections. */
@@ -158,7 +167,7 @@ export function useSignals(): Signals {
 
   const connections = connectors.data?.data ?? [];
   const offline = connections
-    .filter((connection) => connection.status !== "connected")
+    .filter(isOffline)
     .map((connection) => offlineSource(connection, t));
   const capture = liveCapture(connections);
 

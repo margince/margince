@@ -248,7 +248,7 @@ function AuthedApp({
     if (!opensHome) {
       return;
     }
-    prefetchHome(queryClient, currentParams());
+    return prefetchHome(queryClient, currentParams());
   }, [opensHome, queryClient]);
   const commands = useBuiltinCommands();
   usePaletteHotkey(paletteOpen, setPaletteOpen);

@@ -231,3 +231,18 @@ how do I turn off the Telegram or Zalo links on phone numbers
 how do I read a whole note from a contact's overview
 where is the email a task came from
 can I open the full call notes from the contact page
+what can I ask Claude to do with my deals once it is connected
+is there a ready-made request I can pick in my AI assistant, like a morning briefing
+why does my AI assistant not offer the log a call request
+can my AI assistant give me a link that opens a deal in Margince
+will my AI assistant show deal values in euros or in cents
+how do I let an assistant only look things up and write drafts but not change anything
+what is the Full assistant choice when connecting an AI tool
+will my AI assistant ask me before it changes many records at once
+can I undo a bulk change my AI assistant made
+what happens when I tell my assistant a name and two contacts share it
+which requests can the assistant not undo and so asks me about first
+where do I see which leads a partner sent me
+why does a file in my deal room say buyers do not see it
+what does it mean when a mail says its text can no longer be checked
+how do I turn off the forecast correcting itself

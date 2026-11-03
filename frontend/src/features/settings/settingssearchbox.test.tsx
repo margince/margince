@@ -342,10 +342,14 @@ describe("the settings search box", () => {
     );
     await user.keyboard("{ArrowDown}".repeat(index + 1));
     await user.keyboard("{Enter}");
-    expect(navigate).toHaveBeenCalledWith({
-      screen: "settings",
-      id: "system-health",
-    });
+    expect(navigate).toHaveBeenCalledWith(
+      {
+        screen: "settings",
+        id: "system-health",
+        id2: "configuration",
+      },
+      new Map([["section", "operations.retention.label"]]),
+    );
   });
 });
 

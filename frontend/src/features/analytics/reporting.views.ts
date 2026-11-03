@@ -11,7 +11,13 @@ type Catalog = components["schemas"]["ReportingCatalog"];
 type PresetID = components["schemas"]["ReportingPreset"]["id"];
 
 // The views of Performance, in the order the tabs offer them.
-export const REPORTING_VIEWS = ["sales", "sdr", "leads", "partners"] as const;
+export const REPORTING_VIEWS = [
+  "sales",
+  "sdr",
+  "leads",
+  "partners",
+  "conversion",
+] as const;
 export type ReportingView = (typeof REPORTING_VIEWS)[number];
 
 // Which view reads each metric. A Record over every metric id, so a metric the
@@ -34,11 +40,17 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   partner_won: "partners",
   partner_commission: "partners",
   partner_activity: "partners",
+  stage_conversion: "conversion",
+  lead_cohort_outcomes: "leads",
+  bookings_mix: "sales",
+  qualified_opportunities_created: "sales",
+  initiative_pipeline: "sales",
 };
 
 // What each view is called, the tab that opens it, what it asks, and whether
 // its figures take a pipeline and a close window. Only deal views do: the lead
 // readers and the partner commission and activity readers refuse a pipeline.
+// Stage conversion takes a pipeline but follows entries, not close dates.
 // A view asks either the server's preset of that name or the charts listed.
 export const VIEW_SHAPE: Readonly<
   Record<
@@ -48,6 +60,7 @@ export const VIEW_SHAPE: Readonly<
         label: MessageKey;
         section: Section;
         dealFilters: boolean;
+        closeWindow: boolean;
       } & ({ preset: PresetID } | { blocks: readonly ReportingBlockKind[] })
     >
   >
@@ -57,24 +70,35 @@ export const VIEW_SHAPE: Readonly<
     section: "performance",
     preset: "sales",
     dealFilters: true,
+    closeWindow: true,
   },
   sdr: {
     label: "reporting.sdr",
     section: "sdr",
     preset: "sdr",
     dealFilters: false,
+    closeWindow: false,
   },
   leads: {
     label: "reporting.leads",
     section: "leads",
-    blocks: ["breakdown", "target_progress"],
+    blocks: ["breakdown", "target_progress", "lead_cohort"],
     dealFilters: false,
+    closeWindow: false,
   },
   partners: {
     label: "reporting.partners",
     section: "partners",
     blocks: ["breakdown", "target_progress"],
     dealFilters: false,
+    closeWindow: false,
+  },
+  conversion: {
+    label: "reporting.conversion",
+    section: "conversion",
+    blocks: ["stage_cohort"],
+    dealFilters: true,
+    closeWindow: false,
   },
 };
 
@@ -106,6 +130,18 @@ export function metricView(metric: ReportingMetricID): ReportingView {
 // on a page that reads this quarter too.
 const QUARTER_ONLY: ReportingMetricID = "forecast_landing";
 
+/** The metrics and charts the server's preset of this id asks this reader. */
+export function presetRequest(
+  id: PresetID,
+  catalog: Pick<Catalog, "presets">,
+): Readonly<{ metrics: ReportingMetricID[]; blocks: ReportingBlockKind[] }> {
+  const preset = catalog.presets.find((entry) => entry.id === id);
+  return {
+    metrics: [...(preset?.metrics ?? [])],
+    blocks: [...(preset?.blocks ?? [])],
+  };
+}
+
 /**
  * The metrics and charts a view asks on this catalog. A preset view asks the
  * preset the server published for this reader, plus the expected finish on a
@@ -123,12 +159,10 @@ export function viewRequest(
     METRIC_VIEW[QUARTER_ONLY] === view &&
     catalog.metrics.some((metric) => metric.id === QUARTER_ONLY);
   if ("preset" in shape) {
-    const preset = catalog.presets.find((entry) => entry.id === shape.preset);
-    const metrics = [...(preset?.metrics ?? [])];
-    return {
-      metrics: quarterly ? [...metrics, QUARTER_ONLY] : metrics,
-      blocks: [...(preset?.blocks ?? [])],
-    };
+    const asked = presetRequest(shape.preset, catalog);
+    return quarterly
+      ? { ...asked, metrics: [...asked.metrics, QUARTER_ONLY] }
+      : asked;
   }
   const metrics = catalog.metrics
     .filter(

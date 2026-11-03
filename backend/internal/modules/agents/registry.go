@@ -334,7 +334,11 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	ctx, trace := withTrace(ctx)
 	ctx, facts := withEnvelopeFacts(ctx)
 	ctx = agentvolume.WithEffectTally(ctx)
-	noteRowScope(ctx)
+	// An answer about the caller reads no workspace rows, so it has nothing a
+	// row scope could have hidden.
+	if !spec.SelfDescribing {
+		noteRowScope(ctx)
+	}
 	// Capture privacy is a second boundary with the same failure mode, and it
 	// binds an administrator that row scope does not. Whether it took anything
 	// is a fact about the read, so the report is installed here and read once
@@ -343,12 +347,12 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	out, err := t.Handle(ctx, args)
 	if err != nil {
 		return nil, 0, sealShown(err, func(answer json.RawMessage) (json.RawMessage, error) {
-			return sealEnvelope(spec, trace, facts, answer)
+			return sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, answer)
 		})
 	}
 	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)
-	sealed, err := sealEnvelope(spec, trace, facts, out)
+	sealed, err := sealEnvelope(spec, trace, recordLinkOrigin(ctx), facts, out)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -17,14 +17,19 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Home and the team board share the tool's risk engine and its scan-depth signal.
 // The service clock keeps risk facts and the rest of the day at one instant.
 type attentionAtRisk struct {
 	lister func(context.Context, *storekit.OwnerSet) ([]agents.SlippingDeal, bool, error)
-	pool   *pgxpool.Pool
-	now    attention.Clock
+	// tail continues the lister's candidate set past its sweeps; among asks
+	// which deals that set holds.
+	tail  func(context.Context, time.Time, *storekit.OwnerSet, string, int) ([]agents.SlippingDeal, []string, bool, error)
+	among func(context.Context, time.Time, *storekit.OwnerSet, []ids.UUID) (map[ids.UUID]bool, error)
+	pool  *pgxpool.Pool
+	now   attention.Clock
 }
 
 func (a attentionAtRisk) Quiet(ctx context.Context, owners *storekit.OwnerSet) ([]attention.RiskyDeal, bool, error) {
@@ -32,10 +37,41 @@ func (a attentionAtRisk) Quiet(ctx context.Context, owners *storekit.OwnerSet) (
 	if err != nil {
 		return nil, false, err
 	}
-	now := a.now().UTC()
-	cover, err := a.championCover(ctx, candidates, now)
+	risky, err := a.risky(ctx, candidates, a.now().UTC())
+	return risky, cut, err
+}
+
+// RiskAfter reads the candidates past the sweeps, drawn as Quiet draws them.
+func (a attentionAtRisk) RiskAfter(
+	ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, after string, limit int,
+) ([]attention.Positioned[attention.RiskyDeal], bool, error) {
+	candidates, positions, more, err := a.tail(ctx, asOf, owners, after, limit)
 	if err != nil {
 		return nil, false, err
+	}
+	risky, err := a.risky(ctx, candidates, asOf.UTC())
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.Positioned[attention.RiskyDeal], len(risky))
+	for i, deal := range risky {
+		out[i] = attention.Positioned[attention.RiskyDeal]{Row: deal, After: positions[i]}
+	}
+	return out, more, nil
+}
+
+// RiskAmong answers which of these deals the tail's candidate set holds.
+func (a attentionAtRisk) RiskAmong(
+	ctx context.Context, asOf time.Time, owners *storekit.OwnerSet, deals []ids.UUID,
+) (map[ids.UUID]bool, error) {
+	return a.among(ctx, asOf, owners, deals)
+}
+
+// risky draws each candidate as the queue's at-risk deal, in order.
+func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.SlippingDeal, now time.Time) ([]attention.RiskyDeal, error) {
+	cover, err := a.championCover(ctx, candidates, now)
+	if err != nil {
+		return nil, err
 	}
 	var zone *time.Location
 	if err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
@@ -43,7 +79,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context, owners *storekit.OwnerSet) (
 		zone, zoneErr = identity.ZoneAppliedTx(ctx, tx)
 		return zoneErr
 	}); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
 	for _, deal := range candidates {
@@ -65,7 +101,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context, owners *storekit.OwnerSet) (
 			NoNextStep:           deal.NoOpenNextStep,
 		})
 	}
-	return risky, cut, nil
+	return risky, nil
 }
 
 func idleDaysOf(deal agents.SlippingDeal, now time.Time, zone *time.Location) int {

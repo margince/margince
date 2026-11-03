@@ -58,18 +58,63 @@ func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params
 		population.Kind = string(*params.ScopeKind)
 	}
 	var found []Exception
+	var answerable map[ids.UUID]bool
 	err := h.store.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		found, err = h.exceptions(ctx, tx, population)
+		if found, err = h.exceptions(ctx, tx, population); err != nil {
+			return err
+		}
+		answerable, err = AnswerableFindings(ctx, tx, found)
 		return err
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, struct {
-		Data []crmcontracts.InputCheck `json:"data"`
-	}{Data: ExceptionsToWire(found)})
+	httperr.WriteJSON(w, http.StatusOK, InputCheckListToWire(found, answerable))
+}
+
+// InputCheckList is the listInputChecks answer: the findings, each with where
+// it is reviewed, and their groups and totals over the whole list.
+type InputCheckList struct {
+	Data   []crmcontracts.InputCheck      `json:"data"`
+	Groups []crmcontracts.InputCheckGroup `json:"groups"`
+	Totals crmcontracts.InputCheckTotals  `json:"totals"`
+}
+
+// InputCheckListToWire renders a list and what the caller may answer in it.
+// The route and its model tool both answer with it.
+func InputCheckListToWire(found []Exception, answerable map[ids.UUID]bool) InputCheckList {
+	data := ExceptionsToWire(found)
+	for i, e := range found {
+		destination := reviewDestination(answerable[e.ID])
+		data[i].Destination = &destination
+	}
+	groups, totals := GroupFindings(found, answerable)
+	out := InputCheckList{
+		Data:   data,
+		Groups: make([]crmcontracts.InputCheckGroup, 0, len(groups)),
+		Totals: crmcontracts.InputCheckTotals{Findings: totals.Findings, Deals: totals.Deals, OtherFindings: totals.OtherFindings},
+	}
+	for _, g := range groups {
+		exposure := make([]crmcontracts.InputCheckExposure, 0, len(g.Exposure))
+		for _, money := range g.Exposure {
+			exposure = append(exposure, crmcontracts.InputCheckExposure{Currency: money.Currency, AmountMinor: money.AmountMinor})
+		}
+		out.Groups = append(out.Groups, crmcontracts.InputCheckGroup{
+			Type: g.Type, Findings: g.Findings, Deals: g.Deals, OtherFindings: g.OtherFindings,
+			Exposure: exposure, Destination: reviewDestination(g.Answerable),
+		})
+	}
+	return out
+}
+
+func reviewDestination(answerable bool) crmcontracts.InputCheckDestination {
+	mode := crmcontracts.InputCheckDestinationModeRead
+	if answerable {
+		mode = crmcontracts.InputCheckDestinationModeAnswer
+	}
+	return crmcontracts.InputCheckDestination{Screen: crmcontracts.InputCheckDestinationScreenForecastReview, Mode: mode}
 }
 
 // Signal findings open their verified company; the signal remains the review subject.

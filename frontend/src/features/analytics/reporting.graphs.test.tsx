@@ -352,7 +352,7 @@ it("withholds stage-age marks for a small cohort without printing zero days", as
   ).toBeVisible();
   expect(container.querySelector(".report-chart-range-dot")).toBeNull();
   expect(container.querySelector(".report-chart-range-band")).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Sample details" }));
+  await user.click(screen.getByRole("button", { name: "Reporting details" }));
   expect(
     screen.getByText(/Observations: 2 · Too few observations/),
   ).toBeVisible();

@@ -94,7 +94,7 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 		SELECT d.id, d.owner_id, %[5]s, d.currency, %[1]s,
 		       d.expected_close_date, d.close_date_provisional, d.closed_at,
 		       d.status = 'won', d.status = 'lost', d.forecast_category,
-		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s
+		       COALESCE(s.win_probability, 0), d.stage_id, %[6]s, d.name
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE %[2]s
@@ -209,7 +209,7 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 	var qualification string
 	err := row.Scan(&d.ID, &owner, &d.AmountMinor, &currency, &d.BaseMinor,
 		&d.ExpectedCloseDate, &d.CloseProvisional, &d.ClosedAt,
-		&d.Won, &d.Lost, &category, &d.StageProbability, &stage, &qualification)
+		&d.Won, &d.Lost, &category, &d.StageProbability, &stage, &qualification, &d.Name)
 	d.Qualification = viability.Qualification(qualification)
 	if stage != nil {
 		d.StageID = stage.String()
@@ -230,14 +230,25 @@ func scanForecastDeal(row pgx.CollectableRow) (forecasting.Deal, error) {
 // While enforcement is on it is each deal's viability treatment. While it is
 // off it is empty, so no reading can claim a qualification nobody switched on.
 func forecastQualificationSQL(ctx context.Context, tx pgx.Tx, arg func(any) int) (string, error) {
+	policy, err := forecastQualifiedPolicy(ctx, tx)
+	if err != nil || policy == "" {
+		return "''", err
+	}
+	return viabilityQualificationSQL("d", arg), nil
+}
+
+// forecastQualifiedPolicy is the viability policy the forecast read applies
+// now, empty while enforcement is off. A snapshot stores it beside the
+// qualification the same read put on its deals.
+func forecastQualifiedPolicy(ctx context.Context, tx pgx.Tx) (string, error) {
 	enforced, err := config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
 	if err != nil {
 		return "", fmt.Errorf("compose: reading whether the qualified forecast is enforced: %w", err)
 	}
 	if !enforced {
-		return "''", nil
+		return "", nil
 	}
-	return viabilityQualificationSQL("d", arg), nil
+	return viability.PolicyVersion, nil
 }
 
 // requestedFromForecastScope carries the forecast module's scope vocabulary
