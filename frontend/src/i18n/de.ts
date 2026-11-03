@@ -19843,16 +19843,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.peek.started": "Arbeit begonnen",
   "project.standing.peek.today": "Heute",
   "project.standing.peek.documents": "Dateien dieses Projekts, neueste zuerst",
-  "mailCoverage.title": "Der E-Mail-Verlauf kann unvollständig sein",
-  "mailCoverage.unknown":
-    "Die E-Mail-Erfassung bestätigt diesen Zeitraum nicht vollständig. Diese Daten beschreiben erfasste Nachrichten; eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
-  "mailCoverage.partial":
-    "Die Erfassung war erfolgreich. Ein vollständiger Verlauf von Posteingang und gesendeten Nachrichten ist jedoch nicht bestätigt. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
-  "mailCoverage.unavailable":
-    "Die E-Mail-Erfassung ist für einen Teil dieses Verlaufs nicht verfügbar. Eine Antwort kann außerhalb dieses Datensatzes vorliegen.",
-  "mailCoverage.withheld":
-    "Du darfst den Umfang der E-Mail-Erfassung nicht prüfen. Eine fehlende erfasste Nachricht beweist nicht, dass niemand geantwortet hat.",
-  "mailCoverage.connections": "Verbindungen prüfen",
   "connectors.syncTimeUnknown":
     "Zeitpunkt der letzten erfolgreichen Synchronisierung unbekannt",
   "brief.coverage.source.deal_advice": "Vorgeschlagene nächste Schritte",
