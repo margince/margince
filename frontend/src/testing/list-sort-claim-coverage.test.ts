@@ -67,17 +67,27 @@ function functionBody(source: string, name: string): string | undefined {
   return end === -1 ? undefined : source.slice(start, end + 3);
 }
 
-// The fetcher's first `query: { … }`, up to the brace that closes it.
-function firstQueryObject(body: string): string | undefined {
-  const open = body.indexOf("query: {");
-  if (open === -1) return undefined;
+// The text from `text[from]`, an opening bracket, to the bracket closing it.
+function balanced(text: string, from: number): string | undefined {
+  const open = text[from];
+  const close = open === "(" ? ")" : "}";
   let depth = 0;
-  for (let at = body.indexOf("{", open); at < body.length; at++) {
-    if (body[at] === "{") depth++;
-    if (body[at] === "}") depth--;
-    if (depth === 0) return body.slice(open, at + 1);
+  for (let at = from; at < text.length; at++) {
+    if (text[at] === open) depth++;
+    if (text[at] === close) depth--;
+    if (depth === 0) return text.slice(from, at + 1);
   }
   return undefined;
+}
+
+// The `query: { … }` object inside the fetcher's `api.GET(…)` call.
+function wireQuery(body: string): string | undefined {
+  const call = body.indexOf("api.GET(");
+  const args = call === -1 ? undefined : balanced(body, call + 7);
+  const query = args?.indexOf("query: {") ?? -1;
+  return args && query !== -1
+    ? balanced(args, args.indexOf("{", query))
+    : undefined;
 }
 
 type ReadModule = (fromFile: string, specifier: string) => string | undefined;
@@ -100,10 +110,15 @@ function spreadBuilders(
 ): string[] {
   const fetcher = /\bfetchPage: (\w+),/.exec(source)?.[1];
   const body = fetcher ? functionBody(source, fetcher) : undefined;
-  const wire = body === undefined ? undefined : firstQueryObject(body);
+  const wire = body === undefined ? undefined : wireQuery(body);
   if (wire === undefined) return [];
-  return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap(([, name]) => {
-    if (name === undefined) return [];
+  return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap((spread) => {
+    const name = spread[1];
+    // A later `sort:` key that does not read the query overrides the builder's.
+    const after = wire.slice(spread.index + spread[0].length);
+    if (name === undefined || /\bsort:(?!\s*\(?query\.sort\b)/.test(after)) {
+      return [];
+    }
     const from = new RegExp(
       `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
     ).exec(source)?.[1];
@@ -185,15 +200,12 @@ describe("a fetcher's spread builder", () => {
     "}",
     "",
   ].join("\n");
-  const screen = (builder: string, spreadOutside = false) =>
+  const fetcherOf = (...body: string[]) =>
     [
-      `import { ${builder} } from "./things.queries";`,
+      'import { sortedParams, unsortedParams } from "./things.queries";',
       "",
       "export async function fetchThingsPage(query: ListQuery) {",
-      spreadOutside ? `  const extra = { ...${builder}(query) };` : "",
-      '  return api.GET("/things", {',
-      `    params: { query: { ${spreadOutside ? "" : `...${builder}(query), `}limit: 50 } },`,
-      "  });",
+      ...body,
       "}",
       "",
       "const list = useListQuery<Thing>({",
@@ -201,43 +213,67 @@ describe("a fetcher's spread builder", () => {
       "});",
       "",
     ].join("\n");
-  const laterObject = [
-    'import { sortedParams } from "./things.queries";',
-    "",
-    "export async function fetchThingsPage(query: ListQuery) {",
-    '  const page = await api.GET("/things", { params: { query: { limit: 50 } } });',
-    "  const echo = { query: { ...sortedParams(query) } };",
-    "  return page;",
-    "}",
-    "",
-    "const list = useListQuery<Thing>({",
-    "    fetchPage: fetchThingsPage,",
-    "});",
-    "",
-  ].join("\n");
+  const wireCall = (query: string) =>
+    `  return api.GET("/things", { params: { query: { ${query} } } });`;
   const readModule = () => queries;
+
+  const sends = (fetcher: string) =>
+    screenSendsSort("x/things.tsx", fetcher, readModule);
 
   it("sends sort when the builder it spreads does", () => {
     expect(
-      screenSendsSort("x/things.tsx", screen("sortedParams"), readModule),
+      sends(fetcherOf(wireCall("...sortedParams(query), limit: 50"))),
     ).toBe(true);
   });
 
   it("does not, beside a sibling builder that does", () => {
     expect(
-      screenSendsSort("x/things.tsx", screen("unsortedParams"), readModule),
+      sends(fetcherOf(wireCall("...unsortedParams(query), limit: 50"))),
     ).toBe(false);
-  });
-
-  it("does not, when the spread sits in a later query-shaped object", () => {
-    expect(screenSendsSort("x/things.tsx", laterObject, readModule)).toBe(
-      false,
-    );
   });
 
   it("does not, when the spread sits outside the wire query", () => {
+    const fetcher = fetcherOf(
+      "  const extra = { ...sortedParams(query) };",
+      wireCall("limit: 50"),
+    );
+    expect(sends(fetcher)).toBe(false);
+  });
+
+  it("does not, when a query-shaped object before the wire call holds it", () => {
+    const fetcher = fetcherOf(
+      "  const echo = { query: { ...sortedParams(query) } };",
+      wireCall("limit: 50"),
+    );
+    expect(sends(fetcher)).toBe(false);
+  });
+
+  it("does not, when a query-shaped object after the wire call holds it", () => {
+    const fetcher = fetcherOf(
+      '  const page = await api.GET("/things", { params: { query: { limit: 50 } } });',
+      "  const echo = { query: { ...sortedParams(query) } };",
+      "  return page;",
+    );
+    expect(sends(fetcher)).toBe(false);
+  });
+
+  it("does not, when a later key unsets the builder's sort", () => {
     expect(
-      screenSendsSort("x/things.tsx", screen("sortedParams", true), readModule),
+      sends(
+        fetcherOf(
+          wireCall("...sortedParams(query), sort: undefined, limit: 50"),
+        ),
+      ),
     ).toBe(false);
+  });
+
+  it("does, when a later key sets the sort from the query again", () => {
+    expect(
+      sends(
+        fetcherOf(
+          wireCall("...sortedParams(query), sort: query.sort || undefined"),
+        ),
+      ),
+    ).toBe(true);
   });
 });

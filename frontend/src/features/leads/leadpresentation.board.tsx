@@ -195,7 +195,8 @@ export function LeadBoard({
     terminalCountsWithheldBecause(query) ??
     terminalCountsRefusedBecause(counts.data);
   // No count is stated while the report is withheld, refused, pending or failed.
-  const countsShown = !withheld && counts.data instanceof Map;
+  const countsShown =
+    !withheld && !counts.isError && counts.data instanceof Map;
   const terminalRows = useTerminalLeads(
     query,
     openTerminal ?? "promoted",
@@ -264,7 +265,7 @@ export function LeadBoard({
     ...terminalColumns({
       openTerminal,
       opened,
-      counts: counts.data,
+      counts: countsShown ? counts.data : undefined,
       reason: withheld && t(withheld),
       t,
     }),

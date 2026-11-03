@@ -86,7 +86,7 @@ function drawBoard(query: ListQuery) {
     </QueryClientProvider>
   );
   const { rerender } = render(board(query));
-  return { redraw: (dials: ListQuery) => rerender(board(dials)) };
+  return { client, redraw: (dials: ListQuery) => rerender(board(dials)) };
 }
 
 // The figure a column states, to the eye or to a screen reader.
@@ -228,18 +228,23 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     );
   });
 
-  it("claim no count above a withheld column whose leads did not load", async () => {
-    const served = serve(() =>
-      json(
-        { title: "Unavailable", status: 503, code: "service_unavailable" },
-        503,
-      ),
-    );
+  it("claim no count above a withheld column whose leads did not load, and retry them", async () => {
+    let leadReads = 0;
+    serve((sent) => {
+      if (!sent.url.pathname.endsWith("/leads")) return json({ rows: [] });
+      leadReads++;
+      return leadReads === 1
+        ? json(
+            { title: "Unavailable", status: 503, code: "service_unavailable" },
+            503,
+          )
+        : json({
+            data: [{ ...lead, id: "l-q", status: "promoted" }],
+            page: { has_more: false, next_cursor: null },
+          });
+    });
     drawBoard(mine({ min_score: "80" }));
-
-    const head = column("promoted").querySelector(".board-col-head");
-    if (head === null) throw new Error("no Qualified head");
-    fireEvent.click(head);
+    fireEvent.click(headOf("promoted"));
 
     expect(
       await screen.findByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
@@ -248,18 +253,92 @@ describe("the lead board's terminal columns under the queue's dials", () => {
       en["lead.boardTerminalRowsUnavailable"],
     );
 
-    const reads = () =>
-      served.filter((sent) => sent.url.pathname.endsWith("/leads")).length;
-    const before = reads();
     fireEvent.click(screen.getByRole("button", { name: en["common.retry"] }));
-    await waitFor(() => expect(reads()).toBe(before + 1));
-
-    fireEvent.click(head);
     await waitFor(() =>
-      expect(
-        screen.queryByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
-      ).toBeNull(),
+      expect(column("promoted").querySelector('[data-lead="l-q"]')).not.toBe(
+        null,
+      ),
     );
+    expect(leadReads).toBe(2);
+    expect(headOf("promoted").getAttribute("aria-expanded")).toBe("true");
+    expect(
+      screen.queryByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
+    ).toBeNull();
+  });
+
+  it("fold a column, and its row failure goes with it", async () => {
+    serve(() =>
+      json(
+        { title: "Unavailable", status: 503, code: "service_unavailable" },
+        503,
+      ),
+    );
+    drawBoard(mine({ min_score: "80" }));
+    fireEvent.click(headOf("promoted"));
+    await screen.findByText(en["lead.boardTerminalRowsUnavailableNoCount"]);
+
+    fireEvent.click(headOf("promoted"));
+    expect(
+      screen.queryByText(en["lead.boardTerminalRowsUnavailableNoCount"]),
+    ).toBeNull();
+  });
+
+  it("retry the counts after a failure", async () => {
+    let reports = 0;
+    serve((sent) => {
+      if (!sent.url.pathname.includes("/reports/")) return json({ data: [] });
+      reports++;
+      return reports === 1
+        ? json(
+            { title: "Unavailable", status: 503, code: "service_unavailable" },
+            503,
+          )
+        : json({ rows: [{ status: "promoted", leads: 4 }] });
+    });
+    drawBoard(mine());
+    await screen.findByText(en["lead.boardCountsUnavailable"]);
+
+    fireEvent.click(screen.getByRole("button", { name: en["common.retry"] }));
+    await waitFor(() =>
+      expect(column("promoted").textContent).toContain("4 leads"),
+    );
+    expect(screen.queryByText(en["lead.boardCountsUnavailable"])).toBeNull();
+  });
+
+  it("state no count after a refetch of the counts fails", async () => {
+    let failing = false;
+    serve(() =>
+      failing
+        ? json(
+            { title: "Unavailable", status: 503, code: "service_unavailable" },
+            503,
+          )
+        : json({ rows: [{ status: "promoted", leads: 3 }] }),
+    );
+    const board = drawBoard(mine());
+    await waitFor(() =>
+      expect(column("promoted").textContent).toContain("3 leads"),
+    );
+
+    failing = true;
+    await board.client.invalidateQueries({ queryKey: ["leads"] });
+    await screen.findByText(en["lead.boardCountsUnavailable"]);
+    expect(column("promoted").querySelector(STATED_COUNT)).toBeNull();
+    expect(column("promoted").textContent).not.toContain("3");
+  });
+
+  it("keep a cached total out of a column a search withholds", async () => {
+    serve(() => json({ rows: [{ status: "promoted", leads: 3 }] }));
+    const board = drawBoard(mine());
+    await waitFor(() =>
+      expect(column("promoted").textContent).toContain("3 leads"),
+    );
+
+    board.redraw({ ...mine(), q: "nordwind" });
+    expect(column("promoted").textContent).toContain(
+      en["lead.boardCountsNoSearch"],
+    );
+    expect(column("promoted").textContent).not.toContain("3");
   });
 
   it("claim no count above leads that did not load while the counts failed too", async () => {
