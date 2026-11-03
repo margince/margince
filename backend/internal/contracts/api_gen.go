@@ -19561,6 +19561,30 @@ func (e ScheduledSendStatus) Valid() bool {
 	}
 }
 
+// Defines values for SchedulingProfileBlocker.
+const (
+	SchedulingProfileBlockerCalendarReadOnly    SchedulingProfileBlocker = "calendar_read_only"
+	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
+	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
+	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
+func (e SchedulingProfileBlocker) Valid() bool {
+	switch e {
+	case SchedulingProfileBlockerCalendarReadOnly:
+		return true
+	case SchedulingProfileBlockerCalendarUnavailable:
+		return true
+	case SchedulingProfileBlockerNoCalendar:
+		return true
+	case SchedulingProfileBlockerNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SchedulingProfileProvider.
 const (
 	SchedulingProfileProviderEmpty    SchedulingProfileProvider = ""
@@ -53165,6 +53189,10 @@ type PublicMeetingProposal struct {
 		End   time.Time `json:"end"`
 		Start time.Time `json:"start"`
 	} `json:"options"`
+
+	// Profile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+	// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+	// `video_app`), so the guest learns nothing about the calendar behind the page.
 	Profile PublicSchedulingProfile `json:"profile"`
 	Used    bool                    `json:"used"`
 }
@@ -53186,7 +53214,9 @@ type PublicOriginStatus struct {
 	Reachable *bool `json:"reachable,omitempty"`
 }
 
-// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+// PublicSchedulingProfile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+// `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
 	CompanyName     string `json:"company_name"`
 	DurationMinutes int    `json:"duration_minutes"`
@@ -53196,7 +53226,10 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
-	Title   string  `json:"title"`
+
+	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
+	Paused bool   `json:"paused"`
+	Title  string `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -56441,10 +56474,16 @@ type SchedulingAliasRequest struct {
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
 	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
-	Alias             *string   `json:"alias,omitempty"`
-	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
-	BufferMinutes     int       `json:"buffer_minutes"`
-	CalendarId        string    `json:"calendar_id"`
+	Alias *string `json:"alias,omitempty"`
+
+	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+	// the page names no calendar (a page saved before the profile existed reads this way).
+	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+	// the connection is gone or refused. Answered on the host's own profile read only.
+	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
+	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
+	BufferMinutes     int                       `json:"buffer_minutes"`
+	CalendarId        string                    `json:"calendar_id"`
 
 	// CompanyName The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	CompanyName     *string `json:"company_name,omitempty"`
@@ -56473,6 +56512,12 @@ type SchedulingProfile struct {
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+// the page names no calendar (a page saved before the profile existed reads this way).
+// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+// the connection is gone or refused. Answered on the host's own profile read only.
+type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string

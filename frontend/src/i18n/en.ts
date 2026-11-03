@@ -1867,6 +1867,8 @@ export const en = {
   "scheduling.cancelConfirm": "Cancel this meeting and notify the attendee?",
   "scheduling.retry": "Retry invitation",
   "scheduling.book": "Confirm meeting",
+  "scheduling.pausedUnavailable":
+    "{host} is not taking bookings through this page right now.",
   "scheduling.unavailable":
     "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":

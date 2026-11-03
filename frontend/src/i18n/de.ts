@@ -1945,6 +1945,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diesen Termin absagen und den Gast benachrichtigen?",
   "scheduling.retry": "Einladung erneut senden",
   "scheduling.book": "Termin bestätigen",
+  "scheduling.pausedUnavailable":
+    "{host} nimmt über diese Seite gerade keine Buchungen an.",
   "scheduling.unavailable":
     "Diese Buchungsseite ist nicht verfügbar. Wende dich an die organisierende Person.",
   "scheduling.publicUrlMissing":

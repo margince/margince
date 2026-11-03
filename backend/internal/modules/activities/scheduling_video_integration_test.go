@@ -137,6 +137,8 @@ func TestAProposalsVideoChoiceSurvivesTheGuestsAcceptance(t *testing.T) {
 func TestThePublicPageNamesTheVideoAppOnlyWhenMeetingsGetOne(t *testing.T) {
 	f := newInvitationFixture(t)
 	handlers := Handlers{store: f.store}
+	// A paused page names nothing, so the page the guest reads is switched on.
+	savePage(t, f, true)
 	profile := f.setVideoDefault(t, nil)
 	if app := publicVideoApp(f.ctx, t, handlers, *profile.Slug); app != string(crmcontracts.PublicSchedulingProfileVideoAppGoogleMeet) {
 		t.Fatalf("video_app = %q, want google_meet by default", app)

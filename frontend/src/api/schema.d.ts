@@ -37897,6 +37897,11 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        /**
+         * @description A guest's view of a booking page. A paused page names its host and says `paused: true`;
+         *     every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+         *     `video_app`), so the guest learns nothing about the calendar behind the page.
+         */
         PublicSchedulingProfile: {
             host_name: string;
             company_name: string;
@@ -37906,6 +37911,8 @@ export interface components {
             location: string;
             duration_minutes: number;
             enabled: boolean;
+            /** @description True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page. */
+            paused: boolean;
             /**
              * @description Present when new meetings get a video call link from the host's calendar.
              * @enum {string}
@@ -37940,6 +37947,14 @@ export interface components {
             email_reminder?: boolean;
             /** @description Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. */
             video_call?: boolean;
+            /**
+             * @description Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+             *     the page names no calendar (a page saved before the profile existed reads this way).
+             *     `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+             *     the connection is gone or refused. Answered on the host's own profile read only.
+             * @enum {string}
+             */
+            readonly blocker?: "none" | "no_calendar" | "calendar_read_only" | "calendar_unavailable";
         };
         SchedulingAliasRequest: {
             /** @description The friendly address to claim; empty clears it. Validated and normalized by the server. */

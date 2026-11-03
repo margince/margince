@@ -52396,7 +52396,11 @@ components:
 
     PublicSchedulingProfile:
       type: object
-      required: [host_name, company_name, title, location, duration_minutes, enabled]
+      required: [host_name, company_name, title, location, duration_minutes, enabled, paused]
+      description: |
+        A guest's view of a booking page. A paused page names its host and says `paused: true`;
+        every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+        `video_app`), so the guest learns nothing about the calendar behind the page.
       properties:
         host_name: { type: string }
         company_name: { type: string }
@@ -52405,6 +52409,7 @@ components:
         location: { type: string }
         duration_minutes: { type: integer }
         enabled: { type: boolean }
+        paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], description: Present when new meetings get a video call link from the host's calendar. }
     SchedulingProfile:
       type: object
@@ -52429,6 +52434,15 @@ components:
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
         video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
+        blocker:
+          type: string
+          readOnly: true
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable]
+          description: |
+            Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+            the page names no calendar (a page saved before the profile existed reads this way).
+            `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+            the connection is gone or refused. Answered on the host's own profile read only.
     SchedulingAliasRequest:
       type: object
       required: [alias]
