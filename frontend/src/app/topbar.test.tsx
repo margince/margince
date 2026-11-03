@@ -20,6 +20,9 @@ import {
   newClient,
   render,
   renderWith,
+  repSeeing,
+  stubPhoneViewport,
+  TWO_MARKS,
 } from "../testing/shellharness";
 import type { NavSection } from "./nav";
 import { TopBar } from "./topbar";
@@ -165,6 +168,38 @@ describe("Top bar search (AC-shell-7)", () => {
     expect(caps).toHaveLength(2);
     expect(caps[1]).toBe("K");
     expect(caps[0]).toMatch(/^(⌘|Ctrl)$/);
+  });
+});
+
+// The page heading under the bar names the page, so a phone's bar spends the
+// trail's room on the company's mark instead.
+describe("Top bar at phone width", () => {
+  it("leads home from the company's mark in place of the trail", () => {
+    stubPhoneViewport();
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
+    renderWith(
+      client,
+      <TopBar
+        route={{ screen: "deals" }}
+        collapsed={false}
+        onOpenSearch={ignoreSearch}
+      />,
+    );
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    const home = screen.getByRole("link", {
+      name: "Demo GmbH home, powered by Margince",
+    });
+    expect(home.getAttribute("href")).toBe("/#/home");
+    expect(
+      home.querySelector(".ws-chip-company img")?.getAttribute("src"),
+    ).toBe(TWO_MARKS.logo_icon_url);
+  });
+
+  it("keeps the trail and no mark on a wide screen", () => {
+    renderTopBar({ screen: "deals" });
+    expect(trail()).toBeTruthy();
+    expect(document.querySelector(".topbar .ws-chip")).toBeNull();
   });
 });
 

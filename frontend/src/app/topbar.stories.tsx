@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { expect, waitFor } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import { Card } from "../design-system/atoms";
 import type { Locale } from "../i18n";
 import { LISTS_KEY, type List } from "../lib/lists.queries";
@@ -350,8 +350,8 @@ export const BelowFiltersAndViews: Story = {
 };
 
 /**
- * The same trail on a phone: only the page shows, with the whole row to itself.
- * The way back is the bottom bar, and the page names the list it edits.
+ * The same page on a phone: the bar carries the company's mark instead of the
+ * trail. The way back is the bottom bar, and the page names the list it edits.
  */
 export const BelowFiltersAndViewsPhone: Story = {
   name: "below Filters and views — on a phone",
@@ -527,8 +527,27 @@ export const Narrow: Story = {
  * reads this one in Storybook with the viewport tool, or by narrowing the window.
  */
 export const Phone: Story = {
-  name: "phone — no collapse control, no bell",
+  name: "phone — the company's mark in place of the trail",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: () => <BarStory route={{ screen: "deals" }} />,
+  play: async ({ canvasElement }) => {
+    const bar = canvasElement.querySelector<HTMLElement>(".topbar");
+    if (!bar) {
+      throw new Error("the top bar is missing");
+    }
+    const home = await within(bar).findByRole("link", {
+      name: /^Gradion GmbH home/,
+    });
+    await expect(home).toHaveAttribute("href", "/#/home");
+    await expect(bar.querySelector(".crumbs")).toBeNull();
+    // Each glyph stands square, and inside the bar, at a thumb's floor too.
+    const edge = bar.getBoundingClientRect();
+    for (const control of bar.querySelectorAll(".topbar-trail button")) {
+      const box = control.getBoundingClientRect();
+      await expect(box.width).toBe(box.height);
+      await expect(box.top).toBeGreaterThanOrEqual(edge.top);
+      await expect(box.bottom).toBeLessThanOrEqual(edge.bottom);
+    }
+  },
 };

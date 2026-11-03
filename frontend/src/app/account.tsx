@@ -2,6 +2,7 @@ import { UserRound } from "lucide-react";
 import {
   type KeyboardEvent,
   lazy,
+  type ReactNode,
   type RefObject,
   Suspense,
   useCallback,
@@ -17,6 +18,8 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
+import type { SetupChecklist } from "../lib/setup-checklist";
+import { usePhoneViewport } from "../lib/viewport";
 import { FlyoutRow, useFlyout } from "./accountflyout";
 import { SignOutRow } from "./accountfoot";
 import { HelpSubmenu } from "./accounthelp";
@@ -24,6 +27,11 @@ import { type RowSeat, useRovingSeats } from "./accountseats";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";
 import { ThemeSubmenu } from "./accounttheme";
+import {
+  nextStepRoute,
+  SetupReminderLabel,
+  useSetupReminder,
+} from "./setup-reminder";
 
 // Lazy: the list reads the Brief's deck vocabulary, and most sessions never open it.
 const ShortcutsDialog = lazy(() =>
@@ -58,9 +66,7 @@ const BOOKING_SEAT = 2;
 
 const HELP_SEAT = 3;
 
-const SIGN_OUT_SEAT = 4;
-
-const SEAT_COUNT = 5;
+const SETUP_SEAT = 4;
 
 /**
  * Who is signed in, in the shapes the block prints them in.
@@ -101,23 +107,29 @@ function IdentityLines({ identity }: Readonly<{ identity: Identity }>) {
 }
 
 /**
- * The way into settings, the only one the product has. `onActivate` closes the
- * menu, so it does not stay open over the page the link opens.
+ * A row that opens a page in the app. `onActivate` closes the menu, so it does
+ * not stay open over the page the link opens.
  */
-function SettingsRow({
+function LinkRow({
+  href,
   seat,
   onActivate,
-}: Readonly<{ seat: RowSeat; onActivate?: () => void }>) {
-  const t = useT();
+  children,
+}: Readonly<{
+  href: string;
+  seat: RowSeat;
+  onActivate: () => void;
+  children: ReactNode;
+}>) {
   return (
     <AppLink
       className="acctrow"
-      href={SETTINGS_HREF}
+      href={href}
       role="menuitem"
       {...seat}
       onClick={onActivate}
     >
-      {t("nav.settings")}
+      {children}
     </AppLink>
   );
 }
@@ -131,17 +143,20 @@ function AccountPanel({
   identity,
   id,
   panel,
+  setup,
   onDismiss,
   onShortcuts,
 }: Readonly<{
   identity: Identity;
   id: string;
   panel: RefObject<HTMLDivElement | null>;
+  setup: SetupChecklist | null;
   onDismiss: () => void;
   onShortcuts: () => void;
 }>) {
   const t = useT();
-  const { seat, walk, move } = useRovingSeats(SEAT_COUNT);
+  const signOutSeat = setup ? SETUP_SEAT + 1 : SETUP_SEAT;
+  const { seat, walk, move } = useRovingSeats(signOutSeat + 1);
   const theme = useFlyout(THEME_SEAT, move);
   const help = useFlyout(HELP_SEAT, move);
 
@@ -189,7 +204,13 @@ function AccountPanel({
           <hr />
         </>
       )}
-      <SettingsRow seat={seat(SETTINGS_SEAT)} onActivate={onDismiss} />
+      <LinkRow
+        href={SETTINGS_HREF}
+        seat={seat(SETTINGS_SEAT)}
+        onActivate={onDismiss}
+      >
+        {t("nav.settings")}
+      </LinkRow>
       <FlyoutRow
         label={t("shell.theme")}
         seat={seat(THEME_SEAT)}
@@ -200,15 +221,13 @@ function AccountPanel({
       {/* The groups: where you go, then the way out. An <hr> rather than a border
           on the last row — it separates a group, and a screen reader is told so. */}
       <hr />
-      <AppLink
-        className="acctrow"
+      <LinkRow
         href={routeHash({ screen: "settings", id: "meetings" })}
-        role="menuitem"
-        {...seat(BOOKING_SEAT)}
-        onClick={onDismiss}
+        seat={seat(BOOKING_SEAT)}
+        onActivate={onDismiss}
       >
         {t("scheduling.myLink")}
-      </AppLink>
+      </LinkRow>
       <FlyoutRow
         label={t("shell.helpMenu")}
         seat={seat(HELP_SEAT)}
@@ -223,15 +242,25 @@ function AccountPanel({
           onShortcuts={onShortcuts}
         />
       </FlyoutRow>
+      {setup && (
+        <LinkRow
+          href={routeHash(nextStepRoute(setup))}
+          seat={seat(SETUP_SEAT)}
+          onActivate={onDismiss}
+        >
+          <SetupReminderLabel setup={setup} />
+        </LinkRow>
+      )}
       <hr />
-      <SignOutRow seat={seat(SIGN_OUT_SEAT)} />
+      <SignOutRow seat={seat(signOutSeat)} />
     </div>
   );
 }
 
 /**
  * The account menu owns settings, appearance, the booking link, help and
- * feedback with the keyboard shortcuts, and sign-out.
+ * feedback with the keyboard shortcuts, and sign-out. At phone width it also
+ * carries the setup reminder.
  */
 export function AccountMenu() {
   const t = useT();
@@ -268,6 +297,8 @@ export function AccountMenu() {
   }, []);
 
   const identity = identityOf(me.data?.user);
+  // The top bar has no room for the setup reminder at phone width.
+  const setup = useSetupReminder(usePhoneViewport());
 
   // One dismissal for every popover in the chrome (app/popover.ts): Escape from
   // anywhere inside, any outside click, and the opening click deferred past.
@@ -321,6 +352,7 @@ export function AccountMenu() {
           identity={identity}
           id={menuId}
           panel={menu}
+          setup={setup}
           onDismiss={dismiss}
           onShortcuts={() => {
             dismiss();

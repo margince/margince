@@ -11,7 +11,12 @@ import { LocaleProvider } from "../i18n";
 import { parseHash } from "../lib/router";
 import { forgetSeat, readStored, STORAGE_KEYS } from "../lib/storage";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
+import {
+  ignoreSearch,
+  newClient,
+  renderWith,
+  stubPhoneViewport,
+} from "../testing/shellharness";
 import { TopBar } from "./topbar";
 
 // The top bar's "Finish setup" chip: what it counts, what opening it shows, and
@@ -276,5 +281,57 @@ describe("SetupReminder", () => {
     });
     await mountTopBar().answered();
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
+  });
+});
+
+describe("SetupReminder at phone width", () => {
+  const openAccount = async () => {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Account/ }));
+    return screen.getAllByRole("menuitem").map((row) => row.textContent ?? "");
+  };
+
+  it("moves from the bar into the account menu, after Help and feedback", async () => {
+    stubPhoneViewport();
+    serve();
+    await mountTopBar().answered();
+    expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
+
+    const rows = await openAccount();
+    expect(rows.indexOf("Finish setup1 of 4")).toBe(
+      rows.indexOf("Help and feedback") + 1,
+    );
+    // The row leads where the panel's current step would.
+    expect(
+      screen
+        .getByRole("menuitem", { name: /Finish setup/ })
+        .getAttribute("href"),
+    ).toBe("/#/settings/connections");
+  });
+
+  it("stays out of the account menu on a wide screen", async () => {
+    serve();
+    await mountTopBar().answered();
+    expect(await trigger()).toBeTruthy();
+    expect((await openAccount()).join()).not.toContain("Finish setup");
+  });
+
+  it("leaves the account menu once every step is done", async () => {
+    stubPhoneViewport();
+    serve({
+      rows: [
+        gmail(),
+        {
+          ...gmail(),
+          id: "00000000-0000-4000-8000-000000000012",
+          provider: "gcal",
+          scopes: ["https://www.googleapis.com/auth/calendar.events"],
+        },
+      ],
+      voiceVersion: 2,
+      bookingOn: true,
+    });
+    await mountTopBar().answered();
+    expect((await openAccount()).join()).not.toContain("Finish setup");
   });
 });

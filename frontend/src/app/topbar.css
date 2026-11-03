@@ -259,6 +259,23 @@
   }
 }
 
+/* The company's mark in the trail's place at phone width (topbar.tsx). The
+   lead grows, so the controls after it stay at the end of the bar. */
+.topbar-home {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--r-control);
+}
+.topbar-home .ws-chip {
+  width: var(--controlHeight);
+  height: var(--controlHeight);
+}
+.topbar-home:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
    atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
    shared control height must not be capped by this floor. Declared under
@@ -275,6 +292,21 @@
   .topbar .topbar-trail > button,
   .topbar .topbar-trail > * > button {
     min-height: max(var(--controlHeight), 44px);
+    /* The icon buttons are drawn --controlHeight wide; a floor on the height
+       alone stood them as tall, narrow boxes. */
+    min-inline-size: max(var(--controlHeight), 44px);
+  }
+  .topbar-home {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+  /* A 44px box leaves 3px either side in the bar, so the ring is drawn inside
+     the box rather than over the bar's rule. */
+  .topbar-search:focus-visible,
+  .topbar-home:focus-visible,
+  .topbar .topbar-trail > button:focus-visible,
+  .topbar .topbar-trail > * > button:focus-visible {
+    outline-offset: -2px;
   }
 }
 
@@ -295,16 +327,4 @@
 }
 .setup-reminder .badge {
   flex: 0 0 auto;
-}
-/* No room for the words at phone width: the count stays, and the words stay
-   in the accessible name. */
-@media (max-width: 700px) {
-  .setup-reminder-word {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
 }

@@ -18,6 +18,54 @@ import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
+// The installation's own name and marks (ADR-0061: one installation, one
+// company). They come from /me, which carries them to every seat. The full
+// company profile is an admin's read. A disabled observer: the auth gate
+// already fetched /me, and this re-renders when a company save refreshes it.
+function useInstallationBrand() {
+  return useMe(false).data?.installation_brand;
+}
+
+/** The accessible name of a link home that shows the company's mark. */
+export function useHomeLinkLabel(): string {
+  const t = useT();
+  const installation = useInstallationBrand();
+  return installation
+    ? t("shell.companyLogoAria", { company: installation.display_name })
+    : t("shell.logoAria");
+}
+
+/**
+ * The company's square mark, or the product's own before onboarding named a
+ * company. Decorative: the link around it carries the name.
+ */
+export function WorkspaceChip() {
+  const installation = useInstallationBrand();
+  const mark = useSquareMark(
+    installation?.logo_icon_url,
+    installation?.logo_url,
+  );
+  if (!installation) {
+    return (
+      <span className="ws-chip" aria-hidden="true">
+        <Logomark />
+      </span>
+    );
+  }
+  // Avatar draws the deterministic monogram underneath, so a company with no
+  // square mark has a face, not a gap.
+  return (
+    <span className="ws-chip ws-chip-company" aria-hidden="true">
+      {/* The brand read carries no company id, so the name keys the chip. */}
+      <Avatar
+        identity={installation.display_name}
+        name={installation.display_name}
+        src={mark}
+      />
+    </span>
+  );
+}
+
 // One lockup at every width: a square mark and the name. Once the installation
 // has a name of its own, what it runs on sits under it.
 // A square is the one shape every company's mark fits at one weight.
@@ -25,15 +73,8 @@ import { useSquareMark } from "./squaremark";
 // from assistive tech. The link covers the whole card (shell.css).
 function BrandBlock() {
   const t = useT();
-  // The installation's own name and marks (ADR-0061: one installation, one
-  // company). They come from /me, which carries them to every seat. The full
-  // company profile is an admin's read. A disabled observer: the auth gate
-  // already fetched /me, and this re-renders when a company save refreshes it.
-  const installation = useMe(false).data?.installation_brand;
-  const mark = useSquareMark(
-    installation?.logo_icon_url,
-    installation?.logo_url,
-  );
+  const installation = useInstallationBrand();
+  const homeLabel = useHomeLinkLabel();
   // On the link, not the heading: the link already holds the tab stop, and the
   // measure reaches into the heading it clips. Folded, the name has no width,
   // so hovering the mark always shows it.
@@ -48,10 +89,8 @@ function BrandBlock() {
   if (!installation) {
     return (
       <div className="railhead">
-        <span className="ws-chip" aria-hidden="true">
-          <Logomark />
-        </span>
-        <AppLink className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+        <WorkspaceChip />
+        <AppLink className="ws" href="#/home" aria-label={homeLabel}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
@@ -61,22 +100,11 @@ function BrandBlock() {
   }
   return (
     <div className="railhead railhead-attributed">
-      {/* The company's square mark. Avatar draws the deterministic monogram
-          underneath, so a company with no square mark has a face, not a gap. */}
-      <span className="ws-chip ws-chip-company" aria-hidden="true">
-        {/* The brand read carries no company id, so the name keys the chip. */}
-        <Avatar
-          identity={installation.display_name}
-          name={installation.display_name}
-          src={mark}
-        />
-      </span>
+      <WorkspaceChip />
       <AppLink
         className="ws"
         href="#/home"
-        aria-label={t("shell.companyLogoAria", {
-          company: installation.display_name,
-        })}
+        aria-label={homeLabel}
         ref={nameRef}
         {...nameTrigger}
       >
@@ -234,7 +262,6 @@ export function WorkspaceRail({
             meets the menu first (WCAG 2.4.3). */}
         {menuOpen && (
           <div className="railmenu" ref={menu}>
-            <BrandBlock />
             <NavLevelView
               level={level.shown}
               counts={counts}

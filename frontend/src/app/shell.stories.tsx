@@ -675,7 +675,7 @@ export const SectionPhone: Story = {
 };
 
 /** The same head in German: the badge moves under the switcher, the name wraps
- *  with the chevron on its first line, and the trail above shows only the page. */
+ *  with the chevron on its first line, and the bar above carries no trail. */
 export const SectionPhoneGerman: Story = {
   name: "a section — the head's switcher, a German name that wraps",
   globals: { viewport: { value: "phone" } },
@@ -700,10 +700,7 @@ export const SectionPhoneGerman: Story = {
         name.getBoundingClientRect().top + firstLine / 2,
         0,
       );
-      const stops = [...canvasElement.querySelectorAll(".topbar .crumbs li")];
-      expect(
-        stops.filter((stop) => getComputedStyle(stop).display !== "none"),
-      ).toHaveLength(1);
+      expect(canvasElement.querySelector(".topbar .crumbs")).toBeNull();
     });
   },
 };
@@ -766,6 +763,8 @@ export const PhoneMoreMenu: Story = {
     await expect(
       within(menu).getByRole("link", { name: "Analytics" }),
     ).toHaveAttribute("aria-current", "page");
+    // The company's mark stands in the top bar at this width, not in the menu.
+    await expect(menu.querySelector(".railhead")).toBeNull();
   },
   render: () => {
     stubEntitlement(WITHIN_CAP);

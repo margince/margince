@@ -484,6 +484,9 @@
 }
 .rail .ws-chip {
   grid-area: mark;
+}
+/* The chip is drawn in the rail's head and, at phone width, in the top bar. */
+.ws-chip {
   /* 40px is the collapsed column's own width less the rail's 8px inset either
      side, so this is as large as the mark can be without touching the rail's
      edge, and expanded it holds both lines of text beside it. */
@@ -503,10 +506,10 @@
    tints from the record's identity, and either one on the brand fill would
    be a second surface behind a finished mark. The avatar takes the chip's
    square, because a company's icon is drawn square and a circle crops it. */
-.rail .ws-chip-company {
+.ws-chip-company {
   background: none;
 }
-.rail .ws-chip-company .avatar {
+.ws-chip-company .avatar {
   width: 100%;
   height: 100%;
   /* Square, so the chip's own corner (and its clip) is the only one drawn. */
@@ -514,7 +517,7 @@
 }
 /* An icon fills its square edge to edge: it is drawn for one, and the round
    chip's inset would frame it in a ring of ground. */
-.rail .ws-chip-company .avatar-img {
+.ws-chip-company .avatar-img {
   inset: 0;
   width: 100%;
   height: 100%;
@@ -1484,37 +1487,6 @@
   }
   /* Each `.rail.collapsed` axis is restated: the desktop preference survives a
      resize, and the menu must not follow it. */
-  .rail .railmenu .railhead {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas: "mark name";
-    justify-items: stretch;
-    min-height: 0;
-    margin: 0;
-    padding: var(--space-1) var(--space-2) var(--space-3);
-    border: 0;
-    border-bottom: 1px solid var(--groundEdge);
-    border-radius: 0;
-  }
-  .rail .railmenu .railhead-attributed {
-    grid-template-areas:
-      "mark name"
-      "mark by";
-  }
-  .rail .railmenu .ws-chip {
-    width: 32px;
-    height: 32px;
-  }
-  .rail .railmenu .ws {
-    grid-area: name;
-  }
-  .rail .railmenu .ws-name {
-    width: auto;
-    height: auto;
-    opacity: 1;
-  }
-  .rail .railmenu .ws-company {
-    display: block;
-  }
   .rail .railmenu .navlevel,
   .rail .railmenu .navgroup {
     display: flex;
