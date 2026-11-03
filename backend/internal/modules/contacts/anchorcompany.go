@@ -295,7 +295,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		if target.created {
 			action = actionCreate
 		}
-		before, after, err := anchorSaveImages(ctx, tx, target)
+		before, after, receipts, err := anchorSaveImages(ctx, tx, target)
 		if err != nil {
 			return err
 		}
@@ -305,9 +305,9 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		// rides audit_log.evidence, because anything placed in the images is
 		// projected by field history as a change to a field of that name
 		// (storekit.AuditWithEvidence).
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, map[string]any{
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, withProfileFieldReceipts(map[string]any{
 			auditKeySource: CompanySourceHuman, "anchor": true, auditKeyFields: applied,
-		})
+		}, receipts))
 		if err != nil {
 			return fmt.Errorf("audit company save: %w", err)
 		}
@@ -386,6 +386,8 @@ type anchorTarget struct {
 	id      ids.CompanyID
 	created bool
 	before  map[string]any
+	// rows are the profile-field rows behind the columns, read with before.
+	rows map[string]profileFieldRow
 	// named is true when this save wrote the anchor's display name.
 	named bool
 }
@@ -427,6 +429,10 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	if err != nil {
 		return anchorTarget{}, err
 	}
+	rows, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return anchorTarget{}, err
+	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE company SET display_name = $2
 		 WHERE id = $1 AND display_name IS DISTINCT FROM $2`,
@@ -443,7 +449,7 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 			return anchorTarget{}, err
 		}
 	}
-	return anchorTarget{id: companyID, before: before, named: tag.RowsAffected() > 0}, nil
+	return anchorTarget{id: companyID, before: before, rows: rows, named: tag.RowsAffected() > 0}, nil
 }
 
 // createAnchorCompany mints the company row, marked as the installation's

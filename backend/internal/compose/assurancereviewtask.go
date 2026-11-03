@@ -47,16 +47,17 @@ func reviewTaskKey(review assurance.Exception, episode int) string {
 }
 
 // bundleReview delivers one review episode and files the subject's findings
-// under its task. It reports whether it minted.
+// under its task. It reports whether it minted. Only the delivery job calls it:
+// a pass files under a delivered episode's task and leaves the rest to the job.
 func bundleReview(
 	ctx context.Context, deps bundleDeps, cycle ids.UUID, subject subjectFindings, review assurance.Exception,
 ) (bool, error) {
-	episode, linked, err := readEpisodeTask(ctx, deps, review.ID)
+	episode, err := readEpisodeTask(ctx, deps, review.ID)
 	if err != nil {
 		return false, err
 	}
-	if linked != nil {
-		return false, fileUnderTask(ctx, deps, cycle, *linked, subject)
+	if episode.Task != nil {
+		return false, fileUnderDeliveredReview(ctx, deps, cycle, subject, review, episode)
 	}
 	task, found, err := deps.bundles.OpenTaskFor(ctx, cycle, subject.kind, subject.id)
 	if err != nil {
@@ -80,50 +81,113 @@ func bundleReview(
 		if err != nil {
 			return false, err
 		}
-		if task, err = mintBundleTask(ctx, deps, reviewTaskKey(review, episode), subject, &due); err != nil {
+		if task, err = mintBundleTask(ctx, deps, reviewTaskKey(review, episode.Episode), subject, &due); err != nil {
 			return false, err
 		}
 		minted = true
 	}
-	task, err = linkEpisodeTask(ctx, deps, review.ID, episode, task)
+	given, err := systemGivenAssignee(ctx, deps, task, review)
+	if err != nil {
+		return minted, err
+	}
+	task, err = linkEpisodeTask(ctx, deps, review.ID, episode.Episode, task, given)
 	if err != nil {
 		return minted, err
 	}
 	return minted, fileUnderTask(ctx, deps, cycle, task, subject)
 }
 
-func readEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID) (int, *ids.UUID, error) {
-	var episode int
-	var linked *ids.UUID
+// fileUnderDeliveredReview files the subject's findings under the task the
+// review's episode was delivered as, after moving that task to the deal's
+// current owner. An episode not delivered yet is the delivery job's.
+func fileUnderDeliveredReview(
+	ctx context.Context, deps bundleDeps, cycle ids.UUID, subject subjectFindings,
+	review assurance.Exception, episode assurance.ReviewEpisode,
+) error {
+	if episode.Task == nil {
+		return nil
+	}
+	if err := followReviewOwner(ctx, deps, review, episode); err != nil {
+		return err
+	}
+	return fileUnderTask(ctx, deps, cycle, *episode.Task, subject)
+}
+
+// followReviewOwner moves a delivered review's task to the deal's current
+// owner while it still sits with the seat the system gave it. The finding's
+// owner is the deal's, refreshed by every pass.
+func followReviewOwner(ctx context.Context, deps bundleDeps, review assurance.Exception, episode assurance.ReviewEpisode) error {
+	if review.OwnerID == nil || (episode.DeliveredAssignee != nil && *episode.DeliveredAssignee == *review.OwnerID) {
+		return nil
+	}
+	var given *ids.UserID
+	if episode.DeliveredAssignee != nil {
+		seat := ids.From[ids.UserKind](*episode.DeliveredAssignee)
+		given = &seat
+	}
+	owner := ids.From[ids.UserKind](*review.OwnerID)
+	moved, err := deps.activities.FollowSystemTaskOwner(ctx, ids.From[ids.ActivityKind](*episode.Task), given, owner)
+	if err != nil {
+		return fmt.Errorf("compose: moving the review's task to the deal's owner: %w", err)
+	}
+	if !moved {
+		return nil
+	}
+	return deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return deps.bundles.FollowedOwner(ctx, tx, review.ID, episode.Episode, *review.OwnerID)
+	})
+}
+
+// systemGivenAssignee is the seat the delivery gave the task: the deal owner
+// when the task now sits with them. A task that went unassigned, or that an
+// adopted colleague holds, was given to nobody by the system.
+func systemGivenAssignee(ctx context.Context, deps bundleDeps, task ids.UUID, review assurance.Exception) (*ids.UUID, error) {
+	if review.OwnerID == nil {
+		return nil, nil //nolint:nilnil // nil is the answer "the system gave the task to nobody"
+	}
+	act, err := deps.activities.GetActivity(ctx, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading the delivered task: %w", err)
+	}
+	if act.AssigneeId == nil || ids.UUID(*act.AssigneeId) != *review.OwnerID {
+		return nil, nil //nolint:nilnil // the task sits with someone the system did not choose
+	}
+	return review.OwnerID, nil
+}
+
+func readEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID) (assurance.ReviewEpisode, error) {
+	var episode assurance.ReviewEpisode
 	err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		episode, linked, err = deps.bundles.EpisodeTask(ctx, tx, review)
+		episode, err = deps.bundles.EpisodeTask(ctx, tx, review)
 		return err
 	})
 	if err != nil {
-		return 0, nil, fmt.Errorf("compose: reading the review's episode: %w", err)
+		return assurance.ReviewEpisode{}, fmt.Errorf("compose: reading the review's episode: %w", err)
 	}
-	return episode, linked, nil
+	return episode, nil
 }
 
 // linkEpisodeTask records the delivered task and answers the task the episode
 // keeps. A concurrent delivery that linked first wins: both minted the same
 // keyed task, and the link it wrote is the one to file under.
-func linkEpisodeTask(ctx context.Context, deps bundleDeps, review ids.UUID, episode int, task ids.UUID) (ids.UUID, error) {
+func linkEpisodeTask(
+	ctx context.Context, deps bundleDeps, review ids.UUID, episode int, task ids.UUID, given *ids.UUID,
+) (ids.UUID, error) {
 	err := deps.bundles.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		return deps.bundles.LinkEpisodeTask(ctx, tx, review, episode, task)
+		return deps.bundles.LinkEpisodeTask(ctx, tx, review, episode, task, given)
 	})
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		return task, err
 	}
-	_, linked, err := readEpisodeTask(ctx, deps, review)
+	current, err := readEpisodeTask(ctx, deps, review)
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	if linked == nil {
+	if current.Task == nil {
 		return ids.UUID{}, errors.New("compose: the review's episode moved while its task was delivered; the next pass delivers it")
 	}
-	return *linked, nil
+	return *current.Task, nil
 }
 
 // alignAdoptedTask gives an adopted task what a minted review task carries: a

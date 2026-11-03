@@ -17,7 +17,7 @@ import { EditRecordModal } from "../../components/edit";
 import { prefillRowsFromRecord } from "../../components/edit.prefill";
 import { useEntityName } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
-import { Button } from "../../design-system/atoms";
+import { EditableValue } from "../../design-system/editablevalue";
 import { useLocale, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { problemMessageOf } from "../../lib/problem";
@@ -41,8 +41,8 @@ export function useCompanyFieldSave(company: Company) {
   );
 }
 
-// The fields a details row edits in a dialog rather than in place. Each is
-// several inputs (an address, a set of domains) or a search.
+// The fields a details row edits in the record's edit form, not a one-field
+// dialog. Each is several inputs (an address, a set of domains) or a search.
 export type CompoundField =
   | "address"
   | "domains"
@@ -108,6 +108,7 @@ export function CompoundFieldValue({
   which,
   label,
   reading,
+  link,
   canEdit,
   readOnlyReason,
 }: Readonly<{
@@ -116,6 +117,8 @@ export function CompoundFieldValue({
   label: string;
   // What the row shows at rest; absent reads as "Not set".
   reading?: ReactNode;
+  // The reading is itself a link, which keeps its own action.
+  link?: boolean;
   canEdit: boolean;
   readOnlyReason?: string;
 }>) {
@@ -151,24 +154,22 @@ export function CompoundFieldValue({
     },
     onSuccess: () => setOpen(false),
   });
-  const shown = reading ?? t("field.unset");
   if (!canEdit) {
-    return <span title={readOnlyReason}>{shown}</span>;
+    return <span title={readOnlyReason}>{reading ?? t("field.unset")}</span>;
   }
   return (
     <>
-      <Button
-        variant="link"
-        className="inline-editable"
-        data-empty={!reading}
-        aria-label={t("inlineChoice.change", { field: label })}
-        onClick={() => {
+      <EditableValue
+        editLabel={t("inlineChoice.change", { field: label })}
+        placeholder={t("field.unset")}
+        link={link && Boolean(reading)}
+        onEdit={() => {
           mutation.reset();
           setOpen(true);
         }}
       >
-        {shown}
-      </Button>
+        {reading}
+      </EditableValue>
       <EditRecordModal
         open={open}
         onClose={() => setOpen(false)}
