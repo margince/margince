@@ -8,6 +8,7 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { InlineChoice } from "./inlinechoice";
+import { pickOption } from "./select-testing";
 
 const meta: Meta = {
   title: "Components/Forms and input/Inline choice",
@@ -90,8 +91,7 @@ export const RefusedSave: Story = {
       await canvas.findByRole("button", { name: /^Change Lifecycle/ }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Lifecycle" });
-    await user.click(within(dialog).getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Customer" }));
+    await pickOption(user, within(dialog).getByRole("combobox"), "Customer");
     await user.click(within(dialog).getByRole("button", { name: "Save" }));
     const refusal = await within(dialog).findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);

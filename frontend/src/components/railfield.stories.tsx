@@ -6,6 +6,7 @@ import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { OffsiteLink } from "../design-system/offsitelink";
+import { pickOption } from "../design-system/select-testing";
 import { StoryProviders } from "../testing/story-utils";
 import type { CreateField } from "./create";
 import { type RailEdit, RailField } from "./railfield";
@@ -136,8 +137,7 @@ export const ChoiceDialog: Story = {
     );
     const dialog = await screen.findByRole("dialog", { name: "Stage" });
     await waitFor(() => expect(dialog).toBeVisible());
-    await user.click(within(dialog).getByRole("combobox"));
-    await user.click(await screen.findByRole("option", { name: "Won" }));
+    await pickOption(user, within(dialog).getByRole("combobox"), "Won");
     await expect(
       canvas.getByRole("button", { name: "Change Stage Proposal" }),
     ).toBeVisible();

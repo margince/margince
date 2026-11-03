@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import {
@@ -617,10 +618,11 @@ describe("the lifecycle control beside the name", () => {
     const sent = stubPatch(200);
     const user = userEvent.setup();
     renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await user.click(
+    await pickOption(
+      user,
       await screen.findByRole("combobox", { name: "Lifecycle" }),
+      "Prospect",
     );
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
     await waitFor(() => expect(sent).toEqual([{ lifecycle: "prospect" }]));
   });
 
@@ -647,10 +649,11 @@ describe("the lifecycle control beside the name", () => {
     const sent = stubPatch(200);
     const user = userEvent.setup();
     renderInApp(<CompanyLifecycleControl company={COMPANY} />);
-    await user.click(
+    await pickOption(
+      user,
       await screen.findByRole("combobox", { name: "Lifecycle" }),
+      "Customer",
     );
-    await user.click(screen.getByRole("option", { name: "Customer" }));
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(sent).toEqual([]);
   });
@@ -660,8 +663,7 @@ describe("the lifecycle control beside the name", () => {
     const user = userEvent.setup();
     renderInApp(<CompanyLifecycleControl company={COMPANY} />);
     const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await user.click(control);
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(user, control, "Prospect");
     expect(
       await screen.findByText("Someone else changed this account."),
     ).toBeTruthy();
@@ -684,8 +686,7 @@ describe("the lifecycle control beside the name", () => {
     );
     const { rerender } = render(at(COMPANY));
     const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await user.click(control);
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(user, control, "Prospect");
     await screen.findByText("Someone else changed this account.");
     // The Details grid saved a different stage; the record refetched with it.
     rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
@@ -739,8 +740,7 @@ describe("the lifecycle control beside the name", () => {
     );
     const { rerender } = render(at(COMPANY));
     const control = await screen.findByRole("combobox", { name: "Lifecycle" });
-    await user.click(control);
-    await user.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(user, control, "Prospect");
     // While the header's write is out, the Details grid saves another stage.
     rerender(at({ ...COMPANY, lifecycle: "former_customer", version: 2 }));
     refuse(

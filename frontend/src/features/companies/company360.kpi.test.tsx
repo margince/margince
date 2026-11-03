@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { meFixture } from "../../testing/mefixture";
 import {
   type Company,
@@ -160,8 +161,7 @@ describe("company view — where the account stands, and what it is to us", () =
     await screen.findByRole("complementary", { name: "Context" });
 
     const [headerControl] = await lifecycleControls();
-    await userEvent.click(headerControl);
-    await userEvent.click(screen.getByRole("option", { name: "Prospect" }));
+    await pickOption(userEvent.setup(), headerControl, "Prospect");
 
     await waitFor(() => expect(patchCount).toBe(1));
     expect(lastIfMatch).toBe("1");
