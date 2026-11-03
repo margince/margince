@@ -366,8 +366,8 @@ func restoreTheStrictTrigger(t *testing.T) {
 func theRepairsOwnTrigger(t *testing.T) string {
 	t.Helper()
 	// Found by name, never by stamp. A branch waiting on a decision is
-	// re-stamped each time main gains a migration, and a stamp written here
-	// breaks this test instead of the thing it reads.
+	// re-stamped each time main gains a migration. A stamp written here would
+	// break this test instead of the thing it reads.
 	found, err := filepath.Glob(
 		"../../migrations/core/*_the_credential_repair_may_rewrite_an_audit_image.up.sql",
 	)
