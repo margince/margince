@@ -1,5 +1,16 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  hashKey,
+  type QueryClient,
+  type QueryKey,
+  type UseQueryResult,
+  useInfiniteQuery,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
 import { useNow } from "../format/now";
 import { dayInZone } from "../format/timezone";
@@ -118,14 +129,25 @@ function useCloseDay(value: string | undefined): DayRange | undefined {
   return closeDayRange(value, today, fiscalStart);
 }
 
+type DealListQuery = ReturnType<typeof dealsQueryParams> & {
+  cursor?: string;
+};
+
+type DealListPage = Awaited<ReturnType<typeof readDealPage>>;
+
+type Deal = components["schemas"]["Deal"];
+
+async function readDealPage(query: DealListQuery) {
+  return unwrap(await api.GET("/deals", { params: { query } }));
+}
+
+function nextCursorOf(page: DealListPage): string | undefined {
+  return page.page?.has_more ? (page.page.next_cursor ?? undefined) : undefined;
+}
+
 /**
- * The deals the board and the table share.
- *
- * A keyset walk rather than one fixed page. The board draws a column per stage
- * out of whatever this holds. A single capped read would show a busy stage only
- * a fraction of its cards. Its header comes from the deals-by-stage report over
- * every matching deal, so it names the true count. A column saying "40 deals"
- * above six cards is what a pipeline view must not do.
+ * The deals as one keyset walk over every stage, which the table draws. The
+ * board reads each column on its own instead (useStageColumns).
  */
 export function useDeals(f: DealFilters, enabled = true) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
@@ -138,21 +160,168 @@ export function useDeals(f: DealFilters, enabled = true) {
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
-        await api.GET("/deals", {
-          params: {
-            query: {
-              ...dealsQueryParams({ ...f, closeDay }),
-              cursor: pageParam,
-            },
-          },
-        }),
-      );
-    },
-    getNextPageParam: (last) =>
-      last.page?.has_more ? (last.page.next_cursor ?? undefined) : undefined,
+    queryFn: ({ pageParam }) =>
+      readDealPage({
+        ...dealsQueryParams({ ...f, closeDay }),
+        cursor: pageParam,
+      }),
+    getNextPageParam: nextCursorOf,
   });
+}
+
+// A board column's page: smaller than the table's, since every column reads at once.
+export const STAGE_COLUMN_LIMIT = 25;
+
+/** One stage column of the board, in the shape QueryStates and LoadMoreButton read. */
+export type StageColumnRead = Readonly<{
+  deals: Deal[];
+  isPending: boolean;
+  /** The first page failed, so the column holds no cards. */
+  isError: boolean;
+  error: unknown;
+  refetch: () => unknown;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => unknown;
+  /** A later page failed; the cards already read stay. */
+  loadMoreError: unknown;
+}>;
+
+// Each cursor comes from the page this walk just read, never a cached one, so a
+// walk's pages meet with no gap or overlap however the column changed.
+async function walkStagePages(
+  query: DealListQuery,
+  depth: number,
+  seed: readonly DealListPage[],
+): Promise<DealListPage[]> {
+  const pages = [...seed];
+  const seedEnd = seed.at(-1);
+  let cursor = seedEnd ? nextCursorOf(seedEnd) : undefined;
+  while (pages.length < depth && (pages.length === 0 || cursor !== undefined)) {
+    const page = await readDealPage({ ...query, cursor });
+    pages.push(page);
+    cursor = nextCursorOf(page);
+  }
+  return pages;
+}
+
+// The shallower depth's pages start a "load more" walk, so it costs one request.
+// Never on a refetch or from invalidated pages: a write may have shifted them.
+function seedPages(
+  client: QueryClient,
+  queryKey: QueryKey,
+  shallowerKey: QueryKey,
+): readonly DealListPage[] {
+  if (client.getQueryData(queryKey) !== undefined) return [];
+  const shallower = client.getQueryState<DealListPage[]>(shallowerKey);
+  return shallower?.data && !shallower.isInvalidated ? shallower.data : [];
+}
+
+// The newest copy of each deal, by version. Mid-refetch a moved deal can sit in
+// the column it left and the one it joined; it draws once, where it now is.
+function newestOfEach(deals: readonly Deal[]): Deal[] {
+  const byId = new Map<string, Deal>();
+  for (const deal of deals) {
+    const held = byId.get(deal.id);
+    if (!held || (deal.version ?? 0) > (held.version ?? 0))
+      byId.set(deal.id, deal);
+  }
+  return [...byId.values()];
+}
+
+function stageColumnRead(
+  query: UseQueryResult<DealListPage[]>,
+  shown: DealListPage[] | undefined,
+  loadMore: () => void,
+): StageColumnRead {
+  const last = shown?.at(-1);
+  const fetchFailed = query.isError ? query.error : null;
+  return {
+    deals: shown?.flatMap((page) => page.data) ?? [],
+    isPending: shown === undefined && query.isPending,
+    isError: shown === undefined && query.isError,
+    error: shown === undefined ? fetchFailed : null,
+    refetch: () => query.refetch(),
+    hasNextPage: last !== undefined && nextCursorOf(last) !== undefined,
+    isFetchingNextPage:
+      query.data === undefined && shown !== undefined && query.isFetching,
+    // A failed deeper read is retried at that depth, from the seed it had.
+    fetchNextPage: () => (query.isError ? query.refetch() : loadMore()),
+    loadMoreError: shown === undefined ? null : fetchFailed,
+  };
+}
+
+// Not one walk over every stage: a later stage's column would head a count over
+// no cards until the busy stages ran out. The filters reset each column's depth.
+export function useStageColumns(
+  f: DealFilters,
+  stageIds: readonly string[],
+  enabled = true,
+) {
+  const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
+  const client = useQueryClient();
+  const scope = hashKey([f, closeDay]);
+  const [paging, setPaging] = useState<{
+    scope: string;
+    depths: Readonly<Record<string, number>>;
+  }>({ scope, depths: {} });
+  const depths = paging.scope === scope ? paging.depths : {};
+  const readStages = f.filters.stage_id
+    ? stageIds.filter((stageId) => stageId === f.filters.stage_id)
+    : stageIds;
+  const keyOf = (stageId: string, depth: number) =>
+    ["deals", "stage-column", f, closeDay, stageId, depth] as const;
+  const queries = useQueries({
+    queries: readStages.map((stageId) => {
+      const depth = depths[stageId] ?? 1;
+      return {
+        queryKey: keyOf(stageId, depth),
+        enabled,
+        queryFn: ({ queryKey }: { queryKey: QueryKey }) =>
+          walkStagePages(
+            {
+              ...dealsQueryParams({ ...f, closeDay }),
+              limit: STAGE_COLUMN_LIMIT,
+              stage_id: stageId,
+            },
+            depth,
+            seedPages(client, queryKey, keyOf(stageId, depth - 1)),
+          ),
+      };
+    }),
+  });
+  const loadMore = (stageId: string) =>
+    setPaging((prev) => {
+      const held = prev.scope === scope ? prev.depths : {};
+      return {
+        scope,
+        depths: { ...held, [stageId]: (held[stageId] ?? 1) + 1 },
+      };
+    });
+  const columns = new Map<string, StageColumnRead>();
+  readStages.forEach((stageId, index) => {
+    const query = queries[index];
+    if (!query) return;
+    const depth = depths[stageId] ?? 1;
+    // While a deeper read loads or after it failed, the column keeps the cards
+    // it already drew.
+    const shown =
+      query.data ??
+      (depth > 1
+        ? client.getQueryData<DealListPage[]>(keyOf(stageId, depth - 1))
+        : undefined);
+    columns.set(
+      stageId,
+      stageColumnRead(query, shown, () => loadMore(stageId)),
+    );
+  });
+  const reads = [...columns.values()];
+  return {
+    columns,
+    deals: newestOfEach(reads.flatMap((column) => column.deals)),
+    isPending: reads.some((column) => column.isPending),
+    error: queries.find((query) => query.isError)?.error ?? null,
+  };
 }
 
 // dealsByStageReportFilters translates the board's own filter dials into the
@@ -213,8 +382,8 @@ export function totalsRefusedBecause(
 }
 
 // useStageTotals reads the board's per-column totals from the deals-by-stage
-// report: a full aggregate over every matching deal, not the capped page
-// useDeals fetches. The server converts each deal before grouping by stage.
+// report: a full aggregate over every matching deal, not the pages the columns
+// have read. The server converts each deal before grouping by stage.
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters, enabled = true) {

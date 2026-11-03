@@ -35,7 +35,7 @@ const deal = {
 // The pipeline board as the list surface's BODY, which is the whole point of
 // this story: the saved-view rail, the count, the filter bar and the archived
 // toggle stand above the board exactly as they stand above the table, because
-// both views read one query. Rendered instead of the surface, the board took all
+// both views read the same dials. Rendered instead of the surface, the board took all
 // four off screen and left the reader unable to see — or undo — what had
 // narrowed the pipeline.
 const boardStages = [

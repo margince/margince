@@ -50,25 +50,38 @@ describe("DealsScreen", () => {
     expect(await screen.findByText("closes 14 Oct 2099")).toBeTruthy();
   });
 
-  it("board↔table swaps views over the same fetched set without a reload", async () => {
-    const fetchMock = stubBackend([deal({})]);
-    vi.stubGlobal("fetch", fetchMock);
-    render(<DealsScreen />);
-    await waitFor(() =>
-      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
+  // Each surface reads only while it shows: the board one stage per column,
+  // the table one walk over every stage.
+  it("reads the board per stage and the table as one walk, each while it shows", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onDealsUrl: (url) => urls.push(url) }),
     );
-    const dealFetches = () =>
-      fetchMock.mock.calls.filter((call) =>
-        String(
-          call[0] && (call[0] as Request).url
-            ? (call[0] as Request).url
-            : call[0],
-        ).includes("/deals"),
-      ).length;
-    const before = dealFetches();
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(); // same set, table view
-    expect(dealFetches()).toBe(before); // no reload
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const listReads = () =>
+      urls
+        .map((url) => new URL(url, "https://test.local"))
+        .filter((url) => url.pathname.endsWith("/deals"));
+    await waitFor(() =>
+      expect(
+        listReads()
+          .map((url) => url.searchParams.get("stage_id"))
+          .sort(),
+      ).toEqual(["s1", "s2", "s3"]),
+    );
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    const boardReads = listReads().length;
+
+    await user.click(screen.getByRole("button", { name: "Table" }));
+
+    await waitFor(() => expect(listReads().length).toBeGreaterThan(boardReads));
+    const tableReads = listReads().slice(boardReads);
+    expect(tableReads.map((url) => url.searchParams.get("stage_id"))).toEqual(
+      tableReads.map(() => null),
+    );
+    expect(tableReads[0]?.searchParams.get("limit")).toBe("100");
   });
 
   // A view saved on the deals list is a server row, and the tab rail has to
@@ -292,22 +305,36 @@ describe("DealsScreen", () => {
   // The board draws its columns from the deals it holds. With a single capped
   // read, a busy stage shows a fraction of its cards. Its header counts every
   // matching deal, so it reads "40 deals" above six cards. This prevents that.
-  it("the board walks past the first page", async () => {
+  it("a column walks past its first page from its own Load more", async () => {
+    const urls: string[] = [];
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({ id: "d1", name: "First page deal" })], {
         nextPage: [deal({ id: "d2", name: "Second page deal" })],
+        onDealsUrl: (url) => urls.push(url),
       }),
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
 
     expect(await screen.findByText("First page deal")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Load more" }));
+    const column = document.querySelector('[data-stage="s1"]') as HTMLElement;
+    const before = urls.length;
+    // Only the stage with more to read offers to read it.
+    expect(screen.getAllByRole("button", { name: "Load more" })).toHaveLength(
+      1,
+    );
+    await user.click(within(column).getByRole("button", { name: "Load more" }));
 
     // Both pages stand together: the walk adds cards, it does not replace them.
-    expect(await screen.findByText("Second page deal")).toBeTruthy();
-    expect(screen.getByText("First page deal")).toBeTruthy();
+    expect(await within(column).findByText("Second page deal")).toBeTruthy();
+    expect(within(column).getByText("First page deal")).toBeTruthy();
+    const asked = urls
+      .slice(before)
+      .map((url) => new URL(url, "https://test.local").searchParams);
+    expect(
+      asked.map((params) => [params.get("stage_id"), params.get("cursor")]),
+    ).toEqual([["s1", "cur-2"]]);
   });
 
   // The column headers count every matching deal through a separate report
@@ -315,7 +342,7 @@ describe("DealsScreen", () => {
   // mutation fires reaches both. Otherwise a moved card's old header still
   // counts it. The test asserts the key relationship, since a request count
   // cannot tell a real invalidation from a routine refetch.
-  it("keys the column totals under the deals cache so one invalidation reaches both", async () => {
+  it("keys the column totals and cards under the deals cache so one invalidation reaches both", async () => {
     const keys: unknown[][] = [];
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -338,8 +365,11 @@ describe("DealsScreen", () => {
     const totals = keys.find((key) => key.includes("by-stage-totals"));
     expect(totals).toBeTruthy();
     // invalidateQueries({queryKey:["deals"]}) matches by prefix, so this is
-    // the whole claim: the totals live under it.
+    // the whole claim: the totals and every column's cards live under it.
     expect(totals?.[0]).toBe("deals");
+    const columns = keys.filter((key) => key.includes("stage-column"));
+    expect(columns).toHaveLength(3);
+    expect(columns.every((key) => key[0] === "deals")).toBe(true);
   });
 
   // The board's column total must come from the deals-by-stage report over
@@ -371,7 +401,40 @@ describe("DealsScreen", () => {
       screen.getByText(`weighted ${formatMoney(1_234_567, "EUR", "en")}`),
     ).toBeTruthy();
     // The true stage count (250), not "1" (the single loaded card's count).
-    expect(screen.getByText("250 deals")).toBeTruthy();
+    const column = document.querySelector('[data-stage="s1"]') as HTMLElement;
+    expect(within(column).getByText("250 deals")).toBeTruthy();
+  });
+
+  // The head sums the report's stage counts while the report measures the
+  // board, and counts the loaded cards while it does not.
+  it.each([
+    { name: "report in play", hash: "#/deals", head: "260 deals" },
+    { name: "totals withheld", hash: "#/deals?q=fleet", head: "2 deals" },
+  ])("states the board's head count with the $name", async ({ hash, head }) => {
+    window.location.hash = hash;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(
+        [
+          deal({ id: "a", name: "Fleet one", stage_id: "s1" }),
+          deal({ id: "b", name: "Fleet two", stage_id: "s2" }),
+        ],
+        {
+          stageTotalsRows: [
+            { stage_id: "s1", deals: 250 },
+            { stage_id: "s2", deals: 10 },
+          ],
+        },
+      ),
+    );
+    render(<DealsScreen />);
+
+    expect(await screen.findByText("Fleet two")).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(head).some((node) => !node.closest("[data-stage]")),
+      ).toBe(true),
+    );
   });
 
   it.each([

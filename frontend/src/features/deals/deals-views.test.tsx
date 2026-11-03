@@ -89,7 +89,7 @@ const render = (ui: ReactNode) => {
  *
  * The per-stage report answers a count of its own, deliberately larger than the
  * cards on the board: the column's count is the server's aggregate over every
- * matching deal, and the surface's count is what has loaded.
+ * matching deal, and the surface's head sums those counts.
  */
 function stubBackend(opts: {
   deals: Deal[];
@@ -256,8 +256,7 @@ describe("a saved view over the deals board", () => {
         deals: [deal({}), deal({ id: "d2", name: "Depot rollout" })],
         dealUrls,
         // Seven matching deals in the stage, two of them loaded as cards: the
-        // column reports the server's aggregate and the surface reports what is
-        // on screen, and neither may be drawn as the other.
+        // column and the head report the server's aggregate, not the cards.
         stageTotalsRows: [
           {
             stage_id: "s1",
@@ -271,8 +270,8 @@ describe("a saved view over the deals board", () => {
     );
     render(<DealsScreen />);
 
-    expect(await screen.findByText("2 deals")).toBeTruthy();
-    expect(screen.getByText("7 deals")).toBeTruthy();
+    // The head sums the column counts, and the report measures every column.
+    expect(await screen.findAllByText("7 deals")).toHaveLength(2);
     expect(screen.getByText("≈ €7,000.00")).toBeTruthy();
 
     // Archived deals are reachable from the board, not only from the table: a
@@ -284,6 +283,7 @@ describe("a saved view over the deals board", () => {
     );
     expect(screen.queryByText("≈ €7,000.00")).toBeNull();
     expect(screen.queryByText("7 deals")).toBeNull();
+    expect(await screen.findAllByText("2 deals")).toHaveLength(2);
     expect(
       screen.getByText(
         "Loaded deals only. Totals are unavailable while archived deals are included.",

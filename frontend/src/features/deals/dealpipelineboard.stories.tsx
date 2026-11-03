@@ -4,6 +4,7 @@ import type {
   BoardDeal,
   BoardMoneyColumn,
 } from "../../design-system/pipelineboard";
+import type { StageColumnRead } from "../../lib/deals.queries";
 import { WriteToProvider } from "../../lib/writeto";
 import { lastEmailAgo } from "../../testing/dealmail";
 import {
@@ -13,6 +14,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { DealPipelineBoard } from "./dealpipelineboard";
+import { StageColumnFoot } from "./deals.board";
 
 // The deals board with the screen's half of every card: the verbs, and the
 // summary drawer the first of them opens. The cards' own states are canvased in
@@ -148,4 +150,90 @@ export const SummaryOpenDark: Story = {
   globals: { theme: "dark" },
   render: board,
   play: openSummary,
+};
+
+// A column's own read, as the board's foot draws it under that column's cards.
+const settled: StageColumnRead = {
+  deals: [],
+  isPending: false,
+  isError: false,
+  error: null,
+  refetch: () => undefined,
+  hasNextPage: false,
+  isFetchingNextPage: false,
+  fetchNextPage: () => undefined,
+  loadMoreError: null,
+};
+
+const discovery: BoardMoneyColumn = {
+  stage: "discovery",
+  label: "Discovery",
+  probabilityPct: 20,
+  rawMinor: 2_400_000,
+  weightedMinor: 480_000,
+  currency: "EUR",
+  count: 7,
+  deals: [],
+};
+
+function columnStates() {
+  installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+  const reads = new Map<string, StageColumnRead>([
+    [proposal.stage, { ...settled, hasNextPage: true }],
+    [
+      discovery.stage,
+      {
+        ...settled,
+        isError: true,
+        error: new Error("The server could not answer."),
+      },
+    ],
+  ]);
+  return (
+    <StoryProviders>
+      <DealPipelineBoard
+        columns={[proposal, discovery]}
+        cardHref={(each) => `#/deals/${each.id}`}
+        zone="Europe/Berlin"
+        columnExtras={(column) => {
+          const read = reads.get(column.stage);
+          return read && <StageColumnFoot read={read} />;
+        }}
+      />
+    </StoryProviders>
+  );
+}
+
+// Proposal has more cards to read than it holds; Discovery's own read failed,
+// so it says so under its count and offers a retry. Each column pages alone.
+const columnStatesPlay: Story["play"] = async ({ canvasElement }) => {
+  const proposalColumn = canvasElement.querySelector<HTMLElement>(
+    '[data-stage="proposal"]',
+  );
+  const discoveryColumn = canvasElement.querySelector<HTMLElement>(
+    '[data-stage="discovery"]',
+  );
+  if (!proposalColumn || !discoveryColumn) {
+    throw new Error("the board drew no Proposal or Discovery column");
+  }
+  await expect(
+    within(proposalColumn).getByRole("button", { name: "Load more" }),
+  ).toBeVisible();
+  await expect(within(discoveryColumn).getByRole("alert")).toBeVisible();
+  await expect(
+    within(discoveryColumn).getByRole("button", { name: "Retry" }),
+  ).toBeVisible();
+  await expect(
+    within(discoveryColumn).queryByRole("button", { name: "Load more" }),
+  ).toBeNull();
+};
+
+export const ColumnMoreAndFailed: Story = {
+  render: columnStates,
+  play: columnStatesPlay,
+};
+export const ColumnMoreAndFailedDark: Story = {
+  globals: { theme: "dark" },
+  render: columnStates,
+  play: columnStatesPlay,
 };

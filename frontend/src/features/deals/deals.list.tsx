@@ -25,9 +25,11 @@ import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
 import { maskRefusedDialOf } from "../../lib/dealranges";
 import {
+  type DealFilters,
   totalsRefusedBecause,
   totalsWithheldBecause,
   useDeals,
+  useStageColumns,
   useStageTotals,
 } from "../../lib/deals.queries";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
@@ -59,7 +61,7 @@ import {
   useAdvanceDeal,
   useBoardInteractions,
 } from "./deals.board";
-import { dealColumns } from "./deals.columns";
+import { boardDealCount, dealColumns } from "./deals.columns";
 import { partnerFields, usePartnerOptions } from "./deals.fields";
 import {
   DealViewTools,
@@ -201,6 +203,23 @@ function DealCreateAction({
   );
 }
 
+// Each surface reads only while it shows, so neither pays for the other.
+function useSurfaceReads(
+  f: DealFilters,
+  stages: readonly Stage[],
+  view: "board" | "table",
+  refused: boolean,
+) {
+  const dealsQuery = useDeals(f, view === "table" && !refused);
+  const stageColumns = useStageColumns(
+    f,
+    stages.map((stage) => stage.id),
+    view === "board" && !refused,
+  );
+  const readError = view === "board" ? stageColumns.error : dealsQuery.error;
+  return { dealsQuery, stageColumns, readError };
+}
+
 export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -255,14 +274,19 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  const dealsQuery = useDeals(dealFilters, !roleRefusal);
+  const { dealsQuery, stageColumns, readError } = useSurfaceReads(
+    dealFilters,
+    stages,
+    view,
+    Boolean(roleRefusal),
+  );
   // A dial the role's mask refused, which a current snapshot would have
   // withheld. Reading /me again withholds it and the list reloads without it.
-  const maskRefused = maskRefusedDialOf(dealsQuery.error);
+  const maskRefused = maskRefusedDialOf(readError);
   useReReadMeWhen(Boolean(maskRefused));
   const refusal = nameRefusal([...refusedDials, maskRefused]);
   // The board's column totals: a per-stage server aggregate over every
-  // matching deal, not only the capped page useDeals fetches. Built from the
+  // matching deal, not only the pages the columns have read. Built from the
   // same filter dials, so cards and totals agree on which deals are in view.
   const stageTotalsQuery = useStageTotals(dealFilters, !roleRefusal);
   // The same answer the query keys its `enabled` on, so the column explains the
@@ -282,9 +306,6 @@ export function DealsScreen({
   const advance = useAdvanceDeal();
 
   const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
-  // Every page walked so far, in one list. The board draws its columns from
-  // this and the table renders it directly, so both surfaces grow together as
-  // the reader asks for more.
   const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
     (page) => page.data,
   );
@@ -294,8 +315,6 @@ export function DealsScreen({
   const selectedRows = loadedDeals.filter((deal) => selected.has(deal.id));
   const liveSelection = new Set(selectedRows.map((deal) => deal.id));
 
-  // The table's own dials over the same keyset walk the board reads, so
-  // "load more" on either surface advances both.
   const dealsListState: ListState<Deal> = {
     rows: loadedDeals,
     query,
@@ -315,7 +334,12 @@ export function DealsScreen({
   const openStages = stages.filter((stage) => stage.semantic === "open");
 
   const { openDeal, cardDragHandlers, columnDropHandlers } =
-    useBoardInteractions({ stages, loadedDeals, advance, setPending });
+    useBoardInteractions({
+      stages,
+      loadedDeals: stageColumns.deals,
+      advance,
+      setPending,
+    });
 
   // Shared between the board and the table surface: whichever view is
   // showing, the action lives in the surface's own header, not a wrap sibling.
@@ -371,24 +395,27 @@ export function DealsScreen({
     t,
   });
 
+  const boardCount = boardDealCount(
+    stages,
+    stageTotalsQuery.data,
+    stageColumns.deals,
+  );
+
   // The board is the surface's alternate body, not a surface of its own. The
-  // saved views, the chips and the archived toggle all describe the one query
-  // both views read. A board that replaced the surface would take them along,
+  // saved views, the chips and the archived toggle all describe the one set of
+  // dials both views read. A board that replaced the surface would take them along,
   // leaving a narrowed pipeline with nothing saying what narrowed it.
   //
-  // It carries its own continuation control, because `bodyOwnsPaging` withholds
-  // the surface's. That belongs to the paged grid this body does not draw, and
-  // the board holds every card loaded so far at once. Its count still goes to
-  // the surface's head (`bodyCount`). A reader looks for how much is here beside
+  // Each column carries its own "Load more"; `bodyOwnsPaging` withholds the
+  // grid's pager. The count goes to the surface's head (`bodyCount`), beside
   // the page's name; under the toolbar it would read as a caption on the dials.
   const boardBody =
     view === "board" && !refusal ? (
       <DealBoardBody
-        dealsQuery={dealsQuery}
+        stageColumns={stageColumns}
         pipelinesQuery={pipelinesQuery}
         effectivePipeline={effectivePipeline}
         dealFilters={dealFilters}
-        loadedDeals={loadedDeals}
         stageTotalsQuery={stageTotalsQuery}
         totalsWithheld={totalsWithheld}
         companies={companiesQuery.data?.data ?? []}
@@ -419,10 +446,10 @@ export function DealsScreen({
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
         bodyCount={
-          view === "board" &&
-          dealsQuery.data &&
-          translatePlural(locale, "board.count", loadedDeals.length, {
-            count: formatNumber(loadedDeals.length, locale),
+          boardBody !== undefined &&
+          !stageColumns.isPending &&
+          translatePlural(locale, "board.count", boardCount, {
+            count: formatNumber(boardCount, locale),
           })
         }
         // The pipeline picker is screen state, not a filter, so switching it

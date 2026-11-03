@@ -349,9 +349,17 @@ export const pipelines = page([
   },
 ]);
 
-// The board reads the list, so the list shows the writes the detail shows.
-export const listDeals: Handler = ({ json }, { dealPatches }) =>
-  json(page(deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] }))));
+// The board reads the list, so the list shows the writes the detail shows. A
+// board column asks for one stage, and the server answers only that stage.
+export const listDeals: Handler = ({ json, url }, { dealPatches }) => {
+  const stageId = url.searchParams.get("stage_id");
+  const current = deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] }));
+  return json(
+    page(
+      stageId ? current.filter((deal) => deal.stage_id === stageId) : current,
+    ),
+  );
+};
 
 const winEvidenceRequired = {
   title: "Unprocessable",
