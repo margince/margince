@@ -202,7 +202,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	publicEdge := publicForms(srv.webFormsHandlers, newPublicFormLimiters())(
 		publicConfirm(newPublicConfirmLimiters())(
 			publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
-				publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
+				publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
 					publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
 						extensionEdge(srv, log)(api),
 					),

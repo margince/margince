@@ -15,6 +15,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate, useRoute } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import type { AnalyticsScope } from "./analytics.context";
+import { InitiativeReports } from "./reporting.initiatives";
 import { executionLabel } from "./reporting.model";
 import { useReportingPages } from "./reporting.pagination";
 import { PreparedReports } from "./reporting.preparedpanel";
@@ -62,6 +63,7 @@ export function ReportingLibrary({
   return (
     <>
       <ProductReports />
+      <InitiativeReports />
       {scope && (
         <PreparedReports
           scope={{

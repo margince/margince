@@ -3770,6 +3770,7 @@ public.deal.company_id uuid gen=- def=-
 public.deal.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.currency currency_code gen=- def=-
 public.deal.deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES deal_acquisition_source(key) ON UPDATE RESTRICT ON DELETE RESTRICT
+public.deal.deal_amount_minor_base_js_safe CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
 public.deal.deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal.deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES offer(deal_id, id) ON DELETE SET NULL
 public.deal.deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL)))
@@ -7479,6 +7480,71 @@ public.runner_job.status text NOT NULL gen=- def='queued'::text
 public.runner_job.trigger_ref text NOT NULL gen=- def=-
 public.runner_job_pkey CREATE UNIQUE INDEX runner_job_pkey ON public.runner_job USING btree (id)
 public.runner_job_trigger_unique CREATE UNIQUE INDEX runner_job_trigger_unique ON public.runner_job USING btree (agent_spec, trigger_ref)
+public.sales_initiative acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative.archived_at timestamp with time zone gen=- def=-
+public.sales_initiative.captured_by text NOT NULL gen=- def=-
+public.sales_initiative.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative.deadline date NOT NULL gen=- def=-
+public.sales_initiative.deal_rule jsonb gen=- def=-
+public.sales_initiative.description text gen=- def=-
+public.sales_initiative.id uuid NOT NULL gen=- def=uuidv7()
+public.sales_initiative.include_future boolean NOT NULL gen=- def=true
+public.sales_initiative.launch_at timestamp with time zone gen=- def=-
+public.sales_initiative.lead_rule jsonb gen=- def=-
+public.sales_initiative.name text NOT NULL gen=- def=-
+public.sales_initiative.objective_metric text NOT NULL gen=- def=-
+public.sales_initiative.owner_id uuid NOT NULL gen=- def=-
+public.sales_initiative.sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL)))
+public.sales_initiative.sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.sales_initiative.sales_initiative_owner_id_retirement_guard CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
+public.sales_initiative.sales_initiative_pkey PRIMARY KEY (id)
+public.sales_initiative.sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text])))
+public.sales_initiative.sales_initiative_target_value_check CHECK (((target_value IS NULL) OR (target_value > 0)))
+public.sales_initiative.sales_initiative_target_value_exact CHECK (((target_value >= '-9007199254740991'::bigint) AND (target_value <= '9007199254740991'::bigint)))
+public.sales_initiative.sales_initiative_version_exact CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.sales_initiative.source text NOT NULL gen=- def=-
+public.sales_initiative.status text NOT NULL gen=- def='draft'::text
+public.sales_initiative.target_value bigint gen=- def=-
+public.sales_initiative.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative.version bigint NOT NULL gen=- def=1
+public.sales_initiative_baseline acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative_baseline.amount_minor_base bigint gen=- def=-
+public.sales_initiative_baseline.captured_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative_baseline.deal_id uuid NOT NULL gen=- def=-
+public.sales_initiative_baseline.initiative_id uuid NOT NULL gen=- def=-
+public.sales_initiative_baseline.sales_initiative_baseline_amount_exact CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
+public.sales_initiative_baseline.sales_initiative_baseline_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.sales_initiative_baseline.sales_initiative_baseline_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES sales_initiative(id) ON DELETE CASCADE
+public.sales_initiative_baseline.sales_initiative_baseline_pkey PRIMARY KEY (initiative_id, deal_id)
+public.sales_initiative_baseline.stage_id uuid gen=- def=-
+public.sales_initiative_baseline.status text NOT NULL gen=- def=-
+public.sales_initiative_baseline_pkey CREATE UNIQUE INDEX sales_initiative_baseline_pkey ON public.sales_initiative_baseline USING btree (initiative_id, deal_id)
+public.sales_initiative_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative_member.captured_by text NOT NULL gen=- def=-
+public.sales_initiative_member.entered_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative_member.initiative_id uuid NOT NULL gen=- def=-
+public.sales_initiative_member.reason text NOT NULL gen=- def=-
+public.sales_initiative_member.record_id uuid NOT NULL gen=- def=-
+public.sales_initiative_member.record_type text NOT NULL gen=- def=-
+public.sales_initiative_member.sales_initiative_member_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES sales_initiative(id) ON DELETE CASCADE
+public.sales_initiative_member.sales_initiative_member_pkey PRIMARY KEY (initiative_id, record_type, record_id)
+public.sales_initiative_member.sales_initiative_member_reason_check CHECK ((reason = ANY (ARRAY['picked'::text, 'excluded'::text])))
+public.sales_initiative_member.sales_initiative_member_type_check CHECK ((record_type = ANY (ARRAY['lead'::text, 'deal'::text])))
+public.sales_initiative_member_pkey CREATE UNIQUE INDEX sales_initiative_member_pkey ON public.sales_initiative_member USING btree (initiative_id, record_type, record_id)
+public.sales_initiative_member_record_idx CREATE INDEX sales_initiative_member_record_idx ON public.sales_initiative_member USING btree (record_type, record_id)
+public.sales_initiative_pkey CREATE UNIQUE INDEX sales_initiative_pkey ON public.sales_initiative USING btree (id)
+public.sales_initiative_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.sales_initiative_revision.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.sales_initiative_revision.created_by text NOT NULL gen=- def=-
+public.sales_initiative_revision.definition jsonb NOT NULL gen=- def=-
+public.sales_initiative_revision.initiative_id uuid NOT NULL gen=- def=-
+public.sales_initiative_revision.reason text gen=- def=-
+public.sales_initiative_revision.revision bigint NOT NULL gen=- def=-
+public.sales_initiative_revision.sales_initiative_revision_exact CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+public.sales_initiative_revision.sales_initiative_revision_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES sales_initiative(id) ON DELETE CASCADE
+public.sales_initiative_revision.sales_initiative_revision_pkey PRIMARY KEY (initiative_id, revision)
+public.sales_initiative_revision_pkey CREATE UNIQUE INDEX sales_initiative_revision_pkey ON public.sales_initiative_revision USING btree (initiative_id, revision)
+public.sales_initiative_status_idx CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status) WHERE (archived_at IS NULL)
 public.sales_target acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.sales_target.created_at timestamp with time zone NOT NULL gen=- def=-
 public.sales_target.id uuid NOT NULL gen=- def=-

@@ -122,6 +122,7 @@ export function useOverviewFilters(
   const setCloseWindow = (value: string) => replaceDial("close", value);
   const dimensions: Dimensions = {
     product_id: params.get("product") || undefined,
+    initiative_id: params.get("initiative") || undefined,
     country: params.get("country") || undefined,
     industry: params.get("industry") || undefined,
     value_basis:
@@ -133,6 +134,7 @@ export function useOverviewFilters(
     const dials = new Map(currentParams());
     const pairs: [string, string | undefined][] = [
       ["product", next.product_id],
+      ["initiative", next.initiative_id],
       ["country", next.country],
       ["industry", next.industry],
       ["basis", next.value_basis === "all" ? undefined : next.value_basis],
@@ -164,12 +166,13 @@ export function useOverviewFilters(
 /** The dials that narrow a report to a product or a market. */
 export type Dimensions = Pick<
   ReportingSelection,
-  "product_id" | "country" | "industry" | "value_basis"
+  "product_id" | "initiative_id" | "country" | "industry" | "value_basis"
 >;
 
 export function dimensionsOf(selection: ReportingSelection): Dimensions {
   return {
     product_id: selection.product_id,
+    initiative_id: selection.initiative_id,
     country: selection.country,
     industry: selection.industry,
     value_basis: selection.value_basis,
@@ -179,6 +182,7 @@ export function dimensionsOf(selection: ReportingSelection): Dimensions {
 function sameDimensions(a: Dimensions, b: Dimensions): boolean {
   return (
     a.product_id === b.product_id &&
+    a.initiative_id === b.initiative_id &&
     a.country === b.country &&
     a.industry === b.industry &&
     (a.value_basis ?? "all") === (b.value_basis ?? "all")

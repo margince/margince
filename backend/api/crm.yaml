@@ -6770,6 +6770,152 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /analytics/initiatives:
+    get:
+      tags: [Reports]
+      operationId: listSalesInitiatives
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The sales initiatives a reader may open, drafts and live ones.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, live, ended] }
+      responses:
+        '200':
+          description: The initiatives.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiativeListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Reports]
+      operationId: createSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Define a sales initiative as a draft. Nothing is enrolled until it is launched.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesInitiativeInput' }
+      responses:
+        '201':
+          description: The draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Reports]
+      operationId: getSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: One sales initiative.
+      responses:
+        '200':
+          description: The initiative.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Reports]
+      operationId: updateSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Change an initiative's definition. A live initiative keeps its baseline.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesInitiativeInput' }
+      responses:
+        '200':
+          description: The initiative after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives/{id}/launch:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Reports]
+      operationId: launchSalesInitiative
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Launch a draft. The member deals of this moment become the frozen baseline.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: The live initiative.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiative' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /analytics/initiatives/{id}/members:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Reports]
+      operationId: listSalesInitiativeMembers
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The leads and deals that belong, each with why, under the reader's own row scope.
+      parameters:
+        - name: record_type
+          in: query
+          schema: { type: string, enum: [lead, deal] }
+      responses:
+        '200':
+          description: The members.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiativeMembers' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    put:
+      tags: [Reports]
+      operationId: replaceSalesInitiativeMembers
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Set the picked and the excluded records. An exclusion stands over a rule match.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesInitiativeMembersInput' }
+      responses:
+        '200':
+          description: The members after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesInitiativeMembers' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   # ---------------------------- /projects -----------------------------------
   /projects:
     get:
@@ -9908,6 +10054,36 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PublicSchedulingProfile' }
+  /public/booking/{host_slug}/preview:
+    parameters:
+      - { name: host_slug, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Public]
+      operationId: getPublicBookingPreview
+      security: []
+      summary: Read the link-preview card for a host's public booking page.
+      description: |
+        The web tier redirects a non-browser fetch of `/book/{host_slug}` here, so a link
+        preview reads the page without running the app. The HTML carries the host's name,
+        company, meeting title and duration as escaped title, description, Open Graph and
+        Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
+        address on the configured public origin, and are omitted when no usable origin is
+        configured. The company logo is the card image when there is one; otherwise the card
+        has no image. A paused page answers generic metadata that names no host. A missing
+        or revoked page answers 404 with no host metadata. Responses are `no-store` and
+        `noindex`. HEAD is answered like GET without a body. The page links to the booking
+        app, and no guest details or tokens appear in it.
+      responses:
+        '200':
+          description: Booking page card, or generic metadata for a paused page.
+          content:
+            text/html:
+              schema: { type: string }
+        default:
+          description: The page is missing, revoked or unavailable; the HTML names no host.
+          content:
+            text/html:
+              schema: { type: string }
   /public/meeting/{token}:
     parameters:
       - { name: token, in: path, required: true, schema: { type: string } }
@@ -14032,6 +14208,11 @@ paths:
         required: false
         schema:
           $ref: '#/components/schemas/ReportingValueBasis'
+      - &dimInitiative
+        name: initiative_id
+        in: query
+        required: false
+        schema: *id001
   /analytics/evidence:
     get:
       tags:
@@ -14086,6 +14267,7 @@ paths:
       - *dimCountry
       - *dimIndustry
       - *dimValueBasis
+      - *dimInitiative
       - name: metric
         in: query
         required: true
@@ -49041,6 +49223,97 @@ components:
             enum: [contacts, deals, signal_route, our_side]
         signal_route: { $ref: '#/components/schemas/CompanyGraphSignalRoute' }
 
+    # ---- Sales initiatives ----
+    SalesInitiativeStatus:
+      type: string
+      enum: [draft, live, ended]
+    SalesInitiativeRule:
+      type: object
+      additionalProperties: true
+      description: >-
+        A predicate tree in the record type's list vocabulary, the same tree a dynamic list's
+        definition carries. Untyped here for the reason that definition is: the predicate engine
+        is the grammar's authority and answers a precise 422.
+    SalesInitiative:
+      type: object
+      required: [id, name, owner_id, objective_metric, deadline, status, include_future, version, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        owner_id: { type: string, format: uuid }
+        objective_metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: [integer, 'null'], format: int64, description: 'The objective, in the metric''s unit; null is tracking only.' }
+        deadline: { type: string, format: date }
+        status: { $ref: '#/components/schemas/SalesInitiativeStatus' }
+        launch_at: { type: [string, 'null'], format: date-time }
+        lead_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        deal_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        include_future: { type: boolean, description: Whether records that match a rule later join on their own. }
+        version: { $ref: '#/components/schemas/RowVersion' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+      additionalProperties: false
+    SalesInitiativeListResponse:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/SalesInitiative' } }
+      additionalProperties: false
+    SalesInitiativeInput:
+      type: object
+      required: [name, objective_metric, deadline]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 4000 }
+        owner_id: { type: [string, 'null'], format: uuid, description: Defaults to the caller. }
+        objective_metric: { $ref: '#/components/schemas/ReportingMetricID' }
+        target_value: { type: [integer, 'null'], format: int64, minimum: 1 }
+        deadline: { type: string, format: date }
+        lead_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        deal_rule: { $ref: '#/components/schemas/SalesInitiativeRule' }
+        include_future: { type: boolean }
+        reason: { type: [string, 'null'], maxLength: 500, description: Why a live initiative's definition changed. }
+      additionalProperties: false
+    SalesInitiativeMemberRef:
+      type: object
+      required: [record_type, record_id]
+      properties:
+        record_type: { type: string, enum: [lead, deal] }
+        record_id: { type: string, format: uuid }
+      additionalProperties: false
+    SalesInitiativeMember:
+      type: object
+      required: [record_type, record_id, label, reason, included]
+      properties:
+        record_type: { type: string, enum: [lead, deal] }
+        record_id: { type: string, format: uuid }
+        label: { type: string }
+        company_label: { type: [string, 'null'] }
+        reason: { type: string, enum: [rule, picked, carried, excluded], description: '`carried` is a deal promoted from a member lead.' }
+        included: { type: boolean }
+        status: { type: [string, 'null'] }
+        amount_minor_base: { type: [integer, 'null'], format: int64 }
+        created_at: { type: [string, 'null'], format: date-time }
+      additionalProperties: false
+    SalesInitiativeMembers:
+      type: object
+      required: [data, leads, deals, companies, truncated]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/SalesInitiativeMember' } }
+        leads: { type: integer }
+        deals: { type: integer }
+        companies: { type: integer, description: Distinct companies behind the included records. }
+        truncated: { type: boolean, description: A rule matched more records than one read lists. }
+      additionalProperties: false
+    SalesInitiativeMembersInput:
+      type: object
+      required: [picked, excluded]
+      properties:
+        picked: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SalesInitiativeMemberRef' } }
+        excluded: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SalesInitiativeMemberRef' } }
+      additionalProperties: false
+
     # ---- Deal products ----
     DealProduct:
       type: object
@@ -56074,7 +56347,7 @@ components:
             column's nullability, and `exists` is how a filter asks about that.
         references:
           type: string
-          enum: [tag, app_user, team, company, pipeline, stage, project]
+          enum: [tag, app_user, team, company, pipeline, stage, project, product]
           description: |
             The record type this field's ids point at — present for every `id`
             field, absent for every other type. Offer the record rather than a
@@ -56394,6 +56667,8 @@ components:
       - stage_conversion
       - lead_cohort_outcomes
       - bookings_mix
+      - qualified_opportunities_created
+      - initiative_pipeline
     ReportingBlockKind:
       type: string
       description: |
@@ -56702,6 +56977,9 @@ components:
     ReportingProductId:
       type: string
       format: uuid
+    ReportingInitiativeId:
+      type: string
+      format: uuid
     ReportingCountry:
       type: string
       pattern: '^[A-Z]{2}$'
@@ -56753,6 +57031,8 @@ components:
           - all_open
         product_id:
           allOf: [{ $ref: '#/components/schemas/ReportingProductId' }]
+        initiative_id:
+          allOf: [{ $ref: '#/components/schemas/ReportingInitiativeId' }]
         country:
           $ref: '#/components/schemas/ReportingCountry'
         industry:
@@ -56964,6 +57244,11 @@ components:
           allOf: [{ $ref: '#/components/schemas/ReportingProductId' }]
         product_label:
           type: string
+        initiative_id:
+          allOf: [{ $ref: '#/components/schemas/ReportingInitiativeId' }]
+        initiative_label:
+          type: string
+        initiative_launch_at: *id001
         country:
           $ref: '#/components/schemas/ReportingCountry'
         industry:
@@ -60559,7 +60844,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative]
 
     RbacAction:
       type: string

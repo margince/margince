@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -106,9 +105,10 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 	})
 	profile.HostName = &name
 
-	if err == nil && profile.Slug != nil && s.publicOriginUsable() == nil {
-		link := strings.TrimRight(s.publicBaseURL, "/") + "/#/book/" + url.PathEscape(*profile.Slug)
-		profile.PublicUrl = &link
+	if err == nil && profile.Slug != nil {
+		if link, ok := s.publicBookingURL(*profile.Slug); ok {
+			profile.PublicUrl = &link
+		}
 	}
 	return profile, err
 }
