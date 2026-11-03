@@ -764,6 +764,11 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 		Details struct {
 			ReviewID         string   `json:"review_id"`
 			AvailableActions []string `json:"available_actions"`
+			Refusals         []struct {
+				Address    string `json:"address"`
+				ReasonCode string `json:"reason_code"`
+				Category   string `json:"category"`
+			} `json:"refusals"`
 		} `json:"details"`
 	}
 	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
@@ -800,6 +805,15 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 		t.Errorf("the refusal offers %v, want exactly [direct_send] — a rep who may overrule the "+
 			"engine is offered the send, not a note asking somebody else to",
 			problem.Details.AvailableActions)
+	}
+	// The engine's own reason per address, so the composer says why this
+	// recipient stopped instead of one consent sentence for every refusal.
+	if len(problem.Details.Refusals) != 1 ||
+		problem.Details.Refusals[0].Address != "subject@consent.test" ||
+		problem.Details.Refusals[0].ReasonCode != "no_marketing_consent" ||
+		problem.Details.Refusals[0].Category != "marketing" {
+		t.Errorf("the refusal names %+v, want subject@consent.test refused for no_marketing_consent under marketing",
+			problem.Details.Refusals)
 	}
 }
 

@@ -66,8 +66,10 @@ type CreateOfferInput struct {
 	// resolves into a locale; unset falls back to de-DE (the
 	// offer_template package default), never a blank column.
 	TemplateID *ids.OfferTemplateID
-	LineItems  []OfferLineInputRow
-	Source     string
+	// LegalEntityID names the issuing entity; unset is the author's.
+	LegalEntityID *ids.LegalEntityID
+	LineItems     []OfferLineInputRow
+	Source        string
 }
 
 func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOfferInput) (crmcontracts.Offer, error) {
@@ -81,17 +83,20 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 
 	var out crmcontracts.Offer
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = createOfferTx(ctx, tx, dealID, in, by)
+		entity, err := s.offerEntity(ctx, tx, in.LegalEntityID)
+		if err != nil {
+			return err
+		}
+		out, err = createOfferTx(ctx, tx, dealID, in, entity, by)
 		return err
 	})
 	return out, err
 }
 
 // createOfferTx resolves the buyer company, mints the offer number, inserts
-// the offer and its lines, derives the totals, and runs the write shape —
-// all inside the caller's transaction.
-func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, by string) (crmcontracts.Offer, error) {
+// the offer and its lines, derives the totals, and runs the write shape. All
+// of it runs inside the caller's transaction. entity is the issuing legal entity.
+func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, entity ids.LegalEntityID, by string) (crmcontracts.Offer, error) {
 	wsID := storekit.MustWorkspace(ctx)
 	var err error
 	in, err = admitOfferCreation(ctx, tx, dealID, in)
@@ -107,10 +112,11 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	id := ids.New[ids.OfferKind]()
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
-		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by)
-		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11)`,
+		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by,
+		                    legal_entity_id)
+		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		id, dealID, number, in.Currency, in.BuyerCompanyID, in.ValidUntil, in.IntroText, in.TermsText,
-		in.TemplateID, in.Source, by); err != nil {
+		in.TemplateID, in.Source, by, entity); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
 	if err := insertOfferLines(ctx, tx, id, in.Currency, in.LineItems); err != nil {
@@ -378,14 +384,15 @@ type UpdateOfferInput struct {
 	IntroText      *string
 	TermsText      *string
 	TemplateID     *ids.OfferTemplateID
+	LegalEntityID  *ids.LegalEntityID
 	// Clear are the fields the caller sent as an explicit null, which is a
 	// request to empty them rather than to leave them alone.
 	Clear     []string
 	IfVersion *int64
 }
 
-// UpdateOffer also answers the rendering a buyer change retired, nil when none
-// was, so the caller can reclaim an object the committed row no longer names.
+// UpdateOffer also answers the rendering a buyer or issuer change retired, nil
+// when none was. The caller reclaims the object the committed row no longer names.
 func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferInput) (crmcontracts.Offer, *string, error) {
 	if err := auth.Require(ctx, "offer", principal.ActionUpdate); err != nil {
 		return crmcontracts.Offer{}, nil, err
@@ -411,6 +418,20 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		p, dropped, err := offerHeaderPatch(ctx, tx, current, in)
 		if err != nil {
 			return err
+		}
+		if in.LegalEntityID != nil {
+			entity, err := s.offerEntity(ctx, tx, in.LegalEntityID)
+			if err != nil {
+				return err
+			}
+			// Naming the entity the draft already names is no edit. Another
+			// issuer retires the rendering, which prints the old one.
+			if current.LegalEntityId == nil || ids.UUID(*current.LegalEntityId) != entity.UUID {
+				p.Set("legal_entity_id", current.LegalEntityId, entity)
+				if dropped == nil {
+					dropped = retireRendering(p, current)
+				}
+			}
 		}
 		if p.Empty() {
 			if err := storekit.EnsureIfMatch(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {

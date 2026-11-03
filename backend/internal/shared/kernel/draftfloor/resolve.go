@@ -84,8 +84,8 @@ func (r *Resolver) WithUserLanguage(user UserLanguage) *Resolver {
 	return r
 }
 
-// WithClock replaces the clock, so a test states the date its case is about.
-func (r *Resolver) WithClock(now Clock) *Resolver {
+// SetClock replaces the clock, so a test states the date its case is about.
+func (r *Resolver) SetClock(now Clock) *Resolver {
 	if now != nil {
 		r.now = now
 	}

@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import type { LegalEntity } from "../../lib/legalentities.queries";
 import { StoryProviders } from "../../testing/story-utils";
-import type { LegalEntity } from "./legalentities.queries";
 import { MemberEntity } from "./users-entitycell";
 
 // One member's legal entity on the roster, as a name at rest. An admin who may
@@ -46,7 +46,7 @@ function cell(current: string, canAssign: boolean) {
 }
 
 const meta = {
-  title: "Settings/Members/Legal entity picker",
+  title: "Settings/People/Members/Legal entity picker",
   component: MemberEntity,
   args: {
     member: DANA,
