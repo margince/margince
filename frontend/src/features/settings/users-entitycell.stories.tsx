@@ -46,7 +46,7 @@ function cell(current: string, canAssign: boolean) {
 }
 
 const meta = {
-  title: "Settings/Members/Legal entity picker",
+  title: "Settings/People/Members/Legal entity picker",
   component: MemberEntity,
   args: {
     member: DANA,
