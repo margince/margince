@@ -540,7 +540,7 @@ jobs:
 
   # The composed-build lane (ADR-0120): materialize the walking-skeleton
   # reference extension into extensions/, compose, and run the backend
-  # build + unit lane against the composed workspace — the continuous
+  # build + cached unit lane against the composed workspace — the continuous
   # proof that an enabled extension composes without touching an
   # upstream-owned file, plus the extension's own test lane the way a
   # fork's CI would run it. deterministic-gates covers the vanilla
@@ -557,15 +557,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # Full history: this job runs the backend unit lane, which includes
-          # rbacbaselineerafixture_test.go. That gate derives the RBAC
-          # composition arm's pre-state by reading the migration baseline
-          # commit, and pins the committed fixture to it — a pre-state the
-          # migration replay seeds from, so it must not be hand-editable. They
-          # FAIL on a shallow checkout rather than degrading to an empty cohort,
-          # because a gate that quietly checks nothing looks exactly like a
-          # passing one.
-          fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
@@ -598,9 +589,13 @@ jobs:
       - name: Enable the reference extension
         working-directory: .
         run: cp -R fixtures/extensions/crm-hello extensions/
+      # test-cached, not test: the uncached packages (./gates above all) read
+      # fixtures/extensions/ in deterministic-gates already, so a copy under
+      # extensions/ shows them nothing new; a defect planted in the fixture
+      # fails the same gates with the copy or without it.
       - name: Composed build + unit lane
         working-directory: .
-        run: make -C backend build test check-composition
+        run: make -C backend build test-cached check-composition
       # Tree-derived: every enabled unit's own module lane (the committed
       # first-party extensions AND the copied-in reference fixture). The
       # same run emits the merged coverage profile the sonarcloud job
