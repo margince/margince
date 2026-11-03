@@ -202,6 +202,18 @@ export function useTooltip<T extends HTMLElement = HTMLElement>(
 }
 
 /**
+ * The exact reading behind a rounded figure, on hover and on focus.
+ *
+ * Always worth showing, and the anchor takes a tab stop. A figure is not a
+ * control, so without one the exact amount is reachable by pointer only.
+ */
+export function useDetailTooltip<T extends HTMLElement = HTMLElement>(
+  text: string,
+): Tooltip<T> {
+  return useTip<T>(text, always, true);
+}
+
+/**
  * Escape hides the tip wherever focus sits (WCAG 2.2 SC 1.4.13). Captured on
  * the window: a layer under the tip opened first and would hear Escape first.
  */
@@ -296,7 +308,16 @@ function useTip<T extends HTMLElement>(
   const revealForFocus = useCallback(() => reveal("focus"), [reveal]);
   // Pointer reveal waits for intent; focus does not. A reader who tabbed here
   // has said what they want outright, and there is no pointer to measure.
-  const hover = useHoverIntent(revealForPointer, close, { ownsState: true });
+  // A tip the anchor's focus still asks for outlasts the pointer leaving it;
+  // blur or Escape closes it instead.
+  const closeForPointer = useCallback(() => {
+    if (!anchor.current?.contains(document.activeElement)) {
+      setOpen(false);
+    }
+  }, []);
+  const hover = useHoverIntent(revealForPointer, closeForPointer, {
+    ownsState: true,
+  });
   useEscapeDismisses(open, anchor, raisedBy, close);
 
   return {

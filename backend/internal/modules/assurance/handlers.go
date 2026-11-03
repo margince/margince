@@ -228,6 +228,9 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		// which is a different claim from "nothing was tried".
 		Sources:   CoverageToWire(coverage),
 		Freshness: FreshnessToWire(run.Freshness),
+		ReviewDeliveries: crmcontracts.AssuranceReviewDeliveries{
+			Pending: run.Deliveries.Pending, Failed: run.Deliveries.Failed, Delivered: run.Deliveries.Delivered,
+		},
 	}
 	if run.EligibleSignals > 0 {
 		signals := run.EligibleSignals
