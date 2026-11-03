@@ -13153,7 +13153,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.candidate.applyHint":
     "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, behalte deinen aktuellen Schreibstil und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
   "voice.candidate.firstHint":
-    "Wenn diese Version nach dir klingt, verwende sie. Wenn nicht, verwirf sie und füge weitere Schreibproben hinzu. Der nächste Aufbau lernt aus diesen Schreibproben.",
+    "Wenn diese Version nach dir klingt, verwende sie. Die Einrichtung ist fertig, sobald du eine Version verwendest. Wenn nicht, verwirf sie, füge weitere Schreibproben hinzu und baue neu auf. Der nächste Aufbau lernt aus diesen Schreibproben.",
   "voice.candidate.reason.uncomparable":
     "Das vorherige Stimmprofil konnte nicht verglichen werden. Prüfe diese Version, bevor du es ersetzt.",
   "voice.candidate.reason.identity":
@@ -14617,7 +14617,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.caption.waitsAdmin": "Wartet auf einen Admin.",
   "setup.caption.mailReconnect": "Verbindung abgelaufen.",
   "setup.caption.calendarReconnect": "Abgelaufen oder kann nicht buchen.",
-  "setup.caption.voice": "Braucht 800 eigene Wörter.",
+  "setup.caption.voice": "Braucht noch etwa {n} eigene Wörter.",
+  "setup.caption.voiceSamples": "Braucht eigene Schreibproben.",
+  "setup.caption.voiceReview":
+    "Dein Schreibstil ist trainiert und wartet auf deine Prüfung.",
+  "setup.caption.voiceBuilding":
+    "Dein Schreibstil wird aufgebaut. Das läuft weiter, auch wenn du die Seite verlässt.",
+  "setup.caption.voiceDeferred":
+    "Der Aufbau deines Schreibstils wartet auf den Start.",
+  "setup.caption.voiceFailed": "Der letzte Aufbau wurde nicht fertig.",
+  "setup.caption.voiceReady": "Deine Schreibproben reichen für den Aufbau.",
+  "setup.caption.voiceUnknown": "Dein Schreibstil konnte nicht geprüft werden.",
+  "setup.action.voiceReview": "Schreibstil prüfen",
+  "setup.action.voiceProgress": "Fortschritt ansehen",
+  "setup.action.voiceRetry": "Erneut versuchen",
+  "setup.action.voiceBuild": "Schreibstil aufbauen",
+  "setup.action.voiceOpen": "Schreibstil öffnen",
   "setup.caption.booking": "Kunden buchen deine freie Zeit.",
   "setup.caption.bookingNeedsCalendar": "Braucht einen Kalender.",
   "setup.reminder.progress": "Fortschritt der Einrichtung",
@@ -16638,13 +16653,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.lastRecordedExchange":
     "seit dem letzten erfassten Austausch mit diesem Kontakt",
   "contact.standing.lastInbound": "Letzte eingegangene Nachricht",
+  "contact.standing.noneAccessible": "Keine, die du öffnen kannst",
   "contact.standing.direction.twoWay": "Beide Seiten haben geschrieben.",
   "contact.standing.direction.inboundOnly":
-    "Bisher hat nur der Kontakt geschrieben. Dein Team hat noch nichts gesendet.",
+    "In den Nachrichten, die du öffnen kannst, hat nur der Kontakt geschrieben. Von deinem Team ist nichts dabei.",
   "contact.standing.direction.outboundOnly":
-    "Nur ausgehende Nachrichten deines Teams sind erfasst. Eine Antwort ist nicht erfasst.",
+    "In den Nachrichten, die du öffnen kannst, hat nur dein Team geschrieben. Eine Antwort ist nicht dabei.",
   "contact.standing.direction.none":
-    "Noch keine Nachrichten, in keiner Richtung.",
+    "Keine Nachrichten in den Daten, die du öffnen kannst.",
   "contact.subtitle.at": "bei",
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
@@ -17817,6 +17833,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.lastFromCompany": "Letzte Nachricht von diesem Unternehmen",
   "worklist.pane.lastToCompany": "Letzte Nachricht an dieses Unternehmen",
   "worklist.pane.never": "Nie",
+  "worklist.pane.noneAccessible": "Keine, die du öffnen kannst",
   "worklist.pane.company": "Unternehmen",
   "worklist.pane.role": "Rolle",
   "worklist.why.title": "Warum das Aufmerksamkeit braucht",

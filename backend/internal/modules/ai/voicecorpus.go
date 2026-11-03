@@ -40,12 +40,18 @@ const (
 	BandSharp = "sharp"
 )
 
+// FirstBuildWordsRemaining is how far a corpus is from leaving the collecting
+// maturity, so a client phrases the distance without its own threshold.
+func FirstBuildWordsRemaining(totalWords int) int {
+	return max(0, StarterVoiceWords-totalWords)
+}
+
 // Maturity is the honest build-eligibility axis from ADR-0066. It is
 // deliberately independent from corpus quality: an 800-word profile can be
 // useful and provisional while its quality band remains thin.
 func Maturity(totalWords int) string {
 	switch {
-	case totalWords < 800:
+	case totalWords < StarterVoiceWords:
 		return voiceMaturityCollecting
 	case totalWords < 4000:
 		return voiceMaturityProvisional
