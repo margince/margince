@@ -5131,6 +5131,12 @@
               "close_window": {
                 "type": "string"
               },
+              "country": {
+                "type": "string"
+              },
+              "industry": {
+                "type": "string"
+              },
               "interval": {
                 "type": "object",
                 "properties": {
@@ -5248,6 +5254,10 @@
                 "type": "string",
                 "format": "uuid"
               },
+              "product_id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "scope": {
                 "type": "object",
                 "properties": {
@@ -5267,6 +5277,9 @@
                 ]
               },
               "target_basis": {
+                "type": "string"
+              },
+              "value_basis": {
                 "type": "string"
               }
             },

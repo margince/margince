@@ -366,7 +366,7 @@ export function ProductsAdmin() {
               ? Number(values.default_tax_rate)
               : undefined,
             ...billingPatchOf(values),
-            component_kind: componentKindOf(values.component_kind),
+            component_kind: componentKindOf(values.component_kind) ?? null,
           },
         }),
       );

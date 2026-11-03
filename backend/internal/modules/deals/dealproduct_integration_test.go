@@ -138,3 +138,37 @@ func TestAManualProductSetOutlivesTheNextAcceptedOffer(t *testing.T) {
 		t.Fatal("naming one product twice was accepted")
 	}
 }
+
+// A set that adds up to more than the deal is refused, and clearing the set
+// hands the products back to the accepted offer.
+func TestAProductSetStaysInsideTheDealAndClearsBackToTheOffer(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := twoStagePipeline(t, e.configEnv)
+	ctx := e.productCtx()
+	suite := seedKindProduct(t, e, "Suite", "software")
+	price, tax := int64(100_000), "19.00"
+	offer, err := e.store.CreateOffer(ctx, dealID, CreateOfferInput{Currency: "EUR", Source: "manual", LineItems: []OfferLineInputRow{{ProductID: &suite, Quantity: "1", UnitPriceMinor: &price, TaxRate: &tax}}})
+	if err != nil {
+		t.Fatalf("seeding the offer: %v", err)
+	}
+	acceptOfferOf(t, e, offer)
+	tooMuch := int64(200_000)
+	if _, err := e.store.ReplaceDealProducts(ctx, dealID, []crmcontracts.DealProductInput{{ProductId: openapi_types.UUID(suite.UUID), AmountMinor: &tooMuch}}); err == nil {
+		t.Fatal("an allocation above the deal's own amount was accepted")
+	}
+	some := int64(40_000)
+	if _, err := e.store.ReplaceDealProducts(ctx, dealID, []crmcontracts.DealProductInput{{ProductId: openapi_types.UUID(suite.UUID), AmountMinor: &some}}); err != nil {
+		t.Fatalf("setting a product by hand: %v", err)
+	}
+	cleared, err := e.store.ReplaceDealProducts(ctx, dealID, nil)
+	if err != nil {
+		t.Fatalf("clearing the set: %v", err)
+	}
+	if len(cleared) != 1 || cleared[0].Source != "offer" || cleared[0].AmountMinor == nil || *cleared[0].AmountMinor != 100_000 {
+		t.Fatalf("clearing the set left %+v, want the offer's own allocation", cleared)
+	}
+	noProducts := humanWith(e.ws, e.admin, map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}})
+	if _, err := e.store.ListDealProducts(noProducts, dealID); err == nil {
+		t.Fatal("a reader without the product grant read the deal's products")
+	}
+}

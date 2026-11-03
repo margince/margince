@@ -53878,9 +53878,7 @@ type ReportingComparisonOperands struct {
 
 // ReportingContext defines model for ReportingContext.
 type ReportingContext struct {
-	CloseInterval *ReportingWindow `json:"close_interval,omitempty"`
-
-	// Country Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code.
+	CloseInterval     *ReportingWindow  `json:"close_interval,omitempty"`
 	Country           *ReportingCountry `json:"country,omitempty"`
 	Currency          string            `json:"currency"`
 	DefinitionVersion string            `json:"definition_version"`
@@ -53891,9 +53889,7 @@ type ReportingContext struct {
 	FrameworkRevision    int64 `json:"framework_revision"`
 
 	// Horizon The whole period the selection names, half-open: a current quarter runs to the quarter's end. `interval` is the part measured, and its `end_at` is the cutoff the actuals run through. Absent on editions captured before the field existed.
-	Horizon *ReportingWindow `json:"horizon,omitempty"`
-
-	// Industry Narrows to records whose company has this industry; a lead with no company keeps its own.
+	Horizon               *ReportingWindow     `json:"horizon,omitempty"`
 	Industry              *ReportingIndustry   `json:"industry,omitempty"`
 	Interval              ReportingWindow      `json:"interval"`
 	MemberIds             []openapi_types.UUID `json:"member_ids"`
@@ -53908,16 +53904,14 @@ type ReportingContext struct {
 	Scope         ReportingScope `json:"scope"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
-	ScopeHoldsDeals *bool            `json:"scope_holds_deals,omitempty"`
-	StateAt         time.Time        `json:"state_at"`
-	TargetInterval  *ReportingWindow `json:"target_interval,omitempty"`
-	Timezone        string           `json:"timezone"`
-
-	// ValueBasis Which allocated value money figures of won deals count: every allocation and the unallocated remainder, or the allocations of one component kind alone. Counts never change. Readers of open value answer `unsupported` for a basis other than `all`.
-	ValueBasis *ReportingValueBasis `json:"value_basis,omitempty"`
+	ScopeHoldsDeals *bool                `json:"scope_holds_deals,omitempty"`
+	StateAt         time.Time            `json:"state_at"`
+	TargetInterval  *ReportingWindow     `json:"target_interval,omitempty"`
+	Timezone        string               `json:"timezone"`
+	ValueBasis      *ReportingValueBasis `json:"value_basis,omitempty"`
 }
 
-// ReportingCountry Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code.
+// ReportingCountry defines model for ReportingCountry.
 type ReportingCountry = string
 
 // ReportingCoverage defines model for ReportingCoverage.
@@ -54101,7 +54095,7 @@ type ReportingFrameworkInput struct {
 // ReportingFrameworkInputTemplate defines model for ReportingFrameworkInput.Template.
 type ReportingFrameworkInputTemplate string
 
-// ReportingIndustry Narrows to records whose company has this industry; a lead with no company keeps its own.
+// ReportingIndustry defines model for ReportingIndustry.
 type ReportingIndustry = string
 
 // ReportingMetric defines model for ReportingMetric.
@@ -54231,7 +54225,7 @@ type ReportingPreset struct {
 // ReportingPresetId defines model for ReportingPreset.Id.
 type ReportingPresetId string
 
-// ReportingProductId Narrows deal figures to deals that sell this product (their `deal_product` rows) and lead figures to leads interested in it. Money figures of won deals take the product's allocated value. A reader that cannot honour the product answers `unsupported`.
+// ReportingProductId defines model for ReportingProductId.
 type ReportingProductId = openapi_types.UUID
 
 // ReportingQualification defines model for ReportingQualification.
@@ -54413,13 +54407,9 @@ type ReportingSelection struct {
 	// and ignores what was sent, so a client that reads only `blocks` keeps working.
 	Blocks      []ReportingBlockKind          `json:"blocks"`
 	CloseWindow ReportingSelectionCloseWindow `json:"close_window"`
-
-	// Country Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code.
-	Country *ReportingCountry `json:"country,omitempty"`
-
-	// Industry Narrows to records whose company has this industry; a lead with no company keeps its own.
-	Industry *ReportingIndustry `json:"industry,omitempty"`
-	Interval *ReportingWindow   `json:"interval,omitempty"`
+	Country     *ReportingCountry             `json:"country,omitempty"`
+	Industry    *ReportingIndustry            `json:"industry,omitempty"`
+	Interval    *ReportingWindow              `json:"interval,omitempty"`
 
 	// Layout Sections of cards, in reading order. Absent means one untitled section of
 	// full-width cards in `blocks` order. A report holds at most 20 cards in total,
@@ -54436,9 +54426,7 @@ type ReportingSelection struct {
 	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
 	Scope       ReportingScope                `json:"scope"`
 	TargetBasis ReportingSelectionTargetBasis `json:"target_basis"`
-
-	// ValueBasis Which allocated value money figures of won deals count: every allocation and the unallocated remainder, or the allocations of one component kind alone. Counts never change. Readers of open value answer `unsupported` for a basis other than `all`.
-	ValueBasis *ReportingValueBasis `json:"value_basis,omitempty"`
+	ValueBasis  *ReportingValueBasis          `json:"value_basis,omitempty"`
 }
 
 // ReportingSelectionCloseWindow defines model for ReportingSelection.CloseWindow.
@@ -54599,7 +54587,7 @@ type ReportingTargetList struct {
 	NextCursor *string           `json:"next_cursor,omitempty"`
 }
 
-// ReportingValueBasis Which allocated value money figures of won deals count: every allocation and the unallocated remainder, or the allocations of one component kind alone. Counts never change. Readers of open value answer `unsupported` for a basis other than `all`.
+// ReportingValueBasis defines model for ReportingValueBasis.
 type ReportingValueBasis string
 
 // ReportingWindow defines model for ReportingWindow.
@@ -59259,7 +59247,7 @@ type UpdateProductRequest struct {
 	// BillingModel Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
 	BillingModel *UpdateProductRequestBillingModel `json:"billing_model,omitempty"`
 
-	// ComponentKind What kind of value the product is. Omit to leave it unchanged.
+	// ComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
 	ComponentKind  *UpdateProductRequestComponentKind `json:"component_kind,omitempty"`
 	Currency       *string                            `json:"currency,omitempty"`
 	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty"`
@@ -59276,7 +59264,7 @@ type UpdateProductRequestBillingIntervalMonths int
 // UpdateProductRequestBillingModel Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.
 type UpdateProductRequestBillingModel string
 
-// UpdateProductRequestComponentKind What kind of value the product is. Omit to leave it unchanged.
+// UpdateProductRequestComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
 type UpdateProductRequestComponentKind string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
@@ -112921,8 +112909,6 @@ func (siw *ServerInterfaceWrapper) ListDealProducts(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112954,8 +112940,6 @@ func (siw *ServerInterfaceWrapper) ReplaceDealProducts(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

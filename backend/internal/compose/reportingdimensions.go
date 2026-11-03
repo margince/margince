@@ -13,6 +13,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -59,8 +61,8 @@ func reportingDimensionGap(frame crmcontracts.ReportingContext, metric crmcontra
 }
 
 // reportingDimensionContext resolves the selection's dimensions onto the
-// frame. A product the reader may not open, or that does not exist, is a
-// missing row rather than a hint that it is there.
+// frame. The product needs the product read grant, as the catalog does, and
+// one that does not exist is a missing row.
 func reportingDimensionContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, out *crmcontracts.ReportingContext) error {
 	out.Country, out.Industry = selection.Country, selection.Industry
 	if selection.ValueBasis != nil && *selection.ValueBasis != reportingValueBasisAll {
@@ -68,6 +70,9 @@ func reportingDimensionContext(ctx context.Context, tx pgx.Tx, selection crmcont
 	}
 	if selection.ProductId == nil {
 		return nil
+	}
+	if !auth.ReadGranted(ctx, "product") {
+		return apperrors.ErrPermissionDenied
 	}
 	var name string
 	err := tx.QueryRow(ctx, `SELECT name FROM product WHERE id = $1 AND archived_at IS NULL`, *selection.ProductId).Scan(&name)
@@ -82,49 +87,60 @@ func reportingDimensionContext(ctx context.Context, tx pgx.Tx, selection crmcont
 }
 
 // dealDimensionSQL narrows deal rows aliased `alias` to the frame's product,
-// country and industry. Country and industry are the customer company's, as
-// the list vocabulary reads them.
-func dealDimensionSQL(frame crmcontracts.ReportingContext, b *reportingBindings, alias string) string {
+// country and industry. Country and industry are read through the company
+// the reader may open, so a company outside their row scope records nothing.
+func dealDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, b *reportingBindings, alias string) (string, error) {
 	where := ""
 	if frame.ProductId != nil {
 		where += " AND EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id=" + alias + ".id AND dp.product_id=" + b.add(*frame.ProductId) + ")"
 	}
-	return where + companyDimensionSQL(frame, b, alias+".company_id", "")
+	company, err := companyDimensionSQL(ctx, frame, b, alias+".company_id", "")
+	return where + company, err
 }
 
 // leadDimensionSQL narrows lead rows aliased `alias`. A lead is in a product's
 // population through its own product or the product of the deal it was
 // promoted into. A lead with no company keeps the industry a rep typed.
-func leadDimensionSQL(frame crmcontracts.ReportingContext, b *reportingBindings, alias string) string {
+func leadDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, b *reportingBindings, alias string) (string, error) {
 	where := ""
 	if frame.ProductId != nil {
 		product := b.add(*frame.ProductId)
 		where += " AND (" + alias + ".product_id=" + product + " OR EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id=" + alias + ".qualified_deal_id AND dp.product_id=" + product + "))"
 	}
-	return where + companyDimensionSQL(frame, b, alias+".company_id", alias+".industry")
+	company, err := companyDimensionSQL(ctx, frame, b, alias+".company_id", alias+".industry")
+	return where + company, err
 }
 
-func companyDimensionSQL(frame crmcontracts.ReportingContext, b *reportingBindings, companyID, ownIndustry string) string {
+// companyDimensionSQL reads the company's address country and industry through
+// storekit.LinkedCompanyColumn, as the deal and lead list filters do. So the
+// filter needs the company read grant and follows the company row scope.
+func companyDimensionSQL(ctx context.Context, frame crmcontracts.ReportingContext, b *reportingBindings, companyID, ownIndustry string) (string, error) {
 	where := ""
 	if frame.Country != nil {
-		where += " AND EXISTS (SELECT 1 FROM company_address_country cac WHERE cac.company_id=" + companyID + " AND " + b.add(*frame.Country) + "=ANY(cac.countries))"
+		country, err := storekit.LinkedCompanyColumn(ctx, companyID, "address_country", b.arg)
+		if err != nil {
+			return "", err
+		}
+		where += " AND " + country + "=" + b.add(*frame.Country)
 	}
 	if frame.Industry != nil {
+		linked, err := storekit.LinkedCompanyColumn(ctx, companyID, "industry", b.arg)
+		if err != nil {
+			return "", err
+		}
 		industry := b.add(*frame.Industry)
-		company := "EXISTS (SELECT 1 FROM company o WHERE o.id=" + companyID + " AND o.industry=" + industry + ")"
+		company := linked + "=" + industry
 		if ownIndustry != "" {
 			company = "(" + company + " OR (" + companyID + " IS NULL AND " + ownIndustry + "=" + industry + "))"
 		}
 		where += " AND " + company
 	}
-	return where
+	return where, nil
 }
 
 // allocationValueSQL is the base-currency value of a won deal's allocations
-// that the frame names: one product's, one component kind's, or both. The
-// allocation is converted with the ratio the deal's own frozen base amount
-// gives, so it never needs a second rate read. An allocation in another
-// currency than the deal's has no known value.
+// that the frame names: one product's, one component kind's, or both. An
+// allocation in another currency than the deal's has no known value.
 func allocationValueSQL(frame crmcontracts.ReportingContext, b *reportingBindings, alias string) string {
 	where := "dp.deal_id=" + alias + ".id AND dp.amount_minor IS NOT NULL"
 	if frame.ProductId != nil {
@@ -137,10 +153,15 @@ func allocationValueSQL(frame crmcontracts.ReportingContext, b *reportingBinding
 }
 
 // allocationConvertedSQL converts an allocation amount in the deal's currency
-// to the base currency, bound as `base`, by the deal's own frozen ratio.
+// to the base currency, bound as `base`. It uses the rate the deal froze at
+// its close and the minor-unit scales of both currencies, as
+// deals.BaseValueSQL does. A deal with no frozen rate has no known value.
 func allocationConvertedSQL(amount, foreign, alias, base string) string {
+	digits := func(currency string) string {
+		return "power(10::numeric, coalesce((SELECT d.digits FROM currency_minor_digits d WHERE d.currency=" + currency + "),2))"
+	}
 	return "CASE WHEN " + amount + " IS NULL OR " + foreign + " THEN NULL" +
 		" WHEN " + alias + ".currency=" + base + " THEN " + amount +
-		" WHEN " + alias + ".amount_minor IS NOT NULL AND " + alias + ".amount_minor<>0 AND " + alias + ".amount_minor_base IS NOT NULL" +
-		" THEN round(" + amount + "::numeric*" + alias + ".amount_minor_base/" + alias + ".amount_minor)::bigint ELSE NULL END"
+		" WHEN " + alias + ".fx_rate_to_base IS NULL THEN NULL" +
+		" ELSE round(" + amount + "::numeric*" + alias + ".fx_rate_to_base*" + digits(base) + "/" + digits(alias+".currency") + ")::bigint END"
 }

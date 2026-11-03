@@ -73,8 +73,12 @@ func readDealMetricFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
+	dimensions, err := dealDimensionSQL(ctx, frame, &b, "t")
+	if err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
 	where := spec.where + " AND " + population + " AND " + rowScope + " AND " + fieldScope
-	where += reportingFactFilters(frame, metric, spec, &b) + dealDimensionSQL(frame, &b, "t")
+	where += reportingFactFilters(frame, metric, spec, &b) + dimensions
 	position := spec.stagePosition
 	if position == "" {
 		position = "0"

@@ -41691,19 +41691,11 @@ export interface components {
             /** Format: date-time */
             end_at: string;
         };
-        /**
-         * Format: uuid
-         * @description Narrows deal figures to deals that sell this product (their `deal_product` rows) and lead figures to leads interested in it. Money figures of won deals take the product's allocated value. A reader that cannot honour the product answers `unsupported`.
-         */
+        /** Format: uuid */
         ReportingProductId: string;
-        /** @description Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code. */
         ReportingCountry: string;
-        /** @description Narrows to records whose company has this industry; a lead with no company keeps its own. */
         ReportingIndustry: string;
-        /**
-         * @description Which allocated value money figures of won deals count: every allocation and the unallocated remainder, or the allocations of one component kind alone. Counts never change. Readers of open value answer `unsupported` for a basis other than `all`.
-         * @enum {string}
-         */
+        /** @enum {string} */
         ReportingValueBasis: "all" | "software" | "implementation";
         ReportingSelection: {
             scope: components["schemas"]["ReportingScope"];
@@ -49345,10 +49337,10 @@ export interface components {
              */
             billing_interval_months?: 1 | 3 | 6 | 12 | null;
             /**
-             * @description What kind of value the product is. Omit to leave it unchanged.
-             * @enum {string}
+             * @description What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
+             * @enum {string|null}
              */
-            component_kind?: "software" | "implementation" | "other";
+            component_kind?: "software" | "implementation" | "other" | null;
             currency?: string;
             /** Format: double */
             default_tax_rate?: number;
@@ -61647,6 +61639,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     replaceDealProducts: {

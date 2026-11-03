@@ -174,6 +174,7 @@ func clearableProductColumns(current crmcontracts.Product) map[string]storekit.C
 	return map[string]storekit.Clearable{
 		"sku":             {Column: "sku", Current: current.Sku},
 		descriptionColumn: {Column: descriptionColumn, Current: current.Description},
+		"component_kind":  {Column: "component_kind", Current: current.ComponentKind},
 	}
 }
 

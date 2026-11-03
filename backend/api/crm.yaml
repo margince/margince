@@ -6734,7 +6734,8 @@ paths:
     get:
       tags: [Deals]
       operationId: listDealProducts
-      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: The products a deal sells, with the value allocated to each.
       description: |
         `offer` rows are rewritten from the accepted offer's lines that name a product. One
@@ -6747,10 +6748,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DealProductListResponse' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Deals]
       operationId: replaceDealProducts
-      x-mcp-tool: { verb: update_record, record_type: deal, tier: auto_execute, scope: write }
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Set a deal's products by hand, replacing every allocation it had.
       requestBody:
         required: true
@@ -56699,26 +56702,15 @@ components:
     ReportingProductId:
       type: string
       format: uuid
-      description: >-
-        Narrows deal figures to deals that sell this product (their `deal_product` rows) and lead
-        figures to leads interested in it. Money figures of won deals take the product's allocated
-        value. A reader that cannot honour the product answers `unsupported`.
     ReportingCountry:
       type: string
       pattern: '^[A-Z]{2}$'
-      description: >-
-        Narrows to records whose company's checked address country is this ISO 3166-1 alpha-2 code.
     ReportingIndustry:
       type: string
       maxLength: 120
-      description: Narrows to records whose company has this industry; a lead with no company keeps its own.
     ReportingValueBasis:
       type: string
       enum: [all, software, implementation]
-      description: >-
-        Which allocated value money figures of won deals count: every allocation and the
-        unallocated remainder, or the allocations of one component kind alone. Counts never
-        change. Readers of open value answer `unsupported` for a basis other than `all`.
     ReportingSelection:
       type: object
       additionalProperties: false
@@ -67081,7 +67073,7 @@ components:
         unit_price_minor: { type: integer, format: int64, minimum: 0 }
         billing_model: { type: [string, 'null'], enum: [one_time, recurring, not_specified, null], description: 'Whether this price repeats. Send `not_specified` to say nobody has classified it — an omitted field and a JSON null both mean "leave the classification alone", which is why clearing it needs a word of its own. Reading a product back, this field is never `not_specified`: it is one_time, recurring, or null.' }
         billing_interval_months: { type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.' }
-        component_kind: { type: string, enum: [software, implementation, other], description: 'What kind of value the product is. Omit to leave it unchanged.' }
+        component_kind: { type: [string, 'null'], enum: [software, implementation, other, null], description: 'What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.' }
         currency: { type: string, pattern: '^[A-Z]{3}$' }
         default_tax_rate: { type: number, format: double, minimum: 0 }
         active: { type: boolean }

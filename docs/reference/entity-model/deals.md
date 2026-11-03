@@ -378,7 +378,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 |---|---|---|---|
 | `amount_minor` | `bigint` |  | The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it. |
 | `component_kind` | `text` |  | The classification of the product when the allocation was written. |
-| `currency` | `character(3)` |  |  |
+| `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `offer_line_item_id` | `uuid` |  | Points at `offer_line_item.id`. |
 | `product_id` | `uuid` | yes | Points at `product.id`. |
@@ -398,8 +398,8 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `deal_product_amount_currency_pair`: `CHECK (((amount_minor IS NULL) = (currency IS NULL)))`
 - `deal_product_amount_minor_check`: `CHECK (((amount_minor IS NULL) OR (amount_minor >= 0)))`
+- `deal_product_amount_minor_exact`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `deal_product_component_kind_check`: `CHECK ((component_kind = ANY (ARRAY['software', 'implementation', 'other'])))`
-- `deal_product_currency_check`: `CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$')))`
 - `deal_product_source_check`: `CHECK ((source = ANY (ARRAY['offer', 'manual'])))`
 
 **Indexes**

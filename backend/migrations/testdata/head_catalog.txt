@@ -4130,12 +4130,12 @@ public.deal_product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/
 public.deal_product.amount_minor bigint gen=- def=-
 public.deal_product.component_kind text gen=- def=-
 public.deal_product.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.deal_product.currency character(3) gen=- def=-
+public.deal_product.currency currency_code gen=- def=-
 public.deal_product.deal_id uuid NOT NULL gen=- def=-
 public.deal_product.deal_product_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL)))
 public.deal_product.deal_product_amount_minor_check CHECK (((amount_minor IS NULL) OR (amount_minor >= 0)))
+public.deal_product.deal_product_amount_minor_exact CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))
 public.deal_product.deal_product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))
-public.deal_product.deal_product_currency_check CHECK (((currency IS NULL) OR (currency ~ '^[A-Z]{3}$'::text)))
 public.deal_product.deal_product_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_product.deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES offer_line_item(id) ON DELETE SET NULL
 public.deal_product.deal_product_pkey PRIMARY KEY (deal_id, product_id)

@@ -16,8 +16,9 @@ CREATE TABLE deal_product (
     product_id uuid NOT NULL REFERENCES product(id),
     source text NOT NULL CONSTRAINT deal_product_source_check CHECK (source IN ('offer', 'manual')),
     offer_line_item_id uuid REFERENCES offer_line_item(id) ON DELETE SET NULL,
-    amount_minor bigint CONSTRAINT deal_product_amount_minor_check CHECK (amount_minor IS NULL OR amount_minor >= 0),
-    currency char(3) CONSTRAINT deal_product_currency_check CHECK (currency IS NULL OR currency ~ '^[A-Z]{3}$'),
+    amount_minor bigint CONSTRAINT deal_product_amount_minor_check CHECK (amount_minor IS NULL OR amount_minor >= 0)
+        CONSTRAINT deal_product_amount_minor_exact CHECK (amount_minor BETWEEN -9007199254740991 AND 9007199254740991),
+    currency currency_code,
     component_kind text CONSTRAINT deal_product_component_kind_check CHECK (component_kind IN ('software', 'implementation', 'other')),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
