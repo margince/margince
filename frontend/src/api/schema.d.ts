@@ -65930,7 +65930,12 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed. */
+            /**
+             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+             *     When the refusal opened a review, `details` carries `review_id`, the
+             *     `available_actions` this caller may take, and `refusals`: each refused address
+             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -66026,7 +66031,12 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed. */
+            /**
+             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+             *     When the refusal opened a review, `details` carries `review_id`, the
+             *     `available_actions` this caller may take, and `refusals`: each refused address
+             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -66388,7 +66398,12 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed. */
+            /**
+             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+             *     When the refusal opened a review, `details` carries `review_id`, the
+             *     `available_actions` this caller may take, and `refusals`: each refused address
+             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
