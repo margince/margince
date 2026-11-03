@@ -190,6 +190,27 @@ func (e AccessPreviewRowScope) Valid() bool {
 	}
 }
 
+// Defines values for AccountCoverageView.
+const (
+	AccountCoverageViewSilent         AccountCoverageView = "silent"
+	AccountCoverageViewSingleThreaded AccountCoverageView = "single_threaded"
+	AccountCoverageViewUntouched      AccountCoverageView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the AccountCoverageView enum.
+func (e AccountCoverageView) Valid() bool {
+	switch e {
+	case AccountCoverageViewSilent:
+		return true
+	case AccountCoverageViewSingleThreaded:
+		return true
+	case AccountCoverageViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AccountDraftReasonKind.
 const (
 	AccountDraftReasonKindCommitment   AccountDraftReasonKind = "commitment"
@@ -25156,6 +25177,48 @@ func (e GetAiTaskFlowParamsWindow) Valid() bool {
 	}
 }
 
+// Defines values for GetAccountCoverageParamsScopeKind.
+const (
+	GetAccountCoverageParamsScopeKindOwner     GetAccountCoverageParamsScopeKind = "owner"
+	GetAccountCoverageParamsScopeKindTeam      GetAccountCoverageParamsScopeKind = "team"
+	GetAccountCoverageParamsScopeKindWorkspace GetAccountCoverageParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsScopeKind enum.
+func (e GetAccountCoverageParamsScopeKind) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsScopeKindOwner:
+		return true
+	case GetAccountCoverageParamsScopeKindTeam:
+		return true
+	case GetAccountCoverageParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAccountCoverageParamsView.
+const (
+	GetAccountCoverageParamsViewSilent         GetAccountCoverageParamsView = "silent"
+	GetAccountCoverageParamsViewSingleThreaded GetAccountCoverageParamsView = "single_threaded"
+	GetAccountCoverageParamsViewUntouched      GetAccountCoverageParamsView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsView enum.
+func (e GetAccountCoverageParamsView) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsViewSilent:
+		return true
+	case GetAccountCoverageParamsViewSingleThreaded:
+		return true
+	case GetAccountCoverageParamsViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSalesDecisionsParamsStatus.
 const (
 	ListSalesDecisionsParamsStatusDone ListSalesDecisionsParamsStatus = "done"
@@ -28237,6 +28300,97 @@ type AccessPreviewMemberStatus string
 
 // AccessPreviewRowScope defines model for AccessPreview.RowScope.
 type AccessPreviewRowScope string
+
+// AccountCoverage defines model for AccountCoverage.
+type AccountCoverage struct {
+	// ActivityReadable False when the reader may not read activity: the two account views are then empty and uncounted.
+	ActivityReadable  bool                  `json:"activity_readable"`
+	AsOf              time.Time             `json:"as_of"`
+	Counts            AccountCoverageCounts `json:"counts"`
+	FrameworkRevision int64                 `json:"framework_revision"`
+	Rows              []AccountCoverageRow  `json:"rows"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	Thresholds AccountCoverageThresholds `json:"thresholds"`
+
+	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
+	Truncated *bool               `json:"truncated,omitempty"`
+	View      AccountCoverageView `json:"view"`
+
+	// Withheld Deals of the view whose committee the reader could not read whole, left out rather than judged.
+	Withheld *int `json:"withheld,omitempty"`
+}
+
+// AccountCoverageView defines model for AccountCoverage.View.
+type AccountCoverageView string
+
+// AccountCoverageAccount defines model for AccountCoverageAccount.
+type AccountCoverageAccount struct {
+	Id      openapi_types.UUID  `json:"id"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+}
+
+// AccountCoverageCounts defines model for AccountCoverageCounts.
+type AccountCoverageCounts struct {
+	Silent         *int `json:"silent,omitempty"`
+	SingleThreaded int  `json:"single_threaded"`
+	Untouched      *int `json:"untouched,omitempty"`
+}
+
+// AccountCoverageDeal defines model for AccountCoverageDeal.
+type AccountCoverageDeal struct {
+	AmountMinor       *int64              `json:"amount_minor,omitempty"`
+	ClosedAt          *time.Time          `json:"closed_at,omitempty"`
+	Currency          *string             `json:"currency,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	Id                openapi_types.UUID  `json:"id"`
+	Name              string              `json:"name"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Stage             *string             `json:"stage,omitempty"`
+}
+
+// AccountCoverageRow defines model for AccountCoverageRow.
+type AccountCoverageRow struct {
+	Company AccountCoverageAccount `json:"company"`
+
+	// DaysSilent Days since the newest exchange either way, or since the won deal closed when there was none.
+	DaysSilent *int                 `json:"days_silent,omitempty"`
+	Deal       *AccountCoverageDeal `json:"deal,omitempty"`
+
+	// EngagedSeats Contacts engaged on the deal, for a single-threaded row.
+	EngagedSeats *int       `json:"engaged_seats,omitempty"`
+	LastInbound  *time.Time `json:"last_inbound,omitempty"`
+	LastOutbound *time.Time `json:"last_outbound,omitempty"`
+
+	// NamedSeats Contacts named on the deal, engaged or not.
+	NamedSeats *int `json:"named_seats,omitempty"`
+
+	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
+
+	// OpenDeals Open deals on the account, for an untouched row.
+	OpenDeals *int                 `json:"open_deals,omitempty"`
+	WonDeal   *AccountCoverageDeal `json:"won_deal,omitempty"`
+}
+
+// AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+type AccountCoverageThresholds struct {
+	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty"`
+
+	// SilentDays A won account with no exchange within this many days is silent. Default 30.
+	SilentDays *int `json:"silent_days,omitempty"`
+
+	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
+	UntouchedDays *int `json:"untouched_days,omitempty"`
+
+	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
+	WonWithinDays *int `json:"won_within_days,omitempty"`
+}
 
 // AccountDraftReason One thing the draft was written from, named so the reader can check it rather than
 // take the draft on trust. Structured rather than a phrase, because the composer
@@ -54560,6 +54714,8 @@ type ReportingFramework struct {
 
 // ReportingFrameworkInput defines model for ReportingFrameworkInput.
 type ReportingFrameworkInput struct {
+	// AccountCoverage What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	AccountCoverage *AccountCoverageThresholds      `json:"account_coverage,omitempty"`
 	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
 	Qualification   []ReportingQualification        `json:"qualification"`
 	Reason          string                          `json:"reason"`
@@ -64183,6 +64339,19 @@ type GetAiUsageParams struct {
 	// To Default: today.
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
+
+// GetAccountCoverageParams defines parameters for GetAccountCoverage.
+type GetAccountCoverageParams struct {
+	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId   *openapi_types.UUID                `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	View      *GetAccountCoverageParamsView      `form:"view,omitempty" json:"view,omitempty"`
+}
+
+// GetAccountCoverageParamsScopeKind defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsScopeKind string
+
+// GetAccountCoverageParamsView defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsView string
 
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
@@ -84353,6 +84522,12 @@ type ServerInterface interface {
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+	// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+	// facts behind its verdict. Counts for every view come with each answer; rows come for
+	// the view asked for. The thresholds are the framework's, and the answer prints them.
+	// (GET /analytics/account-coverage)
+	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
 	// The Sales review's assessment of one selection: a few sentences on what the measured
 	// figures show, each citing the cells it rests on, and one next decision on a deal the
 	// reader may see. Written by the model and kept per reader until the figures or the
@@ -87620,6 +87795,15 @@ func (_ Unimplemented) GetAiUsage(w http.ResponseWriter, r *http.Request, params
 // What AI cost this month so far, as one figure.
 // (GET /ai/usage/summary)
 func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+// facts behind its verdict. Counts for every view come with each answer; rows come for
+// the view asked for. The thresholds are the framework's, and the answer prints them.
+// (GET /analytics/account-coverage)
+func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96429,6 +96613,71 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAiUsageSummary(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAccountCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAccountCoverageParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAccountCoverage(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -136034,6 +136283,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ai/usage/summary", wrapper.GetAiUsageSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/account-coverage", wrapper.GetAccountCoverage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/assessment", wrapper.AssessSalesReview)
