@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var meetingRuleRenderers = []string{"MeetingResponsibilitySQL", "UnclaimedMeetingSQL", "MeetingCreditSQL", "MeetingCreditedSeatSQL", "MeetingCreditedSeatsSQL", "MeetingCreditedSeatsAtChangeSQL", "MeetingCreditedSeatAtChangeSQL"}
+var meetingRuleRenderers = []string{"KnownMeetingHostSQL", "MeetingResponsibilitySQL", "UnclaimedMeetingSQL", "MeetingCreditSQL", "MeetingCreditedSeatSQL", "MeetingCreditedSeatsSQL", "MeetingCreditedSeatsAtChangeSQL", "MeetingCreditedSeatAtChangeSQL"}
 
 const meetingRuleFile = "internal/platform/database/storekit/meetingresponsibility.go"
 
@@ -60,8 +60,6 @@ var meetingHostReaders = gatekit.Waive(map[string]string{
 		"holds; busy time belongs to the calendar, not to attendance",
 	"internal/modules/capture/participantpastcap.go": "writes the attendance rows the rule reads, and skips a " +
 		"seat that already has one",
-	"internal/modules/activities/activityprojection.go": "reads the host column out so a screen can show who " +
-		"hosted; it decides nothing about whose work the meeting is",
 })
 
 func TestEveryMeetingOwnershipReaderAsksTheAttendanceRule(t *testing.T) {

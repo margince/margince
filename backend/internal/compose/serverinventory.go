@@ -137,7 +137,7 @@ type Server struct {
 	companyRollupHandlers
 	reviewAnswerHandlers
 	companyOfferedHandlers
-	strengthHandlers
+	receiptHandlers
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
@@ -199,6 +199,7 @@ type Server struct {
 	// it. In compose because the vocabulary is derived from the report catalog
 	// and narrowed by the caller's grants, both of which live here.
 	analyticsQueryHandlers
+	salesDecisionHandlers
 	analyticsContextHandlers
 	sdrSummaryHandlers
 	assuranceHandlers

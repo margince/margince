@@ -4593,6 +4593,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The decisions recorded from a sales review, newest first, as tasks the reader may see. */
+        get: operations["listSalesDecisions"];
+        put?: never;
+        /**
+         * Record a decision from a sales review as a task on its deal. An open decision with the
+         *     same text on the same deal is returned instead of a second one.
+         */
+        post: operations["recordSalesDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/decisions/{id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record what work was completed and close the decision. The deal does not change. */
+        post: operations["recordSalesDecisionOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -7015,6 +7053,36 @@ export interface paths {
          *     one is refused rather than saved as 0.
          */
         put: operations["putSchedulingProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/scheduling/profile/alias": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose, change or clear the caller's friendly booking address.
+         * @description Sets the caller's own alias, so their booking page also answers at `/book/{alias}`.
+         *     The random address keeps working. The value is trimmed and lowercased. It must be 3 to
+         *     30 characters of letters, digits and inner hyphens. It must not be one of the app's
+         *     reserved booking words or prefixes, or a fixed segment of a `/public/booking/` route;
+         *     such a value answers `reserved`. An empty value clears the alias.
+         *
+         *     An alias is unique across the installation and never moves between hosts. A changed or
+         *     cleared alias is retired, not released: the same host may take it back at any time, and
+         *     no other host can ever claim it. **Replace address** retires the alias too. Refusals
+         *     answer 422 on `alias` with the codes `too_short`, `too_long`, `invalid`, `reserved`,
+         *     `taken` or `no_booking_link` (the caller has no booking link yet).
+         */
+        put: operations["putSchedulingAlias"];
         post?: never;
         delete?: never;
         options?: never;
@@ -35103,6 +35171,53 @@ export interface components {
             /** @description Why a live initiative's definition changed. */
             reason?: string | null;
         };
+        /** @description A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision. */
+        SalesDecision: {
+            /**
+             * Format: uuid
+             * @description The task's id.
+             */
+            id: string;
+            decision: string;
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * Format: uuid
+             * @description The accountable owner, the task's assignee.
+             */
+            owner_id?: string | null;
+            /**
+             * Format: date
+             * @description The review date, the task's due day in the installation's calendar.
+             */
+            review_on?: string | null;
+            expected_result?: string | null;
+            /** @enum {string} */
+            status: "open" | "done";
+            /** Format: date-time */
+            done_at?: string | null;
+            /** @description What work was completed, once the outcome was recorded. */
+            result?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SalesDecisionInput: {
+            decision: string;
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            owner_id: string;
+            /** Format: date */
+            review_on: string;
+            /** @description The observable result the owner expects by the review date. */
+            expected_result?: string;
+        };
+        SalesDecisionOutcomeInput: {
+            result: string;
+        };
+        SalesDecisionListResponse: {
+            data: components["schemas"]["SalesDecision"][];
+        };
         SalesInitiativeMemberRef: {
             /** @enum {string} */
             record_type: "lead" | "deal";
@@ -37382,12 +37497,19 @@ export interface components {
             /** @description The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
             readonly slug?: string;
+            /** @description The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`. */
+            readonly alias?: string;
+            /** @description The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured. */
             readonly public_url?: string;
             replace_link?: boolean;
             /** @description Send one operational email reminder one hour before future meetings. */
             email_reminder?: boolean;
             /** @description Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. */
             video_call?: boolean;
+        };
+        SchedulingAliasRequest: {
+            /** @description The friendly address to claim; empty clears it. Validated and normalized by the server. */
+            alias: string;
         };
         MeetingInvitationRequest: {
             /** Format: uuid */
@@ -40431,6 +40553,8 @@ export interface components {
             base_points?: number | null;
             /** @description The activities behind a behavioral factor, re-read through the CALLER's scope (ADR-0105 §3). */
             source_activity_ids?: string[];
+            /** @description The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `source_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score. */
+            readonly source_activities?: components["schemas"]["ActivityReference"][];
             /**
              * Format: uuid
              * @description The human who supplied a manual factor. Null for machine factors.
@@ -49167,6 +49291,10 @@ export interface components {
             auto_learning_enabled: boolean;
             readonly active_source_hash: string | null;
             readonly candidate_version: number | null;
+            /** @description Included corpus words still missing before a first build can learn anything; zero once maturity leaves collecting. */
+            readonly first_build_words_remaining?: number;
+            /** @description The newest build of this profile; absent when none was ever queued. Setup reads it to tell building, failed and deferred apart without polling a build id. */
+            readonly latest_build?: components["schemas"]["VoiceBuild"] | null;
             /** Format: date-time */
             readonly last_built_at: string | null;
             source: string;
@@ -62095,6 +62223,122 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listSalesDecisions: {
+        parameters: {
+            query?: {
+                deal_id?: string;
+                status?: "open" | "done";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The decisions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecisionListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordSalesDecision: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description The open decision that already held this text on this deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecision"];
+                };
+            };
+            /** @description The decision, as the task it became. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecision"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordSalesDecisionOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDecisionOutcomeInput"];
+            };
+        };
+        responses: {
+            /** @description The closed decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecision"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listProjects: {
         parameters: {
             query?: {
@@ -66254,6 +66498,40 @@ export interface operations {
         };
         responses: {
             /** @description Saved configuration. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulingProfile"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The operation could not be completed. */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    putSchedulingAlias: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulingAliasRequest"];
+            };
+        };
+        responses: {
+            /** @description The configuration with its new public address. */
             200: {
                 headers: {
                     [name: string]: unknown;

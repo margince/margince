@@ -52,6 +52,10 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// AnalyticsDecisionSource names a task a manager recorded from a sales review:
+// a decision with an owner, a review date and an expected result.
+const AnalyticsDecisionSource = "analytics_decision"
+
 // The other native writers that create a task with no human behind it. Each
 // stamps one of these, and storekit.TaskSourceFamilies says how its task stays
 // current.
@@ -92,6 +96,7 @@ var internalSourceSystems = map[string]bool{
 	NoActivityReminderSource:     true,
 	CheckInCadenceSource:         true,
 	CommitmentTaskSource:         true,
+	AnalyticsDecisionSource:      true,
 	WebsiteLeadSource:            true,
 	WhichDealSource:              true,
 	LeadRepliedSource:            true,
