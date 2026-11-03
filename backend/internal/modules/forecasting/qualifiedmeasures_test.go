@@ -82,9 +82,13 @@ func TestQualifiedLandingUsesTheQualifiedReadings(t *testing.T) {
 	}
 }
 
-// qualified sets a contribution's qualification.
+// qualified sets a contribution's qualification and the basis it was frozen on.
 func qualified(c Contribution, q viability.Qualification) Contribution {
 	c.Qualification = q
+	c.Basis = &ViabilityBasis{
+		PolicyVersion: viability.PolicyVersion, Disposition: DispositionNone,
+		Complete: q != viability.QualificationUnknown,
+	}
 	return c
 }
 
@@ -150,5 +154,45 @@ func TestADealThatLeftTheQualifiedReadingByDateIsPushedOut(t *testing.T) {
 		policySide(viability.PolicyVersion, gone))
 	if got := bucketOf(t, moved, "a"); got.Bucket != BucketPushedOut {
 		t.Errorf("a deal whose date left the period landed in %q, want pushed_out", got.Bucket)
+	}
+}
+
+func TestARowFrozenWithoutABasisMakesAQualifiedMovementADefinitionChange(t *testing.T) {
+	t.Parallel()
+	now := qualified(open("a", 100_00), viability.QualificationExcluded)
+	unframed := qualified(open("a", 100_00), viability.QualificationEligible)
+	unframed.Basis = nil
+	otherPolicy := qualified(open("a", 100_00), viability.QualificationEligible)
+	otherPolicy.Basis.PolicyVersion = "viability-0"
+	for name, was := range map[string]Contribution{
+		"a row frozen with no basis":     unframed,
+		"a row frozen under another one": otherPolicy,
+	} {
+		moved := Classify(ReadingQualifiedEvidence,
+			policySide(viability.PolicyVersion, was), policySide(viability.PolicyVersion, now))
+		if len(moved.Buckets) != 1 || moved.Buckets[0].Name != BucketDefinition {
+			t.Errorf("%s: buckets %+v, want the whole difference in definition", name, moved.Buckets)
+		}
+	}
+}
+
+func TestQualifiedOfRebuildsTheBlockFromFrozenRows(t *testing.T) {
+	t.Parallel()
+	rows := []Contribution{
+		qualified(open("kept", 100_00), viability.QualificationEligible),
+		qualified(open("out", 40_00), viability.QualificationExcluded),
+	}
+	got, err := QualifiedOf(rows, viability.PolicyVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.EvidenceMinor != 100_00 || got.ExcludedMinor != 40_00 || got.ExcludedCount != 1 {
+		t.Fatalf("rebuilt %+v, want 10000 evidence and 4000 excluded", got)
+	}
+	if off, err := QualifiedOf(rows, ""); err != nil || off != nil {
+		t.Fatalf("with no policy the rebuild answered %+v, %v; want none", off, err)
+	}
+	if empty, err := QualifiedOf(nil, viability.PolicyVersion); err != nil || empty == nil || *empty != (QualifiedReadings{}) {
+		t.Fatalf("an enforced snapshot with no rows answered %+v, %v; want a zero block", empty, err)
 	}
 }

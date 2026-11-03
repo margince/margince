@@ -442,7 +442,8 @@ const ContributionSelect = `SELECT c.deal_id, c.owner_id, c.amount_minor, c.curr
 		c.effective_close_date, c.close_provisional, c.category, c.stage_probability,
 		c.weighted_minor, c.in_won, c.in_evidence, c.in_best_case, c.in_open, c.in_lost,
 		c.exclusion_reason, c.qualification, c.audit_id, c.approval_id,
-		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect
+		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect,
+		c.qualified_policy_version, c.viability_assessed_at, c.viability_disposition, c.qualification_complete
 		FROM forecast_contribution c`
 
 // CollectContribution scans one row read with ContributionSelect.
@@ -455,11 +456,14 @@ func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	var weighted *int64
 	var stage *ids.UUID
 	var facts []byte
+	var basis frozenBasis
 	err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 		&c.EffectiveClose, &c.CloseProvisional, &category, &probability,
 		&weighted, &c.InWon, &c.InEvidence, &c.InBestCase, &c.InOpen, &c.InLost,
 		&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
-		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
+		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect,
+		&basis.policy, &basis.assessed, &basis.disposition, &basis.complete)
+	c.Basis = basis.read()
 	if err == nil && facts != nil {
 		err = json.Unmarshal(facts, &c.Signals)
 	}

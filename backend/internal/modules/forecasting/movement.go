@@ -192,11 +192,12 @@ func Classify(reading Reading, from, to snapshotSide) Movement {
 	// buckets would report a rules change as sales activity — which is the one
 	// thing a manager reading a waterfall must never be told.
 	definitionChanged := from.DefinitionVersion != to.DefinitionVersion
-	// A qualified reading also means what its policy says. A side frozen with
-	// no policy, or under another one, changes the definition and not the deals.
+	// A qualified reading also means what its policy says. A side or a row
+	// frozen with no policy, or under another one, changes the definition and
+	// not the deals.
 	if _, qualified := baselineOf(reading); qualified {
 		definitionChanged = definitionChanged || from.QualifiedPolicy == "" ||
-			from.QualifiedPolicy != to.QualifiedPolicy
+			from.QualifiedPolicy != to.QualifiedPolicy || !basisAgrees(from, to)
 	}
 
 	out := Movement{

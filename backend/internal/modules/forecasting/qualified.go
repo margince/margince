@@ -151,3 +151,60 @@ func basisColumns(b *ViabilityBasis) (policy *string, assessed *time.Time, dispo
 	}
 	return &b.PolicyVersion, b.AssessedAt, &b.Disposition, &b.Complete
 }
+
+// frozenBasis is the four basis columns as a row holds them, any of them NULL.
+type frozenBasis struct {
+	policy, disposition *string
+	assessed            *time.Time
+	complete            *bool
+}
+
+// read answers the basis a row froze, nil on a row frozen without one.
+func (b frozenBasis) read() *ViabilityBasis {
+	if b.policy == nil || b.disposition == nil || b.complete == nil {
+		return nil
+	}
+	return &ViabilityBasis{PolicyVersion: *b.policy, AssessedAt: b.assessed, Disposition: *b.disposition, Complete: *b.complete}
+}
+
+// QualifiedOf rebuilds the qualified readings from frozen rows, the way
+// Compute builds them from live deals, under the policy they were frozen with.
+// Nil when no policy was enforced.
+func QualifiedOf(rows []Contribution, policy string) (*QualifiedReadings, error) {
+	var out Readings
+	for _, c := range rows {
+		base := int64(0)
+		if c.BaseMinor != nil {
+			base = *c.BaseMinor
+		}
+		if err := qualify(&out, c, base); err != nil {
+			return nil, err
+		}
+	}
+	out.ApplyQualifiedPolicy(policy)
+	if policy == "" {
+		return nil, nil
+	}
+	return out.Qualified, nil
+}
+
+// basisAgrees answers whether every row on both sides froze a basis under one
+// policy. A qualified reading compared across rows frozen without one, or
+// under two, is a definition change and not deals moving.
+func basisAgrees(from, to snapshotSide) bool {
+	policy := ""
+	for _, side := range [][]Contribution{from.Contributions, to.Contributions} {
+		for _, c := range side {
+			if c.Basis == nil {
+				return false
+			}
+			if policy == "" {
+				policy = c.Basis.PolicyVersion
+			}
+			if c.Basis.PolicyVersion != policy {
+				return false
+			}
+		}
+	}
+	return true
+}

@@ -155,13 +155,78 @@ func (v *viabilityEnv) freeze(t *testing.T) ids.UUID {
 		if err != nil {
 			return err
 		}
-		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+		snapshot := forecasting.NewSnapshot{
 			Period: period, Scope: scope, Trigger: forecasting.TriggerRecheck, BaseCurrency: base,
 			Readings: assembly.Readings, TakenAt: v.now,
-		})
+		}
+		if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
+			return err
+		}
+		id, err = store.TakeSnapshot(ctx, tx, snapshot)
 		return err
 	}); err != nil {
 		t.Fatalf("freezing the forecast: %v", err)
 	}
 	return id
+}
+
+// moved is the qualified-evidence movement between two snapshots, read
+// through the store every movement surface reads.
+func (v *viabilityEnv) moved(t *testing.T, from, to ids.UUID) forecasting.Movement {
+	t.Helper()
+	out, err := newForecastStoreFor(v.Pool).Movement(v.Admin(), forecasting.ReadingQualifiedEvidence, from, to)
+	if err != nil {
+		t.Fatalf("reading the movement: %v", err)
+	}
+	return out
+}
+
+func bucketOfDeal(t *testing.T, m forecasting.Movement, deal ids.UUID) string {
+	t.Helper()
+	for _, d := range m.Deals {
+		if d.DealID == deal.String() {
+			return d.Bucket
+		}
+	}
+	t.Fatalf("deal %s moved in no bucket: %+v", deal, m.Buckets)
+	return ""
+}
+
+func TestFrozenReviewChangesMoveTheQualifiedReadingBetweenSnapshots(t *testing.T) {
+	v := setupViability(t)
+	v.check(t)
+	beforeEnforcement := v.freeze(t)
+	assurances := assurance.NewStore(InstallationDB(v.Pool))
+	if err := assurances.SetQualifiedForecastEnforced(v.Admin(), StoredConfig(v.Pool), true); err != nil {
+		t.Fatal(err)
+	}
+	excluded := v.freeze(t)
+
+	if m := v.moved(t, beforeEnforcement, excluded); len(m.Buckets) != 1 || m.Buckets[0].Name != forecasting.BucketDefinition {
+		t.Errorf("against a snapshot frozen with no basis the movement is %+v, want only definition", m.Buckets)
+	}
+
+	var review ids.UUID
+	if err := v.Pool.QueryRow(context.Background(), `SELECT id FROM assurance_exception
+		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent).Scan(&review); err != nil {
+		t.Fatal(err)
+	}
+	until := v.now.AddDate(0, 0, 30)
+	if err := assurances.Resolve(v.Admin(), review, assurance.Resolution{
+		Outcome: assurance.OutcomeValueCorrect, Reason: "Signed order in the post", ExpiresAt: &until,
+	}, v.now); err != nil {
+		t.Fatal(err)
+	}
+	reinstated := v.freeze(t)
+	if got := bucketOfDeal(t, v.moved(t, excluded, reinstated), v.silent); got != forecasting.BucketReinstated {
+		t.Errorf("the overridden deal moved in %q, want reinstated", got)
+	}
+
+	v.WsExec(t, `UPDATE assurance_resolution
+		SET created_at = now() - interval '2 days', expires_at = now() - interval '1 minute'
+		WHERE exception_id = $1`, review)
+	unchecked := v.freeze(t)
+	if got := bucketOfDeal(t, v.moved(t, reinstated, unchecked), v.silent); got != forecasting.BucketNotChecked {
+		t.Errorf("the deal whose override ended moved in %q, want not_checked", got)
+	}
 }
