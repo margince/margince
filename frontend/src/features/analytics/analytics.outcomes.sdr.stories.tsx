@@ -13,15 +13,15 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { day } from "../../testing/worklist.testkit";
 import { MySdrWork } from "./analytics.outcomes.sdr";
+import { QUIET_DAY } from "./analytics.overview.fixtures";
 import { reportingSectionsCatalog } from "./reporting.story-fixtures";
 
 // A rep's own SDR panel: the handoffs waiting on others, one page at a time,
 // beside the lead readings and the meetings ahead.
 
 const meta: Meta = {
-  title: "Records/Reports/Analytics/My SDR work",
+  title: "Records/Reports/Analytics/My prospecting panel",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -87,7 +87,7 @@ export const HandoffsWaiting: Story = {
           },
           rows: [],
         }),
-      "GET /worklist": () => jsonResponse(day()),
+      "GET /worklist": () => jsonResponse(QUIET_DAY),
     });
     return (
       <StoryProviders>

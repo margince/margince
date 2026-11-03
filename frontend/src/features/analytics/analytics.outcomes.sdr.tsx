@@ -24,10 +24,7 @@ import {
 import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import {
-  MoreRows,
-  useHandoffPages,
-} from "./analytics.outcomes.handoffpages";
+import { MoreRows, useHandoffPages } from "./analytics.outcomes.handoffpages";
 import { DoNext } from "./analytics.overview.donext";
 import {
   type ReportingEvaluation,
