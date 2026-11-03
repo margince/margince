@@ -142,9 +142,10 @@ var notAnEdge = map[string]string{
 	"activity_participant": "who capture MATCHED from an address, where activity_link is what it " +
 		"ASSERTED about the record — graphactivity.go ranks the assertion above the match for the " +
 		"same reason a hop should traverse it and not this",
-	"deal_product": "a deal's value split across the products it sells, with the amount, its source and " +
-		"the product's classification when the row was written. Analytics reads it to narrow a report " +
-		"to a product. No deal-to-product hop is defined for search, so nothing traverses it",
+	"deal_product": "an allocation of a deal's value to a catalogue product, carrying an amount, its " +
+		"source and the product's classification when the row was written. The product is a " +
+		"workspace-wide catalogue entry that search finds by its own name, and the allocation is " +
+		"a figure about the deal rather than a link a rep follows between the two records",
 	"contact_consent": "contact_id and lead_id are alternative OWNERS of one consent record, never both, " +
 		"so the pair is a polymorphic parent rather than an edge between the two",
 	"consent_event": "the append-only log behind contact_consent, and polymorphic in the same way",

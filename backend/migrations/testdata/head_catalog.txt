@@ -3990,7 +3990,7 @@ public.deal_product.deal_product_component_kind_check CHECK ((component_kind = A
 public.deal_product.deal_product_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_product.deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES offer_line_item(id) ON DELETE SET NULL
 public.deal_product.deal_product_pkey PRIMARY KEY (deal_id, product_id)
-public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.deal_product.deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT
 public.deal_product.deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text])))
 public.deal_product.offer_line_item_id uuid gen=- def=-
 public.deal_product.product_id uuid NOT NULL gen=- def=-
@@ -5657,7 +5657,7 @@ public.lead.lead_owner_id_retirement_guard CREATE TRIGGER lead_owner_id_retireme
 public.lead.lead_partner_acceptance_pairing CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL)))
 public.lead.lead_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE SET NULL (partner_company_id)
 public.lead.lead_pkey PRIMARY KEY (id)
-public.lead.lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id)
+public.lead.lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT
 public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
 public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
