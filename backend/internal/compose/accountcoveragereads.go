@@ -173,9 +173,11 @@ func wonAccounts(ctx context.Context, tx pgx.Tx, pop *coveragePopulation) ([]crm
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT * FROM (
-		  SELECT DISTINCT ON (c.id) c.id, c.display_name, c.owner_id,
-		         d.id, d.name, %s AS amount_minor, d.currency, d.owner_id, d.closed_at
+		SELECT won.company_id, won.company_name, won.company_owner_id,
+		       won.deal_id, won.deal_name, won.amount_minor, won.currency, won.deal_owner_id, won.closed_at
+		  FROM (
+		  SELECT DISTINCT ON (c.id) c.id AS company_id, c.display_name AS company_name, c.owner_id AS company_owner_id,
+		         d.id AS deal_id, d.name AS deal_name, %s AS amount_minor, d.currency, d.owner_id AS deal_owner_id, d.closed_at
 		    FROM deal d
 		    JOIN company c ON c.id = d.company_id AND c.archived_at IS NULL
 		   WHERE d.status = 'won' AND d.archived_at IS NULL AND d.closed_at >= $%d AND %s
