@@ -60,22 +60,20 @@ func (h Handlers) proposalForRequest(w http.ResponseWriter, r *http.Request, tok
 func publicProfile(profile crmcontracts.SchedulingProfile, requested *bool) crmcontracts.PublicSchedulingProfile {
 	out := pausedPublicProfile(profile)
 	out.Paused = false
-	out.Title, out.Location, out.DurationMinutes, out.Enabled = &profile.Title, &profile.Location, &profile.DurationMinutes, &profile.Enabled
+	out.Title, out.Location, out.DurationMinutes, out.Enabled = profile.Title, profile.Location, profile.DurationMinutes, profile.Enabled
 	out.LogoUrl = profile.LogoUrl
-	company := ""
 	if profile.CompanyName != nil {
-		company = *profile.CompanyName
+		out.CompanyName = *profile.CompanyName
 	}
-	out.CompanyName = &company
 	if app, ok := videoApp(profile.Provider); ok && videoCallFor(profile, requested) {
 		out.VideoApp = &app
-		out.Location = new(string)
+		out.Location = ""
 	}
 	return out
 }
 
 // pausedPublicProfile is all a guest of a paused page is told: whose page it
-// is. The paused copy needs the name, and nothing about the calendar.
+// is. Every other field the contract requires holds a neutral value.
 func pausedPublicProfile(profile crmcontracts.SchedulingProfile) crmcontracts.PublicSchedulingProfile {
 	out := crmcontracts.PublicSchedulingProfile{Paused: true}
 	if profile.HostName != nil {
@@ -109,12 +107,12 @@ func (h Handlers) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Reques
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), row.Host, profile)
 	out := crmcontracts.PublicMeetingProposal{Profile: publicProfile(profile, row.Request.VideoCall), Description: row.Request.Description, ExpiresAt: row.Expires, Used: row.Used != nil, Options: row.Request.Options}
-	out.Profile.Title = &row.Request.Subject
+	out.Profile.Title = row.Request.Subject
 	if out.Profile.VideoApp == nil {
-		out.Profile.Location = &row.Request.Location
+		out.Profile.Location = row.Request.Location
 	}
-	out.Profile.DurationMinutes = &row.Request.DurationMinutes
-	out.Profile.Enabled = new(row.Used == nil)
+	out.Profile.DurationMinutes = row.Request.DurationMinutes
+	out.Profile.Enabled = row.Used == nil
 	// A proposal does not follow the standing page's switch: it is paused only
 	// when the host's calendar cannot take the booking it offers.
 	blocker, err := h.store.calendarBlocker(r.Context(), row.Host, profile)

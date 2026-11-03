@@ -18,8 +18,8 @@ import (
 
 // A booking slug is the capability. On a paused page the availability read
 // and the booking call answer as an unknown slug does. Status and body match,
-// whatever the body sent. Only the profile differs, by design. It
-// tells the guest whose page is paused, and nothing more.
+// whatever the body sent. Only the profile differs, by design. It names
+// the host, and every other field is neutral.
 func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
 	e := apptest.SetupBookingApp(t)
 	paused := bookingSlug(t, e)
@@ -53,8 +53,8 @@ func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
 		})
 	}
 	status, body := rawPublicCall(t, e, http.MethodGet, "/v1/public/booking/"+paused+"/profile", "")
-	if status != http.StatusOK || !strings.Contains(body, `"paused":true`) || strings.Contains(body, "enabled") || strings.Contains(body, "video_app") {
-		t.Errorf("the paused profile answered %d %s, want host_name and paused only", status, body)
+	if status != http.StatusOK || !strings.Contains(body, `"paused":true`) || !strings.Contains(body, `"title":""`) || strings.Contains(body, "video_app") {
+		t.Errorf("the paused profile answered %d %s, want its host's name and neutral fields", status, body)
 	}
 }
 

@@ -151,7 +151,7 @@ func TestPausedBookingPreviewNamesNobody(t *testing.T) {
 	profile := httptest.NewRecorder()
 	server.ServeHTTP(profile, httptest.NewRequest(http.MethodGet, "/v1/public/booking/"+slug+"/profile", nil))
 	body = profile.Body.String()
-	if profile.Code != http.StatusOK || !strings.Contains(body, "Ada") || !strings.Contains(body, `"paused":true`) || strings.Contains(body, "enabled") {
+	if profile.Code != http.StatusOK || !strings.Contains(body, "Ada") || !strings.Contains(body, `"paused":true`) || strings.Contains(body, "Tea") {
 		t.Fatalf("paused profile: %d %s", profile.Code, body)
 	}
 }

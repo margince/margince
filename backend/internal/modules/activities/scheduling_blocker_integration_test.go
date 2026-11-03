@@ -44,11 +44,17 @@ func guestProfile(t *testing.T, f *invitationFixture, slug string) map[string]an
 }
 
 // assertPausedForGuest holds that a paused page tells its guest whose page it
-// is and that it is paused, and nothing about the calendar behind it.
+// is and that it is paused. Every other field is neutral.
 func assertPausedForGuest(t *testing.T, body map[string]any) {
 	t.Helper()
-	if len(body) != 2 || body["paused"] != true || body["host_name"] == "" {
-		t.Errorf("a paused page told its guest %v, want only host_name and paused", body)
+	neutral := map[string]any{"paused": true, "enabled": false, "title": "", "location": "", "company_name": "", "duration_minutes": float64(0)}
+	for field, want := range neutral {
+		if body[field] != want {
+			t.Errorf("a paused page told its guest %s=%v, want %v", field, body[field], want)
+		}
+	}
+	if body["host_name"] == "" || len(body) != len(neutral)+1 {
+		t.Errorf("a paused page told its guest %v, want its host's name and neutral fields only", body)
 	}
 }
 

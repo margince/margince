@@ -52281,11 +52281,11 @@ components:
 
     PublicSchedulingProfile:
       type: object
-      required: [host_name, paused]
+      required: [host_name, company_name, title, location, duration_minutes, enabled, paused]
       description: |
-        A guest's view of a booking page. A paused page answers `host_name` and `paused: true` and
-        nothing else, so the guest is told who is not taking bookings and learns nothing about the
-        calendar behind the page. Every other field is present on a page that takes bookings.
+        A guest's view of a booking page. A paused page names its host and says `paused: true`;
+        every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+        `video_app`), so the guest learns nothing about the calendar behind the page.
       properties:
         host_name: { type: string }
         company_name: { type: string }

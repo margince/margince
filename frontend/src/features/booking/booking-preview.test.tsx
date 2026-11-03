@@ -115,7 +115,15 @@ it("keeps a paused public page unavailable to visitors", async () => {
   installFetchStub({
     "GET /public/booking/ada-lovelace/profile": () =>
       // All a paused page tells its guest: whose page it is.
-      jsonResponse({ host_name: "Ada Lovelace", paused: true }),
+      jsonResponse({
+        host_name: "Ada Lovelace",
+        company_name: "",
+        title: "",
+        location: "",
+        duration_minutes: 0,
+        enabled: false,
+        paused: true,
+      }),
   });
   render(
     <StoryProviders>
