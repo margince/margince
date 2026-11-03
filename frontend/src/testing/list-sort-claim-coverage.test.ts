@@ -49,12 +49,12 @@ function listScreens(): string[] {
     .sort();
 }
 
-/** Does this screen's list fetcher put `sort` on the wire? */
 // The sort on the wire, bare or cast to the endpoint's sort type.
+const SORT_KEY = /\n\s*sort: \(?query\.sort \|\| undefined\)?(?: as \w+)?,/g;
+
+/** Does this screen's list fetcher put `sort` on the wire? */
 function sendsSort(source: string): boolean {
-  return /\n\s*sort: \(?query\.sort \|\| undefined\)?(?: as \w+)?,/.test(
-    source,
-  );
+  return new RegExp(SORT_KEY).test(source);
 }
 
 // One function's text, from its declaration to the closing brace at column 0.
@@ -164,29 +164,37 @@ function builderBody(
 // A `sort:` key that does not read the query, which unsets or replaces it.
 const OVERRIDING_SORT = /\bsort:(?!\s*\(?query\.sort\b)/;
 
-// The bodies of the builders the fetcher spreads into its wire query
-// (`query: { ...leadsQueryParams(query) }`) that no later key or spread overrides.
-function spreadBuilders(
+type WireSpread = { index: number; end: number; body: string | undefined };
+
+function wireSpreads(
   file: string,
   source: string,
   wire: string,
   readModule: ReadModule,
-): string[] {
-  const spreads = [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].map((spread) => ({
+): WireSpread[] {
+  return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].map((spread) => ({
+    index: spread.index,
     end: spread.index + spread[0].length,
     body: builderBody(file, source, spread[1] ?? "", readModule),
   }));
-  return spreads.flatMap((spread, index) => {
-    const overridden =
-      OVERRIDING_SORT.test(wire.slice(spread.end)) ||
-      spreads
-        .slice(index + 1)
-        .some(
-          (later) =>
-            later.body !== undefined && OVERRIDING_SORT.test(later.body),
-        );
-    return spread.body !== undefined && !overridden ? [spread.body] : [];
-  });
+}
+
+// Whether a literal key, or a spread whose builder body, after `end` unsets or
+// replaces the sort set before it.
+function overriddenAfter(
+  wire: string,
+  end: number,
+  spreads: WireSpread[],
+): boolean {
+  return (
+    OVERRIDING_SORT.test(wire.slice(end)) ||
+    spreads.some(
+      (later) =>
+        later.index >= end &&
+        later.body !== undefined &&
+        OVERRIDING_SORT.test(later.body),
+    )
+  );
 }
 
 function screenSendsSort(
@@ -196,11 +204,16 @@ function screenSendsSort(
 ): boolean {
   const body = fetcherBody(source);
   const wire = body === undefined ? undefined : wireQuery(body);
-  return (
-    wire !== undefined &&
-    (sendsSort(wire) ||
-      spreadBuilders(file, source, wire, readModule).some(sendsSort))
+  if (wire === undefined) return false;
+  const spreads = wireSpreads(file, source, wire, readModule);
+  const direct = [...wire.matchAll(SORT_KEY)].some(
+    (key) => !overriddenAfter(wire, key.index + key[0].length, spreads),
   );
+  const built = spreads.filter(
+    (spread) =>
+      spread.body !== undefined && !overriddenAfter(wire, spread.end, spreads),
+  );
+  return direct || built.some((spread) => sendsSort(spread.body ?? ""));
 }
 
 /** Every way this screen names an ordering to the reader. */
@@ -405,6 +418,34 @@ describe("a fetcher's spread builder", () => {
       "  });",
     );
     expect(sends(fetcher)).toBe(true);
+  });
+
+  it("does not, when a later spread unsets the direct sort key", () => {
+    const fetcher = fetcherOf(
+      '  return api.GET("/things", {',
+      "    params: {",
+      "      query: {",
+      "        sort: query.sort || undefined,",
+      "        ...unsortingParams(query),",
+      "      },",
+      "    },",
+      "  });",
+    );
+    expect(sends(fetcher)).toBe(false);
+  });
+
+  it("does not, when a later key unsets the direct sort key", () => {
+    const fetcher = fetcherOf(
+      '  return api.GET("/things", {',
+      "    params: {",
+      "      query: {",
+      "        sort: query.sort || undefined,",
+      "        sort: undefined,",
+      "      },",
+      "    },",
+      "  });",
+    );
+    expect(sends(fetcher)).toBe(false);
   });
 
   it("does not, for a sort written outside the wire query", () => {

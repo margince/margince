@@ -410,14 +410,23 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     expect(screen.queryByText(en["lead.boardCountsUnavailable"])).toBeNull();
   });
 
-  it("show no cached cards in a column a status dial excludes", async () => {
-    serve(() =>
-      json({
-        rows: [{ status: "promoted", leads: 1 }],
-        data: [{ ...lead, id: "l-q", status: "promoted" }],
-        page: { has_more: false, next_cursor: null },
-      }),
-    );
+  it("show no cached cards or count in a column a status dial excludes", async () => {
+    const served = serve((sent) => {
+      if (!sent.url.pathname.endsWith("/reports/leads-by-status")) {
+        return json({
+          data: [{ ...lead, id: "l-q", status: "promoted" }],
+          page: { has_more: false, next_cursor: null },
+        });
+      }
+      const status = (sent.body as { filters?: { status?: string } }).filters
+        ?.status;
+      return json({
+        rows:
+          status === "new"
+            ? [{ status: "new", leads: 4 }]
+            : [{ status: "promoted", leads: 1 }],
+      });
+    });
     const board = drawBoard(mine());
     fireEvent.click(headOf("promoted"));
     await waitFor(() =>
@@ -425,8 +434,22 @@ describe("the lead board's terminal columns under the queue's dials", () => {
         null,
       ),
     );
+    expect(column("promoted").textContent).toContain("1 lead");
 
     board.redraw(mine({ status: "new" }));
+    await waitFor(() =>
+      expect(
+        served.some(
+          (sent) =>
+            sent.url.pathname.endsWith("/reports/leads-by-status") &&
+            JSON.stringify(sent.body).includes('"status":"new"'),
+        ),
+      ).toBe(true),
+    );
     expect(column("promoted").querySelector('[data-lead="l-q"]')).toBeNull();
+    const stated = [...column("promoted").querySelectorAll(STATED_COUNT)];
+    expect(stated.map((count) => count.textContent).join(" ")).not.toMatch(
+      /\b1\b/,
+    );
   });
 });
