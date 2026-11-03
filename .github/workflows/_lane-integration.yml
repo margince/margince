@@ -53,17 +53,16 @@ jobs:
       # A red shard must not cancel its siblings: one CI run should report
       # every failing test, not the first shard to trip.
       fail-fast: false
-      # Eight. The slice is per-TEST, and each shard also pays a fixed cost of
+      # Ten. The slice is per-TEST, and each shard also pays a fixed cost of
       # restoring the build cache and compiling nearly the whole lane, so more
       # shards buy a smaller slice at the price of another copy of that cost.
-      # Six was right while a shard's own tests were the small half (~40s
-      # against ~420s of restore and compile). The tests have grown since: the
-      # `internal/compose/integration` package alone sums to ~2600s of test
-      # time, so six shards left it ~440s each, too near the package budget,
-      # and a slow runner killed the shard with no test reported. Eight leaves
-      # ~330s each. Raise it again only against a measurement of the same kind.
+      # Eight left `internal/compose` ~460s of its ~3700s of recorded test time
+      # per shard. Green runs then measured its slice at 566s to 706s, and a
+      # slow runner reached the 900s package timeout with no test reported. Ten
+      # leaves ~370s each, under the timeout by more than the runners vary.
+      # Raise it again only against a measurement of the same kind.
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
