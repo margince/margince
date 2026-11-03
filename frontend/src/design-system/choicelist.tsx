@@ -92,6 +92,9 @@ type Question<Value extends string> = Readonly<{
    * heading's proximity.
    */
   hideLegend?: boolean;
+  /** What the answers act on, shown under the question and inside its group,
+   * so a reader weighs the answers with it in view. */
+  detail?: ReactNode;
   choices: readonly Choice<Value>[];
   disabled?: boolean;
   /**
@@ -127,6 +130,7 @@ export function ChoiceList<Value extends string>(
   const {
     legend,
     hideLegend,
+    detail,
     choices,
     disabled,
     layout = "stack",
@@ -191,6 +195,7 @@ export function ChoiceList<Value extends string>(
       <legend className={hideLegend ? "sr-only" : "choicelist-legend"}>
         {legend}
       </legend>
+      {detail}
       {runsOf(choices).map((run) =>
         run.group === undefined ? (
           <Fragment key={run.choices[0]?.value}>

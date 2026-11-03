@@ -1,8 +1,9 @@
-import { type FormEvent, useState } from "react";
+import { type SyntheticEvent, useState } from "react";
 import type { components } from "../../../api/schema";
 import { LostReasonFields } from "../../../components/lostreasonfields";
-import { Field, TextInput } from "../../../design-system/atoms";
+import { Field, Textarea } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
+import { isParagraphCommit } from "../../../design-system/inlinetext";
 import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useAgentTierMap, verbTier } from "../../../lib/autonomy";
@@ -219,8 +220,9 @@ export function ConfirmAdvanceModal({
     dismiss();
   };
 
-  // Enter in a reason field closes the deal only when Confirm would.
-  const submit = (event?: FormEvent) => {
+  // Enter in a picker, or ⌘/Ctrl+Enter in a note, closes the deal only when
+  // Confirm would.
+  const submit = (event?: SyntheticEvent) => {
     event?.preventDefault();
     if (pending && refusal === undefined && !submitting) {
       void confirm(pending);
@@ -246,7 +248,15 @@ export function ConfirmAdvanceModal({
             {t("deals.confirmTerminal", { status: shown.toStage.semantic })}
           </p>
           {(needsLostReason || needsWonReason) && (
-            <form className="form-stack" onSubmit={submit}>
+            <form
+              className="form-stack"
+              onSubmit={submit}
+              onKeyDown={(event) => {
+                if (isParagraphCommit(event)) {
+                  submit(event);
+                }
+              }}
+            >
               {needsLostReason && (
                 <LostReasonFields
                   reasons={lossReasons}
@@ -353,8 +363,9 @@ function WonReasonFields({
       {reason === WON_REASON_NEEDING_DETAIL && (
         <Field label={t("deals.winReasonDetail")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={detail}
               onChange={(event) => onDetail(event.target.value)}
             />

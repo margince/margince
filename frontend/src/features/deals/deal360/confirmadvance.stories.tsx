@@ -66,6 +66,7 @@ const OPEN_TASKS = {
       is_done: false,
       version: 2,
       occurred_at: "2026-10-01T09:00:00Z",
+      due_at: "2026-11-04T16:00:00Z",
     },
     {
       id: "t-device",

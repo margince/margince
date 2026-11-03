@@ -32,6 +32,17 @@ export const States: Story = {
           />
         )}
       </Field>
+      <Field label="Note that grows">
+        {(control) => (
+          <Textarea
+            {...control}
+            grow
+            defaultValue={
+              "Lost to a cheaper offer. Their buyer wants to revisit in spring, once the new budget is set."
+            }
+          />
+        )}
+      </Field>
       <Field label="Imported note">
         {(control) => (
           <Textarea

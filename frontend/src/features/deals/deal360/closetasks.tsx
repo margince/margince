@@ -25,9 +25,11 @@ import { SkipReason } from "../../../components/bulkwords";
 import { ChoiceList } from "../../../design-system/choicelist";
 import { ErrorLine } from "../../../design-system/errorline";
 import { useToast } from "../../../design-system/toast";
-import { formatNumber } from "../../../format/format";
+import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
+import { useRecordZone } from "../../../lib/recordzone";
+import "./closetasks.css";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -221,31 +223,67 @@ export function CloseTasksQuestion({
   }
   const count = { count: formatNumber(tasks.length, locale) };
   return (
-    <>
-      <ul className="t-caption" aria-label={t("deals.closeTasks.listLabel")}>
-        {tasks.map((task) => (
-          <li key={task.id}>
-            {task.subject ?? t("deals.closeTasks.untitled")}
-          </li>
-        ))}
+    <ChoiceList<CloseTasksAnswer>
+      legend={plural("deals.closeTasks.legend", tasks.length, count)}
+      detail={<CloseTasksPreview tasks={tasks} />}
+      value={answer}
+      onChange={onAnswer}
+      choices={[
+        {
+          value: "complete",
+          label: t("deals.closeTasks.complete"),
+          description: t("deals.closeTasks.completeHint"),
+        },
+        {
+          value: "keep",
+          label: t("deals.closeTasks.keep"),
+          description: t("deals.closeTasks.keepHint"),
+        },
+      ]}
+    />
+  );
+}
+
+// Past this many, the rest are counted rather than listed.
+const PREVIEW_ROWS = 5;
+
+// Each open task with its due day, so the reader knows what Complete all ends.
+function CloseTasksPreview({
+  tasks,
+}: Readonly<{ tasks: readonly Activity[] }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const hidden = tasks.length - PREVIEW_ROWS;
+  return (
+    <div className="closetasks-preview">
+      <ul aria-label={t("deals.closeTasks.listLabel")}>
+        {tasks.slice(0, PREVIEW_ROWS).map((task) => {
+          const subject = task.subject ?? t("deals.closeTasks.untitled");
+          return (
+            <li key={task.id}>
+              <span className="closetasks-subject" title={subject}>
+                {subject}
+              </span>
+              <span className="t-caption">
+                {task.due_at
+                  ? t("co.next.due", {
+                      when: formatDate(task.due_at, locale, zone),
+                    })
+                  : t("co.next.undated")}
+              </span>
+            </li>
+          );
+        })}
       </ul>
-      <ChoiceList<CloseTasksAnswer>
-        legend={plural("deals.closeTasks.legend", tasks.length, count)}
-        value={answer}
-        onChange={onAnswer}
-        choices={[
-          {
-            value: "complete",
-            label: t("deals.closeTasks.complete"),
-            description: t("deals.closeTasks.completeHint"),
-          },
-          {
-            value: "keep",
-            label: t("deals.closeTasks.keep"),
-            description: t("deals.closeTasks.keepHint"),
-          },
-        ]}
-      />
-    </>
+      {hidden > 0 && (
+        <p className="t-caption">
+          {plural("deals.closeTasks.more", hidden, {
+            count: formatNumber(hidden, locale),
+          })}
+        </p>
+      )}
+    </div>
   );
 }

@@ -58,7 +58,10 @@ type Sent = { path: string; body: unknown };
 type BulkBody = { items: { id: string; version: number }[] };
 
 const OPEN_TASKS = [
-  task("t-invoice", "Send the final invoice"),
+  {
+    ...task("t-invoice", "Send the final invoice"),
+    due_at: "2026-11-04T12:00:00Z",
+  },
   task("t-device", "Return the loan device"),
   task("t-done", "Already handled", true),
   { ...task("n-kickoff", "Kickoff notes"), kind: "note", is_done: undefined },
@@ -179,19 +182,20 @@ async function answer(
 it("lists the deal's open tasks and asks before it closes", async () => {
   stubServer();
   renderClose(async () => ({ id: "deal-1", version: 4 }));
-  const list = await screen.findByRole("list", {
+  const question = await screen.findByRole("group", {
+    name: "What happens to the 2 open tasks on this deal?",
+  });
+  // Listed inside the question, each with its due day.
+  const list = within(question).getByRole("list", {
     name: "Open tasks on this deal",
   });
-  expect(
-    within(list)
-      .getAllByRole("listitem")
-      .map((item) => item.textContent),
-  ).toEqual(["Send the final invoice", "Return the loan device"]);
-  expect(
-    screen.getByRole("group", {
-      name: "What happens to the 2 open tasks on this deal?",
-    }),
-  ).toBeInTheDocument();
+  const rows = within(list).getAllByRole("listitem");
+  expect(rows.map((row) => row.firstChild?.textContent)).toEqual([
+    "Send the final invoice",
+    "Return the loan device",
+  ]);
+  expect(rows[0]).toHaveTextContent(/^Send the final invoiceDue \S/);
+  expect(rows[1]).toHaveTextContent("No due date");
   expect(screen.getByRole("radio", { name: /Complete all/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Keep/ })).not.toBeChecked();
 
@@ -348,4 +352,19 @@ it("completes more tasks than one bulk change holds in batches of 500", async ()
   await waitFor(() =>
     expect(sent.at(-1)?.path).toBe("/v1/bulk/batch-t-0/undo/preview"),
   );
+});
+
+it("lists the first five tasks and counts the rest", async () => {
+  const many = Array.from({ length: 7 }, (_, at) =>
+    task(`t-${at}`, `Task ${at + 1}`),
+  );
+  stubServer({
+    activities: () => json({ data: many, page: { has_more: false } }),
+  });
+  renderClose(async () => ({ id: "deal-1", version: 4 }));
+  const list = await screen.findByRole("list", {
+    name: "Open tasks on this deal",
+  });
+  expect(within(list).getAllByRole("listitem")).toHaveLength(5);
+  expect(screen.getByText("and 2 more")).toBeInTheDocument();
 });

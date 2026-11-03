@@ -1584,6 +1584,13 @@ span.error-line {
   border-color: var(--accent);
   box-shadow: var(--focus-glow);
 }
+/* A note that grows with what is typed, from three lines up to ten, then
+   scrolls. Dragging the corner still resizes it. */
+.textarea-grow {
+  field-sizing: content;
+  min-block-size: calc(3lh + 2 * var(--inputPaddingY) + 2px);
+  max-block-size: calc(10lh + 2 * var(--inputPaddingY) + 2px);
+}
 
 .table-scroll {
   /* Contains absolutely placed cell content (sr-only labels) so it scrolls with the table. */
