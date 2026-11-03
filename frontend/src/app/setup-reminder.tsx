@@ -14,6 +14,7 @@ import type { SettingsReach } from "../lib/settingscatalog";
 import { settingsHref } from "../lib/settingsrouting";
 import { type SetupChecklist, useSetupChecklist } from "../lib/setup-checklist";
 import "./setup-reminder.css";
+import "./topbar-popover.css";
 
 const NO_REACH: SettingsReach = { acts: [], looksUp: [] };
 
@@ -86,6 +87,8 @@ export function SetupReminder({
       className="setup-reminder"
       variant="ghost"
       width="wide"
+      pinned
+      panelClassName="topbar-popover setup-reminder-popover"
       label={<SetupReminderLabel setup={setup} />}
     >
       <div className="setup-reminder-panel">

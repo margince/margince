@@ -13,7 +13,7 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { AppLink } from "../design-system/applink";
-import { Avatar } from "../design-system/atoms";
+import { Avatar, Button } from "../design-system/atoms";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
@@ -26,6 +26,7 @@ import { HelpSubmenu } from "./accounthelp";
 import { type RowSeat, useRovingSeats } from "./accountseats";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";
+import "./topbar-popover.css";
 import { ThemeSubmenu } from "./accounttheme";
 import {
   nextStepRoute,
@@ -181,7 +182,7 @@ function AccountPanel({
 
   return (
     <div
-      className="accountmenu"
+      className="accountmenu topbar-popover"
       id={id}
       role="menu"
       aria-label={
@@ -306,8 +307,10 @@ export function AccountMenu() {
 
   return (
     <div className="account">
-      <button
-        type="button"
+      {/* The bare glyph button its neighbours are, so every state answers alike. */}
+      <Button
+        variant="bare"
+        iconOnly
         className="user"
         ref={trigger}
         // Where the row PRINTS the contact's name, WCAG 2.5.3 (Label in Name)
@@ -346,7 +349,7 @@ export function AccountMenu() {
             {identity.spoken}
           </span>
         )}
-      </button>
+      </Button>
       {open && (
         <AccountPanel
           identity={identity}

@@ -1,6 +1,11 @@
 /* The setup checklist behind the top bar's ghost trigger. Width, padding and
    the steps' action column come from Popover and Checklist. */
 
+/* Pinned under the strip, so it scrolls inside the room left below it. */
+.setup-reminder-popover {
+  max-block-size: var(--topbarPopoverRoom);
+}
+
 .setup-reminder-panel {
   display: flex;
   flex-direction: column;

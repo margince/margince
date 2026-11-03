@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -155,6 +155,24 @@ export const CentreOpen: Story = {
 export const NothingEverRaised: Story = {
   render: story([]),
   play: openIt,
+};
+
+// The empty centre on a phone. The sentence stands on the heading's inset, with
+// no box of its own inside the panel.
+export const NothingEverRaisedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story([]),
+  play: async (context) => {
+    await openIt(context);
+    const body = within(document.body);
+    const empty = await body.findByText(/Nothing has come in yet/);
+    const heading = body.getByRole("heading", { name: "Notifications" });
+    await expect(getComputedStyle(empty).borderTopWidth).toBe("0px");
+    await expect(empty.getBoundingClientRect().left).toBe(
+      heading.getBoundingClientRect().left,
+    );
+  },
 };
 
 // A centre with a history and nothing waiting. No bulk verb: there is nothing

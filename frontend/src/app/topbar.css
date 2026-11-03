@@ -173,18 +173,18 @@
    `--accentBrand`: the brand token keeps one value in both themes and falls
    to 2.0:1 against the strip in the dark one. */
 
-/* The account menu drops from the STRIP, not from the trigger: anchored to the
-   32px avatar it began 9px above the strip's own rule and covered it. The offset
-   is the trigger's centring inside the bar plus the gap under the rule, so it
-   holds at any bar height and at the larger touch control size. */
-.topbar .accountmenu {
-  top: calc(
-    100% +
-    (var(--topbarH) - var(--controlHeight)) /
-    2 +
-    var(--space-2) +
-    1px
-  );
+/* The bar's glyph buttons answer as one: the bare button's square fill under
+   the pointer and while the panel it opens is open. */
+.topbar .btn-bare[aria-expanded="true"] {
+  background: var(--groundHover);
+  color: var(--textPrimary);
+}
+
+/* The avatar's own edge meets the gutter, and it stands off the bell as far as
+   the glyphs stand off each other. The box keeps its full size and reaches out. */
+.topbar .account .user {
+  margin-inline-start: calc((var(--avatarSm) - var(--controlIcon)) / 2);
+  margin-inline-end: calc((var(--avatarSm) - var(--controlHeight)) / 2);
 }
 
 /* Below this width a centred field and the trail beside it are competing for
@@ -226,8 +226,16 @@
   }
   .topbar-search:hover {
     border-color: transparent;
-    background: var(--bgHover);
+    background: var(--groundHover);
     color: var(--textPrimary);
+  }
+  /* The press and the ring of the bare buttons beside it (base.css). */
+  .topbar-search:active {
+    background: var(--bgInset);
+    transform: translateY(1px);
+  }
+  .topbar-search:focus-visible {
+    outline-offset: 2px;
   }
   .topbar-searchlabel,
   .topbar-keys {
@@ -235,6 +243,12 @@
   }
   .topbar-trail {
     order: 2;
+  }
+}
+@media (max-width: 1100px) and (prefers-reduced-motion: reduce) {
+  .topbar-search:active {
+    transform: none;
+    filter: brightness(0.96);
   }
 }
 
@@ -299,6 +313,23 @@
   .topbar-home {
     min-block-size: 44px;
     min-inline-size: 44px;
+  }
+  /* The ends of the bar meet the gutter with what a reader sees, the chip and
+     the avatar, while their targets reach past it. */
+  .topbar-home {
+    margin-inline-start: calc(
+      (var(--controlHeight) - max(var(--controlHeight), 44px)) /
+      2
+    );
+  }
+  .icon-action ~ .topbar-home {
+    margin-inline-start: 0;
+  }
+  .topbar .account .user {
+    margin-inline-end: calc(
+      (var(--avatarSm) - max(var(--controlHeight), 44px)) /
+      2
+    );
   }
   /* A 44px box leaves 3px either side in the bar, so the ring is drawn inside
      the box rather than over the bar's rule. */

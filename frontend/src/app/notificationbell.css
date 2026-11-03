@@ -22,20 +22,17 @@
   pointer-events: none;
 }
 
-/* Under the strip and pinned to its right edge, where the bell is. The width is
-   a reading measure rather than the trigger's: this holds sentences.
+/* Placed under the strip by `.topbar-popover`. The width is a reading measure
+   rather than the trigger's, inside the gutter on both sides on a phone.
    Above the bar (20) because it hangs out of it, below the modal overlay (50),
    which may legitimately cover the whole chrome. */
 .notifbell-loose {
-  position: fixed;
-  top: calc(var(--topbarH) + var(--space-1));
-  right: var(--pageGutter);
   z-index: 25;
-  width: min(380px, calc(100vw - var(--space-8)));
+  width: min(380px, calc(100vw - 2 * var(--pageGutter)));
   /* The history is longer than the screen. The panel keeps its head in view and
      scrolls its own body — a panel as tall as the list would push its own
      "Mark all read" off the bottom of the window. */
-  max-height: min(560px, calc(100vh - var(--topbarH) - var(--space-8)));
+  max-height: min(560px, var(--topbarPopoverRoom));
   overflow-y: auto;
   /* The panel's corner, so the overlay ground and its shadow follow it. */
   border-radius: var(--r-lg);

@@ -88,7 +88,25 @@ const openPanel: Story["play"] = async () => {
 
 export const Closed: Story = {};
 export const ClosedDark: Story = { globals: { theme: "dark" } };
-export const Open: Story = { play: openPanel };
+/** Open, hanging at the page gutter like every panel the strip opens. */
+export const Open: Story = {
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Finish setup/ }),
+    );
+    const panel = await screen.findByRole("heading", {
+      name: "Finish setting up",
+    });
+    const bar = document.querySelector<HTMLElement>(".topbar");
+    const pop = panel.closest(".popover-panel");
+    if (!bar || !pop) {
+      throw new Error("the top bar or the panel is missing");
+    }
+    await expect(window.innerWidth - pop.getBoundingClientRect().right).toBe(
+      Number.parseFloat(getComputedStyle(bar).paddingRight),
+    );
+  },
+};
 export const OpenDark: Story = { play: openPanel, globals: { theme: "dark" } };
 // A phone's bar has no room for the trigger, so the account menu carries it.
 // The row follows Help and feedback and opens the next step's page.

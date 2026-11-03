@@ -196,6 +196,13 @@
   text-align: left;
   background: none;
 }
+/* Nor the card's edge: the pane around the sentence already draws the one
+   edge it sits in. The plate keeps its dashed one. */
+.panel-body > .empty:not(.empty-plate),
+.panel > .empty:not(.empty-plate),
+.panel > [role="alert"] > .empty:not(.empty-plate) {
+  border: 0;
+}
 
 /* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
  * summary is one line among `PanelRow`s and pays the row's own interval and the

@@ -28,6 +28,7 @@ import { routeHash } from "../lib/router";
 import { noticeHeadline } from "./noticeheadline";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
+import "./topbar-popover.css";
 
 // The notification centre, as the chrome carries it: a count somebody sees
 // without opening anything, and the history behind it.
@@ -135,7 +136,7 @@ export function NotificationBell() {
       {open &&
         createPortal(
           <div
-            className="notifbell-loose"
+            className="notifbell-loose topbar-popover"
             ref={panel}
             id={panelId}
             {...panelFocus}

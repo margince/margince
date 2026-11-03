@@ -229,11 +229,6 @@ const ACCEPTED = new Map<string, string>([
   // 2.2 AA asks 44px of a thumb. `max()` is what keeps them a floor: a later
   // rise in the shared height passes straight through.
   [
-    "user",
-    "the account chip takes the coarse-pointer 44px floor; at a fine pointer it " +
-      "is --controlHeight like every other control",
-  ],
-  [
     ".segmented button",
     "a segment takes the coarse-pointer 44px floor; the strip is --controlHeight " +
       "for a mouse, which is what makes it read as one control",

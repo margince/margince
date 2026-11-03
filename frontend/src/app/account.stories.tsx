@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   AccountMenuFrame,
   openMenu,
@@ -97,6 +98,34 @@ export const TopBarThemeFlyoutDark: Story = {
   name: "Top bar theme flyout (dark)",
   globals: { theme: "dark" },
   play: openThemeFlyout,
+  render: () => {
+    stubSession();
+    return <AccountMenuFrame />;
+  },
+};
+
+/**
+ * On a phone, open. The avatar's own edge meets the page gutter while its
+ * square target reaches past it, and the menu hangs at that same gutter.
+ */
+export const TopBarMenuPhone: Story = {
+  name: "Top bar menu (phone)",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async (context) => {
+    await openMenu(context);
+    const bar = context.canvasElement.querySelector<HTMLElement>(".topbar");
+    const avatar = bar?.querySelector(".account .avatar");
+    const menu = await within(document.body).findByRole("menu");
+    if (!bar || !avatar) {
+      throw new Error("the top bar or its avatar is missing");
+    }
+    const inner =
+      bar.getBoundingClientRect().right -
+      Number.parseFloat(getComputedStyle(bar).paddingRight);
+    await expect(avatar.getBoundingClientRect().right).toBe(inner);
+    await expect(menu.getBoundingClientRect().right).toBe(inner);
+  },
   render: () => {
     stubSession();
     return <AccountMenuFrame />;

@@ -1,0 +1,32 @@
+/* Every panel the top bar opens: the account menu, the notification centre and
+   the setup checklist. They hang from the strip's right edge at the page gutter
+   and come out of it with one movement, so the strip's panels read as one set.
+   Transform and opacity only, which composite, on the shell's own state curve. */
+.topbar-popover {
+  position: fixed;
+  top: calc(var(--topbarH) + var(--space-1));
+  right: var(--pageGutter);
+  /* The room under the strip, for a panel that scrolls inside itself. */
+  --topbarPopoverRoom: calc(100dvh - var(--topbarH) - var(--space-8));
+  animation: topbar-popover-in var(--dur-state) var(--ease-out) both;
+  transform-origin: top right;
+}
+
+@keyframes topbar-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* The end state at once: a panel that renders nothing under reduced motion is
+   broken. After the rule it removes, since a media query adds no specificity. */
+@media (prefers-reduced-motion: reduce) {
+  .topbar-popover {
+    animation: none;
+  }
+}

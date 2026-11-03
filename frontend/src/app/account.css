@@ -7,42 +7,10 @@
    outward at all (the phone rule below). */
 
 .account {
-  position: relative;
-  /* The menu is positioned against this box, and the trail is a flex row that
-     would otherwise squeeze it. */
+  /* The trail is a flex row that would otherwise squeeze it. */
   flex: none;
 }
 
-/* The trigger is the AVATAR and nothing else. The strip is chrome true of the
-   whole session rather than a row about a contact, so it takes the strip's own
-   control size — from the token, so it stands on the one control height its
-   three neighbours take instead of a number of its own.
-   The name and the address are not drawn: the sentence they carry reaches a
-   screen reader through the clipped line (account.tsx), and the panel prints them
-   when it opens, which is where the reader confirms whose account this is.
-   Sized rather than padded, because a padded row is 40px tall in a 34px strip and
-   pushes every item in the bar 3px off its centre. */
-.account .user {
-  display: grid;
-  place-items: center;
-  width: var(--controlHeight);
-  height: var(--controlHeight);
-  padding: 0;
-  border: 0;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: transparent;
-  color: var(--textPrimary);
-  font-family: var(--fontFamilyBody);
-  cursor: pointer;
-}
-.account .user:hover {
-  background: var(--groundHover);
-}
-.account .user:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
 /* Two lines in a box that is narrower than either of them can be: both clip
    themselves, and `min-width: 0` is what lets them — a flex item's floor is its
    content width until it is told otherwise, and without it the row grows instead
@@ -65,14 +33,9 @@
   color: var(--textPrimary);
 }
 /* ===== the menu =====
-   Downward and anchored to the trigger's RIGHT edge, which is the top bar's
-   arrangement: the trigger sits at the top-right of the viewport, so a menu
-   anchored on its left edge would open off the screen. */
+   Placed and brought in by `.topbar-popover` (topbar-popover.css), like every
+   panel the strip opens. */
 .accountmenu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  left: auto;
   /* THE MENU ANATOMY's floor (design-system/listtable.css, .lt-menu): one
      option list is one surface, and this one is the product's account menu
      rather than a shape of its own. No block ceiling to go with it — the only
@@ -93,41 +56,6 @@
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);
   z-index: 60;
-  /* The menu comes OUT OF the trigger rather than appearing beside it: the
-     transform origin is the control that opened it, so the growth reads as one
-     movement instead of a panel switching on. Short (--dur-state) because this is
-     chrome — a menu you have to wait for is a menu that feels slow — and on the
-     shell's own curve, so it belongs to the same choreography as the sidebar
-     collapse rather than carrying a second easing vocabulary.
-     Transform and opacity only: both composite, so it cannot cost a frame.
-     The fallback repeats `.app`'s curve because the block is also rendered
-     outside the shell (the component workbench), and an unresolved custom
-     property in a shorthand invalidates the whole declaration — which would
-     silently drop the animation there rather than degrade it. */
-  animation: accountmenu-drop var(--dur-state) var(--ease-out) both;
-  transform-origin: top right;
-}
-
-@keyframes accountmenu-drop {
-  from {
-    opacity: 0;
-    transform: translateY(-4px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-/* The end state, immediately — a menu that renders nothing under reduced motion
-   is broken, not accessible.
-   Only the menu here. The flyout's own rule is declared further down, beside the
-   animation it removes: a media query adds no specificity, and `.accountsub` here
-   losing to `.accountsub` there on document order is why the flyout kept
-   animating for readers who had asked it not to. */
-@media (prefers-reduced-motion: reduce) {
-  .accountmenu {
-    animation: none;
-  }
 }
 
 /* ===== the rows =====
@@ -254,10 +182,10 @@
   animation: accountsub-open var(--dur-state) var(--ease-out) both;
   transform-origin: top right;
 }
-/* The other half of the reduced-motion rule above, declared after the animation
-   it removes so document order settles the tie in its favour. `both` on the
-   animation means the flyout would otherwise hold its start frame; removing the
-   animation is what puts it in its end state. */
+/* Reduced motion, declared after the animation it removes so document order
+   settles the tie in its favour. `both` on the animation means the flyout would
+   otherwise hold its start frame; removing the animation is what puts it in its
+   end state. */
 @media (prefers-reduced-motion: reduce) {
   .accountsub {
     animation: none;
@@ -337,16 +265,4 @@
    edges instead of floating inside the menu's frame. */
 .acctrowalert {
   padding: var(--space-1) 0 0;
-}
-
-/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
-   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
-   shared control height must not be capped by this floor. Declared under
-   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
-   still a mouse — the floor is about what a thumb can hit, not about how much
-   room there is. */
-@media (pointer: coarse) {
-  .account .user {
-    min-height: max(var(--controlHeight), 44px);
-  }
 }

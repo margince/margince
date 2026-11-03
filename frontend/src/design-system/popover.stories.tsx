@@ -152,3 +152,20 @@ export const GhostTriggerWithBadge: Story = {
     ).toBeVisible();
   },
 };
+
+// `pinned`: the caller's class places the panel, as the top bar does, so the
+// panel carries no placement of its own and is not moved to the trigger.
+export const Pinned: Story = {
+  render: () => (
+    <Popover label="Evidence" variant="ghost" width="wide" pinned>
+      <p>Three emails and one call reference the March renewal date.</p>
+    </Popover>
+  ),
+  play: async (context) => {
+    await openByClick(context);
+    const panel = await within(document.body).findByText(
+      "Three emails and one call reference the March renewal date.",
+    );
+    await expect(panel.closest(".popover-panel")).not.toHaveAttribute("style");
+  },
+};
