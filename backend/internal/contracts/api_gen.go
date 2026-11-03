@@ -41257,6 +41257,9 @@ type CreateOfferRequest struct {
 	Currency       string              `json:"currency"`
 	IntroText      *string             `json:"intro_text,omitempty"`
 
+	// Language The language new lines take product names in. Unset is the entity's, else the template's.
+	Language *string `json:"language,omitempty"`
+
 	// LegalEntityId The legal entity that issues the offer. Defaults to the entity the author works for;
 	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
@@ -51025,6 +51028,12 @@ type Offer struct {
 	// the entity has no value for is absent.
 	IssuerSnapshot *map[string]interface{} `json:"issuer_snapshot,omitempty"`
 
+	// Language The language the offer's new lines take product names in (ISO 639-1). It defaults to
+	// the issuing legal entity's `default_language`, else the language of the offer's
+	// template. Null on an offer created before offers had one: its lines take
+	// `Product.name`. The template's own fixed labels follow the template, not this.
+	Language *string `json:"language,omitempty"`
+
 	// LegalEntityId The legal entity that issues the offer: its name, address, VAT ID, bank details and
 	// logo are printed on the PDF. Null on an offer created before offers named one, which
 	// is issued by the default entity.
@@ -52201,6 +52210,22 @@ type ProductListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// ProductTranslation defines model for ProductTranslation.
+type ProductTranslation struct {
+	Description *string `json:"description,omitempty"`
+
+	// Language ISO 639-1, lower case.
+	Language  string    `json:"language"`
+	Name      string    `json:"name"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int64     `json:"version"`
+}
+
+// ProductTranslationListResponse defines model for ProductTranslationListResponse.
+type ProductTranslationListResponse struct {
+	Data []ProductTranslation `json:"data"`
+}
+
 // ProgressDealRequest What `progress_deal` takes besides the deal, which the path names.
 type ProgressDealRequest struct {
 	// ApprovalId The approval a human gave this exact call, on its retry.
@@ -53168,6 +53193,13 @@ type PutOnboardingStateRequestSourceMode string
 
 // PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is where a creator who will not work in it invites that colleague. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
+
+// PutProductTranslationRequest defines model for PutProductTranslationRequest.
+type PutProductTranslationRequest struct {
+	// Description Left out or empty, the language has a name and no description.
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
@@ -60331,6 +60363,9 @@ type UpdateOfferRequest struct {
 	// currency the offer already holds is not a change.
 	Currency  *string `json:"currency,omitempty"`
 	IntroText *string `json:"intro_text,omitempty"`
+
+	// Language The language lines added from now on take product names in. Lines already on the offer keep theirs.
+	Language *string `json:"language,omitempty"`
 
 	// LegalEntityId The legal entity that issues the offer. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
@@ -72753,6 +72788,9 @@ type CreateProductJSONRequestBody = CreateProductRequest
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = UpdateProductRequest
 
+// PutProductTranslationJSONRequestBody defines body for PutProductTranslation for application/json ContentType.
+type PutProductTranslationJSONRequestBody = PutProductTranslationRequest
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProjectRequest
 
@@ -80800,6 +80838,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "issuer_snapshot")
 	}
 
+	if raw, found := object["language"]; found {
+		err = json.Unmarshal(raw, &a.Language)
+		if err != nil {
+			return fmt.Errorf("error reading 'language': %w", err)
+		}
+		delete(object, "language")
+	}
+
 	if raw, found := object["legal_entity_id"]; found {
 		err = json.Unmarshal(raw, &a.LegalEntityId)
 		if err != nil {
@@ -81050,6 +81096,13 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		object["issuer_snapshot"], err = json.Marshal(a.IssuerSnapshot)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'issuer_snapshot': %w", err)
+		}
+	}
+
+	if a.Language != nil {
+		object["language"], err = json.Marshal(a.Language)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'language': %w", err)
 		}
 	}
 
@@ -86823,6 +86876,15 @@ type ServerInterface interface {
 	// Update a product (partial). Existing offer lines keep their price snapshot.
 	// (PATCH /products/{id})
 	UpdateProduct(w http.ResponseWriter, r *http.Request, id Id, params UpdateProductParams)
+	// The product's name and description in further languages.
+	// (GET /products/{id}/translations)
+	ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove the product's text in one language.
+	// (DELETE /products/{id}/translations/{language})
+	DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
+	// Set the product's name and description in one language.
+	// (PUT /products/{id}/translations/{language})
+	PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
 	// List projects (live by default; cursor-paginated).
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
@@ -92106,6 +92168,24 @@ func (_ Unimplemented) GetProduct(w http.ResponseWriter, r *http.Request, id Id)
 // Update a product (partial). Existing offer lines keep their price snapshot.
 // (PATCH /products/{id})
 func (_ Unimplemented) UpdateProduct(w http.ResponseWriter, r *http.Request, id Id, params UpdateProductParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The product's name and description in further languages.
+// (GET /products/{id}/translations)
+func (_ Unimplemented) ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the product's text in one language.
+// (DELETE /products/{id}/translations/{language})
+func (_ Unimplemented) DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the product's name and description in one language.
+// (PUT /products/{id}/translations/{language})
+func (_ Unimplemented) PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -125522,6 +125602,120 @@ func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// ListProductTranslations operation middleware
+func (siw *ServerInterfaceWrapper) ListProductTranslations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProductTranslations(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProductTranslation(w, r, id, language)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) PutProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutProductTranslation(w, r, id, language)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjects operation middleware
 func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.Request) {
 
@@ -138564,6 +138758,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/products/{id}", wrapper.UpdateProduct)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/products/{id}/translations", wrapper.ListProductTranslations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/products/{id}/translations/{language}", wrapper.DeleteProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/products/{id}/translations/{language}", wrapper.PutProductTranslation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects", wrapper.ListProjects)

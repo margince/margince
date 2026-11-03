@@ -14,9 +14,11 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,6 +41,9 @@ type IssuerEntity struct {
 	VatID, RegisterCourt, RegisterNumber string
 	BankAccountHolder, IBAN, BIC         string
 	LogoKey                              string
+	// DefaultLanguage is the language a new offer from the entity takes
+	// product text in, empty for none.
+	DefaultLanguage string
 }
 
 // AuthorEntity answers the legal entity a user works for.
@@ -301,4 +306,70 @@ func (s *Store) sendSnapshots(ctx context.Context, tx pgx.Tx, baseCurrency strin
 		return nil, nil, auth.NameMissingReference("legal_entity_id", apperrors.ErrNotFound)
 	}
 	return buyer, issuerSnapshot(entity, name, baseCurrency), nil
+}
+
+// offerLanguage is the language a new offer takes product text in: the one
+// asked for, else the issuing entity's, else its template's.
+func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEntityID, template *ids.OfferTemplateID, asked *string) (string, error) {
+	if asked != nil {
+		return *asked, checkLanguage(*asked)
+	}
+	issuer, err := s.installation.IssuerEntity(ctx, tx, &entity)
+	if err != nil {
+		return "", fmt.Errorf("read the issuing entity's language: %w", err)
+	}
+	if issuer.DefaultLanguage != "" {
+		return issuer.DefaultLanguage, nil
+	}
+	var templateID *openapi_types.UUID
+	if template != nil {
+		id := openapi_types.UUID(template.UUID)
+		templateID = &id
+	}
+	locale, _, err := resolveRenderTemplate(ctx, tx, templateID)
+	if err != nil {
+		return "", err
+	}
+	return strings.ToLower(strings.SplitN(locale, "-", 2)[0]), nil
+}
+
+// languageOf is an offer's language, empty for an offer written before
+// offers had one, whose lines take product.name.
+func languageOf(language *string) string {
+	if language == nil {
+		return ""
+	}
+	return *language
+}
+
+// issuerPatch adds an edit's language and issuing entity to the offer's patch,
+// and answers the rendering the edit retires. Naming the language or entity
+// the draft already names is no edit. Another issuer retires the rendering,
+// which prints the old one.
+func (s *Store) issuerPatch(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Offer,
+	in UpdateOfferInput, dropped *string,
+) (*string, error) {
+	if in.Language != nil {
+		if err := checkLanguage(*in.Language); err != nil {
+			return dropped, err
+		}
+		if current.Language == nil || *current.Language != *in.Language {
+			p.Set(languageField, current.Language, *in.Language)
+		}
+	}
+	if in.LegalEntityID == nil {
+		return dropped, nil
+	}
+	entity, err := s.offerEntity(ctx, tx, in.LegalEntityID)
+	if err != nil {
+		return dropped, err
+	}
+	if current.LegalEntityId != nil && ids.UUID(*current.LegalEntityId) == entity.UUID {
+		return dropped, nil
+	}
+	p.Set("legal_entity_id", current.LegalEntityId, entity)
+	if dropped == nil {
+		dropped = retireRendering(p, current)
+	}
+	return dropped, nil
 }

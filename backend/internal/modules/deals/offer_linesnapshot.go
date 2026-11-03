@@ -33,7 +33,10 @@ const zeroPct = "0.00"
 // snapshot is copied ONCE, here — a later product edit never touches the
 // line (B-E03.17). The rate-card price only carries over when the
 // currencies agree; a silent conversion would fabricate a number.
-func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
+//
+// The name is the product's text in the offer's language where it has one,
+// and product.name otherwise.
+func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency, language string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
 	if productID == nil {
 		return in, nil
 	}
@@ -42,9 +45,11 @@ func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.Produ
 	var pBillingModel *string
 	var pIntervalMonths *int
 	err := tx.QueryRow(ctx,
-		`SELECT name, unit, currency, default_tax_rate::text, unit_price_minor,
-		        billing_model, billing_interval_months
-		 FROM product WHERE id = $1 AND archived_at IS NULL`, *productID).
+		`SELECT coalesce(t.name, p.name), p.unit, p.currency, p.default_tax_rate::text, p.unit_price_minor,
+		        p.billing_model, p.billing_interval_months
+		   FROM product p
+		   LEFT JOIN product_translation t ON t.product_id = p.id AND t.language = $2
+		  WHERE p.id = $1 AND p.archived_at IS NULL`, *productID, language).
 		Scan(&pName, &pUnit, &pCurrency, &pTax, &pPrice, &pBillingModel, &pIntervalMonths)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -94,8 +99,8 @@ func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discoun
 	return unitVal, discount, tax
 }
 
-func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency string, in OfferLineInputRow) (resolvedOfferLine, error) {
-	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, lineSnapshotDefaults{
+func resolveOfferLine(ctx context.Context, tx pgx.Tx, offerCurrency, language string, in OfferLineInputRow) (resolvedOfferLine, error) {
+	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, language, lineSnapshotDefaults{
 		Description: in.Description, Unit: in.Unit, Price: in.UnitPriceMinor, TaxRate: in.TaxRate,
 		BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
 	})

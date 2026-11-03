@@ -96,6 +96,6 @@ func dealsIssuerEntity(ctx context.Context, tx pgx.Tx, id *ids.LegalEntityID) (d
 		},
 		VatID: text(e.VatID), RegisterCourt: text(e.RegisterCourt), RegisterNumber: text(e.RegisterNumber),
 		BankAccountHolder: text(e.BankAccountHolder), IBAN: text(e.IBAN), BIC: text(e.BIC),
-		LogoKey: text(e.LogoObjectKey),
+		LogoKey: text(e.LogoObjectKey), DefaultLanguage: text(e.DefaultLanguage),
 	}, nil
 }

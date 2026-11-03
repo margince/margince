@@ -57,6 +57,7 @@ type HeaderEditValues = {
   valid_until: string;
   template_id: string | null;
   legal_entity_id: string | null;
+  language: string;
   intro_text: string;
   terms_text: string;
 };
@@ -107,6 +108,7 @@ export function EditOfferHeaderModal({
     valid_until: offer.valid_until ?? "",
     template_id: offer.template_id ?? null,
     legal_entity_id: offer.legal_entity_id ?? null,
+    language: offer.language ?? "",
     intro_text: offer.intro_text ?? "",
     terms_text: offer.terms_text ?? "",
   });
@@ -126,6 +128,7 @@ export function EditOfferHeaderModal({
         valid_until: offer.valid_until ?? "",
         template_id: offer.template_id ?? null,
         legal_entity_id: offer.legal_entity_id ?? null,
+        language: offer.language ?? "",
         intro_text: offer.intro_text ?? "",
         terms_text: offer.terms_text ?? "",
       });
@@ -151,6 +154,12 @@ export function EditOfferHeaderModal({
             // offers named an entity keeps naming none until somebody does.
             ...(input.legal_entity_id
               ? { legal_entity_id: input.legal_entity_id }
+              : {}),
+            // Sent only when the reader changed it: lines added from now on
+            // take product text in it, and the ones already there keep theirs.
+            ...(input.language.trim() &&
+            input.language.trim().toLowerCase() !== (offer.language ?? "")
+              ? { language: input.language.trim().toLowerCase() }
               : {}),
             intro_text: input.intro_text || null,
             terms_text: input.terms_text || null,
@@ -242,6 +251,18 @@ export function EditOfferHeaderModal({
             setValues((prev) => ({ ...prev, legal_entity_id }))
           }
         />
+        <Field label={t("offer.language")} hint={t("offer.languageHint")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              maxLength={2}
+              value={values.language}
+              onChange={(event) =>
+                setValues((prev) => ({ ...prev, language: event.target.value }))
+              }
+            />
+          )}
+        </Field>
         <Field label={t("offer.introText")}>
           {(control) => (
             <TextInput

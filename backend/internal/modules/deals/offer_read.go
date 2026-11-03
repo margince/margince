@@ -159,7 +159,7 @@ func attachOfferLines(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offe
 const offerColumns = `id, deal_id, offer_number, revision, status, currency,
 	buyer_company_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
 	net_minor, tax_minor, gross_minor, fx_rate_to_base::text, fx_rate_date, pdf_asset_ref,
-	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at, legal_entity_id`
+	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at, legal_entity_id, language`
 
 // withholdUnreadableBuyer removes an offer's buyer company from the
 // response when the caller could not open that company.
@@ -317,7 +317,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	err := row.Scan(&id, &dealID, &offerNumber, &revision, &status, &o.Currency,
 		&buyerCompanyID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
 		&netMinor, &taxMinor, &grossMinor, &o.FxRateToBase, &fxRateDate, &o.PdfAssetRef,
-		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &legalEntityID)
+		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &legalEntityID, &o.Language)
 	if err != nil {
 		return o, err
 	}

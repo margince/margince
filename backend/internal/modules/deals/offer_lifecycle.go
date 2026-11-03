@@ -400,10 +400,10 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 		                    buyer_company_id, valid_until, intro_text, terms_text,
-		                    net_minor, tax_minor, gross_minor, source, captured_by, legal_entity_id)
+		                    net_minor, tax_minor, gross_minor, source, captured_by, legal_entity_id, language)
 		 SELECT $1, deal_id, offer_number, $3, 'draft', currency,
 		        buyer_company_id, valid_until, intro_text, terms_text,
-		        net_minor, tax_minor, gross_minor, source, $4, legal_entity_id
+		        net_minor, tax_minor, gross_minor, source, $4, legal_entity_id, language
 		 FROM offer WHERE id = $2`,
 		newID, fromID, nextRevision, by); err != nil {
 		return fmt.Errorf("copy offer into new revision: %w", err)
