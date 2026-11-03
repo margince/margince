@@ -8,6 +8,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../format/timezone";
+import { ProblemError } from "../lib/problem";
 import { RecordView } from "./recordview";
 
 afterEach(cleanup);
@@ -126,7 +127,7 @@ describe("renaming the record", () => {
     expect(onSave).toHaveBeenCalledWith("Brandt Mobility GmbH");
   });
 
-  it("refuses a blank name and keeps the dialog open", async () => {
+  it("cannot save a blank name, and keeps the dialog open", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async (_next: string) => {});
     render(<RecordView {...record} rename={rename(onSave)} />);
@@ -134,9 +135,33 @@ describe("renaming the record", () => {
     const field = screen.getByRole("textbox", { name: "Full name" });
     await user.clear(field);
     await user.type(field, "   {Enter}");
-    expect(await screen.findByText("This field is required.")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(screen.getByRole("dialog", { name: "Full name" })).toBeVisible();
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("shows a refused rename in the dialog and keeps what was typed", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async (_next: string) => {
+      throw new ProblemError({ detail: "Somebody else changed this record." });
+    });
+    const onEditingChange = vi.fn();
+    render(
+      <RecordView
+        {...record}
+        rename={{ ...rename(onSave), onEditingChange }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /^Change Full name/ }));
+    expect(onEditingChange).toHaveBeenLastCalledWith(true);
+    const field = screen.getByRole("textbox", { name: "Full name" });
+    await user.type(field, " AG{Enter}");
+    expect(
+      await screen.findByText("Somebody else changed this record."),
+    ).toBeVisible();
+    expect(field).toHaveValue("Brandt Automotive GmbH AG");
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onEditingChange).toHaveBeenLastCalledWith(true);
   });
 
   it("keeps the name as text for a reader who cannot change it", () => {

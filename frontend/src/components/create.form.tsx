@@ -134,10 +134,13 @@ export function RecordFormBody({
     )
       onSubmit(submittedValues(fields, answers), rows);
   });
-  // A dialog that edits one field is titled with that field's name.
+  // A dialog titled with its one field's name says that name once.
+  const [only, ...others] = shown.filter((field) => !field.divider);
   const titledByDialog =
     dialog !== undefined &&
-    shown.filter((field) => !field.divider).length === 1;
+    only !== undefined &&
+    others.length === 0 &&
+    dialog.title === fieldLabel(only, t);
   const stack = (
     <>
       {shown.map((field) => {
@@ -168,6 +171,7 @@ export function RecordFormBody({
             <MultiselectField
               key={field.key}
               field={field}
+              labelHidden={titledByDialog}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })
@@ -179,6 +183,7 @@ export function RecordFormBody({
           <Field
             key={field.key}
             label={fieldLabel(field, t)}
+            labelHidden={titledByDialog}
             required={field.required}
             hint={
               field.offers

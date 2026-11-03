@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { useState } from "react";
@@ -277,5 +283,78 @@ describe("FieldEditDialog", () => {
     expect(
       await screen.findByRole("textbox", { name: "Industry" }),
     ).toHaveValue("Software");
+  });
+
+  it("sends one write for a double Enter and holds every way out while it is out", async () => {
+    const user = userEvent.setup();
+    let release = () => {};
+    const onSave = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        }),
+    );
+    await user.click(renderEdited({ onSave }));
+    const box = await screen.findByRole("textbox", { name: "Industry" });
+    await user.clear(box);
+    await user.type(box, "Retail{Enter}{Enter}");
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: en["create.cancel"] }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: en["common.close"] }),
+    ).toBeDisabled();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "Industry" })).toBeVisible();
+    release();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("refuses a typed day it cannot read and keeps the dialog open", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await user.click(
+      renderEdited({ onSave, control: "date", stored: "2026-12-15" }),
+    );
+    const box = await screen.findByRole("textbox", { name: "Industry" });
+    await user.clear(box);
+    await user.type(box, "31/02/2026");
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Enter a date as DD/MM/YYYY.",
+    );
+    expect(box).toHaveValue("31/02/2026");
+    expect(screen.getByRole("dialog", { name: "Industry" })).toBeVisible();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("closes only the calendar on an Escape pressed inside it", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await user.click(
+      renderEdited({ onSave, control: "date", stored: "2026-12-15" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /^Choose date/ }),
+    );
+    await screen.findByRole("dialog", { name: /^Choose date/ });
+    await user.keyboard("{ArrowRight}{Escape}");
+    expect(screen.queryByRole("dialog", { name: /^Choose date/ })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Industry" })).toBeVisible();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("does not save a paragraph on the Ctrl+Enter that picks an input method candidate", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await user.click(renderEdited({ onSave, control: "textarea" }));
+    const box = await screen.findByRole("textbox", { name: "Industry" });
+    await user.type(box, " B2B");
+    fireEvent.keyDown(box, { key: "Enter", ctrlKey: true, isComposing: true });
+    fireEvent.keyDown(box, { key: "Enter", ctrlKey: true, keyCode: 229 });
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.keyDown(box, { key: "Enter", ctrlKey: true });
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith("Software B2B"));
   });
 });

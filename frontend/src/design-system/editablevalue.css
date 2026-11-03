@@ -13,11 +13,23 @@
   max-inline-size: calc(100% + var(--space-2));
   margin-block: calc(-1 * var(--space-1));
   margin-inline-start: calc(-1 * var(--space-2));
+  text-align: start;
+  cursor: pointer;
+}
+
+/* The whole pill outside a link: it takes the wrapper's text rules as its own. */
+.editable-value-press {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 100%;
   padding: 0;
   border: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  text-align: start;
+  text-align: inherit;
+  white-space: inherit;
   cursor: pointer;
 }
 
@@ -81,15 +93,15 @@
   }
 }
 
-.editable-value:focus-visible .editable-value-face,
+.editable-value-press:focus-visible .editable-value-face,
 .editable-value-link:focus-within .editable-value-face {
   background: var(--editableFill);
 }
-.editable-value:focus-visible .editable-value-bubble,
+.editable-value-press:focus-visible .editable-value-bubble,
 .editable-value-link:focus-within .editable-value-bubble {
   opacity: 1;
 }
-.editable-value:focus-visible,
+.editable-value-press:focus-visible,
 .editable-value-edit:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;

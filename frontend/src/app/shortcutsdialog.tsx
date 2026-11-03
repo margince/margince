@@ -10,7 +10,7 @@ import {
 } from "../design-system/decisiondeck.verdicts";
 import { Eyebrow } from "../design-system/eyebrow";
 import { FactList } from "../design-system/factlist";
-import { INLINE_COMMIT_KEY } from "../design-system/fieldeditdialog";
+import { FIELD_COMMIT_KEY } from "../design-system/fieldeditdialog";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { DECK_KEY_WORDS } from "../features/brief/brief.deckwords";
@@ -81,7 +81,7 @@ export function shortcutGroups(
         {
           id: "paragraph",
           label: t("shell.shortcuts.paragraphSave"),
-          caps: [modifierCap(platform), capOf(INLINE_COMMIT_KEY)],
+          caps: [modifierCap(platform), capOf(FIELD_COMMIT_KEY)],
         },
       ],
     },

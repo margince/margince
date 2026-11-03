@@ -368,6 +368,10 @@ it("edits a group in a dialog titled by the row, never inside the row", async ()
   await user.click(screen.getByRole("button", { name: "Change Tags" }));
   const dialog = await screen.findByRole("dialog", { name: "Tags" });
   expect(dialog).not.toContainElement(screen.getByRole("link", { name: "a" }));
+  const shown = within(dialog)
+    .getAllByText("Tags")
+    .filter((label) => !label.classList.contains("sr-only"));
+  expect(shown).toHaveLength(1);
 });
 
 // The anchor's name is also /me's brand and the settings company profile.
@@ -412,7 +416,7 @@ it.each([
   },
 );
 
-it("holds a group dialog's corner close while its save is out", async () => {
+it("holds a group dialog's corner close and Escape while its save is out", async () => {
   const user = userEvent.setup();
   let release = () => {};
   const save = vi.fn<RecordFieldSave>(
@@ -452,6 +456,11 @@ it("holds a group dialog's corner close while its save is out", async () => {
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(save).toHaveBeenCalled());
   expect(close).toBeDisabled();
+  await user.keyboard("{Escape}");
+  expect(screen.getByRole("dialog", { name: "Email addresses" })).toBe(dialog);
+  expect(
+    screen.queryByRole("dialog", { name: en["unsaved.title"] }),
+  ).toBeNull();
   release();
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 });

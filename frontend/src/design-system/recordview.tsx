@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useT } from "../i18n";
-import { ProblemError } from "../lib/problem";
+import { problemMessageOf } from "../lib/problem";
 import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
+import { EditableValue } from "./editablevalue";
+import { useFieldEditor } from "./fieldeditdialog";
 import { Heading } from "./heading";
-import { InlineText } from "./inlinetext";
+import { NameDialog } from "./namedialog";
 import { RecordStory } from "./recordstory";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 import "./pagepane.css";
@@ -195,7 +197,7 @@ function RecordHead({
     <header className="record-split-head">
       <div className="record-split-identity">
         <Avatar name={name} identity={identity} src={avatarSrc} size="md" />
-        {rename?.canEdit ? (
+        {rename ? (
           <RecordName name={name} rename={rename} />
         ) : (
           <RecordTitle name={name}>{name}</RecordTitle>
@@ -229,29 +231,66 @@ function RecordTitle({
 }
 
 // The h1 holds the name's edit pill and is named by the record, not by the
-// pill's verb; the rename itself opens in a dialog.
+// pill's verb.
 function RecordName({
   name,
   rename,
 }: Readonly<{ name: string; rename: RecordRename }>) {
   const t = useT();
+  const { open, editing } = useFieldEditor(
+    rename.canEdit,
+    rename.onEditingChange,
+  );
+  const [pending, setPending] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const save = async (next: string) => {
+    setPending(true);
+    setProblem(null);
+    try {
+      await rename.onSave(next);
+      editing(false);
+    } catch (err) {
+      setProblem(problemMessageOf(err, t));
+    } finally {
+      setPending(false);
+    }
+  };
   return (
-    <div className="record-split-rename">
-      <InlineText
+    <>
+      {rename.canEdit ? (
+        <div className="record-split-rename">
+          <RecordTitle name={name}>
+            <EditableValue
+              editLabel={t("inlineChoice.change", { field: rename.label })}
+              placeholder={
+                <span className="record-split-name-text">{name}</span>
+              }
+              onEdit={() => {
+                setProblem(null);
+                editing(true);
+              }}
+            >
+              {rename.value && (
+                <span className="record-split-name-text">{rename.value}</span>
+              )}
+            </EditableValue>
+          </RecordTitle>
+        </div>
+      ) : (
+        <RecordTitle name={name}>{name}</RecordTitle>
+      )}
+      <NameDialog
+        open={open}
+        onClose={() => editing(false)}
+        title={rename.label}
         label={rename.label}
-        value={rename.value}
-        placeholder={name}
-        canEdit
-        frame={(resting) => <RecordTitle name={name}>{resting}</RecordTitle>}
-        onEditingChange={rename.onEditingChange}
+        initial={rename.value}
+        confirmLabel={t("record.save")}
+        pending={pending}
+        problem={problem}
         onDirtyChange={rename.onDirtyChange}
-        onSave={async (next) => {
-          if (!next.trim()) {
-            throw new ProblemError({ detail: t("record.fieldRequired") });
-          }
-          await rename.onSave(next);
-        }}
+        onSave={(next) => void save(next)}
       />
-    </div>
+    </>
   );
 }

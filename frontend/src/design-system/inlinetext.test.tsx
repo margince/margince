@@ -2,6 +2,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -134,6 +135,69 @@ describe("a text value edited in a dialog", () => {
     await user.click(screen.getByRole("button", { name: en["create.cancel"] }));
     expect(onEditingChange).toHaveBeenLastCalledWith(false);
     expect(onDirtyChange).toHaveBeenLastCalledWith(false);
+  });
+});
+
+describe("a field that changes under its open dialog", () => {
+  it("closes the dialog and tells the caller when the field turns read-only", async () => {
+    const user = userEvent.setup();
+    const onEditingChange = vi.fn();
+    const field = (canEdit: boolean) => (
+      <LocaleProvider initial="en">
+        <InlineText
+          label="Industry"
+          value="Automotive"
+          placeholder="Add industry"
+          canEdit={canEdit}
+          onEditingChange={onEditingChange}
+          onSave={async () => undefined}
+        />
+      </LocaleProvider>
+    );
+    const view = render(field(true));
+    await user.click(screen.getByRole("button", { name: /Change Industry/ }));
+    await screen.findByRole("dialog", { name: "Industry" });
+    view.rerender(field(false));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(onEditingChange).toHaveBeenLastCalledWith(false);
+    view.rerender(field(true));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("gives focus to the mark when the first value saved turns the pill into a link", async () => {
+    const user = userEvent.setup();
+    function Email() {
+      const [value, setValue] = useState("");
+      return (
+        <InlineText
+          label="Email"
+          value={value}
+          link={value ? <a href={`mailto:${value}`}>{value}</a> : undefined}
+          placeholder="Add email"
+          canEdit
+          onSave={async (next) => setValue(next)}
+        />
+      );
+    }
+    render(
+      <LocaleProvider initial="en">
+        <Email />
+      </LocaleProvider>,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Change Email Add email" }),
+    );
+    await user.type(
+      await screen.findByRole("textbox", { name: "Email" }),
+      "ana@example.com{Enter}",
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("link", { name: "ana@example.com" })).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Change Email" }),
+      ).toHaveFocus(),
+    );
   });
 });
 

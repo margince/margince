@@ -1,10 +1,4 @@
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { EditableValue } from "../design-system/editablevalue";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice } from "../design-system/inlinechoice";
@@ -20,13 +14,8 @@ import {
   problemMessageOf,
 } from "../lib/problem";
 import type { Route } from "../lib/router";
-import {
-  type CreateField,
-  type FormRows,
-  fieldLabel,
-  RecordFormBody,
-  usePublishedValues,
-} from "./create";
+import { type CreateField, type FormRows, fieldLabel } from "./create";
+import { EditRecordModal } from "./edit";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
 import { useDetailsFieldTarget } from "./pageaside";
 import type {
@@ -122,7 +111,7 @@ function RecordField({
   }
 >) {
   const t = useT();
-  const opened = useRef(props.record);
+  const [opened, setOpened] = useState(props.record);
   const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -130,15 +119,24 @@ function RecordField({
   const { mutation, pending } = useRecordFieldWrite(props.kind, props.record);
   const onEditingChange = useCallback(
     (next: boolean) => {
-      if (next && !editing) opened.current = props.record;
+      if (next && !editing) setOpened(props.record);
       setEditing(next);
       if (!next) setDirty(false);
     },
     [editing, props.record],
   );
+  const grouped =
+    props.groups?.some((group) => group.keys.includes(field.key)) ||
+    Boolean(field.searchTargets) ||
+    props.fields.length > 1 ||
+    field.type === "repeatable" ||
+    field.type === "multiselect";
+  // Only the open group form speaks for the record's answers, and its close clears them.
+  const publish = grouped && editing ? props.onValuesChange : undefined;
+  useEffect(() => () => publish?.({}), [publish]);
   const values = prefillFromRecord(
     props.fields,
-    editing ? opened.current : props.record,
+    editing ? opened : props.record,
   );
   const reason = props.fields
     .map((entry) => props.readOnlyFields?.[entry.key])
@@ -146,24 +144,44 @@ function RecordField({
   // A save elsewhere on the record pauses this field, never its own open editor.
   const editable = props.canEdit && !reason;
   const canEdit = editable && (!pending || editing);
-  const grouped =
-    props.groups?.some((group) => group.keys.includes(field.key)) ||
-    Boolean(field.searchTargets) ||
-    props.fields.length > 1 ||
-    field.type === "repeatable" ||
-    field.type === "multiselect";
   const saveValue = async (next: string) => {
     checkFieldValue(field, next, t);
     await mutation.mutateAsync({
       values: { [field.key]: next },
       rows: {},
-      baseline: opened.current,
+      baseline: opened,
       save: props.save,
     });
+  };
+  const saveGroup = (
+    submitted: Record<string, string>,
+    rows: FormRows | undefined,
+    baseline: FieldRecord,
+  ) => {
+    const unchanged =
+      sameEditValue(submitted, prefillFromRecord(props.fields, baseline)) &&
+      sameEditValue(rows ?? {}, prefillRowsFromRecord(props.fields, baseline));
+    if (unchanged) {
+      onEditingChange(false);
+      return;
+    }
+    mutation.mutate(
+      { values: submitted, rows: rows ?? {}, baseline, save: props.save },
+      { onSuccess: () => onEditingChange(false) },
+    );
+  };
+  const resend = (extra: Record<string, unknown>) => {
+    const last = mutation.variables;
+    if (last)
+      mutation.mutate(
+        { ...last, extra },
+        { onSuccess: () => onEditingChange(false) },
+      );
   };
   if (props.maskedFields?.includes(field.key))
     return <FieldRow label={label}>{t("record.notShown")}</FieldRow>;
   const renderedValue = props.renderValues?.[field.key];
+  const refusal = mutation.error;
   if (grouped)
     return (
       <FieldRow valueRef={target} label={label} align="top">
@@ -179,34 +197,28 @@ function RecordField({
             onEditingChange(true);
           }}
         />
-        <RecordFieldForm
-          {...props}
+        <EditRecordModal
           open={editing}
-          label={label}
-          opened={opened.current}
-          pending={mutation.isPending}
-          error={mutation.error}
-          onResend={(extra) => {
-            const last = mutation.variables;
-            if (last)
-              mutation.mutate(
-                { ...last, extra },
-                { onSuccess: () => onEditingChange(false) },
-              );
-          }}
-          onDirtyChange={setDirty}
           onClose={() => onEditingChange(false)}
-          onSubmit={(submitted, rows) =>
-            mutation.mutate(
-              {
-                values: submitted,
-                rows: rows ?? {},
-                baseline: opened.current,
-                save: props.save,
-              },
-              { onSuccess: () => onEditingChange(false) },
-            )
+          title={label}
+          fields={props.fields}
+          record={props.record}
+          pending={mutation.isPending}
+          error={refusal ? problemMessageOf(refusal, t) : null}
+          existing={
+            refusal instanceof ProblemError
+              ? problemExistingId(refusal.problem)
+              : null
           }
+          resolveExisting={props.resolveExisting}
+          notice={
+            refusal
+              ? props.refusalNotice?.(refusal, resend, mutation.isPending)
+              : null
+          }
+          onValuesChange={publish}
+          onDirtyChange={setDirty}
+          onSubmit={saveGroup}
         />
       </FieldRow>
     );
@@ -358,88 +370,5 @@ function RecordScalarField({
       {link && <OffsiteLink href={link.href}>{link.label}</OffsiteLink>}
       {mark}
     </FieldRow>
-  );
-}
-
-function RecordFieldForm({
-  open,
-  label,
-  opened,
-  pending,
-  error,
-  onResend,
-  onClose,
-  onDirtyChange,
-  onSubmit,
-  ...props
-}: Readonly<
-  Props & {
-    open: boolean;
-    label: string;
-    opened: FieldRecord;
-    pending: boolean;
-    error: unknown;
-    onResend: (extra: Record<string, unknown>) => void;
-    onClose: () => void;
-    onDirtyChange: (dirty: boolean) => void;
-    onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
-  }
->) {
-  const t = useT();
-  const [values, setValues] = useState(() =>
-    prefillFromRecord(props.fields, opened),
-  );
-  const [rows, setRows] = useState(() =>
-    prefillRowsFromRecord(props.fields, opened),
-  );
-  // Seeded in render on opening. The first frame already holds the record,
-  // so a typed key is never overwritten.
-  const [seeded, setSeeded] = useState(open);
-  if (open !== seeded) {
-    setSeeded(open);
-    if (open) {
-      setValues(prefillFromRecord(props.fields, opened));
-      setRows(prefillRowsFromRecord(props.fields, opened));
-    }
-  }
-  const dirty =
-    open &&
-    (pending ||
-      !sameEditValue(values, prefillFromRecord(props.fields, opened)) ||
-      !sameEditValue(rows, prefillRowsFromRecord(props.fields, opened)));
-  useEffect(() => {
-    onDirtyChange(dirty);
-  }, [dirty, onDirtyChange]);
-  const publish = open ? props.onValuesChange : undefined;
-  usePublishedValues(values, publish);
-  useEffect(() => () => publish?.({}), [publish]);
-  return (
-    <RecordFormBody
-      dialog={{ open, title: label }}
-      fields={props.fields}
-      values={values}
-      setValues={setValues}
-      rows={rows}
-      setRows={setRows}
-      pending={pending}
-      error={error ? problemMessageOf(error, t) : null}
-      existing={
-        error instanceof ProblemError ? problemExistingId(error.problem) : null
-      }
-      resolveExisting={props.resolveExisting}
-      notice={error ? props.refusalNotice?.(error, onResend, pending) : null}
-      onSubmit={(submitted, submittedRows) => {
-        const original = prefillFromRecord(props.fields, opened);
-        const originalRows = prefillRowsFromRecord(props.fields, opened);
-        if (
-          sameEditValue(submitted, original) &&
-          sameEditValue(submittedRows, originalRows)
-        )
-          onClose();
-        else onSubmit(submitted, submittedRows);
-      }}
-      onClose={onClose}
-      intent="save"
-    />
   );
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useCallback, useRef, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { EditableValue } from "../design-system/editablevalue";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineText } from "../design-system/inlinetext";
@@ -79,7 +79,7 @@ export function RailField(props: Props) {
 type FieldProps = Props & Readonly<{ field: CreateField }>;
 
 function useRailWrite(edit: RailEdit) {
-  const opened = useRef(edit.record);
+  const [opened, setOpened] = useState(edit.record);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
@@ -88,7 +88,7 @@ function useRailWrite(edit: RailEdit) {
   // is open must not move it, or the save overwrites a concurrent change.
   const onEditingChange = useCallback(
     (next: boolean) => {
-      if (next && !editing) opened.current = edit.record;
+      if (next && !editing) setOpened(edit.record);
       setEditing(next);
       if (!next) setDirty(false);
     },
@@ -96,7 +96,8 @@ function useRailWrite(edit: RailEdit) {
   );
   // A save elsewhere on the record pauses this field, never its own open editor.
   const canEdit = !pending || editing;
-  return { opened, mutation, canEdit, setDirty, onEditingChange };
+  const shown = editing ? opened : edit.record;
+  return { opened, shown, mutation, canEdit, setDirty, onEditingChange };
 }
 
 /**
@@ -107,7 +108,7 @@ export function useRailText(edit: RailEdit, field: CreateField) {
   const t = useT();
   const write = useRailWrite(edit);
   return {
-    stored: prefillFromRecord([field], edit.record)[field.key] ?? "",
+    stored: prefillFromRecord([field], write.shown)[field.key] ?? "",
     canEdit: write.canEdit,
     onEditingChange: write.onEditingChange,
     onDirtyChange: write.setDirty,
@@ -116,7 +117,7 @@ export function useRailText(edit: RailEdit, field: CreateField) {
       await write.mutation.mutateAsync({
         values: { [field.key]: next },
         rows: {},
-        baseline: write.opened.current,
+        baseline: write.opened,
         save: edit.save,
       });
     },
@@ -174,7 +175,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
 function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
   const t = useT();
   const write = useRailWrite(edit);
-  const values = prefillFromRecord([field], edit.record);
+  const values = prefillFromRecord([field], write.shown);
   const stored = values[field.key] ?? "";
   const options = selectOptions(field, values, t);
   return (
@@ -198,7 +199,7 @@ function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
           await write.mutation.mutateAsync({
             values: { [field.key]: next },
             rows: {},
-            baseline: write.opened.current,
+            baseline: write.opened,
             save: edit.save,
           });
         }}

@@ -1,12 +1,11 @@
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { EditableValue } from "./editablevalue";
-import { FieldEditDialog } from "./fieldeditdialog";
+import { FieldEditDialog, useFieldEditor } from "./fieldeditdialog";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
 
-// One value a reader may choose, edited in a dialog that saves on Save.
-// A pick that writes at once leaves no way to back out.
+// One value a reader may choose. A pick is only the draft; Save stores it.
 export function InlineChoice({
   label,
   hideLabel,
@@ -40,15 +39,10 @@ export function InlineChoice({
   // Resolves once stored; a throw is the refusal, shown on the field with
   // the reader's choice kept.
   onSave: (next: string) => Promise<void>;
-  // Test id for the value at rest.
   testId?: string;
 }>) {
   const t = useT();
-  const [open, setOpen] = useState(false);
-  const editing = (next: boolean) => {
-    setOpen(next);
-    onEditingChange?.(next);
-  };
+  const { open, editing } = useFieldEditor(canEdit, onEditingChange);
   // An unset choice still says so: a blank read as a value that failed to load.
   const shown = value ? render(value) : t("field.unset");
   return (

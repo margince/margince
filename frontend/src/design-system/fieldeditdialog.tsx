@@ -17,13 +17,13 @@ import { Button, Field, type FieldControl } from "./atoms";
 import { refuseUnreadableField } from "./formvalidity";
 import { RecordFormDialog } from "./recordformdialog";
 
-export const INLINE_COMMIT_KEY = "Enter";
+export const FIELD_COMMIT_KEY = "Enter";
 
 /** A paragraph commits on ⌘/Ctrl+Enter, because Enter there is a newline. */
 export function isParagraphCommit(
   event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">,
 ): boolean {
-  return event.key === INLINE_COMMIT_KEY && (event.metaKey || event.ctrlKey);
+  return event.key === FIELD_COMMIT_KEY && (event.metaKey || event.ctrlKey);
 }
 
 /** What the dialog hands the one control it holds. */
@@ -52,6 +52,32 @@ export type FieldEditDialogProps = Readonly<{
 }>;
 
 const asTyped = (draft: string) => draft;
+
+/**
+ * Whether one field's editor is open. A field that turns read-only while it is
+ * open closes it, and the caller hears that close like any other.
+ */
+export function useFieldEditor(
+  canEdit: boolean,
+  onEditingChange?: (editing: boolean) => void,
+) {
+  const [open, setOpen] = useState(false);
+  const reported = useRef(false);
+  if (open && !canEdit) {
+    setOpen(false);
+  }
+  const editing = (next: boolean) => {
+    reported.current = next;
+    setOpen(next);
+    onEditingChange?.(next);
+  };
+  useEffect(() => {
+    if (canEdit || !reported.current) return;
+    reported.current = false;
+    onEditingChange?.(false);
+  }, [canEdit, onEditingChange]);
+  return { open: open && canEdit, editing };
+}
 
 export function FieldEditDialog({
   open,
@@ -109,7 +135,6 @@ export function FieldEditDialog({
     if (inFlight.current || refuseUnreadableField(event.currentTarget)) return;
     void save();
   };
-  // Enter is a newline in a paragraph, so it submits on Cmd/Ctrl+Enter.
   const paragraphCommit = (event: KeyboardEvent<HTMLFormElement>) => {
     if (
       event.target instanceof HTMLTextAreaElement &&
@@ -120,16 +145,12 @@ export function FieldEditDialog({
       event.currentTarget.requestSubmit();
     }
   };
-  // Escape, the backdrop and the corner X wait for a write in flight.
-  const close = () => {
-    if (!inFlight.current) onClose();
-  };
 
   return (
     <RecordFormDialog
       open={open}
       title={label}
-      onClose={close}
+      onClose={onClose}
       fieldCount={1}
       unsaved={dirty && !saving}
       closeDisabled={saving}

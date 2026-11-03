@@ -55,12 +55,13 @@ describe("EditableValue", () => {
     expect(document.body).toHaveFocus();
   });
 
-  it.each([
-    ["without onEdit", {}],
-    ["with editable false", { onEdit: () => undefined, editable: false }],
-  ])("renders a read-only value plain %s", (_, props) => {
+  it("renders a read-only value plain", () => {
     const { container } = render(
-      <EditableValue editLabel="Change Industry" {...props}>
+      <EditableValue
+        editLabel="Change Industry"
+        onEdit={() => undefined}
+        editable={false}
+      >
         Software
       </EditableValue>,
     );
@@ -126,5 +127,26 @@ describe("EditableValue", () => {
     expect(
       container.querySelector("button a, a button, button button"),
     ).toBeNull();
+  });
+
+  it("keeps the focused button when a first value turns the pill into a link", () => {
+    const pill = (link: boolean) => (
+      <EditableValue
+        editLabel="Change Email"
+        placeholder="Add email"
+        onEdit={() => undefined}
+        link={link}
+      >
+        {link ? <a href="mailto:ana@example.com">ana@example.com</a> : null}
+      </EditableValue>
+    );
+    const view = render(pill(false));
+    const opener = screen.getByRole("button", {
+      name: "Change Email Add email",
+    });
+    opener.focus();
+    view.rerender(pill(true));
+    expect(screen.getByRole("button", { name: "Change Email" })).toBe(opener);
+    expect(opener).toHaveFocus();
   });
 });

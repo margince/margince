@@ -167,8 +167,3 @@
   inline-size: 0.875rem;
   block-size: 0.875rem;
 }
-
-.fieldgrid-label--stacked,
-.fieldgrid-value--stacked {
-  grid-column: 1 / -1;
-}

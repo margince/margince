@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { Field, TextInput } from "./atoms";
@@ -51,6 +51,7 @@ export function NameDialog({
   problem,
   nameProblem,
   onSave,
+  onDirtyChange,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -69,6 +70,7 @@ export function NameDialog({
   nameProblem?: string | null;
   /** The trimmed name. The caller closes the dialog once the write lands. */
   onSave: (name: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }>) {
   const [draft, setDraft] = useState(initial);
   const name = draft.trim();
@@ -81,6 +83,11 @@ export function NameDialog({
       forget();
     }
   }
+  const unsaved = name !== initial.trim();
+  const dirty = open && (pending || unsaved);
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
   const singlePress = useSinglePress(pending);
   const ready = name !== "" && name !== initial.trim() && !refusedName;
   const save = () => {
@@ -98,7 +105,7 @@ export function NameDialog({
       confirmDisabled={!ready}
       pending={pending}
       error={problem}
-      unsaved={draft.trim() !== initial.trim()}
+      unsaved={unsaved}
       onConfirm={save}
     >
       {/* A form of one text box, so Enter saves it. */}

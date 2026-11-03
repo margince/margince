@@ -192,3 +192,20 @@ export const Renamable: Story = {
     );
   },
 };
+
+const LONG_NAME =
+  "Brandt Automobilzulieferer, Sondermaschinenbau und Industrieautomation Gesellschaft mit beschränkter Haftung und Compagnie Kommanditgesellschaft für Antriebstechnik, Robotik und Wartung";
+
+// A renamable name past three lines is cut at the third, as a plain one is.
+export const RenamableLongName: Story = {
+  args: {
+    ...Default.args,
+    name: LONG_NAME,
+    rename: {
+      label: "Company name",
+      value: LONG_NAME,
+      canEdit: true,
+      onSave: async () => undefined,
+    },
+  },
+};

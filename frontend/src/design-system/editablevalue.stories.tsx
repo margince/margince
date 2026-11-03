@@ -18,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 const LONG =
   "Industrial automation, robotics integration and the maintenance contracts that come with a fleet of installed lines across three plants";
 
-function Rows(props: Readonly<{ onEdit?: () => void }>) {
+function Rows(props: Readonly<{ onEdit: () => void }>) {
   const { onEdit } = props;
   return (
     <FieldGrid>
@@ -47,7 +47,13 @@ function Rows(props: Readonly<{ onEdit?: () => void }>) {
         </EditableValue>
       </FieldRow>
       <FieldRow label="Domain">
-        <EditableValue editLabel="Change Domain">acme.example</EditableValue>
+        <EditableValue
+          editLabel="Change Domain"
+          onEdit={onEdit}
+          editable={false}
+        >
+          acme.example
+        </EditableValue>
       </FieldRow>
     </FieldGrid>
   );
@@ -76,7 +82,7 @@ export const FocusedDark: Story = {
 };
 
 export const ReadOnly: Story = {
-  args: { children: "Software", onEdit: undefined },
+  args: { children: "Software", editable: false },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("button")).toBeNull();
   },

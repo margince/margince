@@ -1,9 +1,13 @@
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { Textarea, TextInput } from "./atoms";
 import { DateInput, isoOrBlank } from "./dateinput";
 import { EditableValue } from "./editablevalue";
-import { type FieldEditControl, FieldEditDialog } from "./fieldeditdialog";
+import {
+  type FieldEditControl,
+  FieldEditDialog,
+  useFieldEditor,
+} from "./fieldeditdialog";
 import "./inlinechoice.css";
 
 // The field for a reader who cannot edit it. `placeholder` is written for
@@ -91,7 +95,6 @@ function InlineTextControl({
   );
 }
 
-const asTyped = (draft: string) => draft;
 const asLine = (draft: string) => draft.trim();
 
 export function InlineText({
@@ -121,9 +124,8 @@ export function InlineText({
   // its own action; the pill's padding and the bubble open the editor.
   link?: ReactNode;
   placeholder: string;
-  // A value the record carries elsewhere, standing in until one is written here
-  // (a contact's title for the role at their current employer). Shown muted
-  // at rest and as the editor's placeholder, since "Unset" would deny it.
+  // A value the record carries elsewhere (a contact's title at their employer),
+  // shown muted until one is written here, since "Unset" would deny it.
   suggested?: string;
   maxLength?: number;
   type?: TextKind;
@@ -144,12 +146,8 @@ export function InlineText({
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const { open, editing } = useFieldEditor(canEdit, onEditingChange);
   const held = frame ?? ((resting: ReactNode) => resting);
-  const editing = (next: boolean) => {
-    setOpen(next);
-    onEditingChange?.(next);
-  };
   const linked = Boolean(link);
   const reading = linked
     ? link
@@ -183,7 +181,7 @@ export function InlineText({
         open={open}
         label={label}
         value={value}
-        settle={multiline ? asTyped : asLine}
+        settle={multiline ? undefined : asLine}
         onClose={() => editing(false)}
         onSave={onSave}
         onDirtyChange={onDirtyChange}

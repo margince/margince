@@ -61,9 +61,7 @@ describe("a choice edited in a dialog", () => {
 
   it("prints the field's name before the value unless the layout does", () => {
     renderChoice({ hideLabel: false });
-    expect(trigger().parentElement?.textContent).toMatch(
-      /^Account lifecycle: /,
-    );
+    expect(screen.getByText(/^Account lifecycle:/)).toContainElement(trigger());
   });
 
   it("opens a dialog titled by the field, holding the chooser on the stored value", async () => {
@@ -123,6 +121,32 @@ describe("a choice edited in a dialog", () => {
     await openChooser(user);
     expect(onEditingChange).toHaveBeenLastCalledWith(true);
     await user.click(screen.getByRole("button", { name: en["create.cancel"] }));
+    expect(onEditingChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("closes the dialog and tells the caller when the field turns read-only", async () => {
+    const user = userEvent.setup();
+    const onEditingChange = vi.fn();
+    const choice = (canEdit: boolean) => (
+      <LocaleProvider initial="en">
+        <InlineChoice
+          label="Account lifecycle"
+          value="prospect"
+          options={OPTIONS}
+          canEdit={canEdit}
+          render={(value) => value}
+          onEditingChange={onEditingChange}
+          onSave={async () => undefined}
+        />
+      </LocaleProvider>
+    );
+    const view = render(choice(true));
+    await user.click(
+      screen.getByRole("button", { name: /^Change Account lifecycle/ }),
+    );
+    await screen.findByRole("dialog", { name: "Account lifecycle" });
+    view.rerender(choice(false));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(onEditingChange).toHaveBeenLastCalledWith(false);
   });
 

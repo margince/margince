@@ -14,8 +14,9 @@ export type EditableValueProps = Readonly<{
   children?: ReactNode;
   /** The verb, translated ("Change Industry"): the bubble's name. */
   editLabel: string;
-  /** Opens the editor. Absent, the value is read-only. */
-  onEdit?: () => void;
+  /** Opens the editor. */
+  onEdit: () => void;
+  /** False draws the value read-only. */
   editable?: boolean;
   /** Shown in the pill while `children` is empty ("Add industry"). */
   placeholder?: ReactNode;
@@ -43,7 +44,7 @@ export function EditableValue({
   const verbId = useId();
   const faceId = useId();
   const edit = useRef<HTMLButtonElement>(null);
-  if (!onEdit || !editable) {
+  if (!editable) {
     return <span data-testid={testId}>{children}</span>;
   }
   const face = (
@@ -60,26 +61,6 @@ export function EditableValue({
       <Pencil />
     </span>
   );
-  if (!link) {
-    return (
-      <button
-        type="button"
-        className="editable-value"
-        // The verb and the value both name it, so the words a reader sees
-        // are words a voice command can say.
-        aria-labelledby={`${verbId} ${faceId}`}
-        aria-haspopup="dialog"
-        data-testid={testId}
-        onClick={onEdit}
-      >
-        <span id={verbId} className="sr-only">
-          {editLabel}
-        </span>
-        {face}
-        {bubble}
-      </button>
-    );
-  }
   const pressPadding = (event: MouseEvent<HTMLElement>) => {
     const hit =
       event.target instanceof Element ? event.target.closest(PRESSABLE) : null;
@@ -88,23 +69,34 @@ export function EditableValue({
     edit.current?.focus();
     onEdit();
   };
+  // The button keeps its slot in both modes. A first value that makes a link
+  // then keeps the element the dialog hands focus back to.
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: a pointer shortcut to the edit button inside, which is the keyboard's way in
     // biome-ignore lint/a11y/useKeyWithClickEvents: the edit button inside is the keyboard's way in; a key here would land on the link first
     <span
-      className="editable-value editable-value-link"
+      className={link ? "editable-value editable-value-link" : "editable-value"}
       data-testid={testId}
       onClick={pressPadding}
     >
-      {face}
+      {link ? face : null}
       <button
         ref={edit}
         type="button"
-        className="editable-value-edit"
-        aria-label={editLabel}
+        className={link ? "editable-value-edit" : "editable-value-press"}
+        // Outside a link the verb and the value both name it, so the words a
+        // reader sees are words a voice command can say.
+        aria-label={link ? editLabel : undefined}
+        aria-labelledby={link ? undefined : `${verbId} ${faceId}`}
         aria-haspopup="dialog"
         onClick={onEdit}
       >
+        {link ? null : (
+          <span id={verbId} className="sr-only">
+            {editLabel}
+          </span>
+        )}
+        {link ? null : face}
         {bubble}
       </button>
     </span>
