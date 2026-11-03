@@ -32,8 +32,13 @@ func (s *Service) askTasksDone(
 	ctx context.Context, tx pgx.Tx, steps []crmcontracts.Company360NextStep, sources []taskSource, now time.Time,
 ) error {
 	// Only a human answers the question, so an agent reads the plain row.
-	if !auth.Allows(ctx, "activity", principal.ActionRead) || auth.RequireHuman(ctx) != nil {
+	if !auth.Allows(ctx, "activity", principal.ActionRead) {
 		return nil
+	}
+	if err := auth.RequireHuman(ctx); errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil
+	} else if err != nil {
+		return err
 	}
 	candidates, err := s.promiseCandidates(ctx, steps, sources)
 	if err != nil || len(candidates) == 0 {

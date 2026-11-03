@@ -34,7 +34,7 @@ type DoneCandidate struct {
 func AskTasksDone(ctx context.Context, tx pgx.Tx, candidates []DoneCandidate, asOf time.Time) (map[ids.UUID]crmcontracts.WorklistMayBeDone, error) {
 	bases, byBasis, keys := promiseBases(candidates)
 	if len(bases) == 0 {
-		return nil, nil
+		return map[ids.UUID]crmcontracts.WorklistMayBeDone{}, nil
 	}
 	followUps, err := activities.PromiseFollowUpsTx(ctx, tx, bases, asOf)
 	if err != nil {
