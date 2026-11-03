@@ -29,17 +29,18 @@ type MergePrimaryRepairPage struct {
 // archived edge sits at a company merged into the heir's, or on a contact
 // merged into c. A merge keeps redirect chains one hop deep.
 //
-// A flag change on c's employments after the merge is a person's decision, and
-// the repair leaves that contact alone.
+// The archive row with origin merge proves the merge archived the edge. A flag
+// change on c's employments after that row is a person's choice, kept as is.
 var mergeDroppedHeir = `SELECT n.id FROM relationship n
  JOIN relationship p ON p.kind = 'employment' AND p.is_current_primary AND p.archived_at IS NOT NULL
  AND ((p.contact_id = c.id AND EXISTS (SELECT 1 FROM company x WHERE x.id = p.company_id AND x.merged_into_id = n.company_id))
    OR (p.company_id = n.company_id AND EXISTS (SELECT 1 FROM contact m WHERE m.id = p.contact_id AND m.merged_into_id = c.id)))
+ JOIN audit_log pa ON pa.entity_type = 'relationship' AND pa.entity_id = p.id AND pa.action = 'archive'
+ AND pa.evidence ->> '` + auditKeyOrigin + `' = '` + originMerge + `'
  WHERE n.contact_id = c.id AND n.kind = 'employment' AND n.archived_at IS NULL AND ` + employment.IsCurrentSQL("n.ended_at") + `
  AND NOT EXISTS (SELECT 1 FROM audit_log al JOIN relationship e ON e.id = al.entity_id
    WHERE al.entity_type = 'relationship' AND e.contact_id = c.id AND e.kind = 'employment' AND al.after ? 'is_current_primary'
-   AND al.occurred_at > coalesce((SELECT max(pa.occurred_at) FROM audit_log pa
-     WHERE pa.entity_type = 'relationship' AND pa.entity_id = p.id AND pa.action = 'archive'), p.archived_at))`
+   AND al.occurred_at > pa.occurred_at)`
 
 // mergeDroppedPrimary picks a live contact with no primary employer and one
 // live current employment, which is its merge heir. With two current

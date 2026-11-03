@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -138,5 +139,105 @@ func TestACompanyMergeFilesTwinsForAContactWhoseEmployerMoved(t *testing.T) {
 	pairs := openCandidatePairs(ctx, t, e, "contact", twin.UUID)
 	if len(pairs) != 1 || pairs[0].OtherID != onFile.String() {
 		t.Fatalf("got pairs %+v, want exactly the pair with the contact on file", pairs)
+	}
+}
+
+// monthStart is the first day of the database's current month. An end on that
+// day is current at month precision and over at day precision. Two duplicate
+// edges can then differ only in whether they are current.
+func monthStart(ctx context.Context, t *testing.T, e *dedupeEnv) time.Time {
+	t.Helper()
+	var day time.Time
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT date_trunc('month', current_date)::date`).Scan(&day)
+	}); err != nil {
+		t.Fatalf("reading the database's month: %v", err)
+	}
+	return day
+}
+
+// employEnding creates an employment that ends at monthStart with the given
+// precision. Only a current employment can be created as primary.
+func (e *dedupeEnv) employEnding(ctx context.Context, t *testing.T, contact ids.ContactID, company ids.CompanyID, primary bool, ends time.Time, precision string) relationshipRow {
+	t.Helper()
+	edge, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &company,
+		IsCurrentPrimary: &primary, EndedAt: &ends, EndedPrecision: &precision, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("create the employment: %v", err)
+	}
+	return edge
+}
+
+// lapsePrimary is a primary employment whose end date has passed. A patch that
+// ends an employment drops its flag, so only time ends one that keeps it. This
+// statement stands in for the month that went by.
+func (e *dedupeEnv) lapsePrimary(ctx context.Context, t *testing.T, edge ids.UUID) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE relationship SET ended_precision = 'day' WHERE id = $1`, edge)
+		return err
+	}); err != nil {
+		t.Fatalf("lapse the primary employment: %v", err)
+	}
+}
+
+func TestACompanyMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.editorCtx()
+	ends := monthStart(ctx, t, e)
+
+	current := e.seedFlipFixture(ctx, t, "Eda Marsh", "Marsh Old", "Marsh New")
+	e.employEnding(ctx, t, current.contact, current.first, true, ends, "month")
+	endedHeir := e.employEnding(ctx, t, current.contact, current.second, false, ends, "day")
+
+	ended := e.seedFlipFixture(ctx, t, "Finn Aske", "Aske Old", "Aske New")
+	holder := e.employEnding(ctx, t, ended.contact, ended.first, true, ends, "month")
+	currentHeir := e.employEnding(ctx, t, ended.contact, ended.second, false, ends, "month")
+	e.lapsePrimary(ctx, t, holder.ID)
+
+	for _, fx := range []flipFixture{current, ended} {
+		if _, err := e.store.MergeCompany(ctx, fx.first, fx.second, nil); err != nil {
+			t.Fatalf("merge: %v", err)
+		}
+	}
+
+	if got := slotHolder(ctx, t, e, current.contact); got == endedHeir.ID {
+		t.Error("an ended employment took the slot from a current one")
+	}
+	if got := slotHolder(ctx, t, e, ended.contact); got == currentHeir.ID {
+		t.Error("an ended employment's slot went to a current one a person left non-primary")
+	}
+}
+
+func TestAContactMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.editorCtx()
+	ends := monthStart(ctx, t, e)
+
+	current := e.seedFlipFixture(ctx, t, "Gry Tollan", "Tollan Works", "Unused Works")
+	currentSurvivor := mustContact(t, e, "Gry Tollan")
+	endedHeir := e.employEnding(ctx, t, currentSurvivor, current.first, false, ends, "day")
+	e.employEnding(ctx, t, current.contact, current.first, true, ends, "month")
+
+	ended := e.seedFlipFixture(ctx, t, "Hal Brenner", "Brenner Works", "Unused Works")
+	endedSurvivor := mustContact(t, e, "Hal Brenner")
+	currentHeir := e.employEnding(ctx, t, endedSurvivor, ended.first, false, ends, "month")
+	holder := e.employEnding(ctx, t, ended.contact, ended.first, true, ends, "month")
+	e.lapsePrimary(ctx, t, holder.ID)
+
+	if _, err := e.store.MergeContact(ctx, current.contact, currentSurvivor, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	if _, err := e.store.MergeContact(ctx, ended.contact, endedSurvivor, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+
+	if got := slotHolder(ctx, t, e, currentSurvivor); got == endedHeir.ID {
+		t.Error("an ended employment took the slot from a current one")
+	}
+	if got := slotHolder(ctx, t, e, endedSurvivor); got == currentHeir.ID {
+		t.Error("an ended employment's slot went to a current one a person left non-primary")
 	}
 }

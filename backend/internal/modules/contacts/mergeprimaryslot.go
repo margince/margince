@@ -16,14 +16,15 @@ import (
 // archiveDuplicatesKeepingPrimarySlot archives the merge's duplicate edges. An
 // archived edge's primary-employer slot goes to the kept edge it folds into,
 // the heir relinkEmploymentSupport gives the provider evidence.
-// The heirs are read while both edges are live, and promoted after the archive
-// because uq_rel_current_primary_employer is not deferrable. The slot witness
-// keeps a contact's other primary.
+// Heirs are read while both edges are live and promoted after the archive,
+// since uq_rel_current_primary_employer is not deferrable. Both edges must be
+// current: an ended heir is no employer, and an ended holder left none.
 func archiveDuplicatesKeepingPrimarySlot(ctx context.Context, tx pgx.Tx, mergingContact bool, archiveWhere string, args pgx.NamedArgs) error {
 	rows, err := tx.Query(ctx, `WITH duplicates AS (`+mergeEmploymentDuplicates(mergingContact)+`)
  SELECT DISTINCT d.new_id FROM duplicates d
  JOIN relationship a ON a.id = d.old_id JOIN relationship n ON n.id = d.new_id
- WHERE `+employment.CurrentPrimarySlotSQL("a")+` AND NOT n.is_current_primary`, args)
+ WHERE `+employment.CurrentPrimarySlotSQL("a")+` AND `+employment.IsCurrentSQL("a.ended_at")+`
+ AND NOT n.is_current_primary AND `+employment.IsCurrentSQL("n.ended_at"), args)
 	if err != nil {
 		return fmt.Errorf("contacts: finding the edges a merge hands the primary employer to: %w", err)
 	}

@@ -197,3 +197,40 @@ func TestTheMergePrimaryTaskBoundsPagingAndRollsBackWithItsProgress(t *testing.T
 		t.Fatal("a restored employer escaped the engine's rollback")
 	}
 }
+
+// A primary a person archived before the merge was no merge's doing. The
+// non-primary edge the person kept stays as they left it, for either merge.
+func TestTheMergePrimaryTaskLeavesAPrimaryArchivedByHandBeforeTheMerge(t *testing.T) {
+	e := integration.Setup(t)
+	byCompany := mergeTestContact(t, e, "Ulla Kesk")
+	retired, kept := mergeTestCompany(t, e, "Kesk Old"), mergeTestCompany(t, e, "Kesk New")
+	archived := mergeTestEmploy(t, e, byCompany, retired, true)
+	if _, err := e.Contacts.ArchiveRelationship(e.Admin(), archived, nil); err != nil {
+		t.Fatal(err)
+	}
+	companyEdge := mergeTestEmploy(t, e, byCompany, kept, false)
+	if _, err := e.Contacts.MergeCompany(e.Admin(), retired, kept, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	survivor, merged := mergeTestContact(t, e, "Vito Rask"), mergeTestContact(t, e, "Vito Rask")
+	employer := mergeTestCompany(t, e, "Rask Shared Works")
+	archived = mergeTestEmploy(t, e, merged, employer, true)
+	if _, err := e.Contacts.ArchiveRelationship(e.Admin(), archived, nil); err != nil {
+		t.Fatal(err)
+	}
+	contactEdge := mergeTestEmploy(t, e, survivor, employer, false)
+	if _, err := e.Contacts.MergeContact(e.Admin(), merged, survivor, nil); err != nil {
+		t.Fatal(err)
+	}
+	task := mergeDroppedPrimaryDataTask()
+
+	runMachineAddressTask(datatask.Acting(e.Admin(), task.ID), t, e, task)
+
+	if isPrimary(t, e, companyEdge) {
+		t.Error("after a company merge the repair promoted an edge a person left non-primary")
+	}
+	if isPrimary(t, e, contactEdge) {
+		t.Error("after a contact merge the repair promoted an edge a person left non-primary")
+	}
+}
