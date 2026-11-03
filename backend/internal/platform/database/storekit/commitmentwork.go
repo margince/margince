@@ -26,6 +26,7 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 	request := `EXISTS (SELECT 1 FROM activity request_source WHERE request_source.id = ` + alias + `.source_activity_id
  AND request_source.kind = 'email' AND request_source.direction = 'inbound' AND request_source.archived_at IS NULL
  AND ` + AutomaticRequestIntentClause("request_source") + `
+ AND NOT ` + AnsweredSQL("request_source", instant) + `
  AND NOT EXISTS (SELECT 1 FROM activity successor WHERE successor.source_system = ` + alias + `.source_system
  AND successor.source_activity_id = ` + alias + `.source_activity_id AND successor.id <> ` + alias + `.id
  AND ` + HeldTaskClause("successor") + `)
@@ -87,6 +88,7 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	provenance.LeadSLATaskSource:            {currency: currentByItsWriter},
 	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter},
 	provenance.AssuranceTaskSource:          {currency: currentByItsWriter},
+	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter},
 	provenance.OvernightReconcileSource:     {currency: currentByItsWriter},
 	provenance.LeadRepliedSource:            {currency: currentByLeadEngagement, undated: true, generatedDate: true},
 	// A refused submission has no activity source; the owner decides its lifecycle.

@@ -29,6 +29,7 @@ const reportingValueBasisAll = crmcontracts.ReportingValueBasisAll
 // dimension. Any other metric answers unsupported while one is set.
 var reportingDimensionMetrics = []crmcontracts.ReportingMetricID{
 	reportingBookingsWon, reportingClosedWinRate, reportingOpenPipeline, reportingStageAge, reportingQualifiedPipelineCreated, reportingBookingsMix,
+	reportingQualifiedOpportunitiesCreated, reportingInitiativePipeline,
 	reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadFirstResponse, reportingLeadsAwaitingResponse,
 }
 
@@ -37,7 +38,7 @@ var reportingDimensionMetrics = []crmcontracts.ReportingMetricID{
 var reportingValueBasisMetrics = []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingBookingsMix}
 
 func reportingDimensioned(frame crmcontracts.ReportingContext) bool {
-	return frame.ProductId != nil || frame.Country != nil || frame.Industry != nil || reportingValueBasis(frame) != reportingValueBasisAll
+	return frame.ProductId != nil || frame.InitiativeId != nil || frame.Country != nil || frame.Industry != nil || reportingValueBasis(frame) != reportingValueBasisAll
 }
 
 func reportingValueBasis(frame crmcontracts.ReportingContext) crmcontracts.ReportingValueBasis {
@@ -67,6 +68,9 @@ func reportingDimensionContext(ctx context.Context, tx pgx.Tx, selection crmcont
 	out.Country, out.Industry = selection.Country, selection.Industry
 	if selection.ValueBasis != nil && *selection.ValueBasis != reportingValueBasisAll {
 		out.ValueBasis = selection.ValueBasis
+	}
+	if err := reportingInitiativeContext(ctx, tx, selection, out); err != nil {
+		return err
 	}
 	if selection.ProductId == nil {
 		return nil

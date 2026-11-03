@@ -53,7 +53,7 @@ func newPublicBookingLimiters() publicBookingLimiters {
 	}
 }
 
-func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters) func(http.Handler) http.Handler {
+func publicBooking(store *activities.Store, svc *identity.Service, limits publicBookingLimiters, srv Server) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			proposal := strings.HasPrefix(r.URL.Path, publicProposalPrefix)
@@ -76,11 +76,24 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				httperr.Write(w, r, apperrors.ErrNotFound)
 				return
 			}
+			// A booking page's link-preview card answers in HTML whatever
+			// happens, and HEAD like GET; the generated router knows GET only.
+			_, preview := bookingPreviewSlug(r.URL.Path)
+			preview = preview && !proposal && !management
+			if preview && (r.Method != http.MethodGet && r.Method != http.MethodHead || r.URL.RawPath != "") {
+				httperr.Write(w, r, apperrors.ErrNotFound)
+				return
+			}
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
+				if preview {
+					srv.writeBookingPreviewUnavailable(w, r, slug, apperrors.ErrBudgetExceeded)
+					return
+				}
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
-			if r.Method != http.MethodGet && !limits.perSlug.Allow(slug) {
+			// Lowercased, so the case variants of one alias share a budget.
+			if r.Method != http.MethodGet && !limits.perSlug.Allow(strings.ToLower(slug)) {
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
@@ -98,6 +111,10 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 			}
 			if resolveErr != nil {
 				// Unknown and revoked slugs read identically as absent.
+				if preview {
+					srv.writeBookingPreviewUnavailable(w, r, slug, resolveErr)
+					return
+				}
 				httperr.Write(w, r, resolveErr)
 				return
 			}
@@ -118,6 +135,10 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				Type: principal.PrincipalSystem,
 				ID:   "system:public_booking",
 			})
+			if preview {
+				srv.GetPublicBookingPreview(w, r.WithContext(ctx), slug)
+				return
+			}
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

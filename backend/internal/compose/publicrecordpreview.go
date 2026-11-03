@@ -71,14 +71,41 @@ type recordPreview struct {
 	Href    string
 }
 
-var recordPreviewHTML = template.Must(template.New("record-preview").Parse(`<!doctype html>
+// previewCard is the escaped HTML a link-preview fetcher reads in place of the
+// app shell. Record cards and booking pages share it. Each caller names its own
+// site and link text, so a record card says Margince and a booking page names
+// only the host's company. html/template escapes every field.
+type previewCard struct {
+	Title   string
+	Summary string
+	// SiteName fills og:site_name; empty omits it.
+	SiteName string
+	// Canonical is an absolute URL for rel=canonical and og:url; empty omits both.
+	Canonical string
+	// Image is an absolute URL for og:image and twitter:image; empty gives a
+	// text-only card.
+	Image    string
+	ImageAlt string
+	// Href is where the page's script sends a browser that reached the card.
+	Href     string
+	LinkText string
+}
+
+// recordPreviewCard keeps the record card's Margince branding: the card advertises
+// the app the record lives in.
+func recordPreviewCard(preview recordPreview) previewCard {
+	return previewCard{Title: preview.Title, Summary: preview.Summary, SiteName: "Margince", Href: preview.Href, LinkText: "Open in Margince"}
+}
+
+var previewCardHTML = template.Must(template.New("preview-card").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Title}}</title>{{if .Summary}}<meta property="og:type" content="website"><meta property="og:site_name" content="Margince">
-<meta property="og:title" content="{{.Title}}"><meta property="og:description" content="{{.Summary}}">
-<meta name="description" content="{{.Summary}}"><meta name="twitter:card" content="summary">
+<title>{{.Title}}</title>{{if .Canonical}}<link rel="canonical" href="{{.Canonical}}">{{end}}{{if .Summary}}<meta property="og:type" content="website">{{if .SiteName}}<meta property="og:site_name" content="{{.SiteName}}">{{end}}
+<meta property="og:title" content="{{.Title}}"><meta property="og:description" content="{{.Summary}}">{{if .Canonical}}<meta property="og:url" content="{{.Canonical}}">{{end}}
+{{if .Image}}<meta property="og:image" content="{{.Image}}"><meta property="og:image:alt" content="{{.ImageAlt}}"><meta name="twitter:image" content="{{.Image}}">
+{{end}}<meta name="description" content="{{.Summary}}"><meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="{{.Title}}"><meta name="twitter:description" content="{{.Summary}}">
 {{end}}<script src="/open-record.js" defer></script></head><body>
-<h1>{{.Title}}</h1><p>{{.Summary}}</p><a id="record" href="{{.Href}}">Open in Margince</a>
+<h1>{{.Title}}</h1><p>{{.Summary}}</p><a id="record" href="{{.Href}}">{{.LinkText}}</a>
 </body></html>`))
 
 // GetPublicRecordPreview exposes only the card; its destination uses normal session and record gates.
@@ -91,25 +118,34 @@ func (s Server) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request, k
 }
 
 func (s Server) writeRecordPreview(w http.ResponseWriter, r *http.Request, preview recordPreview, cause error) {
+	s.writePreviewCard(w, r, recordPreviewCard(preview), "record", cause)
+}
+
+// writePreviewCard answers GET and HEAD with the card. A cause sets the status
+// it classifies to; the card still renders, so a browser that reached it
+// still gets its link onward.
+func (s Server) writePreviewCard(w http.ResponseWriter, r *http.Request, card previewCard, kind string, cause error) {
 	status := http.StatusOK
 	if cause != nil {
 		status = http.StatusInternalServerError
 		if fault, ok := httperr.Classify(cause); ok {
 			status = fault.Status
 		}
-		s.log.WarnContext(r.Context(), "record preview unavailable", "err", cause)
+		s.log.WarnContext(r.Context(), kind+" preview unavailable", "err", cause)
 	}
 	var body bytes.Buffer
-	if err := recordPreviewHTML.Execute(&body, preview); err != nil {
+	if err := previewCardHTML.Execute(&body, card); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 	w.WriteHeader(status)
 	if r.Method == http.MethodHead {
 		return
 	}
 	if _, err := w.Write(body.Bytes()); err != nil {
-		s.log.WarnContext(r.Context(), "record preview response failed", "err", err)
+		s.log.WarnContext(r.Context(), kind+" preview response failed", "err", err)
 	}
 }

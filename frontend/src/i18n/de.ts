@@ -927,7 +927,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.closedOn": "Abgeschlossen am",
   "reporting.meetingOn": "Termindatum",
   "reporting.acceptedOn": "Angenommen am",
-  "reporting.record": "Eintrag",
+  "reporting.memberRecord": "Eintrag",
   "reporting.dealValue": "Deal-Wert",
   "reporting.createdOn": "Erstellt am",
   "reporting.movedOn": "Status geändert am",
@@ -1060,6 +1060,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Snapshot ist geplant und wird hier angezeigt, sobald er fertig ist.",
   "reporting.createReport": "Aus Performance erstellen",
   "reporting.newCustomReport": "Neuer eigener Bericht",
+  "reporting.previewReport": "Vorschau anzeigen",
+  "reporting.unsavedPreview": "Nicht gespeicherte Vorschau",
+  "reporting.assessmentCard": "Einschätzung",
+  "reporting.assessmentDeterministic":
+    "Aus den Zahlen dieses Berichts geschrieben. Nur gemessene Zahlen werden genannt.",
+  "reporting.useExample": "Beispiel verwenden",
+  "reporting.exampleQuestion":
+    "Margince-Umsatz in Deutschland in diesem Quartal: Buchungen, Lead-Konversion und offene Pipeline nach Land.",
+  "reporting.whatToUnderstand": "Was möchtest du verstehen?",
+  "reporting.customBuilderPurpose":
+    "Ein Bericht: die Auswahl, die Diagramme in ihrer Reihenfolge und eine eigene Frage. Nichts wird gespeichert, bis du die Vorschau speicherst.",
+  "reporting.reportingSelection": "Berichtsauswahl",
+  "reporting.includeAssessment": "Einschätzung aufnehmen",
+  "reporting.customQuestion": "Eigene Frage",
+  "reporting.customQuestionHint":
+    "Eine gruppierte Tabelle der offenen Deals unter derselben Auswahl.",
+  "reporting.measure": "Messgröße",
+  "reporting.groupBy": "Gruppieren nach",
+  "reporting.dealCount": "Anzahl offener Deals",
+  "reporting.openValueBase": "Offener Wert, umgerechnet",
+  "reporting.addQuestionCard": "Diese Frage hinzufügen",
+  "reporting.askQuestion": "Frage stellen",
+  "reporting.noPreview":
+    "Es wird gerade keine Vorschau angezeigt. Beginne einen Bericht unter Berichte.",
+  "reporting.backToReports": "Zurück zu Berichte",
   "reporting.stageAmountDeals_one": "{amount} · {count} bepreister Deal",
   "reporting.stageAmountDeals_other": "{amount} · {count} bepreiste Deals",
   "reporting.stageDeals": "Bepreiste Deals",
@@ -1256,6 +1281,98 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.period": "Zeitraum",
   "reporting.pipeline": "Pipeline",
   "reporting.allPipelines": "Alle Pipelines",
+  "reporting.pickDone": "Fertig",
+  "analytics.overview.chipInitiative": "Initiative: {name}",
+  "analytics.overview.profileInitiative": "Vertriebsinitiative",
+  "reporting.initiative": "Vertriebsinitiative",
+  "reporting.allInitiatives": "Alle Initiativen",
+  "reporting.initiativeUnnamed": "Gewählte Initiative",
+  "reporting.initiatives": "Vertriebsinitiativen",
+  "reporting.initiativesPurpose":
+    "Eine Initiative ergänzt denselben Bericht um ein Ziel, zugehörige Datensätze und eine Ausgangsbasis beim Start.",
+  "reporting.newInitiative": "Neue Vertriebsinitiative",
+  "reporting.noInitiatives":
+    "Noch keine Vertriebsinitiativen. Beschreibe ein Vorhaben und wähle, welche Datensätze dazugehören.",
+  "reporting.initiativeStatus.draft": "Entwurf",
+  "reporting.initiativeStatus.live": "Gestartet",
+  "reporting.initiativeStatus.ended": "Beendet",
+  "reporting.trackingOnly": "Nur Beobachtung",
+  "reporting.initiativeTarget": "Ziel {target}",
+  "reporting.initiativeSummary": "{objective} · Frist {deadline}",
+  "reporting.initiativeDrawerPurpose":
+    "Lege zuerst das Ziel fest. Wähle dann, welche Datensätze dazugehören. Bis zum Start wird nichts aufgenommen.",
+  "reporting.initiativeSteps": "Schritte der Einrichtung",
+  "reporting.stepGoal": "Ziel",
+  "reporting.stepMembers": "Zugehörige Datensätze",
+  "reporting.stepReview": "Prüfen und starten",
+  "reporting.initiativeName": "Name der Initiative",
+  "reporting.initiativeNamePlaceholder": "Zum Beispiel: Expansion Fertigung Q4",
+  "reporting.objective": "Hauptziel",
+  "reporting.targetValue": "Zielwert",
+  "reporting.targetHint": "Leer lassen für reine Beobachtung.",
+  "reporting.deadline": "Frist",
+  "reporting.nameDoesNotDecide":
+    "Der Name entscheidet nicht über die Zugehörigkeit. Der nächste Schritt legt die Regel oder die Datensätze fest.",
+  "reporting.chooseIncludedRecords": "Zugehörige Datensätze wählen",
+  "reporting.backToGoal": "Zurück zum Ziel",
+  "reporting.reviewIncludedRecords": "Zugehörige Datensätze prüfen",
+  "reporting.saveMembership": "Zugehörigkeit speichern",
+  "reporting.backToIncludedRecords": "Zurück zu den Datensätzen",
+  "reporting.launchInitiative": "Vertriebsinitiative starten",
+  "reporting.membersPurpose":
+    "Nimm Datensätze auf, die alle gewählten Bedingungen erfüllen, oder wähle sie von Hand. Die Liste unten zeigt, was dazugehört.",
+  "reporting.anyProduct": "Beliebiges Produkt",
+  "reporting.anyIndustry": "Beliebige Branche",
+  "reporting.anyCountry": "Beliebiges Land",
+  "reporting.ruleAnd": "Alle gewählten Bedingungen gelten zugleich.",
+  "reporting.noConditions":
+    "Keine Bedingungen gewählt. Nur von Hand gewählte Datensätze gehören dazu.",
+  "reporting.includeFuture":
+    "Künftig passende Datensätze kommen automatisch dazu",
+  "reporting.pickDeals": "Deals wählen",
+  "reporting.pickLeads": "Leads wählen",
+  "reporting.removePick": "{name} entfernen",
+  "reporting.nonePicked": "Nichts gewählt",
+  "reporting.addRecord": "Hinzufügen",
+  "reporting.searchRecords": "Datensätze suchen",
+  "reporting.noMatchingRecords": "Keine passenden Datensätze",
+  "reporting.pickExplains":
+    "Ein gewählter Deal nimmt nicht jeden Kontakt seines Unternehmens auf. Ein Lead behält seine Umwandlungshistorie.",
+  "reporting.memberCounts":
+    "{leads} Leads · {deals} Deals · {companies} zugehörige Unternehmen",
+  "reporting.membersTruncated":
+    "Die Regel trifft mehr Datensätze, als eine Abfrage auflistet.",
+  "reporting.membersPending": "Die passenden Datensätze werden gelesen.",
+  "reporting.saveGoalFirst":
+    "Speichere das Ziel, um die passenden Datensätze zu sehen.",
+  "reporting.include": "Aufnehmen",
+  "reporting.includeRecord": "{name} aufnehmen",
+  "reporting.record": "Datensatz",
+  "reporting.recordType.lead": "Lead",
+  "reporting.recordType.deal": "Deal",
+  "reporting.whyIncluded": "Warum dazugehörig",
+  "reporting.memberReason.rule": "Erfüllt die Regel",
+  "reporting.memberReason.picked": "Von Hand gewählt",
+  "reporting.memberReason.carried": "Aus einem zugehörigen Lead umgewandelt",
+  "reporting.memberReason.excluded": "Ausgeschlossen",
+  "reporting.trackingOnlyVerdict": "Nur Beobachtung · keine Zielbewertung",
+  "reporting.targetBy": "{target} bis {deadline}",
+  "reporting.knownDealValue": "{value} bekannter Dealwert, alle Status",
+  "reporting.baselineNote":
+    "Deals, die beim Start bestehen, bilden die Ausgangsbasis. Dass sie dabei sind, macht sie nicht zu neu gewonnener Pipeline.",
+  "reporting.futureJoins":
+    "Neue Datensätze, die die Regel erfüllen, kommen automatisch dazu.",
+  "reporting.futureStays":
+    "Die Zugehörigkeit ist ausdrücklich gewählt. Aus zugehörigen Leads umgewandelte Deals gehen trotzdem mit.",
+  "reporting.reviewAfterLaunch": "Nach dem Start öffnet sich die Übersicht für",
+  "reporting.includedRecords": "Zugehörige Datensätze",
+  "reporting.initiativeSince": "Seit dem Start am {launch} · Frist {deadline}",
+  "reporting.initiativeDraftNotice":
+    "Diese Initiative ist ein Entwurf. Starte sie unter Berichte, um ihre Ausgangsbasis einzufrieren.",
+  "reporting.objectiveOfTarget": "{value} von {target}",
+  "reporting.objectiveProgress": "{share} des Ziels",
+  "reporting.noTargetForSlice":
+    "Kein Ziel für diesen Ausschnitt. Die Ergebnisse bleiben, die Zielerreichung wird nicht verglichen.",
   "reporting.product": "Produkt",
   "reporting.allProducts": "Alle Produkte",
   "reporting.productUnnamed": "Gewähltes Produkt",
@@ -1268,8 +1385,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.software": "Nur Software",
   "reporting.basis.implementation": "Nur Umsetzung",
   "reporting.productReports": "Produktumsatz",
-  "reporting.productReportsPurpose": "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
-  "reporting.noProducts": "Noch keine aktiven Produkte. Lege Produkte in den Einstellungen an, um darüber zu berichten.",
+  "reporting.productReportsPurpose":
+    "Öffnet die Umsatzübersicht für ein Produkt. Es ist nichts einzurichten, und nichts wird geschrieben.",
+  "reporting.noProducts":
+    "Noch keine aktiven Produkte. Lege Produkte in den Einstellungen an, um darüber zu berichten.",
   "reporting.actualsThrough": "Ist-Werte bis {at}",
   "reporting.periodNotStarted":
     "Der Zeitraum beginnt am {at}; darin ist noch nichts geschehen",
@@ -5263,6 +5382,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.scoreLoading": "Score-Faktoren werden geladen…",
   "lead.scoreNoFactors": "Bisher fließen keine Faktoren in diesen Score ein.",
   "lead.scoreSources": "Aktivitäten: {count}",
+  "lead.scoreSourcesHead": "Aktivitäten hinter diesem Faktor",
+  "lead.scoreSourceNoSubject": "Kein Betreff",
   "lead.factor.decision_maker_title": "Titel des Entscheidungstragenden",
   "lead.factor.reply": "Lead hat geantwortet",
   "lead.factor.meeting_held": "Termin stattgefunden",
@@ -7263,6 +7384,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.analytics_decision":
+    "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
     "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
   "tasks.origin.commitment":
@@ -11703,6 +11826,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "client.isolation": "Nur mit deinem Unternehmen verbunden",
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
 
+  "book.pageTitle": "Termin mit {host} buchen",
+  "book.pageTitleGeneric": "Termin buchen",
+  "book.meetingTitle": "Dein Termin",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",
@@ -13237,6 +13363,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.report_schedule": "Berichtszeitpläne",
   "roles.object.report_edition": "Berichts-Snapshots",
   "roles.object.sales_target": "Vertriebsziele",
+  "roles.object.sales_initiative": "Vertriebsinitiativen",
   "roles.object.reporting_framework": "Berichtseinstellungen",
   "roles.object.reporting_credit": "SDR-Ergebnisse",
   "roles.object.capture_settings": "Capture-Regeln",
@@ -15810,6 +15937,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Hilfe zu einer Zusage angefragt",
   "webhooks.event.weekly_plan.help_requested.when":
     "Ein Teammitglied bittet die Teamleitung um Hilfe bei einer Zusage.",
+  "webhooks.event.sales_initiative.updated.label":
+    "Vertriebsinitiative geändert",
+  "webhooks.event.sales_initiative.updated.when":
+    "Eine Vertriebsinitiative wurde angelegt, bearbeitet, gestartet oder ihre enthaltenen Datensätze wurden geändert.",
   "webhooks.eventGroup.notices_notifications":
     "Hinweise und Benachrichtigungen",
   "webhooks.event.notice.created.label": "Hinweis erfasst",
@@ -16860,7 +16991,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.amount": "Umgerechneter Betrag",
   "filters.field.city": "Stadt",
   "filters.field.classification": "Klassifizierung",
+  "filters.field.company_country": "Land des Unternehmens",
   "filters.field.company_industry": "Branche des Unternehmens",
+  "filters.field.product_id": "Produkt",
   "filters.field.company_lifecycle": "Lebenszyklus des Unternehmens",
   "filters.field.company_size_band": "Mitarbeitende",
   "filters.field.country": "Ländercode",
@@ -16944,6 +17077,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für Filter trägt kein Datensatz ein archiviertes Tag.",
   "filters.sentence.ref.project_one": "{count} Projekt",
   "filters.sentence.ref.project_other": "{count} Projekte",
+  "filters.sentence.ref.product_one": "{count} Produkt",
+  "filters.sentence.ref.product_other": "{count} Produkte",
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
@@ -18967,6 +19102,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.noLinkYetBody":
     "Erstelle einen, um eine Seite zu teilen, auf der Gäste eine Zeit wählen.",
   "scheduling.replaceAddress": "Adresse ersetzen",
+  "scheduling.alias.label": "Kurzadresse",
+  "scheduling.alias.help":
+    "Optional. Eine Kurzadresse wie /book/alex lässt sich leicht teilen und leicht erraten. Wer sie errät, sieht deine Buchungsseite und deine freien Zeiten. Deine lange Adresse funktioniert weiter.",
+  "scheduling.alias.preview": "Dein Link endet dann auf {path}",
+  "scheduling.alias.save": "Adresse speichern",
+  "scheduling.alias.clear": "Kurzadresse entfernen",
+  "scheduling.alias.changeTitle": "Kurzadresse ändern?",
+  "scheduling.alias.clearTitle": "Kurzadresse entfernen?",
+  "scheduling.alias.changeHelp":
+    "{old} funktioniert dann sofort nicht mehr. Gäste mit dieser Adresse sehen, dass die Seite nicht verfügbar ist. Niemand sonst kann sie je übernehmen, und du kannst sie jederzeit zurückholen.",
+  "scheduling.alias.error.too_short": "Verwende mindestens 3 Zeichen.",
+  "scheduling.alias.error.too_long": "Verwende höchstens 30 Zeichen.",
+  "scheduling.alias.error.invalid":
+    "Verwende Buchstaben, Ziffern und Bindestriche. Beginne und ende mit einem Buchstaben oder einer Ziffer.",
+  "scheduling.alias.error.reserved":
+    "Diese Adresse ist reserviert. Wähle eine andere.",
+  "scheduling.alias.error.taken":
+    "Eine andere Buchungsseite nutzt diese Adresse oder hat sie genutzt. Wähle eine andere.",
+  "scheduling.alias.error.no_booking_link":
+    "Erstelle zuerst deinen Buchungslink.",
+  "scheduling.replaceAliasHelp":
+    "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
@@ -19772,6 +19929,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
   "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
+  "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
+  "analytics.decisions.purpose":
+    "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
+  "analytics.decisions.record": "Entscheidung festhalten",
+  "analytics.decisions.review": "Entscheidungen prüfen",
+  "analytics.decisions.none": "Noch keine Entscheidung festgehalten.",
+  "analytics.decisions.decision": "Entscheidung",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Verantwortlich",
+  "analytics.decisions.reviewOn": "Prüfen am",
+  "analytics.decisions.status": "Status",
+  "analytics.decisions.done": "Erledigt",
+  "analytics.decisions.open": "Offen",
+  "analytics.decisions.recordOutcome": "Ergebnis festhalten",
+  "analytics.decisions.resultLine": "Ergebnis: {result}",
+  "analytics.decisions.chooseDeal": "Deal wählen",
+  "analytics.decisions.chooseOwner": "Verantwortlichen wählen",
+  "analytics.decisions.expected": "Erwartetes Ergebnis",
+  "analytics.decisions.recordNote":
+    "Dieselbe offene Entscheidung am selben Deal ein zweites Mal festzuhalten gibt diese Aufgabe zurück.",
+  "analytics.decisions.confirm": "Festhalten",
+  "analytics.decisions.whatWasDone": "Welche Arbeit wurde erledigt?",
+  "analytics.decisions.outcomeNote":
+    "Erledigte Arbeit qualifiziert oder gewinnt den Deal nicht.",
+  "analytics.decisions.saveOutcome": "Ergebnis speichern",
   "analytics.overview.filtersToggle": "Filter",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Abschluss: {window}",
