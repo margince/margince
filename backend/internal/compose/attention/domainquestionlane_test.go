@@ -237,9 +237,9 @@ func TestARedirectedQuestionCarriesItsContextAndKeepsItsActions(t *testing.T) {
 	row := classifyDomainQuestion(domainQuestionItem(DomainQuestion{
 		Domain: "alias.example", ReasonCode: contacts.PendingForwardedIdentity, AskedAt: readInstant,
 		Context: contacts.DomainQuestionContext{
-			Contacts:     []contacts.DomainQuestionContact{{ID: sender, Name: "Alex Example"}},
-			ContactCount: 2,
-			Suggestion:   &contacts.DomainCompanySuggestion{CompanyID: company, Name: "Example Company", Basis: contacts.SuggestionRedirectTarget},
+			Contacts:       []contacts.DomainQuestionContact{{ID: sender, Name: "Alex Example"}},
+			DomainContacts: 2,
+			Suggestion:     &contacts.DomainCompanySuggestion{CompanyID: company, Name: "Example Company", Basis: contacts.SuggestionRedirectTarget},
 		},
 	}), readInstant).item
 

@@ -365,7 +365,7 @@ const suggested: WorklistItem = {
   },
 };
 
-it("asks about the person and confirms the suggested company for the whole domain", async () => {
+it("asks about the contact and confirms the suggested company for the whole domain", async () => {
   const user = userEvent.setup();
   const writes: { path: string; body: unknown }[] = [];
   transport(async (request, url) => {

@@ -17,7 +17,7 @@ export type DomainQuestionView = Readonly<{
   context: DomainQuestionContext | undefined;
 }>;
 
-// The question names a person the reader may see. Failing that, it names the
+// The question names a contact the reader may see. Failing that, it names the
 // address that wrote, and failing that, the domain.
 export function domainQuestionHeading(
   { domain, context }: DomainQuestionView,

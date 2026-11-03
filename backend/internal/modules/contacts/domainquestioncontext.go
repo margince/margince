@@ -56,8 +56,8 @@ type DomainQuestionContext struct {
 	// Senders of the newest mail first, at most domainQuestionContactLimit.
 	Contacts []DomainQuestionContact
 	// Live contacts on the domain the reader may see, which a confirmed
-	// company also employs.
-	ContactCount int
+	// company also employs. A count of a domain, not of a company's roster.
+	DomainContacts int
 	// The mail came from contacts the reader may not see, and none they may.
 	HiddenSenders bool
 	// The From address of the newest mail, which the reader may read.
@@ -107,7 +107,7 @@ func attachDomainQuestionContextTx(ctx context.Context, tx pgx.Tx, questions []D
 	}
 	for i := range questions {
 		q := &questions[i]
-		q.Context.ContactCount = counts[q.Domain]
+		q.Context.DomainContacts = counts[q.Domain]
 		senders[q.Domain].fill(&q.Context)
 		q.Context.Suggestion = soleSuggestion(offered[q.Domain], names)
 	}
@@ -190,16 +190,17 @@ func readDomainSendersTx(ctx context.Context, tx pgx.Tx, domains []string, asOf 
 	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, `SELECT q.domain, m.id, sender.address, c.id, COALESCE(c.full_name, ''), COALESCE(`+visible+`, false)
- FROM unnest(`+domainList+`) AS q(domain)
+	query := `SELECT q.domain, m.id, sender.address, c.id, COALESCE(c.full_name, ''), COALESCE(` + visible + `, false)
+ FROM unnest(` + domainList + `) AS q(domain)
  CROSS JOIN LATERAL (SELECT question_mail.id, question_mail.occurred_at FROM activity question_mail
-  WHERE `+vendorMailSQL("question_mail", "q.domain", asOf, bind)+` AND `+readable+`
+  WHERE ` + vendorMailSQL("question_mail", "q.domain", asOf, bind) + ` AND ` + readable + `
   ORDER BY question_mail.occurred_at DESC, question_mail.id DESC LIMIT 20) m
  JOIN activity_participant sender ON sender.activity_id = m.id AND sender.role = 'from'
-  AND sender.address_domain_folded IS NOT NULL AND `+owndomain.CoversSQL("sender.address_domain_folded", "q.domain")+`
+  AND sender.address_domain_folded IS NOT NULL AND ` + owndomain.CoversSQL("sender.address_domain_folded", "q.domain") + `
  LEFT JOIN contact_email ce ON ce.email = lower(sender.address) AND ce.archived_at IS NULL
  LEFT JOIN contact c ON c.id = ce.contact_id AND c.archived_at IS NULL AND c.merged_into_id IS NULL
- ORDER BY q.domain, m.occurred_at DESC, m.id DESC`, args...)
+ ORDER BY q.domain, m.occurred_at DESC, m.id DESC`
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading who raised the domain questions: %w", err)
 	}
@@ -286,8 +287,20 @@ func redirectTargetCandidatesTx(ctx context.Context, tx pgx.Tx, questions []Doma
 	for target := range byTarget {
 		targets = append(targets, target)
 	}
-	rows, err := tx.Query(ctx, `SELECT DISTINCT cd.domain_folded, cd.company_id FROM company_domain cd
- WHERE cd.domain_folded = ANY($1) AND cd.archived_at IS NULL`, targets)
+	var args []any
+	bind := func(value any) int { args = append(args, value); return len(args) }
+	targetList := fmt.Sprintf("$%d", bind(targets))
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return err
+	}
+	visible, err := visibleCompanySQL(ctx, "company", bind)
+	if err != nil {
+		return err
+	}
+	query := `SELECT DISTINCT cd.domain_folded, cd.company_id FROM company_domain cd
+ JOIN company company ON company.id = cd.company_id
+ WHERE cd.domain_folded = ANY(` + targetList + `) AND cd.archived_at IS NULL AND ` + visible
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("contacts: reading the companies on redirect targets: %w", err)
 	}
@@ -348,15 +361,16 @@ func visibleCompanyNamesTx(ctx context.Context, tx pgx.Tx, offered map[string][]
 	var args []any
 	bind := func(value any) int { args = append(args, value); return len(args) }
 	idList := fmt.Sprintf("$%d", bind(companyIDs))
-	scope, err := auth.ScopeClauseFor(ctx, companyEntity, "company", bind)
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	visible, err := visibleCompanySQL(ctx, "company", bind)
 	if err != nil {
 		return nil, err
 	}
-	if scope == "" {
-		scope = scopeAllRows
-	}
-	rows, err := tx.Query(ctx, `SELECT company.id, company.display_name FROM company company
- WHERE company.id = ANY(`+idList+`) AND company.archived_at IS NULL AND company.merged_into_id IS NULL AND `+scope, args...)
+	query := `SELECT company.id, company.display_name FROM company company
+ WHERE company.id = ANY(` + idList + `) AND company.merged_into_id IS NULL AND ` + visible
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("contacts: naming the suggested companies: %w", err)
 	}
@@ -377,7 +391,7 @@ func visibleCompanyNamesTx(ctx context.Context, tx pgx.Tx, offered map[string][]
 func (c DomainQuestionContext) Contract() crmcontracts.DomainQuestionContext {
 	out := crmcontracts.DomainQuestionContext{
 		Contacts:      make([]crmcontracts.DomainQuestionContact, 0, len(c.Contacts)),
-		ContactCount:  c.ContactCount,
+		ContactCount:  c.DomainContacts,
 		HiddenSenders: c.HiddenSenders,
 		SiteUnread:    c.SiteUnread,
 	}
@@ -420,6 +434,11 @@ func currentTwinCandidatesTx(ctx context.Context, tx pgx.Tx, candidates map[stri
 	names := make([]string, 0, len(candidates))
 	for domain, twin := range candidates {
 		domains, names = append(domains, domain), append(names, twin.name)
+	}
+	// The object gate only: uniqueness is counted over every live company, as
+	// the hold was decided, and the name is shown through visibleCompanyNamesTx.
+	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
+		return err
 	}
 	stated := exactNameKeySQL("q.name")
 	rows, err := tx.Query(ctx, `SELECT q.domain, (array_agg(c.id))[1], count(*)

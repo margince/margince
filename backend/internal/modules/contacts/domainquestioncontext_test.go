@@ -14,7 +14,7 @@ func TestAQuestionNamesOnlyTheSendersItsReaderMaySee(t *testing.T) {
 	seen, hidden := ids.NewV7(), ids.NewV7()
 	var out DomainQuestionContext
 	domainSenders{
-		{activity: mail, address: "hidden@alias.example", contact: &hidden, name: "Private Person"},
+		{activity: mail, address: "hidden@alias.example", contact: &hidden, name: "Hidden Sender"},
 		{activity: mail, address: "alex@alias.example", contact: &seen, name: "Alex Example", visible: true},
 		{activity: ids.NewV7(), address: "alex@alias.example", contact: &seen, name: "Alex Example", visible: true},
 	}.fill(&out)
@@ -33,7 +33,7 @@ func TestAQuestionNamesOnlyTheSendersItsReaderMaySee(t *testing.T) {
 func TestAQuestionFromHiddenSendersSaysSoWithoutNamingThem(t *testing.T) {
 	hidden := ids.NewV7()
 	var out DomainQuestionContext
-	domainSenders{{activity: ids.NewV7(), address: "p@alias.example", contact: &hidden, name: "Private Person"}}.fill(&out)
+	domainSenders{{activity: ids.NewV7(), address: "p@alias.example", contact: &hidden, name: "Hidden Sender"}}.fill(&out)
 	if len(out.Contacts) != 0 || !out.HiddenSenders {
 		t.Fatalf("context = %+v, want no names and hidden_senders set", out)
 	}

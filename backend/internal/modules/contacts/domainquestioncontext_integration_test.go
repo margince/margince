@@ -59,7 +59,7 @@ func TestAQuestionNamesItsSenderAndWhetherTheSiteWasRead(t *testing.T) {
 	}
 
 	unread := e.questionAbout(ctx, t, "unread-site.test").Context
-	if len(unread.Contacts) != 1 || unread.Contacts[0].Name != "Anna Example" || unread.ContactCount != 1 {
+	if len(unread.Contacts) != 1 || unread.Contacts[0].Name != "Anna Example" || unread.DomainContacts != 1 {
 		t.Fatalf("context = %+v, want Anna named and counted", unread)
 	}
 	if unread.OriginActivityID == nil || unread.SenderAddress != "anna@unread-site.test" || unread.HiddenSenders {

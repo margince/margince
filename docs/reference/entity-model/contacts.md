@@ -6,7 +6,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-47 columns · primary key `(id)` · referenced by 50 foreign keys
+47 columns · primary key `(id)` · referenced by 51 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -193,7 +193,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_domain_disposition
 
-22 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -206,6 +206,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `admission_sender_kind` | `text` |  |  |
 | `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`. |
 | `attempts` | `integer`, default `0` | yes |  |
+| `candidate_company_id` | `uuid` |  | Points at `company.id`. |
+| `candidate_name` | `text` |  |  |
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `domain` | `text` | yes |  |
 | `evidence` | `text` |  |  |
@@ -215,6 +217,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `pending_reason` | `text` |  | One of `unevidenced`, `stale_evidence`, `near_duplicate`, `forwarded_identity`, `vendor_verdict`, `reserved_domain`. |
 | `site_read_id` | `uuid` |  | Points at `site_read.id`. |
+| `site_unread` | `boolean`, default `false` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` |  | One of `site_read`, `heuristic`, `human`. |
@@ -224,6 +227,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `candidate_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `company_id` | `company` | deleting the parent deletes this row |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `site_read_id` | `site_read` | deleting the parent keeps this row and clears the link |
@@ -243,6 +247,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `company_domain_disposition_pkey`: `unique, btree (id)`
+- `idx_company_domain_disposition_candidate`: `btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL)`
 - `idx_company_domain_disposition_company`: `btree (company_id)`
 - `idx_company_domain_disposition_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
 - `idx_domain_disposition_admission`: `btree (admission_at DESC) WHERE (admission IS NOT NULL)`
