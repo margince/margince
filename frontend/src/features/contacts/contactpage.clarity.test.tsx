@@ -258,7 +258,7 @@ it("does not predict a confirmation destination when multiple addresses have no 
 
 describe("the contact overview states no mail coverage", () => {
   // No coverage state names a step the reader can take, so the overview stays
-  // silent about it; a broken connection shows on the connection health banner.
+  // silent about it. A broken connection shows on the connection health banner.
   it.each([
     "partial",
     "unknown",

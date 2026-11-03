@@ -438,7 +438,7 @@ it("background reads explicitly refuse model work", async () => {
 
 describe("Deal360 states no mail coverage", () => {
   // No coverage state names a step the reader can take, so the card stays
-  // silent about it; a broken connection shows on the connection health banner.
+  // silent about it. A broken connection shows on the connection health banner.
   it.each(["partial", "unknown", "unavailable", "withheld", undefined])(
     "draws no notice for coverage %s",
     async (mailCoverage) => {
