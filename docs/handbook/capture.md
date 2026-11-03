@@ -2,11 +2,7 @@
 <!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go -->
 # Capture: how conversations get into Margince
 
-Nobody should have to copy an email into a CRM by hand. **Capture** is the part
-of Margince that connects to your mailbox, your calendar and your chat. It files
-what arrives against the right contacts, their companies and projects.
-Connecting a mailbox or calendar, and importing your older mail, is its own
-page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
+Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
@@ -177,9 +173,7 @@ To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-
 If you use projects, a captured message is filed against one by three fixed
 rules, and the first match wins. No AI model is used in any of them.
 
-**1. The conversation.** A reply to a thread already filed goes under the same
-project. Matching stays within one channel, so an email cannot be filed under a
-chat conversation.
+**1. The conversation.** A reply to a thread already filed goes under the same project. Matching stays within one channel, so an email cannot be filed under a chat conversation.
 
 **2. The deal.** A message already linked to a deal is filed under that deal's
 project.
@@ -239,8 +233,9 @@ You see only the messages whose audience includes you; a held message stays with
 Also called: email history, correspondence, all mails with a customer.
 
 ### What counts as one email thread?
-A reply whose subject changes starts a new conversation. Reply prefixes such as "Re:" and "AW:" do not count as a change, and neither do capital letters or extra spaces. A reply with no subject of its own stays in its parent's conversation. A conversation you kept private stays private under its new subject.
-Mail is split this way when the message it answers is already in Margince. When a newly connected mailbox brings in older mail, a reply can arrive before the message it answers, and then it stays in the old conversation until the people who run your Margince regroup older mail.
+A reply whose subject changes starts a new conversation. "Re:" and "AW:" do not count as a change, and neither do capital letters. A reply with no subject of its own stays in its parent's conversation. A conversation you kept private stays private under its new subject.
+
+Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
 Also called: thread split, new subject, separate conversation.
 
 ### How do I read a whole email thread?

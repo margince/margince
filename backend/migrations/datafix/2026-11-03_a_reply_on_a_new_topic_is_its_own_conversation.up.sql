@@ -14,28 +14,38 @@ SET LOCAL lock_timeout = '3s';
 --     key another message already carries leaves the message with its parent.
 --
 -- Only splits happen: parent and reply already share a key, so no conversation gains a
--- message it did not hold. Each seat's verdict is copied to the new key, a consent
+-- message it did not hold. Each seat's settled verdict is copied to the new key, a consent
 -- basis and an outbound delivery move with the message they came from, and the signal
 -- scan of every touched conversation starts again. A second run finds every split root
 -- without a parent of its key and changes nothing.
+--
+-- Only a settled verdict is copied. A pending question names a message of the old
+-- conversation, and the next mail of the new one opens its own.
+--
+-- On a large installation, run it per range of thread keys: add
+-- `AND a.thread_key >= '<from>' AND a.thread_key < '<to>'` to the first statement. A
+-- reply and its parent share a key, so a range never separates them.
 
 CREATE TEMP TABLE regroup_mail ON COMMIT DROP AS
 SELECT a.id, a.thread_key, a.occurred_at,
        lower(btrim(regexp_replace(regexp_replace(coalesce(a.subject, ''),
          '^(\s*(re|aw|antw)\s*:)+\s*', '', 'i'), '\s+', ' ', 'g'))) AS topic,
-       coalesce((SELECT min(i.identity_key) FROM activity_identity i
-                  WHERE i.activity_id = a.id AND i.identity_kind = 'mail'),
-                CASE WHEN a.source_system = 'email' THEN btrim(a.source_id, '<>') END) AS message_id
+       coalesce(CASE WHEN a.source_system = 'email' THEN btrim(a.source_id, '<>') END,
+                (SELECT min(i.identity_key) FROM activity_identity i
+                  WHERE i.activity_id = a.id AND i.identity_kind = 'mail')) AS message_id
   FROM activity a
  WHERE a.kind = 'email' AND a.archived_at IS NULL AND a.thread_key <> '';
-CREATE INDEX ON regroup_mail (message_id, thread_key);
+CREATE INDEX ON regroup_mail (thread_key);
 
 CREATE TEMP TABLE regroup_parent ON COMMIT DROP AS
 SELECT DISTINCT ON (c.id) c.id AS child, p.id AS parent
   FROM regroup_mail c
   JOIN activity_mail_reference r ON r.activity_id = c.id
-  JOIN regroup_mail p ON p.message_id = r.referenced_id AND p.thread_key = c.thread_key
-                     AND (p.occurred_at, p.id) < (c.occurred_at, c.id)
+  JOIN regroup_mail p ON p.thread_key = c.thread_key AND (p.occurred_at, p.id) < (c.occurred_at, c.id)
+                     AND (p.message_id = r.referenced_id
+                          OR EXISTS (SELECT 1 FROM activity_identity i
+                                      WHERE i.activity_id = p.id AND i.identity_kind = 'mail'
+                                        AND i.identity_key = r.referenced_id))
  ORDER BY c.id, p.occurred_at DESC, p.id DESC;
 
 CREATE TEMP TABLE regroup ON COMMIT DROP AS
@@ -59,11 +69,11 @@ SELECT w.id, m.thread_key AS old_key, w.new_key
 
 INSERT INTO capture_thread_verdict
        (thread_key, user_id, status, kind, confidence, disposition_reason, seen_addresses,
-        first_activity_id, resolved_at, next_attempt_at)
+        first_activity_id, resolved_at)
 SELECT DISTINCT ON (g.new_key, v.user_id) g.new_key, v.user_id, v.status, v.kind, v.confidence,
-       v.disposition_reason, v.seen_addresses, v.first_activity_id, v.resolved_at, v.next_attempt_at
+       v.disposition_reason, v.seen_addresses, v.first_activity_id, v.resolved_at
   FROM regroup g
-  JOIN capture_thread_verdict v ON v.thread_key = g.old_key
+  JOIN capture_thread_verdict v ON v.thread_key = g.old_key AND v.status <> 'pending'
  ORDER BY g.new_key, v.user_id
     ON CONFLICT (thread_key, user_id) DO NOTHING;
 

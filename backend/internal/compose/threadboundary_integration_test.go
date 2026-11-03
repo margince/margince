@@ -74,8 +74,8 @@ func TestABareReplyPrefixDrawsNoBoundary(t *testing.T) {
 	}
 }
 
-// The parent is named by the sender's own header, so a message the seat never held
-// cannot split or steer the reply: it keeps the root its header gives it.
+// The sender's own header names the parent. A message the seat never held cannot split
+// or steer the reply, which keeps the root its header gives it.
 func TestAParentTheSeatDoesNotHoldDecidesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, subjectMail("Angebot", seatAddress(t, e, e.Rep2), "foreign@counterparty.example", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
@@ -111,8 +111,8 @@ func TestAHeldConversationStaysHeldUnderANewTopic(t *testing.T) {
 	}
 }
 
-// A sender who names their reply after another conversation's key does not land in it:
-// the split refuses a key some other message carries and the reply stays with its parent.
+// A sender who names their reply after another conversation's key does not land in it.
+// The split refuses a key another message carries, and the reply stays with its parent.
 func TestASplitNeverTakesAKeyAnotherConversationCarries(t *testing.T) {
 	e := integration.Setup(t)
 	addr := angebotThread(t, e)
@@ -124,5 +124,20 @@ func TestASplitNeverTakesAKeyAnotherConversationCarries(t *testing.T) {
 
 	if got := threadKeyOfMessage(t, e, "ghost-root@counterparty.example"); got != "opener@counterparty.example" {
 		t.Errorf("the reply naming another conversation's key is filed under %q, want its parent's conversation", got)
+	}
+}
+
+// A pending question is about the old conversation's message, so it is not carried: the
+// split conversation's own question names its own message.
+func TestASplitConversationAsksAboutItsOwnMessage(t *testing.T) {
+	e := integration.Setup(t)
+	addr := angebotThread(t, e)
+	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Rechnung März", addr, "invoice@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000",
+		"answer@counterparty.example", "opener@counterparty.example", "answer@counterparty.example"))
+
+	if got := e.WsCount(t, `SELECT count(*) FROM capture_thread_verdict v
+		JOIN activity_identity i ON i.activity_id = v.first_activity_id AND i.identity_kind = 'mail'
+		WHERE v.thread_key = 'invoice@counterparty.example' AND i.identity_key <> 'invoice@counterparty.example'`); got != 0 {
+		t.Errorf("%d verdicts of the split conversation name a message of the conversation it left", got)
 	}
 }

@@ -16,7 +16,7 @@ const replyTopicRegroupUp = "datafix/2026-11-03_a_reply_on_a_new_topic_is_its_ow
 
 // storedMail seeds one captured email under threadKey that references the given ids,
 // the rows live capture writes: the activity, its mail identity and its references.
-func storedMail(ctx context.Context, t *testing.T, conn *pgx.Conn, messageID, subject, threadKey, at string, references ...string) string {
+func storedMail(ctx context.Context, t *testing.T, conn *pgx.Conn, messageID, subject, threadKey, at string, references ...string) {
 	t.Helper()
 	var id string
 	if err := conn.QueryRow(ctx, `
@@ -34,7 +34,6 @@ func storedMail(ctx context.Context, t *testing.T, conn *pgx.Conn, messageID, su
 			t.Fatal(err)
 		}
 	}
-	return id
 }
 
 func storedThreadKey(ctx context.Context, t *testing.T, conn *pgx.Conn, messageID string) string {
@@ -61,7 +60,12 @@ func TestHistoryRegroupsAReplyOnANewTopicIntoItsOwnConversation(t *testing.T) {
 	storedMail(ctx, t, conn, root, "Angebot", root, "2026-06-01T08:00:00Z")
 	storedMail(ctx, t, conn, "answer@x.test", "Re: Angebot", root, "2026-06-02T08:00:00Z", root)
 	storedMail(ctx, t, conn, "invoice@x.test", "Rechnung März", root, "2026-06-03T08:00:00Z", root, "answer@x.test")
-	storedMail(ctx, t, conn, "paid@x.test", "RE:  rechnung märz", root, "2026-06-04T08:00:00Z", root, "answer@x.test", "invoice@x.test")
+	// A message can hold more than one mail identity; its reply may name either.
+	if _, err := conn.Exec(ctx, `INSERT INTO activity_identity (activity_id, identity_kind, identity_key, attested_by)
+		SELECT id, 'mail', 'invoice-alias@x.test', 'connector:gmail' FROM activity WHERE source_id = 'invoice@x.test'`); err != nil {
+		t.Fatal(err)
+	}
+	storedMail(ctx, t, conn, "paid@x.test", "RE:  rechnung märz", root, "2026-06-04T08:00:00Z", root, "answer@x.test", "invoice-alias@x.test")
 	storedMail(ctx, t, conn, "blank@x.test", "Re:", root, "2026-06-05T08:00:00Z", root, "invoice@x.test", "paid@x.test")
 	// A reply naming a message of another conversation is not that conversation's to split.
 	storedMail(ctx, t, conn, "elsewhere@x.test", "Ganz anders", "other-root@x.test", "2026-06-06T08:00:00Z", "answer@x.test")
@@ -70,6 +74,15 @@ func TestHistoryRegroupsAReplyOnANewTopicIntoItsOwnConversation(t *testing.T) {
 	storedMail(ctx, t, conn, "ghost@x.test", "Re: Etwas", root, "2026-06-07T08:00:00Z", root, "answer@x.test")
 	if _, err := conn.Exec(ctx, `INSERT INTO capture_thread_verdict (thread_key, user_id, status, kind)
 		VALUES ($1, $2, 'held_by_owner', 'personal')`, root, seat); err != nil {
+		t.Fatal(err)
+	}
+	var colleague string
+	if err := conn.QueryRow(ctx,
+		`INSERT INTO app_user (email, display_name) VALUES ('colleague@regroup.test', 'Colleague') RETURNING id`).Scan(&colleague); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO capture_thread_verdict (thread_key, user_id, status) VALUES ($1, $2, 'pending')`,
+		root, colleague); err != nil {
 		t.Fatal(err)
 	}
 
@@ -89,6 +102,11 @@ func TestHistoryRegroupsAReplyOnANewTopicIntoItsOwnConversation(t *testing.T) {
 	if err := conn.QueryRow(ctx, `SELECT status FROM capture_thread_verdict WHERE thread_key = 'invoice@x.test' AND user_id = $1`,
 		seat).Scan(&status); err != nil || status != "held_by_owner" {
 		t.Errorf("the split conversation's verdict is %q (%v), want the held verdict carried", status, err)
+	}
+	var pendingCarried int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM capture_thread_verdict WHERE thread_key = 'invoice@x.test' AND user_id = $1`,
+		colleague).Scan(&pendingCarried); err != nil || pendingCarried != 0 {
+		t.Errorf("a pending question was copied to the split conversation (%d rows, %v); it names the old conversation's message", pendingCarried, err)
 	}
 	countAudits := func() int {
 		var n int
