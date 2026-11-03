@@ -204,9 +204,9 @@ Company, contact, deal and lead fields are edited in the Details pane. There is 
 record. Fields with no value still show. Custom fields form their own section, from the workspace catalog in
 use, even when no values exist.
 
-Text fields, and fields where you pick one value, save in line; Escape stops the edit. Text of many lines saves
-on `Cmd/Ctrl+Enter`, or when you leave the field. Some changes use a local `Save` and `Cancel`, so the parts that
-go together are saved together. Those are
+Each field opens a dialog with `Save` and `Cancel`, and nothing is stored until `Save`, a picked value included.
+Escape and `Cancel` stop the edit. Text of many lines saves on `Cmd/Ctrl+Enter`. A field of several parts opens
+the record's edit form in a dialog, so the parts that go together are saved together. Those are
 address parts, email, phone and domain lists, deal money, company and project links, and partner attribution.
 A failed save keeps the draft.
 
@@ -217,6 +217,6 @@ Qualifying leads, changing the lifecycle, setting a score by hand, closing deals
 changes keep their own controls and needed evidence. Fields the app works out, masked and archived fields, and
 fields you have no rights to stay read-only. Header buttons use the same record writer as Details. Dialogs for a new record stay.
 
-`RecordFields` composes `InlineText`, `InlineChoice` and `EditableValue`, which open a dialog and store on Save, and `RecordFormBody` for a field of several inputs. Each object gives its
+`RecordFields` composes `InlineText`, `InlineChoice` and `EditableValue`, which open a dialog and store on Save, and `EditRecordModal` for a field of several inputs. Each object gives its
 field list that exists, and a small request mapper. `RecordCustomFields` gives the section built from the
 catalog for all four kinds.

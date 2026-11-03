@@ -163,11 +163,11 @@ A grey question mark means the answer could not be loaded; press it to try again
 Also called: VAT ID valid, VAT receipt, Registered to.
 
 ### How do I change the owner of a contact or company?
-To change who owns a contact or company in Margince, open the record and pick a colleague in the **Owner** row of its **Details** panel. The change saves as soon as you pick. You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
+To change who owns a contact or company in Margince, open the record and press the **Owner** row of its **Details** panel. Pick a colleague in the dialog and press **Save**. You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
 
 ### How do I claim a company nobody owns?
-To claim a company nobody owns in Margince, open it and pick yourself in **Owner**, in the facts under its name. The company is yours as soon as you pick.
+To claim a company nobody owns in Margince, open it and press **Owner** in the facts under its name. Pick yourself in the dialog and press **Save** to make it yours.
 Everyone can read a company nobody owns, and nobody can edit it. So its **Details** panel takes no changes until someone claims it. Any role that may edit companies can claim one; nobody can claim an archived company.
 Also called: take an unowned account, assign a company to me, claim an account.
 
