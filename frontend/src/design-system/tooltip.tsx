@@ -204,7 +204,7 @@ export function useTooltip<T extends HTMLElement = HTMLElement>(
 /**
  * The exact reading behind a rounded figure, on hover and on focus.
  *
- * Always worth showing, and the anchor takes a tab stop: a figure is not a
+ * Always worth showing, and the anchor takes a tab stop. A figure is not a
  * control, so without one the exact amount is reachable by pointer only.
  */
 export function useDetailTooltip<T extends HTMLElement = HTMLElement>(

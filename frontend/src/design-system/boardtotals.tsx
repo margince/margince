@@ -33,8 +33,8 @@ export function largestStageTotal(
 }
 
 /**
- * A stage's money, as it heads the column: the total, the weighted total, a bar
- * that sets both against the largest stage, and one line of notes.
+ * A stage's money, as it heads the column. It shows the total and the weighted
+ * total, a bar against the largest stage, and one line of notes.
  *
  * Both figures are abbreviated, as on the cards under them. The exact amounts,
  * the probability and what the notes stand for are in the total's tip.
