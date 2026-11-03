@@ -5,14 +5,13 @@
 
 package gates
 
-// WithClock returns a copy with the clock set and leaves the receiver alone;
-// SetClock sets the clock on the receiver and returns it for chaining. With one
-// name for both shapes, a bare `store.WithClock(clock)` on a copying store reads
-// like the mutating one, compiles, and leaves the test on the wall clock.
+// WithClock returns a copy with the clock set. SetClock sets the clock on the
+// receiver and returns it. A bare `store.WithClock(clock)` therefore changes
+// nothing, and a test that wrote it keeps the wall clock.
 //
-// A method named WithClock may not return its own receiver, and a WithClock
-// call may not stand alone as a statement. golangci's unusedresult cannot hold
-// the second half: its `funcs` list names package functions, not methods.
+// So a WithClock method may not return its own receiver, and a WithClock call
+// may not stand alone. golangci's unusedresult cannot hold this: it takes
+// package functions, not methods.
 
 import (
 	"go/ast"
