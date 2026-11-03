@@ -24,6 +24,7 @@ export function buildColumns(
   // play, which is the ordinary case.
   totalsWithheld?: string,
   owners?: OwnerNaming,
+  unread: ReadonlySet<string> = new Set(),
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -41,10 +42,10 @@ export function buildColumns(
         weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
-        // The true count, not the loaded page's. It falls back to the page
-        // count while totals are still loading, so the column shows some
-        // number rather than a misleading 0.
-        count: columnCount(stageTotals, stageDeals.length),
+        count: columnCount(
+          stageTotals,
+          unread.has(stage.id) ? null : stageDeals.length,
+        ),
         asOf: stageTotals?.asOf ?? null,
         timezone: stageTotals?.timezone ?? null,
         unpricedCount: stageTotals?.unpricedCount ?? null,
@@ -54,12 +55,15 @@ export function buildColumns(
     });
 }
 
-// A column's count: the report's over every matching deal, else its loaded cards.
-function columnCount(stageTotals: StageTotals | undefined, loaded: number) {
+// The report's count over every matching deal. While the report is pending,
+// withheld or refused, the loaded cards; none while the column's read is pending.
+function columnCount<Loaded extends number | null>(
+  stageTotals: StageTotals | undefined,
+  loaded: Loaded,
+): number | Loaded {
   return stageTotals?.count ?? loaded;
 }
 
-// The board's head count, as the sum of its column heads, so the two agree.
 export function boardDealCount(
   stages: readonly Stage[],
   totals: Map<string, StageTotals> | null | undefined,

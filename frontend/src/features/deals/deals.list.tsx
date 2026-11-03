@@ -19,8 +19,7 @@ import { useOwnerPicker } from "../../components/recordowners";
 import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
 import { currencyOptions } from "../../format/currencychoices";
-import { formatNumber } from "../../format/format";
-import { translatePlural, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
 import { maskRefusedDialOf } from "../../lib/dealranges";
@@ -29,7 +28,6 @@ import {
   totalsRefusedBecause,
   totalsWithheldBecause,
   useDeals,
-  useStageColumns,
   useStageTotals,
 } from "../../lib/deals.queries";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
@@ -50,6 +48,7 @@ import {
   ConfirmAdvanceModal,
   type PendingAdvance,
 } from "./deal360/confirmadvance";
+import { useStageColumns } from "./dealboard.queries";
 import {
   dealProjectFields,
   resolveDealProject,
@@ -57,11 +56,12 @@ import {
 } from "./dealproject";
 import type { Deal, Pipeline, Stage } from "./deals";
 import {
+  BoardHeadCount,
   DealBoardBody,
   useAdvanceDeal,
   useBoardInteractions,
 } from "./deals.board";
-import { boardDealCount, dealColumns } from "./deals.columns";
+import { dealColumns } from "./deals.columns";
 import { partnerFields, usePartnerOptions } from "./deals.fields";
 import {
   DealViewTools,
@@ -395,15 +395,8 @@ export function DealsScreen({
     t,
   });
 
-  const boardCount = boardDealCount(
-    stages,
-    stageTotalsQuery.data,
-    stageColumns.deals,
-  );
-
   // The board is the surface's body, so the dials that narrow it stay in view.
   // Each column pages itself, so `bodyOwnsPaging` withholds the grid's pager.
-  // The count sits in the head beside the page's name, not under the dials.
   const boardBody =
     view === "board" && !refusal ? (
       <DealBoardBody
@@ -441,11 +434,13 @@ export function DealsScreen({
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
         bodyCount={
-          boardBody !== undefined &&
-          !stageColumns.isPending &&
-          translatePlural(locale, "board.count", boardCount, {
-            count: formatNumber(boardCount, locale),
-          })
+          boardBody && (
+            <BoardHeadCount
+              pipeline={effectivePipeline}
+              stageColumns={stageColumns}
+              stageTotalsQuery={stageTotalsQuery}
+            />
+          )
         }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is

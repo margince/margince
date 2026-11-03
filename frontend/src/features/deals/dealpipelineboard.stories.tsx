@@ -4,7 +4,6 @@ import type {
   BoardDeal,
   BoardMoneyColumn,
 } from "../../design-system/pipelineboard";
-import type { StageColumnRead } from "../../lib/deals.queries";
 import { WriteToProvider } from "../../lib/writeto";
 import { lastEmailAgo } from "../../testing/dealmail";
 import {
@@ -13,6 +12,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import type { StageColumnRead } from "./dealboard.queries";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import { StageColumnFoot } from "./deals.board";
 

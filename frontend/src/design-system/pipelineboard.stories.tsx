@@ -414,6 +414,38 @@ export const WithAWithheldCount: Story = {
   },
 };
 
+// A column still reading its cards, with no total yet. The head states no
+// figure, since a zero would read as an empty stage.
+export const WithACountNotYetKnown: Story = {
+  render: () => (
+    <PipelineBoard
+      columns={[
+        {
+          stage: "discovery",
+          label: "Discovery",
+          probabilityPct: 10,
+          rawMinor: null,
+          weightedMinor: null,
+          currency: null,
+          count: null,
+          deals: [],
+        },
+      ]}
+      cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const discovery = within(canvasElement).getByRole("region", {
+      name: "Discovery",
+    });
+    await expect(
+      discovery.querySelector(".board-col-count:not([hidden])"),
+    ).toBeNull();
+    await expect(discovery).not.toHaveTextContent("0 deals");
+  },
+};
+
 // A card passing under the head is the only thing that shows the band seals
 // the column; at rest the two share one ground. The owner chip and company link
 // are raised over the card's own link, so they are what would break through.

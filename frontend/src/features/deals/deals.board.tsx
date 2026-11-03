@@ -10,6 +10,7 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { useSuggestionGhosts } from "../../components/dealsuggestion";
 import { rosterOwnerNaming } from "../../components/entityref";
 import { ErrorLine } from "../../design-system/errorline";
+import { CountLine } from "../../design-system/listsurface";
 import type {
   BoardColumn,
   BoardDeal,
@@ -21,14 +22,13 @@ import {
   QueryStates,
 } from "../../design-system/querystates";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
 import {
   type DealFilters,
   ownerDialParams,
-  type StageColumnRead,
-  type useStageColumns,
   type useStageTotals,
 } from "../../lib/deals.queries";
 import { useMemberNames } from "../../lib/membernames";
@@ -37,10 +37,11 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import type { AdvanceInput, PendingAdvance } from "./deal360/confirmadvance";
+import type { StageColumnRead, useStageColumns } from "./dealboard.queries";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
-import { buildColumns } from "./deals.columns";
+import { boardDealCount, buildColumns } from "./deals.columns";
 
 /**
  * What a terminal advance says about how the deal closed, on top of the stage
@@ -127,8 +128,8 @@ export function useAdvanceDeal() {
   });
 }
 
-// Under a column's cards: its first read's wait or failure, then its own
-// "Load more". A failed later page is named above that button.
+// Under a column's cards: its first read's wait or failure, then its "Load more".
+// A failed later page keeps the column's cards and is named above its button.
 export function StageColumnFoot({ read }: Readonly<{ read: StageColumnRead }>) {
   const t = useT();
   return (
@@ -136,6 +137,55 @@ export function StageColumnFoot({ read }: Readonly<{ read: StageColumnRead }>) {
       <ErrorLine error={read.loadMoreError} />
       <LoadMoreButton query={read} />
     </QueryStates>
+  );
+}
+
+function unreadStages(columns: ReadonlyMap<string, StageColumnRead>) {
+  return new Set(
+    [...columns].flatMap(([stageId, read]) =>
+      read.isPending ? [stageId] : [],
+    ),
+  );
+}
+
+// The board's count beside the page's name, once its pipeline and figures are in.
+// A sum of loaded cards, while a column has more, says it counts the loaded.
+export function BoardHeadCount({
+  pipeline,
+  stageColumns,
+  stageTotalsQuery,
+}: Readonly<{
+  pipeline?: Pipeline;
+  stageColumns: ReturnType<typeof useStageColumns>;
+  stageTotalsQuery: ReturnType<typeof useStageTotals>;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  // isLoading, not isPending: a withheld report is a disabled query, pending for good.
+  if (!pipeline || stageColumns.isPending || stageTotalsQuery.isLoading) {
+    return null;
+  }
+  const totals = stageTotalsQuery.data;
+  const count = boardDealCount(
+    pipeline.stages ?? [],
+    totals,
+    stageColumns.deals,
+  );
+  const loadedOnly =
+    !totals &&
+    [...stageColumns.columns.values()].some((read) => read.hasNextPage);
+  return loadedOnly ? (
+    <CountLine
+      unit={t("deals.unit")}
+      first={1}
+      last={count}
+      total={count}
+      more
+    />
+  ) : (
+    translatePlural(locale, "board.count", count, {
+      count: formatNumber(count, locale),
+    })
   );
 }
 
@@ -220,6 +270,7 @@ export function DealBoardBody({
               companyMarks,
               totalsWithheld ? t(totalsWithheld) : undefined,
               rosterOwnerNaming(ownerNames),
+              unreadStages(stageColumns.columns),
             )}
             onOpen={openDeal}
             cardDragHandlers={cardDragHandlers}

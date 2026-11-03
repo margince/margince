@@ -124,9 +124,9 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * loaded. A caller with a capped/paginated card fetch (the Kanban board) has
    * a real count from a server aggregate that `deals.length` cannot give it.
    * Falls back to `deals.length` when absent, which is correct for a caller
-   * whose card list is the whole stage.
+   * whose card list is the whole stage. `null`, not known yet, states no figure.
    */
-  count?: number;
+  count?: number | null;
   /** Totals withheld because the aggregate cannot measure the card filters.
    *  A plain board's one total is its count, so its head drops the figure. */
   sumHidden?: boolean;
@@ -331,7 +331,8 @@ function BoardLayout<Record extends BoardRecord>({
         {columns.map((column) => {
           const money = moneyFor(column);
           const dealCount = column.count ?? column.deals.length;
-          const countHidden = !money && column.sumHidden;
+          const countHidden =
+            column.count === null || (!money && column.sumHidden);
           return (
             <section
               key={column.stage}

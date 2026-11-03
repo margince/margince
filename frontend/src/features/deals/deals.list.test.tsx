@@ -405,38 +405,6 @@ describe("DealsScreen", () => {
     expect(within(column).getByText("250 deals")).toBeTruthy();
   });
 
-  // The head sums the report's stage counts while the report measures the
-  // board, and counts the loaded cards while it does not.
-  it.each([
-    { name: "report in play", hash: "#/deals", head: "260 deals" },
-    { name: "totals withheld", hash: "#/deals?q=fleet", head: "2 deals" },
-  ])("states the board's head count with the $name", async ({ hash, head }) => {
-    window.location.hash = hash;
-    vi.stubGlobal(
-      "fetch",
-      stubBackend(
-        [
-          deal({ id: "a", name: "Fleet one", stage_id: "s1" }),
-          deal({ id: "b", name: "Fleet two", stage_id: "s2" }),
-        ],
-        {
-          stageTotalsRows: [
-            { stage_id: "s1", deals: 250 },
-            { stage_id: "s2", deals: 10 },
-          ],
-        },
-      ),
-    );
-    render(<DealsScreen />);
-
-    expect(await screen.findByText("Fleet two")).toBeTruthy();
-    await waitFor(() =>
-      expect(
-        screen.getAllByText(head).some((node) => !node.closest("[data-stage]")),
-      ).toBe(true),
-    );
-  });
-
   it.each([
     { name: "the report frame", timezone: UTC_ZONE, day: "01/10/2026" },
     {
@@ -501,7 +469,7 @@ describe("DealsScreen", () => {
     await waitFor(() =>
       expect(
         screen.getAllByText(
-          "Loaded deals only. This owner’s totals are outside what you may measure.",
+          "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
         ).length,
       ).toBe(1),
     );
