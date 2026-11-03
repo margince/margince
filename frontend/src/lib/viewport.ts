@@ -18,8 +18,8 @@ export const PHONE_MAX_WIDTH = 700;
 // answered by a swipe below it, and a component keying that on a different
 // number would draw both at the widths between the two.
 //
-// A stylesheet cannot read a TypeScript constant, so those blocks and this line
-// are changed together.
+// A stylesheet cannot read a TypeScript constant, so viewport.test.ts fails a
+// fold block that spells another number.
 export const FOLD_MAX_WIDTH = 720;
 
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
@@ -29,8 +29,13 @@ export const FOLD_MAX_WIDTH = 720;
 // of room a long way above the width at which the sidebar becomes a bar.
 export const NARROW_MAX_WIDTH = 1100;
 
+/** The media query the hooks below ask for `maxWidth`. */
+export function widthMedia(maxWidth: number): string {
+  return `(max-width: ${maxWidth}px)`;
+}
+
 function widthQuery(maxWidth: number): MediaQueryList | undefined {
-  return globalThis.matchMedia?.(`(max-width: ${maxWidth}px)`);
+  return globalThis.matchMedia?.(widthMedia(maxWidth));
 }
 
 /**

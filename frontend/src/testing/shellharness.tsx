@@ -10,6 +10,7 @@ import { vi } from "vitest";
 import type { components } from "../api/schema";
 import type { NavSection } from "../app/nav";
 import { LocaleProvider } from "../i18n";
+import { PHONE_MAX_WIDTH, widthMedia } from "../lib/viewport";
 
 // The doubles the shell's chrome suites share, in one place.
 //
@@ -82,13 +83,32 @@ export const ignoreSearch = () => undefined;
  * Only the QUERY the app asks for matches: a stub that answered true to
  * everything would also tell the theme the reader prefers a dark one.
  */
-export function stubPhoneViewport(): void {
+export function stubPhoneViewport(): { widen: () => void } {
+  const phone = widthMedia(PHONE_MAX_WIDTH);
+  const listeners = new Set<() => void>();
+  let wide = false;
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: query === "(max-width: 700px)",
+    get matches() {
+      return query === phone && !wide;
+    },
     media: query,
-    addEventListener: () => undefined,
-    removeEventListener: () => undefined,
+    addEventListener: (_: string, listener: () => void) => {
+      if (query === phone) {
+        listeners.add(listener);
+      }
+    },
+    removeEventListener: (_: string, listener: () => void) =>
+      listeners.delete(listener),
   }));
+  return {
+    /** The window widens past the phone width, as a rotate or a resize does. */
+    widen() {
+      wide = true;
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+  };
 }
 
 /**

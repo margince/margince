@@ -219,8 +219,6 @@ function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
   return (level.barIds?.has(id) ?? false) === (rows === "bar");
 }
 
-export { drawsRow };
-
 type TipState = Readonly<{
   collapsed: boolean;
   tip: string | null;

@@ -11,14 +11,8 @@ import { type Route, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
-import {
-  currentClaim,
-  MOBILE_PRIMARY,
-  NAV,
-  type NavSection,
-  type NavTrailLevel,
-} from "./nav";
-import { drawsRow, NavLevelView, useNavLevel } from "./navlevel";
+import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
+import { NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
@@ -163,13 +157,6 @@ function useMenuOpen(here: string, phone: boolean) {
   return [open, setOpen] as const;
 }
 
-/** Whether the level holds a row the phone bar leaves to its More menu. */
-function hasOffBarRows(level: NavTrailLevel): boolean {
-  return level.groups.some((group) =>
-    group.items.some((entry) => drawsRow(level, "offbar", entry.id)),
-  );
-}
-
 /** Whether focus sits in the menu, or fell to the body when a press left it. */
 function holdsOrDropsFocus(menu: HTMLElement | null): boolean {
   const active = document.activeElement;
@@ -205,30 +192,38 @@ export function WorkspaceRail({
   // landmark and no second item list to keep in sync.
   const phone = usePhoneViewport();
   const [open, setOpen] = useMenuOpen(routeHash(route), phone);
+  const menuOpen = open && phone;
   const more = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
 
-  // A row that navigates closes the menu and leaves focus to the page it opens.
-  const closeMenu = useCallback(() => setOpen(false), [setOpen]);
-
-  // A section's entries take over the panel, one level at a time. The phone
-  // bar keeps its destinations on a section route, which is reached from the
-  // page head there (app/sectionswitcher.tsx).
-  const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
-  // A seat whose destinations all fit on the bar has nothing for More to open.
-  const hasMenu = hasOffBarRows(level.shown);
-  const menuOpen = open && phone && hasMenu;
-
-  // Escape or a press outside hands focus the menu held, or dropped on the
-  // scrim, back to More. A press that focused a control of its own keeps it.
-  const dismissMenu = useCallback(() => {
-    const dropped = holdsOrDropsFocus(menu.current);
+  // Closing hands the focus the menu held, or dropped, to More, which stands for
+  // every page the menu holds. A press that focused a control of its own keeps it.
+  const closeMenu = useCallback(() => {
+    const dropped = menu.current !== null && holdsOrDropsFocus(menu.current);
     setOpen(false);
     if (dropped) {
       more.current?.focus();
     }
   }, [setOpen]);
-  usePopoverDismiss(menuOpen, menu, dismissMenu);
+  usePopoverDismiss(menuOpen, menu, closeMenu);
+
+  // A section's entries take over the panel, one level at a time. The phone
+  // bar keeps its destinations on a section route, which is reached from the
+  // page head there (app/sectionswitcher.tsx).
+  const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
+
+  // A widen closes the menu during render and More goes with it. The focus it
+  // held goes to the sidebar's current row, as a press there would leave it.
+  const menuWasOpen = useRef(false);
+  useEffect(() => {
+    const widened = menuWasOpen.current && !phone;
+    menuWasOpen.current = menuOpen;
+    if (widened && holdsOrDropsFocus(menu.current)) {
+      nav.current
+        ?.querySelector<HTMLElement>(".navitem[aria-current]")
+        ?.focus();
+    }
+  }, [menuOpen, phone]);
 
   // The menu takes focus, or Tab walks a page nobody can see.
   useEffect(() => {
@@ -316,34 +311,32 @@ export function WorkspaceRail({
         />
         {/* Carries the active state for every destination the menu holds, so
             the closed bar always shows where you are. */}
-        {hasMenu && (
-          <button
-            type="button"
-            ref={more}
-            className={offBar ? "railmore active" : "railmore"}
-            // Open, this control closes the menu, so it says so in the name as
-            // well as in the glyph. A control whose name stays the same while its
-            // job changes is the one a screen reader gets wrong.
-            aria-label={menuOpen ? t("shell.closeMenu") : t("shell.more")}
-            aria-expanded={menuOpen}
-            // The state has to reach a screen reader as well as the eye: the
-            // hidden row is out of the accessibility tree at this width. Dropped
-            // once the menu is open, because the real row is then visible and
-            // carries it. Two elements claiming the current page is worse than
-            // none.
-            aria-current={menuOpen ? undefined : moreClaim}
-            onClick={() => setOpen(!menuOpen)}
-          >
-            {/* Both glyphs stay drawn, so one can turn into the other. */}
-            <span className="railmore-glyphs" aria-hidden>
-              <Menu className="railmore-open" />
-              <X className="railmore-close" />
-            </span>
-            <span className="navlabel">
-              {menuOpen ? t("shell.closeMenu") : t("shell.more")}
-            </span>
-          </button>
-        )}
+        <button
+          type="button"
+          ref={more}
+          className={offBar ? "railmore active" : "railmore"}
+          // Open, this control closes the menu, so it says so in the name as
+          // well as in the glyph. A control whose name stays the same while its
+          // job changes is the one a screen reader gets wrong.
+          aria-label={menuOpen ? t("shell.closeMenu") : t("shell.more")}
+          aria-expanded={menuOpen}
+          // The state has to reach a screen reader as well as the eye: the
+          // hidden row is out of the accessibility tree at this width. Dropped
+          // once the menu is open, because the real row is then visible and
+          // carries it. Two elements claiming the current page is worse than
+          // none.
+          aria-current={menuOpen ? undefined : moreClaim}
+          onClick={() => setOpen(!menuOpen)}
+        >
+          {/* Both glyphs stay drawn, so one can turn into the other. */}
+          <span className="railmore-glyphs" aria-hidden>
+            <Menu className="railmore-open" />
+            <X className="railmore-close" />
+          </span>
+          <span className="navlabel">
+            {menuOpen ? t("shell.closeMenu") : t("shell.more")}
+          </span>
+        </button>
         <div className="grow" />
         {/* The sidebar's foot is the agent. It is the one thing in the chrome
             that reports rather than navigates, and it never claims the current

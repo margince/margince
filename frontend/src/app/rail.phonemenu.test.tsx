@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate } from "../lib/router";
@@ -11,37 +11,13 @@ import {
   render,
   stubPhoneViewport,
 } from "../testing/shellharness";
-import type { railTrail } from "./nav";
-import { Shell, WorkspaceRail } from "./shell";
+import { Shell } from "./shell";
 
 // The phone bar's More menu in the whole shell. What closes it, where focus goes
-// then, what it locks while open, and when it is not drawn.
-
-// A seat that sees only the bar's destinations, made by narrowing the trail the
-// rail reads to its bar rows. Off by default, so every other case reads the
-// real trail.
-const seat = vi.hoisted(() => ({ barOnly: false }));
-
-vi.mock("./nav", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./nav")>();
-  const trail: typeof railTrail = (route, section) =>
-    actual.railTrail(route, section).map((level) =>
-      seat.barOnly
-        ? {
-            ...level,
-            groups: level.groups.map((group) => ({
-              ...group,
-              items: group.items.filter((entry) => level.barIds?.has(entry.id)),
-            })),
-          }
-        : level,
-    );
-  return { ...actual, railTrail: trail };
-});
+// then, and what it locks while open.
 
 afterEach(() => {
   cleanup();
-  seat.barOnly = false;
   window.location.hash = "";
   vi.unstubAllGlobals();
   window.localStorage.clear();
@@ -51,9 +27,10 @@ const more = () => screen.getByRole("button", { name: "More" });
 const menu = () => document.querySelector(".railmenu");
 
 function renderPhoneShell(hash: string) {
-  stubPhoneViewport();
+  const viewport = stubPhoneViewport();
   window.location.hash = hash;
-  return render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+  render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+  return viewport;
 }
 
 describe("the phone More menu", () => {
@@ -76,9 +53,9 @@ describe("the phone More menu", () => {
     expect(document.querySelector<HTMLElement>(".main")?.inert).toBe(false);
   });
 
-  // The desktop sidebar moves no focus after a row press, and neither does this
-  // menu. The row unmounts, and More leaves the new page's focus alone.
-  it("leaves focus to the page a menu row opens", async () => {
+  // The pressed row unmounts with the menu. More now stands for the page it
+  // opened, as the pressed row does in the desktop sidebar, so focus waits there.
+  it("hands focus to More when a menu row opens a page", async () => {
     const user = userEvent.setup();
     renderPhoneShell("#/home");
     await user.click(more());
@@ -87,8 +64,23 @@ describe("the phone More menu", () => {
     await waitFor(() => expect(window.location.hash).toBe("#/companies"));
 
     expect(menu()).toBeNull();
-    expect(document.activeElement).not.toBe(more());
-    expect(document.activeElement).toBe(document.body);
+    expect(document.activeElement).toBe(more());
+    expect(more().getAttribute("aria-current")).toBe("page");
+  });
+
+  // Past the phone width there is no More, so the sidebar's current row takes
+  // the focus the menu held.
+  it("hands focus to the sidebar's current row when the window widens", async () => {
+    const user = userEvent.setup();
+    const viewport = renderPhoneShell("#/home");
+    await user.click(more());
+    expect(menu()?.contains(document.activeElement)).toBe(true);
+
+    act(() => viewport.widen());
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("Home");
+    expect(document.activeElement?.getAttribute("aria-current")).toBe("page");
   });
 
   it("locks the page and the skip link while open, and frees them after", async () => {
@@ -107,20 +99,5 @@ describe("the phone More menu", () => {
     await user.keyboard("{Escape}");
     expect(menu()).toBeNull();
     expect([main.inert, skip.inert]).toEqual([false, false]);
-  });
-
-  it("draws no More and no menu for a seat whose destinations fit the bar", () => {
-    seat.barOnly = true;
-    stubPhoneViewport();
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
-
-    expect(
-      [...container.querySelectorAll(".rail > .navlevel .navitem")].map((row) =>
-        row.getAttribute("aria-label"),
-      ),
-    ).toEqual(["Home", "Contacts", "Deals"]);
-    expect(container.querySelector(".railmore")).toBeNull();
-    expect(screen.queryByRole("button", { name: "More" })).toBeNull();
-    expect(menu()).toBeNull();
   });
 });
