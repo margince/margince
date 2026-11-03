@@ -98,8 +98,8 @@ type coveragePopulation struct {
 	args       []any
 	now        time.Time
 	thresholds crmcontracts.AccountCoverageThresholds
-	// truncated is set by a candidate read that hit its cap, so the answer
-	// can say its counts cover the largest candidates and not every one.
+	// truncated is set by a candidate read that hit its cap. The answer then
+	// says its counts cover the largest candidates and not every one.
 	truncated bool
 }
 
