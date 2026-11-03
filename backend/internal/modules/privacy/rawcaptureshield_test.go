@@ -6,6 +6,8 @@ package privacy
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
 // Selection and deletion ask one shield of a provider original.
@@ -20,8 +22,20 @@ func TestSelectionAndDeletionAskOneShieldOfARawCapture(t *testing.T) {
 	if !ok {
 		t.Fatal("no raw_capture selector, so this test guards nothing")
 	}
-	if shield := rawCaptureUnshielded(3, 4); !strings.Contains(selector, shield) {
-		t.Errorf("the selector does not ask the shield the delete asks:\n%s", selector)
+	// The two clauses read differently, because selection also asks whether the
+	// activity is archived. What they owe each other is the shield: both the
+	// floor and the hold, of every activity the original was read into.
+	shield := rawCaptureUnshielded(3, 4)
+	for _, term := range []string{
+		handelsbriefShielded(3, 4),
+		retentionscope.HeldThroughAnyLink("a.id"),
+	} {
+		if !strings.Contains(shield, term) {
+			t.Errorf("the delete's shield drops a term:\n%s", shield)
+		}
+		if !strings.Contains(selector, term) {
+			t.Errorf("the selector does not ask a term the delete asks:\n%s", selector)
+		}
 	}
 }
 
