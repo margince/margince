@@ -75,6 +75,7 @@ const (
 
 // unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	"internal/compose:attendeeCandidates": "the contact ids that hold one invited address, before the host's row scope is asked: resolveAttendee hands each to contacts.GetContact under the host's principal and serves only one it may read; a hidden id only says the consent gate must clear that address",
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
 	// collections.RecordTagSuggestionTx, never to a reader. A user sees the

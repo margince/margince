@@ -15352,6 +15352,33 @@ func (e MeetingPreparationState) Valid() bool {
 	}
 }
 
+// Defines values for MeetingRecordLinkEntityType.
+const (
+	MeetingRecordLinkEntityTypeCompany MeetingRecordLinkEntityType = "company"
+	MeetingRecordLinkEntityTypeContact MeetingRecordLinkEntityType = "contact"
+	MeetingRecordLinkEntityTypeDeal    MeetingRecordLinkEntityType = "deal"
+	MeetingRecordLinkEntityTypeLead    MeetingRecordLinkEntityType = "lead"
+	MeetingRecordLinkEntityTypeProject MeetingRecordLinkEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MeetingRecordLinkEntityType enum.
+func (e MeetingRecordLinkEntityType) Valid() bool {
+	switch e {
+	case MeetingRecordLinkEntityTypeCompany:
+		return true
+	case MeetingRecordLinkEntityTypeContact:
+		return true
+	case MeetingRecordLinkEntityTypeDeal:
+		return true
+	case MeetingRecordLinkEntityTypeLead:
+		return true
+	case MeetingRecordLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingResponse.
 const (
 	MeetingResponseAccepted    MeetingResponse = "accepted"
@@ -25825,33 +25852,6 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	case GetAvailability200JSONResponseBodyCalendarBackingNone:
 		return true
 	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BookMeetingJSONBodyLinksEntityType.
-const (
-	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
-	BookMeetingJSONBodyLinksEntityTypeContact BookMeetingJSONBodyLinksEntityType = "contact"
-	BookMeetingJSONBodyLinksEntityTypeDeal    BookMeetingJSONBodyLinksEntityType = "deal"
-	BookMeetingJSONBodyLinksEntityTypeLead    BookMeetingJSONBodyLinksEntityType = "lead"
-	BookMeetingJSONBodyLinksEntityTypeProject BookMeetingJSONBodyLinksEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the BookMeetingJSONBodyLinksEntityType enum.
-func (e BookMeetingJSONBodyLinksEntityType) Valid() bool {
-	switch e {
-	case BookMeetingJSONBodyLinksEntityTypeCompany:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeContact:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeDeal:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeLead:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeProject:
 		return true
 	default:
 		return false
@@ -49629,12 +49629,21 @@ type MeetingInvitationChangeAction string
 // MeetingInvitationRequest defines model for MeetingInvitationRequest.
 type MeetingInvitationRequest struct {
 	AttendeeEmail openapi_types.Email `json:"attendee_email"`
-	ContactId     openapi_types.UUID  `json:"contact_id"`
-	Description   string              `json:"description"`
-	End           time.Time           `json:"end"`
-	Location      string              `json:"location"`
-	Start         time.Time           `json:"start"`
-	Subject       string              `json:"subject"`
+
+	// AttendeeEmails Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+	// Each address is resolved to a contact, a colleague or a lead the host can see; an
+	// address matching nobody is invited as named by the host. Contacts and leads must hold
+	// transactional consent; colleagues and host-named addresses are not asked.
+	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
+	ContactId      openapi_types.UUID     `json:"contact_id"`
+	Description    string                 `json:"description"`
+	End            time.Time              `json:"end"`
+
+	// Links Further records to file the meeting on, beside the invitee.
+	Links    *[]MeetingRecordLink `json:"links,omitempty"`
+	Location string               `json:"location"`
+	Start    time.Time            `json:"start"`
+	Subject  string               `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -49939,6 +49948,15 @@ type MeetingReadyRequest struct {
 	// undo sends the revision it confirmed, and takes back only that confirmation.
 	PreparationRevision string `json:"preparation_revision"`
 }
+
+// MeetingRecordLink defines model for MeetingRecordLink.
+type MeetingRecordLink struct {
+	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
+}
+
+// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
@@ -65006,10 +65024,12 @@ type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
-	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
-	// build emails these addresses or adds them to a calendar event, and the
-	// created activity does not carry them either. Supply them for the caller's
-	// own record of intent, and tell the attendee yourself.
+	// AttendeeEmails Who the meeting is with. Every address is an attendee on the queued calendar
+	// event. Each address is resolved to a contact, a
+	// colleague or a lead the host can see; an address matching nobody is invited as
+	// named by the host. Contacts and leads must hold transactional consent;
+	// colleagues and host-named addresses are not asked. At most 25 attendees in
+	// total.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -65023,14 +65043,11 @@ type BookMeetingJSONBody struct {
 	// required: a meeting belonging to no record appears on no timeline and is one
 	// nobody will find again, which is the same reason `SendCompanyEmailRequest`
 	// carries the bound. Each one is row-scope probed and written as its own row,
-	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-	// before it stages.
-	Links []struct {
-		EntityId   openapi_types.UUID                 `json:"entity_id"`
-		EntityType BookMeetingJSONBodyLinksEntityType `json:"entity_type"`
-	} `json:"links"`
-	Start   time.Time `json:"start"`
-	Subject *string   `json:"subject,omitempty"`
+	// so the list is bounded at 25. The first `contact` link (else the first `lead`
+	// link) is the invitee the meeting is filed on.
+	Links   []MeetingRecordLink `json:"links"`
+	Start   time.Time           `json:"start"`
+	Subject *string             `json:"subject,omitempty"`
 }
 
 // BookMeetingParams defines parameters for BookMeeting.
@@ -65055,18 +65072,7 @@ type BookMeetingParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
-	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
-	// not yet used, and within 15 minutes of the decision. Anything else is refused with
-	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-	// human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
-
-// BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
-type BookMeetingJSONBodyLinksEntityType string
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
@@ -84876,7 +84882,7 @@ type ServerInterface interface {
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
-	// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+	// Book a meeting at a chosen slot and queue its calendar invitation.
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
@@ -88479,7 +88485,7 @@ func (_ Unimplemented) GetAvailability(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+// Book a meeting at a chosen slot and queue its calendar invitation.
 // (POST /bookings)
 func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -101878,8 +101884,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101905,25 +101909,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 

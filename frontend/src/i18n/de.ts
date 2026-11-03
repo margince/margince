@@ -841,6 +841,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.meetingHost": "Organisiert von",
   "approval.preview.intendedAttendee":
     "Vorgesehene teilnehmende Person (wird nicht benachrichtigt)",
+  "approval.preview.hostNamedAttendee":
+    "Nur per Adresse eingeladen (ohne Einwilligungsprüfung)",
   "approval.preview.htmlBody": "Formatierte Nachricht",
   "approval.preview.correspondence":
     "Verknüpfte Korrespondenz als Geschäftsbriefe einordnen.",
@@ -2666,6 +2668,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.phone": "Telefonnummer",
   "history.field.phones": "Telefonnummern",
   "history.field.invitation_status": "Einladungsstatus",
+  "history.field.attendees": "Eingeladene Teilnehmende",
   "history.field.proposal_status": "Status des Terminvorschlags",
   "history.field.meeting_status": "Ergebnis des Termins",
   "history.field.candidate_company_key": "Zugeordnetes Unternehmen",

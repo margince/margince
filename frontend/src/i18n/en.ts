@@ -799,6 +799,7 @@ export const en = {
   "approval.preview.meetingEnd": "End (UTC offset included)",
   "approval.preview.meetingHost": "Meeting host",
   "approval.preview.intendedAttendee": "Intended attendee (not notified)",
+  "approval.preview.hostNamedAttendee": "Invited by address only (no consent check)",
   "approval.preview.htmlBody": "Formatted message",
   "approval.preview.correspondence":
     "Classify linked correspondence as business records.",
@@ -2559,6 +2560,7 @@ export const en = {
   "history.field.phone": "Phone",
   "history.field.phones": "Phone numbers",
   "history.field.invitation_status": "Invitation status",
+  "history.field.attendees": "Invited attendees",
   "history.field.proposal_status": "Meeting proposal status",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_company_key": "Matched company",
