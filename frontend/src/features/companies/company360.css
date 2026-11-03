@@ -10,13 +10,6 @@
 .record-aside .panel-body {
   padding: var(--padCard);
 }
-/* On a phone the margin is the column, and a panel's inset there is already
-   the tighter of the two. */
-@media (max-width: 700px) {
-  .record-aside .panel-body {
-    padding: var(--padPanel);
-  }
-}
 
 /* The lists the account is on, as a wrapping row of chips. */
 .co-aside-chips {

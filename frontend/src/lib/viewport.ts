@@ -3,13 +3,11 @@
 
 import { useEffect, useState } from "react";
 
-// The phone breakpoint, spelled once for the code that has to KNOW it rather
-// than merely be laid out by it: at this width the sidebar is a bottom bar of
-// three destinations, the agent and More, which changes what the panel renders
-// and where it is measured from, not only how it looks. The
-// `@media (max-width: 700px)` block in app/shell.css is the other half of the
-// same rule — a stylesheet cannot read a TypeScript constant, so that block
-// cites this file and the two are changed together.
+// The phone breakpoint, for the code that has to know it rather than be laid out
+// by it. At this width the sidebar is a bottom bar of three destinations, the
+// agent and More. That changes what the panel renders and where it is measured.
+// Stylesheets spell it in their own `@media (max-width: 700px)` blocks, and
+// viewport.test.ts fails a phone block that spells another number.
 export const PHONE_MAX_WIDTH = 700;
 
 // The width at which the LAYOUT turns: the tree's own narrow breakpoint, which
@@ -21,8 +19,7 @@ export const PHONE_MAX_WIDTH = 700;
 // number would draw both at the widths between the two.
 //
 // A stylesheet cannot read a TypeScript constant, so those blocks and this line
-// are changed together, the same pairing PHONE_MAX_WIDTH keeps with
-// app/shell.css.
+// are changed together.
 export const FOLD_MAX_WIDTH = 720;
 
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
