@@ -127,11 +127,8 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
   return isEmpty ? <p>{t("lead.rail.project.empty")}</p> : null;
 }
 
-// Attaches `project_id` through the SAME writer the Details card's own
-// project row saves through, reused rather than opening a second patch
-// path, so one inline edit and this verb cannot invalidate different caches
-// or send a different If-Match. Picking IS the act, so the list closes once
-// the write lands and stays open over a refusal.
+// Shares the Details project row's writer, so both send one If-Match.
+// Picking is the act: the list closes once stored and stays open on a refusal.
 export function LeadProjectAttachButton({
   lead,
   writer,

@@ -380,18 +380,6 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		},
 		args: func(primary, _ ids.UUID) string { return invitationDoorBody(primary) },
 	},
-	"bookMeeting": {
-		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/bookings", ids.UUID{},
-				`{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","subject":"Renewal review",`+
-					`"links":[{"entity_type":"deal","entity_id":"`+primary.String()+`"}]}`)
-		},
-		args: func(primary, _ ids.UUID) string {
-			return `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z",` +
-				`"subject":"Renewal review","links":[{"entity_type":"deal","entity_id":"` +
-				primary.String() + `"}]}`
-		},
-	},
 }
 
 // twinnedOperations is the subject set, derived: an operation whose declared
@@ -643,10 +631,6 @@ func (bothDoorsComms) SendMessage(context.Context, ids.UUID, agents.SendMessageA
 
 func (bothDoorsComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, int) (agents.AvailabilityResult, error) {
 	return agents.AvailabilityResult{}, errBothDoorsExecuted
-}
-
-func (bothDoorsComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, errBothDoorsExecuted
 }
 
 // agentDoorCtx is a passport principal holding every cap, so admission turns on

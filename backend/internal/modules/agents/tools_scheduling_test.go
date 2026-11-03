@@ -24,62 +24,27 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A booking with no links is refused, at BOTH doors.
-//
-// crm.yaml's bookMeeting body requires `links`, and this surface advertises it
-// as required with minItems 1 — but an InputSchema on the MCP surface is
-// documentation, never validation, so the rule holds only where the code puts
-// it. It used to stage instead: an approval with no target, which is a human
-// asked to release a meeting attached to nothing, with no record to show them
-// and no version to pin it against.
-//
-// The execute door is covered too, because it is reached with an approval
-// already redeemed — a call that never passed staging would otherwise book.
-func TestABookingThatNamesNoRecordIsRefusedAtBothDoors(t *testing.T) {
-	const noLinks = `{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z"}`
-	for _, tc := range []struct {
-		name string
-		ctx  context.Context
-	}{
-		{"staging", sendCtx()},
-		{"after an approval was redeemed", withApprovalRedeemed(sendCtx(), 0, false)},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			approvals := &recordingApprovals{}
-			comms := &recordingComms{}
-			registry := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
-			RegisterCommsTools(registry, comms, &multiLinkProvider{})
-
-			_, err := registry.Invoke(tc.ctx, "book_meeting", json.RawMessage(noLinks))
-
-			if _, ok := errors.AsType[*BadArgsError](err); !ok {
-				t.Fatalf("Invoke err = %v, want a BadArgsError naming `links`", err)
-			}
-			if !strings.Contains(err.Error(), "`links`") {
-				t.Errorf("err = %v, want it to name the field", err)
-			}
-			if len(approvals.staged) != 0 {
-				t.Errorf("staged %d approvals, want none — nothing was approvable", len(approvals.staged))
-			}
-			if comms.booked != nil {
-				t.Error("a booking attached to nothing reached the comms seam")
-			}
-		})
+// stageBooking stages the booking command invite_meeting shares, as the
+// resolver reads it from a wire body.
+func stageBooking(p *multiLinkProvider, body string) (StageInfo, error) {
+	var args struct {
+		Start time.Time    `json:"start"`
+		End   time.Time    `json:"end"`
+		Links []RecordLink `json:"links"`
 	}
+	if err := decodeArgs(json.RawMessage(body), &args); err != nil {
+		return StageInfo{}, err
+	}
+	return StageSubject(context.Background(), NewBookMeetingCall(p, nil, BookMeetingCommand{Start: args.Start, End: args.End, Links: args.Links}))
 }
 
-// Every link is checked, not just the one the inbox displays. A booking that
-// mixes a local deal with a mirrored company is exactly what a
-// first-link-only guard would wave through into an approval nobody could
-// release.
 func TestABookingRefusesAMirroredLinkBehindALocalOne(t *testing.T) {
 	local, mirrored := ids.NewV7(), ids.NewV7()
 	p := &multiLinkProvider{heldElsewhere: map[ids.UUID]bool{mirrored: true}}
 
-	_, err := bookMeetingTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
-		json.RawMessage(fmt.Sprintf(
-			`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","links":[{"entity_type":"deal","entity_id":%q},{"entity_type":"company","entity_id":%q}]}`,
-			local, mirrored)))
+	_, err := stageBooking(p, fmt.Sprintf(
+		`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","links":[{"entity_type":"deal","entity_id":%q},{"entity_type":"company","entity_id":%q}]}`,
+		local, mirrored))
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("StageInfo err = %v, want ErrUnsupportedBySoR — the second link was never validated", err)
@@ -105,8 +70,7 @@ func TestABookingIsBoundedAndDeduplicatedBeforeItReadsAnything(t *testing.T) {
 			links[i] = fmt.Sprintf(`{"entity_type":"deal","entity_id":%q}`, ids.NewV7())
 		}
 		p := &multiLinkProvider{}
-		_, err := bookMeetingTool{comms: &recordingComms{}, p: p}.StageInfo(context.Background(),
-			json.RawMessage(fmt.Sprintf(`{%s,"links":[%s]}`, slot, strings.Join(links, ","))))
+		_, err := stageBooking(p, fmt.Sprintf(`{%s,"links":[%s]}`, slot, strings.Join(links, ",")))
 
 		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Fatalf("StageInfo err = %v, want a BadArgsError refusing the oversized link array", err)
@@ -122,45 +86,13 @@ func TestABookingIsBoundedAndDeduplicatedBeforeItReadsAnything(t *testing.T) {
 			repeated[i] = fmt.Sprintf(`{"entity_type":"deal","entity_id":%q}`, one)
 		}
 		p := &multiLinkProvider{}
-		if _, err := (bookMeetingTool{comms: &recordingComms{}, p: p}).StageInfo(context.Background(),
-			json.RawMessage(fmt.Sprintf(`{%s,"links":[%s]}`, slot, strings.Join(repeated, ",")))); err != nil {
+		if _, err := stageBooking(p, fmt.Sprintf(`{%s,"links":[%s]}`, slot, strings.Join(repeated, ","))); err != nil {
 			t.Fatalf("StageInfo err = %v", err)
 		}
 		if len(p.read) != 1 {
 			t.Errorf("read %d times for one distinct link, want 1", len(p.read))
 		}
 	})
-}
-
-// A booking that ends before it starts is refused at BOTH doors. The store
-// refuses it as well, but reaching that refusal costs the human's approval on
-// the way past: redemption is consumed before the handler runs.
-func TestABookingWithNoDurationIsRefusedAtBothDoors(t *testing.T) {
-	const backwards = `{"start":"2026-08-03T09:30:00Z","end":"2026-08-03T09:00:00Z",` +
-		`"links":[{"entity_type":"deal","entity_id":"019ff000-0000-7000-8000-000000000001"}]}`
-	comms := &recordingComms{}
-	tool := bookMeetingTool{comms: comms, p: &multiLinkProvider{}}
-	doors := map[string]func() error{
-		"staging": func() error {
-			_, err := tool.StageInfo(context.Background(), json.RawMessage(backwards))
-			return err
-		},
-		"after an approval was redeemed": func() error {
-			_, err := tool.Handle(withApprovalRedeemed(sendCtx(), 0, false), json.RawMessage(backwards))
-			return err
-		},
-	}
-	for door, call := range doors {
-		t.Run(door, func(t *testing.T) {
-			var bad *BadArgsError
-			if err := call(); !errors.As(err, &bad) {
-				t.Fatalf("err = %v, want a BadArgsError naming the window", err)
-			}
-			if comms.booked != nil {
-				t.Error("a booking with no duration reached the comms seam")
-			}
-		})
-	}
 }
 
 // availabilityComms answers the free/busy question with one prepared window and

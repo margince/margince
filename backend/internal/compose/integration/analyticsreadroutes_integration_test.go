@@ -299,11 +299,18 @@ type sharedEvaluation struct {
 // The calendar's free time reads the same on GET /availability and
 // check_availability.
 func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
-	d := newTwoDoors(t, "availability-read-doors", "read")
-	from, to := "2036-03-03T08:00:00Z", "2036-03-03T18:00:00Z"
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bea Booked"})
+	d := newTwoDoorsWith(t, "availability-read-doors", []compose.Option{(&apptest.BookingCalendar{}).Option()}, "read")
+	apptest.EnableBooking(t, d.e)
+	booked := apptest.NextBookableMorning()
+	day := booked.Truncate(24 * time.Hour)
+	from, to := day.Add(8*time.Hour).Format(time.RFC3339), day.Add(18*time.Hour).Format(time.RFC3339)
+	bookedFrom, bookedTo := booked.Format(time.RFC3339), booked.Add(time.Hour).Format(time.RFC3339)
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Bea Booked",
+		"emails": []AnyMap{{"email": "bea@buyer.example", "email_type": "work", "is_primary": true}},
+	})
 	if status := d.e.Call(t, "POST", "/v1/bookings", AnyMap{
-		"start": "2036-03-03T10:00:00Z", "end": "2036-03-03T11:00:00Z", "subject": "Door booking",
+		"start": bookedFrom, "end": bookedTo, "subject": "Door booking",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	}, nil, nil); status != 201 {
 		t.Fatalf("booking the hour → %d", status)
@@ -318,7 +325,7 @@ func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
 		t.Fatalf("a working day with one booked hour offers no slot: %+v", got)
 	}
 	for _, slot := range got.Slots {
-		if slot.Start >= "2036-03-03T10:00:00Z" && slot.Start < "2036-03-03T11:00:00Z" {
+		if slot.Start >= bookedFrom && slot.Start < bookedTo {
 			t.Errorf("slot %+v overlaps the booked hour", slot)
 		}
 	}

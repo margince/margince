@@ -29,7 +29,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-const auditInvitationStatus = "invitation_status"
+const (
+	auditInvitationStatus = "invitation_status"
+	auditInvitationRoster = "attendees"
+)
 
 const (
 	invitationPending        = "pending"
@@ -158,6 +161,10 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
+	roster, err := s.invitationRoster(ctx, host, in, intent)
+	if err != nil {
+		return crmcontracts.MeetingInvitation{}, err
+	}
 	token, hash, err := invitationToken()
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
@@ -169,6 +176,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	row := invitationRow{PublicIntent: intent.Public, ManagementRef: ref, Host: host, Provider: string(profile.Provider), Calendar: profile.CalendarId, ReminderStatus: "off", Status: invitationPending, Version: 1, Command: "create"}
 	row.Appointment = invitationAppointment(profile, in)
 	row.Appointment.LeadID = intent.Lead.UUID
+	row.Appointment.Attendees, row.Appointment.Roster = rosterAddresses(roster), roster
 	if intent.DescriptionFromBooker {
 		row.Appointment.Description = ""
 	}
@@ -222,7 +230,7 @@ func auditInvitation(ctx context.Context, tx pgx.Tx, before *invitationRow, afte
 	var audit ids.UUID
 	var err error
 	if before == nil {
-		audit, err = storekit.AuditEvent(ctx, tx, "create", "activity", after.ID, map[string]any{auditInvitationStatus: after.Status, auditReminderStatus: after.ReminderStatus})
+		audit, err = storekit.AuditEvent(ctx, tx, "create", "activity", after.ID, map[string]any{auditInvitationStatus: after.Status, auditReminderStatus: after.ReminderStatus, auditInvitationRoster: rosterAudit(after.Appointment.Roster)})
 	} else {
 		audit, err = storekit.Audit(ctx, tx, "update", "activity", after.ID, map[string]any{auditInvitationStatus: before.Status, auditReminderStatus: before.ReminderStatus}, map[string]any{auditInvitationStatus: after.Status, auditReminderStatus: after.ReminderStatus})
 	}
@@ -279,12 +287,15 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		activity, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
 			Kind: KindMeeting, Subject: &in.Subject, Body: &in.Description,
 			OccurredAt: &in.Start, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
-			Links: []ActivityLinkInput{invitee(in, intent)}, Source: invitationSource(ctx),
+			Links: invitationLinks(in, intent), LinksFromRequest: in.Links != nil, Source: invitationSource(ctx),
 		})
 		if err != nil {
 			return err
 		}
 		row.ID = ids.UUID(activity.Id)
+		if err := stampInvitationAttendees(ctx, tx, ids.From[ids.ActivityKind](row.ID), host, row.Appointment.Roster); err != nil {
+			return err
+		}
 		if !intent.Lead.IsZero() {
 			if s.leadQualifyTasks != nil {
 				if err := s.leadQualifyTasks.FileLeadBookingTx(ctx, tx, intent.Lead, row.ID); err != nil {

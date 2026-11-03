@@ -363,15 +363,20 @@ func writeNoticeSection(body *emailview.Content, notice notices.Notice, facts ap
 	if facts.Heading != "" {
 		body.Heading(mailcopy.OneLine(facts.Heading))
 	}
+	var labelled []emailview.Fact
 	for _, line := range facts.Lines {
 		value := mailcopy.Snippet(line.Value, 600)
-		if line.Label != "" {
-			value = mailcopy.OneLine(line.Label) + ": " + value
+		if line.Label == "" {
+			body.Facts(labelled...)
+			labelled = nil
+			body.Paragraph(value)
+			continue
 		}
-		body.Paragraph(value)
+		labelled = append(labelled, emailview.Fact{Label: mailcopy.OneLine(line.Label), Value: value})
 	}
+	body.Facts(labelled...)
 	if facts.Deadline != "" {
-		body.Paragraph(mailcopy.OneLine(facts.Deadline))
+		body.Note(mailcopy.OneLine(facts.Deadline), emailview.Info)
 	}
 }
 

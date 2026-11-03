@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
@@ -58,12 +59,12 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 		previewDetail("meeting_location", appointment.Location),
 		previewDetail("meeting_start", appointment.Start.Format(time.RFC3339Nano)),
 		previewDetail("meeting_end", appointment.End.Format(time.RFC3339Nano)),
-		previewDetail("to", string(in.AttendeeEmail)),
 		{Field: "meeting_host", Value: hostValue},
 		{Field: "filed_under", Value: contact},
 		{Field: "video_call", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueBoolean, Text: strconv.FormatBool(appointment.VideoCall)}},
 		{Field: "email_reminder", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueBoolean, Text: strconv.FormatBool(appointment.EmailReminder)}},
 	}
+	details = append(details, invitationRecipients(in, appointment)...)
 	out.Details, out.Effects, out.State = &details, &[]string{"authorize_calendar_invitation"}, previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
 }
@@ -84,4 +85,21 @@ func (r approvalPreviewReader) invitationParticipants(ctx context.Context, host 
 		return hostValue, crmcontracts.ApprovalPreviewValue{}, err
 	}
 	return hostValue, contact, nil
+}
+
+// invitationRecipients names every address the approval sends the invite to.
+// A host-named address gets its own field, because no consent check clears it.
+func invitationRecipients(in crmcontracts.MeetingInvitationRequest, appointment connector.CalendarAppointment) []crmcontracts.ApprovalPreviewDetail {
+	if len(appointment.Roster) == 0 {
+		return []crmcontracts.ApprovalPreviewDetail{previewDetail("to", string(in.AttendeeEmail))}
+	}
+	out := make([]crmcontracts.ApprovalPreviewDetail, 0, len(appointment.Roster))
+	for _, attendee := range appointment.Roster {
+		field := "to"
+		if attendee.Basis == connector.AttendeeHostNamed && !attendee.AskConsent {
+			field = previewHostNamedAttendee
+		}
+		out = append(out, previewDetail(field, attendee.Address))
+	}
+	return out
 }

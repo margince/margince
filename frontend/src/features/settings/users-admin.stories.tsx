@@ -136,13 +136,43 @@ const ADMIN: { roles: string[]; allow: GrantSpec } = {
 
 type Users = () => Response | Promise<Response>;
 
+// The installation as two legal entities, Dana working for the second one.
+const ENTITY_ROUTES = {
+  "GET /legal-entities": () =>
+    jsonResponse({
+      data: [
+        { id: "le-default", is_default: true, display_name: "Brandt" },
+        { id: "le-vienna", is_default: false, display_name: "Brandt Wien" },
+      ].map((entity) => ({
+        ...entity,
+        address: {},
+        member_count: 0,
+        version: 1,
+        created_at: "2026-01-12T09:00:00Z",
+        updated_at: "2026-01-12T09:00:00Z",
+      })),
+    }),
+  "GET /legal-entities/le-vienna/members": () =>
+    jsonResponse({
+      data: [
+        {
+          user_id: DANA.id,
+          legal_entity_id: "le-vienna",
+          assigned_at: "2026-02-03T09:00:00Z",
+        },
+      ],
+    }),
+};
+
 function story(
   users: Users,
   identity: { roles: string[]; allow?: GrantSpec } = ADMIN,
   passwordLinks = false,
+  extraRoutes: Parameters<typeof installFetchStub>[0] = {},
 ) {
   return () => {
     installFetchStub({
+      ...extraRoutes,
       "GET /me": () =>
         jsonResponse({
           ...meFixture({ roles: identity.roles, allow: identity.allow }),
@@ -251,15 +281,19 @@ export const RolesWithheld: Story = {
   }),
 };
 
-// A press on a role turns it into the chooser in place.
+// A press on a role opens its dialog, and the chooser in it lists the roles.
 export const RoleChooser: Story = {
   render: story(roster([LARS, DANA, IVY]), ADMIN),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const roleOf = /Dana Kessler’s role/;
+    await userEvent.click(await canvas.findByRole("button", { name: roleOf }));
+    const body = within(canvasElement.ownerDocument.body);
+    const dialog = await body.findByRole("dialog", { name: roleOf });
     await userEvent.click(
-      await canvas.findByRole("button", { name: /Dana Kessler’s role/ }),
+      within(dialog).getByRole("combobox", { name: roleOf }),
     );
-    await within(canvasElement.ownerDocument.body).findByRole("listbox");
+    await body.findByRole("listbox");
   },
 };
 
@@ -285,4 +319,21 @@ export const RowMenuOpen: Story = {
       await canvas.findByRole("button", { name: "Actions for Dana Kessler" }),
     );
   },
+};
+
+// With a second legal entity the roster names each member's, and an admin who
+// may assign one changes it in place.
+export const TwoLegalEntities: Story = {
+  render: story(
+    roster(ROSTER),
+    {
+      roles: ["admin"],
+      allow: {
+        user_admin: ["read", "create", "update", "delete"],
+        legal_entity: ["read", "update"],
+      },
+    },
+    false,
+    ENTITY_ROUTES,
+  ),
 };

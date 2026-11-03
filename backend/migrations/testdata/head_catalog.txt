@@ -1327,6 +1327,7 @@ public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.assurance_exception.affected_minor bigint gen=- def=-
 public.assurance_exception.assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint)))
 public.assurance_exception.assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL)))
+public.assurance_exception.assurance_exception_delivery_state_check CHECK ((delivery_state = ANY (ARRAY['pending'::text, 'failed'::text, 'delivered'::text])))
 public.assurance_exception.assurance_exception_pkey PRIMARY KEY (id)
 public.assurance_exception.assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at))
 public.assurance_exception.assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
@@ -1338,6 +1339,9 @@ public.assurance_exception.captured_by text NOT NULL gen=- def=-
 public.assurance_exception.claim jsonb NOT NULL gen=- def='{}'::jsonb
 public.assurance_exception.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_exception.currency currency_code gen=- def=-
+public.assurance_exception.delivered_assignee_id uuid gen=- def=-
+public.assurance_exception.delivery_attempts integer NOT NULL gen=- def=0
+public.assurance_exception.delivery_state text gen=- def=-
 public.assurance_exception.episode integer NOT NULL gen=- def=1
 public.assurance_exception.evidence_refs jsonb NOT NULL gen=- def='[]'::jsonb
 public.assurance_exception.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2726,9 +2730,11 @@ public.company_domain_disposition.admission_reason_coded_at timestamp with time 
 public.company_domain_disposition.admission_sender_kind text gen=- def=-
 public.company_domain_disposition.admission_source text gen=- def=-
 public.company_domain_disposition.attempts integer NOT NULL gen=- def=0
+public.company_domain_disposition.candidate_company_id uuid gen=- def=-
 public.company_domain_disposition.company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text]))))
 public.company_domain_disposition.company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))
 public.company_domain_disposition.company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text]))))
+public.company_domain_disposition.company_domain_disposition_candidate_company_fkey FOREIGN KEY (candidate_company_id) REFERENCES company(id) ON DELETE SET NULL
 public.company_domain_disposition.company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.company_domain_disposition.company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text)))
 public.company_domain_disposition.company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
@@ -2750,6 +2756,7 @@ public.company_domain_disposition.next_attempt_at timestamp with time zone gen=-
 public.company_domain_disposition.owner_id uuid gen=- def=-
 public.company_domain_disposition.pending_reason text gen=- def=-
 public.company_domain_disposition.site_read_id uuid gen=- def=-
+public.company_domain_disposition.site_unreadable boolean NOT NULL gen=- def=false
 public.company_domain_disposition.source text gen=- def=-
 public.company_domain_disposition.status text NOT NULL gen=- def='pending'::text
 public.company_domain_disposition.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -5077,6 +5084,7 @@ public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON pub
 public.idx_company_dedupe_scan CREATE INDEX idx_company_dedupe_scan ON public.company USING btree (updated_at, id) WHERE (archived_at IS NULL)
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id)
 public.idx_company_domain_dedupe_scan CREATE INDEX idx_company_domain_dedupe_scan ON public.company_domain USING btree (updated_at, id)
+public.idx_company_domain_disposition_candidate CREATE INDEX idx_company_domain_disposition_candidate ON public.company_domain_disposition USING btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL)
 public.idx_company_domain_disposition_company CREATE INDEX idx_company_domain_disposition_company ON public.company_domain_disposition USING btree (company_id)
 public.idx_company_domain_disposition_due CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_company_domain_trgm CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)
