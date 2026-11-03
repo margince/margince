@@ -229,6 +229,11 @@ const ACCEPTED = new Map<string, string>([
   // 2.2 AA asks 44px of a thumb. `max()` is what keeps them a floor: a later
   // rise in the shared height passes straight through.
   [
+    ".topbar-trail .iconbtn, .topbar-trail .btn.btn-bare",
+    "the top bar's glyphs take a 44px box under a coarse pointer and clip their " +
+      "fill to the --controlHeight square inside it (app/topbar.css)",
+  ],
+  [
     ".segmented button",
     "a segment takes the coarse-pointer 44px floor; the strip is --controlHeight " +
       "for a mouse, which is what makes it read as one control",

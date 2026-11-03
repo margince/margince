@@ -286,22 +286,49 @@
   outline-offset: 2px;
 }
 
-/* The company chip's coarse-pointer floor (WCAG 2.2 AA). Declared under
-   `pointer: coarse` and not at a width, because a narrow window on a desktop is
-   still a mouse. The glyph buttons keep --controlHeight, above the 24px that
-   WCAG 2.5.8 asks. */
+/* A thumb gets 44px targets (WCAG 2.5.5, AAA; 2.5.8 AA asks 24px). Under
+   `pointer: coarse`, not a width, because a narrow desktop window is a mouse. */
 @media (pointer: coarse) {
+  .topbar {
+    --topbarTarget: max(var(--controlHeight), 44px);
+    --topbarTargetInset: calc((var(--topbarTarget) - var(--controlHeight)) / 2);
+  }
+  /* The eye keeps the 32px square: every state's fill is clipped to the content
+     box, and the negative margins keep the bar's layout and gaps as drawn. */
+  .topbar-trail .iconbtn,
+  .topbar-trail .btn.btn-bare {
+    inline-size: var(--topbarTarget);
+    max-inline-size: none;
+    block-size: var(--topbarTarget);
+    margin: calc(-1 * var(--topbarTargetInset));
+    padding: var(--topbarTargetInset);
+    background-clip: content-box;
+    border-radius: calc(var(--r-sm) + var(--topbarTargetInset));
+  }
+  /* Each state paints with the `background` shorthand, which resets the clip. */
+  .topbar .topbar-trail .iconbtn:is(:hover, :active),
+  .topbar .topbar-trail .btn.btn-bare:is(:hover, :active),
+  .topbar .topbar-trail .iconbtn[aria-expanded="true"],
+  .topbar .topbar-trail .btn.btn-bare[aria-expanded="true"] {
+    background-clip: content-box;
+  }
+  /* The ring around the square, inside the box and so inside the bar. */
+  .topbar-trail .iconbtn:focus-visible,
+  .topbar-trail .btn.btn-bare:focus-visible {
+    outline-offset: calc(2px - var(--topbarTargetInset));
+  }
+  /* The field takes the floor as its own height. */
+  .topbar .topbar-search {
+    min-block-size: max(var(--inputHeight), var(--topbarTarget));
+  }
   .topbar-home {
-    min-block-size: 44px;
-    min-inline-size: 44px;
+    min-block-size: var(--topbarTarget);
+    min-inline-size: var(--topbarTarget);
   }
   /* The bar's start meets the gutter with what a reader sees, the chip, while
      its target reaches past it. */
   .topbar-home {
-    margin-inline-start: calc(
-      (var(--controlHeight) - max(var(--controlHeight), 44px)) /
-      2
-    );
+    margin-inline-start: calc(-1 * var(--topbarTargetInset));
   }
   .icon-action ~ .topbar-home {
     margin-inline-start: 0;
@@ -310,6 +337,24 @@
      the box rather than over the bar's rule. */
   .topbar-home:focus-visible {
     outline-offset: -2px;
+  }
+}
+/* Drawn as a glyph, the search takes the glyphs' target and square. */
+@media (pointer: coarse) and (max-width: 1100px) {
+  .topbar .topbar-search {
+    inline-size: var(--topbarTarget);
+    min-block-size: var(--topbarTarget);
+    margin: calc(-1 * var(--topbarTargetInset));
+    padding: var(--topbarTargetInset);
+    border-width: 0;
+    background-clip: content-box;
+    border-radius: calc(var(--r-sm) + var(--topbarTargetInset));
+  }
+  .topbar .topbar-search:is(:hover, :active) {
+    background-clip: content-box;
+  }
+  .topbar .topbar-search:focus-visible {
+    outline-offset: calc(2px - var(--topbarTargetInset));
   }
 }
 

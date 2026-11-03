@@ -160,12 +160,9 @@ export function TopBarSearch({
 
 /** The company's mark leading home, where a phone has no room for the trail. */
 function TopBarHome() {
+  const label = useHomeLinkLabel();
   return (
-    <AppLink
-      className="topbar-home"
-      href="#/home"
-      aria-label={useHomeLinkLabel()}
-    >
+    <AppLink className="topbar-home" href="#/home" aria-label={label}>
       <WorkspaceChip />
     </AppLink>
   );
