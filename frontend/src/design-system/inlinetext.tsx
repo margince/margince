@@ -121,10 +121,9 @@ export function InlineText({
   // its own action; the pill's padding and the bubble open the editor.
   link?: ReactNode;
   placeholder: string;
-  // A value the record carries elsewhere that stands in for this field until
-  // one is written here (a contact's title, for the role at their current
-  // employer). Shown muted at rest and as the editor's placeholder, since
-  // "Unset" would deny a fact the record does hold.
+  // A value the record carries elsewhere, standing in until one is written here
+  // (a contact's title for the role at their current employer). Shown muted
+  // at rest and as the editor's placeholder, since "Unset" would deny it.
   suggested?: string;
   maxLength?: number;
   type?: TextKind;

@@ -50,9 +50,8 @@ type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 // lifecycle change and an owner change cannot end up with different conflict,
 // refusal or invalidation behaviour.
 //
-// It throws on failure rather than swallowing: InlineChoice shows what is
-// thrown on the field, and the server's problem detail is a better
-// sentence than any this layer could invent.
+// It throws on failure rather than swallowing. InlineChoice shows what is
+// thrown on the field, and the server's problem detail reads best there.
 // useCompanyFieldPatch wires one inline header edit to the query cache: the
 // record, the list it appears in and the 360 that summarizes it all read the
 // value being changed, so all three are refetched rather than left showing the

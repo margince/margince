@@ -214,8 +214,8 @@ function LeadOwner({
   const roster = useRoster("user", picking);
   const rosterPartial = useRosterPartial("user", picking);
   const partialHint = useRosterPartialHint(rosterPartial);
-  // Everyone but the current owner, with the VIEWER first: assigning to
-  // yourself is the common case on a small team (ADR-0108 §5).
+  // Everyone but the current owner, with the viewer first: assigning to
+  // yourself is the common case on a small team.
   const candidates = (roster.data ?? [])
     .filter(mayOwnRecords)
     .filter((entry) => entry.id !== lead.owner_id)

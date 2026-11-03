@@ -392,8 +392,8 @@ function RecordFieldForm({
   const [rows, setRows] = useState(() =>
     prefillRowsFromRecord(props.fields, opened),
   );
-  // Seeded in render on the opening, so the first frame of the form already
-  // holds the record and a key typed into it is never overwritten.
+  // Seeded in render on opening. The first frame already holds the record,
+  // so a typed key is never overwritten.
   const [seeded, setSeeded] = useState(open);
   if (open !== seeded) {
     setSeeded(open);

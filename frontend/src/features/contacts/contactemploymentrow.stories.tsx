@@ -95,8 +95,8 @@ export const HeldAndEnded: Story = {
   render: () => <Rows data={view} />,
 };
 
-// The row's own verbs, which stay folded until asked for: a verb column
-// standing open would compete with the role a reader came here to correct.
+// The row's own verbs stay folded until asked for, so they do not
+// compete with the role a reader came here to correct.
 // Ending the employment is offered only on the job still held.
 export const VerbsOpen: Story = {
   render: () => <Rows data={view} />,

@@ -15,13 +15,12 @@ import {
   useT,
 } from "../../i18n";
 
-// The repeatable-row field on its own, in the states the row list itself
-// decides: a single row disables both move buttons; in a longer list the first
-// row loses only move-up, the last only move-down, and every middle row keeps
-// both. Each row's move and remove controls carry its ordinal in their
-// accessible names ("Move row 3 up", "Remove row 3"), so the list must be long
-// enough for those to differ. The field definitions are the contact and company
-// forms' real ones, not story-local copies.
+// The repeatable-row field on its own, in the states the row list decides.
+// A single row disables both move buttons. In a longer list the first row
+// loses only move-up, the last only move-down, and middle rows keep both.
+// Move and remove controls carry the row's ordinal in their accessible names
+// ("Move row 3 up"). The list must be long enough for those to differ.
+// The field definitions are the contact and company forms' real ones.
 const meta: Meta = {
   title: "Patterns/Create record/Repeatable rows",
   parameters: { layout: "padded" },
@@ -113,8 +112,8 @@ export const ReorderableListDark: Story = {
 };
 
 /**
- * Inside a dialog titled for the field, the group label is left out; the
- * first row's column labels stay, and later rows keep theirs for screen readers.
+ * Inside a dialog titled for the field, the group label is left out.
+ * The first row's column labels stay; later rows keep theirs for screen readers.
  */
 export const EmailsTitledByDialog: Story = {
   render: () => (

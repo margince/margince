@@ -132,8 +132,8 @@ export const Day: Story = {
   },
 };
 
-// In a grid: a plain value, a link that keeps its action, an empty field's
-// invitation, a suggested value and a long run that wraps from the start edge.
+// In a grid: a plain value, a link, an empty field, a suggested value
+// and a long run that wraps from the start edge.
 function GridExample({ canEdit }: Readonly<{ canEdit: boolean }>) {
   const save = async () => undefined;
   return (

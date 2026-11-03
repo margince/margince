@@ -20,8 +20,8 @@ export type EditableValueProps = Readonly<{
   /** Shown in the pill while `children` is empty ("Add industry"). */
   placeholder?: ReactNode;
   /**
-   * The value is itself a link (an address, a number, a profile), so the
-   * link keeps its own action and the padding and the bubble open the editor.
+   * The value is itself a link (an address, a number, a profile).
+   * The link keeps its action; the padding and the bubble open the editor.
    */
   link?: boolean;
   testId?: string;

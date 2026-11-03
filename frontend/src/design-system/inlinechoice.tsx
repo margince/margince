@@ -5,8 +5,8 @@ import { FieldEditDialog } from "./fieldeditdialog";
 import "./inlinechoice.css";
 import { Select, type SelectOption } from "./select";
 
-// One value a reader may choose, edited in a small dialog that saves on Save,
-// never on the pick: a pick that writes at once leaves no way to look and back out.
+// One value a reader may choose, edited in a dialog that saves on Save.
+// A pick that writes at once leaves no way to back out.
 export function InlineChoice({
   label,
   hideLabel,

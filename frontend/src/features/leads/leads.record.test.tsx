@@ -702,8 +702,8 @@ describe("LeadScreen — the header's Email verb", () => {
       data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
     });
     render(<LeadScreen id="l-1" />);
-    // The row wraps the address in its edit pill once the grants answer, so
-    // the address is read after that; pressing it still writes, never edits.
+    // The row wraps the address in its edit pill once the grants answer.
+    // Read the address after that; pressing it still writes, never edits.
     await screen.findByRole("button", { name: "Change Email" });
     const address = screen.getByRole("button", {
       name: "jonas@nordwind.example",
