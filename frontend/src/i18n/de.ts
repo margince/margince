@@ -7320,7 +7320,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wenn es einen Grund gibt, zum Beispiel eine Anfrage, einen Termin oder eine Kundenbeziehung, erfasse ihn unter deinem Namen.",
   "sendPermission.unprovenRefuses":
     "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
-  "sendPermission.ready": "Bereit zum Senden",
+  "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
+  "sendPermission.missingPermission":
+    "Für diese Nachricht fehlt die Einwilligung",
+  "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.appliesTo": "Das betrifft {address}.",
+  "sendPermission.appliesToAndMore_one":
+    "Das betrifft {address} und {count} weitere Empfangsadresse.",
+  "sendPermission.appliesToAndMore_other":
+    "Das betrifft {address} und {count} weitere Empfangsadressen.",
+  "sendPermission.appliesToSome_one":
+    "Das betrifft {count} von {total} Empfangsadressen.",
+  "sendPermission.appliesToSome_other":
+    "Das betrifft {count} von {total} Empfangsadressen.",
+  "sendPermission.ready": "Empfangsadressen geprüft",
   "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
@@ -7385,9 +7398,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Nachricht senden",
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
-  "compose.consentBlockedTitle": "Versand blockiert: keine Einwilligung",
-  "compose.consentBlocked":
-    "Der Versand wurde blockiert, da jemand unter den Empfangenden für diesen Zweck nicht eingewilligt hat (standardmäßig abgelehnt).",
   "directSend.open": "Mit erfasster Ausnahme senden",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
@@ -7423,7 +7433,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Freigabe gespeichert. Drücke erneut auf Senden.",
   "compose.overrule.failed":
     "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
-  "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
