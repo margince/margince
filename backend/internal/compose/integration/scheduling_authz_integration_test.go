@@ -36,6 +36,7 @@ func bookableStore(t *testing.T, e *Env, hosts ...ids.UUID) *activities.Store {
 			return activities.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Location: time.UTC}, nil
 		})
 	for _, host := range hosts {
+		e.GrantRole(t, host, roleRep)
 		if _, err := store.SaveSchedulingProfile(e.As(host, nil, SchedulerPerms), crmcontracts.SchedulingProfile{
 			Enabled: true, Provider: "gcal", CalendarId: "work", DurationMinutes: 30, HorizonDays: 30, Title: "Meeting",
 		}); err != nil {
