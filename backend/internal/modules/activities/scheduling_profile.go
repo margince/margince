@@ -29,6 +29,12 @@ type SchedulingCalendar interface {
 	Check(context.Context, ids.UserID, string) error
 	List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error)
 	CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error
+	// ResolveAttendees says what each address is to the host: a contact they
+	// can see, a live colleague, a lead, or host-named.
+	ResolveAttendees(context.Context, ids.UserID, []string) ([]connector.CalendarAttendee, error)
+	// InviteeAddress reads a linked contact's or lead's address under the
+	// host's row scope, and the contact a promoted lead became.
+	InviteeAddress(context.Context, ids.UserID, string, ids.UUID, []string) (string, ids.UUID, error)
 	Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error)
 	Inspect(context.Context, ids.UserID, string, string, string) (connector.CalendarState, error)
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)

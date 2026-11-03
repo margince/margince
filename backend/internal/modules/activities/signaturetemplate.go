@@ -18,17 +18,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// SenderSignature is what a send knows about its sender's sign-off: their own
-// signature, the values a template fills in, and the workspace's
-// template. An empty Template means the workspace has none.
+// SenderSignature is what a send knows about its sender's sign-off. That is
+// their own signature, the values a template fills in, and the template of
+// the legal entity they work for. An empty Template means there is none.
 type SenderSignature struct {
 	Body     string
 	HTML     string
 	Title    string
 	Phone    string
 	Template string
-	// LogoKey is the stored object of the workspace logo {logo} shows, empty
-	// when the workspace has none.
+	// Imprint is the legal notice of the sender's entity, which {imprint} shows.
+	Imprint string
+	// LogoKey is the stored object of the entity logo {logo} shows, empty when
+	// the entity has none.
 	LogoKey string
 }
 
@@ -41,8 +43,8 @@ const signatureLogoSrc = "cid:" + connector.SignatureLogoContentID
 // signatureValues fills the template's placeholders. Each value is the
 // sender's own text, so it is escaped before it lands in markup.
 type signatureValues struct {
-	Name, Title, Phone string
-	HasLogo            bool
+	Name, Title, Phone, Imprint string
+	HasLogo                     bool
 }
 
 // renderSignatureTemplate fills the template and returns it as sanitized
@@ -56,6 +58,8 @@ func renderSignatureTemplate(template string, v signatureValues) (markup, text s
 		"{name}", html.EscapeString(v.Name),
 		"{title}", html.EscapeString(v.Title),
 		"{phone}", html.EscapeString(v.Phone),
+		// An imprint is several lines of an address and a register entry.
+		"{imprint}", htmlLines(v.Imprint),
 		"{logo}", logo,
 	).Replace(template)
 	return signatureMarkup(filled)

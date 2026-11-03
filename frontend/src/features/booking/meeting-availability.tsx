@@ -134,6 +134,7 @@ function useAvailabilityDraft(
     dirty,
     // Never-chosen hours are an answer waiting to be saved as offered.
     offered: !chosen,
+    offer: JSON.stringify(savedHours),
     invalid,
     save: () => {
       const nextHours = hoursDirty || !chosen ? sortedHours(draftHours) : null;

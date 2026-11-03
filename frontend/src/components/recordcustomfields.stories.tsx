@@ -95,8 +95,8 @@ export const Filled: Story = {
       await canvas.findByRole("link", { name: VALUES.cf_wiki }),
     ).toHaveAttribute("href", VALUES.cf_wiki);
     await expect(
-      canvas.getByRole("button", { name: "Change Annual budget" }),
-    ).toHaveTextContent("€48,000.00");
+      canvas.getByRole("button", { name: "Change Annual budget €48,000.00" }),
+    ).toBeVisible();
   },
 };
 export const ReadOnly: Story = {
