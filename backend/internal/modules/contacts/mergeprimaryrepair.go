@@ -30,8 +30,8 @@ type MergePrimaryRepairPage struct {
 // merged into c. A merge keeps redirect chains one hop deep.
 //
 // The archive row with origin merge proves the merge archived the edge. A flag
-// change on c's employments after that row is a person's choice, kept as is.
-var mergeDroppedHeir = `SELECT n.id FROM relationship n
+// change on c's employments after that row is a user's choice, kept as is.
+var mergeDroppedHeir = `SELECT n.id, n.version FROM relationship n
  JOIN relationship p ON p.kind = 'employment' AND p.is_current_primary AND p.archived_at IS NOT NULL
  AND ((p.contact_id = c.id AND EXISTS (SELECT 1 FROM company x WHERE x.id = p.company_id AND x.merged_into_id = n.company_id))
    OR (p.company_id = n.company_id AND EXISTS (SELECT 1 FROM contact m WHERE m.id = p.contact_id AND m.merged_into_id = c.id)))
@@ -44,7 +44,7 @@ var mergeDroppedHeir = `SELECT n.id FROM relationship n
 
 // mergeDroppedPrimary picks a live contact with no primary employer and one
 // live current employment, which is its merge heir. With two current
-// employments the choice is a person's.
+// employments the choice is a user's.
 var mergeDroppedPrimary = `c.archived_at IS NULL AND c.merged_into_id IS NULL
  AND NOT EXISTS (SELECT 1 FROM relationship s WHERE s.contact_id = c.id AND ` + employment.CurrentPrimarySlotSQL("s") + `)
  AND (SELECT count(*) FROM relationship n WHERE n.contact_id = c.id AND n.kind = 'employment' AND n.archived_at IS NULL
@@ -93,7 +93,9 @@ func restoreMergeDroppedPrimary(ctx context.Context, tx pgx.Tx, contact ids.Cont
 		return false, err
 	}
 	var heir ids.UUID
-	err := tx.QueryRow(ctx, `SELECT (`+mergeDroppedHeir+` LIMIT 1) FROM contact c WHERE c.id = $1 AND `+mergeDroppedPrimary, contact).Scan(&heir)
+	var version int64
+	err := tx.QueryRow(ctx, `SELECT h.id, h.version FROM contact c, LATERAL (`+mergeDroppedHeir+` LIMIT 1) h
+ WHERE c.id = $1 AND `+mergeDroppedPrimary, contact).Scan(&heir, &version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -101,9 +103,9 @@ func restoreMergeDroppedPrimary(ctx context.Context, tx pgx.Tx, contact ids.Cont
 		return false, fmt.Errorf("contacts: re-reading a contact a merge left without an employer: %w", err)
 	}
 	promoted, err := scanRelationship(tx.QueryRow(ctx, `UPDATE relationship a SET is_current_primary = true
- WHERE a.id = $1 AND a.archived_at IS NULL AND NOT a.is_current_primary
+ WHERE a.id = $1 AND a.version = $2 AND a.archived_at IS NULL AND NOT a.is_current_primary
  AND NOT EXISTS (SELECT 1 FROM relationship b WHERE `+mergePrimarySlotWitness+`)
- RETURNING `+relationshipColumns, heir))
+ RETURNING `+relationshipColumns, heir, version))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}

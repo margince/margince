@@ -207,7 +207,7 @@ func TestACompanyMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
 		t.Error("an ended employment took the slot from a current one")
 	}
 	if got := slotHolder(ctx, t, e, ended.contact); got == currentHeir.ID {
-		t.Error("an ended employment's slot went to a current one a person left non-primary")
+		t.Error("an ended employment's slot went to a current one a user left non-primary")
 	}
 }
 
@@ -238,6 +238,6 @@ func TestAContactMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
 		t.Error("an ended employment took the slot from a current one")
 	}
 	if got := slotHolder(ctx, t, e, endedSurvivor); got == currentHeir.ID {
-		t.Error("an ended employment's slot went to a current one a person left non-primary")
+		t.Error("an ended employment's slot went to a current one a user left non-primary")
 	}
 }

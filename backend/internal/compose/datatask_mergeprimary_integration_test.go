@@ -135,7 +135,7 @@ func TestTheMergePrimaryTaskLeavesAFlagClearedByHandAfterTheMerge(t *testing.T) 
 	runMachineAddressTask(datatask.Acting(e.Admin(), task.ID), t, e, task)
 
 	if isPrimary(t, e, heir) {
-		t.Fatal("the repair overruled a flag a person cleared after the merge")
+		t.Fatal("the repair overruled a flag a user cleared after the merge")
 	}
 }
 
@@ -198,8 +198,8 @@ func TestTheMergePrimaryTaskBoundsPagingAndRollsBackWithItsProgress(t *testing.T
 	}
 }
 
-// A primary a person archived before the merge was no merge's doing. The
-// non-primary edge the person kept stays as they left it, for either merge.
+// A primary a user archived before the merge was no merge's doing. The
+// non-primary edge the user kept stays as they left it, for either merge.
 func TestTheMergePrimaryTaskLeavesAPrimaryArchivedByHandBeforeTheMerge(t *testing.T) {
 	e := integration.Setup(t)
 	byCompany := mergeTestContact(t, e, "Ulla Kesk")
@@ -228,9 +228,9 @@ func TestTheMergePrimaryTaskLeavesAPrimaryArchivedByHandBeforeTheMerge(t *testin
 	runMachineAddressTask(datatask.Acting(e.Admin(), task.ID), t, e, task)
 
 	if isPrimary(t, e, companyEdge) {
-		t.Error("after a company merge the repair promoted an edge a person left non-primary")
+		t.Error("after a company merge the repair promoted an edge a user left non-primary")
 	}
 	if isPrimary(t, e, contactEdge) {
-		t.Error("after a contact merge the repair promoted an edge a person left non-primary")
+		t.Error("after a contact merge the repair promoted an edge a user left non-primary")
 	}
 }

@@ -16,7 +16,7 @@ import (
 
 // mergeDroppedPrimaryDataTask gives a contact back the current employer a
 // merge archived with a duplicate edge, by promoting the kept duplicate. A
-// contact whose flag a person changed after the merge stays as it is.
+// contact whose flag a user changed after the merge stays as it is.
 func mergeDroppedPrimaryDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793719006_merge_dropped_primary", Version: 1,

@@ -190,7 +190,7 @@ To merge two duplicate companies in Margince, open the company you want to remov
 1. Search for the other company and pick it under **Select record to keep**.
 2. Read the question: "Merge {source} into {target}? This archives {source}."
 3. Choose **Merge**. Margince opens the company you kept.
-The company you merged away is archived, not deleted. You cannot merge an archived company. A contact who worked at both companies, with the merged-away company as current employer, keeps the company you kept as current employer.
+The company you merged away is archived, not deleted. You cannot merge an archived company. Some contacts work at both companies, with the merged-away company as current employer. They keep the company you kept as current employer.
 
 Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself. The owner of one company of a possible duplicate may merge it into the other, which stays with its owner.
 
