@@ -1,12 +1,8 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import type { ListQuery } from "../../components/listquery";
 import { Badge } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import {
@@ -18,14 +14,16 @@ import { LoadMoreButton } from "../../design-system/querystates";
 import { formatNumber } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import { translatePlural, useLocale, useT } from "../../i18n";
-import {
-  LEAD_STATUS_COUNTS_KEY,
-  leadTerminalKey,
-  leadWriteKeys,
-} from "../../lib/leadkeys";
+import { leadWriteKeys } from "../../lib/leadkeys";
 import { originLabelFor, useLeadOrigins } from "../../lib/leadorigins";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import {
+  terminalCountsRefusedBecause,
+  terminalCountsWithheldBecause,
+  useLeadStatusCounts,
+  useTerminalLeads,
+} from "./leadboard.queries";
 import { LeadCompanyName } from "./leadcompany";
 import { openTaskCountLabel } from "./leadopentasks";
 import type { Lead } from "./leadpresentation";
@@ -77,68 +75,7 @@ type TerminalDialog = (typeof LEAD_TERMINAL_STAGES)[number]["dialog"];
 // copy still names it, and `seq` keys the dialog so a second drop asks clean.
 type Ask = { lead: Lead; dialog: TerminalDialog; open: boolean; seq: number };
 
-// How many leads each status holds, including the archived terminal ones.
-//
-// The board's own page excludes archived rows, so its terminal columns would
-// read zero. The leads-by-status report is the one lead read that counts them.
-//
-// Keyed under ["leads"], so every lead mutation's invalidation refreshes these
-// figures with the cards. A qualified lead leaves the open count and enters the
-// terminal one together, or the board shows a gone card beside a stale count.
-function useLeadStatusCounts() {
-  return useQuery({
-    queryKey: LEAD_STATUS_COUNTS_KEY,
-    queryFn: async () => {
-      const data = unwrap(
-        await api.POST("/reports/{report}", {
-          params: { path: { report: "leads-by-status" } },
-          body: {
-            group_by: ["status"],
-            aggregates: [{ fn: "count", as: "leads" }],
-          },
-        }),
-      );
-      const counts = new Map<string, number>();
-      for (const row of data.rows) {
-        const status = row.status;
-        const leads = row.leads;
-        if (typeof status === "string" && typeof leads === "number") {
-          counts.set(status, leads);
-        }
-      }
-      return counts;
-    },
-  });
-}
-
-// The leads sitting in one terminal column, fetched only while it is open.
-//
-// A collapsed column states a figure and needs no rows. An expanded one with no
-// rows would claim twelve leads and show nothing. So the rows load when the
-// reader opens it: they are archived, and every other read here hides them.
 type TerminalStatus = (typeof LEAD_TERMINAL_STAGES)[number]["stage"];
-
-function useTerminalLeads(status: TerminalStatus, enabled: boolean) {
-  return useInfiniteQuery({
-    queryKey: leadTerminalKey(status),
-    enabled,
-    initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
-      const query = {
-        status,
-        include_archived: true,
-        limit: 50,
-        cursor: pageParam ?? undefined,
-      };
-      return unwrap(await api.GET("/leads", { params: { query } }));
-    },
-    // The cursor the page hands back, so a column whose count runs to
-    // thousands is reachable past its first fifty. A list that stopped there
-    // while its own head stated 12,000 would be a page contradicting itself.
-    getNextPageParam: (last) =>
-      last.page.has_more ? (last.page.next_cursor ?? null) : null,
-  });
-}
 
 function LeadCard({
   lead,
@@ -195,11 +132,14 @@ function LeadCard({
 }
 
 export function LeadBoard({
+  query,
   rows,
   onMoved,
   hasMore,
   loadMore,
 }: Readonly<{
+  /** The queue's dials, which the terminal columns' counts and cards follow. */
+  query: ListQuery;
   rows: Lead[];
   onMoved: () => void;
   hasMore: boolean;
@@ -215,8 +155,12 @@ export function LeadBoard({
   // still act on, and the terminal pair folded to a count each.
   const [openTerminal, setOpenTerminal] = useState<TerminalStatus | null>(null);
   const [pending, setPending] = useState<Ask | null>(null);
-  const counts = useLeadStatusCounts();
+  const counts = useLeadStatusCounts(query);
+  const withheld =
+    terminalCountsWithheldBecause(query) ??
+    terminalCountsRefusedBecause(counts.data);
   const terminalRows = useTerminalLeads(
+    query,
     openTerminal ?? "promoted",
     openTerminal !== null,
   );
@@ -293,6 +237,8 @@ export function LeadBoard({
       // an open one holds only the fetched page. Either would understate a
       // column whose whole population is archived.
       count: counts.data?.get(stage.stage) ?? 0,
+      sumHidden: withheld !== undefined,
+      sumHiddenReason: withheld && t(withheld),
       collapsed: !isOpen,
       deals: held.map((lead) => ({ id: lead.id, name: "" })),
     });

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import type { ListQuery } from "../../components/listquery";
 import { formatNumber } from "../../format/format";
 import { translate, translatePlural } from "../../i18n";
 import {
@@ -21,6 +22,14 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+
+const UNNARROWED: ListQuery = {
+  q: "",
+  sort: "",
+  includeArchived: false,
+  filters: {},
+  perPage: 25,
+};
 
 const lead = {
   id: "l-1",
@@ -88,6 +97,7 @@ export const OriginAndCountInGerman: Story = {
     return (
       <StoryProviders locale="de">
         <LeadBoard
+          query={UNNARROWED}
           rows={rows}
           onMoved={() => undefined}
           hasMore={false}

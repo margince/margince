@@ -39,7 +39,6 @@ import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import { listQueryParams } from "../../lib/tagfilter";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LeadBulkBar } from "./leadbulk";
@@ -56,7 +55,11 @@ import {
 import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
-import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
+import {
+  createLead,
+  leadsQueryParams,
+  UNASSIGNED_OWNER,
+} from "./leads.list.queries";
 
 export { mapLeadBody, UNASSIGNED_OWNER } from "./leads.list.queries";
 
@@ -87,12 +90,9 @@ export async function fetchLeadsPage(
     await api.GET("/leads", {
       params: {
         query: {
-          q: query.q || undefined,
-          sort: query.sort || undefined,
-          include_archived: query.includeArchived || undefined,
+          ...leadsQueryParams(query),
           cursor: cursor || undefined,
           limit: listFetchLimit(query.perPage),
-          ...listQueryParams(query.filters),
         },
       },
     }),
@@ -264,6 +264,7 @@ function LeadsWorkbench({
         body={
           view === "board" && refused.length === 0 ? (
             <LeadBoard
+              query={state.query}
               rows={state.rows}
               onMoved={() => state.refetch()}
               hasMore={state.hasMore}

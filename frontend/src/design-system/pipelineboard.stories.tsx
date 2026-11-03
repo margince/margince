@@ -9,8 +9,10 @@ import { AnsweredSearch } from "./answeredsearch";
 import { Button, SegmentedControl } from "./atoms";
 import { ListSurface } from "./listsurface";
 import {
+  type BoardColumn,
   type BoardDeal,
   type BoardMoneyColumn,
+  type BoardRecord,
   PipelineBoard,
 } from "./pipelineboard";
 import { Select } from "./select";
@@ -359,6 +361,57 @@ export const WithAFoldedStage: Story = {
       onToggleColumn={() => undefined}
     />
   ),
+};
+
+// A plain board's one total is its count. Withheld, the head drops the figure
+// and the column says why, folded or open.
+const withheldCountColumns: BoardColumn<BoardRecord>[] = [
+  {
+    stage: "new",
+    label: "New",
+    count: 1,
+    deals: [{ id: "p1", name: "Jonas Petersen" }],
+  },
+  {
+    stage: "promoted",
+    label: "Qualified",
+    count: 0,
+    sumHidden: true,
+    sumHiddenReason: "No count while a score filter is on.",
+    collapsed: true,
+    deals: [],
+  },
+  {
+    stage: "disqualified",
+    label: "Disqualified",
+    count: 0,
+    sumHidden: true,
+    sumHiddenReason: "No count while a score filter is on.",
+    collapsed: false,
+    deals: [{ id: "p2", name: "Petra Vogel" }],
+  },
+];
+
+export const WithAWithheldCount: Story = {
+  render: () => (
+    <PipelineBoard
+      variant="plain"
+      columns={withheldCountColumns}
+      renderCard={(record) => <span>{record.name}</span>}
+      onToggleColumn={() => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const qualified = within(canvasElement).getByRole("region", {
+      name: "Qualified",
+    });
+    await expect(qualified).toHaveTextContent(
+      "No count while a score filter is on.",
+    );
+    await expect(
+      qualified.querySelector(".board-col-count:not([hidden])"),
+    ).toBeNull();
+  },
 };
 
 // A card passing under the head is the only thing that shows the band seals

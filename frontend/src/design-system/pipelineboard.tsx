@@ -127,7 +127,8 @@ export type BoardColumn<Record extends BoardRecord = BoardDeal> = {
    * whose card list is the whole stage.
    */
   count?: number;
-  /** Totals withheld because the aggregate cannot measure the card filters. */
+  /** Totals withheld because the aggregate cannot measure the card filters.
+   *  A plain board's one total is its count, so its head drops the figure. */
   sumHidden?: boolean;
   /** The caller's explanation of the withheld total. */
   sumHiddenReason?: string;
@@ -270,6 +271,12 @@ function BoardLayout<Record extends BoardRecord>({
   const t = useT();
   const { locale } = useLocale();
   const sections = useRef(new Map<string, HTMLElement>());
+  const spokenCount =
+    countLabel ??
+    ((count: number) =>
+      translatePlural(locale, "board.count", count, {
+        count: formatNumber(count, locale),
+      }));
   const board = useRef<HTMLDivElement>(null);
   // The search the cards answer, from the list the board is drawn in. With no
   // match in view, the board scrolls to the first and says where they are.
@@ -324,6 +331,7 @@ function BoardLayout<Record extends BoardRecord>({
         {columns.map((column) => {
           const money = moneyFor(column);
           const dealCount = column.count ?? column.deals.length;
+          const countHidden = !money && column.sumHidden;
           return (
             <section
               key={column.stage}
@@ -379,7 +387,11 @@ function BoardLayout<Record extends BoardRecord>({
                   deals" below, with the unit a bare figure leaves out. So the
                   whole chip, separator included, stays out of the accessible
                   tree rather than announcing the number twice. */}
-                <span className="board-col-count" aria-hidden="true">
+                <span
+                  className="board-col-count"
+                  aria-hidden="true"
+                  hidden={countHidden}
+                >
                   <OptionCount count={dealCount} />
                 </span>
                 {money && (
@@ -407,12 +419,8 @@ function BoardLayout<Record extends BoardRecord>({
                   {/* The count is in the head; what a screen reader needs here
                     is the unit the head's bare figure leaves out, so the column
                     announces "12 deals" rather than "Qualified: 12". */}
-                  <span className="sr-only">
-                    {countLabel
-                      ? countLabel(dealCount)
-                      : translatePlural(locale, "board.count", dealCount, {
-                          count: formatNumber(dealCount, locale),
-                        })}
+                  <span className="sr-only" hidden={countHidden}>
+                    {spokenCount(dealCount)}
                   </span>
                 </span>
                 {money && !column.sumHidden && (
@@ -431,7 +439,7 @@ function BoardLayout<Record extends BoardRecord>({
                   hidden={column.sumHidden}
                   zone={zone}
                 />
-                {money && column.sumHidden && dealCount > 0 && (
+                {column.sumHidden && (countHidden || dealCount > 0) && (
                   <span className="board-col-refusal">
                     {column.sumHiddenReason}
                   </span>

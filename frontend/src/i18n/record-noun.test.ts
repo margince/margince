@@ -223,6 +223,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "confirm.done.body",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
+    "lead.boardCountsOwnerNotMeasurable",
     "lead.notYoursToChange",
     // The same refusal as the two above, for a colleague's queue.
     "worklist.owner.refused",
@@ -637,6 +638,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "files.originUnknown",
     "heldThreads.heldByOthers_one",
     "heldThreads.heldByOthers_other",
+    "lead.boardCountsOwnerNotMeasurable",
     "lead.bulkOwnerPick",
     "log.transcriptHint",
     "ob.manual.buying_centerHint",

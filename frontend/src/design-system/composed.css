@@ -168,6 +168,9 @@
   display: flex;
   flex: none;
 }
+.board-col-head .board-col-count[hidden] {
+  display: none;
+}
 /* THE STAGE'S ODDS, and they read at the far edge: a percentage is a property
    of the column rather than of the name, and against the name it read as part
    of it. `auto` rather than a spacer, so the head stays three nodes. */
@@ -229,6 +232,11 @@
      note explaining why there is none. */
   color: var(--textSecondary);
   font: var(--fontBodySmall);
+}
+/* A folded column is as wide as its head, and the reason wraps inside that
+   width rather than widening the fold to one line of prose. */
+.board-col-collapsed .board-col-refusal {
+  contain: inline-size;
 }
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage
