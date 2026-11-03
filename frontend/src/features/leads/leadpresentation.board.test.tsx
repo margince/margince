@@ -15,6 +15,7 @@ import type { components } from "../../api/schema";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import { LeadBoard } from "./leadpresentation.board";
 
 type Lead = components["schemas"]["Lead"];
@@ -33,11 +34,8 @@ const lead: Lead = {
 
 function mine(filters: Record<string, string> = {}): ListQuery {
   return {
-    q: "",
-    sort: "",
-    includeArchived: false,
+    ...UNNARROWED_LIST_QUERY,
     filters: { owner_id: "u-me", ...filters },
-    perPage: 25,
   };
 }
 
@@ -183,7 +181,7 @@ describe("the lead board's terminal columns under the queue's dials", () => {
   });
 
   it("claim no count above a withheld column whose leads did not load", async () => {
-    serve(() =>
+    const served = serve(() =>
       json(
         { title: "Unavailable", status: 503, code: "service_unavailable" },
         503,
@@ -201,5 +199,11 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     expect(document.body.textContent).not.toContain(
       en["lead.boardTerminalRowsUnavailable"],
     );
+
+    const reads = () =>
+      served.filter((sent) => sent.url.pathname.endsWith("/leads")).length;
+    const before = reads();
+    fireEvent.click(screen.getByRole("button", { name: en["common.retry"] }));
+    await waitFor(() => expect(reads()).toBe(before + 1));
   });
 });

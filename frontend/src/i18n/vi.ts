@@ -5192,7 +5192,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.boardCountsNoOtherFilter":
     "Số lượng không thể áp dụng mọi bộ lọc của danh sách này nên không hiển thị.",
   "lead.boardCountsOwnerNotMeasurable":
-    "Số lượng của người chịu trách nhiệm này nằm ngoài phạm vi số liệu bạn được xem.",
+    "Không hiển thị số lượng lead của người chịu trách nhiệm này. Chỉ quản trị viên cấp được quyền xem số liệu này.",
   "lead.boardTerminalRowsUnavailable":
     "Không thể tải các lead này. Số lượng ở trên vẫn đúng.",
   "lead.boardTerminalRowsUnavailableNoCount": "Không thể tải các lead này.",
@@ -5750,7 +5750,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.totalsOwnerNotMeasurable":
-    "Chỉ hiển thị deal đã tải. Tổng của người chịu trách nhiệm này nằm ngoài phạm vi số liệu bạn được xem.",
+    "Chỉ hiển thị deal đã tải. Chỉ quản trị viên cấp được quyền xem tổng của người chịu trách nhiệm này.",
   "deals.totalsNoTagFilter":
     "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc thẻ.",
   "deals.totalsNoSearch":

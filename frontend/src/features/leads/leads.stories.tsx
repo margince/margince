@@ -3,8 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import type { ListQuery } from "../../components/listquery";
 import { standardViews } from "../../components/recordlist";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -28,14 +28,6 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-
-const UNNARROWED: ListQuery = {
-  q: "",
-  sort: "",
-  includeArchived: false,
-  filters: {},
-  perPage: 25,
-};
 
 const lead = {
   id: "l-1",
@@ -517,7 +509,7 @@ export const LeadPresentationComponents: Story = {
           <StatusBadge status="contacted" />
         </div>
         <LeadBoard
-          query={UNNARROWED}
+          query={UNNARROWED_LIST_QUERY}
           rows={[
             { ...lead, status: "new", score: 82 },
             {

@@ -5281,7 +5281,7 @@ export const en = {
   "lead.boardCountsNoOtherFilter":
     "The counts cannot apply every filter on this list, so none is shown.",
   "lead.boardCountsOwnerNotMeasurable":
-    "This owner’s counts are outside what you may measure.",
+    "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
     "These leads did not load. The count above is still correct.",
   "lead.boardTerminalRowsUnavailableNoCount": "These leads did not load.",
@@ -5879,7 +5879,7 @@ export const en = {
   // pages on demand, so that number grows as the reader presses Load more.
   // Naming only the total would leave the count reading as final.
   "deals.totalsOwnerNotMeasurable":
-    "Loaded deals only. This owner’s totals are outside what you may measure.",
+    "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
   "deals.totalsNoTagFilter":
     "Loaded deals only. No total while a tag filter is on.",
   "deals.totalsNoSearch":

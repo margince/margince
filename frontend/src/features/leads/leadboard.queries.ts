@@ -10,8 +10,8 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import type { Lead } from "./leadpresentation";
 import { leadsQueryParams } from "./leads.list.queries";
 
-// The dials the leads-by-status report filters by, under the names /leads
-// gives them.
+// A declared mirror of the leads-by-status `filters` in reportspecs.go, held by
+// TestTheLeadBoardCountsUnderExactlyTheReportsFilters.
 const COUNTED_DIALS = ["status", "owner_id", "source", "origin"] as const;
 
 // The list's own drawing dials, which choose an order or widen to archived rows.

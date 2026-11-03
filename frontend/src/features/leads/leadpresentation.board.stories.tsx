@@ -3,9 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import type { ListQuery } from "../../components/listquery";
 import { formatNumber } from "../../format/format";
 import { translate, translatePlural } from "../../i18n";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -22,14 +22,6 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-
-const UNNARROWED: ListQuery = {
-  q: "",
-  sort: "",
-  includeArchived: false,
-  filters: {},
-  perPage: 25,
-};
 
 const lead = {
   id: "l-1",
@@ -97,7 +89,7 @@ export const OriginAndCountInGerman: Story = {
     return (
       <StoryProviders locale="de">
         <LeadBoard
-          query={UNNARROWED}
+          query={UNNARROWED_LIST_QUERY}
           rows={rows}
           onMoved={() => undefined}
           hasMore={false}

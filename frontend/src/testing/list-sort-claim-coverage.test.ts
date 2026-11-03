@@ -57,24 +57,59 @@ function sendsSort(source: string): boolean {
   );
 }
 
-// The screen's own source, and that of each sibling builder the fetcher spreads
-// onto its query (`...leadsQueryParams(query)`), which then owns the wire.
-function wireSources(file: string, source: string): string[] {
-  const builders = [...source.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap(
-    ([, name]) => {
-      if (name === undefined) return [];
-      const from = new RegExp(
-        `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
-      ).exec(source)?.[1];
-      if (from === undefined) return [];
-      const base = resolve(SRC_ROOT, dirname(file), from);
-      const path = [`${base}.ts`, `${base}.tsx`].find((candidate) =>
-        existsSync(candidate),
-      );
-      return path ? [readFileSync(path, "utf8")] : [];
-    },
+// One function's text, from its declaration to the closing brace at column 0.
+function functionBody(source: string, name: string): string | undefined {
+  const start = new RegExp(
+    `(?:^|\\n)(?:export )?(?:async )?function ${name}\\b`,
+  ).exec(source)?.index;
+  if (start === undefined) return undefined;
+  const end = source.indexOf("\n}\n", start);
+  return end === -1 ? undefined : source.slice(start, end + 3);
+}
+
+type ReadModule = (fromFile: string, specifier: string) => string | undefined;
+
+function readSibling(fromFile: string, specifier: string): string | undefined {
+  const base = resolve(SRC_ROOT, dirname(fromFile), specifier);
+  const path = [`${base}.ts`, `${base}.tsx`].find((candidate) =>
+    existsSync(candidate),
   );
-  return [source, ...builders];
+  return path ? readFileSync(path, "utf8") : undefined;
+}
+
+// The bodies of the builders the screen's `fetchPage` spreads into its wire
+// query (`query: { ...leadsQueryParams(query) }`), each read alone from the
+// sibling module it is imported from.
+function spreadBuilders(
+  file: string,
+  source: string,
+  readModule: ReadModule,
+): string[] {
+  const fetcher = /\bfetchPage: (\w+),/.exec(source)?.[1];
+  const body = fetcher ? functionBody(source, fetcher) : undefined;
+  const at = body?.indexOf("query: {") ?? -1;
+  if (body === undefined || at === -1) return [];
+  const wire = body.slice(at);
+  return [...wire.matchAll(/\.\.\.(\w+)\(query\)/g)].flatMap(([, name]) => {
+    if (name === undefined) return [];
+    const from = new RegExp(
+      `import \\{[^}]*\\b${name}\\b[^}]*\\} from "(\\.[^"]+)"`,
+    ).exec(source)?.[1];
+    const module = from ? readModule(file, from) : undefined;
+    const builder = module ? functionBody(module, name) : undefined;
+    return builder ? [builder] : [];
+  });
+}
+
+function screenSendsSort(
+  file: string,
+  source: string,
+  readModule: ReadModule = readSibling,
+): boolean {
+  return (
+    sendsSort(source) ||
+    spreadBuilders(file, source, readModule).some(sendsSort)
+  );
 }
 
 /** Every way this screen names an ordering to the reader. */
@@ -111,7 +146,7 @@ describe("a list claims no ordering its endpoint cannot give", () => {
 
   it.each(listScreens())("%s", (file) => {
     const source = readFileSync(resolve(SRC_ROOT, file), "utf8");
-    if (wireSources(file, source).some(sendsSort)) {
+    if (screenSendsSort(file, source)) {
       return;
     }
     expect(
@@ -120,5 +155,57 @@ describe("a list claims no ordering its endpoint cannot give", () => {
         `its own way — naming an ordering anyway tells the reader something ` +
         `the list does not do. Either put sort on the wire or drop the claim.`,
     ).toEqual([]);
+  });
+});
+
+// The builder a fetcher spreads is read alone: a sibling that sends sort does
+// not speak for one that does not.
+describe("a fetcher's spread builder", () => {
+  const queries = [
+    "export function sortedParams(query: ListQuery) {",
+    "  return {",
+    "    sort: query.sort || undefined,",
+    "  };",
+    "}",
+    "",
+    "export function unsortedParams(query: ListQuery) {",
+    "  return { q: query.q || undefined };",
+    "}",
+    "",
+  ].join("\n");
+  const screen = (builder: string, spreadOutside = false) =>
+    [
+      `import { ${builder} } from "./things.queries";`,
+      "",
+      "export async function fetchThingsPage(query: ListQuery) {",
+      spreadOutside ? `  const extra = { ...${builder}(query) };` : "",
+      '  return api.GET("/things", {',
+      `    params: { query: { ${spreadOutside ? "" : `...${builder}(query), `}limit: 50 } },`,
+      "  });",
+      "}",
+      "",
+      "const list = useListQuery<Thing>({",
+      "    fetchPage: fetchThingsPage,",
+      "});",
+      "",
+    ].join("\n");
+  const readModule = () => queries;
+
+  it("sends sort when the builder it spreads does", () => {
+    expect(
+      screenSendsSort("x/things.tsx", screen("sortedParams"), readModule),
+    ).toBe(true);
+  });
+
+  it("does not, beside a sibling builder that does", () => {
+    expect(
+      screenSendsSort("x/things.tsx", screen("unsortedParams"), readModule),
+    ).toBe(false);
+  });
+
+  it("does not, when the spread sits outside the wire query", () => {
+    expect(
+      screenSendsSort("x/things.tsx", screen("sortedParams", true), readModule),
+    ).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import type { ListQuery } from "../../components/listquery";
-import { Badge } from "../../design-system/atoms";
+import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import {
   type BoardColumn,
@@ -283,10 +283,24 @@ export function LeadBoard({
           both read as fact. "Nobody was ever disqualified" is a very
           different statement from "we could not ask". */}
       {counts.isError && (
-        <ErrorLine>{t("lead.boardCountsUnavailable")}</ErrorLine>
+        <ErrorLine
+          actions={
+            <Button variant="ghost" onClick={() => counts.refetch()}>
+              {t("common.retry")}
+            </Button>
+          }
+        >
+          {t("lead.boardCountsUnavailable")}
+        </ErrorLine>
       )}
       {terminalRows.isError && (
-        <ErrorLine>
+        <ErrorLine
+          actions={
+            <Button variant="ghost" onClick={() => terminalRows.refetch()}>
+              {t("common.retry")}
+            </Button>
+          }
+        >
           {t(
             withheld
               ? "lead.boardTerminalRowsUnavailableNoCount"

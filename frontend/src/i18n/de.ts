@@ -5331,7 +5331,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.boardCountsNoOtherFilter":
     "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
   "lead.boardCountsOwnerNotMeasurable":
-    "Die Anzahlen dieser verantwortlichen Person darfst du nicht auswerten.",
+    "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, sie auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
     "Diese Leads konnten nicht geladen werden. Die Anzahl oben stimmt weiterhin.",
   "lead.boardTerminalRowsUnavailableNoCount":
@@ -5900,7 +5900,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
-    "Nur geladene Deals. Die Summen der verantwortlichen Person darfst du nicht auswerten.",
+    "Nur geladene Deals. Nur Admins können dir erlauben, die Summen dieser verantwortlichen Person auszuwerten.",
   "deals.totalsNoTagFilter":
     "Nur geladene Deals. Keine Summe, solange ein Tag-Filter aktiv ist.",
   "deals.totalsNoSearch":

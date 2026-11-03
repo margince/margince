@@ -11,10 +11,10 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import { LeadBoard, scoreTone } from "./leadpresentation";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
@@ -24,14 +24,6 @@ vi.mock("../../lib/router", async (actual) => ({
 }));
 
 type Lead = components["schemas"]["Lead"];
-
-const UNNARROWED: ListQuery = {
-  q: "",
-  sort: "",
-  includeArchived: false,
-  filters: {},
-  perPage: 25,
-};
 
 function renderBoard(ui: ReactNode) {
   return renderBoardWithClient(ui).rendered;
@@ -104,7 +96,7 @@ describe("lead work-board presentation", () => {
   it("uses lead-specific counts and shows work context on every card", () => {
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -136,7 +128,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[{ ...lead, company_id: "c-7" }]}
         onMoved={() => undefined}
         hasMore={false}
@@ -158,7 +150,7 @@ describe("lead work-board presentation", () => {
     const user = userEvent.setup();
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -185,7 +177,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[{ ...lead, company_id: "c-7" }]}
         onMoved={() => undefined}
         hasMore={false}
@@ -207,7 +199,7 @@ describe("lead work-board presentation", () => {
   it("names an unlinked lead's company as plain text", () => {
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -221,7 +213,7 @@ describe("lead work-board presentation", () => {
   it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[
           {
             ...lead,
@@ -257,7 +249,7 @@ describe("lead work-board presentation", () => {
     );
     const { invalidated } = renderBoardWithClient(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -293,7 +285,7 @@ describe("lead work-board presentation", () => {
     );
     const { invalidated } = renderBoardWithClient(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -327,7 +319,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -375,7 +367,7 @@ describe("lead work-board presentation", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -415,7 +407,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -461,7 +453,7 @@ describe("lead work-board presentation", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderBoard(
       <LeadBoard
-        query={UNNARROWED}
+        query={UNNARROWED_LIST_QUERY}
         rows={[]}
         onMoved={() => undefined}
         hasMore={false}

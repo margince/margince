@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { ListQuery } from "../../components/listquery";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   leadStatusReportFilters,
   terminalCountsRefusedBecause,
@@ -10,16 +11,8 @@ import {
   terminalLeadsQueryParams,
 } from "./leadboard.queries";
 
-const ALL: ListQuery = {
-  q: "",
-  sort: "",
-  includeArchived: false,
-  filters: {},
-  perPage: 25,
-};
-
 function narrowed(filters: Record<string, string>, q = ""): ListQuery {
-  return { ...ALL, q, filters };
+  return { ...UNNARROWED_LIST_QUERY, q, filters };
 }
 
 describe("the terminal columns' counts", () => {
@@ -40,13 +33,13 @@ describe("the terminal columns' counts", () => {
   });
 
   it("send no filter for an unnarrowed board", () => {
-    expect(leadStatusReportFilters(ALL)).toEqual({});
+    expect(leadStatusReportFilters(UNNARROWED_LIST_QUERY)).toEqual({});
   });
 
   it("stay counted when the list widens to archived rows or sorts", () => {
     expect(
       terminalCountsWithheldBecause({
-        ...ALL,
+        ...UNNARROWED_LIST_QUERY,
         includeArchived: true,
         sort: "-score",
       }),

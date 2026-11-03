@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
 import { translate } from "../../i18n";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -21,14 +22,6 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-
-const UNNARROWED: ListQuery = {
-  q: "",
-  sort: "",
-  includeArchived: false,
-  filters: {},
-  perPage: 25,
-};
 
 const lead = {
   id: "l-1",
@@ -55,7 +48,9 @@ const rows = [
   },
 ];
 
-function Board({ query = UNNARROWED }: Readonly<{ query?: ListQuery }>) {
+function Board({
+  query = UNNARROWED_LIST_QUERY,
+}: Readonly<{ query?: ListQuery }>) {
   return (
     <StoryProviders>
       <LeadBoard
@@ -108,7 +103,11 @@ export const CountsWithheld: Story = {
           page: { has_more: false, next_cursor: null },
         }),
     });
-    return <Board query={{ ...UNNARROWED, filters: { min_score: "80" } }} />;
+    return (
+      <Board
+        query={{ ...UNNARROWED_LIST_QUERY, filters: { min_score: "80" } }}
+      />
+    );
   },
   play: async ({ canvasElement }) => {
     const qualified = await within(canvasElement).findByRole("region", {
@@ -127,7 +126,12 @@ export const CountsRefused: Story = {
         jsonResponse({ title: "Forbidden", status: 403 }, 403),
     });
     return (
-      <Board query={{ ...UNNARROWED, filters: { owner_id: "u-colleague" } }} />
+      <Board
+        query={{
+          ...UNNARROWED_LIST_QUERY,
+          filters: { owner_id: "u-colleague" },
+        }}
+      />
     );
   },
   play: async ({ canvasElement }) => {
