@@ -129,7 +129,7 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
 
 // Attaches `project_id` through the SAME writer the Details card's own
 // project row saves through, reused rather than opening a second patch
-// path, so one inline edit and this verb cannot invalidate different caches
+// path, so one field edit and this verb cannot invalidate different caches
 // or send a different If-Match. Picking IS the act, so the list closes once
 // the write lands and stays open over a refusal.
 export function LeadProjectAttachButton({

@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it } from "vitest";
@@ -38,7 +44,9 @@ it("saves only the corrected scalar", async () => {
     sent.push(body);
     return jsonResponse({ ...contact, version: 4 });
   });
-  await user.click(await screen.findByRole("button", { name: "Change Title" }));
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Title/ }),
+  );
   await user.clear(screen.getByRole("textbox", { name: "Title" }));
   await user.type(screen.getByRole("textbox", { name: "Title" }), "CEO{Enter}");
   await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
@@ -123,8 +131,11 @@ it("keeps a refused correction and offers the existing record on a duplicate", a
   await user.type(input, "taken@example.test");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByRole("button", { name: "View existing record" });
-  expect(screen.getByDisplayValue("taken@example.test")).toBeTruthy();
-  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    within(screen.getByRole("dialog", { name: "Email" })).getByDisplayValue(
+      "taken@example.test",
+    ),
+  ).toBeTruthy();
 });
 it("shows friendly conflict copy and retains the draft", async () => {
   const user = userEvent.setup();
@@ -140,7 +151,9 @@ it("shows friendly conflict copy and retains the draft", async () => {
       409,
     ),
   );
-  await user.click(await screen.findByRole("button", { name: "Change Title" }));
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Title/ }),
+  );
   const input = screen.getByRole("textbox", { name: "Title" });
   await user.clear(input);
   await user.type(input, "CEO{Enter}");
@@ -167,7 +180,9 @@ it("does not offer to clear the owner of a private contact", async () => {
     visibility: "owner",
     owner_id: "u1",
   });
-  await user.click(await screen.findByRole("button", { name: "Change Owner" }));
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Owner/ }),
+  );
   await user.click(screen.getByRole("combobox"));
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
 });
@@ -183,7 +198,7 @@ it("adds the first phone from Details without changing email", async () => {
     { ...contact, phones: [] },
   );
   await user.click(
-    await screen.findByRole("button", { name: "Edit phone numbers" }),
+    await screen.findByRole("button", { name: /^Edit phone numbers/ }),
   );
   await user.click(screen.getByRole("button", { name: "Add phone" }));
   await user.type(

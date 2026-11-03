@@ -66,6 +66,8 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     archived: Boolean(lead.archived_at),
   });
   const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
+  // For an editor that stays open over a refusal and closes once stored.
+  const saveAsync = (body: UpdateLeadRequest) => patch.mutateAsync(write(body));
 
   // Taking an unowned lead is a claim, not a patch. The write arm refuses an
   // ownerless row, so the request that works here is the claim door. It lives
@@ -77,5 +79,5 @@ export function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     onSuccess: onChanged,
   });
 
-  return { patch, claim, readOnly, readOnlyReason, save };
+  return { patch, claim, readOnly, readOnlyReason, save, saveAsync };
 }

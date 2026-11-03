@@ -5,16 +5,15 @@ import {
   render as rtlRender,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
+import { assignOwner } from "./leads.testkit";
 
 // The lead page writes from BOTH of its columns through one mutation, and the
 // two facts that follow from sharing it are what this file holds.
@@ -143,12 +142,7 @@ describe("the lead page's one write, read from two columns", () => {
 
     // Somebody else's write, through the SAME mutation: the owner picker in
     // the rail beside this form.
-    await user.click(screen.getByRole("button", { name: "Assign" }));
-    await pickOption(
-      user,
-      await screen.findByLabelText("Assign this lead to"),
-      "Assign to me",
-    );
+    await assignOwner(user, "Assign to me");
 
     // The override survives it. Before this, the shared mutation's success
     // closed the form and threw away both fields.
@@ -184,16 +178,18 @@ describe("the lead page's one write, read from two columns", () => {
     // The rail renders on every tab, so its writes can be refused on one the
     // ladder panel — where this sentence used to live — never reaches.
     await user.click(await screen.findByRole("button", { name: /^History/ }));
-    await user.click(await screen.findByRole("button", { name: "Assign" }));
-    await pickOption(
-      user,
-      await screen.findByLabelText("Assign this lead to"),
-      "Assign to me",
-    );
+    await assignOwner(user, "Assign to me");
 
-    const alert = await screen.findByRole("alert");
-    expect(
-      within(alert).getByText(/moved while you were reading it/),
-    ).toBeTruthy();
+    // The dialog keeps the refusal on its field; the page states it as well.
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("alert")
+          .filter((alert) => !alert.closest("[role=dialog]"))
+          .some((alert) =>
+            /moved while you were reading it/.test(alert.textContent ?? ""),
+          ),
+      ).toBe(true),
+    );
   });
 });

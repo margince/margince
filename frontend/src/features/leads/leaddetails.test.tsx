@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { LeadScreen } from "./leads";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
@@ -53,6 +54,22 @@ async function showEmptyFields() {
   );
 }
 
+async function chooseIndustry(
+  user: ReturnType<typeof userEvent.setup>,
+  industry: string,
+) {
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Industry/ }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Industry" });
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: "Industry" }),
+    industry,
+  );
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+}
+
 describe("a lead's company facts", () => {
   it("shows the linked company's industry, country and size, named for that company", async () => {
     serve(linked);
@@ -69,7 +86,7 @@ describe("a lead's company facts", () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Change Industry" }),
+      screen.queryByRole("button", { name: /^Change Industry/ }),
     ).toBeNull();
   });
 
@@ -87,12 +104,7 @@ describe("a lead's company facts", () => {
     expect(within(group).queryByText("Country")).toBeNull();
     expect(within(group).queryByText("Industry")).toBeNull();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Manufacturing" }),
-    );
+    await chooseIndustry(userEvent.setup(), "Manufacturing");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "manufacturing" }),
@@ -104,7 +116,7 @@ describe("a lead's company facts", () => {
     serve({ ...lead, company_id: "c-7", industry: "software" });
     render(<LeadScreen id="l-1" />);
     expect(
-      await screen.findByRole("button", { name: "Change Industry" }),
+      await screen.findByRole("button", { name: /^Change Industry/ }),
     ).toHaveTextContent("Software");
     expect(screen.queryByRole("region", { name: /^From / })).toBeNull();
   });
@@ -113,12 +125,7 @@ describe("a lead's company facts", () => {
     const patches = serve(lead);
     render(<LeadScreen id="l-1" />);
     await showEmptyFields();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Logistics and Transport" }),
-    );
+    await chooseIndustry(userEvent.setup(), "Logistics and Transport");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "logistics_transport" }),

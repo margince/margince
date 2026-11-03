@@ -8,6 +8,7 @@ import { translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, promoteEligible, scoreTone, terminalBadge } from "./leads";
 import {
+  assignOwner,
   jsonResponse,
   LEAD_GRANTS,
   lead,
@@ -69,9 +70,9 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
       }),
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Title" }),
+      await screen.findByRole("button", { name: /^Change Title/ }),
     );
-    const title = await screen.findByLabelText("Title");
+    const title = await screen.findByRole("textbox", { name: "Title" });
     await userEvent.type(title, "VP Sales{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
@@ -108,6 +109,7 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
   });
 
   it("moves the origin with a PATCH that carries the origin and no source", async () => {
+    const user = userEvent.setup();
     let patchBody: Record<string, unknown> | null = null;
     stubFetch(async (url, method, request) => {
       if (method === "PATCH") {
@@ -120,16 +122,20 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Origin" }),
+    await user.click(
+      await screen.findByRole("button", { name: "Change Origin Not set" }),
     );
-    // The picker opens on the click that started editing.
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Partner" }),
+    const dialog = await screen.findByRole("dialog", { name: "Origin" });
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", { name: "Origin" }),
+      "Partner",
     );
+    expect(patchBody).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ origin: "partner" });
@@ -517,15 +523,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
     // One control, not a self-assign button beside a picker: the viewer is
     // its first option (ADR-0108).
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Assign" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("combobox", { name: "Assign this lead to" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Assign to me" }),
-    );
+    await assignOwner(userEvent, "Assign to me");
 
     await waitFor(() => expect(claimed).toBe(true));
     expect(patched).toBe(false);
@@ -550,15 +548,15 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     }, "u-9");
     render(<LeadScreen id="l-1" />);
 
-    await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
-    const assign = await screen.findByRole("button", { name: "Assign" });
-    expect(assign.hasAttribute("disabled")).toBe(false);
+    expect(
+      await screen.findByRole("button", { name: /^Change Owner Unassigned/ }),
+    ).toBeEnabled();
   });
 
   // Dropping the per-row half of the write answer must not drop the other two.
   // A read seat cannot be handed work, and the server refuses its assignment.
-  // So an enabled control here would only ever fail in the reader's face.
-  it("offers no enabled assignment to a seat that may not write leads", async () => {
+  // So a control here would only ever fail in the reader's face.
+  it("offers no assignment to a seat that may not write leads", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
@@ -586,8 +584,7 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     render(<LeadScreen id="l-1" />);
 
     await waitFor(() => expect(screen.getByText("Unassigned")).toBeTruthy());
-    const assign = await screen.findByRole("button", { name: "Assign" });
-    expect(assign.hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: /^Change Owner/ })).toBeNull();
   });
 
   it("hides Assign to me when the lead is already owned by the current user", async () => {
@@ -705,7 +702,10 @@ describe("LeadScreen — the header's Email verb", () => {
       data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
     });
     render(<LeadScreen id="l-1" />);
-    const address = await screen.findByRole("button", {
+    // The row wraps the address in its edit pill once the grants answer, so
+    // the address is read after that; pressing it still writes, never edits.
+    await screen.findByRole("button", { name: "Change Email" });
+    const address = screen.getByRole("button", {
       name: "jonas@nordwind.example",
     });
     expect(address.hasAttribute("href")).toBe(false);

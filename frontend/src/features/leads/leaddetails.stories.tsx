@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
 import {
@@ -54,6 +55,14 @@ const linked: Lead = {
 function page(lead: Lead, locale: Locale = "en", companyName?: string) {
   return () => {
     installFetchStub({
+      "GET /users": () =>
+        jsonResponse({
+          data: [
+            { id: "u-2", display_name: "Dana Fischer" },
+            { id: "u-3", display_name: "Mai Nguyen" },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
       "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /companies/c-7": () =>
@@ -117,4 +126,15 @@ export const CompanyFactsDark: Story = {
 export const CompanyFactsPhone: Story = {
   tags: ["uat-phone"],
   render: page(linked),
+};
+
+/** The owner is handed on in a dialog opened from the Owner row's value. */
+export const OwnerDialog: Story = {
+  render: page(base),
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Change Owner/ }),
+    );
+    await screen.findByRole("combobox", { name: "Owner" });
+  },
 };

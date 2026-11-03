@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { LeadScreen } from "./leads";
 import {
+  assignOwner,
   jsonResponse,
   lead,
   openLeadActions,
@@ -426,18 +427,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }, "u-9");
     render(<LeadScreen id="l-1" />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Assign" }),
-    );
-    // The listbox is opened once and the option awaited inside it. Clicking
-    // the trigger again would toggle it shut, and the popup re-renders in
-    // place when the roster lands.
-    await userEvent.click(
-      await screen.findByRole("combobox", { name: "Assign this lead to" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Dana Fischer" }),
-    );
+    await assignOwner(userEvent, "Dana Fischer");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });
