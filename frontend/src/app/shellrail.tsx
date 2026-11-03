@@ -7,7 +7,7 @@ import { Logomark } from "../design-system/logomark";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
-import type { Route } from "../lib/router";
+import { type Route, routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
@@ -92,22 +92,22 @@ function BrandBlock() {
   );
 }
 
-// The panel's state as classes: its width, whether the phone sheet is open,
+// The panel's state as classes: its width, whether the phone menu is open,
 // whether it is mid-collapse, and whether it shows a drilled-in level. The
 // last is a class, not a CSS `:has()` on the level's markup. A `:has()` takes
 // its argument's specificity, so a rule meant only to arrange a panel would
-// have outranked the sheet's layout.
+// have outranked the menu's layout.
 function railClasses(
   state: Readonly<{
     collapsed: boolean;
-    sheetOpen: boolean;
+    menuOpen: boolean;
     leveled: boolean;
   }>,
 ): string {
   return [
     "rail",
     state.collapsed ? "collapsed" : "expanded",
-    state.sheetOpen ? "sheetopen" : "",
+    state.menuOpen ? "menuopen" : "",
     state.leveled ? "leveled" : "",
   ]
     .filter((name) => name !== "")
@@ -134,66 +134,64 @@ export function WorkspaceRail({
   // it without moving focus. The tooltip is never the accessible name:
   // aria-label carries that in both states.
   const navTip = useNavTip(collapsed, nav);
-  // At phone width the same markup is a bottom bar; More expands it into a
-  // sheet carrying every destination. One nav element keeps one navigation
+  // At phone width the same markup is a bottom bar; More opens a menu over it
+  // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [openAt, setOpenAt] = useState<string | undefined>(undefined);
+  const here = routeHash(route);
+  // Keyed by the address it opened at, so any navigation closes it.
+  const menuOpen = openAt === here;
   const phone = usePhoneViewport();
   const more = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
 
-  // The sheet is a popover over the page. It dismisses like every other one in
-  // the chrome: Escape from anywhere, or any click outside it. That makes
-  // the scrim behind it work without being a control of its own.
-  const closeSheet = useCallback(() => setSheetOpen(false), []);
-  usePopoverDismiss(sheetOpen, nav, closeSheet);
+  // The menu, not the nav: a press on the bar or the agent closes it too.
+  const closeMenu = useCallback(() => setOpenAt(undefined), []);
+  usePopoverDismiss(menuOpen, menu, closeMenu);
 
   // Which of the route's levels the panel shows, and the two ways the reader
   // moves between them (app/navlevel.tsx). A section's entries take over the
   // panel rather than hanging off the destinations. 56px cannot carry two
   // levels, and 256px carrying both reads as a list of twenty places to go.
   //
-  // At phone width the panel is a bottom bar of four destinations, and it
-  // keeps them on a section route. A bar that gave its four tabs to a section
+  // At phone width the panel is a bottom bar of destinations, and it
+  // keeps them on a section route. A bar that gave its tabs to a section
   // would lose every destination and hold two controls. There the section is
   // reached from the page head (app/sectionswitcher.tsx), so no section is
   // walked into here.
-  const level = useNavLevel(
-    route,
-    phone ? undefined : section,
-    nav,
-    closeSheet,
-  );
+  const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
 
-  // Opening a sheet that covers the page takes focus with it, or a keyboard
-  // user tabs through a page they cannot see. Closing it hands focus back to
-  // the control that opened it, not to <body>. That happens only while the
-  // sheet still holds focus; a row that navigated away put focus somewhere
-  // better. It also happens only once the sheet has been open. The effect runs
-  // on mount too, and a walk into or out of a section mounts a new rail with
-  // the level's first row focused. Without the guard, More would take it.
-  const sheetOpened = useRef(false);
+  // The menu takes focus, or Tab walks a page nobody can see; focus it took down
+  // with it returns to More. The ref spares the mount, which keeps its focus.
+  const menuOpened = useRef(false);
   useEffect(() => {
-    if (sheetOpen) {
-      sheetOpened.current = true;
-      nav.current?.querySelector<HTMLElement>(".navwrap .navitem")?.focus();
+    if (menuOpen) {
+      menuOpened.current = true;
+      menu.current?.querySelector<HTMLElement>(".navitem")?.focus();
       return;
     }
-    if (sheetOpened.current && nav.current?.contains(document.activeElement)) {
-      sheetOpened.current = false;
+    if (!menuOpened.current) {
+      return;
+    }
+    menuOpened.current = false;
+    if (
+      document.activeElement === null ||
+      document.activeElement === document.body
+    ) {
       more.current?.focus();
     }
-  }, [sheetOpen]);
+  }, [menuOpen]);
 
-  // The sheet exists only at phone width; the control that closes it is not
+  // The menu exists only at phone width; the control that closes it is not
   // rendered above the breakpoint. Widening the window while it is open would
   // otherwise leave the page locked and inert with nothing on screen to release
   // it. The width is already subscribed to above, so this reads that answer
   // rather than opening a second media query of its own.
   useEffect(() => {
-    if (sheetOpen && !phone) {
-      setSheetOpen(false);
+    if (menuOpen && !phone) {
+      setOpenAt(undefined);
     }
-  }, [sheetOpen, phone]);
+  }, [menuOpen, phone]);
 
   // A scrim that only looks blocking is the worst of both worlds: the page it
   // dims stays reachable by Tab and by a screen reader. `inert` on the content
@@ -203,11 +201,11 @@ export function WorkspaceRail({
   // for the same reason: a touch on the scrim should dismiss, not scroll.
   //
   // The skip link goes inert with it. It is a sibling of the nav, not a child
-  // of the column. So Tab past the sheet's last row wrapped onto it, drew it
+  // of the column. So Tab past the bar's last cell wrapped onto it, drew it
   // over the scrim, and pointed at an inert element. That is a control that
   // takes focus, shows itself, and does nothing.
   useEffect(() => {
-    if (!sheetOpen) {
+    if (!menuOpen) {
       return;
     }
     const locked = document.querySelectorAll<HTMLElement>(".main, .skiplink");
@@ -222,13 +220,13 @@ export function WorkspaceRail({
         element.inert = false;
       }
     };
-  }, [sheetOpen]);
+  }, [menuOpen]);
 
   // A destination the phone bar hides behind More: there More is the current
   // tab, and claims what the row it stands in for would (`currentClaim`).
-  const sheetRow = NAV.find((item) => item.screen === level.shown.activeId);
-  const inSheet = sheetRow ? !MOBILE_PRIMARY.has(sheetRow.screen) : false;
-  const moreClaim = inSheet ? currentClaim(level.shown) : undefined;
+  const shownRow = NAV.find((item) => item.screen === level.shown.activeId);
+  const offBar = shownRow ? !MOBILE_PRIMARY.has(shownRow.screen) : false;
+  const moreClaim = offBar ? currentClaim(level.shown) : undefined;
 
   // The agent is app-level chrome: there is one of it, and it belongs to the
   // whole session rather than to any destination. A drilled-in level is
@@ -239,16 +237,30 @@ export function WorkspaceRail({
 
   return (
     <>
-      {/* The scrim dims the page the sheet covers and gives the eye the layer
-          boundary. It carries no behaviour of its own: a click on it lands
-          outside the nav, which is already what closes the sheet. */}
-      {sheetOpen && <div className="railscrim" aria-hidden="true" />}
+      {/* No behaviour of its own: a press on the scrim lands outside the menu,
+          which is what closes it. */}
+      {menuOpen && <div className="railscrim" aria-hidden="true" />}
       <nav
         ref={nav}
-        className={railClasses({ collapsed, sheetOpen, leveled })}
+        className={railClasses({ collapsed, menuOpen, leveled })}
         aria-label={t("shell.railAria")}
       >
-        <BrandBlock />
+        {/* Before the bar in the document as it is above it on screen, so Tab
+            meets the menu first (WCAG 2.4.3). */}
+        {menuOpen && (
+          <div className="railmenu" ref={menu}>
+            <BrandBlock />
+            <NavLevelView
+              level={level.shown}
+              counts={counts}
+              state={navTip}
+              onSelect={level.onSelect}
+              onWalkUp={level.onWalkUp}
+              rows="offbar"
+            />
+          </div>
+        )}
+        {!phone && <BrandBlock />}
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the same depth are the same level with
             another row current, and nothing should move. */}
@@ -260,37 +272,35 @@ export function WorkspaceRail({
           state={navTip}
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
+          rows={phone ? "bar" : "all"}
           // At phone width the agent stands in the middle of the bar, not at
           // the foot of a column that is not there. It sits in the row stream,
           // so a thumb and a Tab key read the bar in the same order. One Core
           // either way: the foot below renders only above the breakpoint.
           centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
         />
-        {/* Phone-width only: expands the bar into a sheet carrying every
-          destination. Hidden by CSS on the desktop sidebar.
-          It carries the active state for every destination it hides, so the
-          closed bar always shows where you are. The four tabs cannot, because
-          those routes' own rows are display:none at this width. */}
+        {/* Carries the active state for every destination the menu holds, so
+            the closed bar always shows where you are. */}
         <button
           type="button"
           ref={more}
-          className={inSheet ? "railmore active" : "railmore"}
-          // Open, this control closes the sheet, so it says so in the name as
+          className={offBar ? "railmore active" : "railmore"}
+          // Open, this control closes the menu, so it says so in the name as
           // well as in the glyph. A control whose name stays the same while its
           // job changes is the one a screen reader gets wrong.
-          aria-label={sheetOpen ? t("shell.closeMenu") : t("shell.more")}
-          aria-expanded={sheetOpen}
+          aria-label={menuOpen ? t("shell.closeMenu") : t("shell.more")}
+          aria-expanded={menuOpen}
           // The state has to reach a screen reader as well as the eye: the
           // hidden row is out of the accessibility tree at this width. Dropped
-          // once the sheet is open, because the real row is then visible and
+          // once the menu is open, because the real row is then visible and
           // carries it. Two elements claiming the current page is worse than
           // none.
-          aria-current={sheetOpen ? undefined : moreClaim}
-          onClick={() => setSheetOpen((open) => !open)}
+          aria-current={menuOpen ? undefined : moreClaim}
+          onClick={() => setOpenAt(menuOpen ? undefined : here)}
         >
-          {sheetOpen ? <X aria-hidden /> : <Menu aria-hidden />}
+          {menuOpen ? <X aria-hidden /> : <Menu aria-hidden />}
           <span className="navlabel">
-            {sheetOpen ? t("shell.closeMenu") : t("shell.more")}
+            {menuOpen ? t("shell.closeMenu") : t("shell.more")}
           </span>
         </button>
         <div className="grow" />

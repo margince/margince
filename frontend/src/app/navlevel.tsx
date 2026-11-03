@@ -181,7 +181,7 @@ export function useNavLevel(
   };
   const onSelect = useCallback(
     (entry: NavLevelEntry) => {
-      // A row pressed inside the phone sheet closes it: the sheet covers the
+      // A row pressed inside the phone menu closes it: the menu covers the
       // page it just navigated to. Dismissal on an OUTSIDE click cannot do this,
       // and should not — a preference row inside a popover must be able to act
       // without taking the popover with it.
@@ -210,6 +210,13 @@ export function useNavLevel(
   });
 
   return { depth, shown, parent, onWalkUp, onSelect };
+}
+
+export type NavRows = "all" | "bar" | "offbar";
+
+function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
+  if (rows === "all") return true;
+  return (level.barIds?.has(id) ?? false) === (rows === "bar");
 }
 
 type TipState = Readonly<{
@@ -293,6 +300,7 @@ function NavLevelGroupView({
   onSelect,
   centre,
   centreAfter,
+  rows,
 }: Readonly<{
   level: NavTrailLevel;
   group: NavLevelGroup;
@@ -301,13 +309,20 @@ function NavLevelGroupView({
   onSelect: (entry: NavLevelEntry) => void;
   centre?: ReactNode;
   centreAfter?: string;
+  rows: NavRows;
 }>) {
   const t = useT();
+  const items = group.items.filter((entry) => drawsRow(level, rows, entry.id));
+  if (items.length === 0) {
+    return null;
+  }
   // The id that ties the group to the words naming it. DERIVED from the message
   // key and never generated, so it is the same across renders and the same in a
   // snapshot — and the key is already what makes a group unique in its level,
   // being the React key the level maps these with.
-  const labelId = group.headingKey ? `navgroup-${group.headingKey}` : undefined;
+  // The menu over the bar names the same groups, and an id names one element.
+  const heading = rows === "bar" ? undefined : group.headingKey;
+  const labelId = heading ? `navgroup-${heading}` : undefined;
   return (
     // A named GROUP, not a heading and its section. The words name a set of
     // links inside a navigation landmark, which is where a reader meets them;
@@ -328,18 +343,14 @@ function NavLevelGroupView({
           NAMED there: a hidden element referenced by `aria-labelledby` is read
           for the name, which is the whole reason the name is wired this way
           rather than taken from the content. */}
-      {group.headingKey && (
+      {heading && (
         <div className="navheading" id={labelId}>
-          {t(group.headingKey)}
+          {t(heading)}
         </div>
       )}
-      {group.items.map((entry) => (
+      {items.map((entry) => (
         <Fragment key={entry.id}>
-          <div
-            className={
-              level.barIds?.has(entry.id) ? "navwrap primary" : "navwrap"
-            }
-          >
+          <div className="navwrap">
             <NavLevelRow
               level={level}
               entry={entry}
@@ -444,6 +455,7 @@ export function NavLevelView({
   onSelect,
   onWalkUp,
   centre,
+  rows = "all",
 }: Readonly<{
   level: NavTrailLevel;
   // Absent on the primary level, which is where the sidebar already is: there
@@ -457,6 +469,7 @@ export function NavLevelView({
   // bar's row of them. The sidebar passes nothing: a column of places to go has
   // no middle for a reading to stand in, and the agent keeps its own foot there.
   centre?: ReactNode;
+  rows?: NavRows;
 }>) {
   const centreAfter = centre ? centreAfterId(level) : undefined;
   return (
@@ -477,6 +490,7 @@ export function NavLevelView({
           onSelect={onSelect}
           centre={centre}
           centreAfter={centreAfter}
+          rows={rows}
         />
       ))}
     </div>

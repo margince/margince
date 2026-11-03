@@ -634,7 +634,7 @@ export const ThirdLevel: Story = {
 /**
  * A section at phone width, where the sidebar does NOT hand its bar over.
  *
- * The bar keeps the four destinations plus More on a section route — handing them
+ * The bar keeps its destinations plus More on a section route — handing them
  * to a section's entries lost the whole product's navigation and left two
  * controls floating in a card — so the section lives in the PAGE HEAD here: the
  * heading names it, and the switcher under the heading names the entry the reader
@@ -644,10 +644,10 @@ export const ThirdLevel: Story = {
  * section is published from live grants: the rail and the head are both handed the
  * fixture, which is what keeps this a picture of the CHROME.
  *
- * The bar itself carries five glyphs and no captions — four destinations and
+ * The bar itself carries five glyphs and no captions — the agent, three tabs and
  * More. Every row keeps its name in `aria-label`, so nothing is lost to a screen
  * reader or a voice-control user; the words are simply not drawn at a size where
- * they would be legible, and the sheet behind More is where they come back.
+ * they would be legible, and the menu behind More is where they come back.
  *
  * One thing about the viewport tool is worth knowing before trusting a picture
  * of this: it is applied by the MANAGER, which resizes the preview iframe, and
@@ -742,53 +742,10 @@ export const SectionSwitcherOpen: Story = {
 };
 
 /**
- * The More sheet, open — the phone's whole sidebar.
- *
- * The bar it grew out of is five cells with no captions, which is all a 390px
- * row can hold; the sheet is where the ten destinations become a LIST again, and
- * everything the bar had to give up comes back with them:
- *
- * - a head, with the installation's mark and name — the bar has no room for one,
- *   so this is the only place at this width that says which workspace this is;
- * - the labels themselves, at body size, with each row's glyph on the left and
- *   the whole width as its target;
- * - the group headings, spelled out where the collapsed sidebar draws none,
- *   because the sheet is 600px wide whatever the desktop preference it
- *   inherited was left at;
- * - the badge as a TRAILING figure in its row rather than a chip pinned to a
- *   tab — a list row has somewhere to put a number.
- *
- * What does NOT come back is the agent. It is a cell of the BAR, and the bar is
- * not on screen while this is; a row for it in a list of ten places would file
- * the one thing in the chrome that reports rather than navigates as an eleventh
- * place to go. What the cell it left behind buys the sheet is the room for the
- * whole list: the ceiling is the viewport less the ledge it stands on and the
- * same air again at the top, and the ten destinations now sit inside it without
- * scrolling. It is still a scroller — a longer locale or a level with more rows
- * will reach that ceiling.
- *
- * The close control is the same More button in its other state, renamed, and it
- * is PINNED to the head's corner rather than left at the end of a scrolling list
- * — a reader who opened the sheet by mistake should not have to walk ten rows to
- * leave it. There is deliberately no grab handle: a handle is a control on every
- * platform that documents one, and this sheet has one height and no drag, so
- * drawing it would promise a gesture that does nothing.
- *
- * The route is Reports, which the bar does not carry. That is the case the sheet
- * exists to answer: the current page's own row is `display: none` in the bar, so
- * the closed bar reports it through More instead, and opening the sheet is what
- * makes it visible. It is also why the scrim and the `inert` content column are
- * part of the frame rather than decoration — the page under a sheet this size has
- * to stop being reachable by Tab, not merely be dimmed.
- *
- * `uat-phone` is what makes the capture gate drive the browser to 390px, and the
- * `play` below opens the sheet the way a reader does; there is no prop that forces
- * it open, and adding one would put a control in the product that exists only for
- * the catalog. The focus ring on the first row in the captured frame is that
- * opening, not a stray state: a sheet that covers the page has to take focus with
- * it, or a keyboard reader is left tabbing through a page they can no longer see.
+ * The More menu open over the bar on Analytics, a destination the bar does not
+ * carry: the bar stays live, More reads Close, and the menu's own row is current.
  */
-function PhoneSheetExample() {
+function PhoneMenuExample() {
   const route: Route = { screen: "analytics" };
   const { openSearch, palette } = usePaletteSeam();
   return (
@@ -799,7 +756,7 @@ function PhoneSheetExample() {
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">
-            <Card as="div">The page the sheet covers.</Card>
+            <Card as="div">The page under the menu.</Card>
           </div>
         </div>
       </main>
@@ -808,20 +765,33 @@ function PhoneSheetExample() {
   );
 }
 
-export const PhoneMoreSheet: Story = {
-  name: "phone — the More sheet as a list",
+export const PhoneMoreMenu: Story = {
+  name: "phone — the More menu above the bar",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: "More" }));
+    const close = await canvas.findByRole("button", { name: "Close" });
+    await expect(close).toHaveAttribute("aria-expanded", "true");
+    const menu = canvasElement.querySelector(".railmenu");
+    const bar = canvasElement.querySelector(".rail > .navlevel .navitem");
+    if (!(menu instanceof HTMLElement) || !(bar instanceof HTMLElement)) {
+      throw new Error("the open menu or the bar under it is missing");
+    }
+    await expect(menu.getBoundingClientRect().bottom).toBeLessThan(
+      bar.getBoundingClientRect().top,
+    );
+    await expect(
+      within(menu).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("aria-current", "page");
   },
   render: () => {
     stubEntitlement(WITHIN_CAP);
     return (
       <StoryProviders>
         <SeedInstallation>
-          <PhoneSheetExample />
+          <PhoneMenuExample />
         </SeedInstallation>
       </StoryProviders>
     );
@@ -840,7 +810,7 @@ export const PhoneMoreSheet: Story = {
  * the bar rather than for the agent. Its accessible name says the rest.
  *
  * The Worklist is what the bar gave up for that cell. It is a tap away in the
- * sheet, which is the same distance the other six destinations already are.
+ * More menu, which is the same distance the other destinations already are.
  *
  * Position is load-bearing twice over. It is the CENTRE because the agent
  * belongs to the whole session rather than to any destination, so it stands
@@ -900,7 +870,7 @@ export const PhoneBar: Story = {
  * is the measured middle of the well, so it still lands if the bar's cells ever
  * stop being even.
  *
- * There is no scrim. This is a popover, not the More sheet: the page behind it
+ * There is no scrim. This is a popover, not the More menu: the page behind it
  * stays live and readable, an outside tap or Escape closes it, and focus goes
  * back to the orb. A dimmed page would claim the reader has to answer something
  * before carrying on, and there is nothing here to answer.

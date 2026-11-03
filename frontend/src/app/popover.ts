@@ -11,7 +11,7 @@ import { coveredByDialog } from "../design-system/dialogfocus";
  *
  * One implementation, every popover in the chrome — the strip's account menu and
  * the theme flyout inside it, the agent dock at the foot of the content column,
- * and the phone sheet: a second copy of this is how two popovers in the same
+ * and the phone menu: a second copy of this is how two popovers in the same
  * product end up dismissing differently.
  */
 export function usePopoverDismiss(
@@ -34,8 +34,8 @@ export function usePopoverDismiss(
       // The inner layer announces itself through a trigger that has EXPANDED a
       // region it NAMES, and both halves are load-bearing. `aria-expanded`
       // alone also matches the panel's own opener when that opener lives inside
-      // it — the phone sheet's "More" is in the bar the sheet grows out of, so
-      // a guard reading only the flag stood the sheet down against itself and
+      // it — the phone menu's "More" is in the bar the menu grows out of, so
+      // a guard reading only the flag stood the menu down against itself and
       // Escape stopped closing it at all. And what KIND of layer a trigger
       // opens (a menu, a group of radios, a listbox) is the inner surface's
       // business, so reading `aria-haspopup` stood down for one shape only.
@@ -48,7 +48,7 @@ export function usePopoverDismiss(
     };
     // OUTSIDE clicks only. A listener that fired for every click dismissed the
     // popover when the click was inside it — which, for a popover as large as
-    // the phone sheet, meant its own account block closed the sheet out from
+    // the phone menu, meant its own account block closed the menu out from
     // under the row being pressed. A click that should BOTH act and close (a
     // destination, a settings link) says so at the call site.
     const onClick = (event: globalThis.MouseEvent) => {

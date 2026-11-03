@@ -525,13 +525,6 @@
        the inside rather than as a grey disc with a marble in it. */
     --coreHalo: 0.4;
   }
-  /* The sheet is destinations and nothing else. The agent is a cell of the BAR,
-     and the bar is not on screen while the sheet is: a row for it in a list of
-     ten places would be the agent filed as an eleventh place to go, which is
-     what taking it out of that list was for. */
-  .rail.sheetopen .arblock {
-    display: none;
-  }
 }
 
 /* ===== The panel =====
@@ -574,9 +567,9 @@
   backdrop-filter: blur(20px);
   /* The one shadow a layer over the page may cast (DESIGN.md §5). */
   box-shadow: var(--shadow-pop);
-  /* Over the page, under the phone sheet and its scrim (29/30, shell.css): a
+  /* Over the page, under the phone menu and its scrim (29/30, shell.css): a
      panel that stayed lit over a dimmed page would read as the one thing still
-     live while the sheet was open. */
+     live while the menu was open. */
   z-index: 28;
   animation: arpanelin 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
