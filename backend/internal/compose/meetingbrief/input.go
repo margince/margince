@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -196,6 +197,14 @@ type ActIn struct {
 	At        time.Time
 	// DateOnly says At is a day entry's anchor (Input.MarshalJSON).
 	DateOnly bool `json:"-"`
+	// WroteOurSide and SideKnown are activities.WroteItOurSide for this row,
+	// which answers who wrote it where the voice names a side.
+	//
+	// Kept out of the prompt, which is told the direction. These are for the
+	// sentence Go writes, where the transport alone credits a colleague's
+	// inbound mail to the counterpart.
+	WroteOurSide bool `json:"-"`
+	SideKnown    bool `json:"-"`
 }
 
 // FromMeeting folds the gated meeting read into the brief's input.
@@ -318,6 +327,7 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 		if activity.Direction != nil {
 			folded.Direction = string(*activity.Direction)
 		}
+		folded.WroteOurSide, folded.SideKnown = activities.WroteItOurSide(activity)
 		in.Recent = append(in.Recent, folded)
 	}
 }

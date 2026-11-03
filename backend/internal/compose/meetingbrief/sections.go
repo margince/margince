@@ -356,13 +356,15 @@ const dealStateCap = 5
 
 func (said briefCopy) lastConversationLine(last ActIn) string {
 	subject := said.subjectOrKind(last)
-	switch last.Direction {
-	case "inbound":
-		return fmt.Sprintf(said.Say(sectionWords.TheyWrote), subject)
-	case "outbound":
+	// The voice rather than the transport: a colleague's mail arrives inbound,
+	// and "they wrote" would hand the counterpart a message we sent.
+	switch {
+	case !last.SideKnown:
+		return fmt.Sprintf(said.Say(sectionWords.LastCaptured), subject)
+	case last.WroteOurSide:
 		return fmt.Sprintf(said.Say(sectionWords.WeWrote), subject)
 	default:
-		return fmt.Sprintf(said.Say(sectionWords.LastCaptured), subject)
+		return fmt.Sprintf(said.Say(sectionWords.TheyWrote), subject)
 	}
 }
 
