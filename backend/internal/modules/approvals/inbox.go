@@ -181,13 +181,20 @@ type ListInput struct {
 	// than a caller-supplied decider id — List binds the acting user
 	// itself, so nobody reads another contact's failures by naming them.
 	FailedForDecider bool
-	Limit            int
+	// Actionable, with Status pending, leaves out a row whose expiry has
+	// passed but whose stored status has not yet been written. It is the
+	// read of "work to decide", and the exact pending count judges the same.
+	Actionable bool
+	Limit      int
 	// Cursor continues a previous page: the opaque keyset token that page
 	// reported as next_cursor. Empty starts at the newest row.
 	Cursor string
 	// failedDecider is FailedForDecider resolved to the acting user;
 	// set by List from the principal, never by a caller.
 	failedDecider *ids.UUID
+	// actionableAt is the service clock reading Actionable resolved, so every
+	// batch of one read judges expiry at the same instant.
+	actionableAt *time.Time
 }
 
 // targeted reports whether the read is scoped to one record.
@@ -221,6 +228,10 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 	// binder clamps before it gets here.
 	if in.Limit <= 0 || in.Limit > inboxBatch {
 		in.Limit = 50
+	}
+	if in.Actionable && in.Status != nil && *in.Status == statusPending {
+		now := s.now()
+		in.actionableAt = &now
 	}
 	start, err := startOf(in.Cursor)
 	if err != nil {
@@ -289,42 +300,6 @@ func walkInbox(ctx context.Context, tx pgx.Tx, in ListInput, start *keysetStart,
 		}
 		from = after(batch[len(batch)-1])
 	}
-}
-
-// inboxProbe is the eligibility every inbox read asks of a batch, by position.
-// A row is eligible when it is in the requested scope and p could decide it now.
-func inboxProbe(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput) batchProbe {
-	return func(batch []row) ([]bool, error) {
-		return askWhere(batch, func(a row) bool { return requestedInScope(a, p.UserID, in) },
-			func(rows []row) ([]bool, error) { return decidableRows(ctx, tx, p, rows) })
-	}
-}
-
-// batchProbe answers a question about each row of a batch, by position.
-type batchProbe func([]row) ([]bool, error)
-
-// askWhere asks probe about the rows keep admits and refuses the rest, so a
-// row an in-memory test refuses never reaches a statement.
-func askWhere(batch []row, keep func(row) bool, probe batchProbe) ([]bool, error) {
-	var kept []row
-	var at []int
-	for i, a := range batch {
-		if keep(a) {
-			kept, at = append(kept, a), append(at, i)
-		}
-	}
-	out := make([]bool, len(batch))
-	if len(kept) == 0 {
-		return out, nil
-	}
-	answers, err := probe(kept)
-	if err != nil {
-		return nil, err
-	}
-	for j, i := range at {
-		out[i] = answers[j]
-	}
-	return out, nil
 }
 
 // admitInboxRead admits a human-backed caller and binds their mutes, so every

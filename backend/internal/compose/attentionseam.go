@@ -52,7 +52,7 @@ func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQ
 }
 
 func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
-	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
+	return approvals.ListInput{Status: &in.Status, Limit: in.Limit, Actionable: true, RequestedForReader: in.RequestedForReader, RequestedForOwners: in.RequestedForOwners, OnlyUnassigned: in.OnlyUnassigned}
 }
 
 // CountPending is the engine's exact count, under the scope the lane reads.
