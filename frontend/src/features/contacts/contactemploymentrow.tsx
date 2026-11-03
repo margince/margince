@@ -16,13 +16,8 @@ import { navigate } from "../../lib/router";
 import type { Employment, EmploymentActions } from "./contactemployers";
 import { stillHeld } from "./employmentcurrency";
 
-// One employment edge: the company it names, the role at that company (inline-
-// editable — this is the ONE place a per-company title is corrected;
-// `contact.title` is a different field, edited in Details above), the dates,
-// and the row's own verbs folded behind an OverflowMenu — this row already
-// carries a focusable inline-edit control, so the verbs stay out of the way
-// until the row is hovered or that control (or the trigger itself) has
-// focus, the same reveal the company page's task rows use for theirs.
+// One employment edge: its company, the role there, the dates and a verb menu.
+// The only place a per-company title is corrected; `contact.title` is another.
 export function EmploymentRow({
   employment,
   canEdit,

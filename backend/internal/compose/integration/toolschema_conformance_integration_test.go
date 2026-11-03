@@ -53,11 +53,14 @@ import (
 // and the same document an agent gets once a human has released the call. So the
 // sweep covers the confirm-first tools too.
 //
-// What it still cannot reach is named rather than implied: the tools whose
-// handler needs a seam this lane does not stand up — a live calendar
-// (book_meeting), an outbound mail or channel provider (send_email,
-// send_message), a crawl runner or model path (enrich), a drafting brain
-// (draft_follow_ups_for). Their declared schemas are checked by derivation and
+// What it still cannot reach is named rather than implied. These tools need a
+// seam this lane does not stand up:
+//   - a live calendar (invite_meeting);
+//   - an outbound mail or channel provider (send_email, send_message);
+//   - a crawl runner or model path (enrich);
+//   - a drafting brain (draft_follow_ups_for).
+//
+// Their declared schemas are checked by derivation and
 // by the encoder-agreement test in the agents package, but not against a live
 // handler.
 func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
@@ -430,7 +433,6 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 		"TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt (choicecards_mcp_integration_test.go) calls it through the served registry and holds its answer to its schema, which this sweep's census cannot read from here",
 	"set_up_partner": "waits for a human even when a passport acts as its user, so it always answers with a staged approval; " +
 		"TestAnApprovedAssistantSetUpStartsAProgramWithNoTier (partnersetuptoolroutes_integration_test.go) drives it through approval and the approved retry",
-	"book_meeting":         "needs a live calendar provider",
 	"invite_meeting":       "needs a writable calendar registry, working hours and a booking vault; this lane composes an empty SendPath",
 	"send_email":           "needs an outbound mail provider",
 	"send_company_email":   "needs an outbound mail provider, and a send-capable mailbox for its pre-flight",

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -87,8 +87,18 @@ Browser and agent invite writes use the same activities store and the same provi
 time, subject, place and the full event text that goes outside. The delivery worker checks the
 host's live rights again, and the send right of any passport the request came from.
 
-So older callers keep working, `book_meeting` and `/bookings` stay record-only: they send no
-invite. `/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
+`/bookings` uses the same engine. The guest is the first contact link, else the first lead link,
+else a contact that one of its `attendee_emails` names. Every other address joins the same event.
+A booking with no guest is refused with `invitee_required`. To record a meeting without a guest,
+log it. Agents book with `invite_meeting` only.
+
+Each further address is matched under the host's row scope. A contact comes first, then a live
+colleague, then a lead. An address that matches none of them counts as typed by the host. The
+provider save matches it again. It asks the consent gate only about addresses a contact or lead
+holds. A colleague and an address no record holds get the invite without that check, and the
+approval preview marks the second kind.
+
+`/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
 says so. No email or ICS file stands in when a provider write fails. So a failed write never turns
 into a claim that the meeting is confirmed.
 

@@ -98,6 +98,7 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/mergeprimaryrepair.go:mergeDroppedHeir":          "the merge-dropped-primary data task asks, as the system principal, whether a contact's archived primary sat at a company merged into its kept employer. Only merged_into_id is compared; no company column leaves the query, and the edge id goes to the audited promotion",
 	"internal/compose/company360/viewbaseline.go:keyVisitsSQL":                  "the visit-mark keying data task, run by KeyVisitsTx behind auth.RequireSystem: `company` appears only in an EXISTS that decides whether a mark's record is gone. It answers user_record_view ids and nothing of a company",
 	"internal/modules/contacts/geocodecopy.go:CopyCompanyPointsTx":              "the same data task's batch: it reads the company's address and old point to copy them onto the side row, under auth.RequireSystem (foldStep). It answers ids and a count; no company column reaches any caller",
 	"internal/modules/contacts/geocodecopy.go:uncopiedCompanyPoints":            "the data task that moves each company's point onto the side row, under the system principal behind auth.RequireSystem (foldStep). It reads a company's address and its old point columns to copy them; no company column reaches any caller",
