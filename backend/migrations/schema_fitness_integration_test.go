@@ -384,7 +384,6 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"company_profile_field.company_id":     "server-derived: the coldstart accept executor resolves the company from the staged source URL, never from a request body",
 	"company_fact.company_id":              "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
 	"company_fact_revision.company_id":     "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
-	"deal_product.deal_id":                 "gated: auth.EnsureWritableLive in ReplaceDealProducts and auth.EnsureVisible in ListDealProducts; the sync from an accepted offer runs under the deal row lock the amount sync took",
 	"offer.deal_id":                        "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
 	"deal_product.deal_id":                 "gated: auth.EnsureWritableLive on the deal in deals.Store.ReplaceDealProducts, the one caller-supplied door; syncDealProductsFromOffer runs inside the offer accept, whose deal the accept already probed",
 	"offer.buyer_company_id":               "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
