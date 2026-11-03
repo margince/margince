@@ -46,6 +46,9 @@ var (
 	taxCategories = []string{"standard", "reduced", "exempt"}
 )
 
+// KnownCountry answers whether a code is an assigned country.
+type KnownCountry func(code string) (bool, error)
+
 // TaxRate is one recorded rate.
 type TaxRate = crmcontracts.TaxRate
 
@@ -109,6 +112,15 @@ func (s *Store) RecordTaxRate(ctx context.Context, in RecordTaxRateInput) (TaxRa
 	in, err := normalizeTaxRate(in)
 	if err != nil {
 		return TaxRate{}, 0, err
+	}
+	// A rate is never removed, so a country that does not exist must never
+	// reach the sheet.
+	known, err := s.installation.KnownCountry(in.Country)
+	if err != nil {
+		return TaxRate{}, 0, err
+	}
+	if !known {
+		return TaxRate{}, 0, httperr.Validation("country", "invalid_country", "country is not an assigned ISO 3166-1 alpha-2 code")
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {

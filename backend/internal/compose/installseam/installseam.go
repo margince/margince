@@ -38,7 +38,10 @@ func Deals() deals.Installation {
 		IssuerLegalName: contacts.ConfirmedIssuerLegalName,
 		BaseCurrency:    identity.BaseCurrencyOf,
 		Country:         installationCountry,
-		Timezone:        identity.TimezoneOf,
+		KnownCountry: func(code string) (bool, error) {
+			return contacts.IsAssignedCountry(code), nil
+		},
+		Timezone: identity.TimezoneOf,
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,

@@ -133,6 +133,10 @@ func TestTheSheetOnlyGrows(t *testing.T) {
 	if _, _, err := record(desk, e, "de", "standard", "20", later); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("a second rate for the same day answered %v, want a conflict", err)
 	}
+	// The sheet keeps every rate for good, so a code no country has is refused.
+	if _, _, err := record(desk, e, "zz", "standard", "19", later); err == nil {
+		t.Error("a rate for zz, which no country has, was recorded")
+	}
 	if err := e.WsExecErr(t, `UPDATE tax_rate SET rate = 1`); err == nil {
 		t.Error("the table changed a recorded rate")
 	}
