@@ -9,10 +9,10 @@ import { UsersAdminCard } from "./users-admin";
 import {
   backend,
   jsonResponse,
+  openRoleDialog,
   ROSTER,
   render,
   roleControl,
-  roleSelect,
   roleShown,
   rowFor,
 } from "./users-admin.testkit";
@@ -44,7 +44,12 @@ describe("UsersAdminCard role picker", () => {
     expect(roleShown(rowFor("Nora None"))).toBe(en["field.unset"]);
     // "Not set" is never an entry. The list offers the assignable roles in the
     // server's key order.
-    await user.click(roleSelect(rowFor("Nora None"), "nora none"));
+    const { chooser } = await openRoleDialog(
+      user,
+      rowFor("Nora None"),
+      "nora none",
+    );
+    await user.click(chooser);
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
@@ -121,7 +126,9 @@ describe("UsersAdminCard role picker", () => {
     expect(within(nora).getByText(en["users.rolesReplace"])).toBeTruthy();
     expect(within(nora).getByRole("status").textContent).toBe("");
 
-    await user.click(roleSelect(nora, "Nora None"));
+    const { chooser } = await openRoleDialog(user, nora, "Nora None");
+    expect(chooser.textContent).toMatch(/^Team lead, Ops/);
+    await user.click(chooser);
     const set = await screen.findByRole("option", { name: /^Team lead, Ops/ });
     expect(set.getAttribute("aria-selected")).toBe("true");
     expect(roleControl(nora, "Nora None")?.textContent).toMatch(/Team lead/);
@@ -138,7 +145,10 @@ describe("UsersAdminCard role picker", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "Team lead");
+    const { chooser, save } = await openRoleDialog(user, active, "ada active");
+    await pickOption(user, chooser, "Team lead");
+    expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+    await user.click(save);
 
     await waitFor(() =>
       expect(
@@ -208,11 +218,14 @@ describe("UsersAdminCard role picker", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "User");
+    const { chooser, save } = await openRoleDialog(user, active, "ada active");
+    await pickOption(user, chooser, "User");
+    await user.click(save);
     await waitFor(() => expect(patches).toHaveLength(1));
 
     // The SAME target again — the retry the operator would make.
-    await pickOption(user, roleSelect(active, "ada active"), "User");
+    await pickOption(user, chooser, "User");
+    await user.click(save);
     await waitFor(() => expect(patches).toHaveLength(2));
   });
 
@@ -293,20 +306,23 @@ describe("UsersAdminCard role picker", () => {
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
     const active = rowFor("Ada Active");
-    await pickOption(user, roleSelect(active, "ada active"), "Team lead");
+    const { dialog, chooser, save } = await openRoleDialog(
+      user,
+      active,
+      "ada active",
+    );
+    await pickOption(user, chooser, "Team lead");
+    await user.click(save);
     await waitFor(() => expect(rosterReads).toBe(2));
 
-    // Mid-flight: the row reads the role being applied and stays locked. "Admin"
-    // here would be the stale cache showing through.
-    expect(roleShown(active)).toBe("Team lead");
-    expect(roleSelect(active, "ada active").disabled).toBe(true);
+    // Mid-flight: the dialog holds the role being applied and stays locked. A
+    // closed dialog here would show the stale cache's "Admin" through the row.
+    expect(dialog.isConnected).toBe(true);
+    expect(chooser.textContent).toBe("Team lead");
+    expect(chooser).toHaveProperty("disabled", true);
 
     releaseRoster();
-    await waitFor(() =>
-      expect(roleSelect(rowFor("Ada Active"), "ada active").disabled).toBe(
-        false,
-      ),
-    );
+    await waitFor(() => expect(dialog.isConnected).toBe(false));
     expect(roleShown(rowFor("Ada Active"))).toBe("Team lead");
   });
 
@@ -356,7 +372,12 @@ describe("UsersAdminCard role picker", () => {
     expect(roleShown(ada)).toBe("Admin");
     expect(within(ada).getByText(en["users.role.outside"])).toBeTruthy();
 
-    await user.click(roleSelect(rowFor("Nora None"), "nora none"));
+    const { chooser } = await openRoleDialog(
+      user,
+      rowFor("Nora None"),
+      "nora none",
+    );
+    await user.click(chooser);
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);

@@ -339,6 +339,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
+    "sendPermission.appliesToAndMore_one",
+    "sendPermission.appliesToAndMore_other",
+    "sendPermission.appliesToSome_one",
+    "sendPermission.appliesToSome_other",
+    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",
@@ -519,7 +524,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceSelectedHint",
     "compose.colleagueMailbox_one",
     "compose.colleagueMailbox_other",
-    "compose.consentBlocked",
     "compose.emptyRecipients",
     "compose.multiRecipientWarning",
     "compose.sharedUnsubscribeToken",
@@ -662,6 +666,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "privacy.correctionNote",
     "privacy.correctionsSub",
     "project.stakeholders.empty",
+    // "người chịu trách nhiệm" is the deal's owner, a colleague, as deal.ownerKeep says it.
+    "review.deliveryFailed_one",
+    "review.deliveryFailed_other",
     "role.rep",
     "room.card.lastSeen",
     // "người mua" — the BUYER who walks into the room: a human being from

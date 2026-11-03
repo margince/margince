@@ -232,7 +232,7 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	return &consent.SendRefusedError{
 		ReviewID: review.ID, Cause: pending.cause,
 		// Decided here, because this is where the principal is known.
-		Actions: actions, Overrulable: overrulable,
+		Actions: actions, Overrulable: overrulable, Refusals: consent.BlockingRefusals(pending.set),
 	}
 }
 

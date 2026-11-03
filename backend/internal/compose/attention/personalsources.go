@@ -107,6 +107,14 @@ func (s *Service) forReader() *Service {
 	return &narrowed
 }
 
+// withReadersSuggestions copies the shared service so its suggestion lane reads
+// only the acting reader's companies, as GET /attention answers for the reader.
+func (s *Service) withReadersSuggestions() *Service {
+	narrowed := *s
+	narrowed.suggestionsOfReader = true
+	return &narrowed
+}
+
 // forUnowned isolates the unassigned scope from concurrent requests.
 func (s *Service) forUnowned() *Service {
 	narrowed := *s

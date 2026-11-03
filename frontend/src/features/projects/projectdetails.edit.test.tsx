@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { project, project360 } from "../../testing/projects.fixtures";
@@ -43,9 +49,12 @@ it("saves a changed description from the left column as that field alone", async
     await screen.findByRole("button", { name: /Show \d+ empty fields?/ }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Change Description" }),
+    await screen.findByRole("button", { name: "Change Description Old words" }),
   );
-  const description = screen.getByRole("textbox", { name: "Description" });
+  const dialog = await screen.findByRole("dialog", { name: "Description" });
+  const description = within(dialog).getByRole("textbox", {
+    name: "Description",
+  });
   await user.clear(description);
   await user.type(description, "New words");
   await user.keyboard("{Control>}{Enter}{/Control}");
@@ -56,4 +65,5 @@ it("offers no change to a reader without the update grant", async () => {
   mount(["read"]);
   await screen.findByText("Owner");
   expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
+  expect(document.querySelector(".editable-value")).toBeNull();
 });
