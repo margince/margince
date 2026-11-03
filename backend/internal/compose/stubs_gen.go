@@ -1487,6 +1487,10 @@ func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id cr
 	httperr.NotImplemented(w, r, "LiftSuppression")
 }
 
+func (stubs) ListContactConversationSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListContactConversationSuggestions")
+}
+
 func (stubs) DraftContactEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftContactEmail")
 }
@@ -2423,6 +2427,10 @@ func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcont
 	httperr.NotImplemented(w, r, "UpdateLead")
 }
 
+func (stubs) ListLeadConversationSuggestions(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListLeadConversationSuggestions")
+}
+
 func (stubs) DemoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.DemoteLeadParams) {
 	httperr.NotImplemented(w, r, "DemoteLead")
 }
@@ -2455,7 +2463,7 @@ func (stubs) PromoteLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "PromoteLead")
 }
 
-func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+func (stubs) PreviewLeadPromotion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.PreviewLeadPromotionParams) {
 	httperr.NotImplemented(w, r, "PreviewLeadPromotion")
 }
 

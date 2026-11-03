@@ -24,7 +24,7 @@ func at(daysAgo float64) *time.Time {
 // ago, 12 interactions in 90d, 7 inbound / 5 outbound → 47, moderate.
 func TestStrengthReproducesTheWorkedExample(t *testing.T) {
 	r := RelationshipStrength{
-		LastInteraction:     at(5),
+		LastInteraction: at(5), LastEngaged: at(5),
 		InteractionCount90d: 12,
 		Inbound90d:          7,
 		Outbound90d:         5,
@@ -39,7 +39,7 @@ func TestStrengthReproducesTheWorkedExample(t *testing.T) {
 // term (P6 factor-decomposition acceptance).
 func TestStrengthDecomposesToItsFactors(t *testing.T) {
 	r := RelationshipStrength{
-		LastInteraction:     at(12),
+		LastInteraction: at(12), LastEngaged: at(12),
 		InteractionCount90d: 8,
 		Inbound90d:          2,
 		Outbound90d:         6,
@@ -54,7 +54,7 @@ func TestStrengthDecomposesToItsFactors(t *testing.T) {
 // Fixed inputs + a fixed clock → a stable value; advancing the clock
 // decays ONLY recency, on the 2^(−t/30d) primitive.
 func TestStrengthDecaysWithTheClock(t *testing.T) {
-	base := RelationshipStrength{LastInteraction: at(0), InteractionCount90d: 12, Inbound90d: 6, Outbound90d: 6}
+	base := RelationshipStrength{LastInteraction: at(0), LastEngaged: at(0), InteractionCount90d: 12, Inbound90d: 6, Outbound90d: 6}
 	fresh := base
 	fresh.finish(fixedNow())
 	aged := base
@@ -80,7 +80,7 @@ func TestStrengthEdgeCases(t *testing.T) {
 	}
 
 	// Purely one-directional: reciprocity sits exactly on the floor.
-	oneWay := RelationshipStrength{LastInteraction: at(1), InteractionCount90d: 10, Inbound90d: 0, Outbound90d: 10}
+	oneWay := RelationshipStrength{LastInteraction: at(1), LastEngaged: at(1), InteractionCount90d: 10, Inbound90d: 0, Outbound90d: 10}
 	oneWay.finish(fixedNow())
 	if oneWay.Reciprocity != relstrength.ReciprocityFloor {
 		t.Fatalf("one-directional reciprocity = %f, want the %v floor", oneWay.Reciprocity, relstrength.ReciprocityFloor)
@@ -88,7 +88,7 @@ func TestStrengthEdgeCases(t *testing.T) {
 
 	// A single interaction today: strong recency, tiny frequency — one
 	// email is not a relationship.
-	single := RelationshipStrength{LastInteraction: at(0), InteractionCount90d: 1, Inbound90d: 1, Outbound90d: 0}
+	single := RelationshipStrength{LastInteraction: at(0), LastEngaged: at(0), InteractionCount90d: 1, Inbound90d: 1, Outbound90d: 0}
 	single.finish(fixedNow())
 	if single.Strength >= 25 {
 		t.Fatalf("a single interaction scored %d — must stay weak", single.Strength)

@@ -1,0 +1,74 @@
+name: meeting_plan_serves_the_meetings_deal
+task: summarize
+site: meeting_plan
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  subject: Discovery call
+  company: Asia Flight Services
+  attendee: Rainer Vogt
+  deal: Hangar booking pilot
+  other_deals:
+    - label: telematics
+      name: Fleet telematics
+      state: lost
+  # Most of the mail is about a deal the account already said no to. The one
+  # message on the open deal is short. A plan that weighs by volume writes the
+  # objective about the lost deal.
+  messages:
+    - label: telematics_scope
+      days_ago: 120
+      direction: inbound
+      deal: telematics
+      subject: Fleet telematics scope
+      body: >
+        We want telematics on every aircraft tug and baggage tractor by spring,
+        with live position and fuel data on one map for the ramp supervisors.
+    - label: telematics_pricing
+      days_ago: 100
+      direction: inbound
+      deal: telematics
+      subject: Telematics pricing
+      body: >
+        The per-vehicle price for telematics is above what finance approved.
+        Can you do anything on the hardware cost or the contract length?
+    - label: telematics_decision
+      days_ago: 80
+      direction: inbound
+      deal: telematics
+      subject: Telematics decision
+      body: >
+        We have decided not to go ahead with telematics this year. The budget
+        went to the new de-icing equipment instead.
+    - label: hangar_question
+      days_ago: 6
+      direction: inbound
+      deal: this
+      subject: Hangar slots
+      body: >
+        Could your hangar booking module replace the shared spreadsheet our
+        maintenance planners use for slots?
+expect:
+  outcome: accepted
+  # A right plan aims the objective and the opening at the open deal: it
+  # cites the hangar question or the deal itself, and says "hangar booking".
+  # A plan whose objective restates telematics has written the meeting about
+  # a deal the account already declined.
+  answer:
+    cites_label: hangar_question
+    names_token: hangar booking
+    objective_cites_any: [hangar_question, this]
+    objective_avoids: telematics
+  bands:
+    # The same bar as the thread scenario: the floor stands on its own, so a
+    # model must reliably pick the meeting's deal to be worth the call.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the plan's objective and opening are about the open hangar
+    booking deal this meeting is for, rather than the telematics deal the
+    account declined. Conversations about telematics may appear as background,
+    and if named, the telematics deal must be named as lost, never as a live
+    opportunity. A plan that sets out to revive telematics has prepared the
+    wrong meeting.

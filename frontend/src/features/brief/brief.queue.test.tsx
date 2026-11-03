@@ -228,7 +228,7 @@ it("opens a meeting on what it asks, with the row's verbs", async () => {
   ).toBeTruthy();
   expect(
     within(details).getByRole("button", {
-      name: en["worklist.verb.meetingUpdateFor"].replace(
+      name: en["worklist.verb.meetingAddNotesFor"].replace(
         "{subject}",
         "Discovery call with Turbinenbau",
       ),

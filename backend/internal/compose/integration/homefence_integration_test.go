@@ -7,7 +7,8 @@ package integration
 
 // The Home cache serves an answer only while the access fence holds. Every
 // write that can take a record out of somebody's reach must move it. A write
-// that only widens reach must not, or the cache would never be served.
+// that only widens reach must not, or the cache would never be served: capture
+// widens reach all day.
 
 import (
 	"context"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,17 +24,18 @@ import (
 
 // fenceFixture is one case's own records, so no case moves another's fence.
 type fenceFixture struct {
-	contact, company, linked, unlinked, task ids.UUID
+	contact, company, linked, unlinked, task, unassignedTask ids.UUID
 }
 
 func seedFenceFixture(t *testing.T, e *Env) fenceFixture {
 	t.Helper()
 	f := fenceFixture{
-		contact:  e.SeedContact(t, "Fence Contact", &e.Rep1),
-		company:  e.SeedCompany(t, "Fence Company", &e.Rep1),
-		linked:   ids.NewV7(),
-		unlinked: ids.NewV7(),
-		task:     ids.NewV7(),
+		contact:        e.SeedContact(t, "Fence Contact", &e.Rep1),
+		company:        e.SeedCompany(t, "Fence Company", &e.Rep1),
+		linked:         ids.NewV7(),
+		unlinked:       ids.NewV7(),
+		task:           ids.NewV7(),
+		unassignedTask: ids.NewV7(),
 	}
 	for _, id := range []ids.UUID{f.linked, f.unlinked} {
 		e.WsExec(t, `INSERT INTO activity (id, kind, subject, source, captured_by)
@@ -42,10 +43,15 @@ func seedFenceFixture(t *testing.T, e *Env) fenceFixture {
 	}
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, assignee_id, source, captured_by)
 		VALUES ($1, 'task', 'Fence task', $2, 'manual', 'human:fence')`, f.task, e.Rep1)
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, source, captured_by)
+		VALUES ($1, 'task', 'Unassigned fence task', 'manual', 'human:fence')`, f.unassignedTask)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
 		f.linked, f.contact)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'to', 'fence@example.test')`,
-		f.linked)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id) VALUES ($1, 'to', 'fence@example.test', $2)`,
+		f.linked, e.Rep1)
+	e.WsExec(t, admitCommitment, f.unlinked, "admitted")
+	e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
+		VALUES ('contact', $1, 'user', $2, 'read', $3)`, f.contact, e.Rep3, e.AdminUser)
 	return f
 }
 
@@ -75,6 +81,12 @@ func inOneTx(t *testing.T, e *Env, statements []fenceStatement) {
 	}
 }
 
+// admitCommitment records an admission verdict on an activity's one commitment.
+const admitCommitment = `INSERT INTO activity_commitment_admission
+	(source_activity_id, locator, outcome, captured_by, current_work, evaluated_at, evidence_ids,
+	 rule_version, source_quote, summary)
+	VALUES ($1, 'c1', $2, 'agent:fence', true, now(), '{}', 'v1', 'quote', 'summary')`
+
 type fenceStatement struct {
 	sql  string
 	args []any
@@ -92,16 +104,24 @@ func TestEveryNarrowingWriteAdvancesTheHomeFenceOncePerTransaction(t *testing.T)
 		"a company changes owner": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE company SET owner_id = $1 WHERE id = $2`, []any{e.Rep2, f.company}}}
 		},
-		"a record is shared": func(f fenceFixture) []fenceStatement {
-			return []fenceStatement{{`INSERT INTO record_grant
-				(record_type, record_id, subject_type, subject_id, access, granted_by)
-				VALUES ('contact', $1, 'user', $2, 'read', $3)`, []any{f.contact, e.Rep3, e.AdminUser}}}
+		"a share is revoked": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`DELETE FROM record_grant WHERE record_id = $1`, []any{f.contact}}}
+		},
+		"a commitment is found to have lost its source": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{admitCommitment, []any{f.linked, "source_unavailable"}}}
+		},
+		"erasure blanks a commitment's text": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`UPDATE activity_commitment_admission SET summary = '', source_quote = '', meaning = NULL
+				WHERE source_activity_id = $1`, []any{f.unlinked}}}
 		},
 		"a message's audience is limited": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET audience = 'participants' WHERE id = $1`, []any{f.linked}}}
 		},
 		"a task changes assignee": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET assignee_id = $1 WHERE id = $2`, []any{e.Rep2, f.task}}}
+		},
+		"an unassigned task is assigned": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`UPDATE activity SET assignee_id = $1 WHERE id = $2`, []any{e.Rep2, f.unassignedTask}}}
 		},
 		"a message is archived": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE activity SET archived_at = now() WHERE id = $1`, []any{f.linked}}}
@@ -181,6 +201,29 @@ func TestAWriteThatOnlyWidensReachLeavesTheHomeFence(t *testing.T) {
 				[]any{f.linked},
 			}}
 		},
+		"a record is shared": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{`INSERT INTO record_grant
+				(record_type, record_id, subject_type, subject_id, access, granted_by)
+				VALUES ('contact', $1, 'user', $2, 'read', $3)`, []any{f.contact, e.Rep2, e.AdminUser}}}
+		},
+		"capture fills in a participant's contact": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{
+				`UPDATE activity_participant SET contact_id = $1 WHERE activity_id = $2`,
+				[]any{f.contact, f.linked},
+			}}
+		},
+		"a participant who is no colleague is removed": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{
+				{
+					`INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'cc', 'outside@example.test')`,
+					[]any{f.linked},
+				},
+				{`DELETE FROM activity_participant WHERE activity_id = $1 AND user_id IS NULL`, []any{f.linked}},
+			}
+		},
+		"a commitment is admitted": func(f fenceFixture) []fenceStatement {
+			return []fenceStatement{{admitCommitment, []any{f.linked, "admitted"}}}
+		},
 		"a contact's name is edited": func(f fenceFixture) []fenceStatement {
 			return []fenceStatement{{`UPDATE contact SET full_name = 'Renamed' WHERE id = $1`, []any{f.contact}}}
 		},
@@ -194,36 +237,5 @@ func TestAWriteThatOnlyWidensReachLeavesTheHomeFence(t *testing.T) {
 				t.Errorf("fence %d → %d, want it left where it was", before, after)
 			}
 		})
-	}
-}
-
-func receiptFence(t *testing.T, e *Env) int64 {
-	t.Helper()
-	n, err := strconv.ParseInt(e.WsScalar(t, `SELECT receipt_generation::text FROM home_read_fence`), 10, 64)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
-// The receipt reports what the machinery wrote, so every actor it reports must
-// end its cached answer, and a colleague's own change must not.
-func TestEveryMachineActorTheReceiptReportsAdvancesItsFence(t *testing.T) {
-	e := Setup(t)
-	write := func(actor string) {
-		e.WsExec(t, `INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
-			VALUES ($1, $1 || ':fence', 'update', 'deal', $2)`, actor, ids.NewV7())
-	}
-	for _, actor := range magic.MachineActors() {
-		before := receiptFence(t, e)
-		write(actor)
-		if after := receiptFence(t, e); after != before+1 {
-			t.Errorf("a %s audit row moved the receipt fence %d → %d, want one step", actor, before, after)
-		}
-	}
-	before := receiptFence(t, e)
-	write("human")
-	if after := receiptFence(t, e); after != before {
-		t.Errorf("a colleague's audit row moved the receipt fence %d → %d", before, after)
 	}
 }

@@ -446,6 +446,22 @@ type NextStepsCase = Readonly<{
   routes?: RouteMap;
 }>;
 
+// The target the server names for these links: its one contact, refused the
+// way the server refuses it.
+function serverTarget(
+  links: { entity_type: string; entity_id: string }[],
+  contact: Record<string, unknown>,
+) {
+  const contacts = links.filter((link) => link.entity_type === "contact");
+  if (contacts.length !== 1) return undefined;
+  const refusal = contact.archived_at
+    ? "archived"
+    : contact.primary_email
+      ? undefined
+      : "no_address";
+  return { entity_type: "contact", entity_id: contacts[0]?.entity_id, refusal };
+}
+
 function stubNextSteps({
   source = { kind: "call", content_state: "available" },
   contact = ALICE,
@@ -466,6 +482,7 @@ function stubNextSteps({
         is_done: isDone,
         source_activity_id: source ? "src-1" : null,
         links,
+        email_target: serverTarget(links, contact),
       }),
     "GET /activities/src-1": () =>
       jsonResponse({
@@ -648,7 +665,7 @@ test("a refused Draft email is said once, after every verb in the row", async ()
 });
 
 test.each([
-  ["no contact", [{ entity_type: "company", entity_id: "co-1" }]],
+  ["no record", []],
   [
     "two contacts",
     [
@@ -731,6 +748,7 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
     source_activity_id: "src-1",
     writable: true,
     links: [{ entity_type: "contact", entity_id: "c-1" }],
+    email_target: { entity_type: "contact", entity_id: "c-1" },
   });
   client.setQueryData(
     ["me"],

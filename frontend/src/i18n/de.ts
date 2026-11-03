@@ -812,6 +812,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt einen Kontakt mit den angezeigten Angaben.",
   "approval.preview.promotionFill":
     "Ergänzt die angezeigten fehlenden Angaben am bestehenden Kontakt. Vorhandener Name, Position und Hauptnummer bleiben erhalten.",
+  "approval.preview.promotionExistingDeal": "Bestehender Deal",
+  "approval.preview.promotionExistingDealEffect":
+    "Fügt den Kontakt als Beteiligten zum angezeigten bestehenden Deal hinzu. Der Lead wird mit diesem Deal verknüpft.",
   "approval.preview.promotionDeal":
     "Eröffnet den angezeigten Deal und fügt den Kontakt als Beteiligten hinzu. Der Lead wird mit diesem Deal verknüpft.",
   "approval.preview.promotionFillIndustry":
@@ -1671,6 +1674,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der gespeicherte Kalender ist nicht verfügbar. Wähle einen anderen Kalender, bevor du Buchungen aktivierst.",
   "scheduling.providerChanged":
     "Dein gespeicherter Kalenderanbieter ist nicht verfügbar. Beim Speichern wird der hier angezeigte verbundene Kalender verwendet.",
+  "scheduling.savedCalendarUnreadable":
+    "Ein gespeicherter Kalender konnte nicht gelesen werden, deshalb werden keine Zeiten angeboten. Wähle deine Kalender hier neu.",
+  "scheduling.calendarUnreadable":
+    "Dein Kalender „{name}“ konnte nicht gelesen werden, deshalb werden keine Zeiten angeboten. Behebe das in deiner Kalender-App oder entferne ihn hier.",
   "scheduling.calendarUnavailable":
     "Der Kalender der organisierenden Person konnte nicht gelesen werden, deshalb wurde nichts angeboten oder geändert. Die organisierende Person kann den in den Termineinstellungen gewählten Kalender prüfen.",
   "scheduling.windowHorizon":
@@ -1812,6 +1819,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "An diesem Tag sind keine Zeiten frei. Wähle einen anderen Tag.",
   "scheduling.noTimesMonth":
     "In diesem Monat sind keine Zeiten frei. Wähle den nächsten Monat.",
+  "conversationSuggestions.title":
+    "In dieser Unterhaltung, noch nicht in Margince",
+  "conversationSuggestions.add": "Als Kontakt hinzufügen",
+  "conversationSuggestions.limited":
+    "Ältere Nachrichten können weitere E-Mail-Adressen enthalten.",
   "contact.meetings.copyBookingLink": "Meinen Buchungslink kopieren",
   "contact.meetings.join": "Mit {app} teilnehmen",
   "contact.meetings.joinCall": "Am Videoanruf teilnehmen",
@@ -5323,7 +5335,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.ladder.byHand": "{label} · manuell",
   "lead.qualify.title": "{name} qualifizieren",
   "lead.qualify.contact": "Kontakt",
-  "lead.qualify.alsoDeal": "Auch einen Deal erstellen",
+  "lead.qualify.withoutDeal": "Ohne Deal qualifizieren",
+  "lead.qualify.dealChoice": "Deal",
+  "lead.qualify.newDeal": "Neuen Deal eröffnen",
+  "lead.qualify.existingDealPicker": "Bestehender Deal",
+  "lead.qualify.unnamedDeal": "Deal ohne Namen",
+  "lead.qualify.existingDeal": "Zu einem bestehenden Deal hinzufügen",
+  "lead.qualify.confirmExisting": "Qualifizieren und zum Deal hinzufügen",
+  "lead.qualify.moreDeals": "Weitere Deals anzeigen",
+  "lead.qualify.dealUnavailable":
+    "Dieser Deal ist nicht mehr verfügbar. Wähle einen anderen Deal oder qualifiziere ohne Deal.",
   "lead.qualify.company": "Unternehmen",
   "lead.qualify.companyUnresolved":
     "Die E-Mail dieses Leads zeigt nicht, welches Unternehmen {company} ist. Darum wird kein Unternehmen von selbst hinzugefügt.",
@@ -6533,6 +6554,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "task.next.draftEmail": "E-Mail entwerfen",
   "task.next.draftIntent": "zu dieser Aufgabe schreiben",
   "task.next.noAddress": "Dieser Kontakt hat keine E-Mail-Adresse.",
+  "task.next.noLeadAddress": "Dieser Lead hat keine E-Mail-Adresse.",
   "today.withheld":
     "Nicht enthalten: {sections}. Du hast keinen Zugriff darauf.",
   "today.source.moments": "Erkenntnisse von Margince",
@@ -6717,6 +6739,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Aus deinem Videokonferenz-Tool einfügen, etwa Teams, Zoom oder Meet. Vorhandene Sprecherangaben bleiben erhalten.",
+  "log.recordOfMeeting": "Ist das der Eintrag zu {subject}, {time}?",
+  "log.recordOfMeetingUntitled": "dem Termin",
+  "log.recordOfMeetingYes":
+    "Ja, beim Termin speichern und als stattgefunden markieren",
+  "log.recordOfMeetingNo": "Nein, einen eigenen Termin erfassen",
+  "log.recordOfMeetingRecorded":
+    "{subject} ist schon als stattgefunden erfasst. Erneutes Speichern ergänzt nur, was nicht gespeichert wurde.",
+  "log.recordOfMeetingManaged":
+    "Betreff und Notizen gehören zur Kalendereinladung. Deine Notizen werden hier als Notiz gespeichert, und der Termin wird als stattgefunden markiert.",
   "log.asTranscript": "Dieser Text ist ein Transkript",
   "log.transcriptUpload": "Oder Datei hochladen",
   "log.transcriptUploadRejected": "Nur eine .txt-Datei ist zulässig.",
@@ -14268,13 +14299,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.accountSettings": "Wer E-Mails von {account} sieht",
   "connectors.heldPointer.label": "Zurückgehaltene Threads und Absendeadressen",
   "connectors.heldPointer.some_one":
-    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+    "{count} Thread wird gerade vor dem Team zurückgehalten. Prüfe ihn und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
   "connectors.heldPointer.some_other":
-    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Erfassungsaktivität.",
+    "{count} Threads werden gerade vor dem Team zurückgehalten. Prüfe sie und jede Absendeadresse, die dein Postfach eingebracht hat, unter Capture-Aktivität.",
   "connectors.heldPointer.none":
-    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+    "Gerade wird nichts vor dem Team zurückgehalten. Jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
   "connectors.heldPointer.unknown":
-    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Erfassungsaktivität.",
+    "Threads, die vor dem Team zurückgehalten werden, und jede Absendeadresse, die dein Postfach eingebracht hat, findest du unter Capture-Aktivität.",
   "connectors.heldPointer.review": "Prüfen",
   "connectors.advanced": "Erweitert",
   "connectors.advancedCount_one": "{count} Einstellung",
@@ -16254,7 +16285,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.band.strong": "stark",
   "contact.strength.detail": "Letzter Kontakt {last}",
   "contact.strength.sentence.weakStale":
-    "Schwach: es ist schon eine Weile her. Letzter Kontakt war am {last}.",
+    "Schwach: es ist schon eine Weile her. Zuletzt hat dein Kontakt dir am {last} geschrieben oder dich getroffen.",
   "contact.strength.sentence.weakFew":
     "Schwach: es gab kürzlich Kontakt, aber in den letzten 90 Tagen wenige Interaktionen.",
   "contact.strength.sentence.weakLopsided":
@@ -16461,6 +16492,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dim.window": "Letzte 90 Tage",
   "contact.standing.dim.reach": "Reichweite",
   "contact.standing.dim.reachNone": "Kein Teammitglied in Kontakt",
+  "contact.standing.dim.reachOneWay": "Kein Kontakt in beide Richtungen",
+  "contact.standing.dim.wroteNoReply": "{names} schrieb, noch keine Antwort",
+  "contact.standing.dim.alsoWrote": "schrieb ebenfalls: {names}",
   "contact.standing.dim.inTouch_one": "{count} Teammitglied in Kontakt",
   "contact.standing.dim.inTouch_other": "{count} Teammitglieder in Kontakt",
   "contact.standing.daysAgo_one": "vor {count} Tag",
@@ -18094,7 +18128,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
-  "worklist.verb.meetingUpdate": "Aktualisieren",
+  "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
   "worklist.verb.meetingReading": "Termin wird geladen…",
   "worklist.verb.meetingWhatHappened": "Terminnotizen",
@@ -18108,7 +18142,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
-  "worklist.verb.meetingUpdateFor": "Aktualisieren: {subject}",
+  "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",
+  "worklist.verb.meetingHeldFor": "Stattgefunden: {subject}",
   "worklist.verb.meetingCanceledFor": "Als abgesagt markieren: {subject}",
   "worklist.verb.meetingCancelInCalendar":
     "Die Kalendereinladung führt diesen Termin. Sag ihn über die Einladung ab.",
@@ -19790,6 +19825,32 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.filteredFinding_other": "1 von {count} Problemen angezeigt",
   "health.showAllFindings": "Alle Probleme anzeigen",
   "health.jobDelayed": "{kind}: verzögert",
+  "health.checkNumbers": "Prüfzahlen anzeigen",
+  "health.checkResults": "Prüfergebnisse",
+  "health.checksFailed": "Fehlgeschlagene Prüfungen",
+  "health.checksReview": "Entscheidung nötig",
+  "health.checksPassing": "Erfolgreiche Prüfungen",
+  "health.checksPending": "Ergebnis ausstehend",
+  "health.askOwner": "Postfachinhaber fragen",
+  "health.mailReviewOwners": "Postfachentscheidungen",
+  "health.reviewOwnersIntro":
+    "Prüfe deine Auswahl oder kopiere eine Prüfbitte für ein anderes Postfach.",
+  "health.ownerReviewEmpty": "Keine Postfachentscheidungen stehen aus.",
+  "health.copyReviewRequest": "Prüfbitte kopieren",
+  "health.copyReviewRequestFor": "Prüfbitte für {name} kopieren",
+  "health.reviewSenderRequest":
+    "{name}, öffne Worklist → Entscheidungen und nimm die vorgeschlagenen Kontakte an oder lehne sie ab: {url}",
+  "health.reviewThreadRequest":
+    "{name}, prüfe die zurückgehaltenen Gespräche deines Postfachs: {url}",
+  "health.ownerNameUnknown": "Postfachinhaber",
+  "health.ownerReviewUnavailable":
+    "Prüfe deine E-Mails oder kopiere eine Prüfbitte für das betroffene Postfach.",
+  "health.openMyReviews": "Meine Auswahl prüfen",
+  "health.copyRequestRemedy": "Markiere und kopiere die Prüfbitte unten.",
+  "health.senderReviewCount_one": "{count} Absenderentscheidung offen",
+  "health.senderReviewCount_other": "{count} Absenderentscheidungen offen",
+  "health.threadReviewCount_one": "{count} Gespräch wartet",
+  "health.threadReviewCount_other": "{count} Gespräche warten",
   "health.views": "Ansichten des Systemzustands",
   "health.overview": "Übersicht",
   "health.diagnostics": "Diagnose",
@@ -19802,16 +19863,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Sende den Fehlerbericht an den Systembetreiber. Er soll den Abschluss prüfen, die Ursache beheben und nur offene Arbeit neu starten; diese fehlgeschlagenen Läufe starten nicht automatisch neu.",
   "health.readFailedNext":
     "Aktualisiere diese Prüfung. Falls sie weiter fehlschlägt, sende den technischen Bericht an den Systembetreiber.",
-  "health.jobStopped": "{kind}: fehlgeschlagene Läufe prüfen",
-  "health.effectUntilFixed": "Bis zur Behebung:",
+  "health.jobStopped": "{kind}: fehlgeschlagene Läufe",
   "health.effect.mailSorting":
     "In der Worklist können E-Mails fehlen oder falsch eingeordnet sein, die eine Antwort oder eine Terminabsprache brauchen. Prüfe deinen Posteingang selbst, bis die Sortierung aufgeholt hat. Du kannst weiterhin E-Mails empfangen und lesen.",
   "health.effect.jobs":
     "Die aufgeführten Hintergrundaufgaben können unvollständig bleiben. Die Zahl fehlgeschlagener Läufe zählt weder fehlende Datensätze noch betroffene Teammitglieder; der Betreiber muss die Aufgaben prüfen.",
   "health.effect.senderReview":
-    "Neue Geschäftskontakte werden möglicherweise nicht angelegt und zugehörige E-Mails bleiben für Teammitglieder unzugänglich, bis die Absenderentscheidung geklärt ist.",
+    "Neue Kontakte und ihre E-Mails fehlen möglicherweise unter Kontakte.",
   "health.effect.heldMail":
-    "Die betroffenen Gespräche bleiben für Teammitglieder verborgen, die nicht an der E-Mail beteiligt waren, bis die Vertraulichkeitsprüfung geklärt ist.",
+    "Diese Gespräche sind im Team erst nach der Freigabe sichtbar.",
   "health.effect.unreadMail":
     "E-Mails aus dem gemeldeten Zeitraum fehlen möglicherweise im CRM. Spätere E-Mails können weiter ankommen; stelle den Zeitraum wieder her, bevor du dem Verlauf vertraust.",
   "health.effect.captureRepair":
@@ -19847,7 +19907,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.measure.items_one": "{count} Element",
   "health.measure.items_other": "{count} Elemente",
   "health.checked": "Keine Aktion nötig",
-  "health.incomplete": "Systemzustand konnte nicht vollständig geprüft werden",
+  "health.refreshNeeded": "Aktualisierung nötig",
+  "health.unreadNext":
+    "Öffne Verbindungen, prüfe dieses Postfach und verbinde es bei Bedarf erneut.",
+  "health.incomplete": "Für einige Prüfungen fehlt ein Ergebnis",
   "health.refresh": "Aktualisieren",
   "health.prioritiesChanged":
     "Die Prioritäten haben sich geändert. Aktualisieren, um die neue Reihenfolge zu übernehmen.",
@@ -19906,7 +19969,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
   "health.ownerHandoff":
-    "Eigene Mail-Entscheidungen unter Verbindungen prüfen. Bei anderen Postfächern die Zuständigen bitten; private Nachrichten sind nur für sie sichtbar.",
+    "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Capture-Aktivität geprüft.",
   "health.operatorHandoff":
     "Ein technischer Betreiber muss den Fall prüfen. Die Diagnoseübersicht für die Übergabe kopieren.",
   "health.copy": "Technischen Bericht kopieren",
@@ -19941,14 +20004,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.queue_expectation_unknown":
     "Arbeit ist ausführbar; eine erwartete Wartezeit ist nicht festgelegt",
   "health.code.capture_checked":
-    "Kein Erfassungsrückstand in den geprüften Kategorien erkannt",
+    "In den geprüften Kategorien ist keine Aktion zur Erfassung nötig",
   "health.code.capture_processing": "Absendeadressen werden eingeordnet",
-  "health.code.capture_uncertain":
-    "Festlegen, wessen Nachrichten ins CRM gehören",
+  "health.code.capture_uncertain": "Kontaktvorschläge prüfen",
   "health.code.capture_exhausted":
     "Automatische Versuche der Absendereinordnung sind ausgeschöpft",
-  "health.code.capture_owner_review":
-    "Für das Postfach steht eine Mail-Entscheidung aus",
+  "health.code.capture_owner_review": "Postfachentscheidungen prüfen",
   "health.code.capture_unread":
     "Ungelesene Postfachzeiträume brauchen einen Wiederherstellungsnachweis",
   "health.code.capture_held":
@@ -19988,8 +20049,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
-  "health.code.capture_thread_uncertain":
-    "Festlegen, welche Gespräche für das Team sichtbar sind",
+  "health.code.capture_thread_uncertain": "Private Gespräche prüfen",
   "health.queueCoverage":
     "Der Warteschlangenverlauf wird nur begrenzt aufbewahrt. Sein Fehlen belegt nicht, dass zuvor fehlgeschlagene Arbeit erledigt wurde.",
 

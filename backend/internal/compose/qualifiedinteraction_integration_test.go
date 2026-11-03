@@ -46,6 +46,7 @@ type relationshipFixture struct {
 func newRelationshipFixture(t *testing.T) *relationshipFixture {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	f := &relationshipFixture{e: e, seat: e.Rep1, contactAddr: "anna@client.test", now: time.Now().UTC().Truncate(time.Second)}
 	f.seatAddr = sharedMailbox(t, e, f.seat)
 	made, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{

@@ -346,6 +346,13 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /brief` | getMorningBrief | The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks). | Read records | at once |
 | `PUT /brief/annotations` | annotateMorningBrief | Write the overnight pass's findings onto the acting rep's own brief for today. | Change records | at once |
 
+## Capture
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /contacts/{id}/conversation-suggestions` | listContactConversationSuggestions | Recipients copied on inbound correspondence who have no contact or live lead. | Read records | at once |
+| `GET /leads/{id}/conversation-suggestions` | listLeadConversationSuggestions | Recipients copied on inbound correspondence who have no contact or live lead. | Read records | at once |
+
 ## Commissions
 
 | Call | operationId | What it does | Permission | Runs |

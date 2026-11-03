@@ -456,6 +456,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
 			return err
 		}
+		if in.WithOutsideParty {
+			in.outsideParty = outsidePartyClause(ctx, tx)
+		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err

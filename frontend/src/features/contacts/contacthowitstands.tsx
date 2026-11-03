@@ -25,6 +25,7 @@ import { strengthSentence } from "./contactstrengthsentence";
 import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 
 /**
  * How the contact stands: the verdict over the strength ring and three
@@ -49,7 +50,13 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
       verdict={verdict}
-      hero={<StrengthHero view={view} sentence={verdict.sentence} />}
+      hero={
+        <StrengthHero
+          view={view}
+          sentence={verdict.sentence}
+          change={verdict.change}
+        />
+      }
       dims={
         dims.length > 0 ? (
           <StandingDims
@@ -107,11 +114,18 @@ function openFigure(contactId: string, figure: ContactFigure) {
   }
 }
 
-// The caption is the newest change of band, unless the verdict already says it.
+// The caption is the change the verdict's sentence was read under, unless the
+// sentence already says it. It is taken from the verdict, never picked again,
+// so the two can never point opposite ways.
 function StrengthHero({
   view,
   sentence,
-}: Readonly<{ view: Contact360; sentence?: string }>) {
+  change,
+}: Readonly<{
+  view: Contact360;
+  sentence?: string;
+  change?: RelationshipChange;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -119,7 +133,6 @@ function StrengthHero({
   if (!strength) {
     return null;
   }
-  const change = view.relationship_changes?.[0];
   const caption = change ? changeSentence(change, t) : undefined;
   return (
     <div className="pe-standing-hero">

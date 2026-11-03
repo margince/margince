@@ -37,6 +37,7 @@ function showLead(lead: WorklistItem, writeTo: WriteTo | null = null) {
         is_done: false,
         source_activity_id: "call-1",
         links: [{ entity_type: "contact", entity_id: "c-1" }],
+        email_target: { entity_type: "contact", entity_id: "c-1" },
       }),
     "GET /activities/call-1": () =>
       jsonResponse({
@@ -153,6 +154,7 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
       occurred_at: "2026-09-08T09:00:00Z",
       is_done: false,
       links: [{ entity_type: "contact", entity_id: "c-1" }],
+      email_target: { entity_type: "contact", entity_id: "c-1" },
     }),
   );
   await vi.waitFor(() => expect(landContact).toBeDefined());

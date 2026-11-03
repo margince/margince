@@ -39,6 +39,10 @@ import {
   videoAppOf,
 } from "./booking-guest-parts";
 import "./booking-guest.css";
+import {
+  UnreadableCalendarLine,
+  unreadableCalendarOf,
+} from "./unreadable-calendar";
 
 type Availability = components["schemas"]["MeetingAvailability"];
 
@@ -229,6 +233,12 @@ export function BookingGuestScreen({
             ) : (
               <>
                 {preview && <PreviewNotice enabled={host.enabled} />}
+                {preview && (
+                  <UnreadableCalendarLine
+                    calendar={unreadableCalendarOf(dayRead.error)}
+                    provider={"provider" in host ? (host.provider ?? "") : ""}
+                  />
+                )}
                 {host.company_name && (
                   <header className="book-brand">
                     <CompanyLogo

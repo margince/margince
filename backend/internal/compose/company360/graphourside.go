@@ -12,16 +12,15 @@ package company360
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // readOurSide reads who on OUR side is connected to the account: the member
@@ -154,6 +153,7 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 	rows, err := g.tx.Query(g.ctx, fmt.Sprintf(`
 		WITH touch AS (
 			SELECT u.id AS user_id, u.display_name, e.contact_id, e.last_at,
+			       e.last_inbound_at, e.last_met_at, e.late_count_90d, e.late_out_count_90d,
 			       e.count_90d, e.in_count_90d, e.out_count_90d
 			FROM graph_interaction_edge e
 			JOIN app_user u ON u.id = e.user_id AND `+liveMemberWhere+`
@@ -164,7 +164,8 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 			SELECT user_id FROM colleagues ORDER BY last_touch DESC, user_id LIMIT %d
 		)
 		SELECT touch.user_id, touch.display_name, touch.contact_id,
-		       touch.last_at, touch.count_90d, touch.in_count_90d, touch.out_count_90d,
+		       touch.last_at, touch.last_inbound_at, touch.last_met_at, touch.late_count_90d, touch.late_out_count_90d,
+		       touch.count_90d, touch.in_count_90d, touch.out_count_90d,
 		       (SELECT count(*) FROM colleagues)
 		FROM touch JOIN chosen ON chosen.user_id = touch.user_id
 		ORDER BY touch.user_id, touch.contact_id`, graphUserCap), contactIDs)
@@ -173,19 +174,17 @@ func (g *graphAssembly) readInContactWith(contactIDs []ids.UUID) error {
 	}
 	g.ourSide, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (ourSideEdge, error) {
 		var edge ourSideEdge
-		var in relstrength.Inputs
-		var lastAt time.Time
+		var stored search.InteractionEdge
 		// Every row carries the same total; they agree because they come from
 		// one statement.
 		if err := row.Scan(&edge.user.userID, &edge.user.displayName, &edge.contactID,
-			&lastAt, &in.Count90d, &in.Inbound90d, &in.Outbound90d, &g.ourSideTotal); err != nil {
+			&stored.LastAt, &stored.LastInboundAt, &stored.LastMetAt, &stored.LateCount90d, &stored.LateOutCount90d,
+			&stored.Count90d, &stored.InCount90d, &stored.OutCount90d, &g.ourSideTotal); err != nil {
 			return edge, err
 		}
-		// Scored HERE rather than in SQL: the decay is a pure function of the
-		// stored counts and the read instant, and keeping it in Go means the
-		// card and every other surface run the identical arithmetic.
-		in.LastInteraction = &lastAt
-		edge.strength = relstrength.Compute(in, g.now)
+		// Scored in Go through the edge's own rule, so the card and every
+		// other surface run the identical arithmetic.
+		edge.strength = stored.StrengthOf(g.now)
 		return edge, nil
 	})
 	return err

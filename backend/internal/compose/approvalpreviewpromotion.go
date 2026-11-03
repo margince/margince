@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func promotionApprovalInput(approval crmcontracts.Approval) (contacts.PromoteLeadInput, error) {
@@ -46,6 +47,7 @@ func promotionRequestInput(approval crmcontracts.Approval) (contacts.PromoteLead
 		in = contacts.PromotionRequestInput(req)
 	} else {
 		req, err := commercialRequest[struct {
+			datasource.PromotionDealChoice
 			LeadID       ids.UUID `json:"lead_id"`
 			Trigger      string   `json:"trigger"`
 			EvidenceNote *string  `json:"evidence_note"`
@@ -56,6 +58,7 @@ func promotionRequestInput(approval crmcontracts.Approval) (contacts.PromoteLead
 		if req.LeadID != ids.UUID(*approval.TargetEntityId) {
 			return in, apperrors.ErrInvalidArgument
 		}
+		in = contacts.PromotionDealInput(req.PromotionDealChoice)
 		in.Trigger, in.EvidenceNote = req.Trigger, req.EvidenceNote
 	}
 	return in, nil
@@ -105,6 +108,9 @@ func (r approvalPreviewReader) promotionPreview(ctx context.Context, approval cr
 	if len(plan.ConsentLinks.WithdrawalCredentials)+len(plan.ConsentLinks.CommunicationBases) > 0 {
 		effects = append(effects, "promote_move_consent_links")
 	}
+	if plan.ExistingDealID != nil {
+		effects = append(effects, "promote_seat_contact_on_existing_deal")
+	}
 	if plan.Deal != nil {
 		effects = append(effects, "promote_open_deal_seat_contact")
 	}
@@ -153,6 +159,13 @@ func (r approvalPreviewReader) promotionDetails(ctx context.Context, in contacts
 	}
 	if plan.TypedCompany != "" {
 		details = append(details, previewDetail("promotion_company_proposed", plan.TypedCompany))
+	}
+	if plan.ExistingDealID != nil {
+		value, err := r.referenceValue(ctx, "deal_id", plan.ExistingDealID.String())
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, crmcontracts.ApprovalPreviewDetail{Field: "promotion_existing_deal", Value: value})
 	}
 	if plan.Deal != nil {
 		deal, err := r.promotionDealDetails(ctx, *plan.Deal)
