@@ -85,12 +85,10 @@ func (s PurgeSubject) Total() int {
 // `subject_ref`, and fulfilling an erasure TOMBSTONES that reference on the
 // subject's other cases — so either half alone misses a real open request.
 // The subject-ref arm casts `subject_ref` to a uuid only behind a canonical-uuid
-// guard: it is free text, and an unguarded cast of a row holding an email or a
-// name would fail the whole query rather than simply not match. The guard keeps
-// that arm identical to the old `contact_id::text = subject_ref` comparison —
-// `contact_id::text` is itself canonical, so only a canonical uuid ever matched —
-// while letting both arms resolve to `contact_id = ANY(...)`, which an index on
-// contact_email(contact_id) serves instead of a per-row scan of the whole table.
+// guard. It is free text, and an unguarded cast of an email or a name would fail
+// the whole query. `contact_id::text` is itself canonical, so the guard matches
+// what the old text comparison matched. Both arms then read as
+// `contact_id = ANY(...)`, which the index on contact_email(contact_id) serves.
 //
 // EVERY ADDRESS THE PURGE CAN MATCH ON, not only the counterparty. A workspace rule
 // reaches a message through a To or Cc line, so a subject who was copied rather than

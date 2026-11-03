@@ -426,10 +426,8 @@ func nullIfEmpty(resolution string) *string {
 }
 
 // seedSubjectRefOnlyRequest files an open request that names its subject only by
-// the free-text subject_ref — the subject's contact id as text — with contact_id
-// left NULL. It is the case an officer opens by hand before the subject is
-// resolved to a contact row, and the one the guarded subject_ref::uuid arm of
-// underAnOpenRequest exists for.
+// subject_ref, the contact id as text, with contact_id left NULL. An officer opens
+// such a case by hand before the subject resolves to a contact row.
 func seedSubjectRefOnlyRequest(t *testing.T, e *integration.Env, address string) {
 	t.Helper()
 	subject := e.SeedContact(t, "Der Mandant", nil)
@@ -448,11 +446,9 @@ func seedSubjectRefOnlyRequest(t *testing.T, e *integration.Env, address string)
 	}
 }
 
-// A request that names its subject only by subject_ref — no resolved contact_id
-// — still shields the subject's mail. With contact_id NULL the shield hangs
-// entirely on the guarded subject_ref::uuid arm of underAnOpenRequest, so this
-// is the regression guard for that arm: an index-friendly rewrite of the id
-// comparison must not quietly drop the handle an unresolved case carries.
+// A request that names its subject only by subject_ref still shields the mail.
+// With contact_id NULL, the shield rests on the guarded subject_ref::uuid arm.
+// This test keeps a later rewrite of the id comparison from dropping that arm.
 func TestAnOpenRequestCarryingOnlyASubjectRefStillShields(t *testing.T) {
 	e := integration.Setup(t)
 	const address = "anwalt@kanzlei.example"
