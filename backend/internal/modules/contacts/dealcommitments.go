@@ -58,13 +58,14 @@ func countDealCommitments(ctx context.Context, tx pgx.Tx, dealID ids.UUID, asOf 
 	args := []any{dealID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var total int
-	err := tx.QueryRow(ctx, `
+	query := `
 		SELECT count(*)
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+theirPromiseOpen(asOf, arg)+`
-		   AND c.archived_at IS NULL AND `+dealFiledSQL(1), args...).Scan(&total)
+		 WHERE ` + theirPromiseOpen(asOf, arg) + `
+		   AND c.archived_at IS NULL AND ` + dealFiledSQL(1)
+	err := tx.QueryRow(ctx, query, args...).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("count the deal's open commitments: %w", err)
 	}

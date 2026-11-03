@@ -6,7 +6,7 @@ it.each(LOCALES)(
   "shows the partner set-up terms and the unset margin tier in %s",
   (locale) => {
     const fields = [
-      ["partner_role", "consulting", "partner.role"],
+      ["partner_kinds", "consulting,referral", "partner.kinds"],
       ["partner_stage", "contacted", "partner.stage"],
       ["partner_next_step", "Send the terms", "partner.nextStep"],
       ["partner_next_step_due_at", "2026-11-30", "partner.nextStepDue"],

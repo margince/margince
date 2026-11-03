@@ -1,5 +1,5 @@
 import type { components } from "../../api/schema";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import type { Provenance } from "../../design-system/trust";
 import type { OccurredPrecision } from "../../format/activitywhen";
 import { stable } from "../../format/collate";
@@ -42,7 +42,10 @@ export function distinctFields(entries: FieldHistoryEntry[]): string[] {
 // supplies a name only when it holds one. Structurally typed off just those two
 // fields so it serves AuditHistoryEntry and FieldHistoryEntry alike.
 export function provenanceOfEntry(
-  entry: Pick<AuditHistoryEntry, "actor_type" | "actor_id">,
+  entry: Pick<
+    AuditHistoryEntry,
+    "actor_type" | "actor_id" | "agent_client" | "on_behalf_of_name"
+  >,
   viewerUserId?: string,
 ): Provenance {
   // A Deal Room participant: a contact, and one from outside the company,
@@ -53,7 +56,10 @@ export function provenanceOfEntry(
     return { kind: "buyer" };
   }
   if (entry.actor_type !== "human") {
-    return machineProvenance(entry.actor_type, entry.actor_id);
+    return withCreator(
+      machineProvenance(entry.actor_type, entry.actor_id),
+      entry,
+    );
   }
   // The spine stores the principal id, which for a human is `human:<uuid>`
   // (principal.Principal.ID), while the session reports the bare user id.

@@ -62,3 +62,38 @@ describe("the time a backdated entry sends", () => {
     expect(body.occurred_precision).toBe("instant");
   });
 });
+
+// The server takes `held` only for a start its own clock has passed.
+describe("the time a logged meeting sends", () => {
+  function loggedMeeting(now: string, zone: string, day: string) {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(now));
+    const draft = { ...freshDraft(zone, "meeting"), subject: "Visit", day };
+    return activityRequestBody(draft, "contact", "c1", zone, NO_ATTENDEES);
+  }
+
+  it("files a meeting dated today a minute before now, as held", () => {
+    const body = loggedMeeting("2026-01-15T10:00:00Z", "UTC", "2026-01-15");
+    expect(body).toMatchObject({
+      occurred_at: "2026-01-15T09:59:00.000Z",
+      occurred_precision: "instant",
+      meeting_status: "held",
+    });
+  });
+
+  it("files yesterday's date as a moment in the first minute of today, never as a date not yet over", () => {
+    const body = loggedMeeting("2026-01-15T00:00:30Z", "UTC", "2026-01-14");
+    expect(body).toMatchObject({
+      occurred_at: "2026-01-14T23:59:30.000Z",
+      occurred_precision: "instant",
+    });
+  });
+
+  it("files an earlier date alone once that date is over", () => {
+    const body = loggedMeeting("2026-01-15T00:01:30Z", "UTC", "2026-01-14");
+    expect(body).toMatchObject({
+      occurred_at: "2026-01-14T12:00:00Z",
+      occurred_precision: "day",
+    });
+  });
+});

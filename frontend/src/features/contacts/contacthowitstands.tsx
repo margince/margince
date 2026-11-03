@@ -7,13 +7,7 @@ import { StandingTimeline } from "../../design-system/standingtimeline";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
-import {
-  type Locale,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { contactTabRoute } from "../../lib/contacttab";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
@@ -27,9 +21,11 @@ import {
   contactTimelineEvents,
   type StandingWords,
 } from "./contactstandingfigures";
+import { strengthSentence } from "./contactstrengthsentence";
 import { changeSentence } from "./relationshipchange";
 
 type Contact360 = components["schemas"]["Contact360"];
+type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 
 /**
  * How the contact stands: the verdict over the strength ring and three
@@ -54,7 +50,13 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
       verdict={verdict}
-      hero={<StrengthHero view={view} sentence={verdict.sentence} />}
+      hero={
+        <StrengthHero
+          view={view}
+          sentence={verdict.sentence}
+          change={verdict.change}
+        />
+      }
       dims={
         dims.length > 0 ? (
           <StandingDims
@@ -112,11 +114,18 @@ function openFigure(contactId: string, figure: ContactFigure) {
   }
 }
 
-// The caption is the newest change of band, unless the verdict already says it.
+// The caption is the change the verdict's sentence was read under, unless the
+// sentence already says it. It is taken from the verdict, never picked again,
+// so the two can never point opposite ways.
 function StrengthHero({
   view,
   sentence,
-}: Readonly<{ view: Contact360; sentence?: string }>) {
+  change,
+}: Readonly<{
+  view: Contact360;
+  sentence?: string;
+  change?: RelationshipChange;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -124,7 +133,6 @@ function StrengthHero({
   if (!strength) {
     return null;
   }
-  const change = view.relationship_changes?.[0];
   const caption = change ? changeSentence(change, t) : undefined;
   return (
     <div className="pe-standing-hero">
@@ -137,40 +145,11 @@ function StrengthHero({
             ? formatDayMonth(strength.last_interaction, locale, zone)
             : "",
         })}
-        explain={strengthExplanation(strength, t, locale, zone)}
+        explain={strengthSentence(strength, t, locale, zone)}
       />
       {caption && caption !== sentence && (
         <p className="pe-standing-caption t-caption">{caption}</p>
       )}
     </div>
   );
-}
-
-type Strength = NonNullable<Contact360["strength"]>;
-
-const STALE_BELOW = 1 / 3;
-
-// One sentence on where the relationship stands, from the band and how long
-// ago the last contact was. The formula behind the score stays out of the way.
-function strengthExplanation(
-  strength: Strength,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): string {
-  const last = strength.last_interaction
-    ? formatDayMonth(strength.last_interaction, locale, zone)
-    : "";
-  if (strength.bucket === "none") {
-    return t("standing.ring.noInteractions");
-  }
-  if (strength.bucket === "weak") {
-    return t(
-      strength.factors.recency < STALE_BELOW
-        ? "contact.strength.sentence.weakStale"
-        : "contact.strength.sentence.weakRare",
-      { last },
-    );
-  }
-  return t(`contact.strength.sentence.${strength.bucket}`, { last });
 }

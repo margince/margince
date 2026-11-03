@@ -7,6 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import {
   type DecisionApproval,
   DecisionCard,
@@ -35,6 +36,7 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time.",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: PLAIN_SUMMARY_WORDS,
   showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
@@ -86,6 +88,26 @@ describe("DecisionCard — what the reader is being asked", () => {
     // subject does not.
     expect(
       screen.getByText("An automation drafted a reply to Marek."),
+    ).toBeInTheDocument();
+  });
+
+  // A preview that needs wider sight arrives with no staged call and no
+  // summary: the server keeps both back. The card still renders and says so.
+  it("renders an approval whose plan the server held back", () => {
+    const withheld = approval({
+      preview: {
+        version: 2,
+        state: "needs_wider_sight",
+        changes: [],
+        reviewer_reason: "record_authority",
+      },
+    });
+    delete withheld.summary;
+    delete withheld.proposed_change;
+    render(card({ approval: withheld }));
+    expect(screen.queryByText("Re: kickoff")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("This proposal carries nothing to read."),
     ).toBeInTheDocument();
   });
 

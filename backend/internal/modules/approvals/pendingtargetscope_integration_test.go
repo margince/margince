@@ -11,8 +11,7 @@ package approvals
 // "so triage visibility and the decision gate can never drift apart — you see
 // exactly what you could act on, and what you cannot see you cannot decide (in
 // either direction)". The panel was a fourth caller answering differently — it
-// hoisted targetVisible, the READ half, where the inbox takes targetDecidable,
-// the WRITE one.
+// hoisted targetVisible, the read half, where the inbox takes the write one.
 //
 // The two differ in exactly the arms a manual grant can widen, so a read-only
 // SHARE was enough. And the panel renders the proposal — summary and proposed
@@ -97,8 +96,8 @@ func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
 		t.Helper()
 		var n int
 		if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-			out, err := e.svc.PendingForTarget(as, tx, tableCompany, target, PendingScanCap)
-			n = len(out)
+			out, err := e.svc.PendingForTarget(as, tx, tableCompany, target)
+			n = len(out.Approvals)
 			return err
 		}); err != nil {
 			t.Fatalf("PendingForTarget: %v", err)

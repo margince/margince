@@ -1,9 +1,4 @@
 import {
-  useIsMutating,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
   type ReactNode,
   useCallback,
   useEffect,
@@ -17,7 +12,6 @@ import { InlineEditVerb, InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useLocale, useT } from "../i18n";
-import { derivedRecordKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { sameEditValue } from "../lib/independentedit";
 import {
@@ -25,7 +19,6 @@ import {
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
-import { invalidateRecord } from "../lib/recordwritekeys";
 import type { Route } from "../lib/router";
 import {
   type CreateField,
@@ -41,8 +34,8 @@ import type {
   FieldRecord,
   RecordFieldSave,
 } from "./recordfieldtypes";
-import { rawRecord } from "./recordfieldtypes";
 import { dateDisplay, groupValue, selectOptions } from "./recordfieldvalues";
+import { checkFieldValue, useRecordFieldWrite } from "./recordfieldwrite";
 import { useUnsavedGuard } from "./unsaved";
 
 type Props = {
@@ -129,14 +122,12 @@ function RecordField({
   }
 >) {
   const t = useT();
-  const qc = useQueryClient();
   const opened = useRef(props.record);
   const target = useDetailsFieldTarget(field.key);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
-  const pending =
-    useIsMutating({ mutationKey: [`${props.kind}-edit`, props.record.id] }) > 0;
+  const { mutation, pending } = useRecordFieldWrite(props.kind, props.record);
   const onEditingChange = useCallback(
     (next: boolean) => {
       if (next && !editing) opened.current = props.record;
@@ -145,39 +136,6 @@ function RecordField({
     },
     [editing, props.record],
   );
-  const mutation = useMutation({
-    mutationKey: [`${props.kind}-edit`, props.record.id],
-    mutationFn: async ({
-      values,
-      rows,
-      baseline,
-      save,
-      extra,
-    }: {
-      values: Record<string, string>;
-      rows: FormRows;
-      baseline: FieldRecord;
-      save: RecordFieldSave;
-      extra?: Record<string, unknown>;
-    }) =>
-      // An ordinary save carries no extra fields, only a refusal's resend does.
-      extra
-        ? save(values, rows, baseline, extra)
-        : save(values, rows, baseline),
-    onSuccess: async () => {
-      await Promise.all([
-        invalidateRecord(qc, props.kind, props.record.id, {
-          anchor: rawRecord(props.record).is_anchor === true,
-        }),
-        qc.invalidateQueries({
-          queryKey: [props.kind === "company" ? "companies" : `${props.kind}s`],
-        }),
-        ...derivedRecordKeys(props.kind, props.record.id).map((queryKey) =>
-          qc.invalidateQueries({ queryKey }),
-        ),
-      ]);
-    },
-  });
   const values = prefillFromRecord(
     props.fields,
     editing ? opened.current : props.record,
@@ -195,10 +153,7 @@ function RecordField({
     field.type === "repeatable" ||
     field.type === "multiselect";
   const saveValue = async (next: string) => {
-    if (field.required && !next.trim())
-      throw new ProblemError({ detail: t("record.fieldRequired") });
-    const refusal = field.validate?.(next);
-    if (refusal) throw new ProblemError({ detail: refusal });
+    checkFieldValue(field, next, t);
     await mutation.mutateAsync({
       values: { [field.key]: next },
       rows: {},

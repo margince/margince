@@ -19,7 +19,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--space-3);
-  background: var(--bgElevated);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-pop);

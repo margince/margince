@@ -63,6 +63,9 @@ type dedupeScanStream struct {
 	// nothing left to pair. An identifier row is read either way, because its
 	// record may still be live.
 	liveOnly bool
+	// rows narrows the table to the rows that name a record, as a compile-time
+	// literal its partial index matches.
+	rows string
 }
 
 // subject is the column naming the record a row belongs to: the record table's
@@ -81,6 +84,10 @@ var dedupeScanStreams = []dedupeScanStream{
 	{table: entityContact, entity: DedupeScanContacts, liveOnly: true},
 	{table: tableContactEmail, entity: DedupeScanContacts},
 	{table: tableContactPhone, entity: DedupeScanContacts},
+	// The second facts a similar company name needs (keepCorroborated): a
+	// stated phone number, and a contact employed at both companies.
+	{table: tableCompanyFact, entity: DedupeScanCompanies},
+	{table: tableRelationship, entity: DedupeScanCompanies, rows: "kind = 'employment' AND company_id IS NOT NULL"},
 }
 
 // DedupeScanResult counts one nightly pass: the records it ran through the
@@ -213,6 +220,9 @@ func (stream dedupeScanStream) changedSince(ctx context.Context, tx pgx.Tx, mark
 	live := ""
 	if stream.liveOnly {
 		live = "archived_at IS NULL AND "
+	}
+	if stream.rows != "" {
+		live += stream.rows + " AND "
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT updated_at, id, `+stream.subject()+` FROM `+stream.table+`

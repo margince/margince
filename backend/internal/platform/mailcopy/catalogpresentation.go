@@ -45,6 +45,8 @@ func workPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MailPromisedBy }, "Promised by", "Zugesagt von", "Người hứa")
 	line(func(c *Copy) *string { return &c.MailInTheirWords }, "In their words", "Im Wortlaut", "Nguyên văn")
 	line(func(c *Copy) *string { return &c.MailWhyYou }, "Why you", "Warum du", "Vì sao là bạn")
+	line(func(c *Copy) *string { return &c.MailAlsoChanges }, "Also changes", "Weitere Änderungen", "Thay đổi kèm theo")
+	line(func(c *Copy) *string { return &c.MailPreviewStatus }, "Approval context", "Freigabekontext", "Ngữ cảnh phê duyệt")
 	line(func(c *Copy) *string { return &c.MailTranscriptOf },
 		"a meeting transcript of", "ein Gesprächsprotokoll vom", "biên bản cuộc họp ngày")
 	line(func(c *Copy) *string { return &c.MailReasonRequested },
@@ -129,6 +131,8 @@ func weeklyPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyLeads }, "Leads assigned", "Zugewiesene Leads", "Lead được phân công")
 	line(func(c *Copy) *string { return &c.WeeklyAnswered }, "First replies recorded by week close", "Erste Antworten bis Wochenende erfasst", "Phản hồi đầu tiên ghi nhận trước khi kết thúc tuần")
 	line(func(c *Copy) *string { return &c.WeeklyBreached }, "First replies overdue", "Überfällige erste Antworten", "Phản hồi đầu tiên quá hạn")
+	// The reporting catalog's name for meetings_held. That catalog is compose's,
+	// out of reach here, so TestTheWeeklyMailNamesMeetingsHeldAsTheCatalogDoes holds the two equal.
 	line(func(c *Copy) *string { return &c.WeeklyMeetings }, "Meetings held", "Durchgeführte Termine", "Cuộc họp đã diễn ra")
 	line(func(c *Copy) *string { return &c.WeeklyNextSteps }, "Meetings with a next step", "Termine mit nächstem Schritt", "Cuộc họp có bước tiếp theo")
 	line(func(c *Copy) *string { return &c.WeeklyPromises }, "Commitments kept", "Eingehaltene Zusagen", "Cam kết đã thực hiện")
@@ -153,6 +157,8 @@ func controllerPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmRecordAction }, "Review contact details", "Kontaktdaten ansehen", "Xem thông tin liên hệ")
 	line(func(c *Copy) *string { return &c.ConfirmConsentAction }, "Confirm subscription", "Abonnement bestätigen", "Xác nhận đăng ký")
 	line(func(c *Copy) *string { return &c.NoticeAction }, "View privacy information", "Datenschutzinformationen ansehen", "Xem thông tin bảo vệ dữ liệu")
+	line(func(c *Copy) *string { return &c.PreviewLinkMarker }, "[Personal link, created when you send]", "[Persönlicher Link, wird beim Senden erstellt]", "[Liên kết cá nhân, được tạo khi bạn gửi]")
+	line(func(c *Copy) *string { return &c.SentLinkMarker }, "[Personal link, sent only to the contact]", "[Persönlicher Link, nur an den Kontakt gesendet]", "[Liên kết cá nhân, chỉ gửi cho người liên hệ]")
 	line(func(c *Copy) *string { return &c.ConsentPurposeLabel }, "Subscription", "Thema", "Đăng ký nhận")
 	line(func(c *Copy) *string { return &c.ControllerFrom }, "This message is from %s.", "Diese Nachricht erhalten Sie von %s.", "Email này được gửi từ %s.")
 }

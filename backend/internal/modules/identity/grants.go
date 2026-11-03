@@ -236,21 +236,9 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	// same row. `expires_at` takes the proposed value even when it is NULL: the
 	// contract says a re-assert resets it, and a COALESCE would make an expiry
 	// unclearable. `granted_by` moves to the caller, who is now accountable.
-	out, err := scanGrant(tx.QueryRow(ctx, `
-		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
-		                          access, granted_by, reason, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
-		SET access     = EXCLUDED.access,
-		    expires_at = EXCLUDED.expires_at,
-		    reason     = EXCLUDED.reason,
-		    granted_by = EXCLUDED.granted_by,
-		    version    = record_grant.version + 1
-		RETURNING `+grantColumns,
-		in.RecordType, in.RecordID, in.SubjectType, in.SubjectID,
-		in.Access, actor.UserID, in.Reason, in.ExpiresAt))
+	out, err := upsertGrant(ctx, tx, in, actor.UserID)
 	if err != nil {
-		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
+		return grantRow{}, err
 	}
 	// `record_share` in both directions, downgrades included: the contract pins
 	// the verb, and `record_unshare` belongs to revocation. Both images render
@@ -259,6 +247,31 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	if _, err := storekit.Audit(ctx, tx, "record_share",
 		in.RecordType, in.RecordID, before, grantImage(out)); err != nil {
 		return grantRow{}, fmt.Errorf("audit record_share: %w", err)
+	}
+	return out, nil
+}
+
+// upsertGrant writes one grant by its natural key. A share and a merge's owner
+// carry both write through it. The caller holds the write-identity lock.
+func upsertGrant(ctx context.Context, tx pgx.Tx, in CreateGrantInput, grantedBy ids.UUID) (grantRow, error) {
+	values := []any{in.RecordType, in.RecordID, in.SubjectType, in.SubjectID, in.Access, grantedBy, in.Reason, in.ExpiresAt}
+	placeholders := make([]string, len(values))
+	for i := range values {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+	out, err := scanGrant(tx.QueryRow(ctx, `
+		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
+		                          access, granted_by, reason, expires_at)
+		VALUES (`+strings.Join(placeholders, ", ")+`)
+		ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
+		SET access     = EXCLUDED.access,
+		    expires_at = EXCLUDED.expires_at,
+		    reason     = EXCLUDED.reason,
+		    granted_by = EXCLUDED.granted_by,
+		    version    = record_grant.version + 1
+		RETURNING `+grantColumns, values...))
+	if err != nil {
+		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
 	}
 	return out, nil
 }

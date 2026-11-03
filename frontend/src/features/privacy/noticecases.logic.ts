@@ -4,8 +4,8 @@
 import type { components } from "../../api/schema";
 import type { MessageKey } from "../../i18n/en";
 
-export type NoticeCase = components["schemas"]["NoticeCase"];
-export type NoticeCaseState = components["schemas"]["NoticeCaseState"];
+export type NoticeCase = components["schemas"]["NoticeCaseReview"];
+export type NoticeCaseState = components["schemas"]["NoticeCaseReviewState"];
 
 // The states a duty can rest in, in the order a reader thinks about them:
 // owed, then being worked, then the four ways one ends.
@@ -16,6 +16,7 @@ export type NoticeCaseState = components["schemas"]["NoticeCaseState"];
 // itself when somebody added a state would move the control under the reader's
 // cursor.
 export const NOTICE_STATES = [
+  "source_review",
   "open",
   "assigned",
   "queued",
@@ -28,6 +29,7 @@ export const NOTICE_STATES = [
 ] as const;
 
 export const NOTICE_STATE_LABEL: Record<NoticeCaseState, MessageKey> = {
+  source_review: "notice.source.title",
   open: "notice.state.open",
   assigned: "notice.state.assigned",
   queued: "notice.state.queued",
@@ -83,11 +85,11 @@ export function isNoticeResolved(state: NoticeCaseState): boolean {
 // mattering when the case closed. Marking a closed case red would ask an
 // officer to act on something already answered.
 export function isNoticeOverdue(
-  dueAtIso: string,
+  dueAtIso: string | null,
   state: NoticeCaseState,
   nowMs: number,
 ): boolean {
-  if (isNoticeResolved(state)) {
+  if (!dueAtIso || state === "source_review" || isNoticeResolved(state)) {
     return false;
   }
   return Date.parse(dueAtIso) < nowMs;
@@ -109,7 +111,7 @@ export function mayAssign(state: NoticeCaseState): boolean {
 // one, and the later note would then read as the reason the first thing
 // happened.
 export function mayExcuse(state: NoticeCaseState): boolean {
-  return !isNoticeResolved(state);
+  return state !== "source_review" && !isNoticeResolved(state);
 }
 
 // Who is accountable for this duty, as a reader should ask it.

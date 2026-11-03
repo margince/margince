@@ -20,6 +20,7 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
+import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
   jsonResponse,
@@ -76,17 +77,19 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
 function openTask() {
   return render(
     <StoryProviders>
-      <TaskDetailModal
-        activityId="task-1"
-        readOnly={false}
-        onClose={() => {}}
-        update={
-          {
-            mutate: () => {},
-            isPending: false,
-          } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-        }
-      />
+      <SourceHost>
+        <TaskDetailModal
+          activityId="task-1"
+          readOnly={false}
+          onClose={() => {}}
+          update={
+            {
+              mutate: () => {},
+              isPending: false,
+            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
+          }
+        />
+      </SourceHost>
     </StoryProviders>,
   );
 }
@@ -296,6 +299,24 @@ test("an email request is read in the task, with no click to open it", async () 
   ).toBeTruthy();
 });
 
+test("a task's source email opens whole, with its thread, from the task", async () => {
+  const user = userEvent.setup();
+  stubEmailRequest();
+  openTask();
+
+  await user.click(
+    await screen.findByRole("button", { name: "View full thread" }),
+  );
+
+  // The message drawer over the task: a second dialog, headed by the message.
+  await waitFor(() => {
+    expect(screen.getAllByRole("dialog")).toHaveLength(2);
+  });
+  expect(
+    screen.getAllByRole("heading", { name: "The original request" }),
+  ).not.toHaveLength(0);
+});
+
 test("the source email names who sent it and who was copied, above the words", async () => {
   stubEmailRequest({
     from: [
@@ -373,8 +394,11 @@ function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
       }),
     "GET /deals/deal-1": () =>
       jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
-    "GET /companies/co-1": () =>
-      jsonResponse({ id: "co-1", display_name: "Brandt Automotive" }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: [{ id: "co-1", display_name: "Brandt Automotive" }],
+        next_cursor: null,
+      }),
   });
 }
 
@@ -391,7 +415,7 @@ test("a task filed under a deal and its company names the deal first", async () 
   const names = screen.getAllByRole("link").map((link) => link.textContent);
   expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
   // Opened in place: following the record is leaving the panel for it.
-  expect(deal.getAttribute("href")).toBe("#/deals/deal-1");
+  expect(deal.getAttribute("href")).toBe("/#/deals/deal-1");
   expect(deal.getAttribute("target")).toBeNull();
 });
 
@@ -422,6 +446,22 @@ type NextStepsCase = Readonly<{
   routes?: RouteMap;
 }>;
 
+// The target the server names for these links: its one contact, refused the
+// way the server refuses it.
+function serverTarget(
+  links: { entity_type: string; entity_id: string }[],
+  contact: Record<string, unknown>,
+) {
+  const contacts = links.filter((link) => link.entity_type === "contact");
+  if (contacts.length !== 1) return undefined;
+  const refusal = contact.archived_at
+    ? "archived"
+    : contact.primary_email
+      ? undefined
+      : "no_address";
+  return { entity_type: "contact", entity_id: contacts[0]?.entity_id, refusal };
+}
+
 function stubNextSteps({
   source = { kind: "call", content_state: "available" },
   contact = ALICE,
@@ -442,6 +482,7 @@ function stubNextSteps({
         is_done: isDone,
         source_activity_id: source ? "src-1" : null,
         links,
+        email_target: serverTarget(links, contact),
       }),
     "GET /activities/src-1": () =>
       jsonResponse({
@@ -479,11 +520,13 @@ function openTaskWith(
   );
   return render(
     <StoryProviders>
-      {options.writeTo ? (
-        <WriteToProvider writeTo={options.writeTo}>{modal}</WriteToProvider>
-      ) : (
-        modal
-      )}
+      <SourceHost>
+        {options.writeTo ? (
+          <WriteToProvider writeTo={options.writeTo}>{modal}</WriteToProvider>
+        ) : (
+          modal
+        )}
+      </SourceHost>
     </StoryProviders>,
   );
 }
@@ -497,7 +540,7 @@ const describedBy = (control: HTMLElement) =>
 const openContact = () =>
   screen.queryByRole("link", { name: en["task.next.openContact"] });
 
-test("a task from a call offers Call, Email and Open contact", async () => {
+test("a task from a call offers Call, Draft email and Open contact", async () => {
   const user = userEvent.setup();
   const writeTo = vi.fn();
   stubNextSteps();
@@ -507,14 +550,16 @@ test("a task from a call offers Call, Email and Open contact", async () => {
     name: en["record.verb.call"],
   });
   expect(dial.getAttribute("href")).toBe("tel:+49301234567");
-  expect(openContact()?.getAttribute("href")).toBe("#/contacts/c-1");
+  expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
   await user.click(
-    screen.getByRole("button", { name: en["record.verb.email"] }),
+    screen.getByRole("button", { name: en["task.next.draftEmail"] }),
   );
+  // The task steers the draft, so the mail is about what was owed.
   expect(writeTo).toHaveBeenCalledWith({
     entityType: "contact",
     entityId: "c-1",
     address: "alice@example.com",
+    draftIntent: `${en["task.next.draftIntent"]}: Call back Alice about the renewal`,
   });
 });
 
@@ -578,26 +623,26 @@ test("a contact with no phone gets no Call", async () => {
   expect(call()).toBeNull();
 });
 
-test("a contact with no address gets Email refused with the reason", async () => {
+test("a contact with no address gets Draft email refused with the reason", async () => {
   stubNextSteps({ contact: { ...ALICE, primary_email: null } });
   openTaskWith();
 
   const email = await screen.findByRole("button", {
-    name: en["record.verb.email"],
+    name: en["task.next.draftEmail"],
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["task.next.noAddress"]);
   expect(call()).not.toBeNull();
 });
 
-test("an archived contact gets no Call and a refused Email, and can still be opened", async () => {
+test("an archived contact gets no Call and a refused Draft email, and can still be opened", async () => {
   stubNextSteps({
     contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
   });
   openTaskWith();
 
   const email = await screen.findByRole("button", {
-    name: en["record.verb.email"],
+    name: en["task.next.draftEmail"],
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["contact.rail.archivedReadOnly"]);
@@ -605,12 +650,12 @@ test("an archived contact gets no Call and a refused Email, and can still be ope
   expect(call()).toBeNull();
 });
 
-test("a refused Email is said once, after every verb in the row", async () => {
+test("a refused Draft email is said once, after every verb in the row", async () => {
   stubNextSteps({ contact: { ...ALICE, primary_email: null } });
   openTaskWith();
 
   const email = await screen.findByRole("button", {
-    name: en["record.verb.email"],
+    name: en["task.next.draftEmail"],
   });
   const reasons = screen.getAllByText(en["task.next.noAddress"]);
   expect(reasons).toHaveLength(1);
@@ -620,7 +665,7 @@ test("a refused Email is said once, after every verb in the row", async () => {
 });
 
 test.each([
-  ["no contact", [{ entity_type: "company", entity_id: "co-1" }]],
+  ["no record", []],
   [
     "two contacts",
     [
@@ -637,6 +682,7 @@ test.each([
   await screen.findByRole("button", { name: "Open original" });
   expect(openContact()).toBeNull();
   expect(screen.queryByText(en["record.verb.email"])).toBeNull();
+  expect(screen.queryByText(en["task.next.draftEmail"])).toBeNull();
   expect(call()).toBeNull();
 });
 
@@ -702,6 +748,7 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
     source_activity_id: "src-1",
     writable: true,
     links: [{ entity_type: "contact", entity_id: "c-1" }],
+    email_target: { entity_type: "contact", entity_id: "c-1" },
   });
   client.setQueryData(
     ["me"],

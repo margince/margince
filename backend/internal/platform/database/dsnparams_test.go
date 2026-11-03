@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 )
@@ -116,6 +117,32 @@ func TestAnOperatorsOwnCeilingWins(t *testing.T) {
 	for _, name := range []string{"statement_timeout", "idle_in_transaction_session_timeout"} {
 		if got := cfg.ConnConfig.RuntimeParams[name]; got != "0" {
 			t.Errorf("a pool overrode the DSN's %s with %q; the DSN is where a role says it runs DDL", name, got)
+		}
+	}
+}
+
+// TestAPoolRetiresItsConnectionsWithinMinutes: a backend keeps the memory it
+// grew to plan a large query until its connection closes. The lifetime bounds
+// that, and a DSN that names one of the two limits keeps its own value for
+// that limit only.
+func TestAPoolRetiresItsConnectionsWithinMinutes(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name             string
+		dsn              string
+		lifetime, jitter time.Duration
+	}{
+		{"a bare DSN gets both defaults", "postgres://h/db", 10 * time.Minute, 2 * time.Minute},
+		{"a DSN lifetime wins", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 2 * time.Minute},
+		{"a DSN jitter keeps the default lifetime", "postgres://h/db?pool_max_conn_lifetime_jitter=30s", 10 * time.Minute, 30 * time.Second},
+	} {
+		cfg, err := database.PoolConfig(tc.dsn)
+		if err != nil {
+			t.Fatalf("%s: PoolConfig: %v", tc.name, err)
+		}
+		if cfg.MaxConnLifetime != tc.lifetime || cfg.MaxConnLifetimeJitter != tc.jitter {
+			t.Errorf("%s: lifetime %v jitter %v, want %v and %v",
+				tc.name, cfg.MaxConnLifetime, cfg.MaxConnLifetimeJitter, tc.lifetime, tc.jitter)
 		}
 	}
 }

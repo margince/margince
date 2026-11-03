@@ -57,7 +57,7 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 		return fmt.Errorf("activities: rechecking aged reminders under their lock: %w", err)
 	}
 	for _, id := range aged {
-		if _, err := archiveActivityInTx(ctx, tx, ids.From[ids.ActivityKind](id), nil, archiveOptions{}); err != nil {
+		if _, err := archiveActivityInTx(ctx, tx, ids.From[ids.ActivityKind](id), nil, archiveOptions{}, asOf); err != nil {
 			return fmt.Errorf("activities: retiring the aged reminder %s: %w", id, err)
 		}
 	}

@@ -120,17 +120,14 @@ describe("RecordHistory", () => {
     await waitFor(() =>
       expect(screen.getByText("Demo Admin created the record")).toBeTruthy(),
     );
-    // The contact is the subject of the sentence, and named exactly once: the
-    // suffix that used to complete the old machine-first phrasing would now be
-    // a second copy of the same name.
+    // Each row names its actor twice: once as the sentence's subject, once on
+    // the provenance chip in the meta row. The agent's chip names the
+    // colleague it worked for, the way a human row's chip names its author.
     expect(
       screen.getByText("Anna Weber, via an agent, updated the record"),
     ).toBeTruthy();
-    expect(screen.getAllByText(/Anna Weber/)).toHaveLength(1);
-    // A human row names the contact on the provenance chip too, which without a
-    // resolved name says a contact acted without saying which one. Twice here is
-    // correct and not the doubling above: once as the sentence's subject, once
-    // as the "typed by" chip in the meta row.
+    expect(screen.getByText("Made by an agent for Anna Weber")).toBeTruthy();
+    expect(screen.getAllByText(/Anna Weber/)).toHaveLength(2);
     expect(screen.getAllByText(/Demo Admin/)).toHaveLength(2);
   });
 

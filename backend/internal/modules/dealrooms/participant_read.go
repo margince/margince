@@ -135,9 +135,10 @@ func participantRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, acti
 func readParticipant(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, id ids.DealRoomParticipantID) (crmcontracts.DealRoomParticipant, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	row := tx.QueryRow(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT %s FROM %s WHERE p.id = $%d AND p.room_id = $%d AND NOT p.preview`,
-		participantColumns, participantFrom, arg(id), arg(roomID)), args...)
+		participantColumns, participantFrom, arg(id), arg(roomID))
+	row := tx.QueryRow(ctx, query, args...)
 
 	// A preview seat is absent here on purpose: every participant write
 	// resolves the row through this read, so none of them can reach it.

@@ -44,16 +44,24 @@ function linkedInMatch(change: Record<string, unknown> = {}): Approval {
   } as Approval;
 }
 
+// The batched company-name read, naming Acme; any other id asked is one the
+// reader may not see, which the list answers by leaving it out.
+function acmeNamed(): Response {
+  return jsonResponse({
+    data: [{ id: ACME, display_name: "Acme GmbH" }],
+    next_cursor: null,
+  });
+}
+
 // Routes the reads the card makes and records what the accept sent.
 function stubCard(
   allow: GrantSpec,
-  company: () => Response | Promise<Response> = () =>
-    jsonResponse({ id: ACME, display_name: "Acme GmbH" }),
+  company: () => Response | Promise<Response> = acmeNamed,
 ) {
   const sent: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute(allow),
-    [`GET /companies/${ACME}`]: company,
+    "GET /companies": company,
     [`GET /contacts/${CONTACT}`]: () =>
       jsonResponse({ id: CONTACT, full_name: "Andreas Muller" }),
     "POST /approvals/ap-li/approve": (body) => {
@@ -147,15 +155,15 @@ describe("the LinkedIn match boxes", () => {
 
   it("hides the employer box when the reader cannot see the company", async () => {
     const hidden = "66666666-6666-4666-8666-666666666666";
-    let hiddenRead = false;
     installFetchStub({
       "GET /me": meRoute(mayEmploy),
-      [`GET /companies/${ACME}`]: () =>
-        jsonResponse({ id: ACME, display_name: "Acme GmbH" }),
-      [`GET /companies/${hidden}`]: () => {
-        hiddenRead = true;
-        return jsonResponse({ status: 404 }, 404);
-      },
+      "GET /companies": acmeNamed,
+    });
+    const asked: string[] = [];
+    const routed = globalThis.fetch;
+    vi.stubGlobal("fetch", (request: Request) => {
+      asked.push(...new URL(request.url).searchParams.getAll("id"));
+      return routed(request);
     });
     const view = show(linkedInMatch());
     // The grants have arrived once a visible company shows its box.
@@ -170,7 +178,7 @@ describe("the LinkedIn match boxes", () => {
         />
       </StoryProviders>,
     );
-    await waitFor(() => expect(hiddenRead).toBe(true));
+    await waitFor(() => expect(asked).toContain(hidden));
     await waitFor(() =>
       expect(
         screen.queryByRole("checkbox", { name: /as employer/ }),

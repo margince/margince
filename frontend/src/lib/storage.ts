@@ -16,6 +16,12 @@ type Declared = Readonly<{ area: StorageArea; lifetime: Lifetime }> &
 /** Every key the app keeps; a `prefix` declares a family of per-record keys.
  *  Names are what earlier builds wrote: renaming one strands stored values. */
 export const STORAGE_KEYS = {
+  // Searches and record references belong to the current seat on this browser.
+  paletteRecents: {
+    name: "margince.palette.recents",
+    area: "local",
+    lifetime: "seat",
+  },
   locale: { name: "margince.locale", area: "local", lifetime: "device" },
   theme: { name: "margince.theme", area: "local", lifetime: "device" },
   sidebarCollapsed: {
@@ -56,6 +62,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // A "Just in" item a reader set aside with "Noticed", keyed by activity id.
+  latestInboundNoticed: {
+    prefix: "margince.latestInbound.noticed:",
+    area: "local",
+    lifetime: "seat",
+  },
   platformDeclined: {
     prefix: "margince.first-run.platform-declined:",
     area: "local",
@@ -82,6 +94,12 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  // When this tab last reloaded onto a newer build, so it reloads once per deploy.
+  staleBuildReloadedAt: {
+    name: "margince.staleBuildReloadedAt",
+    area: "session",
+    lifetime: "device",
+  },
   // "Hide until next sign-in": local so a new tab keeps it, seat so the end of
   // the session brings the reminder back.
   setupReminderHidden: {
@@ -94,6 +112,33 @@ export const STORAGE_KEYS = {
   taskRemindersShown: {
     name: "margince.taskReminders.shown",
     area: "local",
+    lifetime: "seat",
+  },
+  // Fingerprints of machine-written text this browser has played in, so each
+  // arrives with the reveal once. Seat: the next seat to sign in starts afresh.
+  aiRevealSeen: {
+    name: "margince.aiReveal.seen",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The Overview view a reader chose before choices were kept per account.
+  // Read once as a fallback and removed by the next choice.
+  analyticsOverviewView: {
+    name: "margince.analytics.overviewView",
+    area: "local",
+    lifetime: "seat",
+  },
+  // The Overview view and each view's dials a reader chose, per account id.
+  analyticsOverview: {
+    prefix: "margince.analytics.overview:",
+    area: "local",
+    lifetime: "seat",
+  },
+  // Each Overview view's dials as this tab last showed them, per account id.
+  // A shared link lands here and never in the account's own choice above.
+  analyticsOverviewTab: {
+    prefix: "margince.analytics.overviewTab:",
+    area: "session",
     lifetime: "seat",
   },
 } as const satisfies Record<string, Declared>;
@@ -136,14 +181,67 @@ export function readStored(key: StorageKey): string | null {
   return withStorage(area, (storage) => storage.getItem(name), null);
 }
 
+export type StorageChange = "write" | "remove" | "clear";
+
+type StorageListener = {
+  area: StorageArea;
+  name: string;
+  changed: (change: StorageChange) => void;
+};
+const storageListeners = new Set<StorageListener>();
+function storedChanged(area: StorageArea, name: string, change: StorageChange) {
+  for (const listener of [...storageListeners]) {
+    if (listener.area === area && listener.name === name)
+      listener.changed(change);
+  }
+}
+export function watchStored(
+  key: StorageKey,
+  changed: (change: StorageChange) => void,
+) {
+  const { name, area } = locate(key);
+  const listener = { name, area, changed };
+  const external = (event: StorageEvent) => {
+    if (
+      event.storageArea &&
+      !withStorage(area, (storage) => storage === event.storageArea, false)
+    )
+      return;
+    if (event.key === name || event.key === null)
+      changed(
+        event.key === null
+          ? "clear"
+          : event.newValue === null
+            ? "remove"
+            : "write",
+      );
+  };
+  storageListeners.add(listener);
+  globalThis.addEventListener?.("storage", external);
+  return () => {
+    storageListeners.delete(listener);
+    globalThis.removeEventListener?.("storage", external);
+  };
+}
+
 export function writeStored(key: StorageKey, value: string): void {
   const { name, area } = locate(key);
-  withStorage(area, (storage) => storage.setItem(name, value), undefined);
+  const changed = withStorage(
+    area,
+    (storage) => {
+      const previous = storage.getItem(name);
+      storage.setItem(name, value);
+      return previous !== value;
+    },
+    false,
+  );
+  if (changed) storedChanged(area, name, "write");
 }
 
 export function removeStored(key: StorageKey): void {
   const { name, area } = locate(key);
   withStorage(area, (storage) => storage.removeItem(name), undefined);
+  storedChanged(area, name, "remove");
 }
 
 /** The stored JSON as `parse` shapes it, or null when there is none to read. */
@@ -176,6 +274,7 @@ function registeredAs(area: StorageArea, name: string): Registered | undefined {
 /** Erase every `seat` key, in both areas and every family, at sign-out. */
 export function forgetSeat(): void {
   for (const area of ["local", "session"] as const) {
+    const erased = new Set<string>();
     withStorage(
       area,
       (storage) => {
@@ -185,10 +284,20 @@ export function forgetSeat(): void {
         for (const name of names) {
           if (name !== null && registeredAs(area, name)?.lifetime === "seat") {
             storage.removeItem(name);
+            erased.add(name);
           }
         }
       },
       undefined,
     );
+    // A pending write may have no value yet, so its watcher still needs the reset.
+    for (const listener of storageListeners) {
+      if (
+        listener.area === area &&
+        registeredAs(area, listener.name)?.lifetime === "seat"
+      )
+        erased.add(listener.name);
+    }
+    for (const name of erased) storedChanged(area, name, "remove");
   }
 }

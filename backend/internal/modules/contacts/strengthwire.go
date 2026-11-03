@@ -31,6 +31,7 @@ func StrengthToWire(rs RelationshipStrength, now time.Time) crmcontracts.Relatio
 		Score:                   rs.Strength,
 		Bucket:                  StrengthBucketToWire(rs.Bucket),
 		LastInteraction:         rs.LastInteraction,
+		LastEngaged:             rs.LastEngaged,
 		ComputedAt:              &computedAt,
 		Inbound90d:              &inbound,
 		Outbound90d:             &outbound,

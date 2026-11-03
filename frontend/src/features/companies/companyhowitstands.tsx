@@ -27,6 +27,7 @@ import {
 import type { CompanyTab } from "../../lib/companytab";
 import { useRecordZone } from "../../lib/recordzone";
 import { activityMarks } from "../../lib/standingmarks";
+import { companyActivityVerdict } from "./companyactivity";
 import {
   companyDimRows,
   companyVerdict,
@@ -92,7 +93,12 @@ export function CompanyHowItStands({
     locale,
   });
   const withheld = omitted(view, "health");
-  const verdict = companyVerdict({ dimensions, withheld, moment: view.moment });
+  const verdict = companyVerdict({
+    dimensions,
+    withheld,
+    moment: view.moment,
+    unrated: companyActivityVerdict(view, { t, locale, zone }),
+  });
   const word = t(verdict.word);
   const words = { t, plural, locale, zone };
   const { events, gap } = companyTimeline(view, words);

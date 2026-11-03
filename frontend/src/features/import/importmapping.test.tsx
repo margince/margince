@@ -88,6 +88,43 @@ describe("the map step", () => {
     });
   });
 
+  it("offers a core field by the name the format gives it and stages its key", async () => {
+    const user = userEvent.setup();
+    const [companies, ...rest] = formatFixture.files;
+    const sent = stubRoutes({
+      "POST /imports/sources": () => jsonResponse(zipProfile),
+      "GET /imports/format": () =>
+        jsonResponse({
+          ...formatFixture,
+          files: [
+            {
+              ...companies,
+              columns: companies.columns.map((column) =>
+                column.name === "domain"
+                  ? { ...column, field_label: "Website domain" }
+                  : column,
+              ),
+            },
+            ...rest,
+          ],
+        }),
+    });
+    await toTheMap(user);
+    await user.click(screen.getByRole("combobox", { name: "Field for Level" }));
+    expect(
+      screen.queryByRole("option", { name: "domain" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Website domain" }));
+    await user.click(screen.getByRole("button", { name: "Run test" }));
+    await waitFor(() =>
+      expect(sent.some((s) => s.path.endsWith("/validate"))).toBe(true),
+    );
+    const patch = sent.filter((s) => s.method === "PATCH").at(-1)?.body as {
+      parts: { file: string; mapping: Record<string, string> }[];
+    };
+    expect(patch.parts[0]?.mapping.Level).toBe("domain");
+  });
+
   it("orders the tabs by the format and counts the columns each leaves out", async () => {
     const user = userEvent.setup();
     stubRoutes({

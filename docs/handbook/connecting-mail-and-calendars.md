@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/components/mailcoveragenotice.tsx frontend/src/features/capture/connection-service.tsx -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/components/mailcoveragenotice.tsx frontend/src/features/capture/connection-service.tsx -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -250,3 +250,18 @@ Once an import finishes, check two places:
 **Senders**, for what was decided about each address it found, and **Held
 threads**, for the threads still held. Both are under Settings → Capture
 activity.
+
+## Why is there a warning about my mailbox?
+
+A warning at the top of every page names a connection that needs attention and says since when.
+Choose **Reconnect** when its permission has expired, or **Open connection** to check it.
+The same warning stays in your attention feed.
+
+A mailbox warns when its sync stops or it delivers no mail for three days. For a mailbox
+that has never delivered mail, the three days start when you connect it. A quiet mailbox
+may be quiet by choice: dismiss its warning to keep it out of the banner and feed.
+If mail arrives later and another three days pass without delivery, the warning returns.
+Errors still appear after you dismiss this warning. Margince sends no email about it.
+
+Admins and operations can see connections needing attention in **System health**, including
+the member, mailbox and last good sync. They see no subjects or message contents there.

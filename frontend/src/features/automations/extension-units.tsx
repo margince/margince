@@ -16,7 +16,7 @@ import {
   unitsForSecretScope,
   unitTitle,
 } from "../../lib/extensions";
-import { navigate } from "../../lib/router";
+import { navigate, routeHash } from "../../lib/router";
 import "./extension-units.css";
 
 // Where an installation's own units are offered: on the settings page that
@@ -79,13 +79,18 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   const { locale } = useLocale();
   const { name } = unit;
   const title = unitTitle(unit, locale);
-  const open = () => navigate({ screen: EXTENSION_SCREEN, id: name });
+  const address = { screen: EXTENSION_SCREEN, id: name } as const;
+  // The row presses, and the chevron carries the same address as a link. So a
+  // unit can be copied or opened in a tab, which a handler alone never allowed.
   return (
-    <PanelRow record onOpen={open} className="extunits-row">
+    <PanelRow record onOpen={() => navigate(address)} className="extunits-row">
       <span className="extunits-name" data-testid={`ext-unit-${name}`}>
         {title}
       </span>
-      <RowOpen label={t("extUnits.openNamed", { name: title })} onOpen={open} />
+      <RowOpen
+        label={t("extUnits.openNamed", { name: title })}
+        href={routeHash(address)}
+      />
     </PanelRow>
   );
 }

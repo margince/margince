@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CheckSquare, FileText } from "lucide-react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { pickOption } from "../design-system/select-testing";
 import { en } from "../i18n/en";
 import {
   installFetchStub,
@@ -218,3 +219,70 @@ export const WithCustomFieldsDark: Story = {
   ...WithCustomFields,
   globals: { theme: "dark" },
 };
+
+// A meeting logged on a record where a booked meeting still owes its outcome.
+// The form asks whether this is that meeting's record, Yes by default.
+function openMeeting(calendarManaged: boolean) {
+  return () =>
+    jsonResponse({
+      data: [
+        {
+          id: "m-1",
+          kind: "meeting",
+          subject: "Quarterly review",
+          occurred_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+          occurred_precision: "instant",
+          meeting_status: "booked",
+          awaiting_outcome: true,
+          writable: true,
+          calendar_managed: calendarManaged,
+          version: 4,
+          // Hosted by the story's reader, with the contact the form is on.
+          host_user_id: "u1",
+          links: [{ entity_type: "contact", entity_id: "p1" }],
+          offers_email: false,
+          source: "manual",
+          captured_by: "human:u1",
+          created_at: "2026-07-06T08:00:00Z",
+          updated_at: "2026-07-06T08:00:00Z",
+        },
+      ],
+      page: { next_cursor: null },
+    });
+}
+
+function meetingStory(calendarManaged: boolean): Story {
+  return {
+    render: () => {
+      installFetchStub({
+        "GET /me": admin(),
+        "GET /activities": openMeeting(calendarManaged),
+      });
+      return (
+        <StoryProviders>
+          <LogActivity entityType="contact" entityId="p1" />
+        </StoryProviders>
+      );
+    },
+    play: async ({ canvasElement }) => {
+      const canvas = within(canvasElement);
+      await pickOption(
+        userEvent.setup(),
+        await canvas.findByLabelText("Type"),
+        "Meeting",
+      );
+      await expect(
+        await canvas.findByRole("radio", {
+          name: en["log.recordOfMeetingYes"],
+        }),
+      ).toBeChecked();
+    },
+  };
+}
+
+export const OpenMeetingOnThisDay = meetingStory(false);
+export const OpenMeetingOnThisDayDark: Story = {
+  ...OpenMeetingOnThisDay,
+  globals: { theme: "dark" },
+};
+export const OpenCalendarMeetingOnThisDay = meetingStory(true);

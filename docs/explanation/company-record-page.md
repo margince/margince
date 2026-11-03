@@ -1,11 +1,15 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
+<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go backend/internal/modules/contacts/companyroster.go backend/internal/modules/contacts/company_counts.go backend/internal/modules/contacts/contact_list.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
 # The company record page: one gated read, text per viewer, named gaps
 
 The account page a rep opens on a company. It shows who works there, what is open, what moved, and what
 to do next. A written brief covers all of it. It is the largest composite surface in the product. Nearly
 all of it is put together in `internal/compose`. That is gated section reads inside one transaction
 (listed below), plus two groups that work across modules and own view state of their own.
+
+The contact count, company contact tab and company filter share the current roster.
+It includes a current second job and counts each contact once, within the reader's contact and link access.
+A primary employer stays a separate choice on the contact.
 
 ## The shape
 

@@ -98,7 +98,11 @@ const clientToolCeiling = 100
 //
 // Routers that may front actions of different tiers then bring it to 37: one
 // per family of verbs (find_records, read_context, change_state and the rest).
-const publishedToolCeiling = 37
+//
+// change_reports raises it to 38, by a maintainer decision: the slot holds the
+// write-scope reporting router, so later report writes join it as actions. The
+// user keeps 62 of the client's 100 slots for other servers.
+const publishedToolCeiling = 38
 
 type mcpInfoFile struct {
 	Totals struct {

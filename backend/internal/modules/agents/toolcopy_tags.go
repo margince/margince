@@ -96,8 +96,7 @@ var changeTagsCopy = toolCopy{
 	Purpose: "Change the workspace's tags. apply and remove put one tag on, or take it off, one " +
 		"contact, company, deal, lead or project, by tag_id or by the tag_name of a tag that " +
 		"already exists. create coins a new word. update renames, recolours or describes one; " +
-		"fields left out are unchanged. merge folds a duplicate word into the one kept, once a " +
-		"human approves.",
+		"fields left out are unchanged. merge folds a duplicate word into the one kept.",
 	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
 		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
 		"conflict. Before create, read the list — a near-duplicate splits records that belong " +

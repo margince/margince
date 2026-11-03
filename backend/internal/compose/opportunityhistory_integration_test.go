@@ -19,6 +19,7 @@ import (
 
 func TestMailboxHistoryKeepsAQualifiedOpportunityAsHistoricalRecovery(t *testing.T) {
 	e := setupScout(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	e.now = baselineAsOf
 	company := e.SeedCompany(t, "Maple Studio", nil)
 	buyer, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{

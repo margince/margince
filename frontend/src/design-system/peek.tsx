@@ -29,6 +29,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
+import { AppLink } from "./applink";
 import { useHoverIntent } from "./hoverintent";
 import { OverviewList, OverviewRow } from "./overviewcard";
 import { usePanelDismiss } from "./popoverdismiss";
@@ -269,9 +270,9 @@ export function PeekCard({ head, headHidden, items, foot }: PeekContent) {
 function PeekTitle({ item }: Readonly<{ item: PeekItem }>) {
   if (item.href) {
     return (
-      <a className="cell-link peek-door" href={item.href}>
+      <AppLink className="cell-link peek-door" href={item.href}>
         {item.title}
-      </a>
+      </AppLink>
     );
   }
   if (item.onOpen) {

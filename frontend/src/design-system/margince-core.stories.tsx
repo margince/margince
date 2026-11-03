@@ -140,7 +140,9 @@ export const Surfaces: Story = {
       <div style={{ padding: "var(--space-6)", background: "var(--bgPage)" }}>
         <MarginceCoreScene state="working" size="md" surface="auto" />
       </div>
-      <div style={{ padding: "var(--space-6)", background: "var(--bgRail)" }}>
+      <div
+        style={{ padding: "var(--space-6)", background: "var(--bgInkField)" }}
+      >
         <MarginceCoreScene state="working" size="md" surface="dark" />
       </div>
     </div>

@@ -50,14 +50,7 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := e.AgentCtx()
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		t.Fatal("missing staging actor")
-	}
-	actor.OnBehalfOf = e.Rep1
-	ctx = principal.WithActor(ctx, actor)
-	staged, err := queue.Stage(ctx, approvals.StageInput{
+	staged, err := queue.Stage(onBehalfOf(commitmentDispatchCtx(e), e.Rep1), approvals.StageInput{
 		Kind: "commitment_task", ProposedChange: change, DiffHash: hash,
 		TargetType: "deal", TargetID: deal, Summary: "Send revised pricing",
 	})

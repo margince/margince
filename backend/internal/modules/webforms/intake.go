@@ -97,11 +97,15 @@ func (in *Intake) Submit(ctx context.Context, a Arrival) (Receipt, error) {
 	if err := checkEnquiry(f, e); err != nil {
 		return receipt, err
 	}
-	return receipt, in.lander.Land(ctx, Landing{
+	err = in.lander.Land(ctx, Landing{
 		FormID: f.ID, FormName: f.Name, SourceKey: sourceKey(f.ID, key),
 		LeadOrigin: f.LeadOrigin, OwnerID: f.OwnerID, Enquiry: e,
 		ConsentWording: f.ConsentWording, ConsentPolicyVersion: f.ConsentPolicyVersion,
 	})
+	if err == nil {
+		in.store.notePost(ctx, f.ID)
+	}
+	return receipt, err
 }
 
 // admit runs the form's admission rule and reads the fields. An empty key with

@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -389,10 +388,13 @@ func candidateSharesDomain(c ContactCandidate, domain string) bool {
 // path lowercases on write, so the exact tier compares like for like.
 func normalizeEmail(e string) string { return correspondence.Fold(e) }
 
-// normalizeDomain matches company_domain's storage contract:
-// lowercase only — never unaccent, or münich.example would collide with
-// a different company's munich.example.
-func normalizeDomain(d string) string { return strings.ToLower(strings.TrimSpace(d)) }
+// normalizeDomain matches company_domain's storage contract, through the fold
+// the rest of the tree uses. A domain in unicode and the same domain in
+// punycode are one domain.
+//
+// Still never unaccented. `münich.example` folds to its punycode, not to a
+// different company's `munich.example`.
+func normalizeDomain(d string) string { return owndomain.Fold(d) }
 
 // emailDomain returns the lowercased host of an address, or "" when the
 // input carries no host to compare.

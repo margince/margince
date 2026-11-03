@@ -281,6 +281,8 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// beside a short or absent key is reported at ERROR rather than failing the
 	// boot — a vault legitimately exists on deployments that never use MFA.
 	opts = append(opts, compose.WithMFAChallengeSigner(cfg.connectorStateKey))
+	// The same key signs a tool's question in the chat, under its own token type.
+	opts = append(opts, compose.WithMCPInputStateKey(cfg.connectorStateKey))
 
 	// The signing key enables the mutating /webhook-subscriptions surface
 	// (create/rotate/replay); without it those paths answer an honest 503.

@@ -69,7 +69,9 @@ type linkResolver struct {
 	employers map[string]employerCandidate
 	// names holds, per folded company name, the rows of this upload the dry
 	// run predicts will land under it.
-	names map[string]pendingName
+	names                  map[string]pendingName
+	plannedEmployerNames   map[string]bool
+	plannedEmployerDomains map[string]string
 
 	byBinding, byNaturalKey, byID linkStep
 }

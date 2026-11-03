@@ -141,8 +141,20 @@ func writeSanitizedElement(out *strings.Builder, node *html.Node, policy sanitiz
 		return
 	}
 	if !allowedElements[node.DataAtom] && !styled {
-		// Unwrap: keep what it said, drop what it was.
+		separator := ""
+		if policy.styledSpans {
+			if textBlocks[node.DataAtom] {
+				separator = "<br>"
+			}
+			if node.DataAtom == atom.Td || node.DataAtom == atom.Th {
+				separator = " "
+			}
+		}
+		out.WriteString(separator)
 		writeChildren(out, node, policy)
+		if separator != " " {
+			out.WriteString(separator)
+		}
 		return
 	}
 	tag := node.Data
@@ -217,7 +229,7 @@ func safeStyle(node *html.Node) string {
 			}
 			prop, value = strings.ToLower(strings.TrimSpace(prop)), strings.TrimSpace(value)
 			switch {
-			case prop == "color" && styleColor.MatchString(value):
+			case prop == "color" && !strings.EqualFold(value, "transparent") && styleColor.MatchString(value):
 				kept = append(kept, "color:"+value)
 			case prop == "font-size" && styleSize.MatchString(value):
 				kept = append(kept, "font-size:"+value)

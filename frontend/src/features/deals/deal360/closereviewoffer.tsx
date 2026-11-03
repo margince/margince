@@ -135,13 +135,10 @@ export function isSavedDeal(result: unknown): result is Deal {
 /**
  * The reason this close stated, in words the review can start from.
  *
- * A LOST deal always has free text: the dialog will not close it without one,
- * so it passes through as typed. A WON deal usually has nothing — a win with a
- * signed contract behind it is one click and states no reason at all — and
- * where the server did ask, the answer is a picked reason rather than prose.
- * That picked reason is handed over as its own label, plus the detail where
- * "something else" was chosen, because "Something else" alone answers nothing
- * a reviewer can read later.
+ * A LOST deal passes its reason's label and the note, as the dialog joined
+ * them. A WON deal with a signed contract states no reason. Where the server
+ * asked, the picked reason goes over as its label, plus the detail after
+ * "something else", which alone tells a reviewer nothing.
  */
 export function closeReason(
   said: Readonly<{

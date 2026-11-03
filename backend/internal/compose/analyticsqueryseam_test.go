@@ -8,6 +8,7 @@ package compose
 
 import (
 	"context"
+	"maps"
 	"strings"
 	"testing"
 
@@ -125,6 +126,39 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 	// would refuse every plan immediately.
 	if AnalyticsSchemaFor(seatWith("deal")).Version != narrow.Version {
 		t.Error("the same vocabulary hashed to two versions, so every plan is refused")
+	}
+}
+
+// A model reads the currency rule from the vocabulary before it asks, and a
+// saved answer from before a measure became per-row money does not compare as
+// the same vocabulary.
+func TestTheVocabularyPublishesWhichMeasuresAreInEachRowsCurrency(t *testing.T) {
+	t.Parallel()
+	schema := AnalyticsSchemaFor(seatWith("deal"))
+	described := DescribeAnalyticsSchema(schema)
+	marked := 0
+	for name, entity := range schema.Entities {
+		for field, def := range entity.Fields {
+			if def.Currency == nil {
+				continue
+			}
+			marked++
+			if !strings.Contains(described, field+" is in each row's own currency: group by "+def.Currency.By) {
+				t.Errorf("%s.%s is per-row money and the vocabulary does not say so", name, field)
+			}
+			stripped := maps.Clone(schema.Entities)
+			fields := maps.Clone(entity.Fields)
+			def.Currency = nil
+			fields[field] = def
+			entity.Fields = fields
+			stripped[name] = entity
+			if schemaVersion(stripped) == schema.Version {
+				t.Errorf("dropping the currency basis of %s.%s left the schema version unchanged", name, field)
+			}
+		}
+	}
+	if marked == 0 {
+		t.Fatal("no deal measure is marked as per-row money, so this test swept nothing")
 	}
 }
 

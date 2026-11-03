@@ -32,6 +32,8 @@ type UpdateLeadInput struct {
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
+	// Industry is a code or a label of one (leadIndustryWrite); blank clears it.
+	Industry *string
 	// LinkedInURL sets the profile URL in its normalized spelling.
 	LinkedInURL *string
 	Status      *string // only new ↔ working here; terminal states have their own paths
@@ -57,7 +59,9 @@ type UpdateLeadInput struct {
 	ClearScoreOverride bool
 	OwnerID            *ids.UserID
 	ProjectID          *ids.ProjectID
-	IfVersion          *int64
+	// PartnerCompanyID names the partner that referred the lead (setLeadPartner).
+	PartnerCompanyID *ids.CompanyID
+	IfVersion        *int64
 	// CustomFields carries the request body's cf_* keys. A key no active catalog
 	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
@@ -101,36 +105,6 @@ func (e *ScoreOverrideWithoutScoreError) Error() string {
 // FieldFault names the score, which is the input that is missing.
 func (e *ScoreOverrideWithoutScoreError) FieldFault() (field, code, message string) {
 	return leadScoreField, codeRequired, e.Error()
-}
-
-// ScoreOverrideReasonEmptyError rejects an empty-string reason: the
-// contract's clear gesture is JSON null (minLength 1 on the field), so a
-// blank reason is neither a written justification nor a clear — it is
-// invalid input.
-type ScoreOverrideReasonEmptyError struct{}
-
-func (e *ScoreOverrideReasonEmptyError) Error() string {
-	return "score_override_reason must not be empty; pass null to clear the override"
-}
-
-// FieldFault refuses a score-override reason that is present but blank.
-func (e *ScoreOverrideReasonEmptyError) FieldFault() (field, code, message string) {
-	return leadScoreOverrideReasonField, "min_length", e.Error()
-}
-
-// ScoreOverrideClearConflictError rejects a null score arriving together
-// with a written reason: null says "drop the override", the reason says
-// "keep one" — honoring either would silently discard the other half of
-// the request.
-type ScoreOverrideClearConflictError struct{}
-
-func (e *ScoreOverrideClearConflictError) Error() string {
-	return "a null score clears the override; it cannot be combined with a score_override_reason"
-}
-
-// FieldFault refuses setting and clearing the same override in one request.
-func (e *ScoreOverrideClearConflictError) FieldFault() (field, code, message string) {
-	return leadScoreField, "clear_conflict", e.Error()
 }
 
 func (s *Store) UpdateLead(ctx context.Context, id ids.LeadID, in UpdateLeadInput) (crmcontracts.Lead, error) {
@@ -263,26 +237,16 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.EnsureIfMatch(ctx, tx, "lead", id.UUID, in.IfVersion); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// A client-supplied reference to a row-scoped record is a read of it.
-	// No same-company check: a lead's company is an optional link a human
-	// confirms, not an anchor a project must share (Note PROJ-DDL-N-4).
-	if in.ProjectID != nil {
-		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
-			return crmcontracts.Lead{}, err
-		}
-	}
-	in, err = settleOriginHint(ctx, tx, current, in)
+	in, err = admitLeadReferences(ctx, tx, current, in)
 	if err != nil {
 		return crmcontracts.Lead{}, err
-	}
-	if in.Origin != nil {
-		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
-			return crmcontracts.Lead{}, err
-		}
 	}
 	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, resumeRecompute, err := buildLeadPatch(current, in)
 	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := setLeadPartner(ctx, tx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := refuseContactHeldLeadEdit(ctx, tx, current, in); err != nil {
@@ -300,7 +264,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	if err := unlinkRenamedCompany(ctx, tx, id, p); err != nil {
+	if err := unlinkUnnamedCompany(ctx, tx, id, current.CompanyName, current.CandidateCompanyKey, p); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if p.Empty() {
@@ -330,6 +294,28 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 		return crmcontracts.Lead{}, err
 	}
 	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// admitLeadReferences checks the project and origin a patch names, and
+// settles an importer's origin wording. A client-supplied reference to a
+// row-scoped record is a read of it. No same-company check: a lead's company is
+// an optional link a human confirms (Note PROJ-DDL-N-4).
+func admitLeadReferences(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, in UpdateLeadInput) (UpdateLeadInput, error) {
+	if in.ProjectID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
+			return in, err
+		}
+	}
+	in, err := settleOriginHint(ctx, tx, current, in)
+	if err != nil {
+		return in, err
+	}
+	if in.Origin != nil {
+		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
+			return in, err
+		}
+	}
+	return in, nil
 }
 
 // reviewTouchedLeadIdentity re-asks the near-match question after a rename or
@@ -409,6 +395,13 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 	if in.CompanyName != nil {
 		p.Set("company_name", current.CompanyName, *in.CompanyName)
 	}
+	if in.Industry != nil {
+		industry, err := leadIndustryWrite(in.Industry)
+		if err != nil {
+			return nil, false, err
+		}
+		p.Set(leadIndustryField, current.Industry, industry)
+	}
 	if in.LinkedInURL != nil {
 		normalized, err := leadLinkedInForUpdate(*in.LinkedInURL, current.LinkedinUrl)
 		if err != nil {
@@ -464,7 +457,7 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		// outside the record of the change that caused it. The two agree on the
 		// condition: no owner yet, and no clock yet.
 		if current.RoutedAt == nil && current.OwnerId == nil {
-			p.Set("routed_at", nil, leadSLAClock().UTC())
+			stampArrival(p, *in.OwnerID, leadSLAClock().UTC())
 		}
 	}
 	return p, resumeRecompute, nil

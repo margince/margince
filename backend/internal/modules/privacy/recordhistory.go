@@ -272,8 +272,8 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 
 // queryRecordHistoryWindow fetches one keyset window of the record's audit
 // spine, newest first, with both display names resolved in SQL by the shared
-// auditActorNameJoins — and, unioned into the same window, the rows of the LINKS
-// the record is an end of (edgehistory.go).
+// auditattribution.ActorNameJoins. The rows of the links the record is an end
+// of (edgehistory.go) are unioned into the same window.
 //
 // Neither join carries a workspace predicate, and does not need one: both
 // match app_user.id, a global primary key, so a uuid can only ever resolve

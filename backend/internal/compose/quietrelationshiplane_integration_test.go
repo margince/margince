@@ -278,6 +278,45 @@ func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
 	}
 }
 
+func TestAStopStaysWithItsReaderWhenTheContactChangesOwner(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Handed Over", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 60)
+	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	id := ids.From[ids.ContactKind](contact)
+	first := e.As(e.Rep1, nil, integration.AdminPerms)
+	second := e.As(e.Rep2, nil, integration.AdminPerms)
+	if err := store.DismissRelationshipNudges(first, []ids.ContactID{id}, contacts.NudgeSpan{Permanent: true}); err != nil {
+		t.Fatalf("stopping for good: %v", err)
+	}
+	reassign := func(to ids.UUID) {
+		t.Helper()
+		owner := ids.From[ids.UserKind](to)
+		if _, err := e.Contacts.UpdateContact(e.Admin(), id, contacts.UpdateContactInput{OwnerID: &owner}); err != nil {
+			t.Fatalf("reassigning the contact to %s: %v", to, err)
+		}
+	}
+
+	reassign(e.Rep2)
+	if got := quietLaneFor(t, e, e.Rep2, attention.TasksMine, ids.UUID{}); len(got) != 1 || got[0].ContactID != contact || got[0].OwnerID != e.Rep2 {
+		t.Fatalf("the new owner's lane = %+v, want the contact: the old owner's stop is not theirs", got)
+	}
+	if got, err := store.RelationshipNudgeState(first, id); err != nil || !got.Stopped {
+		t.Fatalf("the old owner's state = %+v, %v, want still stopped", got, err)
+	}
+	if got, err := store.RelationshipNudgeState(second, id); err != nil || got.Stopped || got.Until != nil {
+		t.Fatalf("the new owner's state = %+v, %v, want following", got, err)
+	}
+
+	reassign(e.Rep1)
+	if got := quietLaneFor(t, e, e.Rep2, attention.TasksOwnedBy, e.Rep1); len(got) != 1 || got[0].ContactID != contact {
+		t.Fatalf("a colleague viewing the owner's day = %+v, want the contact back with its first owner", got)
+	}
+	if got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{}); len(got) != 0 {
+		t.Fatalf("the lane = %+v once the contact is theirs again, want nothing: their stop still holds", got)
+	}
+}
+
 // The decided rule: a relationship silent for longer than 180 days leaves the
 // Worklist. A silence of 180 days is still a suggestion; 181 is not.
 func TestTheQuietCeilingKeepsDayOneHundredEightyAndDropsTheDayAfter(t *testing.T) {

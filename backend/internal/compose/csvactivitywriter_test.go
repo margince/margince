@@ -64,6 +64,7 @@ func TestEachRefusalOfTheActivitiesStoreIsTheReasonTheReportShows(t *testing.T) 
 		"too many links":  {&activities.TooManyLinksError{Count: activities.MaxLinks + 1}, migration.ReasonTooManyLinks},
 		"company meeting": {&activities.CompanyMeetingError{Kind: "meeting"}, migration.ReasonCompanyLinkOnMeeting},
 		"kind rule":       {fmt.Errorf("filing: %w", kindFault), migration.ReasonMeetingStatusNotForKind},
+		"not taken place": {fmt.Errorf("filing: %w", &activities.MeetingNotTakenPlaceError{}), migration.ReasonMeetingNotTakenPlace},
 		"retention hold":  {fmt.Errorf("filing: %w", apperrors.ErrRetentionHold), migration.ReasonActivityHeld},
 		"not permitted":   {apperrors.ErrPermissionDenied, migration.ReasonLinkNotAttachable},
 		"not visible":     {apperrors.ErrNotFound, migration.ReasonLinkNotAttachable},

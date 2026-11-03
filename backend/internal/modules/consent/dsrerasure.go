@@ -147,7 +147,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	held := dsrHeldSets(in, arg)
-	row := tx.QueryRow(ctx, storekit.SQLf(`
+	query := storekit.SQLf(`
 			UPDATE data_subject_request SET
 			  status = 'fulfilled',
 			  %s,
@@ -155,8 +155,8 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE '`+erasedResolution+`' END,
 			  contact_id = NULL
 			WHERE id = $%d AND status = $%d
-			RETURNING `+dsrColumns, held, arg(in.Resolution), arg(id), arg(current.Status)),
-		args...)
+			RETURNING `+dsrColumns, held, arg(in.Resolution), arg(id), arg(current.Status))
+	row := tx.QueryRow(ctx, query, args...)
 	out, err := scanDSR(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

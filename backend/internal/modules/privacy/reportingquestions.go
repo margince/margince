@@ -80,7 +80,10 @@ func sarQuestionSection(pkg *SARPackage, contactID ids.ContactID, emails []strin
 func redactSubjectQuestions(ctx context.Context, tx pgx.Tx, subject ids.ContactID, emails []string) error {
 	args := []any{subject.UUID, emails}
 	p := strings.Split(storekit.Placeholders(args), ",")
-	return redactQuestionEditions(ctx, tx, `SELECT DISTINCT qs.edition_id FROM report_edition_question_source qs WHERE `+subjectQuestionSources(p[0], p[1]), args...)
+	if err := redactQuestionEditions(ctx, tx, `SELECT DISTINCT qs.edition_id FROM report_edition_question_source qs WHERE `+subjectQuestionSources(p[0], p[1]), args...); err != nil {
+		return err
+	}
+	return scrubSubjectBindings(ctx, tx, subject, emails)
 }
 
 // redactQuestionSource removes every kept answer one of these records was

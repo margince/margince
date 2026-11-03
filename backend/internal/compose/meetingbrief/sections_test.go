@@ -44,7 +44,7 @@ func fullInput() Input {
 		LastTouchAt: &Occurred{At: touched},
 		Deal: &DealIn{
 			ID: dealID, Name: "Northwind platform", Stage: "Proposal",
-			AmountMinor: 9500000, Currency: "EUR", CloseDate: new(at(30)),
+			AmountMinor: new(int64(9500000)), Currency: "EUR", CloseDate: new(at(30)),
 		},
 		Attendees: []AttendeeIn{
 			{ContactID: contactID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &Occurred{At: touched}},

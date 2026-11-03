@@ -201,6 +201,7 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 		CloseDateChange: receipt.CloseDateChange,
 		Kind:            receipt.Kind,
 		Summary:         receipt.Summary,
+		SummaryParts:    receipt.SummaryParts,
 		OccurredAt:      receipt.OccurredAt,
 	}
 	// The record it was about, where the act named one. Not every approval is
