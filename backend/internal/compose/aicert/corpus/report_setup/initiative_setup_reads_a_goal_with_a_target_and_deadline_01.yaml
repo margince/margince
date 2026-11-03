@@ -19,11 +19,10 @@ fixture:
       - {id: software, label: Software}
     periods: [this_month, this_quarter]
     metrics:
-      - {id: bookings_won, label: "Sales won", charts: [bookings_trend, metric_reading]}
-      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: [metric_reading]}
+      - {id: bookings_won, label: "Sales won", charts: [bookings_trend]}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: []}
     charts:
       - {id: bookings_trend, label: bookings_trend}
-      - {id: metric_reading, label: metric_reading}
     objectives:
       - {id: bookings_won, label: "Sales won"}
       - {id: qualified_opportunities_created, label: "Qualified opportunities"}
@@ -33,6 +32,8 @@ expect:
     product: linden
     country: DE
     objective: bookings_won
+    target_value: 250000
+    deadline: "2026-12-31"
     unsupported: 0
   bands:
     certified_min: 70

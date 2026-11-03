@@ -19,10 +19,9 @@ fixture:
     periods: [this_month, this_quarter]
     metrics:
       - {id: bookings_won, label: "Sales won", charts: [bookings_trend]}
-      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: [metric_reading]}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: []}
     charts:
       - {id: bookings_trend, label: bookings_trend}
-      - {id: metric_reading, label: metric_reading}
     objectives:
       - {id: bookings_won, label: "Sales won"}
       - {id: qualified_opportunities_created, label: "Qualified opportunities"}

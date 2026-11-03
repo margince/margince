@@ -12,8 +12,9 @@ func setupInput(site string) Input {
 	return Input{
 		Site: site, Description: "Linden press deals in Germany this quarter", Today: "2026-11-03", Lang: "en",
 		Catalog: Catalog{
-			Products:   []Option{{ID: "11111111-1111-4111-8111-111111111111", Label: "Linden press line"}},
+			Products:   []Option{{ID: "11111111-1111-4111-8111-111111111111", Label: "Linden press line"}, {ID: "22222222-2222-4222-8222-222222222222", Label: "Support"}, {ID: "33333333-3333-4333-8333-333333333333", Label: "support"}},
 			Industries: []Option{{ID: "manufacturing", Label: "Manufacturing"}},
+			Countries:  []string{"DE", "AT"},
 			Periods:    []string{"this_month", "this_quarter"},
 			Metrics: []MetricOption{
 				{ID: "bookings_won", Label: "Sales won", Charts: []string{"bookings_trend", "metric_reading"}},
@@ -94,5 +95,22 @@ func TestParseRefusesAnEmptyReplyAndAnIdInProse(t *testing.T) {
 	}
 	if out.Name != "" || len(out.Clarifications) != 1 {
 		t.Fatalf("prose spelling an id was kept: name %q, clarifications %v", out.Name, out.Clarifications)
+	}
+}
+
+func TestParseNamesBackAnAmbiguousLabelAnUnassignedCountryAndASecondValue(t *testing.T) {
+	reply := `{"name":"Two lines","filters":[{"field":"product","value":"SUPPORT","phrase":"support"},{"field":"country","value":"zz","phrase":"abroad"},{"field":"period","value":"this_month","phrase":"this month"},{"field":"period","value":"this_quarter","phrase":"this quarter"},{"field":"period","value":"this_month","phrase":"the month"}],"metrics":[],"charts":[],"objective":null,"clarifications":[],"unsupported":[]}`
+	out, err := Parse(reply, setupInput(SiteCustomReport))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Product != "" || out.Country != "" || out.Period != "this_month" {
+		t.Fatalf("resolved %+v, want no product, no country and the first period", out)
+	}
+	if len(out.Unsupported) != 3 {
+		t.Fatalf("named back %+v, want the shared label, the unassigned code and the second period", out.Unsupported)
+	}
+	if !strings.Contains(out.Unsupported[0].Reason, "more than one product") || out.Unsupported[2].Code != CodeNotOffered {
+		t.Fatalf("named back %+v", out.Unsupported)
 	}
 }

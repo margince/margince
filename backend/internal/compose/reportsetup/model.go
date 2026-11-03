@@ -66,11 +66,13 @@ type MetricOption struct {
 	Charts []string `json:"charts"`
 }
 
-// Catalog is everything a proposal may resolve to. A country is any ISO
-// 3166-1 alpha-2 code, so it is a rule in the prompt rather than a list.
+// Catalog is everything a proposal may resolve to. Countries are the
+// assigned ISO 3166-1 alpha-2 codes; the prompt states the rule and the
+// gate checks the list, so the model is not handed 250 codes.
 type Catalog struct {
 	Products   []Option       `json:"products"`
 	Industries []Option       `json:"industries"`
+	Countries  []string       `json:"-"`
 	Periods    []string       `json:"periods"`
 	Metrics    []MetricOption `json:"metrics"`
 	Charts     []Option       `json:"charts"`
@@ -90,7 +92,7 @@ const system = `You turn a sales manager's description into the setup of a sales
 Return ONLY a JSON object with these keys:
 {"name":"...","filters":[{"field":"product|industry|country|period","value":"...","phrase":"..."}],"metrics":[{"id":"...","phrase":"..."}],"charts":[{"id":"...","phrase":"..."}],"objective":{"metric":"...","target_value":123,"deadline":"YYYY-MM-DD","phrase":"..."} or null,"clarifications":["..."],"unsupported":[{"phrase":"...","reason":"..."}]}
 "name" is a short name for what was described. "phrase" is the words of the description a value was read from.
-A filter "value" is a catalog id for a product or an industry, an ISO 3166-1 alpha-2 code for a country, or one of the catalog's periods. Name a filter only when the description asks for it.
+A filter "value" is a catalog id for a product or an industry, an ISO 3166-1 alpha-2 code for a country, or one of the catalog's periods. Name each filter once. Name a filter only when the description asks for it.
 "metrics" and "charts" are catalog ids; a chart must be one a chosen metric draws. For site "initiative_setup" name no metrics and no charts.
 "objective" is for site "initiative_setup" only: the metric the initiative is measured by, from "objectives", a whole-number target when the description gives one, and a deadline on or after today when it gives one. For "custom_report_setup" it is null.
 "clarifications" are the questions the description leaves open, at most four, each one sentence. "unsupported" names each phrase the catalog cannot express and says why in one sentence.
@@ -282,14 +284,11 @@ func (g *gate) filter(field, value, phrase string) {
 		g.option(&g.out.Industry, field, value, phrase, g.in.Catalog.Industries)
 	case "country":
 		code := strings.ToUpper(value)
-		if !countryShape.MatchString(code) {
-			g.drop(phrase, CodeUnknownValue, fmt.Sprintf("%q is not a two-letter country code", value))
+		if !countryShape.MatchString(code) || !slices.Contains(g.in.Catalog.Countries, code) {
+			g.drop(phrase, CodeUnknownValue, fmt.Sprintf("%q is not a country code", value))
 			return
 		}
-		if g.out.Country == "" {
-			g.out.Country = code
-			g.keep(field, code, code, phrase)
-		}
+		g.set(&g.out.Country, field, code, code, phrase)
 	case "period":
 		g.option(&g.out.Period, field, value, phrase, periodOptions(g.in.Catalog.Periods))
 	default:
@@ -306,31 +305,48 @@ func periodOptions(periods []string) []Option {
 }
 
 func (g *gate) option(into *string, field, value, phrase string, offered []Option) {
-	found, ok := resolve(value, offered)
-	if !ok {
-		g.drop(phrase, CodeUnknownValue, fmt.Sprintf("there is no %s called %q", field, value))
+	found, err := resolve(field, value, offered)
+	if err != nil {
+		g.drop(phrase, CodeUnknownValue, err.Error())
 		return
 	}
-	if *into == "" {
-		*into = found.ID
-		g.keep(field, found.ID, found.Label, phrase)
+	g.set(into, field, found.ID, found.Label, phrase)
+}
+
+// set keeps the first value of a dimension. A second, different value is
+// named back rather than silently lost, so a contradictory reply shows.
+func (g *gate) set(into *string, field, value, label, phrase string) {
+	switch {
+	case *into == "":
+		*into = value
+		g.keep(field, value, label, phrase)
+	case *into != value:
+		g.drop(phrase, CodeNotOffered, fmt.Sprintf("the %s is already set; a report has one", field))
 	}
 }
 
 // resolve finds an option by id, or by its label when the model answered
-// with the name it read.
-func resolve(value string, offered []Option) (Option, bool) {
+// with the name it read. A label two options share resolves to neither.
+func resolve(field, value string, offered []Option) (Option, error) {
 	for _, option := range offered {
 		if option.ID == value {
-			return option, true
+			return option, nil
 		}
 	}
+	var found []Option
 	for _, option := range offered {
 		if strings.EqualFold(option.Label, value) {
-			return option, true
+			found = append(found, option)
 		}
 	}
-	return Option{}, false
+	switch len(found) {
+	case 1:
+		return found[0], nil
+	case 0:
+		return Option{}, fmt.Errorf("there is no %s called %q", field, value)
+	default:
+		return Option{}, fmt.Errorf("more than one %s is called %q", field, value)
+	}
 }
 
 func (g *gate) metric(id, phrase string) {
@@ -366,9 +382,9 @@ func (g *gate) chart(id, phrase string) {
 		g.drop(phrase, CodeNotOffered, "an initiative draws its own charts")
 		return
 	}
-	chart, ok := resolve(strings.TrimSpace(id), g.in.Catalog.Charts)
-	if !ok {
-		g.drop(phrase, CodeUnknownValue, fmt.Sprintf("there is no chart called %q", id))
+	chart, err := resolve("chart", strings.TrimSpace(id), g.in.Catalog.Charts)
+	if err != nil {
+		g.drop(phrase, CodeUnknownValue, err.Error())
 		return
 	}
 	if !g.drawn(chart.ID) {
@@ -397,9 +413,9 @@ func (g *gate) objective(metric string, target *int64, deadline *string, phrase 
 		g.drop(phrase, CodeNotOffered, "a custom report has no objective")
 		return
 	}
-	found, ok := resolve(strings.TrimSpace(metric), g.in.Catalog.Objectives)
-	if !ok {
-		g.drop(phrase, CodeUnknownValue, fmt.Sprintf("there is no objective called %q", metric))
+	found, err := resolve("objective", strings.TrimSpace(metric), g.in.Catalog.Objectives)
+	if err != nil {
+		g.drop(phrase, CodeUnknownValue, err.Error())
 		return
 	}
 	g.out.Objective = &Objective{Metric: found.ID}

@@ -17,25 +17,25 @@ fixture:
     periods: [this_month, this_quarter]
     metrics:
       - {id: bookings_won, label: "Sales won", charts: [bookings_trend]}
-      - {id: open_pipeline, label: "Open pipeline", charts: [stage_distribution, metric_reading]}
+      - {id: open_pipeline, label: "Open pipeline", charts: [stage_distribution]}
     charts:
       - {id: bookings_trend, label: bookings_trend}
       - {id: stage_distribution, label: stage_distribution}
-      - {id: metric_reading, label: metric_reading}
 expect:
   outcome: accepted
   answer:
     country: AT
     period: this_month
     metrics: [open_pipeline]
+    charts: [stage_distribution]
     unsupported: 1
   bands:
     certified_min: 70
     degraded_min: 50
     floor: 40
   rubric: >
-    Score whether the proposal keeps Open pipeline, Austria as AT and
-    this_month, and names back "the average discount per rep" as a measure
+    Score whether the proposal keeps Open pipeline with its stage chart,
+    Austria as AT and this_month, and names back "the average discount per rep" as a measure
     no metric here holds. Mapping that phrase to Sales won, or to any
     metric, fails the scenario. A product or an industry the words never
     asked for scores low.
