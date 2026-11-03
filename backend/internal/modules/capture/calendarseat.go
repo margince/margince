@@ -23,15 +23,20 @@ func calendarSeatMatch(ctx context.Context, tx pgx.Tx, kind string, attested boo
 	//
 	// It asks only whether the account is erased. A seat that merely left still
 	// attended the meeting.
-	login := "u.archived_at IS NULL AND " +
-		storekit.SeatLoginIsSQL("u", "inp.address", "inp.domain_folded")
+	// Factored out front rather than written into one arm.
+	//
+	// `AND` binds tighter than `OR`, so a liveness test beside the login match
+	// leaves the attested arm unguarded.
+	alive := "u.archived_at IS NULL AND "
+	login := storekit.SeatLoginIsSQL("u", "inp.address", "inp.domain_folded")
 	if kind != meetingKind || !attested {
-		return login, nil
+		return alive + login, nil
 	}
 	bind := func(v any) int { *args = append(*args, v); return len(*args) }
 	identities, err := storekit.ProvedMailSeatIdentitiesSQL(ctx, tx, bind)
 	if err != nil {
 		return "", err
 	}
-	return "(" + login + " OR (" + identities + " -> u.id::text) ? inp.address)", nil
+	return alive + "(" + login +
+		" OR (" + identities + " -> u.id::text) ? inp.address)", nil
 }
