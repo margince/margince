@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   within,
@@ -130,6 +131,13 @@ describe("ConfirmModal", () => {
     expect(onConfirm).not.toHaveBeenCalled();
 
     rerender(dialog());
+    // A Ctrl+Enter that picks an input-method candidate is not a confirm.
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Note" }), {
+      key: "Enter",
+      ctrlKey: true,
+      isComposing: true,
+    });
+    expect(onConfirm).not.toHaveBeenCalled();
     await user.keyboard("Moved{Enter}");
     expect(onConfirm).not.toHaveBeenCalled();
     await user.keyboard("{Control>}{Enter}{/Control}");

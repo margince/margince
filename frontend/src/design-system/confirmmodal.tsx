@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { refuseUnreadableField } from "./formvalidity";
@@ -101,6 +102,7 @@ export function ConfirmModal({
     if (
       !(event.target instanceof HTMLTextAreaElement) ||
       !isParagraphCommit(event) ||
+      isImeCommit(event) ||
       refused
     ) {
       return;
