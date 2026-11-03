@@ -347,6 +347,9 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	if in.Status != nil {
 		terms = append(terms, fmt.Sprintf("status = $%d", arg(*in.Status)))
 	}
+	if in.actionableAt != nil {
+		terms = append(terms, fmt.Sprintf("(kind = ANY($%d::text[]) OR expires_at >= $%d)", arg(neverExpiringKinds()), arg(in.actionableAt.UTC())))
+	}
 	if in.Kind != nil {
 		terms = append(terms, fmt.Sprintf("kind = $%d", arg(*in.Kind)))
 	}
