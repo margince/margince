@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { MayBeDone } from "../../components/maybedone";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
@@ -30,11 +31,10 @@ import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
-import type { WorklistItem } from "./worklist.queries";
+import { type WorklistItem, worklistKey } from "./worklist.queries";
 import {
   noticeDetail,
   readerTask,
@@ -302,7 +302,15 @@ export function WorklistRow({
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />
-          <WorklistMayBeDone item={item} />
+          <MayBeDone
+            question={item.may_be_done}
+            task={{
+              id: item.id,
+              version: item.version,
+              canComplete: item.actions.includes("complete"),
+            }}
+            refresh={[worklistKey]}
+          />
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work

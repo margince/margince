@@ -1,38 +1,56 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import { useTaskUpdate } from "../../components/taskactions";
-import { useCompleteTask } from "../../components/taskcomplete";
-import { Button } from "../../design-system/atoms";
-import { ErrorLine } from "../../design-system/errorline";
-import { activityDay } from "../../format/activitywhen";
-import { useLocale, useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
-import { type WorklistItem, worklistKey } from "./worklist.queries";
+import {
+  type QueryKey,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
+import { activityDay } from "../format/activitywhen";
+import { useLocale, useT } from "../i18n";
+import { unwrap } from "../lib/problem";
+import { useRecordZone } from "../lib/recordzone";
+import { useTaskUpdate } from "./taskactions";
+import { useCompleteTask } from "./taskcomplete";
 
 // The question a promise task asks once we wrote to its recipient after the
 // promise: was that mail the promise kept? The contact page asks the same
 // question under the same key, so Not yet given here holds there too. The
 // task is never closed without the reader's Done.
-export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
+export type MayBeDoneQuestion = components["schemas"]["WorklistMayBeDone"];
+
+/** The task a question is about, and whether this reader may complete it. */
+export type MayBeDoneTask = Readonly<{
+  id: string;
+  version?: number;
+  canComplete: boolean;
+}>;
+
+export function MayBeDone({
+  question,
+  task: promise,
+  refresh,
+}: Readonly<{
+  question?: MayBeDoneQuestion;
+  task: MayBeDoneTask;
+  // The lists the answer changes, besides the contact page.
+  refresh: readonly QueryKey[];
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
   const queryClient = useQueryClient();
-  const question = item.may_be_done;
-  const refresh = [
-    worklistKey,
-    ["contact360", question?.contact_id ?? ""],
-  ] as const;
-  const task = useTaskUpdate(refresh);
+  const refreshed = [...refresh, ["contact360", question?.contact_id ?? ""]];
+  const task = useTaskUpdate(refreshed);
   const complete = useCompleteTask(task);
   // The question rides in as the mutation's variables, so a press answers the
   // question the reader saw even when a newer one has rendered since.
   const notYet = useMutation({
-    mutationFn: async (asked: NonNullable<WorklistItem["may_be_done"]>) => {
+    mutationFn: async (asked: MayBeDoneQuestion) => {
       unwrap(
         await api.POST("/contacts/{id}/moment/dismiss", {
           params: { path: { id: asked.contact_id } },
@@ -46,7 +64,7 @@ export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
     },
     onSuccess: (_, asked) =>
       Promise.all(
-        [worklistKey, ["contact360", asked.contact_id]].map((queryKey) =>
+        [...refresh, ["contact360", asked.contact_id]].map((queryKey) =>
           queryClient.invalidateQueries({ queryKey }),
         ),
       ),
@@ -68,8 +86,8 @@ export function WorklistMayBeDone({ item }: Readonly<{ item: WorklistItem }>) {
       <span className="today-verb">
         <Button
           variant="primary"
-          disabled={pending || !item.actions.includes("complete")}
-          onClick={() => complete(item.id, item.version)}
+          disabled={pending || !promise.canComplete}
+          onClick={() => complete(promise.id, promise.version)}
         >
           {t("worklist.mayBeDone.done")}
         </Button>

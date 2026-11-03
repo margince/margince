@@ -3,15 +3,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { LocaleProvider } from "../../i18n";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { LocaleProvider } from "../i18n";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
-} from "../../testing/story-utils";
-import { WorklistMayBeDone } from "./worklist.maybedone";
-import type { WorklistItem } from "./worklist.queries";
+} from "../testing/story-utils";
+import { MayBeDone, type MayBeDoneQuestion } from "./maybedone";
 
 // A promise task the reader may have kept in a later mail asks on the
 // Worklist as it does on the contact page. Done completes the task. Not yet
@@ -22,7 +21,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const ASKED: NonNullable<WorklistItem["may_be_done"]> = {
+const ASKED: MayBeDoneQuestion = {
   contact_id: "p-1",
   email_activity_id: "e-1",
   wrote_at: "2026-08-12T10:00:00Z",
@@ -31,20 +30,10 @@ const ASKED: NonNullable<WorklistItem["may_be_done"]> = {
   evidence_fingerprint: "fp-1",
 };
 
-const ROW: WorklistItem = {
-  id: "a-9",
-  source: "task",
-  category: "tasks",
-  level: 3,
-  actions: ["complete", "snooze"],
-  because: [{ kind: "overdue" }],
-  consequence: "buyer_waits",
-  occurred_precision: "instant",
-  version: 4,
-  may_be_done: ASKED,
-};
+// The task the question is about, as either list hands it in.
+const TASK = { id: "a-9", version: 4, canComplete: true };
 
-function show(item: WorklistItem) {
+function show(question: MayBeDoneQuestion | undefined) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -52,7 +41,7 @@ function show(item: WorklistItem) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <WorklistMayBeDone item={item} />
+          <MayBeDone question={question} task={TASK} refresh={[["worklist"]]} />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -70,7 +59,7 @@ describe("a Worklist promise our later mail may have kept", () => {
         return new Response(null, { status: 204 });
       },
     });
-    show(ROW);
+    show(ASKED);
 
     expect(
       screen.getByText(/You may have done this: you wrote to them on/),
@@ -95,7 +84,7 @@ describe("a Worklist promise our later mail may have kept", () => {
         return jsonResponse({ id: "a-9", is_done: true, version: 5 });
       },
     });
-    show(ROW);
+    show(ASKED);
 
     await userEvent.setup().click(screen.getByRole("button", { name: "Done" }));
     await waitFor(() =>
@@ -104,7 +93,7 @@ describe("a Worklist promise our later mail may have kept", () => {
   });
 
   it("asks nothing on a row without the question", () => {
-    show({ ...ROW, may_be_done: undefined });
+    show(undefined);
     expect(screen.queryByRole("button", { name: "Not yet" })).toBeNull();
   });
 });

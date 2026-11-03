@@ -7,6 +7,8 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { StoryProviders } from "../../testing/story-utils";
 import { CompanyTaskTable } from "./companytaskstable";
 
 type Company360 = components["schemas"]["Company360"];
@@ -105,5 +107,42 @@ describe("CompanyTaskTable: where each task stands on the 360's own day", () => 
 
     expect(screen.getByText("No open tasks for this company.")).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+describe("CompanyTaskTable: a promise our later mail may have kept", () => {
+  const kept = step({
+    may_be_done: {
+      contact_id: "p-1",
+      email_activity_id: "e-1",
+      wrote_at: "2026-08-12T10:00:00Z",
+      wrote_precision: "instant",
+      claim_key: "moment:may_be_done:a-1",
+      evidence_fingerprint: "fp-1",
+    },
+  });
+
+  it("asks the Worklist's question where the list offers the tick", () => {
+    render(
+      <StoryProviders>
+        <CompanyTaskTable view={view([kept])} renderTick={() => null} />
+      </StoryProviders>,
+    );
+    const row = rowOf(kept.subject);
+    expect(
+      within(row).getByRole("button", { name: en["worklist.mayBeDone.done"] }),
+    ).toBeTruthy();
+    expect(
+      within(row).getByRole("button", {
+        name: en["worklist.mayBeDone.notYet"],
+      }),
+    ).toBeTruthy();
+  });
+
+  it("asks nothing in a list that offers no tick", () => {
+    renderTable([kept]);
+    expect(
+      screen.queryByRole("button", { name: en["worklist.mayBeDone.done"] }),
+    ).toBeNull();
   });
 });

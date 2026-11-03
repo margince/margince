@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { MayBeDone } from "../../components/maybedone";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -161,6 +162,18 @@ function TaskCell({ step, cells }: Readonly<{ step: NextStep; cells: Cells }>) {
               <EntityRef kind="contact" id={step.linked_contact_id} />
             )}
           </span>
+        )}
+        {/* A list that offers the tick asks the Worklist's question too. */}
+        {renderTick && (
+          <MayBeDone
+            question={step.may_be_done}
+            task={{
+              id: step.activity_id,
+              version: step.version,
+              canComplete: true,
+            }}
+            refresh={[["company360"]]}
+          />
         )}
       </span>
     </span>
