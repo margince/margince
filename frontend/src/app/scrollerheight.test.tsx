@@ -33,7 +33,16 @@ function stubObservers(): Watcher[] {
 function Scroller({ layout }: Readonly<{ layout: string }>) {
   const scroller = useRef<HTMLDivElement>(null);
   usePublishedScrollerHeight(scroller, layout);
-  return <div className="scroll" data-testid="scroller" ref={scroller} />;
+  // Keyed by layout, as the shell renders each layout's own `.scroll`, so a
+  // layout change mounts a new scroller.
+  return (
+    <div
+      key={layout}
+      className="scroll"
+      data-testid="scroller"
+      ref={scroller}
+    />
+  );
 }
 
 function heightOf(box: HTMLElement, height: number) {
@@ -65,14 +74,17 @@ describe("the published scroller height", () => {
 
   it("stops watching a scroller the shell has swapped out", () => {
     const watchers = stubObservers();
-    const { rerender } = render(<Scroller layout="workspace" />);
+    const { getByTestId, rerender } = render(<Scroller layout="workspace" />);
+    const first = getByTestId("scroller");
 
     rerender(<Scroller layout="railless" />);
+    const second = getByTestId("scroller");
 
+    expect(second, "the layout change kept the old scroller").not.toBe(first);
     expect(watchers).toHaveLength(2);
     expect(watchers[0]?.boxes, "the first scroller is still watched").toEqual(
       [],
     );
-    expect(watchers[1]?.boxes).toHaveLength(1);
+    expect(watchers[1]?.boxes).toEqual([second]);
   });
 });
