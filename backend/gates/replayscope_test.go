@@ -67,6 +67,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"DealSuggestionAcceptance": {object: "deal", moduleProbe: "deal_suggestion", idPath: "suggestion.id", rowNote: "the acceptance hands back the suggestion it decided, probed like DealSuggestion; the deal it opened rides as a companion"},
 
 	"Activity":            {table: "activity", idPath: "id"},
+	"SalesDecision":       {table: "activity", idPath: "id"},
 	"VoiceProfile":        {table: "voice_profile", idPath: "id"},
 	"List":                {table: "list", idPath: "id"},
 	"SavedView":           {table: "saved_view", idPath: "id"},

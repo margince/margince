@@ -42,6 +42,7 @@ import {
   type SalesInitiative,
 } from "./reporting.initiatives";
 import { useMetricNames } from "./reporting.queries";
+import { goalWithProposal, ruleWithProposal } from "./reporting.setupapply";
 
 /**
  * The reader's picks and exclusions. They start from the saved membership, so
@@ -240,14 +241,23 @@ export function InitiativeDrawer({
     }: {
       id: string;
       body: { picked: MemberRef[]; excluded: MemberRef[] };
-    }) =>
+    }) => {
       unwrap(
         await api.PUT("/analytics/initiatives/{id}/members", {
           params: { path: { id } },
           body,
         }),
-      ),
-    onSuccess: () => {
+      );
+      // The save moved the version, and the launch names it, so the
+      // initiative is read again rather than kept from the goal's save.
+      return unwrap(
+        await api.GET("/analytics/initiatives/{id}", {
+          params: { path: { id } },
+        }),
+      );
+    },
+    onSuccess: (next) => {
+      setSaved(next);
       invalidate();
       queryClient.invalidateQueries({ queryKey: ["reporting-evaluation"] });
       if (live) onClose();
@@ -295,7 +305,16 @@ export function InitiativeDrawer({
         </Checklist>
       </DrawerHead>
       <DrawerBody>
-        {step === "goal" && <GoalFields goal={goal} onChange={setGoal} />}
+        {step === "goal" && (
+          <GoalFields
+            goal={goal}
+            onChange={setGoal}
+            onProposal={(proposal) => {
+              setGoal((prev) => goalWithProposal(prev, proposal));
+              setRule((prev) => ruleWithProposal(prev, proposal));
+            }}
+          />
+        )}
         {step === "members" && (
           <MemberFields
             rule={rule}
@@ -322,7 +341,13 @@ export function InitiativeDrawer({
         live={live}
         saved={saved}
         goal={goal}
-        memberCount={(members.data?.leads ?? 0) + (members.data?.deals ?? 0)}
+        // A pick made here belongs before it is saved, so it counts beside
+        // what the server already holds.
+        memberCount={
+          (members.data?.leads ?? 0) +
+          (members.data?.deals ?? 0) +
+          picked.length
+        }
         pending={{
           goal: saveGoal.isPending,
           members: saveMembers.isPending,

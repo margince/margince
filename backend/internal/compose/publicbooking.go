@@ -92,7 +92,8 @@ func publicBooking(store *activities.Store, svc *identity.Service, limits public
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}
-			if r.Method != http.MethodGet && !limits.perSlug.Allow(slug) {
+			// Lowercased, so the case variants of one alias share a budget.
+			if r.Method != http.MethodGet && !limits.perSlug.Allow(strings.ToLower(slug)) {
 				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 				return
 			}

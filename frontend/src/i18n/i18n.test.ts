@@ -60,6 +60,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // does; only the words inside change, and they are the speaker's own.
   "commitment.quote",
   "filters.propose.unusedItem",
+  "reporting.setup.unusedItem",
   // The product name of the buyer surface, on the card that names it and on
   // the tab that opens it.
   "room.card.title",
@@ -71,6 +72,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "explain.col.pipeline",
   "reporting.recordType.lead",
   "reporting.recordType.deal",
+  "analytics.decisions.deal",
   // The settings group heading. "AI" is the initialism Vietnamese uses too —
   // the vi catalog already carries it untranslated wherever it appears in a
   // sentence, so rendering "Trí tuệ nhân tạo" on one nav heading would give

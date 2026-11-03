@@ -229,7 +229,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aggregategatereach_test.go` | H3 | Every job the `ci` aggregate depends on can actually run on the merge queue. |
 | `aicallsubject_test.go` | H2 | Every model call either names the record it is about, or says why it names none. |
 | `aitaskcensus_test.go` | H3 | The contract says which AI tasks ship and what their invocation sites are called, and this build must register those and no others. |
-| `aitaskmirror_test.go` | H3 | api/ai-tasks.yaml is a mirror, and until this gate nothing failed when it stopped being one. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site exists; this says a process role runs it. |
 | `analyticsscope_test.go` | H2 | Every path that renders a report spec's population applies that spec's row narrowings. |
@@ -448,6 +447,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
+| `uuidkeydefault_test.go` | H2 | Every uuid `id` column defaults to uuidv7(). |
 | `validatedreplypath_test.go` | H2 | A model reply this tree can refuse must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 | `versionbumptriggercolumn_test.go` | H2 | Every table the bump trigger is attached to has a NOT NULL version column for it to bump. |
