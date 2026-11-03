@@ -6917,6 +6917,83 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ---------------------------- /projects -----------------------------------
+  /analytics/decisions:
+    get:
+      tags: [Reports]
+      operationId: listSalesDecisions
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: The decisions recorded from a sales review, newest first, as tasks the reader may see.
+      parameters:
+        - name: deal_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, done] }
+      responses:
+        '200':
+          description: The decisions.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecisionListResponse' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Reports]
+      operationId: recordSalesDecision
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: |
+        Record a decision from a sales review as a task on its deal. An open decision with the
+        same text on the same deal is returned instead of a second one.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesDecisionInput' }
+      responses:
+        '201':
+          description: The decision, as the task it became.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecision' }
+        '200':
+          description: The open decision that already held this text on this deal.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecision' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /analytics/decisions/{id}/outcome:
+    post:
+      tags: [Reports]
+      operationId: recordSalesDecisionOutcome
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Record what work was completed and close the decision. The deal does not change.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SalesDecisionOutcomeInput' }
+      responses:
+        '200':
+          description: The closed decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SalesDecision' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects:
     get:
       tags: [Projects]
@@ -10385,6 +10462,43 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '200':
           description: Saved configuration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SchedulingProfile' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /scheduling/profile/alias:
+    put:
+      tags: [Activities]
+      operationId: putSchedulingAlias
+      security:
+        - cookieAuth: []
+      summary: Choose, change or clear the caller's friendly booking address.
+      description: |
+        Sets the caller's own alias, so their booking page also answers at `/book/{alias}`.
+        The random address keeps working. The value is trimmed and lowercased. It must be 3 to
+        30 characters of letters, digits and inner hyphens. It must not be one of the app's
+        reserved booking words or prefixes, or a fixed segment of a `/public/booking/` route;
+        such a value answers `reserved`. An empty value clears the alias.
+
+        An alias is unique across the installation and never moves between hosts. A changed or
+        cleared alias is retired, not released: the same host may take it back at any time, and
+        no other host can ever claim it. **Replace address** retires the alias too. Refusals
+        answer 422 on `alias` with the codes `too_short`, `too_long`, `invalid`, `reserved`,
+        `taken` or `no_booking_link` (the caller has no booking link yet).
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingAliasRequest' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The configuration with its new public address.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SchedulingProfile' }
@@ -49275,6 +49389,46 @@ components:
         include_future: { type: boolean }
         reason: { type: [string, 'null'], maxLength: 500, description: Why a live initiative's definition changed. }
       additionalProperties: false
+    SalesDecision:
+      type: object
+      required: [id, decision, deal_id, status, created_at]
+      description: A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
+      properties:
+        id: { type: string, format: uuid, description: The task's id. }
+        decision: { type: string }
+        deal_id: { type: string, format: uuid }
+        owner_id: { type: [string, 'null'], format: uuid, description: "The accountable owner, the task's assignee." }
+        review_on: { type: [string, 'null'], format: date, description: "The review date, the task's due day in the installation's calendar." }
+        expected_result: { type: [string, 'null'] }
+        status: { type: string, enum: [open, done] }
+        done_at: { type: [string, 'null'], format: date-time }
+        result: { type: [string, 'null'], description: "What work was completed, once the outcome was recorded." }
+        created_at: { type: string, format: date-time }
+      additionalProperties: false
+    SalesDecisionInput:
+      type: object
+      required: [decision, deal_id, owner_id, review_on]
+      properties:
+        decision: { type: string, minLength: 1, maxLength: 500 }
+        deal_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid }
+        review_on: { type: string, format: date }
+        expected_result: { type: string, maxLength: 2000, description: The observable result the owner expects by the review date. }
+      additionalProperties: false
+    SalesDecisionOutcomeInput:
+      type: object
+      required: [result]
+      properties:
+        result: { type: string, minLength: 1, maxLength: 2000 }
+      additionalProperties: false
+    SalesDecisionListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/SalesDecision' }
+      additionalProperties: false
     SalesInitiativeMemberRef:
       type: object
       required: [record_type, record_id]
@@ -51710,10 +51864,16 @@ components:
         company_name: { type: string, maxLength: 200, description: The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. }
         logo_url: { type: string, maxLength: 2000, description: The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. }
         slug: { type: string, readOnly: true }
-        public_url: { type: string, readOnly: true }
+        alias: { type: string, readOnly: true, description: "The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`." }
+        public_url: { type: string, readOnly: true, description: 'The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.' }
         replace_link: { type: boolean, writeOnly: true }
         email_reminder: { type: boolean, description: Send one operational email reminder one hour before future meetings. }
         video_call: { type: boolean, description: Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on. }
+    SchedulingAliasRequest:
+      type: object
+      required: [alias]
+      properties:
+        alias: { type: string, maxLength: 200, description: 'The friendly address to claim; empty clears it. Validated and normalized by the server.' }
     MeetingInvitationRequest:
       type: object
       required: [contact_id, attendee_email, start, end, subject, location, description]

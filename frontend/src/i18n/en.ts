@@ -7416,6 +7416,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.analytics_decision":
+    "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
     "Created from a follow-up that the overnight review proposed and someone approved.",
   "tasks.origin.commitment":
@@ -18940,6 +18942,27 @@ export const en = {
   "scheduling.noLinkYetBody":
     "Create one to share a page where guests pick a time.",
   "scheduling.replaceAddress": "Replace address",
+  "scheduling.alias.label": "Short address",
+  "scheduling.alias.help":
+    "Optional. A short address such as /book/alex is easy to share and easy to guess. Anyone who guesses it sees your booking page and your free times. Your long address keeps working.",
+  "scheduling.alias.preview": "Your link will end in {path}",
+  "scheduling.alias.save": "Save address",
+  "scheduling.alias.clear": "Remove short address",
+  "scheduling.alias.changeTitle": "Change your short address?",
+  "scheduling.alias.clearTitle": "Remove your short address?",
+  "scheduling.alias.changeHelp":
+    "{old} stops working at once. Guests who have it see that the page is not available. Nobody else can ever take it, and you can take it back at any time.",
+  "scheduling.alias.error.too_short": "Use at least 3 characters.",
+  "scheduling.alias.error.too_long": "Use at most 30 characters.",
+  "scheduling.alias.error.invalid":
+    "Use letters, digits and hyphens. Start and end with a letter or digit.",
+  "scheduling.alias.error.reserved":
+    "This address is reserved. Choose another one.",
+  "scheduling.alias.error.taken":
+    "Another booking page uses or has used this address. Choose another one.",
+  "scheduling.alias.error.no_booking_link": "Create your booking link first.",
+  "scheduling.replaceAliasHelp":
+    "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
@@ -19714,6 +19737,31 @@ export const en = {
   "analytics.hero.prior": "Same point of the previous period: {amount}",
   "analytics.hero.noPrior": "No earlier period to compare with yet.",
   "analytics.overview.more": "More",
+  "analytics.decisions.title": "Decisions from the last review",
+  "analytics.decisions.purpose":
+    "Each decision is a task on its deal with an owner and a review date. Completing it records the work, not a sale.",
+  "analytics.decisions.record": "Record decision",
+  "analytics.decisions.review": "Review decisions",
+  "analytics.decisions.none": "No decision recorded yet.",
+  "analytics.decisions.decision": "Decision",
+  "analytics.decisions.deal": "Deal",
+  "analytics.decisions.owner": "Owner",
+  "analytics.decisions.reviewOn": "Review on",
+  "analytics.decisions.status": "Status",
+  "analytics.decisions.done": "Done",
+  "analytics.decisions.open": "Open",
+  "analytics.decisions.recordOutcome": "Record outcome",
+  "analytics.decisions.resultLine": "Outcome: {result}",
+  "analytics.decisions.chooseDeal": "Choose a deal",
+  "analytics.decisions.chooseOwner": "Choose an owner",
+  "analytics.decisions.expected": "Expected result",
+  "analytics.decisions.recordNote":
+    "A second record of the same open decision on the same deal returns that task.",
+  "analytics.decisions.confirm": "Record",
+  "analytics.decisions.whatWasDone": "What work was completed?",
+  "analytics.decisions.outcomeNote":
+    "Completing the work does not qualify or win the deal.",
+  "analytics.decisions.saveOutcome": "Save outcome",
   "analytics.overview.filtersToggle": "Filters",
   "analytics.overview.chipPipeline": "Pipeline: {name}",
   "analytics.overview.chipClose": "Closing: {window}",
