@@ -4593,6 +4593,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The decisions recorded from a sales review, newest first, as tasks the reader may see. */
+        get: operations["listSalesDecisions"];
+        put?: never;
+        /**
+         * Record a decision from a sales review as a task on its deal. An open decision with the
+         *     same text on the same deal is returned instead of a second one.
+         */
+        post: operations["recordSalesDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/decisions/{id}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record what work was completed and close the decision. The deal does not change. */
+        post: operations["recordSalesDecisionOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects": {
         parameters: {
             query?: never;
@@ -35103,6 +35141,53 @@ export interface components {
             /** @description Why a live initiative's definition changed. */
             reason?: string | null;
         };
+        /** @description A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision. */
+        SalesDecision: {
+            /**
+             * Format: uuid
+             * @description The task's id.
+             */
+            id: string;
+            decision: string;
+            /** Format: uuid */
+            deal_id: string;
+            /**
+             * Format: uuid
+             * @description The accountable owner, the task's assignee.
+             */
+            owner_id?: string | null;
+            /**
+             * Format: date
+             * @description The review date, the task's due day in the installation's calendar.
+             */
+            review_on?: string | null;
+            expected_result?: string | null;
+            /** @enum {string} */
+            status: "open" | "done";
+            /** Format: date-time */
+            done_at?: string | null;
+            /** @description What work was completed, once the outcome was recorded. */
+            result?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        SalesDecisionInput: {
+            decision: string;
+            /** Format: uuid */
+            deal_id: string;
+            /** Format: uuid */
+            owner_id: string;
+            /** Format: date */
+            review_on: string;
+            /** @description The observable result the owner expects by the review date. */
+            expected_result?: string;
+        };
+        SalesDecisionOutcomeInput: {
+            result: string;
+        };
+        SalesDecisionListResponse: {
+            data: components["schemas"]["SalesDecision"][];
+        };
         SalesInitiativeMemberRef: {
             /** @enum {string} */
             record_type: "lead" | "deal";
@@ -62094,6 +62179,122 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSalesDecisions: {
+        parameters: {
+            query?: {
+                deal_id?: string;
+                status?: "open" | "done";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The decisions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecisionListResponse"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordSalesDecision: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description The open decision that already held this text on this deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecision"];
+                };
+            };
+            /** @description The decision, as the task it became. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecision"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordSalesDecisionOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDecisionOutcomeInput"];
+            };
+        };
+        responses: {
+            /** @description The closed decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesDecision"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
