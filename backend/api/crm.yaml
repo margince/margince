@@ -60328,9 +60328,15 @@ components:
       description: >-
         The classified difference between two snapshots. opening_minor plus every bucket
         equals closing_minor, exactly.
-      required: [reading, opening_minor, closing_minor, buckets, deals]
+      required: [reading, base_currency, opening_minor, closing_minor, buckets, deals]
       properties:
         reading: { type: string, enum: [open, weighted, evidence, best_case] }
+        base_currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: >-
+            The currency every amount here is in: the base currency both snapshots
+            converted to.
         opening_minor: { type: integer, format: int64 }
         closing_minor: { type: integer, format: int64 }
         buckets:

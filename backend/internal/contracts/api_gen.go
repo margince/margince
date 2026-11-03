@@ -44501,6 +44501,9 @@ type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
 type ForecastMovement struct {
+	// BaseCurrency The currency every amount here is in: the base currency both snapshots converted to.
+	BaseCurrency string `json:"base_currency"`
+
 	// Buckets The named causes, in the order a waterfall draws them — what arrived, what crossed the period, what was repriced, and only then what the machinery did. A bucket that moved nothing is absent rather than zero.
 	Buckets      []ForecastMovementBucket `json:"buckets"`
 	ClosingMinor int64                    `json:"closing_minor"`

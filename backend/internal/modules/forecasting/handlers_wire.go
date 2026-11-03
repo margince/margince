@@ -113,6 +113,7 @@ func (h Handlers) GetForecastMovement(
 func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement {
 	out := crmcontracts.ForecastMovement{
 		Reading:      crmcontracts.ForecastMovementReading(reading),
+		BaseCurrency: in.BaseCurrency,
 		OpeningMinor: in.OpeningMinor,
 		ClosingMinor: in.ClosingMinor,
 		// Empty, never nil. "Nothing moved" is a real answer and arrives shaped

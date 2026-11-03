@@ -10,22 +10,22 @@ package gates
 // No agent tool result carries a minor-unit amount a model cannot read in
 // major units.
 //
-// A tool result reaches the model through Registry.Invoke, which adds
-// `<name>_display` in major units beside each `<name>_minor` whose object names
-// a currency, or sits under an enclosing base_currency (withReadableAmounts).
+// A tool result reaches the model through Registry.Invoke. Its
+// withReadableAmounts pass adds `<name>_display` in major units beside each
+// `<name>_minor` whose object names a currency or sits under a base_currency.
 // So a tool result may carry `_minor` integers, unlike a prompt, but only where
 // that pass finds a currency for them. An integer named for minor units fails
 // when its JSON key is not spelled `_minor`, or when no currency is in scope.
-// Scope follows the runtime: an object's own currency or base_currency, else
-// the base_currency of an enclosing object, unless an object between them
-// names a currency of its own.
+// Scope follows the runtime. An object's own currency or base_currency counts
+// first, then an enclosing object's base_currency. An object between them that
+// names a currency of its own stops the inheritance.
 //
 // Roots: the type argument of every schemaFor[T]() under the agents module,
 // which is the declared output shape of each tool. Every root must resolve.
 //
-// Blind spots (H2): a tool that returns raw JSON (a passthrough or a wire
-// record) declares no Go shape, so only the runtime pass covers it. An
-// interface field ends the walk at that field.
+// Blind spots (H2): a tool that returns raw JSON, a passthrough or a wire
+// record, declares no Go shape. Only the runtime pass covers it. An interface
+// field ends the walk at that field.
 
 import (
 	"fmt"
@@ -62,7 +62,7 @@ func (p *minorUnitSources) toolResultRoots(dir string) []promptRoot {
 	return roots
 }
 
-// toolResultTypes is every type a declared tool result is built from.
+// toolResultTypes collects the types the declared tool results are built from.
 func (p *minorUnitSources) toolResultTypes(dir string) map[promptTypeKey]bool {
 	reached := map[promptTypeKey]bool{}
 	walk := &toolWalk{packages: p, findings: map[string]bool{}}
@@ -186,7 +186,7 @@ func toolJSONKey(field *ast.Field, name string) string {
 	return name
 }
 
-// toolMinorUnitFindings walks every tool result root under moduleRoot and
+// toolMinorUnitFindings walks every tool result root under moduleRoot. It
 // returns the amounts with no readable unit, the roots it resolved, and the
 // roots it could not.
 func toolMinorUnitFindings(t *testing.T, moduleRoot string, parse func(string) (*ast.File, error)) (findings, resolved, unresolved []string) {

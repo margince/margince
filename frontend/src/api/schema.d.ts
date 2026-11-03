@@ -43969,6 +43969,8 @@ export interface components {
         ForecastMovement: {
             /** @enum {string} */
             reading: "open" | "weighted" | "evidence" | "best_case";
+            /** @description The currency every amount here is in: the base currency both snapshots converted to. */
+            base_currency: string;
             /** Format: int64 */
             opening_minor: number;
             /** Format: int64 */

@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -71,8 +72,37 @@ func bothDoorsName(t *testing.T, what string, rest, tool json.RawMessage, want .
 // envelope on one door only is set aside.
 func sameDocument(t *testing.T, what string, rest, tool json.RawMessage) {
 	t.Helper()
-	if !reflect.DeepEqual(decoded(t, unwrapData(rest, tool)), decoded(t, unwrapData(tool, rest))) {
+	route, model := decoded(t, unwrapData(rest, tool)), withoutModelDisplays(decoded(t, unwrapData(tool, rest)))
+	if !reflect.DeepEqual(route, model) {
 		t.Errorf("%s: the doors answered different documents\nroute: %s\ntool: %s", what, rest, tool)
+	}
+}
+
+// withoutModelDisplays drops each `<name>_display` the tool registry writes
+// beside a `<name>_minor` for the model. The route answers the amount alone.
+//
+//craft:ignore naked-any a document under comparison is whichever JSON the door answered
+func withoutModelDisplays(doc any) any {
+	switch typed := doc.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, value := range typed {
+			if name, ok := strings.CutSuffix(key, "_display"); ok {
+				if _, paired := typed[name+"_minor"]; paired {
+					continue
+				}
+			}
+			out[key] = withoutModelDisplays(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for i, value := range typed {
+			out[i] = withoutModelDisplays(value)
+		}
+		return out
+	default:
+		return doc
 	}
 }
 
