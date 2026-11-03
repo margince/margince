@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState, SearchField } from "../../design-system/atoms";
@@ -13,12 +13,14 @@ import {
   QueryGate,
   QueryStates,
 } from "../../design-system/querystates";
+import { RecordCardList } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
 import { isExtensionEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { navigate, useRoute } from "../../lib/router";
 import {
+  bestIdentifierMatch,
   groupSearchHits,
   SEARCH_HIT_ORDER,
   type SearchHitType,
@@ -288,8 +290,18 @@ function SearchGroups({
   const t = useT();
   const directory = useRecordKindDirectory().data?.data ?? [];
   const groups = groupSearchHits(results);
+  const best = bestIdentifierMatch(results);
   return (
     <div className="search-groups arrive-stack">
+      {best && (
+        <Panel title={t("search.bestMatch")}>
+          <PanelBody>
+            <SearchHitList card={searchHitHasCard(best.type)}>
+              <SearchHit hit={best} onOpen={onOpen} />
+            </SearchHitList>
+          </PanelBody>
+        </Panel>
+      )}
       {groups.map(({ group, hits }, index) => {
         const heading = searchGroupHeading(group, t, directory);
         const type = searchGroupType(group);
@@ -318,11 +330,7 @@ function SearchGroups({
             }
           >
             <PanelBody>
-              <ul
-                className={
-                  searchHitHasCard(type) ? "record-card-list" : "search-hits"
-                }
-              >
+              <SearchHitList card={searchHitHasCard(type)}>
                 {hits.map((hit) => (
                   <SearchHit
                     key={`${hit.type}:${hit.id}`}
@@ -330,11 +338,24 @@ function SearchGroups({
                     onOpen={onOpen}
                   />
                 ))}
-              </ul>
+              </SearchHitList>
             </PanelBody>
           </Panel>
         );
       })}
     </div>
+  );
+}
+
+// Hits drawn as cards stack as the design system's card list; the rest are
+// plain rows.
+function SearchHitList({
+  card,
+  children,
+}: Readonly<{ card: boolean; children: ReactNode }>) {
+  return card ? (
+    <RecordCardList>{children}</RecordCardList>
+  ) : (
+    <ul className="search-hits">{children}</ul>
   );
 }

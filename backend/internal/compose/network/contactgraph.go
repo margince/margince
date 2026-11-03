@@ -32,6 +32,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -292,8 +293,9 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 	limitPos := arg(receiptsPerEdge)
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, a.subject, a.occurred_at, a.occurred_precision, a.kind
+		SELECT a.id, a.subject, a.occurred_at, a.occurred_precision, a.kind, %s
 		  FROM activity a
+		  LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
 		 WHERE a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM activity_participant up
 		                WHERE up.activity_id = a.id AND up.user_id = $%d)
@@ -301,7 +303,7 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 		                WHERE pp.activity_id = a.id AND pp.contact_id = $%d)
 		   AND (%s)
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, userPos, contactPos, scope, limitPos), args...)
+		 LIMIT $%d`, activities.ControllerSendSQL, userPos, contactPos, scope, limitPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("network: reading the messages behind a relationship: %w", err)
 	}
@@ -312,11 +314,14 @@ func edgeReceipts(ctx context.Context, tx pgx.Tx, userID, contactID ids.UUID) ([
 		var r crmcontracts.ContactGraphReceipt
 		var activityID ids.UUID
 		var kind string
-		if err := rows.Scan(&activityID, &r.Subject, &r.OccurredAt, &r.OccurredPrecision, &kind); err != nil {
+		var controller bool
+		var from *string
+		if err := rows.Scan(&activityID, &r.Subject, &r.OccurredAt, &r.OccurredPrecision, &kind, &controller, &from); err != nil {
 			return nil, fmt.Errorf("network: reading a message behind a relationship: %w", err)
 		}
 		r.ActivityId = openapi_types.UUID(activityID)
 		r.Kind = crmcontracts.ContactGraphReceiptKind(kind)
+		r.ControllerSend = activities.ControllerSendOf(controller, from)
 		out = append(out, r)
 	}
 	if err := rows.Err(); err != nil {

@@ -42,7 +42,8 @@ func admitHealthReader(w http.ResponseWriter, r *http.Request) bool {
 
 func admitOperator(w http.ResponseWriter, r *http.Request, object string, action principal.Action) bool {
 	ctx := r.Context()
-	if _, ok := principal.Actor(ctx); !ok {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return false
 	}

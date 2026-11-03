@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 )
 
 // editableMembers names, per kind, the only top-level members of a staged
@@ -22,6 +24,8 @@ import (
 // typed. The two boxes are the only choice the card offers.
 var editableMembers = map[string][]string{
 	kindLinkedInMatch: {"use_as_title", "use_as_employer"},
+	// A handover is answered yes or no, and its effect trusts every member.
+	approvalsubject.KindOwnershipTransfer: {},
 }
 
 // assertEditableMembers refuses an edit that changes a member its kind does not
@@ -67,6 +71,10 @@ func assertEditableMembers(kind string, original, edited json.RawMessage) error 
 		return nil
 	}
 	sort.Strings(fixed)
+	if len(allowed) == 0 {
+		return &InvalidEditError{Cause: fmt.Errorf("a %s takes no edit; %s must stay as staged",
+			kind, strings.Join(fixed, ", "))}
+	}
 	return &InvalidEditError{Cause: fmt.Errorf("a %s edit may change only %s; %s must stay as staged",
 		kind, strings.Join(allowed, " and "), strings.Join(fixed, ", "))}
 }

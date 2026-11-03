@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The filter Panel's footer band: what state the filter is in on the leading
-// edge, and the one emerald way to keep it on the trailing edge, with the
-// rarer verbs folded into More beside it.
+// The filter Panel's footer band. The leading edge says what state the filter
+// is in. The trailing edge holds the one accent way to keep it, with the rarer
+// verbs in More beside it.
 
 import type { ReactNode } from "react";
 import { ActionRow } from "../../design-system/actionrow";

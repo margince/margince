@@ -163,11 +163,11 @@ func TestTheSignatureWindowTaskTakesBackWhatTheSenderDidNotWrite(t *testing.T) {
 	task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
 	runMachineAddressTask(ctx, t, e, task)
 
-	if got := liveNumbers(t, e, f.bob); !slices.Equal(got, []string{"+442079460000", "+49309999999"}) {
-		t.Errorf("Bob's numbers = %v, want his own, and the older number the quoted one had replaced", got)
+	if got := liveNumbers(t, e, f.bob); !slices.Equal(got, []string{"+442079460000"}) {
+		t.Errorf("Bob's numbers = %v, want only the number with surviving evidence", got)
 	}
 	if got := signatureEvidence(t, e, f.bob); !slices.Equal(got, []string{"phone:+442079460000", "website:"}) {
-		t.Errorf("Bob's evidence = %v, want his own numbers and the corrected website", got)
+		t.Errorf("Bob's evidence = %v, want the supported number and the corrected website", got)
 	}
 	if title := contactTitle(t, e, f.bob); title != nil {
 		t.Errorf("Bob's title = %q, want the quoted title taken back", *title)
@@ -282,4 +282,17 @@ func retractionAudits(t *testing.T, e *integration.Env) int {
 	return e.WsCount(t, `SELECT count(*) FROM audit_log
 		 WHERE entity_type = 'contact' AND evidence->>'reason' IN
 		   ('signature read off text the contact did not write in that mail', 'a number a workspace member signs with')`)
+}
+
+func TestANumberOnlyInMemberMarkupIsNotLearnedFromAReply(t *testing.T) {
+	e := integration.Setup(t)
+	markup := `<div>Sam Seller</div><a href="tel:&#43;31205550101">Call me</a><div>Mobile: &#43;31 20 555 0101</div>`
+	if _, err := contacts.NewStore(InstallationDB(e.Pool)).SaveMyEmailSignature(e.Admin(), contacts.SaveSignatureInput{Body: "", HTML: &markup}); err != nil {
+		t.Fatal(err)
+	}
+	contact := seedEnrichContact(t, e, "bob@window.example", "Works for me.\n\nBob Contact\n"+bobOwnNumber+"\nYour account manager: "+memberNumber)
+	runEnrichPass(t, e, &signatureScriptBrain{fields: phoneReply(bobOwnNumber, memberNumber)})
+	if got := liveNumbers(t, e, contact); !slices.Equal(got, []string{"+442079460000"}) {
+		t.Fatalf("member HTML number learned as a contact's: %v", got)
+	}
 }

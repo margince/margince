@@ -178,8 +178,8 @@ func TestTheForecastEndpointListsThePeriodsSnapshots(t *testing.T) {
 	} {
 		t.Helper()
 		handlers := NewHandlers(e.store,
-			func(context.Context, pgx.Tx, Period, Scope, time.Time, string) ([]Deal, Scope, bool, error) {
-				return nil, scope, false, nil
+			func(context.Context, pgx.Tx, Period, Scope, time.Time, string) (Assembly, error) {
+				return Assembly{Scope: scope}, nil
 			},
 			func(context.Context, pgx.Tx, PeriodKind, time.Time) (Period, string, error) {
 				return period, "EUR", nil

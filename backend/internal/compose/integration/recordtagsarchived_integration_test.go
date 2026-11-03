@@ -74,7 +74,7 @@ func TestRecordTagsOfAnArchivedRecordAnswerNotFoundLikeItsSiblings(t *testing.T)
 			func() ids.UUID { return seedLead(t, e, "Promoted Lead", "promoted@prospect.test", &e.Rep1).UUID },
 			func(id ids.UUID) error {
 				_, _, err := e.Contacts.PromoteLead(ctx, leadIDOf(id), contacts.PromoteLeadInput{
-					Trigger: "inbound_reply", EvidenceNote: new("replied to outreach"),
+					Trigger: "human_qualify", EvidenceNote: new("replied to outreach"),
 				})
 				return err
 			},

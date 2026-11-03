@@ -53,6 +53,7 @@ func (s *Redis) Publish(ctx context.Context, provider string, st model.ProviderH
 	if _, err := pipe.Exec(ctx); err != nil {
 		return fmt.Errorf("providerhealthstore: publishing %s: %w", provider, err)
 	}
+	s.pruneAfterWrite(ctx)
 	return nil
 }
 
@@ -64,6 +65,7 @@ func (s *Redis) Clear(ctx context.Context, provider string) error {
 	if _, err := pipe.Exec(ctx); err != nil {
 		return fmt.Errorf("providerhealthstore: clearing %s: %w", provider, err)
 	}
+	s.pruneAfterWrite(ctx)
 	return nil
 }
 
@@ -89,11 +91,9 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 	if err != nil {
 		return nil, fmt.Errorf("providerhealthstore: reading statuses: %w", err)
 	}
-	var expired []string
 	for i, value := range values {
 		raw, ok := value.(string)
 		if !ok {
-			expired = append(expired, providers[i])
 			continue
 		}
 		var rec record
@@ -102,16 +102,7 @@ func (s *Redis) Load(ctx context.Context) (map[string]model.ProviderHealthStatus
 		}
 		out[providers[i]] = model.ProviderHealthStatus{Health: rec.Health, Since: rec.Since, RetryAfter: rec.RetryAfter}
 	}
-	if len(expired) > 0 {
-		// A key that expired leaves its provider in the index; drop it so the
-		// index does not grow past what is recorded. A failure is not the
-		// reader's problem: the next Load tries again.
-		for _, provider := range expired {
-			if err := s.pruneIfStillAbsent(ctx, provider); err != nil {
-				slog.WarnContext(ctx, "providerhealthstore: pruning an expired provider from the index", "provider", provider, "error", err)
-			}
-		}
-	}
+
 	return out, nil
 }
 
@@ -126,4 +117,36 @@ return 0`)
 
 func (s *Redis) pruneIfStillAbsent(ctx context.Context, provider string) error {
 	return pruneScript.Run(ctx, s.rdb, []string{indexKey, keyPrefix + provider}, provider).Err()
+}
+
+func (s *Redis) pruneExpired(ctx context.Context) error {
+	providers, err := s.rdb.SMembers(ctx, indexKey).Result()
+	if err != nil {
+		return fmt.Errorf("providerhealthstore: listing status index: %w", err)
+	}
+	if len(providers) == 0 {
+		return nil
+	}
+	keys := make([]string, len(providers))
+	for i, provider := range providers {
+		keys[i] = keyPrefix + provider
+	}
+	values, err := s.rdb.MGet(ctx, keys...).Result()
+	if err != nil {
+		return fmt.Errorf("providerhealthstore: checking status index: %w", err)
+	}
+	for i, value := range values {
+		if value == nil {
+			if err := s.pruneIfStillAbsent(ctx, providers[i]); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Redis) pruneAfterWrite(ctx context.Context) {
+	if err := s.pruneExpired(ctx); err != nil {
+		slog.WarnContext(ctx, "provider health index cleanup failed", "err", err)
+	}
 }

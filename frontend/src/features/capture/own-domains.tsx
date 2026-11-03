@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import {
   Badge,
   Button,
@@ -173,7 +174,9 @@ export function OwnDomainsCard() {
             title={t("ownDomains.companyTitle")}
             level="h3"
             action={
-              <a href="#/settings/company">{t("ownDomains.openCompany")}</a>
+              <AppLink href="#/settings/company">
+                {t("ownDomains.openCompany")}
+              </AppLink>
             }
           />
           <SettingList bleed="settings" testId="own-domains-from-company">

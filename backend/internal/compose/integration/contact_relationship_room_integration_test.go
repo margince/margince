@@ -56,9 +56,7 @@ func roomAgo(d time.Duration) time.Time { return roomFixedNow.Add(-d) }
 // fixture that wants a booked meeting wants the same one.
 var roomTomorrow = roomFixedNow.Add(24 * time.Hour)
 
-// roomPerms is a bounded rep holding every grant the contact page asks for. The
-// scope must be team-level: an unbounded admin short-circuits the row-scope
-// clauses these tests exist to prove.
+// roomPerms grants every section with team scope, so row-scope clauses remain exercised.
 var roomPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
@@ -68,6 +66,7 @@ var roomPerms = principal.Permissions{
 		"activity":              {Create: true, Read: true, Update: true},
 		"deal":                  {Read: true},
 		"project":               {Read: true},
+		"privacy_request":       {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,

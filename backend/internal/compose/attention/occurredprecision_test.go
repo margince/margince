@@ -80,9 +80,9 @@ type laneWindows struct {
 	today, over *MeetingWindow
 }
 
-func (w *laneWindows) Today(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, error) {
+func (w *laneWindows) Today(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]Meeting, bool, error) {
 	w.today = &window
-	return w.rows, nil
+	return w.rows, false, nil
 }
 
 func (w *laneWindows) Since(_ context.Context, window MeetingWindow, _ int, _ TaskScope, _ ids.UUID) ([]MeetingAwaitingOutcome, error) {
@@ -113,7 +113,7 @@ func TestTheMeetingsLaneAsksForTodaysDayMeetingsByDate(t *testing.T) {
 		lanes := &laneWindows{}
 		svc := &Service{meetings: lanes, zone: func(context.Context) (*time.Location, error) { return loc, nil }}
 		asOf := time.Date(2026, 3, 10, c.hour, 30, 0, 0, loc)
-		if _, err := svc.meetingsAhead(context.Background(), asOf, asOf.Add(time.Hour)); err != nil {
+		if _, _, err := svc.meetingsAhead(context.Background(), asOf, asOf.Add(time.Hour)); err != nil {
 			t.Fatal(err)
 		}
 		got := *lanes.today

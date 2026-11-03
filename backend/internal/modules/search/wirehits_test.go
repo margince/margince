@@ -137,3 +137,15 @@ func TestTypesWithMoreIsPresentOnAGroupedPageAlone(t *testing.T) {
 		t.Errorf("a grouped page that cut activities rendered %v", cut.TypesWithMore)
 	}
 }
+
+func TestIdentifierEvidenceDoesNotComeFromTheScore(t *testing.T) {
+	t.Parallel()
+	for _, match := range []*crmcontracts.SearchResultIdentifierMatch{nil, new(crmcontracts.SearchResultIdentifierMatchExact), new(crmcontracts.SearchResultIdentifierMatchPrefix)} {
+		for _, score := range []float64{-1, 0, 4, 8, 16, 100} {
+			got := wireHits([]Hit{{Type: "contact", ID: ids.NewV7(), Score: score, IdentifierMatch: match}})[0].IdentifierMatch
+			if (got == nil) != (match == nil) || (got != nil && *got != *match) {
+				t.Fatalf("score %v changed evidence %v to %v", score, match, got)
+			}
+		}
+	}
+}

@@ -92,6 +92,9 @@ type CreateContactInput struct {
 	// ConvertLeadIDs are the live leads holding this contact's address or
 	// profile, which the user chose to convert into the new contact.
 	ConvertLeadIDs []ids.LeadID
+	// Employer is written with the contact, in its transaction.
+	Employer       EmployerChoice
+	EmployerResult *EmployerAttached
 }
 
 // CreateContact inserts the contact + child rows + audit + event atomically.
@@ -173,12 +176,14 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		return crmcontracts.Contact{}, err
 	}
 
-	id, err := createContact(ctx, tx, match, ContactSpec{
+	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		// Whatever the caller declared. An unset kind records unknown_legacy,
 		// which is the honest answer for a contact somebody typed in without
 		// saying why — and the answer that makes the gap visible rather than
 		// leaving the question unasked.
-		Acquisition: acquisitionForCreate(in),
+		Acquisition:      acquisitionForCreate(in),
+		Employer:         in.Employer,
+		EmployerAttached: in.EmployerResult,
 		// A typed create publishes to the workspace, whoever typed it. An agent
 		// creating a contact on a rep's behalf is doing the rep's filing, and a
 		// contact only its creator can see is not in the CRM in any useful

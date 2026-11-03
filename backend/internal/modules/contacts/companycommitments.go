@@ -206,7 +206,7 @@ func rankedClaims(
 	// DISTINCT ON (c.id) is not needed — a claim is one row — but a contact
 	// with two live employment edges at one account would duplicate it, so the
 	// edge is existence-tested rather than joined.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT c.id, c.contact_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
 		       c.source_activity_id, a.kind, c.due_at, a.occurred_at, a.occurred_precision,
 		       count(*) OVER () AS admitted
@@ -221,7 +221,8 @@ func rankedClaims(
 		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
 		          c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
 		 LIMIT %[4]d`,
-		contactScope, activityScope, owned, companyCommitmentsLimit(limit)), args...)
+		contactScope, activityScope, owned, companyCommitmentsLimit(limit))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("read the open commitments: %w", err)
 	}
@@ -256,19 +257,19 @@ func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 	var total int
 	args := []any{companyID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	err := tx.QueryRow(ctx, `
+	query := `
 		SELECT count(*)
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+side(asOf, arg)+`
+		 WHERE ` + side(asOf, arg) + `
 		   AND c.archived_at IS NULL
 		   AND EXISTS (
 		         SELECT 1 FROM relationship r
 		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
 		            AND r.company_id = $1
-		            AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL)`,
-		args...).Scan(&total)
+		            AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL)`
+	err := tx.QueryRow(ctx, query, args...).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("count the account's open commitments: %w", err)
 	}
@@ -329,7 +330,7 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		contactScope = sqlAlwaysVisible
 	}
 	capped := companyCommitmentsLimit(limit)
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT c.id, c.contact_id, coalesce(pr.full_name, ''), c.body, c.source_quote,
 		       c.source_activity_id, c.due_at, a.occurred_at
 		  FROM conversation_claim c
@@ -342,7 +343,8 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
 		          c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
 		 LIMIT %[3]d`,
-		activityScope, contactScope, capped+1), args...)
+		activityScope, contactScope, capped+1)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the workspace's open commitments: %w", err)
 	}
@@ -409,7 +411,7 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 		return 0, false, err
 	}
 	var total int
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT count(*)
 		  FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
@@ -417,7 +419,8 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 		 WHERE `+openCommitmentEitherSide(s.clock(), arg)+`
 		   AND c.archived_at IS NULL
 		   AND (%[4]s)
-		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, employed), args...).Scan(&total); err != nil {
+		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, employed)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&total); err != nil {
 		return 0, false, fmt.Errorf("count the account's open commitments: %w", err)
 	}
 	return total, true, nil

@@ -60,13 +60,52 @@ describe("the approval card", () => {
 
   it("shows what is proposed, by whom and for whom", () => {
     const root = mount();
-    expect(root.querySelector(".name")?.textContent).toBe(
+    expect(root.querySelector("h1")?.textContent).toBe(
       "Move Acme renewal to Negotiation",
     );
     expect(root.textContent).toContain("Proposed by an assistant for Sam Rep");
     expect(
       [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
     ).toEqual(["StageProposal → Negotiation"]);
+  });
+
+  it("heads with the summary's sentence and lists its values where the preview has none", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary: "Update record deal: name=Acme, Inc., +1 more",
+      summary_parts: {
+        sentence: "Update record deal",
+        fields: [{ field: "name", value: "Acme, Inc." }],
+        more_fields: 1,
+      },
+      changes: [],
+    });
+    expect(root.querySelector("h1")?.textContent).toBe("Update record deal");
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["NameAcme, Inc."]);
+    expect(root.textContent).toContain("1 more not shown");
+    expect(root.textContent).not.toContain("name=");
+  });
+
+  it("lists only the summary fields the preview does not name, as sent", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      summary_parts: {
+        sentence: "Move Acme renewal",
+        fields: [
+          { field: "stage_id", value: "Negotiation" },
+          { field: "scheduled_at", value: "2026-11-01T12:00:00Z" },
+        ],
+        more_fields: 0,
+      },
+    });
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual([
+      "StageProposal → Negotiation",
+      "Scheduled at2026-11-01T12:00:00Z",
+    ]);
   });
 
   it("shows a structured value as words rather than as its document", () => {
@@ -119,7 +158,50 @@ describe("the approval card", () => {
     expect(root.querySelector("tbody")).toBeNull();
   });
 
-  it("approves through decide_approvals and says the assistant still has to run it", async () => {
+  it("shows the operands and further effects of a ready preview", () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      changes: [],
+      preview_state: "ready",
+      details: [
+        {
+          field: "promotion_contact_name",
+          label: "Promotion contact name",
+          value: { kind: "text", text: "Pia Parity" },
+        },
+      ],
+      effects: [
+        {
+          effect: "promote_lead_archive_source",
+          label: "Qualifies and archives this lead.",
+        },
+      ],
+    });
+    expectReadable(root);
+    expect(
+      [...root.querySelectorAll("tbody tr")].map((r) => r.textContent),
+    ).toEqual(["Promotion contact namePia Parity"]);
+    expect(root.querySelector(".dcard-body")?.textContent).toContain(
+      "Also changesQualifies and archives this lead.",
+    );
+    expect(labels(root)).toEqual(["Reject", "Approve"]);
+  });
+
+  it("offers no approval for a preview the reader cannot see, and says who decides", () => {
+    const note =
+      "This change touches records you cannot open. A colleague who can see them must decide it.";
+    const root = mount({
+      ...(approvalFixture.data as object),
+      changes: [],
+      preview_state: "needs_wider_sight",
+      preview_note: note,
+    });
+    expect(labels(root)).toEqual([]);
+    expect(root.querySelector(".dcard-verbs")?.textContent).toBe(note);
+    expect(root.querySelector("tbody")).toBeNull();
+  });
+
+  it("approves through decide_approvals and asks the assistant to run it", async () => {
     const root = mount();
     await press(root, "Approve");
     expect(calls).toEqual([
@@ -129,9 +211,27 @@ describe("the approval card", () => {
       },
     ]);
     expect(root.textContent).toContain(
-      "Approved. The assistant still has to run it again.",
+      "Approved. The assistant is running it now.",
     );
     expect(labels(root)).toEqual([]);
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toContain(`approval_id ${ID}`);
+  });
+
+  it("asks nothing of the assistant once a colleague's proposal is approved", async () => {
+    const root = mount({
+      ...(approvalFixture.data as object),
+      proposed_by: "human:0195c3a0-0000-7000-8000-0000000000a3",
+    });
+    await press(root, "Approve");
+    expect(root.textContent).toContain("Approved.");
+    expect(asked).toEqual([]);
+  });
+
+  it("asks nothing of the assistant after a rejection", async () => {
+    const root = mount();
+    await press(root, "Reject");
+    expect(asked).toEqual([]);
   });
 
   it("rejects, and the settled line survives a redelivered result", async () => {
@@ -149,7 +249,7 @@ describe("the approval card", () => {
     expect(root.querySelector(".refusal")?.textContent).toBe(
       "Only the owner can release a send.",
     );
-    expect(labels(root)).toEqual(["Approve", "Reject"]);
+    expect(labels(root)).toEqual(["Reject", "Approve"]);
   });
 
   it("offers no choice for an item already answered", () => {
@@ -158,7 +258,9 @@ describe("the approval card", () => {
       status: "approved",
     });
     expect(labels(root)).toEqual([]);
-    expect(root.textContent).toContain("Already approved.");
+    expect(root.querySelector(".dcard-meta")?.textContent).toContain(
+      "Approved",
+    );
   });
 
   it("offers no choice for a lapsed item", () => {
@@ -167,7 +269,7 @@ describe("the approval card", () => {
       expires_at: "2020-01-01T00:00:00Z",
     });
     expect(labels(root)).toEqual([]);
-    expect(root.textContent).toContain("Expired");
+    expect(root.textContent).toContain("ran out of time");
   });
 
   it("asks the assistant in chat when the host will not run tools for a view", async () => {

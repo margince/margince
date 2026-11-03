@@ -5,6 +5,7 @@
 // the engine says no" should find the words and the button in one place rather
 // than in a 2700-line composer.
 
+import { AppLink } from "../../design-system/applink";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import type { Refusal } from "./composesend";
@@ -56,9 +57,9 @@ export function SendRefusal({
           <ReviewReference review={review} />
         )}
         {contactId && (
-          <a href={`#/contacts/${contactId}`} className="link-button">
+          <AppLink href={`#/contacts/${contactId}`} className="link-button">
             {t("compose.consentGoto")}
-          </a>
+          </AppLink>
         )}
       </div>
     );
@@ -67,9 +68,9 @@ export function SendRefusal({
     return (
       <div className="compose-refusal" role="alert">
         <p className="t-body">{t("compose.mailboxNotSendCapable")}</p>
-        <a href="#/settings/connections" className="link-button">
+        <AppLink href="#/settings/connections" className="link-button">
           {t("compose.mailboxNotSendCapableGoto")}
-        </a>
+        </AppLink>
       </div>
     );
   }

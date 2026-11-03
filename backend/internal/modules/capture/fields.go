@@ -55,6 +55,9 @@ type ActivityFields struct {
 	// CredentialsMasked says masking changed this record's subject or body. Only
 	// then may equal text fail to prove one message (replaymaskedproof.go).
 	CredentialsMasked bool
+	// AgendaFingerprint is a meeting invite's own description, fingerprinted as
+	// the calendar sent it. Empty for anything that is not a calendar meeting.
+	AgendaFingerprint string
 
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.
@@ -72,7 +75,8 @@ type ActivityFields struct {
 
 	// Envelope is what the mail parser read about addressing and links; nil
 	// for anything not parsed from a mail, and for list mail.
-	Envelope *MailEnvelope
+	ProviderPrivate bool
+	Envelope        *MailEnvelope
 
 	// judged is what the sink concluded from Envelope. Unexported so no
 	// connector can state the conclusion for it.
@@ -161,6 +165,10 @@ const (
 	// BodyForwarded is a mail that said nothing of its own, whose Body is the
 	// text of the original it forwarded. Those are not its sender's words.
 	BodyForwarded BodyCompleteness = "forwarded"
+	// BodyUnverifiable is a captured mail stored before completeness was
+	// recorded, whose original is gone or no longer decodes. Nothing is left
+	// to check its text against.
+	BodyUnverifiable BodyCompleteness = "unverifiable"
 )
 
 func (c BodyCompleteness) stored() BodyCompleteness {

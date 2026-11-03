@@ -126,8 +126,8 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 		fields     string
 		wantNamed  string
 	}{
-		{"company_id on a contact create", createWriteShapes, "contact", `{"full_name":"A","company_id":"x"}`, "company_id"},
 		{"source on a contact update", updateWriteShapes, "contact", `{"source":"manual"}`, "source"},
+		{"company_id on a contact update", updateWriteShapes, "contact", `{"company_id":"x"}`, "company_id"},
 		{"a typo next to a real field", createWriteShapes, "company", `{"displayname":"Firecrawl"}`, "displayname"},
 	}
 	for _, tc := range cases {

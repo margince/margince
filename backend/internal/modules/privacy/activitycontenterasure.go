@@ -64,7 +64,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	// been done and this has not. Ordering buys nothing on the success path —
 	// one transaction — and on the failure path it is the one that must not be
 	// the step nobody got to.
-	if err := e.purgeRawCaptures(ctx, tx, []ids.UUID{id}); err != nil {
+	if err := e.purgeRawCaptures.PurgeRawCaptureTx(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	// What a classifier concluded the message MEANT, and every human correction

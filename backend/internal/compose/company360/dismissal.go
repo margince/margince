@@ -67,17 +67,16 @@ func (s *Service) DismissSuggestion(
 			return err
 		}
 		// After the record gate, so a caller who may not read this account gets the
-		// same 404 whatever they put in the body. The shape check alone is
-		// account-independent, but the raisesSuggestion call below is not — keeping
-		// both on this side of the gate means there is one order to reason about.
+		// same 404 whatever they put in the body. The raisesSuggestion call below
+		// depends on the account, so both checks stay on this side of the gate.
 		if !isFingerprint(fingerprint) {
 			return httperr.Validation("fingerprint", "malformed",
 				"dismiss a suggestion by the fingerprint it was served with, unchanged")
 		}
-		// The SAME gate the scoped page passes before it renders anything. A
-		// dismissal that narrowed to a project the caller cannot open would
-		// answer 204 for a fingerprint they could never have been served, and
-		// the shape of that answer is how you probe for a project's existence.
+		// The same gate the scoped page passes before it renders anything. A
+		// dismissal narrowed to a project the caller cannot open would answer 204
+		// for a fingerprint they were never served. That answer would reveal that
+		// the project exists.
 		if within != nil {
 			if err := activities.RequireProjectScope(ctx, tx, *within); err != nil {
 				return err
@@ -88,15 +87,13 @@ func (s *Service) DismissSuggestion(
 			return err
 		}
 		if !raises {
-			// Nothing to dismiss, and that is a success rather than an error. Either
-			// the situation resolved between the render and the click — in which case
-			// the suggestion is already gone and storing a row would change nothing —
-			// or the fingerprint was never served, in which case there is nothing to
-			// silence. Saying which would answer a question the caller has no business
-			// asking.
+			// Nothing to dismiss, and that is a success. Either the situation resolved
+			// between the render and the click, so the suggestion is already gone, or the
+			// fingerprint was never served. Saying which would answer a question the
+			// caller has no business asking.
 			return nil
 		}
-		// The row's existence IS the dismissal, so a repeat click is a no-op. Nothing
+		// The row's existence is the dismissal, so a repeat click is a no-op. Nothing
 		// reads a dismissal's age, and the id is a v7 uuid, so the instant stays
 		// recoverable for support without a column nobody reads.
 		_, err = tx.Exec(ctx, `

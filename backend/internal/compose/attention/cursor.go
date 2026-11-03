@@ -64,6 +64,9 @@ type worklistCursor struct {
 	// Refusing it would break every walk in flight at the moment this shipped,
 	// to no reader's benefit.
 	Snapshot ids.UUID `json:"s,omitempty"`
+	// Rest is where each backlog source stands once the ranked rows ran out.
+	// Nil until then.
+	Rest *backlogCursor `json:"r,omitempty"`
 }
 
 // fingerprint renders the request parameters that decide WHICH rows exist.
@@ -94,9 +97,14 @@ type worklistCursor struct {
 // otherwise be refused for agreeing with the server.
 func fingerprint(scope, filter string, owner ids.UUID) string {
 	sum := sha256.Sum256([]byte(
-		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String()))
+		scope + "\x00" + normalizedFilter(filter) + "\x00" + owner.String() + "\x00" + tailProtocol))
 	return hex.EncodeToString(sum[:8])
 }
+
+// tailProtocol names the cursor's tail shape inside its fingerprint. A binary
+// that predates the tail would ignore the tail and end the walk early, so it
+// computes another fingerprint and refuses the token instead.
+const tailProtocol = "tail1"
 
 // normalizedFilter collapses the two spellings of "everything" onto one.
 //
@@ -128,11 +136,12 @@ func normalizedFilter(filter string) string {
 // the backlog ended early) is worse than the case it guards against.
 //
 // Held by: TestACursorRoundTripsThePositionItWasMintedAt.
-func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID) string {
+func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID, rest *backlogCursor) string {
 	token, err := storekit.EncodeOpaque(worklistCursor{
 		At:       at,
 		Params:   fingerprint(scope, filter, owner),
 		Snapshot: snapshot,
+		Rest:     rest,
 	})
 	if err != nil {
 		// Unreachable for an int and a string. An empty token is refused by
@@ -163,16 +172,18 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	//   - A NEGATIVE offset reaches `rows[n:]` and panics. A crafted token must
 	//     be a 422, never a crash on an authenticated endpoint.
 	//   - ZERO is the top of the list, which this only ever reaches by minting a
-	//     token after a full page — so an offset of zero came from somewhere
-	//     else. It grants nothing (an absent cursor answers the same first page)
-	//     and is refused anyway, because a token the server cannot have written
-	//     should not be read as one it did.
+	//     token after a full page, or with a backlog position when the ranked
+	//     rows were empty. Any other zero came from somewhere else and is
+	//     refused, because a token the server cannot have written should not be
+	//     read as one it did.
 	//   - An EMPTY fingerprint is what `{}` and `null` decode to, and without
 	//     this they would pass as a legitimate first page.
-	if cursor.At <= 0 || cursor.Params == "" {
+	if cursor.At < 0 || (cursor.At == 0 && cursor.Rest == nil) || cursor.Params == "" {
 		return worklistCursor{}, &storekit.MalformedCursorError{}
 	}
-	if cursor.Params != fingerprint(scope, filter, owner) {
+	// A tail this binary could not have minted is refused like a token for
+	// another question: the caller starts the walk again.
+	if cursor.Params != fingerprint(scope, filter, owner) || (cursor.Rest != nil && !cursor.Rest.valid()) {
 		return worklistCursor{}, &storekit.CursorSortMismatchError{}
 	}
 	return cursor, nil

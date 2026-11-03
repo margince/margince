@@ -52,7 +52,8 @@ func (s *Service) Sweep(ctx context.Context) error {
 func (s *Service) materializeDue(ctx context.Context) error {
 	return s.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var b bindings
-		rows, err := tx.Query(ctx, "SELECT "+scheduleColumns+" FROM report_schedule WHERE enabled AND next_due_at<="+b.add(s.now())+" ORDER BY next_due_at,id LIMIT "+b.add(100)+" FOR UPDATE SKIP LOCKED", b.values...)
+		query := "SELECT " + scheduleColumns + " FROM report_schedule WHERE enabled AND next_due_at<=" + b.add(s.now()) + " ORDER BY next_due_at,id LIMIT " + b.add(100) + " FOR UPDATE SKIP LOCKED"
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -113,7 +114,8 @@ func (s *Service) claimExecution(ctx context.Context) (executionClaim, bool, err
 			return s.exhaustClaim(ctx, tx, out, before)
 		}
 		b = bindings{}
-		err = tx.QueryRow(ctx, "UPDATE report_execution SET status='running',fence=fence+1,attempt=attempt+1,lease_until="+b.add(now.Add(90*time.Second))+" WHERE id="+b.add(out.ID)+" RETURNING owner_id,fence,attempt,retry_base_attempt", b.values...).Scan(&out.Owner, &out.Fence, &out.Attempt, &out.RetryBase)
+		statement := "UPDATE report_execution SET status='running',fence=fence+1,attempt=attempt+1,lease_until=" + b.add(now.Add(90*time.Second)) + " WHERE id=" + b.add(out.ID) + " RETURNING owner_id,fence,attempt,retry_base_attempt"
+		err = tx.QueryRow(ctx, statement, b.values...).Scan(&out.Owner, &out.Fence, &out.Attempt, &out.RetryBase)
 		if err != nil {
 			return err
 		}
@@ -126,7 +128,8 @@ func (s *Service) claimExecution(ctx context.Context) (executionClaim, bool, err
 func (s *Service) exhaustClaim(ctx context.Context, tx pgx.Tx, claim executionClaim, before executionAudit) error {
 	var b bindings
 	reason := s.statusCopy(ctx, tx).Say(statusWords.Exhausted)
-	if _, err := tx.Exec(ctx, "UPDATE report_execution SET status='failed',fence=fence+1,lease_until=NULL,reason="+b.add(reason)+" WHERE id="+b.add(claim.ID), b.values...); err != nil {
+	query := "UPDATE report_execution SET status='failed',fence=fence+1,lease_until=NULL,reason=" + b.add(reason) + " WHERE id=" + b.add(claim.ID)
+	if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 		return err
 	}
 	if err := recordExecutionChange(ctx, tx, claim.ID, before); err != nil {

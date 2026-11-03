@@ -137,6 +137,47 @@ export async function pageOverflow(page: Page): Promise<string[]> {
 }
 
 /**
+ * What a list surface hides from a phone, named. The surface clips (`.lt` is
+ * `overflow: hidden`). So a body squeezed short, or a value past the card's
+ * edge, passes `pageOverflow` while the reader cannot see it. Content inside a
+ * sideways scroller of its own, such as the view tabs, is reachable.
+ */
+export async function listClipping(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const found: string[] = [];
+    const name = (element: Element) =>
+      `${element.tagName.toLowerCase()}.${[...element.classList].join(".")} "${(element.textContent ?? "").trim().slice(0, 40)}"`;
+    const scrollsSideways = (element: Element) => {
+      const { overflowX } = getComputedStyle(element);
+      return overflowX === "auto" || overflowX === "scroll";
+    };
+    for (const surface of document.querySelectorAll(".lt")) {
+      const body = surface.querySelector(".lt-scroll");
+      if (body && body.scrollHeight > body.clientHeight + 1) {
+        found.push(
+          `${name(body)}: ${body.scrollHeight - body.clientHeight}px of rows below a body the page cannot scroll to`,
+        );
+      }
+      const edge = surface.getBoundingClientRect().right;
+      for (const element of surface.querySelectorAll("*")) {
+        const box = element.getBoundingClientRect();
+        if (box.width === 0 || box.right <= edge + 1) continue;
+        let inside = element.parentElement;
+        while (inside && inside !== surface && !scrollsSideways(inside)) {
+          inside = inside.parentElement;
+        }
+        if (inside === surface) {
+          found.push(
+            `${name(element)}: ${Math.round(box.right - edge)}px past the surface's edge`,
+          );
+        }
+      }
+    }
+    return found;
+  });
+}
+
+/**
  * The tab a click opened, once its navigation has committed to `url`.
  *
  * A new tab loads the whole app from cold, which on a busy runner can take

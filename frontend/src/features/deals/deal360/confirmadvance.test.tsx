@@ -155,6 +155,27 @@ it("lets go of the dialog when the write rejects instead of holding it busy", as
   ).toBeNull();
 });
 
+function lossReason(key: string, label: string, active = true) {
+  return {
+    id: `reason-${key}`,
+    key,
+    label,
+    sort_order: 10,
+    active,
+    system: true,
+    version: 1,
+    created_at: "2026-10-01T08:00:00Z",
+    updated_at: "2026-10-01T08:00:00Z",
+  };
+}
+
+// The list the loss picker offers from. "Bad timing" is retired, so a new
+// loss cannot name it.
+const LOSS_REASONS = [
+  lossReason("price", "Price"),
+  lossReason("timing", "Bad timing", false),
+];
+
 // What the deal's win-evidence read answers: the contract state, or a failure.
 type Evidence = boolean | "unreadable";
 
@@ -165,6 +186,9 @@ function stubReads(evidence: Evidence, hold?: Promise<void>) {
     "fetch",
     vi.fn(async (input: Request | string | URL) => {
       const url = input instanceof Request ? input.url : String(input);
+      if (url.includes("/loss-reasons")) {
+        return Response.json({ data: LOSS_REASONS });
+      }
       if (!url.includes("/win-evidence")) {
         return Response.json({ data: [], page: { has_more: false } });
       }
@@ -208,22 +232,31 @@ function confirmRefusal(): string | null {
   return said === "" ? null : said;
 }
 
-it("says a lost deal needs a reason, and sends the reason on Enter", async () => {
+it("says a lost deal needs a reason from the list, and sends it with the note on Enter", async () => {
   const user = userEvent.setup();
   const onConfirm = vi.fn(async () => undefined);
   openOn(LOST, onConfirm);
 
   await waitFor(() =>
-    expect(confirmRefusal()).toBe("Enter why the deal was lost."),
+    expect(confirmRefusal()).toBe("Pick why the deal was lost."),
   );
-  await user.click(screen.getByRole("textbox", { name: "Lost reason" }));
-  await user.keyboard("{Enter}");
+  await user.click(screen.getByRole("textbox", { name: "Note (optional)" }));
+  await user.keyboard("Budget cut{Enter}");
   expect(onConfirm).not.toHaveBeenCalled();
 
-  await user.keyboard("Budget cut{Enter}");
+  const why = screen.getByRole("combobox", { name: "Why was it lost?" });
+  await user.click(why);
+  const price = await screen.findByRole("option", { name: "Price" });
+  expect(screen.queryByRole("option", { name: "Bad timing" })).toBeNull();
+  await user.click(price);
+  await user.click(screen.getByRole("textbox", { name: "Note (optional)" }));
+  await user.keyboard("{Enter}");
   expect(onConfirm).toHaveBeenCalledTimes(1);
   expect(onConfirm).toHaveBeenCalledWith(
-    expect.objectContaining({ lostReason: "Budget cut" }),
+    expect.objectContaining({
+      lostReasonCode: "price",
+      lostReason: "Budget cut",
+    }),
   );
 });
 
@@ -380,7 +413,7 @@ it("does not look for a contract when the deal is going to a lost stage", async 
     false,
   );
   await waitFor(() =>
-    expect(confirmRefusal()).toBe("Enter why the deal was lost."),
+    expect(confirmRefusal()).toBe("Pick why the deal was lost."),
   );
   expect(
     screen.queryByRole("combobox", { name: "How was it won?" }),

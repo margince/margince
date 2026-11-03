@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
-import { NextBar } from "../../design-system/nextbar";
+import { RecordNextBar } from "../../components/latestinbound";
+import type { NextBar } from "../../design-system/nextbar";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -32,7 +33,7 @@ export function ProjectNext({
   const me = useMe();
   const next = nextCommitment(view);
   if (!next) {
-    return <NextBar />;
+    return <RecordNextBar />;
   }
   const mine = next.assigneeId !== null && next.assigneeId === me.data?.user.id;
   const sub = [
@@ -46,7 +47,7 @@ export function ProjectNext({
         t("project.standing.assignedTo", { name: next.assigneeName }),
   ].filter(Boolean);
   return (
-    <NextBar
+    <RecordNextBar
       title={
         <button
           type="button"

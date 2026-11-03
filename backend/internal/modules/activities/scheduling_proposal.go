@@ -145,6 +145,14 @@ func auditProposal(ctx context.Context, tx pgx.Tx, id ids.UUID, status string) e
 }
 
 func (s *Store) validateProposalOptions(ctx context.Context, host ids.UserID, in crmcontracts.MeetingProposalRequest) (time.Time, error) {
+	proposed := make([]slot, 0, len(in.Options))
+	for _, option := range in.Options {
+		candidate := slot{Start: option.Start, End: option.End}
+		if overlapsAny(candidate, proposed) {
+			return time.Time{}, errProposalTimesOverlap
+		}
+		proposed = append(proposed, candidate)
+	}
 	expires := s.now().Add(7 * 24 * time.Hour)
 	var last time.Time
 	for _, option := range in.Options {

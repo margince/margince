@@ -67,11 +67,11 @@ describe("Breadcrumb", () => {
 
     expect(
       screen.getByRole("link", { name: "Deals" }).getAttribute("href"),
-    ).toBe("#/deals");
+    ).toBe("/#/deals");
     // The glyph is decorative, so it does not join the link's accessible name.
     expect(
       screen.getByRole("link", { name: "Companies" }).getAttribute("href"),
-    ).toBe("#/companies");
+    ).toBe("/#/companies");
     expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 

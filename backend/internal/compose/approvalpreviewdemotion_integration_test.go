@@ -95,10 +95,11 @@ func assertDemotionListed(ctx context.Context, t *testing.T, e *integration.Env,
 		}
 	}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := svc.PendingForTarget(ctx, tx, "lead", lead, 20)
+		pending, err := svc.PendingForTarget(ctx, tx, "lead", lead)
 		if err != nil {
 			return err
 		}
+		rows := pending.Approvals
 		if len(rows) != 1 || ids.UUID(rows[0].Id) != id.UUID {
 			t.Fatalf("demotion panel: %+v", rows)
 		}
@@ -148,10 +149,11 @@ func assertDemotionWithheld(t *testing.T, e *integration.Env, svc *approvals.Ser
 		}
 	}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := svc.PendingForTarget(ctx, tx, "lead", lead, 20)
+		pending, err := svc.PendingForTarget(ctx, tx, "lead", lead)
 		if err != nil {
 			return err
 		}
+		rows := pending.Approvals
 		if len(rows) != 0 {
 			t.Fatalf("unauthorized reversal panel: %+v", rows)
 		}

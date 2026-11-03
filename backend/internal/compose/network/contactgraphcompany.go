@@ -139,7 +139,7 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		return nil, 0, err
 	}
 	viewer, _ := principal.Actor(ctx)
-	seatPos := arg(seats.For(seatViewer(viewer)))
+	notSeat := storekit.HoldsNoSeatAddressSQL("p.id", seats.For(seatViewer(viewer)), arg)
 	limitPos := arg(graphAccountCap)
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the
@@ -176,15 +176,12 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		   AND p.id <> $%d
 		   AND (%s)
 		   AND (%s)
-		   AND NOT EXISTS (
-		       SELECT 1 FROM contact_email se
-		        WHERE se.contact_id = p.id AND se.archived_at IS NULL
-		          AND lower(se.email) = ANY($%d))
+		   AND `+notSeat+`
 		)
 		SELECT id, full_name, title, count(*) OVER () AS total
 		  FROM coworkers WHERE edge_rank = 1
 		 ORDER BY full_name, id
-		 LIMIT $%d`, contactPos, contactPos, edgeBound, scope, seatPos, limitPos), args...)
+		 LIMIT $%d`, contactPos, contactPos, edgeBound, scope, limitPos), args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("network: reading who else works at a contact's company: %w", err)
 	}

@@ -7,6 +7,7 @@ import { afterEach, expect, it } from "vitest";
 import { StoryProviders } from "../../testing/story-utils";
 import type { ReportingLayout } from "./reporting.layout";
 import { LayoutEditor } from "./reporting.layouteditor";
+import { reportingCatalogClient } from "./reporting.story-fixtures";
 
 afterEach(cleanup);
 
@@ -35,8 +36,9 @@ function Harness({
   start = twoSections,
 }: Readonly<{ start?: ReportingLayout }>) {
   const [layout, setLayout] = useState(start);
+  const [client] = useState(reportingCatalogClient);
   return (
-    <StoryProviders>
+    <StoryProviders client={client}>
       <LayoutEditor
         layout={layout}
         choices={[]}

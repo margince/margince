@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { type Translator, translate } from "../i18n";
 import { parseHash, type Route, routeHash } from "./router";
 import {
+  bestIdentifierMatch,
   groupSearchHits,
   SEARCH_ACTIVITY_SEGMENT,
   SEARCH_GROUP_KEY,
@@ -244,5 +245,21 @@ describe("searchHitHasCard", () => {
       "contact",
       "company",
     ]);
+  });
+});
+
+describe("bestIdentifierMatch", () => {
+  it("selects exact before prefix and leaves an older server without a best match", () => {
+    expect(
+      bestIdentifierMatch([
+        { type: "lead", id: "prefix", identifier_match: "prefix", score: 9 },
+        { type: "company", id: "exact", identifier_match: "exact", score: 16 },
+      ])?.id,
+    ).toBe("exact");
+    expect(
+      bestIdentifierMatch([
+        { type: "lead", id: "old", title: "Lena", score: 1 },
+      ]),
+    ).toBeUndefined();
   });
 });

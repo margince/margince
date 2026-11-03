@@ -17,7 +17,7 @@ The 1 table owned by `contracts`, as the migrations build them. [Back to the ent
 | `cancellation_notice_on` | `date` |  |  |
 | `company_id` | `uuid` | yes | The counterparty. |
 | `contract_number` | `text` |  | Free text: an imported agreement carries whatever number the counterparty's own system gave it. |
-| `currency` | `character(3)` |  |  |
+| `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` |  | The deal this agreement came from, when there was one. |
 | `ends_on` | `date` |  | Absent means open-ended. |
 | `fx_rate_date` | `date` |  |  |

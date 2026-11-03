@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import {
   Button,
   Field,
@@ -35,7 +36,11 @@ import {
   type VideoApp,
 } from "../../lib/booking-video";
 import { useConnectors } from "../../lib/connectors";
-import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
+import {
+  usePatchSchedulingProfile,
+  useSchedulingProfile,
+} from "../../lib/scheduling-profile-query";
+import { BookingAliasField, currentBookingAddress } from "./booking-alias";
 import { hoursSentence } from "./meeting-phrases";
 import { useWorkingHours } from "./working-hours";
 import "./meeting-cards.css";
@@ -263,6 +268,7 @@ function LinkForm({
             )}
           </Field>
         )}
+        {profile.slug && <BookingAliasField profile={profile} />}
         <SegmentedControl
           label={t("scheduling.col.length")}
           options={LENGTHS}
@@ -370,7 +376,8 @@ function VideoChoice({
         t(copy.other)
       ) : (
         <>
-          {t(copy.needs)} <a href="#/settings/connections">{t(copy.connect)}</a>
+          {t(copy.needs)}{" "}
+          <AppLink href="#/settings/connections">{t(copy.connect)}</AppLink>
         </>
       );
     }
@@ -455,6 +462,8 @@ export function ReplaceAddressConfirm({
 }: Readonly<{ open: boolean; onClose: () => void }>) {
   const t = useT();
   const replace = usePatchSchedulingProfile();
+  // Read from the cache the settings page already holds.
+  const profile = useSchedulingProfile().data;
   return (
     <ConfirmModal
       open={open}
@@ -470,6 +479,13 @@ export function ReplaceAddressConfirm({
       }
     >
       <p>{t("scheduling.replaceHelp")}</p>
+      {profile?.alias && (
+        <p>
+          {t("scheduling.replaceAliasHelp", {
+            url: currentBookingAddress(profile, profile.alias),
+          })}
+        </p>
+      )}
       <ErrorLine error={replace.error} />
     </ConfirmModal>
   );

@@ -55,6 +55,12 @@ func grantsFor(parts []migration.PartMapping, tags tagGrants) []grantNeed {
 		needs = append(needs,
 			grantNeed{Object: part.Object, Action: principal.ActionCreate, Why: cannotCreateWhy(part.Object)},
 			grantNeed{Object: part.Object, Action: principal.ActionUpdate, Why: edit})
+		if part.Object == migration.ObjectContact && (columnFor(part.Fields, csvEmployerName) != "" || columnFor(part.Fields, csvTargetCompanyRef) != "" || columnFor(part.Fields, fieldEmail) != "") {
+			for _, need := range []grantNeed{{Object: string(recordTypeCompany), Action: principal.ActionRead}, {Object: string(recordTypeCompany), Action: principal.ActionCreate}, {Object: string(recordTypeRelationship), Action: principal.ActionCreate}} {
+				need.Why = migration.Why(migration.ReasonEmployerRefused)
+				needs = append(needs, need)
+			}
+		}
 		if part.Object == migration.ObjectDeal {
 			needs = append(needs, grantNeed{
 				Object: pipelineObject, Action: principal.ActionRead,

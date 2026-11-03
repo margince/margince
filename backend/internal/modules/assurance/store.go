@@ -28,6 +28,7 @@ import (
 type Store struct {
 	db             *database.DB
 	signalDecision SignalDecisionFunc
+	reviewCheck    ReviewCheckFunc
 }
 
 // NewStore wires the store to its pool.
@@ -78,6 +79,19 @@ const ExceptionSubjectDeparted = "subject_departed"
 // would strand its findings with nothing failing.
 const reopenableStatuses = `'` + ExceptionConditionCleared + `', '` + ExceptionSubjectDeparted + `'`
 
+// reopensSQL is the upsert's test that a re-detected finding starts a new
+// episode. A closing nobody answered reopens, as above. A REVIEW finding also
+// reopens after somebody resolved it, once no suppression is still running.
+// The deal was revived and then went silent again, which is a new question.
+// Every other type keeps its resolution, which re-detection must not un-ask.
+const reopensSQL = `(assurance_exception.status IN (` + reopenableStatuses + `)
+	OR (assurance_exception.type = '` + TypeDealViability + `'
+	    AND assurance_exception.status = 'resolved'
+	    AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
+	                     WHERE r.exception_id = assurance_exception.id
+	                       AND r.outcome IN ('` + OutcomeValueCorrect + `', '` + OutcomeNotRelevant + `')
+	                       AND r.expires_at > now())))`
+
 // Source coverage states.
 const (
 	CoverageChecked           = "checked"
@@ -111,6 +125,11 @@ type SourceCoverage struct {
 // system and a run captured_by a manager would attribute to them every
 // exception it raises.
 func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time, requestedBy *string) (ids.UUID, error) {
+	return s.openRun(ctx, tx, asOf, requestedBy, nil)
+}
+
+// openRun opens a run over every deal, or over one when deal is set.
+func (s *Store) openRun(ctx context.Context, tx pgx.Tx, asOf time.Time, requestedBy *string, deal *ids.UUID) (ids.UUID, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return ids.Nil, err
 	}
@@ -124,10 +143,10 @@ func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time, request
 	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO assurance_run (as_of, rule_versions, status, captured_by, requested_by)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO assurance_run (as_of, rule_versions, status, captured_by, requested_by, subject_deal_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`,
-		asOf, versions, StatusRunning, capturedBy, requestedBy).Scan(&id); err != nil {
+		asOf, versions, StatusRunning, capturedBy, requestedBy, deal).Scan(&id); err != nil {
 		return ids.Nil, fmt.Errorf("assurance: opening the run: %w", err)
 	}
 	return id, nil
@@ -206,31 +225,34 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 	}
 	var args []any
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
-	if _, err := tx.Exec(ctx, `
+	query := `
 		INSERT INTO assurance_exception
 		    (logical_key, type, subject_kind, subject_id, claim, observed,
 		     severity, affected_minor, currency, owner_id, captured_by)
-		VALUES (`+arg(LogicalKey(f))+`, `+arg(f.Type)+`, `+arg(kind)+`, `+arg(subjectID)+`, `+arg(claim)+`, `+arg(observed)+`, `+arg(f.Severity)+`, `+arg(f.AffectedMinor)+`, `+arg(nullIfEmpty(f.Currency))+`, `+arg(nullableID(owner))+`, `+arg(capturedBy)+`)
+		VALUES (` + arg(LogicalKey(f)) + `, ` + arg(f.Type) + `, ` + arg(kind) + `, ` + arg(subjectID) + `, ` + arg(claim) + `, ` + arg(observed) + `, ` + arg(f.Severity) + `, ` + arg(f.AffectedMinor) + `, ` + arg(nullIfEmpty(f.Currency)) + `, ` + arg(nullableID(owner)) + `, ` + arg(capturedBy) + `)
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
-		    -- A row CLOSED WITHOUT AN ANSWER reopens on re-detection: the scan
-		    -- closed it because the condition left the record, or because the
-		    -- record left the eligible set, and neither is a decision anybody
-		    -- made. A deal that is restored or reopened is walked again, so its
-		    -- old finding is the same finding and not a second one. A resolved
-		    -- row does not reopen — somebody answered that one, and
-		    -- re-detection must not un-ask them.
-		    status = CASE WHEN assurance_exception.status IN (`+reopenableStatuses+`)
-		                  THEN 'open' ELSE assurance_exception.status END,
+		    -- A reopened row is a new episode, and its task link belongs to the
+		    -- old one: the new episode's review is delivered afresh. Every SET
+		    -- reads the row as it was, so all four test the same old status.
+		    episode = CASE WHEN ` + reopensSQL + ` THEN assurance_exception.episode + 1
+		                   ELSE assurance_exception.episode END,
+		    task_activity_id = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                            ELSE assurance_exception.task_activity_id END,
+		    status = CASE WHEN ` + reopensSQL + ` THEN 'open' ELSE assurance_exception.status END,
+		    -- The deal's owner tonight, not the one it had when first raised: a
+		    -- review of a deal that changed hands belongs to the new owner.
+		    owner_id = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
+		                    THEN EXCLUDED.owner_id ELSE assurance_exception.owner_id END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
 		    -- the value it was resolved against, which is what lets a later
 		    -- scan tell "still true" from "changed since you answered".
-		    observed = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
+		    observed = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
 		                    THEN EXCLUDED.observed ELSE assurance_exception.observed END,
-		    severity = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
-		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`,
-		args...); err != nil {
+		    severity = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
+		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("assurance: recording the finding: %w", err)
 	}
 	return nil
@@ -244,19 +266,21 @@ func (s *Store) FinishRun(
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
 	}
-	tag, err := tx.Exec(ctx, `
+	var deal *ids.UUID
+	err := tx.QueryRow(ctx, `
 		UPDATE assurance_run
 		SET eligible_deals = $2, eligible_signals = $3, status = $4,
 		    readiness = $5, updated_at = now()
-		WHERE id = $1 AND status = 'running'`,
-		runID, eligibleDeals, eligibleSignals, status, readiness)
-	if err != nil {
-		return fmt.Errorf("assurance: closing the run: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
+		WHERE id = $1 AND status = 'running'
+		RETURNING subject_deal_id`,
+		runID, eligibleDeals, eligibleSignals, status, readiness).Scan(&deal)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// Already closed, or never opened. Either way this call would be
 		// rewriting a verdict somebody may have read.
 		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("assurance: closing the run: %w", err)
 	}
 	// The RUN is what the audit log records, not each finding. A pass over a
 	// large pipeline mints thousands of exceptions, and an audit row per
@@ -277,6 +301,7 @@ func (s *Store) FinishRun(
 			// silently retired four hundred findings must not read like one
 			// that retired none.
 			"cleared": cleared,
+			"deal_id": deal,
 		})
 	if err != nil {
 		return err
@@ -293,6 +318,7 @@ func (s *Store) FinishRun(
 		Status:          crmcontracts.PublicEventForecastAssuranceCreatedStatus(status),
 		EligibleDeals:   eligibleDeals,
 		EligibleSignals: &eligibleSignals,
+		DealId:          (*openapi_types.UUID)(deal),
 	}
 	if readiness != "" {
 		verdict := crmcontracts.PublicEventForecastAssuranceCreatedReadiness(readiness)
@@ -328,11 +354,15 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 		err := tx.QueryRow(ctx, `
 			SELECT id, as_of, eligible_deals, eligible_signals, status, readiness
 			FROM assurance_run
-			WHERE status <> 'running'
+			WHERE status <> 'running' AND subject_deal_id IS NULL
 			ORDER BY as_of DESC, id DESC
 			LIMIT 1`).
 			Scan(&out.ID, &out.AsOf, &out.EligibleDeals, &out.EligibleSignals,
 				&out.Status, &out.Readiness)
+		if err != nil {
+			return err
+		}
+		out.Freshness, err = readFreshness(ctx, tx)
 		return err
 	})
 	if err != nil {
@@ -352,6 +382,9 @@ type Run struct {
 	EligibleSignals int
 	Status          string
 	Readiness       *string
+	// Freshness is what changed after this reading. A reading the records
+	// moved past is never shown as current.
+	Freshness Freshness
 }
 
 // InTx runs fn inside one workspace transaction.
@@ -451,4 +484,7 @@ type Exception struct {
 	// because it decides what to group and never draws a row — and the wire
 	// then names the subject by id alone, which is what it did before.
 	SubjectLabel string
+	// InputsChanged says whether the subject, or the workspace, changed after
+	// the last run read it (MarkOutOfDate). Nil when that is not known.
+	InputsChanged *bool
 }

@@ -154,7 +154,7 @@ it("links an allowance editor to usage instead of model bindings", async () => {
     (
       await screen.findByRole("link", { name: "Manage allowance" })
     ).getAttribute("href"),
-  ).toBe("#/settings/usage");
+  ).toBe("/#/settings/usage");
 });
 
 it("does not show management notices to a read seat even with role grants", async () => {

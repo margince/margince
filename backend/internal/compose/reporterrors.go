@@ -235,16 +235,16 @@ func (e *ReservedAliasError) MessageFault() (code, message string) {
 	return reportFieldNotAllowedCode, e.Error() + " — name the aggregate anything else"
 }
 
-// NativeMoneyNeedsCurrencyError refuses summing a per-row currency amount
-// across a grouping that does not split by currency.
+// NativeMoneyNeedsCurrencyError refuses an aggregate that would fold per-row
+// currency amounts across currencies.
 //
-// FieldFault names the aggregate rather than the grouping, because the
-// aggregate is the half that cannot be made safe: a caller who wanted a total
-// across currencies wanted a CONVERTED one, and this report's native measure is
-// not it. Naming group_by would suggest adding a dimension answers the
-// question, which it does — differently, per currency, which may not be what
-// they meant.
-type NativeMoneyNeedsCurrencyError struct{ Field string }
+// It names the aggregate rather than the grouping. A caller who wanted a total
+// across currencies wanted a converted one, and the refusal names that measure
+// when the report offers it.
+type NativeMoneyNeedsCurrencyError struct {
+	Field   string
+	refusal *analyticsquery.RefusalError
+}
 
 func (e *NativeMoneyNeedsCurrencyError) Error() string {
 	return "report: " + e.Field + " is money in each row's own currency"
@@ -255,7 +255,5 @@ func (e *NativeMoneyNeedsCurrencyError) Error() string {
 // and a second minted in the build would put an undocumented code in front of a
 // client branching on the documented one.
 func (e *NativeMoneyNeedsCurrencyError) MessageFault() (code, message string) {
-	return reportFieldNotAllowedCode,
-		e.Error() + ", so a total spanning currencies would be a number with no unit — " +
-			"group by `currency` as well, or ask for a measure already converted to one currency"
+	return reportFieldNotAllowedCode, "report: " + e.refusal.Message + " — " + e.refusal.Suggest
 }

@@ -129,7 +129,7 @@ func (s *Store) RedactCapturedNoiseTx(
 		   FOR UPDATE
 		), stripped AS (
 		  UPDATE activity a
-		     SET subject = NULL, body = NULL, raw = NULL,
+		     SET subject = NULL, body = NULL, raw = NULL, agenda_fingerprint = NULL,
 		         -- Read from the words being emptied, so they go with them.
 		         language = NULL, source_author_name = NULL,
 		         reply_verdict = NULL, reply_verdict_at = NULL, reply_verdict_by = NULL%s

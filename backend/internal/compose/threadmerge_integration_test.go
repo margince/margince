@@ -81,7 +81,7 @@ func threadConnectorCtx(e *integration.Env, owner ids.UUID) context.Context {
 // addressed to it.
 func seatAddress(t *testing.T, e *integration.Env, seat ids.UUID) string {
 	t.Helper()
-	addr := "seat-" + seat.String()[:8] + "@ws.example"
+	addr := "seat-" + seat.String() + "@ws.example"
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
@@ -190,7 +190,7 @@ func TestAReferenceToAMessageTheSeatDoesNotHoldMergesNothing(t *testing.T) {
 	if got := threadKeyOfMessage(t, e, "private@counterparty.example"); got != "private-root@counterparty.example" {
 		t.Fatalf("the other seat's message moved to thread %q; a reference it never held must not reach it", got)
 	}
-	// Nor is the forged mail merged INTO that conversation: it keeps the root
+	// Nor is the forged mail merged into that conversation: it keeps the root
 	// its own header gives it, which the private thread does not carry.
 	if got := threadKeyOfMessage(t, e, "forged@counterparty.example"); got == "private-root@counterparty.example" {
 		t.Fatal("a mail naming a message its seat never held was merged into that message's thread")

@@ -4,6 +4,7 @@
 import { createContext, type ReactNode, useContext, useEffect } from "react";
 import { isRenderableZone } from "../format/format";
 import { FALLBACK_RECORD_ZONE } from "../format/timezone";
+import { useFiguresFollowTheSwitch } from "./individualperformance";
 import { logUnexpectedError } from "./problem";
 import { useInstallationSettings } from "./uploadlimit";
 
@@ -124,6 +125,9 @@ export function useConfiguredRecordZone(enabled: boolean): {
   pending: boolean;
 } {
   const query = useInstallationSettings(enabled);
+  // Mounted here because this is where the installation read already mounts for
+  // every session, which is what the switch has to reach.
+  useFiguresFollowTheSwitch(enabled);
   // A settled read that carries no timezone is NOT the same state as one still
   // in flight, though `data?.timezone` spells both `undefined`. The contract
   // makes the field required, so a 200 without it is a server older or newer

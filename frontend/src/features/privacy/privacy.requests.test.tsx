@@ -251,7 +251,10 @@ describe("the subject-request drawer", () => {
     const link = within(await subjectFact()).getByRole("link", {
       name: "Lena Hoffmann",
     });
-    expect(link).toHaveAttribute("href", `#/contacts/${NAMED.subject_ref}`);
+    expect(link).toHaveAttribute(
+      "href",
+      `/r/contacts/${NAMED.subject_ref}#/contacts/${NAMED.subject_ref}`,
+    );
   });
 
   it("links a lead subject to the lead, never to a contact of the same id", async () => {
@@ -265,7 +268,7 @@ describe("the subject-request drawer", () => {
     const link = within(await subjectFact()).getByRole("link", {
       name: "Jonas Berg",
     });
-    expect(link).toHaveAttribute("href", `#/leads/${NAMED.subject_ref}`);
+    expect(link).toHaveAttribute("href", `/#/leads/${NAMED.subject_ref}`);
   });
 
   it("names an unresolved subject neutrally and links nowhere", async () => {

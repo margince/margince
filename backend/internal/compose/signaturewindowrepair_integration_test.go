@@ -27,8 +27,6 @@ import (
 func TestAnOutlookBoldFromReplyQuotingOurSignatureAddsNoMemberNumber(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO email_signature (owner_id, body, phone) VALUES ($1, '', $2)`, e.AdminUser, memberNumber)
-	// SenderLines does not know the bold header, so Sam's quoted signature is
-	// in the window and only the member check keeps his number off Bob.
 	contact := seedEnrichContact(t, e, "bob@window.example", "Works for me.\n\nBob Contact\n"+bobOwnNumber+"\n\n"+
 		"*From:* Sam Seller <sam@seller.example>\n*Sent:* Monday\n\nSam Seller\n"+memberNumber)
 	runEnrichPass(t, e, &signatureScriptBrain{fields: phoneReply(bobOwnNumber, memberNumber)})

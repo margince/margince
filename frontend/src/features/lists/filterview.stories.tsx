@@ -149,7 +149,7 @@ async function changeCity(canvas: Canvas) {
 export const Loading: Story = { render: opened("held") };
 
 // Results first: the filter as one sentence, what it selects open beneath it,
-// and nothing emerald, because there is nothing yet to keep.
+// and nothing in the accent, because there is nothing yet to keep.
 export const Reading: Story = { render: opened() };
 
 // The rows open where the sentence was; with nothing changed, Done folds them.

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -17,11 +18,15 @@ import (
 )
 
 type recordingPartnerSetUp struct {
-	checkErr error
-	setUps   []PartnerSetUpFields
+	checkErr    error
+	checkStages []*string
+	setUps      []PartnerSetUpFields
 }
 
-func (p *recordingPartnerSetUp) Check(context.Context, ids.UUID) error { return p.checkErr }
+func (p *recordingPartnerSetUp) Check(_ context.Context, _ ids.UUID, stage *string) error {
+	p.checkStages = append(p.checkStages, stage)
+	return p.checkErr
+}
 
 func (p *recordingPartnerSetUp) SetUp(_ context.Context, _ ids.UUID, f PartnerSetUpFields) (json.RawMessage, error) {
 	p.setUps = append(p.setUps, f)
@@ -67,7 +72,7 @@ func TestSetUpPartnerStagesOnlyWhatTheStoreWouldAccept(t *testing.T) {
 		t.Errorf("staged %+v, want the company pinned at the version read", info)
 	}
 	if !strings.Contains(info.Summary, "hosting") {
-		t.Errorf("summary %q does not name the role", info.Summary)
+		t.Errorf("summary %q does not name the kind", info.Summary)
 	}
 
 	refused := &recordingPartnerSetUp{checkErr: apperrors.ErrConflict}
@@ -76,12 +81,38 @@ func TestSetUpPartnerStagesOnlyWhatTheStoreWouldAccept(t *testing.T) {
 	}
 }
 
+func TestSetUpPartnerReadsTheDeprecatedRoleAsOneKind(t *testing.T) {
+	companyID := ids.NewV7()
+	partners := &recordingPartnerSetUp{}
+	args := json.RawMessage(fmt.Sprintf(`{"company_id":%q,"partner_role":"consulting"}`, companyID))
+
+	if _, err := setUpPartnerTool(partners, companyID).Handle(context.Background(), args); err != nil {
+		t.Fatalf("Handle err = %v", err)
+	}
+	if len(partners.setUps) != 1 || !slices.Equal(partners.setUps[0].Kinds, []string{"consulting"}) {
+		t.Errorf("store got %+v, want the role as the one kind", partners.setUps)
+	}
+}
+
+func TestSetUpPartnerAsksTheStoreAboutTheStageBeforeStaging(t *testing.T) {
+	companyID := ids.NewV7()
+	partners := &recordingPartnerSetUp{}
+	args := json.RawMessage(fmt.Sprintf(`{"company_id":%q,"partner_kinds":["referral"],"relationship_stage":"scouting"}`, companyID))
+
+	if _, err := setUpPartnerTool(partners, companyID).StageInfo(context.Background(), args); err != nil {
+		t.Fatalf("StageInfo err = %v", err)
+	}
+	if len(partners.checkStages) != 1 || partners.checkStages[0] == nil || *partners.checkStages[0] != "scouting" {
+		t.Errorf("check saw stages %v, want the requested stage", partners.checkStages)
+	}
+}
+
 func TestSetUpPartnerRefusesWordsOutsideTheContractsVocabularies(t *testing.T) {
 	companyID := ids.NewV7()
 	for field, body := range map[string]string{
-		"partner_role":       `"partner_role":"reseller"`,
-		"relationship_stage": `"partner_role":"hosting","relationship_stage":"won"`,
-		"next_step_due_at":   `"partner_role":"hosting","next_step_due_at":"soon"`,
+		"partner_role":     `"partner_role":"reseller"`,
+		"partner_kinds":    `"partner_kinds":["hosting","implementation"]`,
+		"next_step_due_at": `"partner_role":"hosting","next_step_due_at":"soon"`,
 	} {
 		args := json.RawMessage(fmt.Sprintf(`{"company_id":%q,%s}`, companyID, body))
 		_, err := setUpPartnerTool(&recordingPartnerSetUp{}, companyID).Handle(context.Background(), args)
@@ -95,7 +126,7 @@ func TestSetUpPartnerHandsTheStoreTheTermsAndNoTier(t *testing.T) {
 	companyID := ids.NewV7()
 	partners := &recordingPartnerSetUp{}
 	args := json.RawMessage(fmt.Sprintf(
-		`{"company_id":%q,"partner_role":"strategic","relationship_stage":"contacted","next_step":"call","next_step_due_at":"2026-11-30"}`, companyID))
+		`{"company_id":%q,"partner_kinds":["strategic","referral"],"relationship_stage":"contacted","next_step":"call","next_step_due_at":"2026-11-30"}`, companyID))
 
 	if _, err := setUpPartnerTool(partners, companyID).Handle(context.Background(), args); err != nil {
 		t.Fatalf("Handle err = %v", err)
@@ -104,7 +135,7 @@ func TestSetUpPartnerHandsTheStoreTheTermsAndNoTier(t *testing.T) {
 		t.Fatalf("store called %d times, want 1", len(partners.setUps))
 	}
 	got := partners.setUps[0]
-	if got.Role != "strategic" || *got.Stage != "contacted" || *got.NextStep != "call" || got.NextStepDueAt.Format("2006-01-02") != "2026-11-30" {
+	if !slices.Equal(got.Kinds, []string{"strategic", "referral"}) || *got.Stage != "contacted" || *got.NextStep != "call" || got.NextStepDueAt.Format("2006-01-02") != "2026-11-30" {
 		t.Errorf("store got %+v", got)
 	}
 }

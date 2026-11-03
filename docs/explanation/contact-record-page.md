@@ -1,22 +1,30 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
 
 ## Reading order
 
-A moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
+The newest thing the contact sent in the last 7 days that nobody has answered is "Just in". The server reads it (`GET /activities/latest-inbound`, `backend/internal/modules/activities/latestinbound.go`). Mail and messages come from the `waiting_reply` read. A website form counts until a later sent mail or message, a call or a held meeting answers it. An item a task stands for is left out.
+
+`RecordNextBar` (`frontend/src/components/latestinbound.tsx`) puts the item in the Next bar on every record type. It takes the bar when nothing urgent is next: a late item, a moment or a move the page marks urgent. Otherwise it is one line above the bar. A bar whose move already cites the item draws alone.
+
+**Create task** accepts a mail's request when the server says it can (`accepts_request`), so finishing the task settles it. Anything else becomes a task made from the item. "Noticed" hides it in this browser, and no older item takes its place. On the other tabs it is one line under the badges.
+
+After it, a moment that needs action, an open task or a promise still owed comes first. Otherwise the relationship brief comes first. When no brief exists, a plain line that states the recorded identity takes its place. Source and the date the record was created show beside the owner in the header. A failed brief has its own retry; a failure does not turn into an empty profile.
 
 For a contact an agent created, the source names the tool and the colleague it worked for, each when the create audit row records it. `captured_by` names only the passport, so `created_by` reads them from that row.
 
 The `thin_relationship` rule needs an activity timeline that loaded and is empty, and no recorded colleague connections. Its label is `No interactions recorded`. It supplies no made-up evidence that the relationship changed. The `thin_relationship` result shows as a short line that states what the record covers, not as a next step. They cover the records the reader can see, not everything anyone knows about the contact.
 
-An empty block, whether for reading, for promises or for a conversation, does not show on the Overview tab. Real tasks still show when a moment is dismissed, and they open the shared task window. The link to the full work queue says that it opens the whole queue. What the system knows about past conversations shows once; the History tab holds the full story in time order. The sidebar does not show the newest activity a second time.
+An empty block, whether for reading, for promises or for a conversation, does not show on the Overview tab. Real tasks still show when a moment is dismissed, and they open the shared task window. The link to the full work queue says that it opens the whole queue. What the system knows about past conversations shows once; the History tab holds the full story in time order. Apart from that one line, the sidebar does not show the newest activity a second time.
 
 A relationship is marked inbound only, outbound only, or both ways. A pulse, colleague list or signal list that loaded but is empty does not show; a limit set by role is still stated. Missing times do not prove that a relationship runs only one way.
 
 Editing identity, choosing the default address and resolving where the contact works stay with the parts that already do them.
+
+While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`contactcaseentry.tsx`). The count is the number of other contacts of the case that the reader can see. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone.
 
 ## Permission to write
 
@@ -33,3 +41,38 @@ On a small screen, `Details & permissions` opens the same sidebar content over t
 ## Focus and the work queue
 
 Focus chooses and orders entries the normal way, with no pin controls and no stored pins that change it. The separate full work queue keeps its pins as they work today. The backend chooses Focus before it applies personal pins to the queue. So old stored pins cannot pull a note that asks for no action into Focus, or change its order.
+
+The Next bar stays about this contact. With no move, no task and nothing just in, it says whose turn it is. It reads that from `last_exchange` in `GET /activities/latest-inbound`, the contact's newest call, meeting or message. `activities.WhoseMove` decides it, the same function the company page's strip uses, so the two cannot disagree.
+
+A move whose action opens the composer drafts the message on the press and is drawn in the AI indigo. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. A move that only opens a form or a record keeps the accent.
+
+The Next bar shows open privacy notice work before relationship suggestions. It reads the same
+contact-scoped queue as Home, with the same grants and row scope. **Review privacy duty** opens the
+case itself in Settings → Privacy, so the Worklist page limit does not hide it. Closed cases and
+notices already queued for delivery do not ask for another notice.
+
+The last-touch fields (`last_inbound_at`, `last_outbound_at`, `relationship_direction` and the rest)
+come from `contact360.LastTouchFor` in `backend/internal/compose/contact360/lasttouch.go`. It counts
+the messages whose content the caller may open: the activity content gate, contact reach, project
+narrowing and the human-message rules. `last_touch_basis` says so on the wire. The page's moment,
+its relationship changes and the contact rows on the Worklist read the same function. So they agree
+with the History the caller can open.
+
+The query also returns the id of each picked row
+(`last_inbound_activity_id`, `last_outbound_activity_id`, `last_live_inbound_activity_id`). A
+moment cites that id as evidence and does not match a time against the capped timeline page.
+
+Relationship strength and the colleague network use a different basis. They count only rows the
+whole workspace may see (`auth.AudienceWorkspaceOnly`), so every colleague reads the same number.
+
+History names the side that wrote each message through `correspondenceSide` in
+`frontend/src/lib/messagevoice.ts`, which follows the same rule as `activities.WroteItOurSide`. The timeline adapter
+sets each entry's `side` from it, and the thread lead, the mark and the per-side counts read `side`
+before transport direction.
+
+The Reach figure counts colleagues with recorded messages in both directions during the last
+90 days. Receiving the same message in several mailboxes does not show a reply.
+
+An unknown source appears as **Review source**, with no duty or legal deadline claimed. Only
+readers with privacy access see it. The review opens the case in Settings → Privacy, where the
+source and any known date can be confirmed.

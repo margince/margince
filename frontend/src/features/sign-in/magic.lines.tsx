@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { providerName } from "../../format/connectorprovider";
@@ -9,6 +10,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
 import { ENTITY, isEntityKind } from "../../lib/entity";
+import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import {
   magicByKey,
   magicSentenceKey,
@@ -19,7 +21,6 @@ import { routeHash } from "../../lib/router";
 import { approvalHref } from "../automations/approvaldrawer";
 import { MagicApproval } from "./magic.approval";
 import { axisLabel, markKind } from "./magic.marks";
-import type { MagicLane, MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
 import { MagicUndoButton, undoPress } from "./magic.undo";
 
@@ -210,7 +211,7 @@ function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   if (line.lane === "needs_you") {
     return (
       <div className="magic-line-controls">
-        <a href={approvalHref(line.id)}>{t("magic.decide")}</a>
+        <AppLink href={approvalHref(line.id)}>{t("magic.decide")}</AppLink>
       </div>
     );
   }
@@ -354,7 +355,7 @@ function LineSubject({
       {opens ? (
         <LineRecordsOpener line={line} since={since} summary={shown} />
       ) : href ? (
-        <a href={href}>{shown}</a>
+        <AppLink href={href}>{shown}</AppLink>
       ) : (
         shown
       )}

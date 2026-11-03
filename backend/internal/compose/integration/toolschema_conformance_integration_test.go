@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -329,7 +330,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"read_approval", `{"staged_action_id":"` + waiting.String() + `"}`},
 		{"decide_approval", `{"staged_action_id":"` + waiting.String() + `","decision":"reject"}`},
 	}
-	calls = append(calls, partsAndRetirement(ctx, t, registry, company)...)
+	calls = slices.Concat(calls, partsAndRetirement(ctx, t, registry, company), readinessOfABookedMeeting(ctx, t, registry))
 	assertEveryRegisteredToolIsAccountedFor(t, registry, calls)
 
 	for _, call := range calls {
@@ -368,6 +369,32 @@ func partsAndRetirement(ctx context.Context, t *testing.T, registry *agents.Regi
 	}
 }
 
+// readinessOfABookedMeeting books a meeting the acting rep hosts and confirms,
+// then takes back, the revision prep_for_meeting answers for it.
+func readinessOfABookedMeeting(ctx context.Context, t *testing.T, registry *agents.Registry) []struct{ tool, args string } {
+	t.Helper()
+	start := clocktest.Now(t).UTC().Add(2 * time.Hour).Truncate(time.Minute)
+	meeting := createThroughTheToolSurface(ctx, t, registry,
+		`{"record_type":"activity","fields":{"kind":"meeting","subject":"Conformance review","occurred_at":"`+
+			start.Format(time.RFC3339)+`","meeting_status":"booked"}}`)
+	out, err := registry.Invoke(ctx, "prep_for_meeting",
+		json.RawMessage(`{"record_type":"activity","record_id":"`+meeting.String()+`"}`))
+	if err != nil {
+		t.Fatalf("prep_for_meeting on the booked meeting: %v", err)
+	}
+	var prep struct {
+		Data agents.PrepForMeetingResult `json:"data"`
+	}
+	if err := json.Unmarshal(out, &prep); err != nil || prep.Data.Preparation == nil {
+		t.Fatalf("prep_for_meeting names no preparation for the host's own meeting (%v): %s", err, out)
+	}
+	args := `{"activity_id":"` + meeting.String() + `","preparation_revision":"` + prep.Data.Preparation.Revision + `"}`
+	return []struct{ tool, args string }{
+		{"confirm_meeting_ready", args},
+		{"undo_meeting_ready", args},
+	}
+}
+
 // unreachableInThisLane names the tools this sweep CANNOT invoke, and why. Each
 // needs a seam the lane does not stand up — a live calendar, an outbound mail or
 // channel provider, a crawl runner, a drafting brain — so a call would exercise
@@ -380,6 +407,9 @@ var unreachableInThisLane = gatekit.Waive(map[string]string{
 	"preview_member_retirement": "requires a live literal-admin role; this fixture stamps object grants only. TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor validates the real preview result against its schema",
 	"merge_members":             "requires the same live administrator and a reviewed retirement token. TestAMemberMergeStagesReviewsApprovesAndRedeemsThroughTheToolDoor validates the approved result against its schema",
 
+	"draft_report": "a reporting write needs a seat that may write, and this lane's human carries no seat type; " +
+		"TestDraftReportSavesTheSameDraftOnEitherDoor (reportdraftdoors_integration_test.go) calls it on the served MCP surface " +
+		"under a real passport, and TestEveryResultTypeSatisfiesTheSchemaDerivedFromIt (modules/agents) holds its declared schema",
 	"read_view": "runs a route through the API server's router, and this lane's registry is built with no server; " +
 		"TestReadViewAnswersAsItsRoutes (readviewdoors_integration_test.go) calls it on the served MCP surface and compares it to the route",
 	"relink_thread": "refused for an assistant at every destination and however it is called, so it has no answer to hold to a schema; " +

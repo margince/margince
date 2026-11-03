@@ -73,7 +73,7 @@ func (s *Store) ListOfferedValues(ctx context.Context, id ids.CompanyID) ([]crmc
 		}
 		// An archived company answers 404, like its own read, so offers kept
 		// for a restore are not served while the record is retired.
-		if _, err := readCompany(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
+		if _, err := readCompanyRow(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx, `

@@ -47,6 +47,11 @@ type Field struct {
 	// Coverage is how many records hold a value in a field the installation
 	// defined. Nil where nobody counted, which every question run leaves it.
 	Coverage *Coverage
+	// Currency is set on a measure kept in each row's own currency, and nil
+	// on every other field.
+	Currency *PerRowCurrency
+	// Period is set on a field whose value is a period bucket's label.
+	Period *PeriodField
 }
 
 // Coverage counts the live records a reader can see, and how many hold a value.
@@ -104,6 +109,9 @@ type Entity struct {
 	// answers the same population the prebuilt report does.
 	BaseWhere string
 	Fields    map[string]Field
+	// Contributor is the seat each row is credited to, "" when the entity
+	// names none. The plan counts the seats behind each group from it.
+	Contributor string
 }
 
 // Schema is the whole vocabulary, for one caller.

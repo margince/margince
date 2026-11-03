@@ -81,7 +81,7 @@ describe("the vCard import address", () => {
       const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
       expect(
         within(trail).getByRole("link", { name: "Contacts" }),
-      ).toHaveAttribute("href", "#/contacts");
+      ).toHaveAttribute("href", "/#/contacts");
       expect(trail.querySelector('[aria-current="page"]')).toHaveTextContent(
         "Import business cards",
       );
@@ -90,7 +90,7 @@ describe("the vCard import address", () => {
       );
       expect(
         screen.getByRole("link", { name: "Contacts", current: true }),
-      ).toHaveAttribute("href", "#/contacts");
+      ).toHaveAttribute("href", "/#/contacts");
     },
     SETTLE_MS * 2,
   );

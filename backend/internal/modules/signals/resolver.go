@@ -176,7 +176,7 @@ func (s *Store) resolveTx(ctx context.Context, tx pgx.Tx, actor principal.Princi
 	if err != nil {
 		return crmcontracts.Signal{}, fmt.Errorf("audit signal resolution: %w", err)
 	}
-	out, err := readSignal(ctx, tx, signalID, storekit.LiveOnly)
+	out, err := readSignalFor(ctx, tx, signalID, storekit.LiveOnly, s.words)
 	if err != nil {
 		return crmcontracts.Signal{}, fmt.Errorf("read resolved signal: %w", err)
 	}

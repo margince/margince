@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -44,6 +45,8 @@ type StageInput struct {
 	CoTargetType string
 	CoTargetID   ids.UUID
 	Summary      string
+	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
+	SummaryParts *crmcontracts.ApprovalSummaryParts
 	// TargetLabel names the target when its table has no name to read, such as
 	// a captured message offered as a new contact. Nil reads the name from the
 	// target row, which is what every named record does.
