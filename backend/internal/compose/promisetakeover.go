@@ -111,7 +111,7 @@ func (h promiseTakeOverHandlers) write(ctx context.Context, tx pgx.Tx, promise c
 	}
 	// Locked first, so the audience read below and the reader check are of
 	// one source that no concurrent narrowing can change before commit.
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE activity_thread_available(thread_key) AND id = $1 FOR SHARE`, promise.Source); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE id = $1 FOR SHARE`, promise.Source); err != nil {
 		return fmt.Errorf("compose: locking the promise's source: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, promise.Source); err != nil {
@@ -158,7 +158,7 @@ func takenOverAudience(ctx context.Context, tx pgx.Tx, source, taker ids.UUID) (
 			apperrors.ErrPermissionDenied)
 	}
 	var audience string
-	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE activity_thread_available(thread_key) AND id = $1`, source).Scan(&audience); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1`, source).Scan(&audience); err != nil {
 		return nil, fmt.Errorf("compose: reading who may read the promise's source: %w", err)
 	}
 	if audience != string(crmcontracts.ActivityAudienceWorkspace) {

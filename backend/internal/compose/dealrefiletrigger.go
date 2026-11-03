@@ -125,10 +125,6 @@ func activityRefileScope(env events.Envelope) (capture.DealRefileScope, error) {
 	if err := json.Unmarshal(env.Payload, &updated); err != nil {
 		return scope, fmt.Errorf("%w: decode %s: %v", events.ErrUnactionable, env.Type, err)
 	}
-	if updated.ChangedFields.ThreadKey != nil && env.Actor.ID == threadRepairActor {
-		scope.Activities = []ids.UUID{env.Entity.ID}
-		return scope, nil
-	}
 	target := updated.ChangedFields.Relinked
 	if target != nil && (target.EntityType == contactObject || target.EntityType == string(recordTypeCompany) || target.EntityType == string(recordTypeProject)) {
 		scope.Activities = []ids.UUID{env.Entity.ID}

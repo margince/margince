@@ -448,8 +448,8 @@ func companyActivityCount30d(ctx context.Context, tx pgx.Tx, included []ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND `+activities.CompanyLinkedActivityExistsAny(1)+`
-		  AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		WHERE `+activities.CompanyLinkedActivityExistsAny(1)+`
+		  AND a.archived_at IS NULL
 		  AND `+occurredday.WithinSQL("a", "$2", "$3")+` AND `+occurredday.HappenedSQL("a", "$3"),
 		included, asOf.AddDate(0, 0, -companyActivityWindowDays), asOf).Scan(&count)
 	return count, err

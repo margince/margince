@@ -80,7 +80,7 @@ func (m Mailbox) Arrival(t *testing.T, messageID string) time.Time {
 	t.Helper()
 	var received time.Time
 	if err := m.DB.Tx(m.Context, func(tx pgx.Tx) error {
-		return tx.QueryRow(m.Context, `SELECT ci.provider_received_at FROM capture_import ci JOIN activity a ON a.id=ci.activity_id WHERE a.source_id=$1 AND ci.user_id=$2 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))`, messageID, m.Seat).Scan(&received)
+		return tx.QueryRow(m.Context, `SELECT ci.provider_received_at FROM capture_import ci JOIN activity a ON a.id=ci.activity_id WHERE a.source_id=$1 AND ci.user_id=$2 AND a.archived_at IS NULL`, messageID, m.Seat).Scan(&received)
 	}); err != nil {
 		t.Fatal(err)
 	}

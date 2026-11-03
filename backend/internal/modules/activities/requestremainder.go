@@ -45,7 +45,7 @@ func groundedRemainderTx(ctx context.Context, tx pgx.Tx, in RequestSettlementInp
 		return in.Remaining, nil
 	}
 	var body string
-	if err := tx.QueryRow(ctx, `SELECT coalesce(body, '') FROM activity WHERE activity_thread_available(thread_key) AND id = $1`,
+	if err := tx.QueryRow(ctx, `SELECT coalesce(body, '') FROM activity WHERE id = $1`,
 		in.Request.RequestID).Scan(&body); err != nil {
 		return "", fmt.Errorf("activities: re-reading the request to check the remaining quote: %w", err)
 	}

@@ -172,7 +172,7 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
-			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND activity_thread_available(a.thread_key) AND a.occurred_precision = 'instant'
+			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.occurred_precision = 'instant'
 			  AND (a.host_user_id = $%[1]d
 			       OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id = a.id AND held.user_id = $%[1]d)
 			       OR EXISTS (SELECT 1 FROM activity_participant seat
@@ -298,7 +298,7 @@ func (h Handlers) GetAvailability(w http.ResponseWriter, r *http.Request, params
 	}
 	slots, truncated, err := availability(r.Context(), host, params.From, params.To, duration)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeStoreErr(w, r, calendarNamedToItsHost(err, actor, host))
 		return
 	}
 	backing, err := h.calendars.BackingFor(r.Context(), actor.UserID, host)

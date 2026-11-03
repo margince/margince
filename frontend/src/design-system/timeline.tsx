@@ -12,12 +12,13 @@ import "./composed.css";
 import {
   AutomaticFlag,
   CommitmentReviewFlag,
-  directionClass,
   dotClass,
   entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   noteClass,
+  sideClass,
+  sideOf,
   TaskStateFlag,
   TIMELINE_ICON,
   TIMELINE_KIND_LABEL,
@@ -112,7 +113,7 @@ function BulkGroupRow({
   }
   const Icon = TIMELINE_ICON[newest.kind];
   return (
-    <li className={directionClass(newest.direction)}>
+    <li className={sideClass(newest)}>
       {/* A group sits on the same three columns a single row does (date,
           rail, what happened), because it is a row of the chronology. One
           that stepped out of the axis read as a different list wedged into
@@ -199,15 +200,14 @@ function directionPhrase(
   t: ReturnType<typeof useT>,
 ): string {
   const who = entry.counterparts;
+  const side = sideOf(entry);
   if (!who) {
-    return entry.direction === "outbound"
-      ? t("timeline.sent")
-      : t("timeline.received");
+    return side === "ours" ? t("timeline.sent") : t("timeline.received");
   }
-  if (entry.direction === "outbound") {
+  if (side === "ours") {
     return t("timeline.sentTo", { who });
   }
-  if (entry.direction === "inbound") {
+  if (side === "theirs") {
     return t("timeline.receivedFrom", { who });
   }
   // A meeting or a note has no side. It still has contacts in it, and naming
@@ -250,7 +250,7 @@ export function TimelineRow({
   // A note is the rep's own words about the record, not an exchange with it.
   // The row says so: its body sits on a plate of its own instead of running
   // in the message rhythm around it.
-  const rowClass = [directionClass(entry.direction), noteClass(entry)]
+  const rowClass = [sideClass(entry), noteClass(entry)]
     .filter(Boolean)
     .join(" ");
   // An email draws the canonical row, the one reading of a message in the

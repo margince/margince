@@ -82,7 +82,7 @@ func RestoreMailBodyTx(ctx context.Context, tx pgx.Tx, r MailBodyRestoration) (b
 	}
 	var threadKey *string
 	err := tx.QueryRow(ctx, `
-		WITH old AS (SELECT body_completeness, owed_verdict_ruleset FROM activity WHERE activity_thread_available(thread_key) AND id = $1 AND (restricted_at IS NULL AND activity_thread_available(thread_key)))
+		WITH old AS (SELECT body_completeness, owed_verdict_ruleset FROM activity WHERE id = $1 AND restricted_at IS NULL)
 		UPDATE activity a SET body = $2, body_completeness = $3, language = NULL,
 		       subject = COALESCE($6, a.subject),
 		       owed_verdict_ruleset = CASE WHEN `+humanReviewedOwedSQL("a")+` THEN a.owed_verdict_ruleset END

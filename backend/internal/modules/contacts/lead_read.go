@@ -55,7 +55,7 @@ func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
 
 func leadNextTaskDueSQL(work string) string {
 	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
 	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
@@ -80,7 +80,7 @@ func leadLastActivityPrecisionSQL() string {
 // leadTouchesSQL is the activities the last-touch clock reads.
 func leadTouchesSQL() string {
 	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
 }
 
@@ -104,7 +104,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	` + leadQualificationEvidenceSQL(slaNow(ctx), arg) + `,
 	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
 	-- The next open task, as the pair it is: its title and its deadline
 	-- describe ONE task, so they select one row. The subject is content and
 	-- the due date is a marker, but splitting them by that distinction would
@@ -117,7 +117,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
 	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
 	` + leadNextTaskDueSQL(work) + `,

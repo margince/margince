@@ -185,13 +185,18 @@ var tableOwners = map[string]string{
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
 	// a layout: a statement writing either table from any other package fails
 	// TestEveryPackageOnlyWritesTablesItOwns.
-	"project":               "internal/modules/projects",
-	"project_phase_history": "internal/modules/projects",
-	"fx_rate":               "internal/modules/deals",
-	"product":               "internal/modules/deals",
-	"offer":                 "internal/modules/deals",
-	"offer_line_item":       "internal/modules/deals",
-	"offer_template":        "internal/modules/deals",
+	"project":                   "internal/modules/projects",
+	"project_phase_history":     "internal/modules/projects",
+	"fx_rate":                   "internal/modules/deals",
+	"product":                   "internal/modules/deals",
+	"offer":                     "internal/modules/deals",
+	"offer_line_item":           "internal/modules/deals",
+	"deal_product":              "internal/modules/deals",
+	"sales_initiative":          "internal/modules/initiatives",
+	"sales_initiative_revision": "internal/modules/initiatives",
+	"sales_initiative_member":   "internal/modules/initiatives",
+	"sales_initiative_baseline": "internal/modules/initiatives",
+	"offer_template":            "internal/modules/deals",
 	// activities
 	"activity":              "internal/modules/activities",
 	"transcript_read":       "internal/modules/activities",
@@ -271,6 +276,7 @@ var tableOwners = map[string]string{
 	"meeting_proposal":      "internal/modules/activities",
 	"meeting_invitation":    "internal/modules/activities",
 	"booking_page":          "internal/modules/activities",
+	"booking_alias":         "internal/modules/activities",
 	// approvals. The autonomy policy is what each rep decided about a KIND of
 	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
@@ -330,13 +336,6 @@ var tableOwners = map[string]string{
 	"capture_party_source_replay":      "internal/modules/capture",
 	"capture_party_source":             "internal/modules/capture",
 	"capture_import":                   "internal/modules/capture",
-	"capture_thread_invalidation":      "internal/modules/capture",
-	"capture_thread_pending":           "internal/modules/capture",
-	"capture_thread_repair":            "internal/modules/capture",
-	"capture_thread_barrier":           "internal/modules/capture",
-	"capture_thread_reply":             "internal/modules/capture",
-	"capture_thread_topic":             "internal/modules/capture",
-	"capture_thread_repair_node":       "internal/modules/capture",
 	"capture_thread_verdict":           "internal/modules/capture",
 	"capture_counterparty_hold":        "internal/modules/capture",
 	"capture_digest":                   "internal/modules/capture",

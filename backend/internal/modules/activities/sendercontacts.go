@@ -49,7 +49,7 @@ func (s *Store) SenderContacts(ctx context.Context, activityIDs []ids.UUID) (map
 			  JOIN activity a ON a.id = ap.activity_id
 			  JOIN contact p ON p.id = ap.contact_id
 			 WHERE ap.activity_id = ANY($1) AND ap.role = 'from'
-			   AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND (` + content + `)
+			   AND a.archived_at IS NULL AND (` + content + `)
 			   AND ap.contact_id IS NOT NULL AND p.archived_at IS NULL`
 		if scope != "" {
 			q += ` AND (` + scope + `)`
