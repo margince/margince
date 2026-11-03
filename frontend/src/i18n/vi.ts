@@ -1194,6 +1194,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có gì để vẽ cho kỳ và chỉ số của báo cáo này. Vẫn thêm biểu đồ, hoặc đổi kỳ trong Tùy chỉnh báo cáo.",
   "reporting.chooseChart": "Biểu đồ cần thêm",
   "reporting.exportCsv": "Xuất CSV",
+  "reporting.coverageThresholds": "Ngưỡng độ phủ công ty",
+  "reporting.coverageThresholdsHelp":
+    "Những gì phần Độ phủ công ty xem là rủi ro. Ngưỡng áp dụng từ lần đọc tiếp theo.",
+  "reporting.maxEngagedSeats": "Tối đa liên hệ gắn bó",
+  "reporting.untouchedDays": "Số ngày không trao đổi trong pipeline",
+  "reporting.silentDays": "Số ngày không trao đổi sau khi thắng",
+  "reporting.wonWithinDays": "Số ngày một lần thắng còn được tính",
   "reporting.captureContexts": "Ghi nhận lịch sử pipeline hằng ngày",
   "reporting.captureHelp":
     "Chọn nhóm và pipeline cố định để dựng lịch sử biến động. Cần hai lần chụp hằng ngày so sánh được với nhau.",
@@ -7481,6 +7488,48 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionOutcomes": "Kết quả của tôi",
   "analytics.sectionCoverage": "Độ bao phủ dữ liệu",
   "analytics.sectionDelivery": "Triển khai",
+  "analytics.sectionAccounts": "Độ phủ công ty",
+  "analytics.accounts.views": "Các góc nhìn rủi ro",
+  "analytics.accounts.singleThreaded": "Deal chỉ có một liên hệ",
+  "analytics.accounts.untouched": "Chưa liên hệ trong pipeline",
+  "analytics.accounts.silent": "Đã thắng nhưng im lặng",
+  "analytics.accounts.pending": "Đang kiểm tra các công ty",
+  "analytics.accounts.thresholds":
+    "Rủi ro nghĩa là: tối đa {seats} liên hệ gắn bó với deal, không trao đổi trong {untouched} ngày khi còn trong pipeline, không trao đổi trong {silent} ngày sau khi thắng trong vòng {won} ngày.",
+  "analytics.accounts.singleThreadedPurpose":
+    "Deal đang mở mà gần đây chỉ có tối đa {seats} liên hệ ở công ty trao đổi thư hoặc gặp bạn.",
+  "analytics.accounts.untouchedPurpose":
+    "Công ty có deal đang mở và không có trao đổi hai chiều trong {days} ngày qua.",
+  "analytics.accounts.silentPurpose":
+    "Công ty có deal thắng trong {won} ngày qua, không có deal đang mở, và không có trao đổi hai chiều trong {days} ngày qua.",
+  "analytics.accounts.noActivityGrant":
+    "Việc kiểm tra các công ty cần quyền đọc hoạt động.",
+  "analytics.accounts.none": "Không có gì rủi ro ở đây.",
+  "analytics.accounts.truncated":
+    "Có nhiều công ty hơn mức lần đọc này kiểm tra: số đếm chỉ gồm những công ty lớn nhất. Hãy thu hẹp các hồ sơ bạn đã chọn.",
+  "analytics.accounts.withheld_one":
+    "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
+  "analytics.accounts.withheld_other":
+    "{count} deal khác có liên hệ bạn không được xem, nên không được đánh giá.",
+  "analytics.accounts.account": "Công ty",
+  "analytics.accounts.deal": "Deal",
+  "analytics.accounts.owner": "Phụ trách",
+  "analytics.accounts.engagedSeats": "Liên hệ gắn bó",
+  "analytics.accounts.seatsOf": "{engaged} trên {named}",
+  "analytics.accounts.openDeals": "Deal đang mở",
+  "analytics.accounts.wonDeal": "Deal đã thắng",
+  "analytics.accounts.lastExchange": "Trao đổi gần nhất",
+  "analytics.accounts.never": "Chưa bao giờ",
+  "analytics.accounts.daysAgo": "{date}, {days} ngày trước",
+  "analytics.accounts.evidencePurpose": "Căn cứ của nhận định này.",
+  "analytics.accounts.factSeats":
+    "{engaged} trên {named} liên hệ được nêu trong deal đã trao đổi thư hoặc gặp bạn trong 90 ngày qua.",
+  "analytics.accounts.factStage": "Deal đang ở giai đoạn {stage}.",
+  "analytics.accounts.factOpen_one": "{count} deal đang mở ở công ty này.",
+  "analytics.accounts.factOpen_other": "{count} deal đang mở ở công ty này.",
+  "analytics.accounts.factWon": "{deal} đã thắng vào {date}.",
+  "analytics.accounts.factInbound": "Họ viết lần cuối: {date}.",
+  "analytics.accounts.factOutbound": "Bạn viết lần cuối: {date}.",
   // The Questions section: a question composed from the seat's own analytics
   // schema. Field keys are the engine's wire names, rendered under the
   // `analytics.field.` stem; a backend gate holds them against the report catalog.

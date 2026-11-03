@@ -335,10 +335,11 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   context,
 }) => {
   const availability: string[] = [];
+  let previewing = false;
   await context.route("**/v1/availability?*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.searchParams.get("reliable")).toBe("true");
-    availability.push(url.searchParams.get("from") ?? "");
+    if (previewing) availability.push(url.searchParams.get("from") ?? "");
     await route.fulfill({ json: { slots: bookingSlots, truncated: false } });
   });
   let profile = { ...bookingProfile, enabled: false };
@@ -381,6 +382,7 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   ).toBeVisible();
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ notice_minutes: 1440, enabled: false });
+  previewing = true;
   await page
     .getByRole("button", { name: de["scheduling.preview"] })
     .first()
@@ -391,8 +393,8 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
   await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
-  // October in Berlin holds the clock going back, so it runs past the
-  // server's 31-day bound and is read in two windows after September's one.
+  // Only reads after the preview opens count: the settings page makes its
+  // own. October in Berlin runs past the 31-day bound, so it takes two windows.
   await expect.poll(() => availability.length).toBe(3);
   const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
