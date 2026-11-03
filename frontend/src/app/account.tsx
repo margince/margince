@@ -341,7 +341,7 @@ export function AccountMenu() {
           // does not jump when the name arrives, and shows a contact glyph rather
           // than an empty circle or initials of a name nobody has.
           <span className="avatar avatar-sm" aria-hidden>
-            <UserRound size={15} />
+            <UserRound />
           </span>
         )}
         {identity.spoken && (

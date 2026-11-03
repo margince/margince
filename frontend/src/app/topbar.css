@@ -175,7 +175,8 @@
 
 /* The bar's glyph buttons answer as one: the bare button's square fill under
    the pointer and while the panel it opens is open. */
-.topbar .btn-bare[aria-expanded="true"] {
+.topbar .iconbtn[aria-expanded="true"],
+.topbar .btn.btn-bare[aria-expanded="true"] {
   background: var(--groundHover);
   color: var(--textPrimary);
 }

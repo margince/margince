@@ -58,6 +58,29 @@ export const TopBar: Story = {
 };
 
 /**
+ * Before the session resolves: a contact glyph in the chip's box, drawn at the
+ * control's icon size like every glyph in the bar.
+ */
+export const TopBarPending: Story = {
+  name: "Top bar trigger (session pending)",
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole("button", {
+      name: /Account$/,
+    });
+    const icon = trigger.querySelector("svg");
+    if (!icon) throw new Error("the pending chip draws no glyph");
+    const size = getComputedStyle(trigger).getPropertyValue("--controlIcon");
+    await expect(icon.getBoundingClientRect().width).toBe(
+      Number.parseFloat(size),
+    );
+  },
+  render: () => {
+    stubSession({}, { "GET /me": () => new Promise<Response>(() => {}) });
+    return <AccountMenuFrame />;
+  },
+};
+
+/**
  * The panel, open: who you are, settings, theme, the booking link, help and
  * feedback, and sign out under its own rule. Only Sign out has a leading glyph,
  * because it is the row nobody wants to press by accident. A chevron says a
