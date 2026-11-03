@@ -249,8 +249,8 @@ func TestAResendIsRefusedUnlessTheLiveMailFailed(t *testing.T) {
 	}
 }
 
-// A relay that holds the mail past the send's budget fails it, and the
-// refusal still lands on the link although the send's own context is spent.
+// A relay that holds the mail past the send's budget fails it. The refusal
+// still lands on the link, although the send's own context is spent.
 func TestARelayTimeoutStillRecordsTheMailAsFailed(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-timeout")
 	stalled := stalledMail{release: make(chan struct{})}
