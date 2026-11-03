@@ -255,3 +255,34 @@ it("does not predict a confirmation destination when multiple addresses have no 
   );
   expect(screen.queryByText(/Send to /)).toBeNull();
 });
+
+describe("the contact overview states no mail coverage", () => {
+  // No coverage state names a step the reader can take, so the overview stays
+  // silent about it; a broken connection shows on the connection health banner.
+  it.each([
+    "partial",
+    "unknown",
+    "unavailable",
+    "withheld",
+    undefined,
+  ] as const)("draws no notice for coverage %s", async (state) => {
+    mount("overview", {
+      ...sparse,
+      ...(state === undefined
+        ? {}
+        : {
+            mail_coverage: {
+              channel: "email",
+              state,
+              interval_to: view.as_of,
+              evaluated_at: view.as_of,
+            },
+          }),
+    });
+    await screen.findByRole("heading", { name: /^How it stands/ });
+    expect(
+      document.querySelector('a[href="#/settings/connections"]'),
+    ).toBeNull();
+    expect(screen.queryByText(/mail history/i)).toBeNull();
+  });
+});

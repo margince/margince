@@ -50,6 +50,7 @@ function serve({
   writer = "model" as "model" | "deterministic",
   reasons = ["Nobody sent the times.", "That was three weeks ago."],
   blocker = undefined as string | undefined,
+  mailCoverage = undefined as string | undefined,
 }) {
   vi.stubGlobal(
     "fetch",
@@ -71,6 +72,16 @@ function serve({
             ...(blocker === undefined
               ? {}
               : { blocker: { sentences: [{ text: blocker, evidence: [] }] } }),
+            ...(mailCoverage === undefined
+              ? {}
+              : {
+                  mail_coverage: {
+                    channel: "email",
+                    state: mailCoverage,
+                    interval_to: "2026-08-24T00:00:00Z",
+                    evaluated_at: "2026-08-24T00:00:00Z",
+                  },
+                }),
             generated_at: "2026-08-24T00:00:00Z",
             generated_by: writer,
           }),
@@ -423,4 +434,21 @@ it("background reads explicitly refuse model work", async () => {
     .find((url) => url.pathname.endsWith("/status"));
   expect(status?.searchParams.get("facts_only")).toBe("true");
   client.clear();
+});
+
+describe("Deal360 states no mail coverage", () => {
+  // No coverage state names a step the reader can take, so the card stays
+  // silent about it; a broken connection shows on the connection health banner.
+  it.each(["partial", "unknown", "unavailable", "withheld", undefined])(
+    "draws no notice for coverage %s",
+    async (mailCoverage) => {
+      serve({ standing: "live", mailCoverage });
+      renderCard();
+      await screen.findByText("On track");
+      expect(
+        screen.queryByRole("link", { name: "Check connections" }),
+      ).toBeNull();
+      expect(screen.queryByText(/mail history/i)).toBeNull();
+    },
+  );
 });
