@@ -24,7 +24,7 @@ func (h reportSetupHandlers) ProposeReportSetup(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	out, err := h.svc.Propose(r.Context(), body)
+	out, err := h.svc.ProposeSetup(r.Context(), body)
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return
