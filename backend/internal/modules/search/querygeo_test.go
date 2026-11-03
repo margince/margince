@@ -116,8 +116,8 @@ func (stubPlaces) LookupPlace(_ context.Context, query string) (Point, bool, err
 	return Point{}, false, nil
 }
 
-// The SQL a radius compiles to must read geocode_status, not the coordinates
-// alone.
+// The SQL a radius compiles to must read the point's status, not the
+// coordinates alone.
 //
 // This is the whole staleness design showing up in one predicate. A company's
 // coordinates belong to whatever address it held when the worker last ran, and
@@ -134,8 +134,8 @@ func TestARadiusOnlyReadsCoordinatesThatMatchTheAddress(t *testing.T) {
 	})
 	joined := strings.Join(where, " AND ")
 
-	if !strings.Contains(joined, "geocode_status") {
-		t.Errorf("the radius does not check geocode_status, so a moved company answers from its old "+
+	if !strings.Contains(joined, "located_point.status") {
+		t.Errorf("the radius does not check the point's status, so a moved company answers from its old "+
 			"address:\n%s", joined)
 	}
 	if !strings.Contains(joined, "IS NOT NULL") {
@@ -149,8 +149,8 @@ func TestARadiusOnlyReadsCoordinatesThatMatchTheAddress(t *testing.T) {
 	if distance == "" {
 		t.Error("the radius produced no distance expression, so the answer cannot say how far")
 	}
-	if !strings.Contains(joined, distance) {
-		t.Error("the distance expression is not used to decide membership; the box alone is wider " +
+	if !strings.Contains(joined, "asin(sqrt(") || !strings.Contains(distance, "asin(sqrt(") {
+		t.Error("the haversine does not decide membership; the box alone is wider " +
 			"than the circle and would admit companies outside the radius")
 	}
 }

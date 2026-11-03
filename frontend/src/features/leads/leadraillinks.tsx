@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -24,7 +25,7 @@ import type { Project } from "../projects/projects.form";
 import { searchProjectReferences } from "../records/recordreferences";
 import type { LeadWriter } from "./leads";
 
-// The lead's Deals tab: the deal it opened once qualified, and the project
+// The lead's Deals tab: the deal chosen during qualification once qualified, and the project
 // its details name.
 
 type Lead = components["schemas"]["Lead"];
@@ -50,13 +51,13 @@ function DealRecordCard({
   name,
 }: Readonly<{ dealId: string; name: string }>) {
   return (
-    <a
+    <AppLink
       className="record-card co-deal-card"
       href={routeHash({ screen: "deals", id: dealId })}
       aria-label={name}
     >
       <span className="record-card-name">{name}</span>
-    </a>
+    </AppLink>
   );
 }
 
@@ -103,7 +104,7 @@ function useLeadProjectLink(projectId: string | null | undefined) {
 // (companyrailprojects.css's `.co-project-card`/`.co-project-phase`).
 function ProjectRecordCard({ project }: Readonly<{ project: Project }>) {
   return (
-    <a
+    <AppLink
       className="record-card co-project-card"
       href={routeHash({ screen: "projects", id: project.id })}
       aria-label={project.name}
@@ -112,7 +113,7 @@ function ProjectRecordCard({ project }: Readonly<{ project: Project }>) {
       <span className="co-project-phase">
         <PhaseBadge phase={project.phase} />
       </span>
-    </a>
+    </AppLink>
   );
 }
 
@@ -185,7 +186,7 @@ export function LeadProjectAttachButton({
 }
 
 /**
- * LeadDealsTab: the deal this lead opened, or the way to open one, then the
+ * LeadDealsTab: the deal this lead joined or opened, or the way to qualify, then the
  * project it names, with Attach/Change. A lead earns a deal by being
  * qualified, never by a second create here, so the deal panel's verb is
  * Qualify. It is gone once a deal is named or the lead is closed.

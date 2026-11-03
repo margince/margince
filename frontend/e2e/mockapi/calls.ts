@@ -56,6 +56,7 @@ function activity(fields: {
     is_done: false,
     content_state: "available",
     links: onContact,
+    email_target: { entity_type: "contact", entity_id: CALLED_CONTACT },
     source: "manual",
     captured_by: "human:u1",
     version: 1,

@@ -274,7 +274,12 @@ describe("ProjectScreen", () => {
     await within(drawer).findByText("Kickoff agenda");
 
     expect(within(drawer).getByRole("button", { name: "Reply" })).toBeTruthy();
-    await user.click(within(drawer).getByRole("button", { name: "Relink" }));
+    await user.click(
+      within(drawer).getByRole("button", {
+        name: "More actions for Kickoff agenda",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Relink" }));
     await waitFor(() =>
       expect(screen.getAllByRole("dialog").length).toBeGreaterThan(1),
     );
@@ -403,11 +408,11 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    for (const label of [en["log.title"], en["log.addTask"]]) {
-      expect(
-        screen.getByRole("button", { name: label }).hasAttribute("disabled"),
-      ).toBe(true);
-    }
+    expect(
+      screen
+        .getByRole("button", { name: en["log.title"] })
+        .hasAttribute("disabled"),
+    ).toBe(true);
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
     // a pressable one: clicking it opens the flow and the save 403s. Edit is
@@ -420,6 +425,7 @@ describe("ProjectScreen", () => {
     // the one sentence in the band, so a reader is told why rather than left
     // with a dead control.
     for (const label of [
+      /^Add task/,
       /^Edit project/,
       /^Archive/,
       /^Assign/,

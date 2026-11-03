@@ -88,7 +88,7 @@ func archiveContactInTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVers
 		return err
 	}
 	// A liveness probe, not a wire read — no custom columns needed.
-	if _, err := readContact(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
+	if _, err := readContactRow(ctx, tx, id, storekit.LiveOnly, nil); err != nil {
 		return err
 	}
 	return archiveContactRows(ctx, tx, id, time.Now().UTC(), ifVersion)

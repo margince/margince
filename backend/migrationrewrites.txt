@@ -36,3 +36,28 @@
 1793072052_a_built_in_label_reads_in_the_readers_language.down.sql | activity_review_template | the down migration rewrites only the built-in review templates, the two the product shipped with
 1793102336_retired_members_cannot_receive_active_work.up.sql | * | the procedural body is a per-row trigger function that checks a member reference; the migration installs guards and validates constraints without rewriting any existing row
 1793150001_a_company_type_may_come_from_an_extension.down.sql | company_relationship_type | only rows holding an ext: type are deleted, and those exist only once an installed extension declared a type and set it on a company, so the set is small
+1793175360_the_duplicate_scan_reads_facts_and_employment.down.sql | dedupe_scan_state | deletes only the watermark rows of the two streams this migration added, at most two rows
+1793159036_a_geocode_lives_beside_its_company.up.sql | * | the procedural body is a trigger function that marks the one side row of the company being updated stale; the migration adds empty columns and changes no existing row
+1793159036_a_geocode_lives_beside_its_company.down.sql | *, company | runs only on a rollback: the procedural body restores the trigger function that edits only the company row being updated, and the UPDATE returns each geocoded company's point to its own row, one row per company that has one
+1793343907_an_input_check_knows_when_its_inputs_moved.up.sql | * | the procedural body grants USAGE on the new sequence to the app role when that role exists; the migration changes no existing row
+1793365073_a_lost_deal_names_its_reason_from_a_list.up.sql | * | the statements after the two new triggers add empty columns, NOT VALID constraints and indexes, and rewrite no existing row; the one INSERT seeds the eight built-in reasons into the table this migration creates
+1793373553_a_stage_move_keeps_the_stage_order_it_happened_in.up.sql | * | the procedural body grants USAGE on the new sequence to the app role and writes no row; the migration adds empty columns and changes no existing row
+1793379831_a_frozen_forecast_cannot_be_rewritten.up.sql | * | the procedural bodies are trigger functions that refuse an UPDATE and write no row; the migration changes no existing row
+1793390425_a_company_can_be_onboarding_or_live.down.sql | company | runs only on a rollback and moves only accounts set to onboarding or live since the upgrade, which a colleague sets per account as a contract is signed
+1793397376_a_partner_stage_comes_from_a_list.up.sql | *, partner | the trigger is the version bump on the new partner_stage table, which nothing later in the file updates; the UPDATE touches the partner table once, one row per partner company, and a partner programme is a short list beside the company table
+1793397376_a_partner_stage_comes_from_a_list.down.sql | partner | runs only on a rollback and rewrites the partner table once, one row per partner company
+1793445932_a_mail_without_its_original_says_so.down.sql | activity | runs only on a rollback and moves back only mail the upgrade marked unverifiable: legacy captured mail stored before completeness was recorded whose original is gone, a fixed set no new capture adds to
+1793445933_a_mail_without_its_original_says_so_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793514621_notice_source_assessment.down.sql | * | the procedural block only checks whether source evidence exists and refuses before DDL; it rewrites no rows
+1793531111_notice_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793536357_a_website_forms_privacy_notice_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1793594630_home_reads_are_cached_behind_an_access_fence.up.sql | * | the trigger functions advance one counter row in the new home_read_fence table and rewrite no existing row; the one INSERT seeds that singleton row in the table this migration creates
+1793612292_the_home_fence_moves_only_when_reach_narrows.up.sql | * | the trigger functions advance the one home_read_fence row and rewrite no existing row; the dropped columns are on the table of cached answers and the one counter row
+1793612292_the_home_fence_moves_only_when_reach_narrows.down.sql | *, home_read_cache | the restored trigger functions advance the one home_read_fence row and rewrite no existing row; the added columns carry a constant default; the DELETE drops the cached receipts, per-reader derived state
+
+1793602000_thread_subject_boundaries.up.sql | * | the source-erasure trigger changes only the one future basis row being updated; this migration creates empty repair ledgers and comparison metadata, and rewrites no existing domain rows
+1793664831_thread_repair_tables_are_dropped.up.sql | communication_basis | the UPDATE revokes only bases the withdrawn thread repair copied, which its inherit phase alone wrote; the dropped columns and tables rewrite no row
+1793664831_thread_repair_tables_are_dropped.down.sql | * | the down migration replays 1793602000, which creates empty repair ledgers and rewrites no existing domain row
+1793670405_a_sales_initiative_names_its_effort.up.sql | role | updates only the fixed set of system roles, one grant each, at most six rows per workspace
+1793670405_a_sales_initiative_names_its_effort.down.sql | role | removes that one grant from the same fixed set of system roles
+1793670406_a_deal_base_amount_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

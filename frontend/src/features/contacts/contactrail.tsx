@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -103,16 +104,25 @@ export function ContactRail({
   ];
   // The lists read answers 404 while lists are switched off, so it is asked
   // only where they are on.
-  if (listsOn && !view.contact.archived_at) {
-    return (
-      <ContactRailWithLists
-        contactId={view.contact.id}
-        sections={sections}
-        footnote={footnote}
-      />
-    );
-  }
-  return <RecordDetails sections={sections} footnote={footnote} />;
+  return (
+    <>
+      {listsOn && !view.contact.archived_at ? (
+        <ContactRailWithLists
+          contactId={view.contact.id}
+          sections={sections}
+          footnote={footnote}
+        />
+      ) : (
+        <RecordDetails sections={sections} footnote={footnote} />
+      )}
+      {!view.contact.archived_at && (
+        <ConversationSuggestionsCard
+          key={view.contact.id}
+          record={{ type: "contact", id: view.contact.id }}
+        />
+      )}
+    </>
+  );
 }
 
 function ContactRailWithLists({

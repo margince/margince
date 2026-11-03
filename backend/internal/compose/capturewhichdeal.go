@@ -70,10 +70,11 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	var shared bool
 	args := []any{q.ActivityID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	err = tx.QueryRow(ctx, `
+	query := `
 		SELECT coalesce(nullif(a.thread_key, ''), a.id::text), a.audience = 'workspace'
 		  FROM activity a WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND `+storekit.CurrentSourceMailClause("a.id", a.now(), arg), args...).Scan(&thread, &shared)
+		   AND ` + storekit.CurrentSourceMailClause("a.id", a.now(), arg)
+	err = tx.QueryRow(ctx, query, args...).Scan(&thread, &shared)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

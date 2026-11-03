@@ -17,23 +17,6 @@ import { AccountMenu } from "./account";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
 
-// The bundle's releases are compiled in, and every local build leaves them
-// empty. Getters over a hoisted value let each case set the releases it needs.
-// The comparison rule stays the real one.
-const bundle = vi.hoisted(() => ({ release: "", core: "" }));
-vi.mock("../lib/release", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/release")>();
-  return {
-    ...actual,
-    get SPA_RELEASE() {
-      return bundle.release;
-    },
-    get CORE_RELEASE() {
-      return bundle.core;
-    },
-  };
-});
-
 // The account block: an avatar in the top bar's trail, and the menu it opens is
 // the product's ONE door into settings and its ONE appearance control — the
 // sidebar's foot carried the first and no longer exists, and the second used to
@@ -49,8 +32,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  bundle.release = "";
-  bundle.core = "";
   vi.unstubAllGlobals();
   window.localStorage.removeItem(THEME_KEY);
 });
@@ -146,13 +127,13 @@ describe("AccountMenu", () => {
     render(<AccountMenu />);
     await openMenu(user, railTrigger());
 
-    expect(row("Settings").getAttribute("href")).toBe("#/settings");
+    expect(row("Settings").getAttribute("href")).toBe("/#/settings");
     // Exactly one: a second row a click apart landing on the same level is the
     // shape this menu replaced.
     expect(
       screen
         .getAllByRole("menuitem")
-        .filter((item) => item.getAttribute("href") === "#/settings"),
+        .filter((item) => item.getAttribute("href") === "/#/settings"),
     ).toHaveLength(1);
   });
 
@@ -276,6 +257,8 @@ describe("AccountMenu", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("My booking link"));
     await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(row("Help and feedback"));
+    await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Sign out"));
     // Wrapping, so the walk has no dead end.
     await user.keyboard("{ArrowDown}");
@@ -380,85 +363,6 @@ describe("AccountMenu", () => {
     await user.click(row("Sign out"));
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Your session is already gone.");
-  });
-
-  // The release the reader is running, at the foot of the menu, so whoever
-  // reports a problem can say which build it is in. A statement rather than a
-  // row: it goes nowhere, so it is not a menu item and the keyboard skips it.
-  it("names the release this bundle was built from", async () => {
-    bundle.release = "v1.4.0";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    const version = screen.getByText("Version v1.4.0");
-    expect(version.closest("[role=menuitem]")).toBeNull();
-    expect(screen.getAllByRole("menuitem").at(-1)).toBe(row("Sign out"));
-  });
-
-  // An unstamped build does not know its release, and an empty or "dev" line
-  // would print a version that is not one.
-  it.each(["", "dev"])(
-    "prints no release for an unstamped build (%j)",
-    async (release) => {
-      bundle.release = release;
-      const user = userEvent.setup();
-      const { container } = render(<AccountMenu />);
-      await openMenu(user, railTrigger());
-      expect(screen.queryByText(/^Version/)).toBeNull();
-      expect(container.querySelector(".acctversion")).toBeNull();
-    },
-  );
-
-  // An instance build stamps the core release it pins, and the reader then
-  // sees both: the instance's own release and the core under it.
-  it("names the instance and the core release on an instance build", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.0.5";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
-    const core = screen.getByText("Core v0.0.5");
-    expect(core.closest("[role=menuitem]")).toBeNull();
-    expect(screen.queryByText(/^Version/)).toBeNull();
-    expect(screen.getAllByRole("menuitem").at(-1)).toBe(row("Sign out"));
-  });
-
-  // Equal values are still two facts about two repositories.
-  it("keeps both lines when the instance and core releases are equal", async () => {
-    bundle.release = "v0.4.1";
-    bundle.core = "v0.4.1";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    expect(screen.getByText("Instance v0.4.1")).toBeInTheDocument();
-    expect(screen.getByText("Core v0.4.1")).toBeInTheDocument();
-  });
-
-  it.each(["", "dev"])(
-    "an instance build with an unstamped instance release (%j) names only the core",
-    async (release) => {
-      bundle.release = release;
-      bundle.core = "v0.0.5";
-      const user = userEvent.setup();
-      render(<AccountMenu />);
-      await openMenu(user, railTrigger());
-      expect(screen.getByText("Core v0.0.5")).toBeInTheDocument();
-      expect(screen.queryByText(/^Instance/)).toBeNull();
-      expect(screen.queryByText(/^Version/)).toBeNull();
-    },
-  );
-
-  // "dev" is what a plain docker build stamps, so it is no core release.
-  it('treats a core release of "dev" as a core-only build', async () => {
-    bundle.release = "v1.4.0";
-    bundle.core = "dev";
-    const user = userEvent.setup();
-    render(<AccountMenu />);
-    await openMenu(user, railTrigger());
-    expect(screen.getByText("Version v1.4.0")).toBeInTheDocument();
-    expect(screen.queryByText(/^Core/)).toBeNull();
-    expect(screen.queryByText(/^Instance/)).toBeNull();
   });
 
   // Closed, the panel is not rendered at all — so there is nothing behind the

@@ -31,9 +31,10 @@ func TestRenderedShapesDescribeExactlyWhatTheDecoderAccepts(t *testing.T) {
 		decoded  map[datasource.EntityType]reflect.Type
 		rendered map[string]string
 		parents  map[string][]string
+		withheld map[string][]string
 	}{
-		{"create_record", createShapes, createRecordShapes, createParentFields},
-		{"update_record", updateShapes, updateRecordShapes, nil},
+		{"create_record", createShapes, createRecordShapes, createParentFields, createWithheldFields},
+		{"update_record", updateShapes, updateRecordShapes, nil, nil},
 	} {
 		if len(table.decoded) != len(table.rendered) {
 			t.Errorf("%s describes %d record types and decodes %d",
@@ -45,7 +46,7 @@ func TestRenderedShapesDescribeExactlyWhatTheDecoderAccepts(t *testing.T) {
 				t.Errorf("%s decodes %s but renders no shape for it", table.tool, recordType)
 				continue
 			}
-			want := acceptedFieldNames(shape, table.parents[string(recordType)])
+			want := acceptedFieldNames(shape, table.parents[string(recordType)], table.withheld[string(recordType)])
 			got := renderedKeys(rendered)
 			slices.Sort(got)
 			if !slices.Equal(got, want) {

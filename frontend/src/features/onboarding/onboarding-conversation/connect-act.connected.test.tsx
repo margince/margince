@@ -122,6 +122,22 @@ describe("a live Google mailbox", () => {
     expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
   });
 
+  // Setup asks whether the mailbox is connected at all. A sync the sweep keeps
+  // retrying does not send the member back to the account chooser.
+  it("keeps a mailbox whose sync is failing connected", async () => {
+    stub({
+      "GET /connectors": roster(
+        row("gmail", { status: "error", backfill: { state: "none" } }),
+        row("gcal"),
+      ),
+      "POST /connectors/gmail/backfill/preview": preview,
+    });
+    renderConnectAct();
+
+    expect(await screen.findByText("Google is connected")).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
+  });
+
   it("imports the chosen window, then records the step as connected", async () => {
     const starts: unknown[] = [];
     stub({
@@ -501,7 +517,11 @@ describe("the overnight question", () => {
     stub({
       "GET /connectors": roster(row("gmail", { backfill: { state: "done" } })),
       "PUT /me/agent-grants/morning_brief": (body: unknown) => {
-        answers.push(body);
+        answers.push(["morning_brief", body]);
+        return jsonResponse({});
+      },
+      "PUT /me/agent-grants/overnight_at_risk_sweep": (body: unknown) => {
+        answers.push(["overnight_at_risk_sweep", body]);
         return jsonResponse({});
       },
     });
@@ -515,6 +535,12 @@ describe("the overnight question", () => {
     );
     await userEvent.click(onward);
 
-    await waitFor(() => expect(answers).toEqual([{ granted: false }]));
+    // One answer, written for both overnight agents.
+    await waitFor(() =>
+      expect(answers).toEqual([
+        ["morning_brief", { granted: false }],
+        ["overnight_at_risk_sweep", { granted: false }],
+      ]),
+    );
   });
 });

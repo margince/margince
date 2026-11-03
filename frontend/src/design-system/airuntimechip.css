@@ -71,7 +71,6 @@
   padding: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   animation: mw-aistat-in var(--dur-state) var(--ease-in-out) both;
   /* The measured room below the chip, less the drop to the popover and a

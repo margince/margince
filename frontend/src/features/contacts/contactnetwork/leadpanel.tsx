@@ -12,8 +12,10 @@ import type { components } from "../../../api/schema";
 import { Avatar, Badge, Button } from "../../../design-system/atoms";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Panel } from "../../../design-system/panel";
+import { relayMemberFor } from "../../../design-system/provenanceof";
 import { formatNumber } from "../../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
+import { useViewerId } from "../../../lib/session";
 import { BAND_BADGE } from "../companygraph";
 import {
   evidenceSentence,
@@ -221,6 +223,7 @@ function EvidencePlate({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const viewerId = useViewerId();
   const ev = route.evidence;
   const receipts = route.receipts ?? [];
   return (
@@ -252,7 +255,11 @@ function EvidencePlate({
               count: formatNumber(receipts.length, locale),
             })}
           </Eyebrow>
-          <ReceiptList receipts={receipts} onOpenEmail={onOpenEmail} />
+          <ReceiptList
+            receipts={receipts}
+            relayMember={relayMemberFor(route.via_user_id, viewerId)}
+            onOpenEmail={onOpenEmail}
+          />
         </div>
       ) : (
         <p className="pn-counts t-sub">{t("contact.graph.countsOnly")}</p>

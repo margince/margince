@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -125,10 +126,13 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 func subjectsFor(t *testing.T, e *integration.Env) []assurance.Subject {
 	t.Helper()
+	asOf := clocktest.Now(t)
 	var out []assurance.Subject
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = AssuranceSubjects(context.Background(), tx)
+		out, err = AssuranceSubjects(context.Background(), tx, asOf, []assurance.SourceCoverage{
+			{Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: &asOf},
+		})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the subjects: %v", err)

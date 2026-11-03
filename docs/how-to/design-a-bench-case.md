@@ -29,8 +29,9 @@ Leave out two kinds of call:
 
 - **Model-lane reads.** An endpoint that calls a model on a cache miss measures the model fallback on every
   sample instead of the screen's query. The deal status and the company dossier are out for this reason.
-- **Admin-only reads.** A call the screen makes only under an admin permission check is one a rep never
-  waits for.
+- **Admin-only reads in a rep's row.** A call the screen makes only under an admin permission check is one
+  a rep never waits for. The admin's own rail reads are timed in their own flow, `admin_rail`, under the
+  admin seat.
 
 ## 3. Choose the seats
 
@@ -39,14 +40,14 @@ seats see every workspace-visible record. A rep also sees its own owner-only con
 none, so a manager sees fewer contacts than a rep. The seed step asserts that relation. The seats
 differ where the screens ask them to:
 
-- the Worklist opens on `scope=mine` for a rep and `scope=team` for a manager;
+- the Worklist opens on `scope=mine` for both seats, and a manager also times the `scope=team` they pick, as `worklist_team`;
 - the analytics screen evaluates over each seat's default scope;
 - mail visible to its participants only is visible to those seats alone;
 - owner-only contacts are visible to their owner alone.
 
 On activities, both scopes walk the activity links. An admin skips that walk, so an admin timing hides
-the cost the other two pay. The admin session runs only as background load in the morning pass and is
-never reported as a seat.
+the cost the other two pay. The admin seat is therefore reported only for its own rail reads. In the
+morning pass the admin session runs as background load.
 
 ## 4. Shape the corpus
 
@@ -154,3 +155,13 @@ evidence shows the server errors as its own symptom. A 422 is allowed only on a 
    with `make perfdoc`; `make drift` fails a page that does not match its record.
 4. The bench database stays in place after every run, passed or failed, so you can read plans against it.
    The next run recreates it. Drop it with `make bench-daily-clean` when you are done.
+
+## Measure System health
+
+Run `make bench-daily BENCH_DAILY_TEST=TestSystemHealthBudgets` for System health on the admin seat.
+This case is an exception to the daily-screen and admin-seat rules above: operators need bounded reads while investigating a problem.
+It shares the daily corpus but writes its own record after its checks pass.
+The [flow declarations](../../backend/internal/compose/integration/daily_systemhealth_bench_test.go) hold its reads and fixtures.
+The Overview and Diagnostics have their own budget IDs in the [budget registry](../../backend/internal/compose/integration/daily_budgets_bench_test.go).
+The app-shell flow and the rep and manager flows keep their own budgets.
+HTTP timings do not measure browser rendering, cache return or hidden-page polling. Check those with the browser tests as well.

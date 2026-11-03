@@ -276,8 +276,11 @@ const meetingQuery = `
 	  -- account running two engagements carries two open deals, and picking by
 	  -- close date alone named whichever happened to land first — a header
 	  -- confidently about the other body of work. Nulls sort last, so an
-	  -- unattributed meeting keeps the old ordering exactly.
+	  -- unattributed meeting keeps the old ordering exactly. After the project,
+	  -- an open deal wins over a closed one: a meeting is prepared for the
+	  -- deal still in play, whatever the closed one's close date was.
 	  ORDER BY (pr.id IS NOT NULL AND dd.project_id = pr.id) DESC,
+	           (dd.status = 'open') DESC,
 	           dd.expected_close_date NULLS LAST, dd.id
 	  LIMIT 1
 	) d ON TRUE

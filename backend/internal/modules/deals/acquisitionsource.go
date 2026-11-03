@@ -121,30 +121,42 @@ func deriveAcquisitionKey(label string) string {
 // a deal carrying a retired key still has to render its label, and a filter
 // still has to find those deals.
 func (s *Store) ListAcquisitionSources(ctx context.Context) ([]crmcontracts.AcquisitionSource, error) {
+	return listCatalog(ctx, s, "deal_acquisition_source", acquisitionSourceColumns,
+		"d.acquisition_source = deal_acquisition_source.key", scanAcquisitionSource,
+		func(source *crmcontracts.AcquisitionSource, count *int) { source.DealCount = count })
+}
+
+// listCatalog reads one administered deal list in display order. Each row
+// carries the live deals the caller may see that hold its key. table and
+// columns are literals from this package, never a caller's text.
+func listCatalog[Row any](
+	ctx context.Context, s *Store, table, columns, match string,
+	scan func(pgx.Row, ...any) (Row, error), counted func(*Row, *int),
+) ([]Row, error) {
 	if err := auth.Require(ctx, acquisitionVocabularyObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any
-	dealCount, err := visibleDealCount(ctx, &args, "d.acquisition_source = deal_acquisition_source.key")
+	dealCount, err := visibleDealCount(ctx, &args, match)
 	if err != nil {
 		return nil, err
 	}
-	var out []crmcontracts.AcquisitionSource
+	var out []Row
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT `+acquisitionSourceColumns+`, `+dealCount+`
-			FROM deal_acquisition_source ORDER BY sort_order, label`, args...)
+		rows, err := tx.Query(ctx, `SELECT `+columns+`, `+dealCount+`
+			FROM `+table+` ORDER BY sort_order, label`, args...)
 		if err != nil {
-			return fmt.Errorf("list acquisition sources: %w", err)
+			return fmt.Errorf("list %s: %w", table, err)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var count *int
-			source, err := scanAcquisitionSource(rows, &count)
+			row, err := scan(rows, &count)
 			if err != nil {
 				return err
 			}
-			source.DealCount = count
-			out = append(out, source)
+			counted(&row, count)
+			out = append(out, row)
 		}
 		return rows.Err()
 	})

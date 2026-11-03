@@ -17,9 +17,9 @@ import (
 )
 
 // replaceSetsChange is what a save's replace-sets changed: anything at all,
-// which bumps the version, and the addresses, which re-run the duplicate check.
+// which bumps the version, and the identifiers, which re-run the duplicate check.
 type replaceSetsChange struct {
-	any, emails bool
+	any, emails, phones bool
 }
 
 // applyContactReplaceSets lands the social, email and phone replace-sets in a
@@ -56,13 +56,14 @@ func replaceContactSetsAndCompare(
 	if err := replaceContactSets(ctx, tx, id, in); err != nil {
 		return replaceSetsChange{}, err
 	}
-	after, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	after, err := readContactRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return replaceSetsChange{}, fmt.Errorf("read the contact after its replace-sets: %w", err)
 	}
 	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
 	_, emails := differs["emails"]
-	return replaceSetsChange{any: len(differs) > 0, emails: emails}, nil
+	_, phones := differs["phones"]
+	return replaceSetsChange{any: len(differs) > 0, emails: emails, phones: phones}, nil
 }
 
 // replaceContactSets writes each set the update carries. It takes the write

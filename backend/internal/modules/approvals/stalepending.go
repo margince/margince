@@ -15,7 +15,7 @@ import (
 
 // The caller holds the pending row lock. Reuse the redemption pins so a retry
 // never rejoins a proposal whose eventual execution would refuse that context.
-func withdrawStalePendingInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
+func (s *Service) withdrawStalePendingInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
 	a, err := get(ctx, tx, id)
 	if err != nil {
 		return false, err
@@ -23,7 +23,7 @@ func withdrawStalePendingInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID)
 	if a.Status != statusPending {
 		return false, nil
 	}
-	if err := validateRedemptionTarget(ctx, tx, a); err != nil {
+	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
 			return withdrawInTx(ctx, tx, id, "The proposed change was restaged after its context changed.")
 		}

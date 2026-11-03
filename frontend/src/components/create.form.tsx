@@ -22,7 +22,11 @@ import {
   submittedValues,
   visibleFields,
 } from "./create.fields";
-import { OfferedNameControl, offeredHint } from "./create.offered";
+import {
+  OfferedNameControl,
+  offeredHint,
+  usePrefilledPick,
+} from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // A submit button's resting and busy labels travel as one pair, so an edit
@@ -77,6 +81,10 @@ export function RecordFormBody({
   const t = useT();
   const formId = useId();
 
+  // Laid over the reader's values where the form shows and sends them. Other
+  // fields write from the reader's own, so the box stays untouched until used.
+  const prefilled = usePrefilledPick(fields, values, rows);
+  const answers = { ...values, ...prefilled };
   // A field its showWhen hides neither renders nor holds Save hostage.
   const shown = visibleFields(fields, values);
   // A write must not bring back an answer to a question withdrawn in between.
@@ -124,7 +132,7 @@ export function RecordFormBody({
       refusals.size === 0 &&
       !refuseUnreadableField(event.currentTarget)
     )
-      onSubmit(submittedValues(fields, values), rows);
+      onSubmit(submittedValues(fields, answers), rows);
   });
   const stack = (
     <>
@@ -169,7 +177,13 @@ export function RecordFormBody({
             required={field.required}
             hint={
               field.offers
-                ? offeredHint(field.offers, field.key, values, t)
+                ? offeredHint(
+                    field.offers,
+                    field.key,
+                    answers,
+                    t,
+                    Object.hasOwn(prefilled, field.key),
+                  )
                 : field.hint
             }
             error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
@@ -181,7 +195,7 @@ export function RecordFormBody({
                   type={field.type === "email" ? "email" : undefined}
                   offers={field.offers}
                   control={control}
-                  values={values}
+                  values={answers}
                   setValues={setVisibleValues}
                 />
               ) : (

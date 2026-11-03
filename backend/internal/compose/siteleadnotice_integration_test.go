@@ -63,7 +63,7 @@ func setupNoticeLane(t *testing.T) *noticeLaneEnv {
 	vault := &sealingVault{}
 	notices := &siteLeadNoticeLane{reviewed: current}
 	notices.store.Store(consent.NewStore(InstallationDB(e.Pool)).
-		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter), vault, "https://crm.example.test"))
+		WithConfirmationLane(NewControllerMailQueue(e.Pool, inserter, ""), vault, "https://crm.example.test"))
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
 	read, _ := runTeamDeepRead(t, e, company)
 	svc := approvals.NewService(e.DB())
@@ -169,6 +169,10 @@ func TestTheNoticeLinkOpensTheDisclosureForTheLead(t *testing.T) {
 	}
 	if ref.LeadID.IsZero() || !ref.ContactID.IsZero() {
 		t.Fatalf("the link resolved to lead %v and contact %v, want the lead alone", ref.LeadID, ref.ContactID)
+	}
+	if mailed := l.e.WsScalar(t, `SELECT locale FROM lead_privacy_notice`); ref.QuestionLocale == "" || ref.QuestionLocale != mailed {
+		t.Errorf("the lead's page names language %q and its mail was written in %q: the page must follow the mail",
+			ref.QuestionLocale, mailed)
 	}
 	info, err := store.PrivacyInformationFor(l.e.Admin(), ref)
 	if err != nil {

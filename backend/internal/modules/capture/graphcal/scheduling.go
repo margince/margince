@@ -175,8 +175,12 @@ func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to
 			if err != nil {
 				return nil, err
 			}
-			if !end.After(start) {
-				return nil, errors.New("calendar: invalid busy interval")
+			occupied, err := connector.CalendarOccupancy(start, end)
+			if err != nil {
+				return nil, err
+			}
+			if !occupied {
+				continue
 			}
 			busy = append(busy, connector.CalendarInterval{EventID: event.ID, Start: start, End: end})
 		}

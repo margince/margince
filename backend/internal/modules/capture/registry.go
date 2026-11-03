@@ -280,6 +280,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	if err != nil {
 		return err
 	}
+	runCtx, tally := withDeliveryTally(runCtx)
 	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
@@ -290,7 +291,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		}
 		return syncErr
 	}
-	superseded, err := r.commitSyncCursor(ctx, snapshot, next)
+	superseded, err := r.commitSyncCursor(ctx, snapshot, next, tally.receivedAt())
 	if err != nil {
 		return err
 	}
@@ -304,7 +305,7 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 }
 
 // The cursor and successful health verdict commit under the same snapshot fence.
-func (r *Registry) commitSyncCursor(ctx context.Context, snapshot syncSnapshot, next connector.Cursor) (superseded bool, err error) {
+func (r *Registry) commitSyncCursor(ctx context.Context, snapshot syncSnapshot, next connector.Cursor, receivedAt *time.Time) (superseded bool, err error) {
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		args := snapshot.args()
 		cur := cursorJSON(next)
@@ -326,7 +327,7 @@ func (r *Registry) commitSyncCursor(ctx context.Context, snapshot syncSnapshot, 
 				return err
 			}
 		}
-		return r.recordSyncSuccessTx(ctx, tx, snapshot.id)
+		return r.recordSyncSuccessTx(ctx, tx, snapshot.id, receivedAt)
 	})
 	return superseded, err
 }
@@ -459,3 +460,8 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 // would quietly never fire. An unparseable label is returned as it came: it is
 // then judged as an address, which is what it was before this.
 func bareAddress(label string) string { return mailidentity.BareAddress(label) }
+
+// AdmitActivityParties keeps receipt follow-up on this registry configured sink.
+func (r *Registry) AdmitActivityParties(ctx context.Context, activity ids.ActivityID) error {
+	return r.sink.AdmitActivityParties(ctx, activity)
+}

@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
-import { dayOccurredAt, type OccurredPrecision } from "../format/activitywhen";
+import {
+  dayOccurredAt,
+  latestHeldMoment,
+  type OccurredPrecision,
+} from "../format/activitywhen";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import type { EntityKind } from "./entity";
 
@@ -90,7 +94,9 @@ export function occurredFields(
   input: ActivityDraft,
   recordZone: string,
 ): { occurred_at: string; occurred_precision: OccurredPrecision } {
-  const now = new Date();
+  // A meeting goes out as held, so it reads its today off the held clock.
+  const now =
+    input.kind === "meeting" ? latestHeldMoment(new Date()) : new Date();
   const today = calendarDay(now, recordZone);
   if (input.kind === "task" || input.day === "" || input.day >= today) {
     return { occurred_at: now.toISOString(), occurred_precision: "instant" };

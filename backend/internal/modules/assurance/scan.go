@@ -5,6 +5,7 @@ package assurance
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -13,11 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SubjectsFunc reads the deals a run should examine.
+// SubjectsFunc reads the deals a run should examine, as of the run's own
+// instant and with the coverage the run recorded.
 //
 // Injected rather than imported: the deals live in another module and the read
-// spans stages and activities, which is the composition layer's business.
-type SubjectsFunc func(ctx context.Context, tx pgx.Tx) ([]Subject, error)
+// spans stages and activities, which is the composition layer's business. The
+// coverage arrives here so the viability assessment and the run's coverage line
+// stand on one reading of the mailbox, not two.
+type SubjectsFunc func(ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []SourceCoverage) ([]Subject, error)
 
 // CoverageFunc answers which sources the run could reach.
 type CoverageFunc func(ctx context.Context, tx pgx.Tx, now time.Time) []SourceCoverage
@@ -26,9 +30,12 @@ type CoverageFunc func(ctx context.Context, tx pgx.Tx, now time.Time) []SourceCo
 type Scanner struct {
 	store    *Store
 	signals  SignalSubjectsFunc
+	calls    CallSubjectsFunc
 	subjects SubjectsFunc
-	coverage CoverageFunc
-	cfg      Config
+	// dealSubjects reads one deal, for a pass queued because it changed.
+	dealSubjects DealSubjectsFunc
+	coverage     CoverageFunc
+	cfg          Config
 }
 
 // NewScanner wires a pass to its store and its two seams.
@@ -92,12 +99,20 @@ func (w walked) findings() []Finding {
 }
 
 // askEveryRule asks every rule of every subject, once, and writes nothing.
-func askEveryRule(now time.Time, subjects []Subject, cfg Config) walked {
+//
+// A rule whose sources were not read tonight is not asked. Its finding would be
+// a claim about what nobody looked at: an unread mailbox shows silence on every
+// deal.
+func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []SourceCoverage) walked {
 	var out walked
+	askable := sourcesRead(coverage)
 	for _, subject := range subjects {
 		out.deals = append(out.deals, subject.DealID)
 		out.eligible++
 		for _, rule := range Rules() {
+			if !askable(rule) {
+				continue
+			}
 			found := rule.Ask(now, subject, cfg)
 			if found == nil {
 				continue
@@ -138,6 +153,12 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return err
 		}
 		out.RunID = runID
+		// Before the deals are read, so every change at or below it was
+		// committed before this pass looked (freshness.go).
+		generation, err := s.store.inputGeneration(ctx, tx)
+		if err != nil {
+			return err
+		}
 
 		coverage := s.coverage(ctx, tx, now)
 		for _, c := range coverage {
@@ -146,7 +167,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			}
 		}
 
-		subjects, err := s.subjects(ctx, tx)
+		subjects, err := s.subjects(ctx, tx, now, coverage)
 		if err != nil {
 			// The deals could not be read at all. The run still stands and
 			// says so, because a missing run is the one answer that tells
@@ -161,8 +182,11 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
 		}
 
-		pass := askEveryRule(now, subjects, s.cfg)
+		pass := askEveryRule(now, subjects, s.cfg, coverage)
 		out.EligibleSignals, err = s.askSignals(ctx, tx, now, &pass)
+		if err == nil {
+			err = s.askCalls(ctx, tx, now, &pass)
+		}
 		if err != nil {
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
@@ -175,6 +199,9 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 				return err
 			}
 		}
+		if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+			return err
+		}
 		// Which findings THIS run saw, before the clearing below removes the
 		// ones it did not. Recorded from the same `seen` set that decides what
 		// stays open, so the membership and the clearing can never disagree
@@ -182,40 +209,10 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if err := s.store.RecordRunFindings(ctx, tx, runID, pass.seen); err != nil {
 			return err
 		}
-		// A finding this complete walk did not re-mint has no condition left to
-		// report — close it, but only for rules whose required sources were
-		// read tonight. Absence is a claim, and it stands on what was looked at.
-		cleared, err := s.store.CloseCleared(ctx, tx, clearableTypes(coverage), pass.deals, pass.seen)
-		if err != nil {
+		if err := s.closeAbsent(ctx, tx, coverage, pass, &out); err != nil {
 			return err
 		}
-		out.Cleared = cleared
-		if s.signals != nil {
-			signalCleared, err := s.store.closeAbsentSignals(ctx, tx, pass.seen)
-			if err != nil {
-				return err
-			}
-			out.Cleared += signalCleared
-		}
-		// And the findings whose SUBJECT went, which the clearing above
-		// deliberately leaves alone: it speaks only about deals it walked, and
-		// a departed deal was never walked. Unbounded by rule type, unlike the
-		// clearing — a source being unread tonight says nothing about a deal
-		// that is won, lost or archived — and it asks the deal rather than
-		// taking the complement of tonight's set, so a short read closes
-		// nothing it should not.
-		departed, err := s.store.CloseDeparted(ctx, tx)
-		if err != nil {
-			return err
-		}
-		out.Departed = departed
-		out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
-		out.Status = StatusComplete
-		if out.Readiness == ReadinessChecksIncomplete {
-			out.Status = StatusIncomplete
-		}
-		return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
-			out.Status, out.Readiness)
+		return s.conclude(ctx, tx, runID, generation, coverage, pass, &out)
 	})
 	if err != nil {
 		return Result{}, err
@@ -223,26 +220,91 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 	return out, nil
 }
 
+// closeAbsent closes what a complete walk of every subject no longer finds.
+func (s *Scanner) closeAbsent(ctx context.Context, tx pgx.Tx, coverage []SourceCoverage, pass walked, out *Result) error {
+	// A finding this complete walk did not raise again has no condition left.
+	// It closes only for rules whose sources were read tonight: absence is a
+	// claim, and it stands on what was looked at.
+	cleared, err := s.store.CloseCleared(ctx, tx, clearableTypes(coverage), pass.deals, pass.seen)
+	if err != nil {
+		return err
+	}
+	out.Cleared = cleared
+	for _, sweep := range []struct {
+		wired bool
+		fn    func(context.Context, pgx.Tx, []string) (int64, error)
+	}{{s.signals != nil, s.store.closeAbsentSignals}, {s.calls != nil, s.store.closeAbsentCalls}} {
+		if !sweep.wired {
+			continue
+		}
+		closed, err := sweep.fn(ctx, tx, pass.seen)
+		if err != nil {
+			return err
+		}
+		out.Cleared += closed
+	}
+	// Then the findings whose deal went, which the clearing above leaves
+	// alone because it never walked that deal. Every rule type: an unread
+	// source says nothing about a deal that is won, lost or archived. It asks
+	// the deal rather than taking the complement of tonight's set, so a short
+	// read closes nothing it should not.
+	out.Departed, err = s.store.CloseDeparted(ctx, tx, nil, pass.deals)
+	return err
+}
+
+// conclude grades a pass that read the deals and closes its run. Only a
+// complete run records what it read: a missed source's changes went unread.
+func (s *Scanner) conclude(
+	ctx context.Context, tx pgx.Tx, runID ids.UUID, generation int64, coverage []SourceCoverage, pass walked, out *Result,
+) error {
+	out.Readiness = Readiness(coverage, pass.findings(), s.cfg)
+	out.Status = StatusComplete
+	if out.Readiness == ReadinessChecksIncomplete {
+		out.Status = StatusIncomplete
+	}
+	if out.Status == StatusComplete {
+		if err := s.store.recordReadThrough(ctx, tx, runID, generation); err != nil {
+			return err
+		}
+	}
+	return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
+		out.Status, out.Readiness)
+}
+
 // clearableTypes names the rule types whose findings tonight's pass may close
 // in absence: every source the rule needs was actually read. A rule with no
 // declared needs stands on the subjects read alone, which succeeding is what
 // got us here.
+//
+// A retired type is clearable on the same terms. No rule raises it, so a pass
+// that read its sources finds it absent everywhere it walked.
+//
+// A review type never clears in absence. A reply ends the silence and not the
+// review: only somebody's validated answer, or the deal leaving, closes it.
 func clearableTypes(coverage []SourceCoverage) []string {
-	checked := map[string]bool{}
-	for _, c := range coverage {
-		checked[c.Source] = c.State == CoverageChecked
-	}
+	read := sourcesRead(coverage)
 	var out []string
-	for _, rule := range Rules() {
-		clearable := true
-		for _, need := range rule.Needs {
-			if !checked[need] {
-				clearable = false
-			}
-		}
-		if clearable {
+	for _, rule := range append(Rules(), retiredRules...) {
+		if read(rule) && !slices.Contains(ReviewTypes(), rule.Type) {
 			out = append(out, rule.Type)
 		}
 	}
 	return out
+}
+
+// sourcesRead answers, for one rule, whether every source it needs was
+// actually read tonight. Raising and clearing ask this one question.
+func sourcesRead(coverage []SourceCoverage) func(Rule) bool {
+	checked := map[string]bool{}
+	for _, c := range coverage {
+		checked[c.Source] = c.State == CoverageChecked
+	}
+	return func(rule Rule) bool {
+		for _, need := range rule.Needs {
+			if !checked[need] {
+				return false
+			}
+		}
+		return true
+	}
 }

@@ -99,7 +99,7 @@ describe("AiTasksCard", () => {
       within(sheet)
         .getByRole("link", { name: "View these calls →" })
         .getAttribute("href"),
-    ).toBe(`#/settings/model-calls?task=${feature.task}`);
+    ).toBe(`/#/settings/model-calls?task=${feature.task}`);
   });
 
   it("offers Open, not Edit, to a seat that may not change routing", async () => {

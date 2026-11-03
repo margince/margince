@@ -110,16 +110,18 @@ describe("the Questions section", () => {
     ).toBeTruthy();
   });
 
-  it("is the last tab of Analytics", async () => {
+  it("opens from beside the tabs, not as one of them", async () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
     const tabs = await screen.findByRole("group", {
       name: "Analytics sections",
     });
-    const names = within(tabs)
-      .getAllByRole("button")
-      .map((tab) => tab.textContent);
-    expect(names.at(-1)).toBe("Custom reports");
+    expect(
+      within(tabs).queryByRole("button", { name: "Custom reports" }),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("button", { name: "Custom reports" }),
+    ).toBeTruthy();
   });
 
   it("says the builder is withheld when the seat can read no population", async () => {

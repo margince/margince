@@ -25,6 +25,47 @@ type ContactEmployers interface {
 	CurrentEmployers(ctx context.Context, contactIDs []ids.UUID) (map[ids.UUID]crmcontracts.ContactEmployer, error)
 }
 
+// MeetingOrganizers answers which colleague organized each of a set of
+// meetings, under the caller's own grants. A meeting with no organizing
+// colleague is absent from the answer.
+type MeetingOrganizers interface {
+	MeetingOrganizers(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]ids.UUID, error)
+}
+
+// nameTheOrganizers makes a meeting row's host the colleague who organized
+// the meeting, where one did. The calendar a meeting came off can be an
+// invited colleague's, which synced first. The row's owner stays that
+// calendar's seat: who answers for the row is not what this changes.
+func (s *Service) nameTheOrganizers(ctx context.Context, rows []crmcontracts.WorklistItem) error {
+	if s.organizers == nil {
+		return nil
+	}
+	var meetings []ids.UUID
+	for _, row := range rows {
+		if isMeetingRow(row) && row.Subject != nil {
+			meetings = append(meetings, ids.UUID(row.Subject.Id))
+		}
+	}
+	if len(meetings) == 0 {
+		return nil
+	}
+	organizers, err := s.organizers.MeetingOrganizers(ctx, meetings)
+	if err != nil {
+		return fmt.Errorf("attention: naming who organized the meetings: %w", err)
+	}
+	for i := range rows {
+		if !isMeetingRow(rows[i]) || rows[i].Subject == nil {
+			continue
+		}
+		if organizer, known := organizers[ids.UUID(rows[i].Subject.Id)]; known {
+			rows[i].Host = &crmcontracts.WorklistOwner{
+				Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser, Id: idPtr(organizer),
+			}
+		}
+	}
+	return nil
+}
+
 // hostOnTheWire is the seat a meeting row's meeting came off, with its name
 // still to resolve; nil where no calendar claims the meeting. It reads the same
 // host id the row's owner is drawn from.

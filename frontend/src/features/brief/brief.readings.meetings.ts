@@ -63,6 +63,46 @@ export function meetingsReading(
   };
 }
 
+// Meetings booked by hand still count while the calendar cannot be read. The
+// figure is then a minimum, and the line says how to make it whole.
+export function calendarCut(day: Worklist, calendar: CalendarDay): boolean {
+  return calendar.state === "counted" && day.calendar === "unreadable";
+}
+
+/** The line under the meetings figure: when the next meeting is on a quiet
+ *  day, how to make a cut figure whole, or how many meetings are prepared. */
+export function meetingsBasis(
+  day: Worklist,
+  calendar: CalendarDay,
+  reading: MeetingsReading,
+  say: Readonly<{
+    locale: Locale;
+    t: Translator;
+    plural: ReturnType<typeof usePlural>;
+    zone: string;
+  }>,
+): string | undefined {
+  if (calendar.state === "quiet") {
+    return nextMeetingLine(calendar.next, say.locale, say.t, say.zone);
+  }
+  if (calendarCut(day, calendar)) {
+    return say.t("brief.readings.calendarUnreadableWhy");
+  }
+  return meetingsDetail(reading, say.locale, say.t, say.plural);
+}
+
+/** Whether the meetings figure is a minimum rather than a count. */
+export function meetingsFloor(day: Worklist, calendar: CalendarDay): boolean {
+  return (
+    calendarCut(day, calendar) ||
+    day.reach?.find((entry) => entry.source === "meeting")?.more_available ===
+      true ||
+    day.sources_unavailable.some(
+      (entry) => entry.source === "meeting" || !entry.category,
+    )
+  );
+}
+
 // How many meetings, and how many of them nothing is prepared for.
 //
 // Readiness is the fact that changes what a reader does before the first one

@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,6 +23,9 @@ import (
 // wrote each row rides it too (WithMessageVoices).
 func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	if err := WithMessageVoices(ctx, tx, page); err != nil {
+		return err
+	}
+	if err := withMessageMoves(ctx, tx, page); err != nil {
 		return err
 	}
 	emailIDs := emailIDsOf(page)
@@ -67,4 +71,63 @@ func applyEverySeatReach(page []crmcontracts.Activity, reach map[ids.UUID]bool) 
 			summary.DisplayStatus = crmcontracts.EmailAccessStatusWorkspace
 		}
 	}
+}
+
+// messageIDsOf is the chat messages on a page the reader may read. A withheld
+// one draws no move, as a withheld mail draws no badge.
+func messageIDsOf(page []crmcontracts.Activity) []ids.UUID {
+	var out []ids.UUID
+	for i := range page {
+		withheld := page[i].ContentState != nil && *page[i].ContentState == crmcontracts.ActivityContentStateWithheld
+		if page[i].Kind != crmcontracts.ActivityKindMessage || withheld {
+			continue
+		}
+		out = append(out, ids.UUID(page[i].Id))
+	}
+	return out
+}
+
+// withMessageMoves sets each readable chat message's move, by the rules the
+// mail badge follows.
+func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+	messages := messageIDsOf(page)
+	if len(messages) == 0 {
+		return nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	wanted := arg(messages)
+	sentByReader, laterContent, err := moveInputs(ctx, arg)
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx, `SELECT a.id, `+moveSQL(sentByReader, laterContent, conversationKinds)+`
+ FROM activity a WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL`, args...)
+	if err != nil {
+		return fmt.Errorf("activities: reading whose move each chat message is: %w", err)
+	}
+	moves, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (messageMoveRow, error) {
+		var m messageMoveRow
+		err := row.Scan(&m.id, &m.move)
+		return m, err
+	})
+	if err != nil {
+		return fmt.Errorf("activities: reading whose move each chat message is: %w", err)
+	}
+	byID := make(map[ids.UUID]crmcontracts.ActivityMessageMove, len(moves))
+	for _, m := range moves {
+		byID[m.id] = m.move
+	}
+	for i := range page {
+		if move, ok := byID[ids.UUID(page[i].Id)]; ok {
+			page[i].MessageMove = &move
+		}
+	}
+	return nil
+}
+
+// messageMoveRow is one chat message's move as the page pass reads it.
+type messageMoveRow struct {
+	id   ids.UUID
+	move crmcontracts.ActivityMessageMove
 }

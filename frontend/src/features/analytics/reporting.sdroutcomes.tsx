@@ -2,12 +2,12 @@ import { Popover } from "../../design-system/popover";
 import { GroupedBars } from "../../design-system/report-charts";
 import { useLocale, useT } from "../../i18n";
 import {
-  metricLabel,
   type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
 } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 export function SdrOutcomes({
   chart,
@@ -19,6 +19,7 @@ export function SdrOutcomes({
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const t = useT();
+  const metricName = useMetricNames();
   const { locale } = useLocale();
   const format = (value: number | null | undefined) =>
     reportingAmount(value, chart.unit, evaluation.context.currency, locale);
@@ -32,7 +33,7 @@ export function SdrOutcomes({
   };
   const shared = {
     readings,
-    label: metricLabel(chart.metric, t),
+    label: metricName(chart.metric),
     dataLabel: t("reporting.data"),
     valueLabel: t("reporting.actual"),
     onSelect,
@@ -62,9 +63,9 @@ export function SdrOutcomes({
       <GroupedBars
         {...shared}
         readings={combined}
-        valueLabel={metricLabel(chart.metric, t)}
+        valueLabel={metricName(chart.metric)}
         comparisonLabel={
-          accepted ? t("reporting.accepted_opportunities") : undefined
+          accepted ? metricName("accepted_opportunities") : undefined
         }
         onSelect={(key) => {
           if (key.endsWith(":comparison")) {

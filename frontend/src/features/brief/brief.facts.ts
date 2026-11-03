@@ -4,6 +4,7 @@
 import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev } from "../../format/format";
 import type { Locale } from "../../i18n";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 
 type Source = WorklistItem["source"];
@@ -35,9 +36,8 @@ export function scheduledMeetings(day: Worklist | undefined): WorklistItem[] {
 export function meetingReadiness(
   item: WorklistItem,
 ): "prepared" | "unprepared" | "unknown" {
-  if (item.kind === "prepared") return "prepared";
-  if (item.because.some((reason) => reason.kind === "meeting_unprepared"))
-    return "unprepared";
+  if (item.preparation?.state === "ready") return "prepared";
+  if (isUnprepared(item)) return "unprepared";
   return "unknown";
 }
 

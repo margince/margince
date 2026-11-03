@@ -21,6 +21,7 @@ import type { components } from "../api/schema";
 import { WorklistScreen } from "../features/worklist/worklist";
 import { type Locale, LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { WORKLIST_VIEWS } from "../lib/worklistviews";
 
 export { row } from "../features/worklist/worklist.fixtures";
 
@@ -83,6 +84,19 @@ const ANSWERED_READS = [
 ];
 
 /**
+ * The page as a server that knows views answers it: the asked view echoed. A
+ * fixture that names its own view keeps it.
+ */
+export function echoView(
+  url: string,
+  page: Worklist | undefined,
+): Worklist | undefined {
+  const asked = new URL(url, "http://localhost").searchParams.get("view");
+  const view = WORKLIST_VIEWS.find((known) => known === asked);
+  return page && view && page.view === undefined ? { ...page, view } : page;
+}
+
+/**
  * The queue, plus the one approval a decision row fetches whole. A row sends a
  * sentence; deciding needs the payload, the stager and the evidence, so the row
  * being decided reads the approval it is showing.
@@ -93,7 +107,7 @@ export function stub(day: Worklist, answer?: unknown) {
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       if (isWorklistRead(url)) {
-        return jsonResponse(day);
+        return jsonResponse(echoView(url, day));
       }
       // One optional answer, served to whichever of the single-record
       // endpoints a test drives (or to the suggestions a suggestion row
@@ -143,10 +157,10 @@ export function stubWalk(pages: readonly Worklist[]) {
         "cursor",
       );
       if (!cursor) {
-        return jsonResponse(pages[0]);
+        return jsonResponse(echoView(url, pages[0]));
       }
       const at = pages.findIndex((page) => page.next_cursor === cursor);
-      return jsonResponse(at >= 0 ? pages[at + 1] : pages[0]);
+      return jsonResponse(echoView(url, at >= 0 ? pages[at + 1] : pages[0]));
     }),
   );
 }

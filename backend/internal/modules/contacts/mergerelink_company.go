@@ -62,7 +62,7 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := moveCompanyScans(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	if err := moveCompanyDedupeCandidates(ctx, tx, sourceID, targetID); err != nil {
+	if err := moveDedupeCandidates(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
 		return err
 	}
 	if err := repointLinkedLeads(ctx, tx, sourceID, targetID); err != nil {
@@ -86,6 +86,7 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 		`UPDATE finance_invoice SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE finance_payment SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE commission_entry SET partner_company_id = $2 WHERE partner_company_id = $1`,
+		`UPDATE lead SET partner_company_id = $2 WHERE partner_company_id = $1`,
 		`UPDATE company_domain_disposition SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE sdr_handoff SET company_id = $2 WHERE company_id = $1`,
 		// The resolution caches. Each says "this outside thing turned out to be

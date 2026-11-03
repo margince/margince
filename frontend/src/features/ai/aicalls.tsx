@@ -13,6 +13,7 @@ import {
 import { SurfaceState } from "../../design-system/surfacestate";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { providerName } from "../../lib/ai-provider-names";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -24,7 +25,6 @@ import {
   useUrlParams,
 } from "../../lib/urlstate";
 import { tierLabel } from "./ai-decision-labels";
-import { providerName } from "./ai-provider-names";
 import { type AiCallRecord, CallDrawer } from "./aicalls-detail";
 import {
   CALL_PARAMS,
@@ -146,7 +146,10 @@ export function useLastCallAt(): LastCall {
     // The header says how long ago the last call was, so the figure has to move
     // while the page is open. A minute is the resolution it reads at.
     refetchInterval: 60_000,
-    queryFn: async () => unwrap(await api.GET("/ai/calls", {})),
+    // One row answers it. The trace is newest-first, and the default page is
+    // fifty records, refetched every minute for every admin with the grant.
+    queryFn: async () =>
+      unwrap(await api.GET("/ai/calls", { params: { query: { limit: 1 } } })),
   });
   // Read through the grant, not only around it. A revoked grant disables the
   // query but leaves its last answer in the cache, and answering from it would

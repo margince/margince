@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
 import { EmptyState } from "../../design-system/atoms";
 import { FactList } from "../../design-system/factlist";
 import { PanelBody } from "../../design-system/panel";
@@ -15,7 +14,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { HealthCard, type HealthSlot, HealthStrip } from "./healthcard";
+import { HealthCard } from "./healthcard";
 
 // The shell System health cards wear, with the least body that can stand in.
 // In order: a reading, an empty report the body draws, the withheld notice, a
@@ -166,76 +165,4 @@ export const StillReading: Story = {
 export const ReadingDark: Story = {
   globals: { theme: "dark" },
   render: story(true, queryState({ data: BUSY })),
-};
-
-const STAMP = "14/10/2026, 10:41";
-
-const CLEAN: readonly HealthSlot[] = [
-  {
-    key: "search",
-    label: "Search index",
-    reading: { card: { value: "Up to date", tone: "success" }, panel: false },
-  },
-  {
-    key: "jobs",
-    label: "Background jobs",
-    reading: { card: { value: "Idle", tone: "success" }, panel: false },
-  },
-  {
-    key: "intake",
-    label: "Connector records",
-    reading: { card: { value: "None", tone: "success" }, panel: false },
-  },
-  {
-    key: "providers",
-    label: "AI provider status",
-    reading: { card: { value: "Answering", tone: "success" }, panel: false },
-  },
-];
-
-// One slot found something: its tone says how bad, and its card stands below.
-const ONE_DEGRADED: readonly HealthSlot[] = CLEAN.map((slot) =>
-  slot.key === "jobs"
-    ? {
-        ...slot,
-        reading: { card: { value: "2 dead", tone: "danger" }, panel: true },
-      }
-    : slot,
-);
-
-function strip(slots: readonly HealthSlot[]) {
-  return () => (
-    <StoryProviders>
-      <HealthStrip slots={slots} stamp={STAMP} />
-    </StoryProviders>
-  );
-}
-
-/** The page's row of readings with every answer clean, dated once. */
-export const StripAllClear: Story = {
-  render: strip(CLEAN),
-  play: async ({ canvasElement }) => {
-    const row = await within(canvasElement).findByRole("region", {
-      name: "Status",
-    });
-    await expect(
-      within(row).getAllByText(/./, { selector: ".stat-card-value" }),
-    ).toHaveLength(4);
-  },
-};
-
-export const StripOneDegraded: Story = { render: strip(ONE_DEGRADED) };
-
-export const StripOneDegradedDark: Story = {
-  globals: { theme: "dark" },
-  render: strip(ONE_DEGRADED),
-};
-
-// On a phone each slot folds into a row: name and door leading, answer
-// trailing.
-export const StripAtPhoneWidth: Story = {
-  render: strip(ONE_DEGRADED),
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
 };

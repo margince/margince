@@ -6,8 +6,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3) var(--padPanel);
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-rest);
   backdrop-filter: blur(12px);
@@ -45,4 +44,13 @@
 
 .filter-bar-caption {
   margin: 0;
+}
+
+/* Quiet: the dials without the card, so the figures under them lead. */
+.filter-bar[data-quiet] {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: none;
 }

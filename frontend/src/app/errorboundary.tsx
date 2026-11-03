@@ -2,6 +2,7 @@ import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { isStaleChunkError, reloadForNewBuild } from "../lib/stalebuild";
 import "./errorboundary.css";
 
 // The app-level error boundary (architecture/frontend, "the data layer").
@@ -43,6 +44,14 @@ class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
 
   static getDerivedStateFromError(): BoundaryState {
     return { failed: true };
+  }
+
+  componentDidCatch(error: unknown): void {
+    // A screen whose code a deploy replaced is not a defect. A retry cannot
+    // load it either; only a reload onto the new build can.
+    if (isStaleChunkError(error)) {
+      reloadForNewBuild();
+    }
   }
 
   private readonly retry = () => {

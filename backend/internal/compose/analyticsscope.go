@@ -379,6 +379,9 @@ func resolveOwnerScope(
 		return ResolvedScope{}, fmt.Errorf(
 			"only your own records are within what you may measure: %w", apperrors.ErrNotFound)
 	}
+	if err := requireMeasurableSeat(ctx, tx, id); err != nil {
+		return ResolvedScope{}, err
+	}
 	return ResolvedScope{Kind: ScopeKindOwner, ID: &id}, nil
 }
 

@@ -29,7 +29,8 @@ func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
 
 	own := New([]string{"acme.com", "Bücher.Example"})
 	query := `SELECT EXISTS (SELECT 1 FROM unnest($2::text[]) AS own(domain) WHERE ` +
-		CoversSQL("$1::text", "own.domain") + `)`
+		CoversSQL("$1::text", "own.domain") + `), EXISTS (SELECT 1 FROM unnest($2::text[]) AS own(domain) WHERE ` +
+		CoversIndexedSQL("$1::text", "own.domain") + `)`
 	cases := []struct {
 		name    string
 		address *string // nil is a row with no address, stored as NULL
@@ -39,6 +40,7 @@ func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
 		{"subdomain", new("rep@mail.acme.com"), true},
 		{"lookalike ending", new("rep@notacme.com"), false},
 		{"lookalike parent", new("rep@acme.com.evil.example"), false},
+		{"lookalike before a dot", new("rep@x-acme.com"), false},
 		{"trailing dot", new("rep@acme.com."), true},
 		{"mixed-case punycode", new("anna@XN--Bcher-KVA.example"), true},
 		{"unicode", new("anna@BÜCHER.example"), true},
@@ -54,8 +56,8 @@ func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
 			stored = StoredOfAddress(*c.address)
 			goCovers = own.CoversDomain(OfAddress(*c.address))
 		}
-		var sqlCovers bool
-		if err := pool.QueryRow(context.Background(), query, stored, own.Domains()).Scan(&sqlCovers); err != nil {
+		var sqlCovers, indexedCovers bool
+		if err := pool.QueryRow(context.Background(), query, stored, own.Domains()).Scan(&sqlCovers, &indexedCovers); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}
 		if goCovers != c.covered {
@@ -63,6 +65,9 @@ func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
 		}
 		if sqlCovers != goCovers {
 			t.Errorf("%s: CoversSQL = %v over %v, Set.CoversDomain = %v", c.name, sqlCovers, deref(stored), goCovers)
+		}
+		if indexedCovers != sqlCovers {
+			t.Errorf("%s: CoversIndexedSQL = %v over %v, CoversSQL = %v", c.name, indexedCovers, deref(stored), sqlCovers)
 		}
 	}
 }

@@ -16,6 +16,7 @@ import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
 import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
+import { DomainContactsArrival } from "./companycontacts/domaincontacts";
 import { hasFinance } from "./companyfinance";
 import { wholeCount } from "./companyrailshared";
 import { REFUSED_WHEN_ARCHIVED, useShownCompanyTab } from "./companytab";
@@ -165,6 +166,7 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
+      <DomainContactsArrival key={id} companyId={id} />
       <QueryGate query={companyQuery} pendingLabel={t("nav.companies")}>
         {(company) => (
           <CompanyRecord

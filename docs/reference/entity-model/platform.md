@@ -49,6 +49,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `home_read_fence_scrub`: `AFTER INSERT FOR EACH ROW WHEN ((new.action = ANY (ARRAY['erase', 'anonymize', 'restrict']))) EXECUTE FUNCTION advance_home_read_fence()`
 - `trg_audit_no_mutate`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION audit_log_immutable()`
 
 ## currency_minor_digits
@@ -57,7 +58,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `digits` | `smallint` | yes |  |
 
 **Rules**
@@ -206,7 +207,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `confidence` | `real` |  |  |
+| `confidence` | `numeric(4,3)` |  |  |
 | `evidence_ref` | `text` |  |  |
 | `field_name` | `text` | yes |  |
 | `object_id` | `uuid` | yes |  |
@@ -216,7 +217,7 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `field_provenance_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))`
+- `field_provenance_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `field_provenance_object_type_check`: `CHECK (((object_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])) OR (object_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 
 **Indexes**
@@ -240,6 +241,10 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `report_projection_fence_pkey`: `unique, btree (singleton)`
+
+**Triggers**
+
+- `home_read_fence_authority`: `AFTER UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## setting
 

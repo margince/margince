@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/server.go backend/internal/compose/serverassembly.go backend/internal/compose/serveroptions.go backend/internal/compose/routes.go backend/internal/compose/installation.go backend/internal/compose/registry.go backend/internal/compose/agentgate.go -->
+<!-- describes: backend/internal/compose/server.go backend/internal/compose/serverassembly.go backend/internal/compose/serveroptions.go backend/internal/compose/routes.go backend/internal/compose/installation.go backend/internal/compose/registry.go backend/internal/compose/agentgate.go backend/internal/compose/contactcasemergeseam.go -->
 # The composition layer
 
 `internal/compose/` is the only layer that knows about more than one module. Modules are all at one level and
@@ -98,7 +98,7 @@ The store of the module that owns the data backs it, so neither module names the
 | the installation bootstrap | deals + consent + automation + activities defaults | `compose.EnsureInstallation` (one transaction, at boot; `installation.go`) |
 | activities | the outbound suppression gate of consent; contacts (public booking); consent (unsubscribe link) | `.WithConsent(...)`, `.WithPublicBooking(...)`, `.WithUnsubscribe(...)` |
 | consent (DSR erase) | the `Eraser` of privacy (it also erases files in the blob store under `WithBlobstore`) | `consent.NewHandlers(pool).WithEraser(privacy.NewEraser(pool))` |
-| agents (MCP surface) | staging, and the later run of an approved action, from approvals (the 🟡 confirm-first actions) | `approvalsHandlersWithEffects(pool)` (`.WithEffects(...)`) |
+| agents (MCP surface) | staging, and the later run of an approved action, from approvals (the 🟡 confirm-first actions); the contact case merge of contacts, which `merge_records` reaches for a case | `approvalsHandlersWithEffects(pool)` (`.WithEffects(...)`); `contactCaseMergerSeam(db)` (`.WithContactCaseMerger(...)`, `contactcasemergeseam.go`) |
 | `automation` (workflow engine) | the add-to-list write of `collections`; the draft email build of activities + the suppression gate of consent; staging from approvals (its own adapter, because `automation.StageRequest` is a different type from the request type the agents surface uses); the no-activity and check-in scan of activities; the live RBAC of identity (the owner gate at match time, through `authz.Resolver`) | `compose.NewWorkflowEngine(pool)` (`compose/workflows.go`) |
 | `signals` | the relationship score of contacts | `signalStrength{contacts: contacts.NewStore(pool)}` adapter |
 | IMAP connect | the connector registry of capture (vault under `WithKeyvault`) | `imapConnectHandlers{registry: NewCaptureRegistry(pool, vault)}` |

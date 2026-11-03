@@ -33,7 +33,9 @@
 #                 *-actions   gap / column-gap  -> var(--gapActions)
 #                 *-cards     gap / row-gap     -> var(--gapCards)
 #                 *-card, *-panel  padding      -> var(--padCard) / var(--padPanel)
-#               The three mappings are spelled below rather than derived,
+#                 *-panes     gap / column-gap  -> var(--gapPanes)
+#                 *-pane      padding           -> var(--padPane)
+#               The five mappings are spelled below rather than derived,
 #               because the mapping from a selector's shape to a role IS the
 #               rule — there is nothing else in the tree to read it off. What IS
 #               derived is that each role token exists: renaming one in
@@ -91,12 +93,14 @@ ROLE_ACTIONS="--gapActions"
 ROLE_CARDS="--gapCards"
 PAD_CARD="--padCard"
 PAD_PANEL="--padPanel"
+GAP_PANES="--gapPanes"
+PAD_PANE="--padPane"
 
 if [[ ! -f "$TOKENS" ]]; then
   echo "FAIL: $TOKENS not found — this gate is reading the wrong tree" >&2
   exit 1
 fi
-for role in "$ROLE_ACTIONS" "$ROLE_CARDS" "$PAD_CARD" "$PAD_PANEL"; do
+for role in "$ROLE_ACTIONS" "$ROLE_CARDS" "$PAD_CARD" "$PAD_PANEL" "$GAP_PANES" "$PAD_PANE"; do
   if ! grep -qE "^[[:space:]]*$role[[:space:]]*:" "$TOKENS"; then
     echo "FAIL: this gate demands $role and tokens.css does not define it." >&2
     echo "      Rename it in both places, or the arm that demands it holds" >&2
@@ -238,6 +242,8 @@ for f in "${SHEETS[@]}"; do
     -v roleCards="$ROLE_CARDS" \
     -v padCard="$PAD_CARD" \
     -v padPanel="$PAD_PANEL" \
+    -v gapPanes="$GAP_PANES" \
+    -v padPane="$PAD_PANE" \
     "$OWNED" "$f" >>"$FINDINGS"
 done
 
@@ -266,6 +272,7 @@ else
   printf '  %-34s between two buttons side by side\n' "var($ROLE_ACTIONS)"
   printf '  %-34s between sibling card surfaces\n' "var($ROLE_CARDS)"
   printf '  %-34s inside a card / inside a panel\n' "var($PAD_CARD) / var($PAD_PANEL)"
+  printf '  %-34s between page panes / inside one\n' "var($GAP_PANES) / var($PAD_PANE)"
   echo "A genuine variant with no role to name it is waived in-line, with a"
   echo "reason, on the declaration:"
   echo "  /* ds:ignore <reason> */"
