@@ -218,8 +218,8 @@ func maskAuditImagesBatch(
 	}
 	if !admits {
 		// Refused rather than scanned past. The cursor advances over every row
-		// below, so carrying on would report the step done with these images
-		// untouched, and a later run would start after them. The credentials
+		// below. Carrying on would report the step done with these images
+		// untouched. A later run would start after them, and the credentials
 		// would stay in audit_log with nothing left to revisit them.
 		//
 		// The task requires this trigger's migration, so arriving here means
@@ -292,9 +292,9 @@ type auditImageRow struct {
 //
 // Selected through the purge's own condition rather than through
 // raw_capture_id. The link is stamped only on rows written since the column
-// landed, and PurgeRawCaptureTx says its natural-key arm cannot be dropped: an
+// landed. PurgeRawCaptureTx says its natural-key arm cannot be dropped: an
 // upgraded installation has years of originals whose activity carries no link.
-// Selecting on the link alone never offered those rows to the purge, so their
+// Selecting on the link alone never offered those rows to the purge. Their
 // payloads stayed readable.
 var maskedMailWithAStoredOriginal = `FROM activity a
  WHERE a.restricted_at IS NULL
