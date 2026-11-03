@@ -972,10 +972,9 @@ func storeReceiver(name string) bool {
 }
 
 // takesContext keeps the gate on ENTRY POINTS. A method that takes no
-// context does no request work — option setters (WithClock), accessors
-// and constructors — and demanding an auth gate of them would grow a
-// ratification list that says nothing about whether the real entry
-// points are covered.
+// context does no request work: option setters (WithClock, SetClock),
+// accessors and constructors. Demanding an auth gate of them would grow a
+// ratification list that says nothing about the real entry points.
 func takesContext(fn *ast.FuncDecl) bool {
 	for _, param := range fn.Type.Params.List {
 		if sel, ok := param.Type.(*ast.SelectorExpr); ok {

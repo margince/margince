@@ -3223,7 +3223,11 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3274,7 +3278,11 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3315,7 +3323,11 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
-          description: 'Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.'
+          description: |-
+            Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+            When the refusal opened a review, `details` carries `review_id`, the
+            `available_actions` this caller may take, and `refusals`: each refused address
+            the caller named, with the engine's `reason_code` and resolved `category`.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -3699,8 +3711,10 @@ paths:
       summary: The workspace's signature template.
       description: |-
         The layout every member's mail signs with when it is set, filled in with each member's
-        own name, title and phone. Read by a seat that may read installation settings; changed
-        by admin/ops. Governed by the `installation_settings` RBAC object.
+        own name, title and phone. A member assigned to a legal entity that has its own
+        `signature_template` signs with that one instead. Read by a seat that may read
+        installation settings; changed by admin/ops. Governed by the `installation_settings`
+        RBAC object.
       responses:
         '200':
           description: The template.
@@ -14349,8 +14363,10 @@ components:
           maxLength: 4000
           description: |-
             The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-            `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-            mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+            `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+            sender works for, sized for mail, in the message itself; the default entity's logo is
+            the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
             and spans with a colour and a pixel size, and drops everything else. Empty means
             none: each member uses personal HTML, plain text or the closing line.
     CompanyGraphEdge:
@@ -14629,6 +14645,19 @@ components:
             type: string
             enum: [contacts, deals, signal_route, our_side]
         signal_route: {$ref: '#/components/schemas/CompanyGraphSignalRoute'}
+    SalesAssessmentView:
+      type: string
+      enum: [sales, prospecting, team]
+    ReportingOverviewAction:
+      description: An application-supplied action over the exact records named by its evidence reference.
+      type: object
+      additionalProperties: false
+      required: [id, label, evidence, count]
+      properties:
+        id: {type: string}
+        label: {type: string}
+        count: {type: integer, minimum: 1}
+        evidence: {$ref: '#/components/schemas/ReportingEvidenceRef'}
     Relationship:
       type: object
       description: |-
@@ -18893,6 +18922,7 @@ components:
         - leads_created
         - lead_status_moves
         - leads_promoted
+        - leads_qualified
         - lead_first_response
         - leads_awaiting_response
         - partner_pipeline
@@ -19582,6 +19612,14 @@ components:
         the field existed; a reader then says the basis is unknown and never guesses one.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_pipeline_minor:
+          type: integer
+          format: int64
+          description: Open deal value eligible for the forecast period, in base minor units.
+        call_at:
+          type: string
+          format: date-time
+          description: Submission time of the compatible manager call.
         landing:
           $ref: '#/components/schemas/ForecastLanding'
         period:
@@ -19658,6 +19696,10 @@ components:
         - metrics
         - charts
       properties:
+        overview_actions:
+          type: array
+          maxItems: 3
+          items: {$ref: '#/components/schemas/ReportingOverviewAction'}
         evaluation_key: {type: string}
         context:
           $ref: '#/components/schemas/ReportingContext'
@@ -19721,6 +19763,9 @@ components:
         - metrics
         - presets
       properties:
+        assessment_views:
+          type: array
+          items: {$ref: '#/components/schemas/SalesAssessmentView'}
         schedule_ready:
           type: boolean
           description: Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
@@ -22822,7 +22867,33 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         buyer_company_id: {type: [string, 'null'], format: uuid}
         buyer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Buyer legal block captured at send time.}
-        issuer_snapshot: {type: [object, 'null'], additionalProperties: true, readOnly: true, description: Seller legal block captured at send time.}
+        issuer_snapshot:
+          type: [object, 'null']
+          additionalProperties: true
+          readOnly: true
+          description: |-
+            Seller legal block captured at send time, so a later change to the legal entity
+            leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+            document prints), `base_currency`, and, on an offer sent since offers name their
+            legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+            `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+            `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+            the entity has no value for is absent.
+        language:
+          type: [string, 'null']
+          description: |-
+            The language the offer's new lines take product names in (ISO 639-1). It defaults to
+            the issuing legal entity's `default_language`, else the language of the offer's
+            template. Null on an offer created before offers had one: its lines take
+            `Product.name`. The template's own fixed labels follow the template, not this.
+        legal_entity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: |-
+            The legal entity that issues the offer: its name, address, VAT ID, bank details and
+            logo are printed on the PDF. Null on an offer created before offers named one, which
+            is issued by the default entity.
         valid_until: {type: [string, 'null'], format: date}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
@@ -22912,6 +22983,16 @@ components:
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
         template_id: {type: [string, 'null'], format: uuid}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: |-
+            The legal entity that issues the offer. Defaults to the entity the author works for;
+            for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language new lines take product names in. Unset is the entity's, else the template's.
         line_items:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
@@ -22936,6 +23017,14 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
+        legal_entity_id:
+          type: string
+          format: uuid
+          description: The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language lines added from now on take product names in. Lines already on the offer keep theirs.
       additionalProperties: false
     MorningBrief:
       type: object

@@ -317,6 +317,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensioninboundverifiesgate_test.go` | H2 | Every inbound endpoint a unit declares must check the signature. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
+| `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
@@ -626,6 +627,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `unitegress_test.go` | H2 | A unit dials through the installation's egress policy, not through a copy of it. |
 | `uploadauthorder_test.go` | H1 | An upload route refuses an unauthorized caller before it reads the body. |
 | `waiveronoffender_test.go` | H2 | A waiver must be asked about an offender, never about a candidate. |
+| `withclockresult_test.go` | H2 | A WithClock method returns a copy, and no caller discards what it returns. |
 | `workflowhandler_test.go` | H2 | A workflow.Handler's Match is a pure predicate and its Plan computes the typed Effect without applying it, which is what makes dry-run and diff preview possible. |
 
 ## Claim

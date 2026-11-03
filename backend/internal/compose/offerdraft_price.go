@@ -35,6 +35,7 @@ import (
 // against a fixture that serves it from a map.
 type rateCardLookup interface {
 	GetProduct(ctx context.Context, id ids.ProductID, archived storekit.ArchivedFilter) (crmcontracts.Product, error)
+	ProductNamesIn(ctx context.Context, language string, products []ids.UUID) (map[ids.UUID]string, error)
 }
 
 // resolvePrice is the price-grounding ladder (features/07 §8b, poc-1's
@@ -50,7 +51,7 @@ type rateCardLookup interface {
 // omitting the field. The one true error: GetProduct failing for a
 // reason OTHER than "no such product" (a real infra/permission fault),
 // which propagates rather than being masked as "could not ground".
-func (d offerDrafter) resolvePrice(ctx context.Context, c offerLineCandidate, snippet, currency string, line *deals.StagedOfferLineInput) error {
+func (d offerDrafter) resolvePrice(ctx context.Context, c offerLineCandidate, snippet, currency, language string, line *deals.StagedOfferLineInput) error {
 	if c.ConversationPriceMinor != nil && *c.ConversationPriceMinor >= 0 &&
 		priceEvidencedInSnippet(snippet, *c.ConversationPriceMinor, currency) {
 		line.UnitPriceMinor = *c.ConversationPriceMinor
@@ -64,7 +65,7 @@ func (d offerDrafter) resolvePrice(ctx context.Context, c offerLineCandidate, sn
 			case err == nil && product.Currency == currency:
 				line.UnitPriceMinor = product.UnitPriceMinor
 				line.PriceGrounded = true
-				return nil
+				return d.nameFromProduct(ctx, product, language, line)
 			case err == nil, errors.Is(err, apperrors.ErrNotFound):
 				// Wrong currency or a stale/hallucinated id: fails to
 				// ground, falls through to the zero sentinel below —
@@ -129,4 +130,19 @@ func priceEvidencedInSnippet(snippet string, priceMinor int64, currency string) 
 	plain := strconv.FormatInt(values.WholeMajorUnits(priceMinor, currency), 10)
 	full := values.MajorUnits(priceMinor, currency)
 	return strings.Contains(snippet, plain) || strings.Contains(snippet, full)
+}
+
+// nameFromProduct gives a line grounded on a product the product's name in
+// the offer's language, where the product has a translation into it. Without
+// one the line keeps the customer's own wording for what they asked for.
+func (d offerDrafter) nameFromProduct(ctx context.Context, product crmcontracts.Product, language string, line *deals.StagedOfferLineInput) error {
+	id := ids.UUID(product.Id)
+	names, err := d.rateCard.ProductNamesIn(ctx, language, []ids.UUID{id})
+	if err != nil {
+		return err
+	}
+	if name, ok := names[id]; ok && name != product.Name {
+		line.Description = name
+	}
+	return nil
 }

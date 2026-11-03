@@ -15,13 +15,13 @@ import { QueryStates } from "../../design-system/querystates";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
 import {
   type CreateLegalEntity,
   type LegalEntity,
   useCreateLegalEntity,
   useLegalEntities,
-} from "./legalentities.queries";
+} from "../../lib/legalentities.queries";
+import { problemMessageOf } from "../../lib/problem";
 import {
   ArchiveEntityDialog,
   CountryField,

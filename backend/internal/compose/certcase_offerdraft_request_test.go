@@ -111,11 +111,11 @@ func assertOrchestratorAgrees(
 	t.Helper()
 	brain := &replyBrainStub{response: model.Response{Text: trace.Output}}
 	orchestrator := offerDrafter{brain: brain, rateCard: c.drafter.rateCard}
-	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog)
+	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage)
 	if err != nil {
 		t.Fatalf("the orchestrator refused the reply outright: %v", err)
 	}
-	staged, err := orchestrator.groundOfferLines(context.Background(), candidates, c.dealContext, c.currency)
+	staged, err := orchestrator.groundOfferLines(context.Background(), candidates, c.dealContext, c.currency, offerDraftCaseLanguage)
 	if err != nil {
 		t.Fatalf("the gate faulted: %v", err)
 	}
@@ -147,6 +147,10 @@ func (f faultingRateCard) GetProduct(
 	return crmcontracts.Product{}, f.err
 }
 
+func (f faultingRateCard) ProductNamesIn(context.Context, string, []ids.UUID) (map[ids.UUID]string, error) {
+	return nil, f.err
+}
+
 // A lookup fault is not a grounding verdict, and it does not leave a partial
 // draft behind either: the ladder propagates it, the gate returns it, and
 // production abandons the whole draft — the lines that had already grounded
@@ -171,11 +175,11 @@ func TestOfferDraftCaseAbandonsTheDraftProductionAbandons(t *testing.T) {
 		brain:    &replyBrainStub{response: model.Response{Text: trace.Output}},
 		rateCard: c.drafter.rateCard,
 	}
-	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog)
+	candidates, err := orchestrator.draftCandidates(context.Background(), c.dealContext, c.catalog, offerDraftCaseLanguage)
 	if err != nil {
 		t.Fatalf("the orchestrator refused the reply outright: %v", err)
 	}
-	staged, err := orchestrator.groundOfferLines(context.Background(), candidates, c.dealContext, c.currency)
+	staged, err := orchestrator.groundOfferLines(context.Background(), candidates, c.dealContext, c.currency, offerDraftCaseLanguage)
 	if err == nil {
 		t.Fatal("the orchestrator ground this reply without a fault, so the scenario proves nothing")
 	}

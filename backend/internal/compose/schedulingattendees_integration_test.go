@@ -156,3 +156,123 @@ func TestAQueuedContactThatLosesItsAddressIsNotSentUnchecked(t *testing.T) {
 		})
 	}
 }
+
+// Every further address a contact or lead holds goes to the consent gate, the
+// archived and promoted ones too, however the address is cased. An address no
+// record holds goes out unless a stop is recorded on it.
+func TestEveryGuestARecordHoldsIsAskedOfTheGate(t *testing.T) {
+	refused := func(t *testing.T, w attendeeWorld, invitee ids.UUID, guest string) {
+		t.Helper()
+		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", guest))
+		if err == nil {
+			err = consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional")
+		}
+		if !errors.Is(err, apperrors.ErrConsentNotGranted) {
+			t.Fatalf("%s answered %v, want the consent refusal", guest, err)
+		}
+	}
+	lead := func(t *testing.T, w attendeeWorld, address string) ids.UUID {
+		t.Helper()
+		id := ids.NewV7()
+		w.e.WsExec(t, `INSERT INTO lead (id, full_name, email, source, captured_by) VALUES ($1, 'Lea Lead', $2, 'manual', 'human:test')`, id, address)
+		return id
+	}
+
+	t.Run("an archived contact who withdrew", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		gone := w.contact(t, w.e.Rep1, "gone@buyer.test", "withdrawn")
+		w.e.WsExec(t, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, gone)
+		w.e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, gone)
+		refused(t, w, invitee, "gone@buyer.test")
+	})
+	t.Run("an archived lead", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.e.WsExec(t, `UPDATE lead SET archived_at = now() WHERE id = $1`, lead(t, w, "archived@lead.test"))
+		refused(t, w, invitee, "archived@lead.test")
+	})
+	t.Run("a promoted lead", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.e.WsExec(t, `UPDATE lead SET status = 'promoted', promoted_contact_id = $2, archived_at = now() WHERE id = $1`, lead(t, w, "promoted@lead.test"), invitee)
+		refused(t, w, invitee, "promoted@lead.test")
+	})
+	t.Run("a withdrawn contact typed in mixed case", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.contact(t, w.e.Rep1, "withdrawn@buyer.test", "withdrawn")
+		refused(t, w, invitee, "Withdrawn@Buyer.TEST")
+	})
+	t.Run("a suppressed address no record holds", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.e.WsExec(t, `INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level)
+			VALUES ('bounced@elsewhere.test', 'hard_bounce', 'test', 'human:test', 'subject')`)
+		refused(t, w, invitee, "bounced@elsewhere.test")
+	})
+	stopped := func(t *testing.T, w attendeeWorld, address, kind string) {
+		t.Helper()
+		w.e.WsExec(t, `INSERT INTO communication_suppression (address, kind, source, captured_by, decided_by_level)
+			VALUES ($1, $2, 'test', 'human:test', 'subject')`, address, kind)
+	}
+	t.Run("a stop on the address of a contact who granted consent", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		w.contact(t, w.e.Rep1, "bounced@buyer.test", "granted")
+		stopped(t, w, "bounced@buyer.test", "hard_bounce")
+		refused(t, w, invitee, "bounced@buyer.test")
+	})
+	t.Run("a restriction on an address no record holds", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		stopped(t, w, "restricted@elsewhere.test", "processing_restriction")
+		refused(t, w, invitee, "restricted@elsewhere.test")
+	})
+	t.Run("a marketing objection does not stop an invitation", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		stopped(t, w, "objector@elsewhere.test", "marketing_objection")
+		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", "objector@elsewhere.test"))
+		if err != nil {
+			t.Fatalf("a marketing objection refused a calendar invitation: %v", err)
+		}
+		if err := consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional"); err != nil {
+			t.Fatalf("a marketing objection refused a calendar invitation: %v", err)
+		}
+	})
+	t.Run("a lead typed in mixed case", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		lead(t, w, "mixed@lead.test")
+		refused(t, w, invitee, "Mixed@Lead.TEST")
+	})
+	t.Run("a contact's secondary address", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		other := w.contact(t, w.e.Rep1, "primary@buyer.test", "withdrawn")
+		w.e.WsExec(t, `INSERT INTO contact_email(contact_id,email,is_primary,source,captured_by) VALUES ($1,'secondary@buyer.test',false,'manual','human:test')`, other)
+		refused(t, w, invitee, "secondary@buyer.test")
+	})
+	t.Run("a merged contact's address", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		source := w.contact(t, w.e.Rep1, "merged@buyer.test", "withdrawn")
+		target := w.contact(t, w.e.Rep1, "survivor@buyer.test", "")
+		if _, err := w.e.Contacts.MergeContact(w.e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil); err != nil {
+			t.Fatal(err)
+		}
+		refused(t, w, invitee, "merged@buyer.test")
+	})
+	t.Run("an address no record holds", func(t *testing.T) {
+		w := newAttendeeWorld(t)
+		invitee := w.contact(t, w.e.Rep1, "invitee@buyer.test", "granted")
+		gated, err := w.calendar.consentAddresses(w.e.Admin(), w.host, w.queued(t, invitee, "invitee@buyer.test", "stranger@elsewhere.test"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := consentGateFor(w.e.Pool).RequireGrantedForEmails(w.e.Admin(), gated, "transactional"); err != nil {
+			t.Fatalf("an address no record holds was refused: %v", err)
+		}
+	})
+}

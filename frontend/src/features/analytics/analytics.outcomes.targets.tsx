@@ -169,6 +169,8 @@ export function targetCard(
   const amount = (value: number) =>
     reportingCompactAmount(value, metric.unit, context.currency, locale);
   const actual = metric.target_actual;
+  const partialQualifications =
+    metric.id === "leads_qualified" && metric.coverage.status === "partial";
   // The dates the target covers, named as Performance names them.
   const period = context.target_interval
     ? reportingPeriodLabel(context.target_interval, context.timezone, locale)
@@ -185,12 +187,24 @@ export function targetCard(
     value:
       actual == null
         ? t(`reporting.status.${metric.coverage.status}`)
-        : t("analytics.targetOf", {
-            actual: amount(actual),
-            target: amount(target),
-          }),
-    detail: [period, share].filter((part) => part != null).join(" · "),
-    meter: actual == null ? undefined : { filled: actual, total: target },
+        : partialQualifications
+          ? t("analytics.team.atLeast", {
+              value: t("analytics.targetOf", {
+                actual: amount(actual),
+                target: amount(target),
+              }),
+            })
+          : t("analytics.targetOf", {
+              actual: amount(actual),
+              target: amount(target),
+            }),
+    detail: [period, partialQualifications ? metric.coverage.reason : share]
+      .filter((part) => part != null)
+      .join(" · "),
+    meter:
+      actual == null || partialQualifications
+        ? undefined
+        : { filled: actual, total: target },
   };
 }
 
