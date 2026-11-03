@@ -799,6 +799,8 @@ export const en = {
   "approval.preview.meetingEnd": "End (UTC offset included)",
   "approval.preview.meetingHost": "Meeting host",
   "approval.preview.intendedAttendee": "Intended attendee (not notified)",
+  "approval.preview.hostNamedAttendee":
+    "Invited by address only (no consent check)",
   "approval.preview.htmlBody": "Formatted message",
   "approval.preview.correspondence":
     "Classify linked correspondence as business records.",
@@ -2559,6 +2561,7 @@ export const en = {
   "history.field.phone": "Phone",
   "history.field.phones": "Phone numbers",
   "history.field.invitation_status": "Invitation status",
+  "history.field.attendees": "Invited attendees",
   "history.field.proposal_status": "Meeting proposal status",
   "history.field.meeting_status": "Meeting outcome",
   "history.field.candidate_company_key": "Matched company",
@@ -2841,8 +2844,16 @@ export const en = {
 
   "board.count_one": "{count} deal",
   "board.count_other": "{count} deals",
-  "board.weighted": "weighted {value}",
-  "board.convertedAt": "Converted · rates as of {date}",
+  "board.weightedLabel": "weighted",
+  "board.ratesOn": "Rates {date}",
+  "board.unpriced_one": "{count} not priced",
+  "board.unpriced_other": "{count} not priced",
+  "board.totalsTip": "{total} open, {weighted} weighted at {probability}.",
+  "board.unpricedTip_one":
+    "{count} deal has no price and is left out of both totals.",
+  "board.unpricedTip_other":
+    "{count} deals have no price and are left out of both totals.",
+  "board.convertedTip": "Converted at rates as of {date}.",
   "board.matchesIn_one": "{count} result in {columns}",
   "board.matchesIn_other": "{count} results in {columns}",
   "board.showMatches": "Go to column",
@@ -5436,9 +5447,7 @@ export const en = {
   "lead.unassigned": "Unassigned",
   "lead.terminalDisqualified": "Disqualified. This lead is read-only.",
   "lead.marker": "Lead",
-  "lead.assign": "Assign",
   "lead.assignToMe": "Assign to me",
-  "lead.assignTo": "Assign this lead to",
   "lead.assignChoose": "Choose a colleague",
   "lead.assignNobodyElse": "No other user to assign this lead to.",
   "lead.saveOverride": "Save override",
@@ -5680,7 +5689,66 @@ export const en = {
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
-  "legalEntities.countryHint": "Two letters, for example AT.",
+  "legalEntities.edit": "Edit",
+  "legalEntities.archive": "Archive",
+  "legalEntities.editTitle": "Edit {name}",
+  "legalEntities.save": "Save",
+  "legalEntities.defaultFromCompany":
+    "The default takes its name, legal name, address, VAT ID, register entry, offering and logo from the company profile. Change them there.",
+  "legalEntities.sectionAddress": "Address",
+  "legalEntities.line1": "Street and number",
+  "legalEntities.line2": "Address line 2",
+  "legalEntities.postalCode": "Postal code",
+  "legalEntities.city": "City",
+  "legalEntities.region": "Region or state",
+  "legalEntities.sectionRegister": "Tax and register",
+  "legalEntities.vatId": "VAT ID",
+  "legalEntities.registerCourt": "Register court",
+  "legalEntities.registerNumber": "Register number",
+  "legalEntities.sectionBank": "Bank details",
+  "legalEntities.bankHolder": "Account holder",
+  "legalEntities.iban": "IBAN",
+  "legalEntities.bic": "BIC",
+  "legalEntities.sectionDocuments": "Documents",
+  "legalEntities.defaultLanguage": "Document language",
+  "legalEntities.defaultLanguageHint":
+    "Two letters, for example de. Leave it empty to use the template’s language.",
+  "legalEntities.imprint": "Imprint",
+  "legalEntities.imprintHint":
+    "The legal notice this entity prints, up to 4,000 characters.",
+  "legalEntities.signatureTemplate": "Email signature template (HTML)",
+  "legalEntities.signatureTemplateHint":
+    "Mail from colleagues who work for this entity signs with this template. Use {name}, {title}, {phone}, {logo} and {imprint}. Empty uses the company’s template.",
+  "legalEntities.sectionOffering": "What it sells",
+  "legalEntities.offerSummary": "Offer",
+  "legalEntities.icp": "Ideal customer",
+  "legalEntities.valueProposition": "Value proposition",
+  "legalEntities.usp": "What sets it apart",
+  "legalEntities.sectionLogo": "Logo",
+  "legalEntities.logoAdd": "Add a logo",
+  "legalEntities.logoReplace": "Replace the logo",
+  "legalEntities.logoHint":
+    "PNG, JPEG, GIF, WebP, ICO or SVG. It is saved as soon as you choose it.",
+  "legalEntities.logoEmpty": "Drop an image here or choose one",
+  "legalEntities.logoRemove": "Remove logo",
+  "legalEntities.countryPlaceholder": "Choose a country",
+  "legalEntities.countryInstallation": "The installation’s country",
+  "legalEntities.countryInstallationHint":
+    "Leave it on the installation’s country unless this company is established elsewhere.",
+  "legalEntities.archiveTitle": "Archive {name}?",
+  "legalEntities.archiveBody":
+    "It leaves this list, and nobody can be assigned to it any more.",
+  "legalEntities.hasMembers":
+    "Colleagues still work for this entity. Assign them to another entity on the Members page first.",
+  "legalEntities.assessedAgainst":
+    "Companies are still rated against what this entity sells. Choose another entity for them first.",
+  "legalEntities.nameTaken": "Another legal entity already has this name.",
+  "legalEntities.invalidIban": "This IBAN is not valid. Check the digits.",
+  "legalEntities.invalidBic":
+    "This BIC is not valid. It has 8 or 11 letters and digits.",
+  "legalEntities.invalidCountry": "Choose a country from the list.",
+  "legalEntities.invalidLanguage":
+    "Type a two-letter language code, for example de.",
   "lossReasons.title": "Loss reasons",
   "lossReasons.sub":
     "The reasons to pick from when a deal is lost. Reports count lost deals by them.",
@@ -6104,6 +6172,9 @@ export const en = {
   "offer.buyerCompany": "Buyer company",
   "offer.buyerCompanyConfirm": "Buyer company: {name}",
   "offer.template": "Template",
+  "offer.legalEntity": "Issued by",
+  "offer.legalEntityHint":
+    "The legal entity whose name, address, VAT ID, bank details and logo the offer prints.",
   "offer.validUntil": "Valid until",
   "offer.introText": "Intro text",
   "offer.termsText": "Terms text",
@@ -6727,7 +6798,6 @@ export const en = {
   "field.phoneHome": "Home",
   "field.phoneOther": "Other",
   "field.primary": "Primary",
-  "field.removeRow": "Remove",
   "field.removeRowLabel": "Remove row {n}",
   "field.moveRowUp": "Move row {n} up",
   "field.moveRowDown": "Move row {n} down",
@@ -7286,7 +7356,19 @@ export const en = {
     "If a reason exists, for example a request, a meeting or a customer relationship, record it under your name.",
   "sendPermission.unprovenRefuses":
     "Sending is refused until a reason is recorded.",
-  "sendPermission.ready": "Ready to send",
+  "sendPermission.missingContext": "This message needs one more detail",
+  "sendPermission.missingPermission": "Consent needed for this message",
+  "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.appliesTo": "This applies to {address}.",
+  "sendPermission.appliesToAndMore_one":
+    "This applies to {address} and {count} other recipient.",
+  "sendPermission.appliesToAndMore_other":
+    "This applies to {address} and {count} other recipients.",
+  "sendPermission.appliesToSome_one":
+    "This applies to {count} of {total} recipients.",
+  "sendPermission.appliesToSome_other":
+    "This applies to {count} of {total} recipients.",
+  "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
   "sendPermission.unanswered":
@@ -7355,9 +7437,6 @@ export const en = {
   "compose.sendMessageConfirmTitle": "Send message",
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
-  "compose.consentBlockedTitle": "Send blocked: no consent",
-  "compose.consentBlocked":
-    "A recipient has not granted consent for this purpose, so the send was blocked (denied by default).",
   "directSend.open": "Send with a recorded exception",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
@@ -7390,7 +7469,6 @@ export const en = {
   "compose.overrule.recorded": "Overrule recorded. Press Send again.",
   "compose.overrule.failed":
     "The overrule was not recorded. Retry, or open the review from the refusal above.",
-  "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":
@@ -7480,14 +7558,8 @@ export const en = {
   "analytics.overview.prospecting": "My prospecting",
   "analytics.overview.readings": "Opening readings",
   "analytics.overview.charts": "Charts",
-  "analytics.overview.expectedFinish": "Expected finish",
-  "analytics.overview.coverage": "Coverage",
   "analytics.overview.allOpen": "All open pipeline",
   "analytics.overview.openClosing": "Open pipeline closing this quarter",
-  "analytics.overview.quarterOnly": "This quarter only",
-  "analytics.overview.winRateBasis": "Of the deals closed in this period",
-  "analytics.overview.summary": "Summary",
-  "analytics.overview.notCompared": "Not compared",
   "analytics.overview.saveView": "Save view",
   "analytics.overview.templates": "Report templates",
   "analytics.overview.saveViewNote":
@@ -7498,8 +7570,6 @@ export const en = {
     "It may have been archived, or it is not shared with you. Choose a pipeline to see figures.",
   "analytics.overview.pipelineDefault": "Use the default pipeline",
   "analytics.overview.pipelineAll": "Use all pipelines",
-  "analytics.overview.salesNothing":
-    "No forecast check is open for this scope.",
   "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
   "analytics.overview.quarterOnlyBody":
     "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
@@ -7537,11 +7607,6 @@ export const en = {
   "analytics.prospect.failed": "Could not be read",
   "analytics.prospect.failedDetail":
     "The source did not answer. Try again later.",
-  "analytics.prospect.basisAccepted": "Handoffs accepted into a deal, {period}",
-  "analytics.prospect.noArrivals":
-    "No lead arrived {period}, so none could be qualified",
-  "analytics.prospect.basisQualified":
-    "Of {arrived} leads that arrived {period}",
   "analytics.prospect.weeksFailed": "The recent weeks could not be read.",
   "analytics.prospect.noMeetingsWeek": "No meetings recorded as held this week",
   "analytics.prospect.noMeetingsPeriod":
@@ -7588,7 +7653,6 @@ export const en = {
   "analytics.doNext.all_other": "All {count} items in your Worklist",
   "analytics.doNext.open": "Open",
   "analytics.doNext.openNamed": "Open {title}",
-  "analytics.overview.gapMissing": "The comparison came back without a gap.",
   "analytics.overview.team": "Team prospecting",
   "analytics.team.chooseTeam": "Choose a team",
   "analytics.team.chooseTeamBody":
@@ -7634,11 +7698,6 @@ export const en = {
     "{rate} of these {rounds} rounds were accepted.",
   "analytics.team.tooFewForRate":
     "Fewer than {below} is too few for a rate, so none is shown.",
-  "analytics.team.qualifiedOf_one":
-    "{qualified} of the {count} lead that arrived in this period is qualified so far. The others are still open or were disqualified.",
-  "analytics.team.qualifiedOf_other":
-    "{qualified} of the {count} leads that arrived in this period are qualified so far. The others are still open or were disqualified.",
-  "analytics.team.qualifiedRate": "That is {rate} of the leads that arrived.",
   "analytics.team.waitingRow_one": "{count} handoff waits for a decision",
   "analytics.team.waitingRow_other": "{count} handoffs wait for a decision",
   "analytics.team.waitingBasis": "Waiting now",
@@ -7667,7 +7726,6 @@ export const en = {
   "analytics.team.handoffsHidden": "Handoffs are hidden from you.",
   "analytics.team.hiddenBasis":
     "Your role does not include this. Nothing here says it is zero.",
-  "analytics.team.nothingWaits": "Nothing waits on the team in this period.",
   "analytics.team.showHandoffs": "Show handoffs",
   "analytics.team.showReasons": "Show reasons",
   "analytics.team.showLeads": "Show leads",
@@ -7686,12 +7744,14 @@ export const en = {
   "analytics.team.target": "Monthly target",
   "analytics.team.targetOf": "{actual} of {target}",
   "analytics.team.noTarget": "No target",
+  "analytics.team.eventCredit":
+    "Credit: owner at first qualification. Each lead counts once.",
   "analytics.team.qualificationBasis":
-    "Qualified counts the leads that arrived in this period and are qualified so far. Unanswered counts the leads that wrote in during this period and have no reply yet. Both count for each lead’s owner now, so a reassigned lead counts for its new owner.",
+    "Qualified counts first qualifications in this period, credited to the owner at that time. Unanswered follows current ownership.",
   "analytics.team.handoffBasis":
     "Submitted, returned and rejected count what happened in this period. Accepted counts each deal once, in the period it was first accepted. Waiting now is as of today. Each counts for whoever handed it on at the time.",
   "analytics.team.targetBasis":
-    "Targets are monthly. Each compares the qualified leads that arrived {month} so far with that member’s own target.",
+    "Targets are monthly and compare first qualifications in {month} with that member’s target.",
   "analytics.team.meetingsHidden": "Meetings are hidden from you.",
   "analytics.team.leadsHidden":
     "Qualified and unanswered leads are hidden from you.",
@@ -7964,6 +8024,7 @@ export const en = {
   "analytics.myPipeline": "My open deals",
   "analytics.sdrLeads": "My leads this month",
   "analytics.sdrReading.leads_promoted": "Leads qualified",
+  "analytics.sdrReading.leads_qualified": "Leads qualified",
   "analytics.sdrReading.lead_first_response":
     "First reply time, answered leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -8075,6 +8136,10 @@ export const en = {
   "review.outOfDate": "Out of date",
   "review.outOfDateDeals_one": "1 deal changed since this check.",
   "review.outOfDateDeals_other": "{count} deals changed since this check.",
+  "review.deliveryFailed_one":
+    "1 customer review could not be handed to its owner as a task. The next check tries again.",
+  "review.deliveryFailed_other":
+    "{count} customer reviews could not be handed to their owners as tasks. The next check tries again.",
   "review.outOfDateWorkspace":
     "A stage or forecast call changed since this check.",
   "review.outOfDateSignals_one": "1 buying signal changed since this check.",
@@ -8259,7 +8324,7 @@ export const en = {
   "forecast.confirmed": "Close date confirmed",
   "forecast.fxMissing": "Exchange rate missing",
   "analytics.reportForecast": "Forecast categories",
-  "analytics.shareOfOpenPipeline": "Share of open pipeline",
+  "analytics.shareOfOpenPipeline": "Share of pipeline in this currency",
   "analytics.reportPipelineByCloseMonth": "Open pipeline by close month",
   "analytics.closeMonth": "Close month",
   "analytics.noCloseDate": "No close date",
@@ -8313,7 +8378,7 @@ export const en = {
   "signatureTemplate.label": "Template (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Use {name}, {title}, {phone} and {logo}, the company logo embedded in the mail. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+    "Use {name}, {title}, {phone}, {logo} and {imprint}. {logo} is the logo of the sender’s legal entity, embedded in the mail, and {imprint} is its imprint. A legal entity with its own template uses that one. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Plain text",
   "settings.signatureFormatHtml": "HTML",
@@ -9554,6 +9619,7 @@ export const en = {
   "jobs.kind.assurance_run": "Forecast check on request",
   "jobs.kind.assurance_sweep": "Forecast check",
   "jobs.kind.assurance_deal_rescan": "Forecast check of a changed deal",
+  "jobs.kind.assurance_review_delivery": "Task for a customer review",
   "jobs.kind.brief_generate": "Morning brief",
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",
@@ -11112,13 +11178,76 @@ export const en = {
     "Reserved domain: company identification paused",
   "blockedDomains.source.forwardedIdentity":
     "Different site answered. Confirm the company match.",
-  "worklist.domainReview.defer": "Set aside",
+  "worklist.domainReview.defer": "Not now",
   "worklist.domainReview.restore": "Return to Review",
   "worklist.domainReview.deferEffect":
-    "Set aside removes this question from your queue until new evidence arrives. You can still find it here.",
-  "worklist.domainReview.title": "Domain review",
-  "worklist.domainReview.loading": "Loading domains…",
-  "worklist.domainReview.empty": "No domains need review.",
+    "Not now takes the question off your list until new mail from the domain arrives. It stays here.",
+  "worklist.domainReview.title": "Company questions",
+  "worklist.source.domain_question": "Company question",
+  "worklist.disposition.verb.notNow": "Not now",
+  "worklist.disposition.hint.notNow":
+    "Takes the question off your list. New mail from this domain brings it back.",
+  "worklist.disposition.done.notNow":
+    "Set aside. New mail from this domain brings the question back.",
+  "worklist.domainQuestion.heading": "Which company does {name} work for?",
+  "worklist.domainQuestion.headingPair":
+    "Which company do {name} and one other contact work for?",
+  "worklist.domainQuestion.headingMany":
+    "Which company do {name} and {others} other contacts work for?",
+  "worklist.domainQuestion.headingDomain":
+    "Which company does {domain} belong to?",
+  "worklist.domainQuestion.reason.unread":
+    "Their website could not be read, so Margince cannot tell which company the address belongs to.",
+  "worklist.domainQuestion.reason.read":
+    "Their website was read, but it does not name a company.",
+  "worklist.domainQuestion.reason.forwarded":
+    "Their website redirects to another website, so Margince could not confidently match their company.",
+  "worklist.domainQuestion.reason.vendor":
+    "Their website looks like a mail or hosting provider, which can host addresses for many companies.",
+  "worklist.domainQuestion.reason.nearDuplicate":
+    "More than one company here already has the name their website states.",
+  "worklist.domainQuestion.reason.stale":
+    "The newest email from this domain is too old to match against today’s website.",
+  "worklist.domainQuestion.basis.name_twin":
+    "It has exactly the name their website states.",
+  "worklist.domainQuestion.basis.redirect_target":
+    "Their website redirects to this company’s domain.",
+  "worklist.domainQuestion.basis.contact_employer":
+    "A sender already works there.",
+  "worklist.domainQuestion.suggested": "Suggested company: {name}.",
+  "worklist.domainQuestion.confirm": "Confirm company",
+  "worklist.domainQuestion.confirmEffectNone":
+    "Confirming links {domain} to {company}. Contacts already at another company keep theirs.",
+  "worklist.domainQuestion.confirmEffect_one":
+    "Confirming links {domain} to {company} and gives {count} contact that company. Contacts already at another company keep theirs.",
+  "worklist.domainQuestion.confirmEffect_other":
+    "Confirming links {domain} to {company} and gives {count} contacts that company. Contacts already at another company keep theirs.",
+  "worklist.domainQuestion.confirmed": "Company linked",
+  "worklist.domainQuestion.confirmFailed": "Company was not linked. Retry.",
+  "worklist.domainQuestion.choose": "Choose company",
+  "worklist.domainQuestion.chooseAnother": "Choose another",
+  "worklist.domainQuestion.stopCapturingEffect":
+    "Mail from {domain} stops being saved from your mailboxes. Mail already saved stays.",
+  "worklist.domainQuestion.originWith":
+    "Margince found {domain} in your email with",
+  "worklist.domainQuestion.originHidden":
+    "Margince found {domain} in your email with a contact you cannot see.",
+  "worklist.domainQuestion.originFrom":
+    "Margince found {domain} in your email from {address}.",
+  "worklist.domainQuestion.originUnknown":
+    "Margince found {domain} in your email.",
+  "worklist.domainQuestion.andMore_one": "and {count} more",
+  "worklist.domainQuestion.andMore_other": "and {count} more",
+  "worklist.domainReview.focusedTitle": "Company question",
+  "worklist.domainReview.details": "Website details",
+  "worklist.domainReview.createEffect":
+    "Create company adds a new company and links the domain’s contacts to it.",
+  "worklist.domainReview.retryEffect":
+    "Retry site read reads the website again and keeps the question open.",
+  "worklist.domainReview.keepVendorEffect":
+    "Keep as vendor creates no company and stops asking about this domain.",
+  "worklist.domainReview.loading": "Loading company questions…",
+  "worklist.domainReview.empty": "No company questions are open.",
   "worklist.domainReview.more": "Load more",
   "worklist.domainReview.forwarded": "Answering site: {url}",
   "worklist.domainReview.evidenceAt": "Latest evidence: {date}",
@@ -11128,17 +11257,10 @@ export const en = {
     "Matching links this domain and its captured contacts to the selected company.",
   "worklist.domainReview.create": "Create company",
   "worklist.domainReview.retry": "Retry site read",
-  "worklist.domainReview.exclude": "Exclude domain",
-  "worklist.domainReview.forwardedEffects":
-    "Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
-  "worklist.domainReview.effects":
-    "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
   "worklist.domainReview.keepVendor": "Keep as vendor",
-  "worklist.domainReview.vendorEffects":
-    "Create adds a company and links its contacts. Keep as vendor creates nothing and does not ask again. Exclude stops capture for your mailboxes.",
   "worklist.batch.domain_questions_one": "Review {count} domain",
   "worklist.batch.domain_questions_other": "Review {count} domains",
-  "blockedDomains.source.unevidenced": "No company named on the site",
+  "blockedDomains.source.unevidenced": "No company found from the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
   "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
@@ -13625,6 +13747,9 @@ export const en = {
   "users.invite": "Invite",
   "users.setRole": "Set role…",
   "users.roleOf": "{name}’s role",
+  "users.entityLabel": "Legal entity",
+  "users.entityOf": "{name}’s legal entity",
+  "users.entitySaved": "{name} now works for {entity}",
   "users.rolesReplace": "A role you choose replaces all current roles.",
   "users.deactivate": "Deactivate",
   "users.reactivate": "Reactivate",
@@ -17786,7 +17911,7 @@ export const en = {
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":
-    "Margince cannot tell what this domain belongs to. Create a company for it, keep it as a vendor, or exclude it.",
+    "Margince could not tell which company this contact works for. Confirm a company, choose one, or stop capturing the domain.",
   "worklist.ask.ai_work_health":
     "An AI task keeps failing. Check its AI provider in Settings.",
   "worklist.ask.bounce":
@@ -18248,7 +18373,7 @@ export const en = {
   // product's expectation: a domain one colleague works with is noise to the
   // next, and leading with either would be the machine guessing again.
   "worklist.verb.keep": "Create company",
-  "worklist.verb.discard": "Exclude domain",
+  "worklist.verb.discard": "Stop capturing in your mailboxes",
   "worklist.verb.domainKept": "Company created from domain",
   "worklist.verb.domainKeepFailed": "Company was not created. Retry.",
   "worklist.verb.keepAsVendor": "Keep as vendor",
@@ -19654,16 +19779,6 @@ export const en = {
   "project.standing.peek.started": "Work started",
   "project.standing.peek.today": "Today",
   "project.standing.peek.documents": "Files on this project, newest first",
-  "mailCoverage.title": "Mail history may be incomplete",
-  "mailCoverage.unknown":
-    "Mail capture does not verify this period. These dates describe recorded exchanges; a reply may exist outside this record.",
-  "mailCoverage.partial":
-    "Capture has succeeded, but a complete Inbox and Sent history is unverified. Missing recorded mail does not prove that nobody replied.",
-  "mailCoverage.unavailable":
-    "Mail capture is unavailable for part of this history. A reply may exist outside this record.",
-  "mailCoverage.withheld":
-    "This reader cannot check mail coverage. Missing recorded mail does not prove that nobody replied.",
-  "mailCoverage.connections": "Check connections",
   "connectors.syncTimeUnknown": "Successful sync time unavailable",
   "brief.coverage.source.deal_advice": "Suggested deal steps",
   "tasks.origin.accepted_recommendation": "Accepted from a suggested step.",
@@ -19820,33 +19935,19 @@ export const en = {
   "analytics.hero.attainment": "Sales won against the quarter’s target",
   "analytics.hero.attained": "{percent}% of the {target} target",
   "analytics.hero.remaining": "{amount} still to win",
-  "analytics.hero.shortfall":
-    "Projected shortfall {amount}, from an expected finish of {landing}",
-  "analytics.hero.surplus":
-    "Projected surplus {amount}, from an expected finish of {landing}",
+  "analytics.hero.shortfall": "Projected shortfall {amount}",
+  "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
-  "analytics.hero.noPrior": "No earlier period to compare with yet.",
   "analytics.overview.more": "More",
-  "analytics.assessment.title": "Assessment",
-  "analytics.assessment.pending": "Reading the figures",
+  "analytics.outlook.valuedCount": "{included} of {eligible} valued",
+  "analytics.outlook.periodPipeline": "Pipeline due this quarter",
+  "analytics.outlook.sales": "Quarter outlook",
+  "analytics.outlook.team": "Team prospecting outlook",
+  "analytics.outlook.prospecting": "Prospecting outlook",
+  "analytics.outlook.records": "View supporting records",
   "analytics.assessment.refresh": "Refresh assessment",
   "analytics.assessment.retry": "Retry",
-  "analytics.assessment.noSales": "No measured sales in this selection.",
-  "analytics.assessment.deterministic":
-    "Written from the figures alone. An AI model would add its reading here once one is set up.",
-  "analytics.assessment.nextDecision": "Next decision",
-  "analytics.assessment.noDecision": "No supported decision.",
-  "analytics.assessment.viewEvidence": "View evidence",
   "analytics.assessment.evidenceTitle": "What the assessment rests on",
-  "analytics.assessment.evidencePurpose":
-    "Each sentence names the figures it reads. Open a figure to see its records.",
-  "analytics.assessment.confidence": "Confidence: {level}",
-  "analytics.assessment.kind.observation": "Observation",
-  "analytics.assessment.kind.claim": "Reported",
-  "analytics.assessment.kind.hypothesis": "Hypothesis",
-  "analytics.assessment.level.low": "low",
-  "analytics.assessment.level.medium": "medium",
-  "analytics.assessment.level.high": "high",
   "analytics.decisions.title": "Decisions from the last review",
   "analytics.decisions.purpose":
     "Each decision is a task on its deal with an owner and a review date. Completing it records the work, not a sale.",
@@ -19882,8 +19983,6 @@ export const en = {
   "analytics.overview.profileCompany": "Company sales",
   "analytics.overview.profileProduct": "Product sales",
   "analytics.overview.removeFilter": "Remove {filter}",
-  "analytics.overview.winRate": "Closed win rate",
-  "analytics.overview.coverageNotCompared": "The note under Sales won says why",
   "analytics.intervention.scope":
     "These checks cover every pipeline and close date in this scope.",
   "analytics.intervention.viewAll": "View all checks",
@@ -19906,8 +20005,6 @@ export const en = {
     "1 data source could not be read in the last check.",
   "analytics.intervention.maintenanceBody_other":
     "{count} data sources could not be read in the last check.",
-  "analytics.decision.composition": "What the expected finish is made of",
-  "analytics.decision.won": "Won",
   "analytics.decision.included":
     "Counts {included} of the {eligible} open deals the forecast considered.",
   "analytics.decision.excluded": "Left out: {parts}.",
@@ -19928,8 +20025,6 @@ export const en = {
   "reporting.writtenChecksDeals_other": "{count} deals",
   "analytics.intervention.notPermitted":
     "Forecast checks are not available to you.",
-  "analytics.decision.part.commit_evidence": "Confirmed commit",
-  "analytics.decision.part.weighted": "Weighted open deals",
   "health.needsFix": "Needs fixing",
   "health.needsReview": "Review needed",
   "health.actionsNeeded_one": "Problem needing action: {count}",
@@ -20185,6 +20280,20 @@ export const en = {
     "The restore test did not meet its targets. Ask your system operator to fix the problem and run another test.",
   "health.impact.automatic":
     "Work may be assigned to the wrong colleague. Review routing and correct the owner.",
+  "analytics.outlook.calledAt": "Called {at}",
+  "analytics.prospect.weeksByQualification":
+    "Each lead counts in the week it was first qualified.",
+  "analytics.team.atLeast": "At least {value}",
+  "analytics.team.arrivalQualified": "Arriving leads qualified",
+  "analytics.team.arrivalTarget": "Arrival-cohort target",
+  "analytics.team.arrivalCredit":
+    "Arrival cohort: leads arriving in the period, credited to their current owner.",
+  "analytics.outlook.dealCount_one": "{count} deal",
+  "analytics.outlook.dealCount_other": "{count} deals",
+  "analytics.team.qualificationUnattributed_one":
+    "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
+  "analytics.team.qualificationUnattributed_other":
+    "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
 } as const;
 
 export type MessageKey = keyof typeof en;

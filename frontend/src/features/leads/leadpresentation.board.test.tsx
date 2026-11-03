@@ -92,7 +92,7 @@ function drawBoard(query: ListQuery) {
 
 // The figure a column states, to the eye or to a screen reader.
 const STATED_COUNT =
-  ".board-col-count:not([hidden]), .board-col-total > .sr-only:not([hidden])";
+  ".board-col-count:not([hidden]), .board-col-sub > .sr-only:not([hidden])";
 
 function column(stage: string): HTMLElement {
   const found = document.querySelector<HTMLElement>(
@@ -123,6 +123,8 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     await waitFor(() =>
       expect(column("promoted").textContent).toContain("3 leads"),
     );
+    // Both stated figures match, so the absent checks below cannot pass vacuously.
+    expect(column("promoted").querySelectorAll(STATED_COUNT)).toHaveLength(2);
     const report = served.find((sent) =>
       sent.url.pathname.endsWith("/reports/leads-by-status"),
     );

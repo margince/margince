@@ -179,39 +179,57 @@
   margin-inline-start: auto;
   font-variant-numeric: tabular-nums;
 }
-/* Two lines rather than three figures fighting for one: a stage column is
- * narrow by design, and a money figure broken across lines is unreadable. */
+/* The stage's money: the total and the weighted total on one row, a bar
+ * under them, and one line of notes. */
 .board-col-sub {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: 0 4px 4px;
+  padding: 0 4px var(--space-2);
 }
-/* A MONEY FIGURE IS ONE LINE AND ELLIPSISES; A SENTENCE WRAPS.
-   Both totals are `nowrap`, because an amount broken across lines is
-   unreadable — so each has to be told what to do when it does not fit, or it
-   paints past the stage it belongs to. Cut, a figure is visibly incomplete,
-   where one running on under the next column can be read as whole. */
+/* A MONEY FIGURE IS ONE LINE. The total is short and never gives way; the
+   weighted figure beside it ellipsises when the two do not fit. */
 .board-col-total {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-2);
   white-space: nowrap;
-  overflow: hidden;
+  min-width: 0;
 }
 .board-col-money {
+  flex: none;
+  font: var(--fontHeadingMedium);
+  color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
-  /* A flex item's floor is its own min-content width unless it is told
-     otherwise, and a `nowrap` amount has no shrink in it at all. */
+  border-radius: var(--r-sm);
+}
+.board-col-money:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.board-col-weighted {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.board-col-weighted {
-  white-space: nowrap;
+  color: var(--textSecondary);
   font-variant-numeric: tabular-nums;
+}
+.board-col-weighted-figure {
+  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
+}
+/* Two short notes on one line. The tip on the total spells each out. */
+.board-col-notes {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.board-col-notes > span + span::before {
+  content: "·";
+  margin-inline: var(--space-1);
 }
 /* The line that stands in for a refused total is PROSE, and the rule above is
    exactly wrong for it: ellipsised in a 240px stage it read "Loaded only —

@@ -186,7 +186,7 @@ func TestFxRateProposalApplyRefusesAcrossMidnight(t *testing.T) {
 	// The effect store's clock crosses midnight right after the precondition
 	// read: first sample = today, every later sample = the next day.
 	calls := 0
-	crossing := deals.NewStore(e.DB(), DealsInstallation()).WithClock(func() time.Time {
+	crossing := deals.NewStore(e.DB(), DealsInstallation()).SetClock(func() time.Time {
 		calls++
 		if calls == 1 {
 			return time.Now().UTC()

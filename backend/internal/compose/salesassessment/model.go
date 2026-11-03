@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -27,19 +26,22 @@ import (
 
 // PromptVersion changes when the prompt or the reply shape changes, so a
 // cached assessment written under an older prompt is not served as current.
-const PromptVersion = "2026-11-03.1"
+const PromptVersion = "2026-11-03.3"
 
-// The reply's bounds: the panel sits beside one chart, not under it.
+// Bounds apply before grounding, so malformed replies cannot grow the reading.
 const (
 	maxSentences    = 6
 	maxSentenceRune = 240
 	maxDecisionRune = 240
+	maxParagraphs   = 4
 )
 
 // Input is what the model reads: measured cells with their units and
 // windows, never a record. Candidate deals are the evidence rows the reader
 // may see; decisions are the ones recorded from earlier reviews.
 type Input struct {
+	View       string        `json:"view"`
+	Actions    []ActionIn    `json:"actions"`
 	Frame      FrameIn       `json:"frame"`
 	Cells      []CellIn      `json:"cells"`
 	Candidates []CandidateIn `json:"candidate_deals"`
@@ -47,8 +49,17 @@ type Input struct {
 	Earlier    string        `json:"earlier_assessment,omitempty"`
 }
 
+// ActionIn is a measured application action the model may prioritise.
+type ActionIn struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Count int    `json:"count"`
+	Cell  string `json:"cell"`
+}
+
 // FrameIn names what the report is about.
 type FrameIn struct {
+	Timezone   string `json:"timezone"`
 	Scope      string `json:"scope"`
 	Period     string `json:"period"`
 	Window     string `json:"window"`
@@ -63,12 +74,13 @@ type FrameIn struct {
 // CellIn is one measured figure. Value is the figure as text, which is what
 // a sentence may quote.
 type CellIn struct {
-	ID       string `json:"id"`
-	Label    string `json:"label"`
-	Value    string `json:"value"`
-	Unit     string `json:"unit"`
-	Window   string `json:"window"`
-	Coverage string `json:"coverage"`
+	CoverageDetail string `json:"coverage_detail,omitempty"`
+	ID             string `json:"id"`
+	Label          string `json:"label"`
+	Value          string `json:"value"`
+	Unit           string `json:"unit"`
+	Window         string `json:"window"`
+	Coverage       string `json:"coverage"`
 }
 
 // CandidateIn is a deal the next decision may name.
@@ -90,14 +102,17 @@ type DecisionIn struct {
 	Result   string `json:"result,omitempty"`
 }
 
-const system = `You assess one sales report for the manager reading it, from a JSON summary of its measured figures, the open deals behind them and the decisions recorded at earlier reviews.
+const system = `Interpret the supplied report for its view: sales is a manager's sales review; prospecting is the reader's own work; team is team prospecting. Explain the main commercial takeaway, relationships between the figures and practical next steps in flowing prose. Write up to four substantial paragraphs, normally two to four sentences each. Use fewer when there is less to explain. Never pad sparse evidence, narrate every tile or add generic reassurance, confidence commentary or internal checking status.
+The source context states which period and population each figure covers. Never imply that all-open pipeline is the current period's forecast. Zero means no recorded outcome, not failed capture or no work. Missing facts cannot establish causes, customer intent, employee effort or attendance. A median is not an average. A modelled range does not establish the probability of reaching a target. Do not recommend fixing setup without a supplied action.
+Every next action must come from "actions". You may prioritise them through "action_ids" but cannot invent a subset, route, count or action. Do not rank deals solely by stage or amount. Respect the difference between historical outcomes and current work. Only discuss changes when cells carry a comparable baseline.
+
 Return ONLY a JSON object with these keys:
-{"sentences":[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...]}, ...],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
-"sentences" is two to six sentences. Each states one thing a figure shows and cites the cell ids it rests on in "cells". "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
+{"paragraphs":[[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...]}, ...]],"action_ids":["<supplied action id>"],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
+Each paragraph has at most six sentences of at most 240 characters. Each sentence cites the cell ids it rests on in "cells". Connect the reasoning across sentences. "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
 Every number you write must appear in a cited cell's "value". Never add, divide or round figures into a number no cell carries. Never write an id in "text".
 "next_decision" names the one deal to act on, from "candidate_deals" only, with that deal's "owner_id", and says in one sentence what to decide. Return null when no candidate deal supports a decision.
 "decisions" are what earlier reviews decided. A done one with a "result" is work that happened; an open one is still owed. Acknowledge them before you recommend again, and never recommend what an open decision already covers.
-Coverage "withheld" or "failed" on a cell means its figure is not whole: say so rather than reading it as a total.
+Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that cell. Do not turn this into boilerplate caveats. Partial coverage permits only the stated covered population. "not measured" is never zero.
 "confidence" is how far the cited figures carry the reading.
 `
 
@@ -123,6 +138,8 @@ func encode(in Input) string {
 // Written is what the model wrote once the grounding filter kept it.
 type Written struct {
 	Sentences  []Sentence
+	Paragraphs [][]Sentence
+	ActionIDs  []string
 	Next       *NextDecision
 	Confidence string
 }
@@ -141,13 +158,17 @@ type NextDecision struct {
 	Text    string
 }
 
+type replySentence struct {
+	Text  string   `json:"text"`
+	Kind  string   `json:"kind"`
+	Cells []string `json:"cells"`
+}
+
 type replyShape struct {
-	Sentences []struct {
-		Text  string   `json:"text"`
-		Kind  string   `json:"kind"`
-		Cells []string `json:"cells"`
-	} `json:"sentences"`
-	Next *struct {
+	Sentences  []replySentence   `json:"sentences"`
+	Paragraphs [][]replySentence `json:"paragraphs"`
+	ActionIDs  []string          `json:"action_ids"`
+	Next       *struct {
 		DealID  string `json:"deal_id"`
 		OwnerID string `json:"owner_id"`
 		Text    string `json:"text"`
@@ -173,17 +194,53 @@ func Parse(reply string, in Input) (Written, error) {
 	}
 	known := knownIDs(in)
 	out := Written{Confidence: "low"}
-	for _, line := range parsed.Sentences {
-		kept, ok, err := keepSentence(line.Text, line.Kind, line.Cells, cells, known)
-		if err != nil {
-			return Written{}, err
+	if len(parsed.Paragraphs) > maxParagraphs {
+		return Written{}, errors.New("too many assessment paragraphs")
+	}
+	paragraphs := parsed.Paragraphs
+	if len(paragraphs) == 0 && len(parsed.Sentences) > 0 {
+		paragraphs = [][]replySentence{parsed.Sentences}
+	}
+	for _, paragraph := range paragraphs {
+		if len(paragraph) > maxSentences {
+			return Written{}, errors.New("too many sentences in an assessment paragraph")
 		}
-		if ok {
-			out.Sentences = append(out.Sentences, kept)
+		accepted := []Sentence{}
+		for _, line := range paragraph {
+			kept, ok, err := keepSentence(line.Text, line.Kind, line.Cells, cells, known)
+			if err != nil {
+				return Written{}, err
+			}
+			if !ok {
+				if len(parsed.Paragraphs) == 0 {
+					continue
+				}
+				return Written{}, errors.New("assessment paragraph contains an unsupported sentence")
+			}
+			accepted = append(accepted, kept)
+			if len(out.Sentences) < maxSentences {
+				out.Sentences = append(out.Sentences, kept)
+			}
 		}
-		if len(out.Sentences) == maxSentences {
-			break
+		if len(accepted) > 0 {
+			out.Paragraphs = append(out.Paragraphs, accepted)
 		}
+	}
+	for _, id := range parsed.ActionIDs {
+		found := false
+		for _, action := range in.Actions {
+			if action.ID == id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return Written{}, errors.New("assessment names an unsupported action")
+		}
+		if len(out.ActionIDs) == 3 {
+			return Written{}, errors.New("too many assessment actions")
+		}
+		out.ActionIDs = append(out.ActionIDs, id)
 	}
 	if len(out.Sentences) == 0 {
 		return Written{}, errors.New("assessment reply reads no figure")
@@ -213,7 +270,10 @@ func keepSentence(text, kind string, cited []string, cells map[string]CellIn, kn
 	}
 	var kept []string
 	for _, id := range cited {
-		if _, ok := cells[id]; ok {
+		if cell, ok := cells[id]; ok {
+			if cell.Coverage == "failed" || cell.Coverage == "withheld" || cell.Coverage == "unsupported" || cell.Value == "not measured" {
+				return Sentence{}, false, nil
+			}
 			kept = append(kept, id)
 		}
 	}
@@ -221,63 +281,6 @@ func keepSentence(text, kind string, cited []string, cells map[string]CellIn, kn
 		return Sentence{}, false, nil
 	}
 	return Sentence{Text: text, Kind: kind, Cells: kept}, true, nil
-}
-
-// numbersCarried says every number in the text appears in a cited cell's
-// value. Digits are compared without separators, so "21.6k" and "€21,600"
-// carry the same figure.
-func numbersCarried(text string, cited []string, cells map[string]CellIn) bool {
-	carried := map[string]bool{}
-	for _, id := range cited {
-		for _, run := range digitRuns(cells[id].Value) {
-			carried[run] = true
-		}
-	}
-	for _, run := range digitRuns(text) {
-		if !carried[run] && !carriedWithin(run, carried) {
-			return false
-		}
-	}
-	return true
-}
-
-// carriedWithin admits a rounded spelling of a carried figure, as "21.6" of
-// "21600" is. Three digits at least, so a two-digit guess is not read as an
-// opening of some longer figure.
-func carriedWithin(run string, carried map[string]bool) bool {
-	if len(run) < 3 {
-		return false
-	}
-	for value := range carried {
-		if strings.HasPrefix(value, run) {
-			return true
-		}
-	}
-	return false
-}
-
-// digitRuns is each run of digits in the text, with separators inside a
-// number removed, so "1,200.5" reads as "12005" wherever it is spelled.
-func digitRuns(text string) []string {
-	var runs []string
-	var current strings.Builder
-	flush := func() {
-		if current.Len() > 0 {
-			runs = append(runs, current.String())
-			current.Reset()
-		}
-	}
-	for i, r := range text {
-		switch {
-		case unicode.IsDigit(r):
-			current.WriteRune(r)
-		case (r == '.' || r == ',') && current.Len() > 0 && i+1 < len(text) && unicode.IsDigit(rune(text[i+1])):
-		default:
-			flush()
-		}
-	}
-	flush()
-	return runs
 }
 
 // keepDecision keeps a decision on a candidate deal, for that deal's owner,

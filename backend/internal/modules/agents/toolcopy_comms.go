@@ -80,15 +80,8 @@ var sendMessageCopy = toolCopy{
 var checkAvailabilityCopy = toolCopy{
 	Purpose: "Find candidate times for a host without booking or sending anything.",
 	Limits:  "Set reliable=true to check the acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live occupancy was checked. This never checks invitees' availability.",
-	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. book_meeting only records a meeting. prep_for_meeting prepares for an existing meeting.",
+	Instead: "Use invite_meeting to request an approved calendar invitation after a time is agreed. log_activity records a meeting without inviting anyone. prep_for_meeting prepares for an existing meeting.",
 	Retain:  "Keep the exact start and end, the calendar_backing value, and the truncated flag. Availability is checked again when reserving the time.",
-}
-
-var bookMeetingCopy = toolCopy{
-	Purpose: "Record a meeting against linked CRM records without sending an invitation.",
-	Limits:  "Reserves the recorded interval locally. It does not create a calendar event or notify attendees. Needs at least one record link.",
-	Instead: "Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past meeting.",
-	Retain:  "Keep the recorded activity id. Do not describe a record-only booking as an invitation sent.",
 }
 
 var enrichCopy = toolCopy{

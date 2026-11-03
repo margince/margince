@@ -141,6 +141,11 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  sessionSeen: {
+    name: "margince.session.seen",
+    area: "local",
+    lifetime: "seat",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

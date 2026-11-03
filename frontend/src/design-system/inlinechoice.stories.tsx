@@ -8,6 +8,7 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ProblemError } from "../lib/problem";
 import { InlineChoice } from "./inlinechoice";
+import { pickOption } from "./select-testing";
 
 const meta: Meta = {
   title: "Components/Forms and input/Inline choice",
@@ -46,6 +47,11 @@ function Example() {
 }
 export const Editable: Story = { render: () => <Example /> };
 
+export const EditableDark: Story = {
+  render: () => <Example />,
+  globals: { theme: "dark" },
+};
+
 export const ReadOnly: Story = {
   render: () => (
     <InlineChoice
@@ -60,8 +66,8 @@ export const ReadOnly: Story = {
   ),
 };
 
-// A refused save keeps the picker open on the reader's answer and says why as
-// the field's error beneath it.
+// The pick waits for Save; a refused save keeps the dialog open on the
+// reader's answer and says why as the field's error beneath it.
 export const RefusedSave: Story = {
   render: () => (
     <InlineChoice
@@ -79,14 +85,15 @@ export const RefusedSave: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Change Lifecycle" }),
+    await user.click(
+      await canvas.findByRole("button", { name: /^Change Lifecycle/ }),
     );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Customer" }),
-    );
-    const refusal = await canvas.findByRole("alert");
+    const dialog = await screen.findByRole("dialog", { name: "Lifecycle" });
+    await pickOption(user, within(dialog).getByRole("combobox"), "Customer");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    const refusal = await within(dialog).findByRole("alert");
     await expect(refusal).toHaveTextContent(en["common.versionSkew"]);
     await expect(refusal).toHaveClass("field-error");
   },

@@ -289,11 +289,11 @@ A date Margince set is a guess, marked "provisional close date, not confirmed by
 
 ## Reading the numbers
 
-Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability, how many deals are in it, the stage total, and under that the weighted total.
+Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
 
-The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count.
+A stage with no total shows no bar, and the bar has no dark part when the weighted total is unknown. No stage shows a bar when the totals on the board are in more than one currency. When the totals have a rate date, a last line gives the date of the exchange rates used. It also says how many deals have no price, when some have none. Point at the stage total, or move to it with Tab, to see both totals in full, down to the smallest unit of the currency. A weighted total that is unknown shows there as a line, not an amount.
 
-If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
+The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count. If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
 
 The totals count every deal you may see, which are the deals the board shows as cards. They are held back when the board includes archived deals. They are also held back when you narrow the board by stage, tag, search, team or unassigned deals. A range such as close date or value holds them back too. A tag filter, for example, shows "Loaded deals only. No total while a tag filter is on."
 

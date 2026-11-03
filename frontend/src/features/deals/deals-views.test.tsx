@@ -271,7 +271,7 @@ describe("a saved view over the deals board", () => {
 
     // The head sums the column counts, and the report measures every column.
     expect(await screen.findAllByText("7 deals")).toHaveLength(2);
-    expect(screen.getByText("≈ €7,000.00")).toBeTruthy();
+    expect(screen.getByText("€7,000")).toBeTruthy();
 
     // Archived deals are reachable from the board, not only from the table: a
     // deal archived by mistake could otherwise only be restored by leaving.
@@ -280,7 +280,7 @@ describe("a saved view over the deals board", () => {
     await waitFor(() =>
       expect(dealUrls.at(-1)?.includes("include_archived=true")).toBe(true),
     );
-    expect(screen.queryByText("≈ €7,000.00")).toBeNull();
+    expect(screen.queryByText("€7,000")).toBeNull();
     expect(screen.queryByText("7 deals")).toBeNull();
     expect(await screen.findAllByText("2 deals")).toHaveLength(2);
     expect(

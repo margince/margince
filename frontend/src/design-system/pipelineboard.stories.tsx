@@ -443,7 +443,7 @@ export const WithACountNotYetKnown: Story = {
       discovery.querySelector(".board-col-count:not([hidden])"),
     ).toBeNull();
     await expect(
-      discovery.querySelector(".board-col-total > .sr-only"),
+      discovery.querySelector(".board-col-sub > .sr-only"),
     ).toHaveAttribute("hidden");
   },
 };

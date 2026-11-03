@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -37,7 +38,8 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 	start := clocktest.Now(t).UTC().Truncate(time.Second)
 	seedInitiativeDeals(t, e, start)
 	ctx := initiativeManager(e)
-	service := newReportingService(e.Pool, func() time.Time { return start.Add(time.Hour) })
+	at := start.Add(time.Hour)
+	service := newReportingService(e.Pool, func() time.Time { return at })
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingOpenPipeline}, Blocks: []crmcontracts.ReportingBlockKind{"metric_reading"}}
 
 	floor := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool))
@@ -67,10 +69,43 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 	if out.GeneratedBy != crmcontracts.WrittenByModel || len(out.Sentences) != 1 || !strings.HasPrefix(out.Sentences[0].Text, "The open pipeline") {
 		t.Fatalf("the written assessment is %+v, want the one grounded sentence", out)
 	}
+	at = at.Add(time.Minute)
 	if _, err := written.Assess(ctx, selection, false); err != nil || lane.calls != 1 {
 		t.Fatalf("a second read asked the model %d times (err %v), want the kept assessment", lane.calls, err)
 	}
 	if _, err := written.Assess(ctx, selection, true); err != nil || lane.calls != 2 {
 		t.Fatalf("a refresh asked the model %d times (err %v), want a second call", lane.calls, err)
+	}
+}
+
+func TestAssessmentUsesTheDisplayedReceiptAndSeparatesRoleContext(t *testing.T) {
+	e := setupForecast(t)
+	at := clocktest.Now(t)
+	ctx := initiativeManager(e)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingOpenPipeline}, Blocks: []crmcontracts.ReportingBlockKind{}}
+	evaluation, err := service.Evaluate(ctx, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lane := &assessmentLane{reply: `{"paragraphs":[[{"text":"Review the open opportunities with their owners.","kind":"observation","cells":["metric:open_pipeline"]}]],"action_ids":[]}`}
+	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, "roles")
+	receipt := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
+	for _, view := range []crmcontracts.SalesAssessmentView{"sales", "team"} {
+		out, err := written.AssessView(ctx, selection, false, &view, &receipt)
+		if err != nil || out.EvaluationKey != evaluation.EvaluationKey || out.Paragraphs == nil {
+			t.Fatalf("%s assessment: %+v, %v", view, out, err)
+		}
+	}
+	if lane.calls != 2 {
+		t.Fatalf("role contexts shared a cache entry: %d calls", lane.calls)
+	}
+	receipt.Key = "unrelated-receipt"
+	view := crmcontracts.SalesAssessmentView("sales")
+	if _, err := written.AssessView(ctx, selection, false, &view, &receipt); err == nil {
+		t.Fatal("accepted a receipt from another evaluation")
+	}
+	if lane.calls != 2 {
+		t.Fatal("a mismatched receipt reached the model")
 	}
 }
