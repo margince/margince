@@ -16,6 +16,7 @@ import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";
 import { sortState } from "../../design-system/listtable.query";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
 import { type Translator, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -29,13 +30,10 @@ import {
   COMPONENT_KINDS,
   COMPONENT_LABEL,
   componentKindOf,
-  editableProduct,
   ProductPrice,
   ProductStatus,
   productStatus,
-  text,
-  toMinor,
-} from "./productcells";
+} from "./products.display";
 import "../lists/listsection.css";
 import {
   currencyOptions,
@@ -45,6 +43,7 @@ import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import {
   OTHER_UNIT,
   storedUnitOf,
+  unitChoiceOf,
   unitLabel,
   unitOptions,
 } from "./productunit";
@@ -168,6 +167,36 @@ function productFields(
       ],
     },
   ];
+}
+
+function editableProduct(p: Product) {
+  const unit = unitChoiceOf(p.unit);
+  return {
+    ...p,
+    unit: unit.choice,
+    unit_other: unit.other,
+    unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
+    billing_model: p.billing_model ?? "",
+    component_kind: p.component_kind ?? "",
+    billing_interval_months:
+      p.billing_interval_months == null
+        ? ""
+        : String(p.billing_interval_months),
+  };
+}
+
+// text narrows one value off the edit form's Record<string, unknown> without
+// asserting: a field the reader left alone is absent, not an empty string, and
+// an assertion would hand `undefined` to a scale that then silently defaults.
+function text(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+// Major-unit price string -> integer minor units (P11: no float money on the
+// wire), at the scale the PRODUCT's own currency carries. A hard-coded hundred
+// priced a yen product at a hundredth and a dinar product at ten times.
+function toMinor(major: string | undefined, currency: string): number {
+  return toMinorUnits(Number(major ?? "0"), currency);
 }
 
 /**

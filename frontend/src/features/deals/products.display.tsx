@@ -1,16 +1,20 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// How a product reads in the catalogue: its component kind, billing cadence,
+// price and status.
+
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { formatMoney } from "../../format/format";
-import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { unitChoiceOf } from "./productunit";
 
 type Product = components["schemas"]["Product"];
 
-type ComponentKind = NonNullable<Product["component_kind"]>;
+export type ComponentKind = NonNullable<Product["component_kind"]>;
 
 export const COMPONENT_KINDS: readonly ComponentKind[] = [
   "software",
@@ -28,7 +32,7 @@ export function componentKindOf(value: unknown): ComponentKind | undefined {
   return COMPONENT_KINDS.find((kind) => kind === value);
 }
 
-type BillingMonths = NonNullable<Product["billing_interval_months"]>;
+export type BillingMonths = NonNullable<Product["billing_interval_months"]>;
 
 export const BILLING_MONTHS: readonly BillingMonths[] = [1, 3, 6, 12];
 
@@ -87,34 +91,4 @@ export function ProductStatus({ product }: Readonly<{ product: Product }>) {
   const t = useT();
   const status = productStatus(product);
   return status === null ? null : <Badge>{t(status)}</Badge>;
-}
-
-export function editableProduct(p: Product) {
-  const unit = unitChoiceOf(p.unit);
-  return {
-    ...p,
-    unit: unit.choice,
-    unit_other: unit.other,
-    unit_price: String(toMajorUnits(p.unit_price_minor, p.currency)),
-    billing_model: p.billing_model ?? "",
-    component_kind: p.component_kind ?? "",
-    billing_interval_months:
-      p.billing_interval_months == null
-        ? ""
-        : String(p.billing_interval_months),
-  };
-}
-
-// text narrows one value off the edit form's Record<string, unknown> without
-// asserting. A field the reader left alone is absent, not an empty string.
-// An assertion would hand `undefined` to a scale that silently defaults.
-export function text(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-// Major-unit price string -> integer minor units (P11: no float money on the
-// wire), at the scale the PRODUCT's own currency carries. A hard-coded hundred
-// priced a yen product at a hundredth and a dinar product at ten times.
-export function toMinor(major: string | undefined, currency: string): number {
-  return toMinorUnits(Number(major ?? "0"), currency);
 }
