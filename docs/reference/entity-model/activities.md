@@ -6,7 +6,7 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-69 columns · primary key `(id)` · referenced by 47 foreign keys
+69 columns · primary key `(id)` · referenced by 43 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -137,7 +137,6 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_calendar_method_unread_outbound`: `btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email') AND (direction = 'outbound'))`
 - `activity_meeting_no_overlap`: `gist (host_user_id, tsrange(timezone('UTC', occurred_at), (timezone('UTC', occurred_at) + (( CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)::double precision * '00:00:01'::interval)), '[)')) WHERE ((kind = 'meeting') AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'))`
 - `activity_pkey`: `unique, btree (id)`
-- `activity_thread_repair_page`: `btree (thread_key, id) WHERE (kind = 'email')`
 - `idx_activity_answer_mail_subject`: `btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''), '^(\s*(re|aw|antw)\s*:)+\s*', '', 'i'), '\s+', ' ', 'g'))), occurred_at) WHERE ((direction = 'outbound') AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_answer_touch`: `btree (id, occurred_at) WHERE (((kind = 'call') OR ((kind = 'meeting') AND (meeting_status = 'held'))) AND (restricted_at IS NULL) AND (audience = 'workspace') AND (archived_at IS NULL))`
 - `idx_activity_channel_thread`: `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
@@ -315,8 +314,8 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `activity_identity_activity_idx`: `btree (activity_id, identity_kind, identity_key)`
 - `activity_identity_pkey`: `unique, btree (identity_kind, identity_key)`
-- `activity_identity_repair_page`: `btree (activity_id, identity_kind, identity_key)`
 
 ## activity_link
 
@@ -374,12 +373,11 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_mail_reference
 
-4 columns · primary key `(activity_id, referenced_id)` · referenced by 0 foreign keys
+3 columns · primary key `(activity_id, referenced_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
-| `reference_order` | `integer`, default `0` | yes |  |
 | `referenced_id` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -389,15 +387,10 @@ The 31 tables owned by `activities`, as the migrations build them. [Back to the 
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
 
-**Rules**
-
-- `activity_mail_reference_reference_order_check`: `CHECK ((reference_order >= 0))`
-
 **Indexes**
 
-- `activity_mail_reference_inverse`: `btree (referenced_id, activity_id)`
-- `activity_mail_reference_ordered`: `btree (activity_id, reference_order, referenced_id)`
 - `activity_mail_reference_pkey`: `unique, btree (activity_id, referenced_id)`
+- `activity_mail_reference_referenced_idx`: `btree (referenced_id, activity_id)`
 
 ## activity_meeting_history
 

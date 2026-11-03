@@ -33,10 +33,8 @@ package capture
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -150,13 +148,6 @@ func (s *Sink) upsertRefused(
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	if mine {
-		var available bool
-		if err := tx.QueryRow(ctx, `SELECT activity_thread_available(thread_key) FROM activity WHERE id=@id`, pgx.NamedArgs{"id": id}).Scan(&available); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if !available {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, fmt.Errorf("message is being repaired; retry capture: %w", apperrors.ErrConflict)
-		}
 		return datasource.EntityRef{}, false, counterpartyDecision{}, refusal
 	}
 	return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)

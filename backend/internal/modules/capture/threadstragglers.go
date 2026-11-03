@@ -52,7 +52,7 @@ func (s *ThreadVerdictStore) ThreadsWithUndecidedMessages(
 			           JOIN activity a ON a.id = i.activity_id
 			          WHERE i.user_id = v.user_id
 			            AND a.thread_key = v.thread_key
-			            AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.restricted_at IS NULL
+			            AND a.archived_at IS NULL AND a.restricted_at IS NULL
 			            AND (i.verdict_status IS NULL OR i.verdict_status = $7))
 			 ORDER BY v.updated_at
 			 LIMIT $1`,
@@ -91,7 +91,7 @@ func (s *ThreadVerdictStore) LockSettledThreadTx(
 	err := tx.QueryRow(ctx, `
 		SELECT thread_key, user_id, status, coalesce(kind, ''), seen_addresses
 		  FROM capture_thread_verdict
-		 WHERE thread_key = $1 AND activity_thread_available(thread_key) AND user_id = $2
+		 WHERE thread_key = $1 AND user_id = $2
 		   FOR UPDATE`, threadKey, user).Scan(&t.ThreadKey, &t.UserID, &t.Status, &t.Kind, &t.Seen)
 	if err != nil {
 		if err == pgx.ErrNoRows {

@@ -39,9 +39,6 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	if err := auth.EnsureThreadAvailable(ctx, tx, threadKey); err != nil {
-		return err
-	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return apperrors.ErrPermissionDenied
@@ -89,7 +86,7 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 		UPDATE capture_import i
 		   SET verdict_status = $3
 		  FROM activity a
-		 WHERE activity_thread_available(a.thread_key) AND a.id = i.activity_id
+		 WHERE a.id = i.activity_id
 		   AND a.thread_key = $1
 		   AND a.restricted_at IS NULL
 		   AND a.archived_at IS NULL
@@ -132,7 +129,7 @@ func ThreadActivityIDsTx(ctx context.Context, tx pgx.Tx, threadKey string, user 
 	rows, err := tx.Query(ctx, `
 		SELECT a.id FROM activity a
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
-		 WHERE a.thread_key = $1 AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))
+		 WHERE a.thread_key = $1 AND a.archived_at IS NULL
 		   AND a.restricted_at IS NULL
 		 ORDER BY a.id`, threadKey, user)
 	if err != nil {

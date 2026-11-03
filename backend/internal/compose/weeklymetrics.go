@@ -87,9 +87,9 @@ func weeklyConfirmedFollowup(ctx context.Context, tx pgx.Tx, facts []reporting.F
 		return 0, err
 	}
 	if visible == "" {
-		visible = auth.ActivityAvailableClause("task")
+		visible = sqlUnnarrowed
 	}
-	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task JOIN activity meeting ON meeting.id=task.source_activity_id WHERE activity_thread_available(meeting.thread_key) AND task.source_activity_id=ANY(" + b.add(meetingIDs) + "::uuid[]) AND " + weekly.NextStepTaskSQL("task", "meeting") + " AND task.created_at<" + b.add(end) + " AND " + visible
+	query := "SELECT count(DISTINCT task.source_activity_id) FROM activity task JOIN activity meeting ON meeting.id=task.source_activity_id WHERE task.source_activity_id=ANY(" + b.add(meetingIDs) + "::uuid[]) AND " + weekly.NextStepTaskSQL("task", "meeting") + " AND task.created_at<" + b.add(end) + " AND " + visible
 	var count int
 	err = tx.QueryRow(ctx, query, b.values...).Scan(&count)
 	return count, err

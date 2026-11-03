@@ -65,7 +65,7 @@ type QuietContact struct {
 func liveExchangeClock(asOf string) string {
 	return fmt.Sprintf(`SELECT max(a.occurred_at) AS touched
 		      FROM activity_participant cp
-		      JOIN activity a ON a.id = cp.activity_id AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key))%s
+		      JOIN activity a ON a.id = cp.activity_id AND a.archived_at IS NULL%s
 		       AND %s
 		     WHERE cp.contact_id = e.contact_id AND cp.role IN %s
 		       AND EXISTS (SELECT 1 FROM activity_participant up

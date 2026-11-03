@@ -29,7 +29,7 @@ func ColleagueSeats(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ids.
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ap.user_id
 		  FROM activity_participant ap
-		  JOIN activity act ON act.id = ap.activity_id AND (act.restricted_at IS NULL AND activity_thread_available(act.thread_key))
+		  JOIN activity act ON act.id = ap.activity_id AND act.restricted_at IS NULL
 		 WHERE ap.activity_id = $1 AND ap.user_id IS NOT NULL AND ap.role <> $2
 		   AND `+auth.ParticipantStandsSQL("ap", "act")+`
 		 ORDER BY ap.user_id`, activityID, connector.ParticipantRoleBCC)

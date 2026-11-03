@@ -267,7 +267,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND %s AND (%s)%s %s
+		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
 		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
@@ -436,7 +436,7 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactI
 	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
-		WHERE activity_thread_available(a.thread_key) AND (a.archived_at IS NULL AND activity_thread_available(a.thread_key)) AND a.created_at > $%d AND %s AND (%s)%s`,
+		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
 		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg))
 	if err := tx.QueryRow(ctx, query, args...).
 		Scan(&view.NewActivities); err != nil {
