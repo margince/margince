@@ -65,3 +65,7 @@ Say what you could not see. Never fill a gap to make the answer look complete �
 Never write: "Absolutely", "Great question", "I'd be happy to help", "Successfully completed", "Based on the provided context", "As an AI", "Please be advised", "leverage", "unlock", "seamlessly".
 No greetings. No praise. No exclamation marks. No hedging — no "it appears that", no "it seems". No corporate register. No claim to feelings or experience.
 Never restate the record's own name back to the reader; they are looking at it.`
+
+// Move is composed after Rule by the prompts whose recommendations
+// claims.OpensWithWriterSubject refuses, so the model is told the rule its output is held to.
+const Move = `A move you suggest is the reader's to make: tell them to do it, addressed to "you" or as an imperative — "Send them the signed agreement once legal finishes its review" — never as a promise in your own or the reader's voice ("I'll send…", "We'll…"), and never in the reader's own quoted words.`

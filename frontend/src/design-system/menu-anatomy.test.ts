@@ -136,7 +136,8 @@ const SURFACES: readonly Surface[] = [
     rows: [".accountsub .choicelist-choice"],
     floor:
       "it opens inward from a right-anchored menu, so width is distance toward the window's own left edge",
-    ceiling: "three theme radios; it cannot grow",
+    ceiling:
+      "three theme radios, or help's five rows over the build; neither roster grows",
   },
   {
     selector: ".overflow-menu-items",

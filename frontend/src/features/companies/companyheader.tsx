@@ -3,6 +3,7 @@ import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import type { ActivityGate } from "../../components/activitygate";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
@@ -255,11 +256,17 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
 
 export function CompanyActionBadges({
   company,
+  activity,
+  onAddTask,
   onOpenHistory,
   onSetUpPartner,
   archivedReasonId,
 }: Readonly<{
   company: Company;
+  // The page's activity gate, which the strip's Log verb reads too; its
+  // refusal sentence is stated there, outside this menu.
+  activity: ActivityGate;
+  onAddTask: () => void;
   onOpenHistory: () => void;
   onSetUpPartner: () => void;
   // Stated by the caller for the whole strip; see companyheaderactions.tsx's
@@ -301,6 +308,15 @@ export function CompanyActionBadges({
         {refusedReason && !archivedReasonId && (
           <p id={ownReasonId}>{refusedReason}</p>
         )}
+        {/* First: the most frequent verb in the menu. It files the task
+            against this account, in the same drawer Log opens. */}
+        <Button
+          disabled={!company.archived_at && activity.pending}
+          reasonId={company.archived_at ? menuReasonId : activity.refusedId}
+          onClick={onAddTask}
+        >
+          {t("log.addTask")}
+        </Button>
 
         <MergeAction
           requires={{ object: "company", action: "update" }}

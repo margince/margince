@@ -280,6 +280,12 @@ describe("a fixture is the shape the server sends", () => {
       if (!text.includes("unknown")) {
         continue;
       }
+      // Nor can a declaration file. It holds no expression, so no `as` cast,
+      // and the generated contract types are 4.4 MB of `unknown` that every
+      // run would parse to find nothing.
+      if (path.endsWith(".d.ts")) {
+        continue;
+      }
       const where = relative(frontendRoot, path).replaceAll("\\", "/");
       for (const one of castsIn(parseSource(path, text), where)) {
         found.push(`${one.where}:${one.line} ${one.says}`);

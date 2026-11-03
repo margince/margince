@@ -14,9 +14,14 @@ import { readStored, removeStored, STORAGE_KEYS, writeStored } from "./storage";
 
 export type MyAgentGrant = components["schemas"]["MyAgentGrant"];
 
-/** The agent this question is about. The morning brief is the one a rep
- * recognises by name, and the sweep that feeds it runs under the same answer. */
+/** The morning brief is the agent a rep recognises by name. */
 export const MORNING_BRIEF = "morning_brief" as const;
+
+/** The sweep that feeds the brief. The runner starts each agent only for a rep
+ * who granted that agent, so the one answer is written for both. */
+export const OVERNIGHT_AT_RISK_SWEEP = "overnight_at_risk_sweep" as const;
+
+const OVERNIGHT_AGENTS = [MORNING_BRIEF, OVERNIGHT_AT_RISK_SWEEP] as const;
 
 const GRANTS_KEY = ["agent-grants"] as const;
 
@@ -66,23 +71,28 @@ export function useSetAgentGrant() {
   const t = useT();
   return useMutation({
     mutationFn: async (granted: boolean) => {
-      return unwrap(
-        await api.PUT("/me/agent-grants/{spec}", {
-          params: { path: { spec: MORNING_BRIEF } },
-          body: { granted },
-        }),
-      );
+      for (const spec of OVERNIGHT_AGENTS) {
+        unwrap(
+          await api.PUT("/me/agent-grants/{spec}", {
+            params: { path: { spec } },
+            body: { granted },
+          }),
+        );
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: GRANTS_KEY });
-      toast.show(t("settings.saved"));
-    },
+    // Refreshed after a failure too. The first agent's write may have landed
+    // before the second failed. The card must show the grants as they stand.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: GRANTS_KEY }),
+    onSuccess: () => toast.show(t("settings.saved")),
   });
 }
 
-/** Picks the morning brief's answer out of the list. */
-export function morningBriefGrant(
+/** The grant of each overnight agent, in the order the agents are written, or
+ * undefined for an agent the list does not hold. */
+export function overnightGrants(
   grants: readonly MyAgentGrant[],
-): MyAgentGrant | undefined {
-  return grants.find((grant) => grant.spec === MORNING_BRIEF);
+): (MyAgentGrant | undefined)[] {
+  return OVERNIGHT_AGENTS.map((spec) =>
+    grants.find((grant) => grant.spec === spec),
+  );
 }

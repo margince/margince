@@ -44,6 +44,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Go | The programming language of the server. |
 | Google | The company behind Gmail and the Gemini models. |
 | Gradion | The company that builds Margince and licenses it. |
+| handoff | An SDR passing a prospect to an account executive, who accepts or returns it. |
+| handoffs | SDRs passing prospects to account executives, who accept or return them. |
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | identity | Who sent a privacy request; closing one records how that was checked. |
@@ -58,6 +60,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
 | mask | A field permission that hides one field of a record from a role. |
+| Material | Google's Material Symbols icon set, the source of the web app's filled status marks. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |

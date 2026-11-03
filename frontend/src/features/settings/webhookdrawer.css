@@ -70,25 +70,6 @@
   gap: var(--space-2);
 }
 
-.webhook-events-frame {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  min-height: var(--inputHeight);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--borderStrong);
-  border-radius: var(--r-sm);
-}
-
-.webhook-events-invalid {
-  border-color: var(--dangerText);
-}
-
-.webhook-picker-panel {
-  width: min(28rem, calc(100vw - 2 * var(--space-4)));
-}
-
 .webhook-picker {
   display: flex;
   flex-direction: column;
@@ -221,10 +202,6 @@
   gap: var(--space-2);
 }
 
-.webhook-events-add {
-  margin-inline-start: auto;
-}
-
 /* A stored value: one dashed box holding the lock, the mark and Replace. */
 .webhook-sealed {
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-2);
@@ -262,16 +239,10 @@
   align-items: flex-start;
 }
 
-/* The picker reads three lines per event, so it is wider than a pick list. */
-.popover-panel.webhook-picker-panel {
-  inline-size: min(28rem, calc(100vw - 2 * var(--space-4)));
-  max-inline-size: none;
-}
-
 .webhook-picker-group {
   padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgWell);
 }
 
 .webhook-picker-group-name {

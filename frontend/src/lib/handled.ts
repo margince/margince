@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { infiniteQueryOptions, useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
@@ -23,20 +23,23 @@ export type Receipt = components["schemas"]["Receipt"];
  * same population, so a grouped record found there keeps its review verbs.
  */
 export function useHandledForYou() {
-  return useInfiniteQuery({
-    queryKey: [...worklistKey, "handled"],
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }): Promise<HandledForYou> => {
-      return unwrap(
-        await api.GET("/worklist/handled", {
-          params: { query: pageParam ? { cursor: pageParam } : {} },
-        }),
-      );
-    },
-    getNextPageParam: (last) => last.next_cursor,
-    select: (read): HandledForYou => joinedPages(read.pages),
-  });
+  return useInfiniteQuery(handledForYouOptions);
 }
+
+/** The read useHandledForYou makes, which Home's prefetch also starts. */
+export const handledForYouOptions = infiniteQueryOptions({
+  queryKey: [...worklistKey, "handled"],
+  initialPageParam: undefined as string | undefined,
+  queryFn: async ({ pageParam }): Promise<HandledForYou> => {
+    return unwrap(
+      await api.GET("/worklist/handled", {
+        params: { query: pageParam ? { cursor: pageParam } : {} },
+      }),
+    );
+  },
+  getNextPageParam: (last) => last.next_cursor,
+  select: (read): HandledForYou => joinedPages(read.pages),
+});
 
 // The pages as one answer: the first page's instant and window, every receipt
 // in order, and the last page's word on whether more remains.

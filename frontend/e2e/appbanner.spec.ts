@@ -88,7 +88,7 @@ test.describe("the reindex advisory", () => {
       page,
       "#/settings/knowledge",
       { embedReindex: "current" },
-      /\/embeddings\/reindex\/status/,
+      /\/embeddings\/reindex\/identities/,
     );
     await expect(page.locator(BANNER)).toHaveCount(0);
   });

@@ -100,7 +100,7 @@ func (s *Store) updateContactInTx(
 	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
 		return out, err
 	}
-	current, err := readContact(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readContactRow(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return out, fmt.Errorf("read contact before update: %w", err)
 	}
@@ -145,7 +145,7 @@ func (s *Store) updateContactInTx(
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	if p.Empty() {
-		return current, nil
+		return withContactCreator(ctx, tx, current)
 	}
 
 	if err := guardVisibilityWrite(ctx, tx, p, id, current, in.Visibility); err != nil {
@@ -173,7 +173,7 @@ func (s *Store) updateContactInTx(
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventContactUpdated{ChangedFields: after}); err != nil {
 		return out, fmt.Errorf("emit contact.updated: %w", err)
 	}
-	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails); err != nil {
+	if err := recheckIfEdited(ctx, tx, id, current.FullName, in, setsChanged.emails || setsChanged.phones); err != nil {
 		return out, err
 	}
 	if err := s.convertEditedLeads(ctx, tx, id, in.converting); err != nil {
@@ -182,7 +182,7 @@ func (s *Store) updateContactInTx(
 	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return out, fmt.Errorf("read updated contact: %w", err)
 	}
-	return out, s.followShareOwnerTx(ctx, tx, id, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
+	return out, s.followShareOwnerTx(ctx, tx, entityContact, id.UUID, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // Child sets are separate rows, so their audit images supplement the column patch.

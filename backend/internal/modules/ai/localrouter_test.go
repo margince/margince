@@ -133,6 +133,37 @@ func TestNewLocalRouterCacheOnByDefaultCollapsesIdenticalRequests(t *testing.T) 
 	}
 }
 
+// A caller that asks again because the first answer was not enough must reach
+// the model. The cache would hand the first answer back. Then the second
+// question would be no question.
+func TestAFreshAnswerReachesTheModelThoughTheRequestIsCached(t *testing.T) {
+	fake := NewFakeClient().Script("first answer", "second answer")
+	r, err := NewLocalRouter(localFakeConfig(), WithFakeClient(fake))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := wsContext(t)
+	req := model.Request{Messages: []model.Message{{Role: "user", Content: "same prompt"}}}
+
+	if _, _, err := r.Complete(ctx, TaskSummarize, req); err != nil {
+		t.Fatal(err)
+	}
+	second, info, err := r.Complete(WithFreshAnswer(ctx), TaskSummarize, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Cached || second.Text != "second answer" || len(fake.Calls()) != 2 {
+		t.Fatalf("a fresh answer must reach the model: cached=%v text=%q calls=%d", info.Cached, second.Text, len(fake.Calls()))
+	}
+	third, info, err := r.Complete(ctx, TaskSummarize, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.Cached || third.Text != "second answer" {
+		t.Fatalf("the fresh answer must replace the cached one, got cached=%v %q", info.Cached, third.Text)
+	}
+}
+
 // TestNewLocalRouterWithMonthlyBudgetIsLive proves the static budget
 // WithMonthlyBudget installs actually gates calls, not just a wired but
 // idle field: a tiny budget spent past by the first call must degrade

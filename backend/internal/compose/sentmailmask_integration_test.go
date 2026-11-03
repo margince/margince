@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -123,7 +124,7 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 		t.Fatalf("jobs.NewInserter: %v", err)
 	}
 	// The live link is the engine's evidence for a record confirmation.
-	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact), ""); err != nil {
 		t.Fatalf("IssueConfirmToken: %v", err)
 	}
 	var link ids.UUID
@@ -140,7 +141,7 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	rendered.Body += "\nPasswort: " + secret
 	var deliveredSubject, deliveredBody, storedSubject, storedBody string
 	if err := database.WithWorkspaceTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
-		delivery, err := NewControllerMailQueue(l.e.Pool, inserter).QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
+		delivery, err := NewControllerMailQueue(l.e.Pool, inserter, "").QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
 			ContactID: ids.From[ids.ContactKind](l.contact), Recipient: "subject@example.test", Category: category,
 			LinkID: link, LinkRef: "sealed-ref", ExpiresAt: expires,
 			MessageID: "controller-mask@margince.test", Rendered: rendered,
@@ -158,7 +159,10 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	if !strings.Contains(deliveredSubject, secret) || !strings.Contains(deliveredBody, secret) {
 		t.Fatalf("the delivery carries %q / %q, want the words as rendered", deliveredSubject, deliveredBody)
 	}
-	if storedSubject != credentialmask.MaskText(deliveredSubject) || storedBody != credentialmask.MaskText(deliveredBody) {
+	if storedSubject != credentialmask.MaskText(deliveredSubject) || strings.Contains(storedBody, secret) {
 		t.Fatalf("the timeline row stores %q / %q, want the delivered text masked", storedSubject, storedBody)
+	}
+	if !strings.Contains(storedBody, mailcopy.For(rendered.Language).SentLinkMarker) || strings.Contains(storedBody, "{{confirmation-link}}") {
+		t.Fatalf("the timeline row stores %q, want the link marker where the delivery keeps its placeholder", storedBody)
 	}
 }

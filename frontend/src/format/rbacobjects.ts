@@ -71,6 +71,10 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
   report_schedule: { area: "analytics", label: "roles.object.report_schedule" },
   report_edition: { area: "analytics", label: "roles.object.report_edition" },
   sales_target: { area: "analytics", label: "roles.object.sales_target" },
+  sales_initiative: {
+    area: "analytics",
+    label: "roles.object.sales_initiative",
+  },
   reporting_framework: {
     area: "analytics",
     label: "roles.object.reporting_framework",

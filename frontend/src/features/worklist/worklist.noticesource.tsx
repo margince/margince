@@ -13,10 +13,10 @@ import { viewerZone } from "../../format/timezone";
 import { TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCanWrite } from "../../lib/capability";
+import { rowHref } from "../../lib/worklistcopy";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
 import { TaskDetailModal } from "./taskdetailmodal";
-import { rowHref } from "./worklist.copy";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
 import { WorklistWhy } from "./worklist.why";
 

@@ -16,12 +16,10 @@ import {
   armHoverIntent,
   takeHoverClock,
 } from "../design-system/hoverintent-testing";
-import { en } from "../i18n/en";
 import { navigate, parseHash, type Route } from "../lib/router";
 import {
   fixtureSection,
   ignoreSearch,
-  MARKER,
   navGroupNames,
   newClient,
   render,
@@ -162,7 +160,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     ).getByRole("link", {
       name: "Margince",
     });
-    expect(brand.getAttribute("href")).toBe("#/home");
+    expect(brand.getAttribute("href")).toBe("/#/home");
     // The DESTINATIONS are the level's own rows, so they are counted there: the
     // brand above it and the More control below it are neither of them, and each
     // is asserted where it belongs.
@@ -390,42 +388,6 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
-  // The half that is easy to break: the marker has to survive the collapse. At
-  // 56px the rail drops every label it has, so a stage badge that rode the
-  // wordmark would be gone exactly where the product is hardest to identify —
-  // and it is the one thing here a reader may need to read back to us.
-  //
-  // ONE WORD at both widths, asserted as one expectation of both renders rather
-  // than as two: the word is short enough for the 56px column, so a second,
-  // narrow spelling is exactly what must not creep back in — two strings for
-  // one marker can drift into naming two different stages.
-  it("stamps the stage at both rail widths, in the same word", () => {
-    const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(expanded.container.querySelector(MARKER)?.textContent).toBe(
-      en["shell.beta"],
-    );
-    cleanup();
-
-    const collapsed = render(
-      <WorkspaceRail route={{ screen: "home" }} collapsed />,
-    );
-    expect(collapsed.container.querySelector(MARKER)?.textContent).toBe(
-      en["shell.beta"],
-    );
-  });
-
-  // The badge is not inside the link. A fact about the build sitting in an
-  // anchor is a fact a press carries the reader away from, and the head's one
-  // target is the mark.
-  it("keeps the stage badge out of the brand's link", () => {
-    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
-    const badge = container.querySelector(MARKER);
-    expect(badge).toBeTruthy();
-    expect(badge?.closest("a")).toBeNull();
-    // And the marker the foot used to carry is gone with it.
-    expect(container.querySelector(".railversion")).toBeNull();
-  });
-
   // The bar is five cells and only three of them are destinations. The agent is
   // the middle one — it reports rather than navigates, so it is not filed among
   // the places to go — and it stands in the ROW STREAM rather than beside it,
@@ -528,7 +490,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
       screen
         .getByRole("link", { name: "Privacy and retention" })
         .getAttribute("href"),
-    ).toBe("#/settings/deep");
+    ).toBe("/#/settings/deep");
     // Exactly one row claims the current page, and it is the entry the SECTION
     // resolved — the screen owns that answer, fallbacks included.
     const current = document.querySelectorAll('[aria-current="page"]');
@@ -697,16 +659,13 @@ describe("Rail levels (a section's entries as the second level)", () => {
     }
   });
 
-  // The other half of the same head, and the half a real installation actually
-  // wears: the company's own mark with "Powered by Margince" and the build badge
-  // under it. That line used to go with the brand's words on a level, so the one
-  // thing in the chrome saying what the product IS was absent from every
-  // settings address.
+  // An installation's head: the company's mark with "Powered by Margince" under
+  // it. It draws the same on a level, so every settings address names the product.
   it("draws an installation's own head the same on a level as off one", () => {
     shellStyles = mountShellStyles();
     const client = newClient();
     client.setQueryData(["me"], repSeeing(TWO_MARKS));
-    const parts = [".ws-chip", ".ws-company-text", MARKER];
+    const parts = [".ws-chip", ".ws-name", ".ws-company"];
     const plain = renderWith(
       client,
       <WorkspaceRail route={{ screen: "home" }} />,
@@ -753,7 +712,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
     expect(levelLabels()).toEqual(["Fields"]);
     expect(
       screen.getByRole("link", { name: "Fields" }).getAttribute("href"),
-    ).toBe("#/settings/deep/deeper");
+    ).toBe("/#/settings/deep/deeper");
     expect(navGroupNames()).toEqual(["Privacy and retention"]);
   });
 

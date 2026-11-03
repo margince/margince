@@ -212,8 +212,8 @@ func TestAContactLinksToACompanyTheZipNamesByID(t *testing.T) {
 	}
 }
 
-// In a ZIP run the employer-name column follows the run's broken-link policy as
-// company_ref does. A single CSV still lands the row and reports only the link.
+// A new employer name creates its company in CSV and ZIP imports.
+// A missing company reference still follows the broken-link policy.
 func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 	nameParts := []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
 		"ref": "ref", "email": "email", "name": "full_name", "company": "company_name",
@@ -229,17 +229,14 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 			}, &run); status != http.StatusAccepted {
 				t.Fatalf("stage → %d, want 202", status)
 			}
-			wantKind, wantCreated := "broken_link", 0
-			if policy == "drop_link" {
-				wantKind, wantCreated = "dropped_link", 1
-			}
+
 			report := readImportReport(t, e, run.ID)
-			if report.Disposition.Created != wantCreated || !hasIssue(report, wantKind, "Nowhere Ltd") {
-				t.Fatalf("report = %+v, want %d created and a %s issue naming Nowhere Ltd", report, wantCreated, wantKind)
+			if report.Disposition.Created != 1 || report.Links == nil || len(report.Links.Unresolved) != 0 {
+				t.Fatalf("preview=%+v, want one contact and its employer", report)
 			}
 			approveAndRead(t, e, run.ID)
-			if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != wantCreated || !hasIssue(committed, wantKind, "Nowhere Ltd") {
-				t.Fatalf("committed = %+v, want the commit to do what the dry run said", committed)
+			if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != 1 || employerOf(t, e, "lu@"+policy+".example") != "Nowhere Ltd" {
+				t.Fatalf("commit=%+v, want one contact at Nowhere Ltd", committed)
 			}
 		})
 	}
@@ -255,8 +252,8 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 			t.Fatalf("stage → %d, want 202", status)
 		}
 		report := readImportReport(t, e, run.ID)
-		if report.Disposition.Created != 1 || len(report.Issues) != 0 || report.Links == nil || len(report.Links.Unresolved) != 1 {
-			t.Fatalf("report = %+v, want the row created, no issue and the link unresolved", report)
+		if report.Disposition.Created != 1 || len(report.Issues) != 1 || report.Issues[0].ReasonCode != "employer_will_create" || report.Links == nil || len(report.Links.Unresolved) != 0 {
+			t.Fatalf("report = %+v, want the row and employer created with a preview notice", report)
 		}
 	})
 }

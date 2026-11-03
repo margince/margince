@@ -57,9 +57,13 @@ func (s *Store) calendarBusy(ctx context.Context, host ids.UserID, p crmcontract
 			if exclude != "" && calendar == p.CalendarId && interval.EventID == exclude {
 				continue
 			}
-			if !interval.End.After(interval.Start) {
+			occupied, err := connector.CalendarOccupancy(interval.Start, interval.End)
+			if err != nil {
 				return nil, calendarReadFailure(ctx, host, string(p.Provider), calendar,
-					connector.NewCalendarUnavailable(calendar, "invalid_interval", errors.New("scheduling: invalid provider interval")))
+					connector.NewCalendarUnavailable(calendar, "invalid_interval", err))
+			}
+			if !occupied {
+				continue
 			}
 			busy = append(busy, slot{Start: interval.Start.Add(-buffer), End: interval.End.Add(buffer)})
 		}

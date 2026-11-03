@@ -39,6 +39,7 @@ var roomErasureAdmin = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"contact":   {Create: true, Read: true, Update: true, Delete: true},
+		"company":   {Create: true, Read: true},
 		"deal":      {Create: true, Read: true, Update: true, Delete: true},
 		"deal_room": {Create: true, Read: true, Update: true, Delete: true},
 		"activity":  {Create: true, Read: true, Update: true, Delete: true},

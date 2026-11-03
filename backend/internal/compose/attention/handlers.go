@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,6 +22,9 @@ import (
 // to live.
 type Handlers struct {
 	svc *Service
+	// home serves the first page of a reader's worklist while it holds; nil
+	// reads every page fresh.
+	home *homecache.Cache
 }
 
 // NewHandlers binds the route to the assembler.
@@ -202,7 +206,18 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	if params.Cursor != nil {
 		token = *params.Cursor
 	}
-	out, err := h.svc.Worklist(r.Context(), scope, filter, owner, limit, token)
+	view := ""
+	if params.View != nil {
+		view = string(*params.View)
+	}
+	svc := h.svc
+	if params.Relationships != nil && *params.Relationships == crmcontracts.GetWorklistParamsRelationshipsOmit {
+		svc = svc.OmittingRelationships()
+	}
+	out, err := h.worklistAnswer(r.Context(), svc, worklistQuestion{
+		view: view, scope: scope, filter: filter, owner: owner, limit: limit, token: token,
+		omitRelationships: svc.omitDecay,
+	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

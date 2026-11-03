@@ -3,7 +3,7 @@
 
 import { Button } from "../../design-system/atoms";
 import { useLocale, useT } from "../../i18n";
-import { sourceUnavailableText } from "../worklist/worklist.copy";
+import { sourceUnavailableText } from "../../lib/worklistcopy";
 import type { Worklist } from "../worklist/worklist.queries";
 import { omittedFactorsText } from "./brief.factors";
 import type { MorningBrief } from "./brief.queries";

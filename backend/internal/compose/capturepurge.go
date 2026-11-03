@@ -315,24 +315,25 @@ func (p *CapturePurger) carryOut(
 // query, so what a pass does not reach this tick it reaches the next.
 const personalSweepBatch = 500
 
+// personalSweepActor binds the actor and correlation id the purge refuses to
+// run without. The fleet job's context carries only a workspace.
+const personalSweepActor = "system:capture-personal-purge"
+
 // SweepPersonalMail destroys the personal correspondence whose undo window has
-// closed, for every seat in the workspace that has any.
+// closed, for every seat in the workspace that has any. It is the only place
+// where a classification leads to irreversible deletion with nobody in the loop.
+// Three guards make that survivable, and removing any one of them breaks it:
 //
-// This is the automatic half of the `personal` verdict, and it is the only place
-// in the product where a classification leads to irreversible deletion with no
-// human in the loop at the moment it happens. Three things make that survivable,
-// and removing any one of them breaks it:
-//
-//   - SelectPersonalPurgeTx measures the window PER MESSAGE and refuses any
+//   - SelectPersonalPurgeTx measures the window per message and refuses any
 //     address carrying a live `business` override, which is how a contact cancels.
 //   - A verdict the classifier reached alone waits four times as long as one a
 //     contact reached, because nobody has looked at it.
-//   - The statutory floor is applied as a shield, so correspondence the law
-//     requires kept is reported rather than destroyed.
+//   - The statutory floor shields what the law requires kept, and reports it.
 //
-// It reuses carryOut, so a message destroyed here goes through exactly the
+// It reuses carryOut, so a message destroyed here goes through the same
 // sequence an owner's own purge uses.
 func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.PersonalPurgeWindows) (int, error) {
+	ctx = principal.SystemActing(ctx, personalSweepActor)
 	var seats []ids.UUID
 	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error

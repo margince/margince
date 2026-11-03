@@ -3,13 +3,10 @@
 
 package compose
 
-// Pure mechanics behind GET /companies/{id}/hierarchy-rollup
-// (RD-T04): the RBAC-aware BFS prune over the parent→children company
-// graph, calendar-quarter bounds in the workspace timezone, and the
-// two rounding rules (win-weighted value, FX base conversion) the
-// rollup's totals are built from. No DB and no HTTP live here — the
-// gated tree walk and measures are in companyrollupread.go, the HTTP
-// handler arrives with the transport slice.
+// Pure mechanics behind GET /companies/{id}/hierarchy-rollup (RD-T04): the
+// RBAC-aware BFS prune over the company tree and the missing-rate error. No DB
+// and no HTTP live here. The gated tree walk and measures are in
+// companyrollupread.go.
 
 import (
 	"fmt"
@@ -78,39 +75,6 @@ func pruneUnreadable(rootID ids.UUID, nodes []companyTreeNode, readable func(ids
 		}
 	}
 	return included, restricted, true
-}
-
-// currentQuarterBounds returns the quarter [start, end) that now falls in,
-// evaluated in loc — the workspace timezone, not UTC, so a moment shortly
-// after midnight UTC can still belong to the prior quarter (and year) for a
-// workspace west of Greenwich.
-//
-// fiscalStartMonth is the month the installation's business year begins, 1..12.
-// The quarters are cut FROM it rather than from January, so an installation
-// whose year starts in April reads April–June as its first quarter — the same
-// cut the period reports make, and the figure on the company page has to agree
-// with the report a reader checks it against.
-//
-// January (the default, and every installation that predates the setting)
-// leaves the offset at zero and reproduces the calendar quarters exactly.
-func currentQuarterBounds(now time.Time, loc *time.Location, fiscalStartMonth int) (start, end time.Time) {
-	local := now.In(loc)
-	// Months since the fiscal year began, 0..11. The +12 keeps the modulo
-	// positive for a month earlier in the calendar than the fiscal start —
-	// February under an April start is 10 months in, not -2.
-	monthsIn := (int(local.Month()) - fiscalStartMonth + 12) % 12
-	quarterOffset := (monthsIn / 3) * 3
-	// Anchored on the fiscal start month IN local's own calendar year, then
-	// walked forward by whole quarters. That anchor can land in the future —
-	// February under an April start sits in the fiscal year that began the
-	// PREVIOUS April — so a start after `local` is pulled back a year.
-	start = time.Date(local.Year(), time.Month(fiscalStartMonth), 1, 0, 0, 0, 0, loc).
-		AddDate(0, quarterOffset, 0)
-	if start.After(local) {
-		start = start.AddDate(-1, 0, 0)
-	}
-	end = start.AddDate(0, 3, 0)
-	return start, end
 }
 
 // FXRateUnavailableError reports that the rollup needed a stored FX

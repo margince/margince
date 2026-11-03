@@ -17,6 +17,8 @@ import {
 // worth pressing. A control's value (`:checked`, a switch's `aria-checked`) is
 // not where the reader is, so it keeps the accent the platform paints it in.
 // So does a progress ladder's rung, which says where a record stands.
+// The rail's current row is the app's location marker, not a pick among peers,
+// so it alone takes the accent fill (README, State colours).
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -38,6 +40,12 @@ const NEGATION = /:not\((?:[^()]|\([^()]*\))*\)/g;
 const PAINT =
   /^(?:background(?:-color)?|color|border(?:-[a-z-]+)?|box-shadow)$/;
 const ACCENT = /var\(\s*--accent/;
+
+// Exact entries, so a new selector, sheet or property stays a finding.
+const LOCATION_MARKERS = new Set([
+  "src/app/shell.css: .rail .navitem.active { background: var(--accent) }",
+  "src/app/shell.css: .rail .railmore.active { background: var(--accent) }",
+]);
 
 function stateMarkers(selector: string): string[] {
   const positive = selector.replaceAll(NEGATION, "");
@@ -71,11 +79,22 @@ function accentStates(rules: readonly Rule[]): string[] {
   );
 }
 
+function unexcused(rules: readonly Rule[]): string[] {
+  return accentStates(rules).filter((found) => !LOCATION_MARKERS.has(found));
+}
+
 describe("a selected or pressed state is neutral", () => {
   const rules = rulesOf(appStylesheets(frontendRoot));
 
   it("paints no selected, pressed or current state from an --accent token", () => {
-    expect(accentStates(rules)).toEqual([]);
+    expect(unexcused(rules)).toEqual([]);
+  });
+
+  it("finds each rail location marker it lets through", () => {
+    const found = new Set(accentStates(rules));
+    expect([...LOCATION_MARKERS].filter((entry) => !found.has(entry))).toEqual(
+      [],
+    );
   });
 
   // A marker that matches nothing in the tree is a pattern that went blind.
@@ -115,5 +134,19 @@ describe("a selected or pressed state is neutral", () => {
     expect(
       accentStates(probe(".row.on", "outline-color: var(--accent)")),
     ).toEqual([]);
+  });
+
+  it("lets through only the rail's own fill, in its own sheet", () => {
+    const shell = join(frontendRoot, "src", "app", "shell.css");
+    const elsewhere = join(frontendRoot, "src", "probe.css");
+    const marked = (file: string, selector: string, body: string) =>
+      unexcused([{ file, selector, body }]);
+    const fill = "background: var(--accent)";
+    expect(marked(shell, ".rail .navitem.active", fill)).toEqual([]);
+    expect(
+      marked(shell, ".rail .navitem.active", "color: var(--accentText)"),
+    ).toHaveLength(1);
+    expect(marked(shell, ".tabs .tab.active", fill)).toHaveLength(1);
+    expect(marked(elsewhere, ".rail .navitem.active", fill)).toHaveLength(1);
   });
 });

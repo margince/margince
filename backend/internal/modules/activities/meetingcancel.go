@@ -169,18 +169,21 @@ func writeMeetingCancellationTx(
 	// trusted to the caller's read: this is the statement that writes, and a
 	// row that was retired between the lock and the write must not be moved by
 	// it.
-	tag, err := tx.Exec(ctx, `
+	var storedStart time.Time
+	var startPrecision string
+	err := tx.QueryRow(ctx, `
 		UPDATE activity SET meeting_status = $2
 		 WHERE id = $1 AND meeting_status IS NOT DISTINCT FROM $3
-		   AND restricted_at IS NULL AND archived_at IS NULL`,
-		id, cancelled, stored)
-	if err != nil {
-		return fmt.Errorf("activities: cancelling the captured meeting %s: %w", id, err)
-	}
-	if tag.RowsAffected() != 1 {
+		   AND restricted_at IS NULL AND archived_at IS NULL
+		 RETURNING occurred_at, occurred_precision`,
+		id, cancelled, stored).Scan(&storedStart, &startPrecision)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// The row moved under the lock. An audit row about a change that did not
 		// happen would put a lie in the compliance trail.
 		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("activities: cancelling the captured meeting %s: %w", id, err)
 	}
 	before := map[string]any{auditFieldMeetingStatus: deref(stored)}
 	after := map[string]any{auditFieldMeetingStatus: cancelled}
@@ -198,19 +201,25 @@ func writeMeetingCancellationTx(
 	// scheduled start travels as the transition's own moment; the natural key
 	// travels as its idempotency key, so a calendar resynced twice records one
 	// cancellation.
-	scheduledStart := &at
+	// The connector reports an instant. Only when it is the meeting's own
+	// stored start does the meeting's precision apply to it.
+	precision := PrecisionInstant
+	if at.Equal(storedStart) {
+		precision = startPrecision
+	}
+	scheduled := scheduledAs(at, precision)
 	if at.IsZero() || !datasource.InstantInRange(at) {
 		// An event whose start we could not read, or could not store. The
 		// transition is still recorded, since the meeting was cancelled either
 		// way. It carries no scheduled start: the zero instant would file it at
 		// the beginning of history and count as a booking due in year one.
-		scheduledStart = nil
+		scheduled = nil
 	}
 	return recordMeetingTransition(ctx, tx, meetingTransition{
-		ActivityID:     id,
-		Status:         cancelled,
-		ScheduledStart: scheduledStart,
-		SourceSystem:   &key.SourceSystem,
-		SourceID:       &key.SourceID,
+		ActivityID:   id,
+		Status:       cancelled,
+		Scheduled:    scheduled,
+		SourceSystem: &key.SourceSystem,
+		SourceID:     &key.SourceID,
 	})
 }

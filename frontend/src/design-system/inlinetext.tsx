@@ -1,6 +1,7 @@
 import {
   type ComponentPropsWithoutRef,
   forwardRef,
+  type ReactNode,
   type Ref,
   useEffect,
   useRef,
@@ -13,6 +14,15 @@ import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
 import { DateInput, type DateInputProps, isoOrBlank } from "./dateinput";
 import { panelsOpenedFrom } from "./dialogfocus";
 import "./inlinechoice.css";
+
+export const INLINE_COMMIT_KEY = "Enter";
+
+/** A paragraph commits on ⌘/Ctrl+Enter, because Enter there is a newline. */
+export function isParagraphCommit(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">,
+): boolean {
+  return event.key === INLINE_COMMIT_KEY && (event.metaKey || event.ctrlKey);
+}
 
 // Edits a value where it is read, under InlineChoice's save and refusal rules.
 // Typing has no moment of choice, so Enter or leaving the field commits it.
@@ -209,6 +219,7 @@ export function InlineText({
   multiline,
   type,
   step,
+  frame,
   onEditingChange,
   onDirtyChange,
   canEdit,
@@ -234,6 +245,10 @@ export function InlineText({
   maxLength?: number;
   type?: "text" | "email" | "number" | "date";
   step?: string;
+  // Holds the resting value in the element its text belongs to, such as a
+  // record's h1. The open editor is never held there: a field is not heading
+  // content.
+  frame?: (resting: ReactNode) => ReactNode;
   // A value that is a PARAGRAPH rather than a line: the account's own story
   // fields run to several sentences, and a single-line input shows a reader
   // one sentence of what they are editing. Enter then inserts a newline
@@ -316,26 +331,27 @@ export function InlineText({
       cancelling.current = false;
       setEditing(true);
     };
+    const held = frame ?? ((resting: ReactNode) => resting);
     if (verb)
-      return (
+      return held(
         <InlineEditVerb
           ref={trigger}
           label={label}
           disabled={!canEdit}
           onClick={open}
-        />
+        />,
       );
     if (!canEdit) {
-      return (
+      return held(
         <ReadOnlyText
           value={value}
           display={display}
           suggested={suggested}
           readOnlyReason={readOnlyReason}
-        />
+        />,
       );
     }
-    return (
+    return held(
       <button
         ref={trigger}
         type="button"
@@ -349,7 +365,7 @@ export function InlineText({
         onClick={open}
       >
         {shown}
-      </button>
+      </button>,
     );
   }
 
@@ -425,12 +441,11 @@ export function InlineText({
               void commit(true, settled);
             }}
             onKeyDown={(event) => {
-              // In a paragraph Enter is a newline and the commit moves to
-              // Cmd/Ctrl+Enter; in a line Enter is still the commit.
               if (
-                event.key === "Enter" &&
                 !isImeCommit(event) &&
-                (!multiline || event.metaKey || event.ctrlKey)
+                (multiline
+                  ? isParagraphCommit(event)
+                  : event.key === INLINE_COMMIT_KEY)
               ) {
                 event.preventDefault();
                 void commit(true);

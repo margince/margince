@@ -121,7 +121,7 @@ describe("a brief item is answerable from the queue", () => {
     renderWorklist();
     const link = await screen.findByRole("link", { name: en["deal.openDeal"] });
     expect(link.getAttribute("href")).toBe(
-      "#/deals/01a05500-0000-7000-8000-0000000000bb",
+      "/r/deals/01a05500-0000-7000-8000-0000000000bb#/deals/01a05500-0000-7000-8000-0000000000bb",
     );
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
     expect(writes(fetched)).toEqual([]);

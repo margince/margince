@@ -110,7 +110,13 @@ func homeRepairReview(scope homeRepairScope, asOf time.Time) (datatask.ReviewReq
 }
 
 func homeRepairDigest(review datatask.ReviewRequest) (string, error) {
-	var scope homeRepairScope
+	return reviewDigest[homeRepairScope](review)
+}
+
+// reviewDigest names a reviewed plan by its canonical form, so a scope that
+// decodes to the same plan always has the same digest. S is the task's scope.
+func reviewDigest[S any](review datatask.ReviewRequest) (string, error) {
+	var scope S
 	if err := json.Unmarshal(review.Scope, &scope); err != nil {
 		return "", err
 	}

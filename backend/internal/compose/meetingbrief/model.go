@@ -63,7 +63,7 @@ Say plainly when something is uncertain or missing rather than filling the gap. 
 // instead — which json.Marshal emitted as "Language", so the field the prompt
 // named was never actually present.
 func briefSystemFor(fence promptfence.Fence, lang string) string {
-	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptlang.Rule(lang) + "\n" +
+	return briefSystem + "\n" + promptvoice.Rule + "\n" + promptvoice.Move + "\n" + promptlang.Rule(lang) + "\n" +
 		fence.Rule("meeting summary")
 }
 
@@ -281,13 +281,15 @@ func keptSentence(
 		sentence.Evidence = append(sentence.Evidence,
 			Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID})
 	}
-	// Grounding decides FIRST. Counting an ungrounded recommendation would let
-	// one malformed claim spend the volume budget and suppress the valid advice behind
-	// it — the reader loses the advice and is told nothing about why.
+	// Grounding and refusal decide first: a recommendation the reader never sees
+	// must not spend the budget.
 	if !claims.Grounded(sentence, known) {
 		return Sentence{}, false
 	}
 	if nature == natureRecommendation {
+		if claims.OpensWithWriterSubject(sentence.Text) {
+			return Sentence{}, false
+		}
 		*recommendations++
 	}
 	return sentence, true

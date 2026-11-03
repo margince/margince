@@ -19,7 +19,7 @@
   transition: background-color var(--dur-state) var(--ease-out);
 }
 .worklist-list > li > .worklist-row:not(.worklist-row-selected):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* Three columns a reader runs down as three lists: the rank, the KIND of work,

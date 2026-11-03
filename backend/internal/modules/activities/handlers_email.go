@@ -286,21 +286,31 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
-// The wire names of the two fields every mail send requires, shared with the
-// agent door that refuses them blank.
-const (
-	FieldSubject = fieldSubject
-	FieldBody    = fieldBody
-)
+// RefuseBlankMail answers a subject or body that holds nothing but white space.
+// Both send doors call it, so a message never goes out with a blank field on
+// one door that the other refuses.
+func RefuseBlankMail(subject, body string) error {
+	if strings.TrimSpace(subject) == "" {
+		return &RequiredFieldError{Field: fieldSubject}
+	}
+	if strings.TrimSpace(body) == "" {
+		return &RequiredFieldError{Field: fieldBody}
+	}
+	return nil
+}
 
 // requiredSent answers a send body that left out `subject` or `body`, which
-// both send requests require. An empty string is a value the caller chose.
-func requiredSent(w http.ResponseWriter, r *http.Request) bool {
+// both send requests require, or that left either one blank.
+func requiredSent(w http.ResponseWriter, r *http.Request, subject, body string) bool {
 	for _, field := range []string{fieldSubject, fieldBody} {
 		if err := httperr.RequireSent(r, field, field+" is required"); err != nil {
 			httperr.Write(w, r, err)
 			return false
 		}
+	}
+	if err := RefuseBlankMail(subject, body); err != nil {
+		writeStoreErr(w, r, err)
+		return false
 	}
 	return true
 }
@@ -312,7 +322,7 @@ func requiredSent(w http.ResponseWriter, r *http.Request) bool {
 // drift between the two surfaces (ADR-0087 §1).
 func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendCompanyEmailParams) {
 	var req crmcontracts.SendCompanyEmailRequest
-	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r, req.Subject, req.Body) {
 		return
 	}
 	links := linkInputsOf(&req.Links)
@@ -410,7 +420,7 @@ func sendInputFrom(to []openapi_types.Email, cc, bcc *[]openapi_types.Email, sub
 // inherits. Its account-started twin above shares everything after the origin.
 func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SendEmailParams) {
 	var req crmcontracts.SendEmailRequest
-	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r, req.Subject, req.Body) {
 		return
 	}
 	// Deliverability — the RFC 8058 header and the visible footer — is

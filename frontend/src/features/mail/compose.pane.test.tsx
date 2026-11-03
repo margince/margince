@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
+import { draftButton } from "../../testing/composedraft.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import { ComposeModal } from "./compose";
 import {
   type Activity,
@@ -21,6 +23,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // What the composer claims a message is, and when it claims nothing.
@@ -232,6 +235,131 @@ describe("the composer's conversation pane", () => {
     occurred_at: "2026-06-28T00:00:00Z",
   };
 
+  it("quotes only the selected message even when other thread rows are newer", async () => {
+    const user = steppedClock();
+    const newer = {
+      ...sibling,
+      id: "act-newer",
+      body: "Later invoice discussion",
+      occurred_at: "2026-07-02T00:00:00Z",
+    };
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities": () =>
+        jsonResponse({
+          data: [newer, threaded, sibling],
+          page: { has_more: false },
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Show selected message" }),
+    );
+    const quote = document.querySelector<HTMLElement>(".compose-earlier");
+    if (!quote) throw new Error("reply quote is absent");
+    expect(
+      within(quote).getByText("The signed order is attached."),
+    ).toBeTruthy();
+    expect(within(quote).queryByText("Later invoice discussion")).toBeNull();
+    expect(
+      within(quote).queryByText("Sending the order over today."),
+    ).toBeNull();
+  });
+
+  it("changes the quote, target line and draft request when another message is selected", async () => {
+    const user = steppedClock();
+    const second: Activity = {
+      ...threaded,
+      id: "act-2",
+      subject: "Invoice",
+      body: "Please confirm the invoice address.",
+      occurred_at: "2026-07-02T00:00:00Z",
+    };
+    const sent = stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(threaded),
+      "GET /activities/act-2": () => jsonResponse(second),
+      "GET /activities": () =>
+        jsonResponse({ data: [second, threaded], page: { has_more: false } }),
+      "POST /activities/act-2/draft-email": () =>
+        jsonResponse({
+          subject: "Re: Invoice",
+          body: "Invoice draft.",
+          ai_generated: true,
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Show selected message" }),
+    );
+    await screen.findByText("The signed order is attached.");
+    await user.click(screen.getByRole("button", { name: /Change$/ }));
+    await user.click(
+      await within(threadMenu()).findByRole("button", { name: /Invoice/ }),
+    );
+    await screen.findByText(/Replying to “Invoice”/);
+    const quote = document.querySelector<HTMLElement>(".compose-earlier");
+    if (!quote) throw new Error("selected quote is absent");
+    expect(within(quote).getByText(second.body ?? "")).toBeTruthy();
+    expect(within(quote).queryByText(threaded.body ?? "")).toBeNull();
+    await user.click(draftButton());
+    await waitFor(() =>
+      expect(
+        sent.some((call) => call.key === "POST /activities/act-2/draft-email"),
+      ).toBe(true),
+    );
+    expect(
+      sent.some((call) => call.key === "POST /activities/act-1/draft-email"),
+    ).toBe(false);
+  });
+
+  it("labels a colleague-authored inbound message as our follow-up and names its author", async () => {
+    const user = steppedClock();
+    const colleague: Activity = {
+      ...threaded,
+      voice: {
+        author: {
+          kind: "colleague",
+          display_name: "Anna Team",
+          is_reader: false,
+        },
+      },
+    };
+    stubRoutes({ "GET /activities/act-1": () => jsonResponse(colleague) });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText(/Following up on “Re: Q3”/);
+    await user.click(
+      screen.getByRole("button", { name: "Show selected message" }),
+    );
+    const quote = document.querySelector<HTMLElement>(".compose-quoted");
+    if (!quote) throw new Error("selected quote is absent");
+    expect(quote.textContent).toContain("Anna Team");
+    expect(quote.textContent).not.toContain("You wrote");
+  });
+
   it("marks the thread it is answering in the menu above the fields", async () => {
     stubRoutes({
       "GET /activities/act-1": () => jsonResponse(threaded),
@@ -287,7 +415,7 @@ describe("the composer's conversation pane", () => {
     // The words the draft answers are quoted under it; the withheld one is
     // not, since nobody here may read it.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Show 1 earlier message" }),
+      await screen.findByRole("button", { name: "Show selected message" }),
     );
     expect(
       await screen.findByText("The signed order is attached."),
@@ -390,7 +518,7 @@ describe("the composer's conversation pane", () => {
     );
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Show 1 earlier message" }),
+      await screen.findByRole("button", { name: "Show selected message" }),
     );
     await waitFor(() =>
       expect(document.querySelector(".compose-earlier")?.textContent).toContain(
@@ -406,7 +534,7 @@ describe("the composer's conversation pane", () => {
   });
 
   it("searches a long record's threads and reads older ones a page at a time", async () => {
-    const user = userEvent.setup();
+    const user = steppedClock();
     const older: Activity = {
       ...sibling,
       id: "act-9",

@@ -105,13 +105,7 @@ func startRunnerLogging(t *testing.T, pool *pgxpool.Pool, log *slog.Logger) (*jo
 	if err := runner.Start(context.Background()); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	t.Cleanup(func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	})
+	t.Cleanup(integration.StartedJobRunner(t, runner))
 	return runner, sub
 }
 

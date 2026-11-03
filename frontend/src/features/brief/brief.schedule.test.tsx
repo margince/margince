@@ -178,7 +178,7 @@ describe("the schedule panel", () => {
         within(panel)
           .getByRole("link", { name: en[verb] })
           .getAttribute("href"),
-      ).toBe("#/settings/connections");
+      ).toBe("/#/settings/connections");
       expect(scheduleIsEmpty(day, "ready")).toBe(false);
     },
   );

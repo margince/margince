@@ -3,6 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
 import { TagsPanel } from "../../components/tagspanel";
@@ -21,6 +22,7 @@ import {
   RecordDetails,
 } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
+import { industryOptions, industryWords } from "../../format/industry";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -35,8 +37,10 @@ import {
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
-import { LeadCompany } from "./leadcompany";
+import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
+import { leadIndustry } from "./leadindustry";
+import { useLeadPartnerRow } from "./leadpartner";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -57,12 +61,16 @@ function isBlank(value: string | null | undefined): boolean {
 /**
  * One field of the lead, edited where it stands. Every row saves through
  * the same independent-edit path the record form used, so two rows cannot
- * send a different If-Match or invalidate different caches.
+ * send a different If-Match or invalidate different caches. The record's head
+ * renames the lead through it too.
  */
-function useFieldSave(lead: Lead) {
+export function useFieldSave(lead: Lead) {
   const t = useT();
   const queryClient = useQueryClient();
-  return (key: TextKey | "origin", required = false) =>
+  return (
+    key: TextKey | "origin" | "industry" | "partner_company_id",
+    required = false,
+  ) =>
     async (next: string) => {
       if (required && !next.trim()) {
         throw new ProblemError({ detail: t("record.fieldRequired") });
@@ -153,6 +161,11 @@ function useAboutRows(
   const save = useFieldSave(lead);
   const canEdit = !writer.readOnly;
   const reason = writer.readOnlyReason;
+  const partnerRow = useLeadPartnerRow(
+    lead,
+    writer,
+    save("partner_company_id"),
+  );
   const text = (
     key: TextKey,
     label: MessageKey,
@@ -182,6 +195,8 @@ function useAboutRows(
   const rows: DetailRow[] = [
     {
       ...companyName,
+      // A domain can match a company the lead never named, and the offer must show.
+      empty: companyName.empty && !(lead.company_match && canEdit),
       value: (
         <>
           {companyName.value}
@@ -190,6 +205,33 @@ function useAboutRows(
       ),
     },
     text("title", "create.contactTitle"),
+    // The linked company's industry speaks for the lead, and shows under it.
+    ...(leadIndustry(lead)?.from === "company"
+      ? []
+      : [
+          {
+            key: "industry",
+            term: t("create.industry"),
+            empty: !lead.industry,
+            value: (
+              <InlineChoice
+                label={t("create.industry")}
+                hideLabel
+                value={lead.industry ?? ""}
+                options={[
+                  { value: "", label: t("field.unset") },
+                  ...industryOptions(t, locale),
+                ]}
+                render={(value) =>
+                  value === "" ? t("field.unset") : industryWords(t, value)
+                }
+                canEdit={canEdit}
+                readOnlyReason={reason}
+                onSave={save("industry")}
+              />
+            ),
+          },
+        ]),
     {
       key: "email",
       term: t("create.email"),
@@ -226,6 +268,7 @@ function useAboutRows(
       ),
     },
     text("origin_detail", "lead.originDetail"),
+    ...(partnerRow ? [partnerRow] : []),
     {
       key: "added_via",
       term: t("lead.addedVia"),
@@ -341,6 +384,7 @@ function LeadDetailsBody({
     writer.readOnly ? terminalReasonId : undefined,
   );
   const setBy = statusSetBy(lead, t);
+  const companyFacts = useLeadCompanyFactsSection(lead);
   const sections: DetailSection[] = [
     {
       key: "about",
@@ -348,6 +392,7 @@ function LeadDetailsBody({
       // A lead nobody may change has no blank to fill, so it has none to show.
       rows: writer.readOnly ? about.filter((row) => !row.empty) : about,
     },
+    ...(companyFacts ? [companyFacts] : []),
     {
       key: "ownership",
       label: t("record.details.ownership"),
@@ -376,6 +421,14 @@ function LeadDetailsBody({
     { key: "lists", label: t("lists.record.title"), children: lists || null },
   ];
   return (
-    <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+    <>
+      <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      {!lead.archived_at && (
+        <ConversationSuggestionsCard
+          key={lead.id}
+          record={{ type: "lead", id: lead.id }}
+        />
+      )}
+    </>
   );
 }

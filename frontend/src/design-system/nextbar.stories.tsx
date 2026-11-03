@@ -67,6 +67,30 @@ export const ReadyToQualify: Story = {
   },
 };
 
+/** A task with its own words under the title, cut at one line on a narrow
+ *  bar, with a German label that runs long. */
+export const TaskWithDetail: Story = {
+  args: {
+    title: "Rückruf wegen der Verlängerungsvereinbarung",
+    detail:
+      "Zweiter Versuch: Dana fragt nach den Preisstufen für die Verlängerung und möchte vor Freitag eine Zusage.",
+    sub: "Fällig am 25. Juli",
+    more: { count: 1, onOpen: noop },
+  },
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: "20rem" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const detail = within(canvasElement).getByText(/^Zweiter Versuch/);
+    await expect(detail).toBeVisible();
+    await expect(detail.scrollWidth).toBeGreaterThan(detail.clientWidth);
+  },
+};
+
 /** Nothing dated next: one quiet sentence rather than an empty bar. */
 export const NothingNext: Story = {
   args: {},

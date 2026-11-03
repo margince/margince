@@ -38,6 +38,8 @@ func newPromoteIdentityEnv(t *testing.T) (context.Context, *Store) {
 	actor.Permissions.Objects["contact"] = principal.ObjectGrant{
 		Create: true, Read: true, Update: true, Delete: true,
 	}
+	actor.Permissions.Objects["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	actor.Permissions.Objects["relationship"] = principal.ObjectGrant{Create: true, Read: true}
 	return principal.WithActor(ctx, actor), store
 }
 

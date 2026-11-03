@@ -6,27 +6,30 @@ import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
-import { askKey } from "./worklist.ask";
-import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import {
   briefContextTitle,
   briefSubjectLabel,
   dealFactsText,
-  isUnprepared,
   itemTitle,
   phrasedReasons,
   reasonText,
   rowHref,
   subjectHref,
   whenText,
-} from "./worklist.copy";
+} from "../../lib/worklistcopy";
+import {
+  conditionOf,
+  eyebrowKeyFor,
+  kindClass,
+} from "../../lib/worklisteyebrow";
+import { askKey } from "./worklist.ask";
+import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
-import { leadFactsText } from "./worklist.leadfacts";
 import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
@@ -35,14 +38,20 @@ import type { WorklistItem } from "./worklist.queries";
 import {
   noticeDetail,
   readerTask,
+  sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
-import { useDrawerDials, withWorklistReturn } from "./worklist.return";
-import { aboutRecord, shapedReadings, touchOf } from "./worklist.row.captions";
+import {
+  aboutRecord,
+  shapedReadings,
+  touchOf,
+  useListed,
+} from "./worklist.row.captions";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
@@ -137,17 +146,20 @@ export function WorklistRow({
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
   // Inside the drawer a row's record links carry the way back to it.
-  const drawer = useDrawerDials();
+  const listed = useListed();
   const target = rowHref(item);
-  const href = target && withWorklistReturn(target, drawer);
+  const href = target && listed(target);
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const name = framedName(readerTask(item, viewer, t), t, locale, framed);
+  const name = framedName(
+    readerTask(sentenceTitled(item), viewer, t),
+    t,
+    locale,
+    framed,
+  );
   const title = name.title;
-  const facts =
-    dealFactsText(item, t, locale, zone) ??
-    leadFactsText(item, t, locale, zone);
+  const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
@@ -180,13 +192,13 @@ export function WorklistRow({
   // its rows and this line is the only place those facts are said there.
   const about = framed
     ? undefined
-    : aboutRecord(item, emailOpener !== undefined, drawer);
+    : aboutRecord(item, emailOpener !== undefined, listed);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  // Whether the day put a state on this row — overdue, or a meeting with
-  // nothing prepared. They ride on the title line, which is why it is drawn on
-  // a row that has no title of its own to draw.
+  // Whether the day put a state on this row: overdue, or a meeting the reader
+  // has not confirmed ready. They ride on the title line, which is why it is
+  // drawn on a row that has no title of its own to draw.
   const badged = item.overdue === true || isUnprepared(item);
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two
@@ -286,6 +298,7 @@ export function WorklistRow({
             />
           )}
           <RowAsk item={item} framed={framed} />
+          <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />

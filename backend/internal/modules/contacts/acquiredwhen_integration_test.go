@@ -233,14 +233,14 @@ func TestAnAddressWeOnlyWroteToStaysUnknown(t *testing.T) {
 	}
 }
 
-// A newsletter is a list writing to everyone, not the sender writing to us.
-func TestABulkSenderStaysUnknown(t *testing.T) {
+// Bulk delivery does not change who supplied the sender address.
+func TestABulkSenderSuppliesTheirOwnAddress(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	in := e.datedEnsureInput(ctx, t, "news@list.test", "list.test", time.Now().Add(-time.Hour))
+	in := e.datedEnsureInput(ctx, t, "news@list.test", "list.test", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
 	in.Replied = false
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE activity SET bulk_mail_attested = true WHERE id = $1`, in.ActivityID)
+		_, err := tx.Exec(ctx, `UPDATE activity SET bulk_mail_attested = true, inbound_sender_authenticated = true WHERE id = $1`, in.ActivityID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -249,7 +249,56 @@ func TestABulkSenderStaysUnknown(t *testing.T) {
 	if err != nil || !res.ContactCreated {
 		t.Fatalf("ensure = %+v (err %v), want a created contact", res, err)
 	}
+	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredSubjectInitiated {
+		t.Errorf("a bulk sender is recorded as %q, want %q", kind, AcquiredSubjectInitiated)
+	}
+}
+
+func TestUnverifiedBulkDoesNotSupplyDirectSenderEvidence(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	in := e.datedEnsureInput(ctx, t, "unverified@list.test", "list.test", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
+	in.Replied = false
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE activity SET bulk_mail_attested = true, inbound_sender_authenticated = false WHERE id = @id`, pgx.NamedArgs{"id": in.ActivityID})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	res, err := e.store.EnsureCounterparty(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if kind, _ := acquisitionOf(ctx, t, e.store, res.ContactID); kind != AcquiredUnknownLegacy {
-		t.Errorf("a bulk sender is recorded as %q, want %q", kind, AcquiredUnknownLegacy)
+		t.Fatalf("unverified bulk changed the source to %s", kind)
+	}
+}
+
+func TestPromotedThirdPartyLeadKeepsItsSourceAfterAuthenticatedMail(t *testing.T) {
+	for _, origin := range []string{"referral", "cold_outreach"} {
+		t.Run(origin, func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.as()
+			address := origin + "@lead.test"
+			lead, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: new("Referred Sender"), Email: &address, Source: "manual", Origin: &origin})
+			if err != nil {
+				t.Fatal(err)
+			}
+			mail := e.datedEnsureInput(ctx, t, address, "lead.test", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
+			if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+				_, err := tx.Exec(ctx, `UPDATE activity SET bulk_mail_attested = true, inbound_sender_authenticated = true WHERE id = @id`, pgx.NamedArgs{"id": mail.ActivityID})
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			contact := e.convertAfterMail(ctx, t, ids.From[ids.LeadKind](ids.UUID(lead.Id)), mail)
+			want := AcquiredReferral
+			if origin == "cold_outreach" {
+				want = AcquiredPublicOrBusinessSource
+			}
+			if kind, _ := acquisitionOf(ctx, t, e.store, contact); kind != want {
+				t.Fatalf("source = %s, want %s", kind, want)
+			}
+		})
 	}
 }

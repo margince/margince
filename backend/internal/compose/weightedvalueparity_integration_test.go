@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -44,7 +45,7 @@ func TestTheTwoSpellingsOfWeightedValueAgree(t *testing.T) {
 	// table each, so the constant under test needs no rewriting to run.
 	query := fmt.Sprintf(
 		`SELECT %s FROM (SELECT $1::bigint AS amount_minor) t, (SELECT $2::int AS win_probability) s`,
-		weightedAmountMinorExpr)
+		strings.ReplaceAll(weightedAmountMinorExpr, reportChanceToken, "s.win_probability"))
 
 	cases := []struct {
 		name        string
@@ -117,7 +118,7 @@ func TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit(t *testing.T
 	conn := connectForExpressionParity(t)
 	query := fmt.Sprintf(
 		`SELECT %s FROM (SELECT $1::bigint AS amount_minor) t, (SELECT $2::int AS win_probability) s`,
-		weightedAmountMinorExpr)
+		strings.ReplaceAll(weightedAmountMinorExpr, reportChanceToken, "s.win_probability"))
 
 	const beyondTheColumn = 300
 	// values.ErrWeightedValueOutOfRange specifically, not any error: a domain guard
