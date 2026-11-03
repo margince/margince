@@ -137,6 +137,12 @@ To read a report, a user needs access to the report and access to the numbers un
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
+## What does the panel beside the chart say?
+
+**Assessment** sits beside the leading chart of the sales review. It reads the measured figures and writes a few sentences on what they show. Each is marked as an observation, a reported fact or a guess. It names one next decision on a deal you may open, or says that none is supported.
+
+**View evidence** lists the figures each sentence rests on and opens their records. **Record decision** turns the next decision into a task with the deal and owner filled in. **Refresh assessment** asks again. Without an AI model, the panel shows the summary written from the figures and says so.
+
 ## How do I record a decision from a review?
 
 Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.

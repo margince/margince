@@ -1,0 +1,40 @@
+name: sales_assessment_names_the_largest_open_deal
+task: report_interpret
+site: sales_assessment
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# A quarter behind its target with one large open deal in proposal. The
+# assessment reads the gap off the cells and names that deal.
+fixture:
+  frame:
+    scope: Whole company
+    period: this_quarter
+    window: "2026-10-01 to 2026-12-31"
+    currency: EUR
+    today: "2026-11-03"
+  cells:
+    - {label: bookings_won, value: "216000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
+    - {label: forecast_landing, value: "410000 EUR", unit: EUR, window: "2026-10-01 to 2026-12-31", coverage: ok}
+    - {label: open_pipeline, value: "370000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
+    - {label: closed_win_rate, value: "0.33 ratio", unit: ratio, window: "2026-10-01 to 2026-11-03", coverage: ok}
+  candidate_deals:
+    - {label: linden, name: "Linden press line", amount: "250000 EUR", stage: Proposal}
+    - {label: tern, name: "Tern customer portal", amount: "120000 EUR", stage: Qualified}
+  decisions: []
+expect:
+  outcome: accepted
+  answer:
+    cites: [bookings_won, open_pipeline]
+    next_decision: linden
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the assessment reads the figures as given and names the deal
+    that matters. It must cite sales won and the open pipeline, and it must
+    not invent a figure the cells do not carry: a percentage gap or a
+    "remaining to target" number no cell holds fails the scenario. The next
+    decision must name the Linden press line, the larger deal in proposal,
+    with one concrete thing to decide. A decision on the smaller qualified
+    deal scores low; no decision at all fails.

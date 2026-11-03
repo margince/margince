@@ -19946,6 +19946,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
   "analytics.hero.noPrior": "Noch keine frühere Periode zum Vergleich.",
   "analytics.overview.more": "Mehr",
+  "analytics.assessment.title": "Einschätzung",
+  "analytics.assessment.pending": "Zahlen werden gelesen",
+  "analytics.assessment.refresh": "Einschätzung erneuern",
+  "analytics.assessment.retry": "Erneut versuchen",
+  "analytics.assessment.noSales":
+    "Keine gemessenen Verkäufe in dieser Auswahl.",
+  "analytics.assessment.deterministic":
+    "Allein aus den Zahlen geschrieben. Ein KI-Modell ergänzt hier seine Lesart, sobald eines eingerichtet ist.",
+  "analytics.assessment.nextDecision": "Nächste Entscheidung",
+  "analytics.assessment.noDecision": "Keine gestützte Entscheidung.",
+  "analytics.assessment.viewEvidence": "Belege ansehen",
+  "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",
+  "analytics.assessment.evidencePurpose":
+    "Jeder Satz nennt die Zahlen, die er liest. Öffne eine Zahl, um ihre Datensätze zu sehen.",
+  "analytics.assessment.confidence": "Sicherheit: {level}",
+  "analytics.assessment.kind.observation": "Beobachtung",
+  "analytics.assessment.kind.claim": "Berichtet",
+  "analytics.assessment.kind.hypothesis": "Vermutung",
+  "analytics.assessment.level.low": "niedrig",
+  "analytics.assessment.level.medium": "mittel",
+  "analytics.assessment.level.high": "hoch",
   "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
   "analytics.decisions.purpose":
     "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",

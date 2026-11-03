@@ -1,0 +1,40 @@
+name: sales_assessment_acknowledges_an_open_decision
+task: report_interpret
+site: sales_assessment
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The one open deal already carries an open decision from the last review.
+# The assessment acknowledges it and recommends nothing it already covers.
+fixture:
+  frame:
+    scope: Whole company
+    period: this_quarter
+    window: "2026-10-01 to 2026-12-31"
+    currency: EUR
+    today: "2026-11-03"
+  cells:
+    - {label: bookings_won, value: "0 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
+    - {label: open_pipeline, value: "37000 EUR", unit: EUR, window: "2026-10-01 to 2026-11-03", coverage: ok}
+  candidate_deals:
+    - {label: globex, name: "Globex renewal", amount: "25000 EUR", stage: Proposal}
+  decisions:
+    - deal: globex
+      text: "Call the buyer about the budget owner"
+      review_on: "2026-11-17"
+      status: open
+expect:
+  outcome: accepted
+  answer:
+    cites: [open_pipeline]
+    next_decision: none
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the assessment respects the decision already open. It must
+    cite the open pipeline and say that nothing was won yet, in the figures
+    given. It must mention that a decision on the Globex renewal is open for
+    review on 17 November, and its next decision must be null: recommending
+    the same call again, or any new decision on that one deal while the open
+    one stands, fails the scenario.

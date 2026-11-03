@@ -367,6 +367,10 @@ func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 
+func (stubs) AssessSalesReview(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AssessSalesReview")
+}
+
 func (stubs) GetAnalyticsContext(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAnalyticsContext")
 }
