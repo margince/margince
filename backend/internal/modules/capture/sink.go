@@ -274,6 +274,9 @@ func (s *Sink) Upsert(ctx context.Context, rec connector.NormalizedRecord) (data
 			if rec, fields, err = s.readAgainstTheSeatsAddressesTx(ctx, tx, actor.UserID, rec, fields); err != nil {
 				return err
 			}
+			if rec.ThreadKey, err = s.subjectThreadKeyTx(ctx, tx, rec, fields.Subject); err != nil {
+				return err
+			}
 			// Stored only now, so the original's privacy question sees the record
 			// staging sees, after it was read against the seat's own addresses.
 			if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {

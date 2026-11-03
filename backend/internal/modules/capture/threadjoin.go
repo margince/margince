@@ -176,7 +176,7 @@ func (s *Sink) keysToMerge(
 			return nil, err
 		}
 	}
-	keys, err := heldNeighbourKeysTx(ctx, tx, seat, neighbours, sent)
+	keys, err := heldNeighbourKeysTx(ctx, tx, seat, id, neighbours, sent)
 	if err != nil {
 		return nil, err
 	}
@@ -220,18 +220,21 @@ func ownThreadKeyTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (key stri
 // heldNeighbourKeysTx answers the distinct thread keys of the neighbours this
 // seat holds or is proved to have sent, sorted.
 func heldNeighbourKeysTx(
-	ctx context.Context, tx pgx.Tx, seat ids.UUID, neighbours, sent []ids.ActivityID,
+	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours, sent []ids.ActivityID,
 ) ([]string, error) {
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
+	// A neighbour on another topic is the conversation this reply left, not one to rejoin.
 	query := fmt.Sprintf(`
 		SELECT DISTINCT a.thread_key
 		  FROM activity a
+		  JOIN activity self ON self.id = $%d
 		 WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
 		   AND a.archived_at IS NULL
 		   AND a.id = ANY($%d::uuid[])
 		   AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
-		                WHERE ci.activity_id = a.id AND ci.user_id = $%d))`, arg(neighbours), arg(sent), arg(seat))
+		                WHERE ci.activity_id = a.id AND ci.user_id = $%d))
+		   AND %s`, arg(id), arg(neighbours), arg(sent), arg(seat), sameTopicSQL("a", "self"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)
