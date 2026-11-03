@@ -168,3 +168,34 @@ it("writes nothing for an unchanged name and sends the typed one", async () => {
   await user.type(field, "Eingehende Anfragen{Enter}");
   expect(onSave).toHaveBeenCalledExactlyOnceWith("Eingehende Anfragen");
 });
+
+function Titled({ title, label }: Readonly<{ title: string; label: string }>) {
+  return (
+    <LocaleProvider initial="en">
+      <NameDialog
+        open
+        onClose={() => undefined}
+        title={title}
+        label={label}
+        initial="Berlin"
+        confirmLabel="Save"
+        onSave={() => undefined}
+      />
+    </LocaleProvider>
+  );
+}
+
+it("prints a label that repeats the title once and keeps it as the field name", () => {
+  render(<Titled title="Deal name" label="Deal name" />);
+  const printed = screen
+    .getAllByText("Deal name")
+    .filter((node) => !node.classList.contains("sr-only"));
+  expect(printed).toHaveLength(1);
+  expect(screen.getByRole("textbox", { name: "Deal name" })).toBeVisible();
+});
+
+it("prints both when the label differs from the title", () => {
+  render(<Titled title="Rename deal" label="Deal name" />);
+  expect(screen.getByText("Rename deal")).toBeVisible();
+  expect(screen.getByText("Deal name")).not.toHaveClass("sr-only");
+});

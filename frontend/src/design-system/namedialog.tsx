@@ -115,7 +115,12 @@ export function NameDialog({
           save();
         })}
       >
-        <Field label={label} hint={hint} error={refusedName}>
+        <Field
+          label={label}
+          labelHidden={label === title}
+          hint={hint}
+          error={refusedName}
+        >
           {(control) => (
             <TextInput
               {...control}
