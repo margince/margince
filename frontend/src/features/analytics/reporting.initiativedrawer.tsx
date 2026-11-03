@@ -42,6 +42,7 @@ import {
   type SalesInitiative,
 } from "./reporting.initiatives";
 import { useMetricNames } from "./reporting.queries";
+import { goalWithProposal, ruleWithProposal } from "./reporting.setupapply";
 
 /**
  * The reader's picks and exclusions. They start from the saved membership, so
@@ -304,7 +305,16 @@ export function InitiativeDrawer({
         </Checklist>
       </DrawerHead>
       <DrawerBody>
-        {step === "goal" && <GoalFields goal={goal} onChange={setGoal} />}
+        {step === "goal" && (
+          <GoalFields
+            goal={goal}
+            onChange={setGoal}
+            onProposal={(proposal) => {
+              setGoal((prev) => goalWithProposal(prev, proposal));
+              setRule((prev) => ruleWithProposal(prev, proposal));
+            }}
+          />
+        )}
         {step === "members" && (
           <MemberFields
             rule={rule}

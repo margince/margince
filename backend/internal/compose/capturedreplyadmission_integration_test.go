@@ -31,7 +31,7 @@ func TestCapturedMailNeedsConfirmedResponsibilityBeforeItAsksForAReply(t *testin
 			o := setupOwed(t)
 			o.contact(t, "Buyer", "buyer@customer.example")
 			message := o.capture(t, owedMail{from: "buyer@customer.example", to: o.seat, subject: tc.name, body: tc.body, at: o.now.Add(-time.Hour), messageID: ids.NewV7().String() + "@customer.example"})
-			if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, tc.label); err != nil {
+			if _, err := o.e.LabelCapture(o.judge(), message, tc.label); err != nil {
 				t.Fatal(err)
 			}
 			if o.owed(t, message) {

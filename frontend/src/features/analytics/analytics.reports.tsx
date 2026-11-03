@@ -71,6 +71,8 @@ export const SECTION_REPORTS = {
   // The forecast section draws its own view (readings, a call and a receipt,
   // none of them a row set), so it lists no report card.
   forecast: [],
+  // The account views are verdicts over rows, read by their own section.
+  accounts: [],
   // The forecast-category breakdown lives here. It is a real report and the
   // only place a reader sees how the pipeline divides by category. It is not
   // the forecast, which is an answer rather than a table.
