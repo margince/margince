@@ -52,10 +52,10 @@ func NewStore(db *database.DB, rates Rates) *Store {
 	return &Store{db: db, now: time.Now, rates: rates}
 }
 
-// WithClock replaces the store's clock. Tests only: a summary that reads
+// SetClock replaces the store's clock. Tests only: a summary that reads
 // "stale" is a function of the wall clock, and a test that waited for one
 // would be a test that sometimes fails.
-func (s *Store) WithClock(now func() time.Time) *Store {
+func (s *Store) SetClock(now func() time.Time) *Store {
 	s.now = now
 	return s
 }

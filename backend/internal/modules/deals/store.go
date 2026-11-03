@@ -198,7 +198,7 @@ func refusing(field string) InstallationValue {
 	}
 }
 
-// WithClock overrides the "today" source (tests only). Returns the store
+// SetClock overrides the "today" source (tests only). Returns the store
 // for chaining.
 // WithOwnDomains binds the own-domain reader the stage-move check judges an
 // activity's author with, so a card is held to the domains as they stand.
@@ -207,7 +207,8 @@ func (s *Store) WithOwnDomains(own OwnDomainReader) *Store {
 	return s
 }
 
-func (s *Store) WithClock(clock func() time.Time) *Store {
+// SetClock sets the clock on this store itself and returns it for chaining.
+func (s *Store) SetClock(clock func() time.Time) *Store {
 	s.clock = clock
 	return s
 }

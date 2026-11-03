@@ -43,7 +43,7 @@ func reportingBusiness(t *testing.T) *reportingBusinessFixture {
 	f.human = principal.WithActor(f.human, actor)
 	f.writer = principal.SystemActing(f.human, "system:reporting-fixture")
 	f.service = newReportingService(e.Pool, func() time.Time { return f.at })
-	f.store = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).WithClock(func() time.Time { return f.at })
+	f.store = deals.NewStore(InstallationDB(e.Pool), DealsInstallation()).SetClock(func() time.Time { return f.at })
 	_, err := f.service.PublishFramework(f.human, 0, crmcontracts.ReportingFrameworkInput{Template: "sales", Reason: "Qualification begins at proposal", Qualification: []crmcontracts.ReportingQualification{{PipelineId: openapi_types.UUID(e.pipeline), StageIds: []openapi_types.UUID{openapi_types.UUID(e.stages[60])}}}, CaptureContexts: []crmcontracts.ReportingCaptureContext{{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, PipelineId: ptrUUID(e.pipeline)}}})
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func (f *reportingBusinessFixture) openDeals(t *testing.T) {
 
 func (f *reportingBusinessFixture) outcomes(t *testing.T) {
 	t.Helper()
-	store := contacts.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
+	store := contacts.NewStore(InstallationDB(f.env.Pool)).SetClock(func() time.Time { return f.at })
 	contact, err := store.CreateContact(f.human, contacts.CreateContactInput{FullName: "Customer fixture", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)

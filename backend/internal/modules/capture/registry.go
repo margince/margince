@@ -85,7 +85,7 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 	}
 }
 
-// WithClock replaces the source of the instants this registry STAMPS — the
+// SetClock replaces the source of the instants this registry STAMPS — the
 // sync-state timestamps, not the schedule.
 //
 // The schedule is deliberately out of reach: next_sync_at is a delay the
@@ -98,7 +98,7 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 // a sleep, and a test whose verdict depends on elapsed wall time is the
 // flakiness the suite refuses. A nil clock is ignored rather than installed:
 // a registry with no clock would panic on its first write.
-func (r *Registry) WithClock(now func() time.Time) *Registry {
+func (r *Registry) SetClock(now func() time.Time) *Registry {
 	if now != nil {
 		r.now = now
 	}

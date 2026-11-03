@@ -46,7 +46,7 @@ type CloseDateCorrector struct {
 	policy   CorrectionPolicy
 	reviewer QuietReviewReader
 	log      *slog.Logger
-	// now is the corrector's clock. WithClock overrides it, and a test that
+	// now is the corrector's clock. SetClock overrides it, and a test that
 	// asks what TOMORROW's pass does has no other way to get there: the
 	// proposed date is computed from "today", so two passes in one process
 	// otherwise always run on the same day.
@@ -68,7 +68,7 @@ func NewCloseDateCorrector(db *database.DB, policy CorrectionPolicy, reviewer Qu
 	}
 }
 
-// WithClock overrides the "today" this sweep computes its dates against
+// SetClock overrides the "today" this sweep computes its dates against
 // (tests only). Returns the corrector for chaining, like every other clock
 // seam in this module.
 //
@@ -82,7 +82,7 @@ func NewCloseDateCorrector(db *database.DB, policy CorrectionPolicy, reviewer Qu
 // (60 days ahead), missing, or still provisional — so a clock ahead of the
 // database's by less than that window changes which deals are FLAGGED and never
 // which are looked at. A test crossing a day or two is well inside it.
-func (c *CloseDateCorrector) WithClock(clock func() time.Time) *CloseDateCorrector {
+func (c *CloseDateCorrector) SetClock(clock func() time.Time) *CloseDateCorrector {
 	c.now = clock
 	return c
 }
