@@ -371,6 +371,35 @@ it("saves never-chosen hours as offered, without a change first", async () => {
   expect(server.profileWrites).toEqual([]);
 });
 
+async function barDiscard(user: User) {
+  await enabledSave();
+  const bar = saveBar();
+  if (bar === null) throw new Error("the page has no save bar");
+  await user.click(within(bar).getByRole("button", { name: "Discard" }));
+}
+
+it("discards the only connected calendar offered to a profile never saved", async () => {
+  const user = userEvent.setup();
+  const server = mount();
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+  expect(server.profileWrites).toEqual([]);
+});
+
+it("discards never-chosen hours offered through the bar", async () => {
+  const user = userEvent.setup();
+  const server = mount(
+    { provider: "gcal" },
+    {
+      "GET /me/working-hours": () =>
+        jsonResponse({ ...bookingHours, chosen: false }),
+    },
+  );
+  await barDiscard(user);
+  await waitFor(() => expect(saveBar()).toBeNull());
+  expect(server.hourWrites).toEqual([]);
+});
+
 it.each([
   ["90", 90],
   ["10080", 10080],

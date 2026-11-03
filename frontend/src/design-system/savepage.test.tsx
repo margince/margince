@@ -56,6 +56,27 @@ function Page({
   );
 }
 
+function OfferedCard({ offered }: Readonly<{ offered: boolean }>) {
+  useSaveDraft({
+    dirty: false,
+    offered,
+    save: async () => undefined,
+    discard: () => undefined,
+  });
+  return null;
+}
+
+function OfferPage({ offered }: Readonly<{ offered: boolean }>) {
+  return (
+    <LocaleProvider initial="en">
+      <SavePageProvider>
+        <OfferedCard offered={offered} />
+        <PageSaveBar />
+      </SavePageProvider>
+    </LocaleProvider>
+  );
+}
+
 const field = (name: string) => screen.getByRole("textbox", { name });
 const button = (name: string) => screen.queryByRole("button", { name });
 
@@ -126,6 +147,17 @@ describe("PageSaveBar", () => {
     expect(field("Name")).toHaveValue("");
     expect(field("Title")).toHaveValue("");
     expect(button(SAVE)).toBeNull();
+  });
+
+  it("brings back an offer put aside on Discard once it is offered again", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<OfferPage offered />);
+    await user.click(screen.getByRole("button", { name: DISCARD }));
+    expect(button(SAVE)).toBeNull();
+
+    rerender(<OfferPage offered={false} />);
+    rerender(<OfferPage offered />);
+    expect(button(SAVE)).toBeVisible();
   });
 
   it("sends nothing while a field says its value is wrong", async () => {

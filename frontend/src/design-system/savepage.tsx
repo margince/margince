@@ -169,11 +169,23 @@ export function useSaveDraft(draft: SaveDraft): boolean {
   const mark = registry?.mark;
   const release = registry?.release;
   const invalid = draft.invalid ?? false;
-  const offered = draft.offered ?? false;
+  // Discard puts an offer aside until it ends and is offered once more.
+  const [declined, setDeclined] = useState(false);
+  if (declined && !draft.offered) {
+    setDeclined(false);
+  }
+  const offered = (draft.offered ?? false) && !declined;
 
   // Every render, so the bar's Save always calls the latest closure.
   useEffect(() => {
-    register?.(token, draft);
+    register?.(token, {
+      ...draft,
+      offered,
+      discard: () => {
+        if (offered) setDeclined(true);
+        draft.discard();
+      },
+    });
   });
   useEffect(() => {
     mark?.(token, { dirty: draft.dirty, invalid, offered });
