@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 
 // The roster fixture, the routed backend and the row helpers the member card's
@@ -126,8 +127,8 @@ export const TEAMS = [
   { id: "t-nordics", name: "Nordics" },
 ];
 
-// The open chooser, else the resting value that opens it. Narrowed by instance,
-// so a control that stopped being a button fails by name.
+// The resting value that opens the role dialog. Narrowed by instance, so a
+// control that stopped being a button fails by name.
 export function roleSelect(row: HTMLElement, name: string) {
   const control = roleControl(row, name);
   if (!(control instanceof HTMLButtonElement)) {
@@ -138,11 +139,17 @@ export function roleSelect(row: HTMLElement, name: string) {
 
 // Null where the reader may not change this member's role: the value is words.
 export function roleControl(row: HTMLElement, name: string) {
-  const named = new RegExp(`${name}’s role`, "i");
-  return (
-    within(row).queryByRole("combobox", { name: named }) ??
-    within(row).queryByRole("button", { name: named })
-  );
+  return within(row).queryByRole("button", { name: roleOf(name) });
+}
+
+const roleOf = (name: string) => new RegExp(`${name}’s role`, "i");
+
+export async function openRoleDialog(
+  user: ReturnType<typeof userEvent.setup>,
+  row: HTMLElement,
+  name: string,
+) {
+  return openChoiceDialog(user, roleOf(name), roleSelect(row, name));
 }
 
 // What the role cell reads, open or at rest: neither its screen-reader text (a

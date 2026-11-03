@@ -149,7 +149,7 @@ function DealAsideBody({
   );
 }
 
-// The fields a row changes, and its value as text when it edits in place.
+// The fields a row changes, and its value as text when it is edited alone.
 type RowChange = Readonly<{ keys: readonly string[]; text?: string }>;
 
 type RowMaker = (
@@ -169,7 +169,7 @@ type Facts = Readonly<{
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
-// that names its fields changes them in place, empty or not.
+// that names its fields opens their edit, empty or not.
 function rowMaker(
   masked: readonly string[],
   t: Translator,

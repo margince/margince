@@ -45,13 +45,20 @@ function render(ui: ReactNode) {
 
 // The inline numbers the chip beside `name` draws its mesh from.
 function meshBeside(name: string, holder: string): string {
-  const chip = screen
-    .getAllByText(name)
+  return meshNear(screen.getAllByText(name), holder, name);
+}
+
+function meshNear(
+  nodes: readonly HTMLElement[],
+  holder: string,
+  what: string,
+): string {
+  const chip = nodes
     .map((node) => node.closest(holder)?.querySelector(".avatar-mesh"))
     .find((node) => node != null);
   const mesh = chip?.getAttribute("style");
   if (!mesh?.includes("--avatar-hue-a")) {
-    throw new Error(`no mesh beside ${name} in ${holder}`);
+    throw new Error(`no mesh beside ${what} in ${holder}`);
   }
   return mesh;
 }
@@ -66,9 +73,10 @@ function meshKeyedOn(key: string): string {
 }
 
 const headMesh = () =>
-  meshBeside(
-    screen.getByRole("heading", { level: 1 }).textContent ?? "",
+  meshNear(
+    [screen.getByRole("heading", { level: 1 })],
     ".record-split-head",
+    "the record's name",
   );
 
 const noMore = { next_cursor: null, has_more: false };

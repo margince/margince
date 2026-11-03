@@ -2925,8 +2925,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "board.count_one": "Deal: {count}",
   "board.count_other": "Deals: {count}",
-  "board.weighted": "gewichtet {value}",
-  "board.convertedAt": "Umgerechnet · Wechselkurse vom {date}",
+  "board.weightedLabel": "gewichtet",
+  "board.ratesOn": "Kurse vom {date}",
+  "board.unpriced_one": "{count} ohne Preis",
+  "board.unpriced_other": "{count} ohne Preis",
+  "board.totalsTip": "{total} offen, {weighted} gewichtet mit {probability}.",
+  "board.unpricedTip_one":
+    "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
+  "board.unpricedTip_other":
+    "{count} Deals haben keinen Preis und zählen in keiner der beiden Summen.",
+  "board.convertedTip": "Umgerechnet mit Wechselkursen vom {date}.",
   "board.matchesIn_one": "{count} Treffer in {columns}",
   "board.matchesIn_other": "{count} Treffer in {columns}",
   "board.showMatches": "Zur Spalte",
@@ -5466,9 +5474,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.terminalDisqualified":
     "Disqualifiziert. Dieser Lead ist schreibgeschützt.",
   "lead.marker": "Lead",
-  "lead.assign": "Zuweisen",
   "lead.assignToMe": "Mir zuweisen",
-  "lead.assignTo": "Diesen Lead zuweisen an",
   "lead.assignChoose": "Teammitglied wählen",
   "lead.assignNobodyElse":
     "Kein weiteres Teammitglied, dem dieser Lead zugewiesen werden kann.",
@@ -6675,7 +6681,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "field.phoneHome": "Privat",
   "field.phoneOther": "Sonstige",
   "field.primary": "Primär",
-  "field.removeRow": "Entfernen",
   "field.removeRowLabel": "Zeile {n} entfernen",
   "field.moveRowUp": "Zeile {n} nach oben verschieben",
   "field.moveRowDown": "Zeile {n} nach unten verschieben",
@@ -8075,6 +8080,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 Deal hat sich seit dieser Prüfung geändert.",
   "review.outOfDateDeals_other":
     "{count} Deals haben sich seit dieser Prüfung geändert.",
+  "review.deliveryFailed_one":
+    "1 Kundenprüfung konnte nicht als Aufgabe an den Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
+  "review.deliveryFailed_other":
+    "{count} Kundenprüfungen konnten nicht als Aufgaben an die Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
   "review.outOfDateWorkspace":
     "Eine Phase oder eine Prognose hat sich seit dieser Prüfung geändert.",
   "review.outOfDateSignals_one":
@@ -9524,6 +9533,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_run": "Prognoseprüfung auf Anfrage",
   "jobs.kind.assurance_sweep": "Prognoseprüfung",
   "jobs.kind.assurance_deal_rescan": "Prognoseprüfung eines geänderten Deals",
+  "jobs.kind.assurance_review_delivery": "Aufgabe zu einer Kundenprüfung",
   "jobs.kind.brief_generate": "Morgenbericht",
   "jobs.kind.capture_auto_enrich_sweep":
     "Anreicherung von Unternehmensdaten aus E-Mails",

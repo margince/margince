@@ -129,7 +129,15 @@ func (v *viabilityEnv) customerWrites(t *testing.T, deal ids.UUID, at time.Time)
 	}
 }
 
+// check runs the input check and works the review deliveries it queued.
 func (v *viabilityEnv) check(t *testing.T) {
+	t.Helper()
+	v.runCheck(t)
+	v.deliverReviews(t)
+}
+
+// runCheck runs the input check alone, leaving its deliveries queued.
+func (v *viabilityEnv) runCheck(t *testing.T) {
 	t.Helper()
 	worker := &assuranceRunWorker{sweep: v.worker}
 	if err := worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{
@@ -227,9 +235,7 @@ func TestACompletedReviewTaskIsNotMintedAgainAndAReplyAloneKeepsTheReview(t *tes
 		WHERE type = $1 AND subject_id = $2`, assurance.TypeDealViability, v.silent).Scan(&task); err != nil {
 		t.Fatalf("the review carries no task link: %v", err)
 	}
-	// Settled now rather than at the fixture's clock: the task was written after
-	// that instant, and a completion dated before it is refused as stale.
-	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](task), clocktest.Now(t)); err != nil || !done {
+	if done, err := v.Activities.CompleteTask(v.Admin(), ids.From[ids.ActivityKind](task), settledAfterDelivery(t)); err != nil || !done {
 		t.Fatalf("completing the review task: done=%v err=%v", done, err)
 	}
 	v.check(t)
