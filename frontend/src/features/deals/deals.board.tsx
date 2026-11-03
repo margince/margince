@@ -9,6 +9,7 @@ import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useSuggestionGhosts } from "../../components/dealsuggestion";
 import { rosterOwnerNaming } from "../../components/entityref";
+import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { CountLine } from "../../design-system/listsurface";
 import type {
@@ -129,27 +130,37 @@ export function useAdvanceDeal() {
 }
 
 // Under a column's cards: its first read's wait or failure, then its "Load more".
-// A failed later page keeps the column's cards and is named above its button.
+// A failed later read keeps the cards and is named, with Retry once no page is left.
 export function StageColumnFoot({ read }: Readonly<{ read: StageColumnRead }>) {
   const t = useT();
   return (
     <QueryStates query={read} pendingLabel={t("nav.deals")} pendingLines={3}>
-      <ErrorLine error={read.loadMoreError} />
+      <ErrorLine
+        error={read.loadMoreError}
+        actions={
+          !read.hasNextPage && (
+            <Button variant="ghost" onClick={() => read.refetch()}>
+              {t("common.retry")}
+            </Button>
+          )
+        }
+      />
       <LoadMoreButton query={read} />
     </QueryStates>
   );
 }
 
-function unreadStages(columns: ReadonlyMap<string, StageColumnRead>) {
+// Stages whose first read has not answered with cards, so their count is unknown.
+function uncountedStages(columns: ReadonlyMap<string, StageColumnRead>) {
   return new Set(
     [...columns].flatMap(([stageId, read]) =>
-      read.isPending ? [stageId] : [],
+      read.isPending || read.isError ? [stageId] : [],
     ),
   );
 }
 
 // The board's count beside the page's name, once its pipeline and figures are in.
-// A sum of loaded cards, while a column has more, says it counts the loaded.
+// A sum of loaded cards that misses a column's deals says it counts the loaded.
 export function BoardHeadCount({
   pipeline,
   stageColumns,
@@ -161,11 +172,16 @@ export function BoardHeadCount({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const totals = stageTotalsQuery.data;
   // isLoading, not isPending: a withheld report is a disabled query, pending for good.
-  if (!pipeline || stageColumns.isPending || stageTotalsQuery.isLoading) {
+  // An answered report counts every stage, so no column read is waited for.
+  if (
+    !pipeline ||
+    stageTotalsQuery.isLoading ||
+    (!totals && stageColumns.isPending)
+  ) {
     return null;
   }
-  const totals = stageTotalsQuery.data;
   const count = boardDealCount(
     pipeline.stages ?? [],
     totals,
@@ -173,7 +189,9 @@ export function BoardHeadCount({
   );
   const loadedOnly =
     !totals &&
-    [...stageColumns.columns.values()].some((read) => read.hasNextPage);
+    [...stageColumns.columns.values()].some(
+      (read) => read.hasNextPage || read.isError,
+    );
   return loadedOnly ? (
     <CountLine
       unit={t("deals.unit")}
@@ -270,7 +288,7 @@ export function DealBoardBody({
               companyMarks,
               totalsWithheld ? t(totalsWithheld) : undefined,
               rosterOwnerNaming(ownerNames),
-              unreadStages(stageColumns.columns),
+              uncountedStages(stageColumns.columns),
             )}
             onOpen={openDeal}
             cardDragHandlers={cardDragHandlers}

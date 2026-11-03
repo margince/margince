@@ -349,16 +349,32 @@ export const pipelines = page([
   },
 ]);
 
+// Thirty more deals in Qualify: past one board column's page of 25.
+const busyStageDeals = Array.from({ length: 30 }, (_, index) => ({
+  ...deals[0],
+  id: `d-busy-${index + 1}`,
+  name: `Busy deal ${index + 1}`,
+  stage_id: "s1",
+}));
+
 // The board reads the list, so the list shows the writes the detail shows. A
-// board column asks for one stage, and the server answers only that stage.
-export const listDeals: Handler = ({ json, url }, { dealPatches }) => {
+// board column asks for one stage, and the server answers only that stage. The
+// cursor is the offset of the next page, as a keyset server's is opaque.
+export const listDeals: Handler = ({ json, url }, { dealPatches, options }) => {
   const stageId = url.searchParams.get("stage_id");
-  const current = deals.map((deal) => ({ ...deal, ...dealPatches[deal.id] }));
-  return json(
-    page(
-      stageId ? current.filter((deal) => deal.stage_id === stageId) : current,
-    ),
+  const current = [...deals, ...(options.busyStage ? busyStageDeals : [])].map(
+    (deal) => ({ ...deal, ...dealPatches[deal.id] }),
   );
+  const rows = stageId
+    ? current.filter((deal) => deal.stage_id === stageId)
+    : current;
+  const from = Number(url.searchParams.get("cursor") ?? 0);
+  const limit = Number(url.searchParams.get("limit") ?? rows.length);
+  const more = from + limit < rows.length;
+  return json({
+    data: rows.slice(from, from + limit),
+    page: { next_cursor: more ? String(from + limit) : null, has_more: more },
+  });
 };
 
 const winEvidenceRequired = {

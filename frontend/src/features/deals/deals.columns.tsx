@@ -24,7 +24,7 @@ export function buildColumns(
   // play, which is the ordinary case.
   totalsWithheld?: string,
   owners?: OwnerNaming,
-  unread: ReadonlySet<string> = new Set(),
+  uncounted: ReadonlySet<string> = new Set(),
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -44,7 +44,7 @@ export function buildColumns(
         deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
         count: columnCount(
           stageTotals,
-          unread.has(stage.id) ? null : stageDeals.length,
+          uncounted.has(stage.id) ? null : stageDeals.length,
         ),
         asOf: stageTotals?.asOf ?? null,
         timezone: stageTotals?.timezone ?? null,
@@ -56,7 +56,7 @@ export function buildColumns(
 }
 
 // The report's count over every matching deal. While the report is pending,
-// withheld or refused, the loaded cards; none while the column's read is pending.
+// withheld or refused, the loaded cards; none before a first read answers.
 function columnCount<Loaded extends number | null>(
   stageTotals: StageTotals | undefined,
   loaded: Loaded,

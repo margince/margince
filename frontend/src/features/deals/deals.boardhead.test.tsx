@@ -1,7 +1,10 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { StageColumnRead } from "./dealboard.queries";
 import { DealsScreen } from "./deals";
+import { StageColumnFoot } from "./deals.board";
 import { deal, jsonResponse, render, stubBackend } from "./deals.testkit";
 
 afterEach(() => {
@@ -138,5 +141,87 @@ describe("the deals board's counts", () => {
       within(column("s3")).queryByText("0 deals", { ignore: "[hidden]" }),
     ).toBeNull();
     expect(within(column("s1")).getByText("1 deal")).toBeTruthy();
+  });
+
+  // The report counts every stage, so a column still reading holds nothing up.
+  it("states the head count from the report while a column still reads", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendWith(
+        stubBackend(twoDeals, { stageTotalsRows: reportRows }),
+        (url) =>
+          url.searchParams.get("stage_id") === "s3"
+            ? new Promise<Response>(() => {})
+            : undefined,
+      ),
+    );
+    render(<DealsScreen />);
+
+    await waitFor(() => expect(headCount("260 deals")).toHaveLength(1));
+  });
+
+  it("states no count over a column whose first read failed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendWith(stubBackend(twoDeals), (url) =>
+        url.searchParams.get("stage_id") === "s3"
+          ? Promise.resolve(jsonResponse({ code: "internal" }, 500))
+          : undefined,
+      ),
+    );
+    render(<DealsScreen />);
+
+    expect(await screen.findByText("Fleet two")).toBeTruthy();
+    expect(await within(column("s3")).findByRole("alert")).toBeTruthy();
+    expect(
+      column("s3").querySelector(".board-col-count:not([hidden])"),
+    ).toBeNull();
+  });
+
+  // A failed column adds nothing to the sum, so the sum is not the whole board.
+  it("says the head counts only the loaded cards while a column's read failed", async () => {
+    window.location.hash = "#/deals?q=fleet";
+    vi.stubGlobal(
+      "fetch",
+      backendWith(stubBackend(twoDeals), (url) =>
+        url.searchParams.get("stage_id") === "s3"
+          ? Promise.resolve(jsonResponse({ code: "internal" }, 500))
+          : undefined,
+      ),
+    );
+    render(<DealsScreen />);
+
+    expect(await screen.findByText("1 to 2 of 2 deals loaded")).toBeTruthy();
+  });
+});
+
+describe("a board column's foot", () => {
+  const failedRefetch = (more: boolean) => ({
+    deals: [],
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    hasNextPage: more,
+    isFetchingNextPage: false,
+    fetchNextPage: vi.fn(),
+    loadMoreError: new Error("The server could not answer."),
+  });
+
+  it("offers Retry for a failed read once the column has no page left", async () => {
+    const read: StageColumnRead = failedRefetch(false);
+    const user = userEvent.setup();
+    render(<StageColumnFoot read={read} />);
+
+    expect(screen.getByRole("alert")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Retry" }));
+    expect(read.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the retry to Load more while the column has a page left", () => {
+    render(<StageColumnFoot read={failedRefetch(true)} />);
+
+    expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 });

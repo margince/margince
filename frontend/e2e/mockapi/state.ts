@@ -49,6 +49,8 @@ export type MockApiOptions = Readonly<{
   agentRunning?: true;
   // The day's queue holds the two tasks on the called contact instead.
   callTasks?: true;
+  // Qualify holds more deals than one board column reads at a time.
+  busyStage?: true;
 }>;
 
 export type LoggedActivity = {

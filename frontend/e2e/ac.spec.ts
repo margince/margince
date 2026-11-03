@@ -1012,6 +1012,26 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
 });
 
+// A stage busier than one column's page reads its next page from its own Load
+// more, and no other column reads or offers one.
+test("AC-pipeline-12: a busy stage's column loads its next page on its own", async ({
+  page,
+}) => {
+  await mockApi(page, { busyStage: true });
+  await page.goto("/#/deals");
+  const qualify = page.locator('[data-stage="s1"]');
+  // The seeded Qualify deal and thirty more: 31, of which a page reads 25.
+  const cards = qualify.locator("[data-deal]");
+  await expect(cards).toHaveCount(25);
+  const loadMore = page.getByRole("button", { name: "Mehr laden" });
+  await expect(loadMore).toHaveCount(1);
+
+  await qualify.getByRole("button", { name: "Mehr laden" }).click();
+
+  await expect(cards).toHaveCount(31);
+  await expect(loadMore).toHaveCount(0);
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
