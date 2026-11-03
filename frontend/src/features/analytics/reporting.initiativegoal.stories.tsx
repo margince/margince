@@ -15,7 +15,7 @@ import { reportingStoryRoutes } from "./reporting.story-fixtures";
 // who owns it. A new one names no owner and reads as the caller's.
 
 const meta: Meta = {
-  title: "Analytics/Reporting/Initiative goal",
+  title: "Records/Reports/Analytics/Initiative goal",
   parameters: { layout: "padded" },
 };
 export default meta;
