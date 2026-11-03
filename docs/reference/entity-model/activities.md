@@ -1018,13 +1018,15 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## meeting_invitation
 
-19 columns · primary key `(activity_id)` · referenced by 1 foreign key
+21 columns · primary key `(activity_id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `appointment` | `jsonb` | yes |  |
 | `attempts` | `integer`, default `0` | yes |  |
+| `attention_episode` | `uuid` |  |  |
+| `attention_reason` | `text` |  | Why a `needs_attention` invitation waits. |
 | `calendar_id` | `text` | yes |  |
 | `cleanup_complete` | `boolean`, default `false` | yes |  |
 | `command` | `text`, default `'create'::text` | yes | One of `create`, `update`, `cancel`. |
@@ -1051,6 +1053,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `meeting_invitation_attention_reason_check`: `CHECK ((attention_reason = ANY (ARRAY['delivery_failed', 'calendar_disconnected'])))`
 - `meeting_invitation_command_check`: `CHECK ((command = ANY (ARRAY['create', 'update', 'cancel'])))`
 - `meeting_invitation_management_hash_key`: `UNIQUE (management_hash)`
 - `meeting_invitation_provider_check`: `CHECK ((provider = ANY (ARRAY['gcal', 'graphcal'])))`
@@ -1067,6 +1070,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Triggers**
 
+- `meeting_invitation_attention_follows_status`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION meeting_invitation_attention_follows_status()`
 - `meeting_invitation_host_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled', 'erased'])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION refuse_retired_member_work('host_user_id')`
 
 ## meeting_proposal

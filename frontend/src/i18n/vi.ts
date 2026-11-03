@@ -1903,6 +1903,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.cancel": "Hủy cuộc họp",
   "scheduling.cancelConfirm":
     "Hủy cuộc họp này và thông báo cho người tham dự?",
+  "scheduling.calendarDisconnectedTitle": "Lịch của bạn đã từ chối Margince",
+  "scheduling.calendarDisconnectedHelp":
+    "Mọi lời mời đang chờ lịch này đều tạm dừng. Hãy kết nối lại lịch với quyền thêm sự kiện, chúng sẽ tự được gửi đi.",
+  "scheduling.reconnectCalendar": "Kết nối lại lịch",
   "scheduling.retry": "Thử lại lời mời",
   "scheduling.book": "Xác nhận cuộc họp",
   "scheduling.pausedUnavailable":

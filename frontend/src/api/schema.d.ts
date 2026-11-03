@@ -38135,6 +38135,14 @@ export interface components {
             video_call?: boolean;
             /** @description The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one. */
             video_url?: string;
+            /**
+             * @description Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+             *     Margince, so every queued invitation of that host and calendar was paused; they go out again on
+             *     their own once the calendar is reconnected with write access. `delivery_failed`: this one
+             *     invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+             * @enum {string}
+             */
+            attention_reason?: "delivery_failed" | "calendar_disconnected";
         };
         MeetingProposal: {
             /**
