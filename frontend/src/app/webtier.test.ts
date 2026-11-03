@@ -222,7 +222,15 @@ it("routes a record card to the public metadata endpoint rather than the static 
 describe("a booking page has a real path a preview fetcher can read", () => {
   const SLUG = "Ab3_x-9QrStUvWxYz0123456789abcd";
 
-  it.each([`/book/${SLUG}`, `/book/${SLUG}/`, "/book/lowercase-and_UPPER"])(
+  it.each([
+    `/book/${SLUG}`,
+    `/book/${SLUG}/`,
+    "/book/lowercase-and_UPPER",
+    // A host's short address, in each case a guest may type it.
+    "/book/alex",
+    "/book/ALEX",
+    "/book/alex-sales/",
+  ])(
     "sends a non-browser fetch of %s to the booking preview and a navigation to the shell",
     (path) => {
       const where = locate(path);
@@ -237,15 +245,26 @@ describe("a booking page has a real path a preview fetcher can read", () => {
     },
   );
 
-  it.each(["/book/x.png", "/book/slug.json/", "/book/.env"])(
-    "answers %s, which names a file, with 404 rather than a preview",
+  it.each([
+    "/book/x.png",
+    "/book/slug.json/",
+    "/book/.env",
+    "/book/a/b",
+    "/book/",
+    "/book/alex.sales",
+  ])(
+    "refuses %s, which names no booking page, with an unlogged 404",
     (path) => {
-      expect(answer(path)).toBe(404);
+      const where = locate(path);
+      expect(where.pattern).toBe("^/book/");
+      expect(where.body).not.toContain("/v1/public/booking/");
+      expect(where.body).toMatch(/access_log off;/);
+      expect(where.body).toMatch(/return 404 "Not found\\n";/);
     },
   );
 
-  it.each(["/book/a/b", "/Book/abc", "/book/", "/book"])(
-    "leaves %s, which is no booking page, to the shell without a preview redirect",
+  it.each(["/Book/abc", "/book"])(
+    "leaves %s, which is outside /book/, to the shell",
     (path) => {
       expect(locate(path).body).not.toContain("/v1/public/booking/");
       expect(answer(path)).toBe("shell");

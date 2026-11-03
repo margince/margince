@@ -31,6 +31,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/ai/calls": {
 		{Name: "outcome", Values: []string{"answered", "fallback", "declined", "failed"}, Array: false, Explode: true},
 	},
+	"GET /v1/analytics/decisions": {
+		{Name: "status", Values: []string{"open", "done"}, Array: false, Explode: true},
+	},
 	"GET /v1/analytics/editions/{id}/evidence": {
 		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "lead_first_response", "leads_awaiting_response", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
 	},

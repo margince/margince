@@ -18967,6 +18967,24 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	}
 }
 
+// Defines values for SalesDecisionStatus.
+const (
+	SalesDecisionStatusDone SalesDecisionStatus = "done"
+	SalesDecisionStatusOpen SalesDecisionStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the SalesDecisionStatus enum.
+func (e SalesDecisionStatus) Valid() bool {
+	switch e {
+	case SalesDecisionStatusDone:
+		return true
+	case SalesDecisionStatusOpen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesInitiativeMemberReason.
 const (
 	SalesInitiativeMemberReasonCarried  SalesInitiativeMemberReason = "carried"
@@ -24937,6 +24955,24 @@ func (e GetAiTaskFlowParamsWindow) Valid() bool {
 	case GetAiTaskFlowParamsWindowN30d:
 		return true
 	case GetAiTaskFlowParamsWindowN7d:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSalesDecisionsParamsStatus.
+const (
+	ListSalesDecisionsParamsStatusDone ListSalesDecisionsParamsStatus = "done"
+	ListSalesDecisionsParamsStatusOpen ListSalesDecisionsParamsStatus = "open"
+)
+
+// Valid indicates whether the value is a known member of the ListSalesDecisionsParamsStatus enum.
+func (e ListSalesDecisionsParamsStatus) Valid() bool {
+	switch e {
+	case ListSalesDecisionsParamsStatusDone:
+		return true
+	case ListSalesDecisionsParamsStatusOpen:
 		return true
 	default:
 		return false
@@ -47528,6 +47564,9 @@ type LeadScoreFactor struct {
 	// blended into an auto-captured signal (AC-S7a).
 	SignalKind *LeadManualSignalKind `json:"signal_kind,omitempty"`
 
+	// SourceActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `source_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
+	SourceActivities *[]ActivityReference `json:"source_activities,omitempty"`
+
 	// SourceActivityIds The activities behind a behavioral factor, re-read through the CALLER's scope (ADR-0105 §3).
 	SourceActivityIds *[]openapi_types.UUID `json:"source_activity_ids,omitempty"`
 }
@@ -55157,6 +55196,52 @@ type RunReportRequest struct {
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
 
+// SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
+type SalesDecision struct {
+	CreatedAt      time.Time          `json:"created_at"`
+	DealId         openapi_types.UUID `json:"deal_id"`
+	Decision       string             `json:"decision"`
+	DoneAt         *time.Time         `json:"done_at,omitempty"`
+	ExpectedResult *string            `json:"expected_result,omitempty"`
+
+	// Id The task's id.
+	Id openapi_types.UUID `json:"id"`
+
+	// OwnerId The accountable owner, the task's assignee.
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// Result What work was completed, once the outcome was recorded.
+	Result *string `json:"result,omitempty"`
+
+	// ReviewOn The review date, the task's due day in the installation's calendar.
+	ReviewOn *openapi_types.Date `json:"review_on,omitempty"`
+	Status   SalesDecisionStatus `json:"status"`
+}
+
+// SalesDecisionStatus defines model for SalesDecision.Status.
+type SalesDecisionStatus string
+
+// SalesDecisionInput defines model for SalesDecisionInput.
+type SalesDecisionInput struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	Decision string             `json:"decision"`
+
+	// ExpectedResult The observable result the owner expects by the review date.
+	ExpectedResult *string            `json:"expected_result,omitempty"`
+	OwnerId        openapi_types.UUID `json:"owner_id"`
+	ReviewOn       openapi_types.Date `json:"review_on"`
+}
+
+// SalesDecisionListResponse defines model for SalesDecisionListResponse.
+type SalesDecisionListResponse struct {
+	Data []SalesDecision `json:"data"`
+}
+
+// SalesDecisionOutcomeInput defines model for SalesDecisionOutcomeInput.
+type SalesDecisionOutcomeInput struct {
+	Result string `json:"result"`
+}
+
 // SalesInitiative defines model for SalesInitiative.
 type SalesInitiative struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -55519,8 +55604,16 @@ type ScheduledSendHeldReason string
 // a human reschedules or cancels it.
 type ScheduledSendStatus string
 
+// SchedulingAliasRequest defines model for SchedulingAliasRequest.
+type SchedulingAliasRequest struct {
+	// Alias The friendly address to claim; empty clears it. Validated and normalized by the server.
+	Alias string `json:"alias"`
+}
+
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
+	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
+	Alias             *string   `json:"alias,omitempty"`
 	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int       `json:"buffer_minutes"`
 	CalendarId        string    `json:"calendar_id"`
@@ -55542,10 +55635,12 @@ type SchedulingProfile struct {
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
 	NoticeMinutes int                       `json:"notice_minutes"`
 	Provider      SchedulingProfileProvider `json:"provider"`
-	PublicUrl     *string                   `json:"public_url,omitempty"`
-	ReplaceLink   *bool                     `json:"replace_link,omitempty"`
-	Slug          *string                   `json:"slug,omitempty"`
-	Title         string                    `json:"title"`
+
+	// PublicUrl The address to share: `/book/{alias}` when an alias is set, else `/book/{slug}`, on the configured public origin. Absent when no usable public origin is configured.
+	PublicUrl   *string `json:"public_url,omitempty"`
+	ReplaceLink *bool   `json:"replace_link,omitempty"`
+	Slug        *string `json:"slug,omitempty"`
+	Title       string  `json:"title"`
 
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -63714,6 +63809,39 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// ListSalesDecisionsParams defines parameters for ListSalesDecisions.
+type ListSalesDecisionsParams struct {
+	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
+	Status *ListSalesDecisionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListSalesDecisionsParamsStatus defines parameters for ListSalesDecisions.
+type ListSalesDecisionsParamsStatus string
+
+// RecordSalesDecisionParams defines parameters for RecordSalesDecision.
+type RecordSalesDecisionParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // CompareReportingEditionsParams defines parameters for CompareReportingEditions.
 type CompareReportingEditionsParams struct {
 	LeftId  openapi_types.UUID `form:"left_id" json:"left_id"`
@@ -71025,6 +71153,12 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// RecordSalesDecisionJSONRequestBody defines body for RecordSalesDecision for application/json ContentType.
+type RecordSalesDecisionJSONRequestBody = SalesDecisionInput
+
+// RecordSalesDecisionOutcomeJSONRequestBody defines body for RecordSalesDecisionOutcome for application/json ContentType.
+type RecordSalesDecisionOutcomeJSONRequestBody = SalesDecisionOutcomeInput
+
 // ExplainAnalyticsCellJSONRequestBody defines body for ExplainAnalyticsCell for application/json ContentType.
 type ExplainAnalyticsCellJSONRequestBody = AnalyticsExplainRequest
 
@@ -71948,6 +72082,9 @@ type ChangeMeetingInvitationJSONRequestBody = MeetingInvitationChange
 
 // PutSchedulingProfileJSONRequestBody defines body for PutSchedulingProfile for application/json ContentType.
 type PutSchedulingProfileJSONRequestBody = SchedulingProfile
+
+// PutSchedulingAliasJSONRequestBody defines body for PutSchedulingAlias for application/json ContentType.
+type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
@@ -83841,6 +83978,16 @@ type ServerInterface interface {
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
 	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	// The decisions recorded from a sales review, newest first, as tasks the reader may see.
+	// (GET /analytics/decisions)
+	ListSalesDecisions(w http.ResponseWriter, r *http.Request, params ListSalesDecisionsParams)
+	// Record a decision from a sales review as a task on its deal. An open decision with the
+	// same text on the same deal is returned instead of a second one.
+	// (POST /analytics/decisions)
+	RecordSalesDecision(w http.ResponseWriter, r *http.Request, params RecordSalesDecisionParams)
+	// Record what work was completed and close the decision. The deal does not change.
+	// (POST /analytics/decisions/{id}/outcome)
+	RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request, id Id)
 	// Compare reporting editions
 	// (GET /analytics/editions/compare)
 	CompareReportingEditions(w http.ResponseWriter, r *http.Request, params CompareReportingEditionsParams)
@@ -86154,6 +86301,9 @@ type ServerInterface interface {
 	// Configure and activate the caller's booking page.
 	// (PUT /scheduling/profile)
 	PutSchedulingProfile(w http.ResponseWriter, r *http.Request)
+	// Choose, change or clear the caller's friendly booking address.
+	// (PUT /scheduling/profile/alias)
+	PutSchedulingAlias(w http.ResponseWriter, r *http.Request)
 	// List the acting host's open proposals and personal links for one contact.
 	// (GET /scheduling/proposals)
 	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
@@ -87087,6 +87237,25 @@ func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Reques
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
 func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The decisions recorded from a sales review, newest first, as tasks the reader may see.
+// (GET /analytics/decisions)
+func (_ Unimplemented) ListSalesDecisions(w http.ResponseWriter, r *http.Request, params ListSalesDecisionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a decision from a sales review as a task on its deal. An open decision with the
+// same text on the same deal is returned instead of a second one.
+// (POST /analytics/decisions)
+func (_ Unimplemented) RecordSalesDecision(w http.ResponseWriter, r *http.Request, params RecordSalesDecisionParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record what work was completed and close the decision. The deal does not change.
+// (POST /analytics/decisions/{id}/outcome)
+func (_ Unimplemented) RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -91716,6 +91885,12 @@ func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Choose, change or clear the caller's friendly booking address.
+// (PUT /scheduling/profile/alias)
+func (_ Unimplemented) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the acting host's open proposals and personal links for one contact.
 // (GET /scheduling/proposals)
 func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams) {
@@ -95881,6 +96056,137 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDataCoverage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSalesDecisions operation middleware
+func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSalesDecisionsParams
+
+	// ------------- Optional query parameter "deal_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "deal_id", r.URL.Query(), &params.DealId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "deal_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "deal_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "status"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSalesDecisions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordSalesDecision operation middleware
+func (siw *ServerInterfaceWrapper) RecordSalesDecision(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RecordSalesDecisionParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordSalesDecision(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordSalesDecisionOutcome operation middleware
+func (siw *ServerInterfaceWrapper) RecordSalesDecisionOutcome(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordSalesDecisionOutcome(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129206,6 +129512,26 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// PutSchedulingAlias operation middleware
+func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutSchedulingAlias(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
 
@@ -135261,6 +135587,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/analytics/coverage", wrapper.GetDataCoverage)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/decisions", wrapper.ListSalesDecisions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/decisions", wrapper.RecordSalesDecision)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/decisions/{id}/outcome", wrapper.RecordSalesDecisionOutcome)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/editions/compare", wrapper.CompareReportingEditions)
 	})
 	r.Group(func(r chi.Router) {
@@ -137572,6 +137907,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/scheduling/profile", wrapper.PutSchedulingProfile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/profile/alias", wrapper.PutSchedulingAlias)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)
