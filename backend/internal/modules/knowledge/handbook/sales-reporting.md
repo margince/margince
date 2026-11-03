@@ -137,6 +137,18 @@ To read a report, a user needs access to the report and access to the numbers un
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
+## What does the panel beside the chart say?
+
+**Assessment** sits beside the leading chart of the sales review. It reads the measured figures and writes a few sentences on what they show. Each is marked as an observation, a reported fact or a guess. It names one next decision on a deal you may open, or says that none is supported.
+
+**View evidence** lists the figures each sentence rests on and opens their records. **Record decision** turns the next decision into a task with the deal and owner filled in. **Refresh assessment** asks again. Without an AI model, the panel shows the summary written from the figures and says so.
+
+## Can I describe a report or an initiative in words?
+
+Yes. In the custom report window, write under **What would you like to understand?** and choose **Suggest filters and charts**. In a new initiative, write under **Describe the initiative** and choose **Suggest the goal**. Margince reads your words against what you may choose: a product, an industry, a company address, a date range, the figures and the graphs.
+
+The proposal shows the words each value came from. It lists the questions your words leave open, and the parts it could not use. **Use proposal** puts the proposed values into the fields, over what you had chosen; a name you typed stays. Nothing is saved until you save. Without an AI model, the button says so and you choose by hand.
+
 ## How do I record a decision from a review?
 
 Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.
